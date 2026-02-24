@@ -8,20 +8,20 @@ export async function POST(req) {
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
-      const room = createRoom(name, lang);
+      const room = await createRoom(name, lang);
       return NextResponse.json({ room });
     }
 
     if (action === 'join') {
       if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
-      const room = joinRoom(roomId, name, lang);
+      const room = await joinRoom(roomId, name, lang);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }
 
     if (action === 'heartbeat') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
-      const room = updateHeartbeat(roomId, name);
+      const room = await updateHeartbeat(roomId, name);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }
@@ -39,7 +39,7 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    const room = getRoom(id);
+    const room = await getRoom(id);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ room });
   } catch (e) {

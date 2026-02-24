@@ -1,32 +1,48 @@
-// In-memory store for rooms and messages
-// Persists across warm serverless invocations on the same instance
-// For production, replace with Upstash Redis
+// Upstash Redis store for rooms and messages
+// Uses REST API - no npm package needed, works perfectly with Vercel serverless
 
-const rooms = globalThis.__VT_ROOMS__ || (globalThis.__VT_ROOMS__ = new Map());
-const messages = globalThis.__VT_MESSAGES__ || (globalThis.__VT_MESSAGES__ = new Map());
+const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
+const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-export function createRoom(creatorName, creatorLang) {
-  cleanup();
+async function redis(command, ...args) {
+  const res = await fetch(`${UPSTASH_URL}`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${UPSTASH_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([command, ...args]),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.result;
+}
+
+export async function createRoom(creatorName, creatorLang) {
   const id = Math.random().toString(36).substring(2, 8).toUpperCase();
   const room = {
     id,
     created: Date.now(),
     members: [{ name: creatorName, lang: creatorLang, joined: Date.now() }]
   };
-  rooms.set(id, room);
-  messages.set(id, []);
+  // Store room with 1 hour TTL
+  await redis('SET', `room:${id}`, JSON.stringify(room), 'EX', 3600);
   return room;
 }
 
-export function getRoom(id) {
+export async function getRoom(id) {
   if (!id) return null;
-  return rooms.get(id.toUpperCase()) || null;
+  const data = await redis('GET', `room:${id.toUpperCase()}`);
+  if (!data) return null;
+  return JSON.parse(data);
 }
 
-export function joinRoom(id, name, lang) {
-  const room = rooms.get(id.toUpperCase());
-  if (!room) return null;
-  // Check if already joined by name
+export async function joinRoom(id, name, lang) {
+  const key = `room:${id.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
+
   const existing = room.members.findIndex(m => m.name === name);
   if (existing >= 0) {
     room.members[existing].lang = lang;
@@ -34,47 +50,50 @@ export function joinRoom(id, name, lang) {
   } else if (room.members.length < 2) {
     room.members.push({ name, lang, joined: Date.now() });
   } else {
-    // Replace second member
     room.members[1] = { name, lang, joined: Date.now() };
   }
+
+  // Update with refreshed TTL
+  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
   return room;
 }
 
-export function addMessage(roomId, msg) {
+export async function addMessage(roomId, msg) {
   const id = roomId.toUpperCase();
-  if (!messages.has(id)) messages.set(id, []);
-  const msgs = messages.get(id);
+  const roomData = await redis('GET', `room:${id}`);
+  if (!roomData) return null;
+
   const m = {
     ...msg,
     id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
     timestamp: Date.now()
   };
-  msgs.push(m);
-  if (msgs.length > 200) msgs.splice(0, msgs.length - 200);
+
+  const key = `msgs:${id}`;
+  await redis('RPUSH', key, JSON.stringify(m));
+  // Keep only last 200 messages
+  await redis('LTRIM', key, -200, -1);
+  // Set TTL on messages list
+  await redis('EXPIRE', key, 3600);
   return m;
 }
 
-export function getMessages(roomId, after = 0) {
-  const msgs = messages.get(roomId.toUpperCase());
-  if (!msgs) return [];
-  return msgs.filter(m => m.timestamp > after);
+export async function getMessages(roomId, after = 0) {
+  const key = `msgs:${roomId.toUpperCase()}`;
+  const allMsgs = await redis('LRANGE', key, 0, -1);
+  if (!allMsgs || !Array.isArray(allMsgs)) return [];
+  return allMsgs
+    .map(m => JSON.parse(m))
+    .filter(m => m.timestamp > after);
 }
 
-export function updateHeartbeat(roomId, memberName) {
-  const room = rooms.get(roomId.toUpperCase());
-  if (!room) return null;
+export async function updateHeartbeat(roomId, memberName) {
+  const key = `room:${roomId.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
   const member = room.members.find(m => m.name === memberName);
   if (member) member.lastSeen = Date.now();
+  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
   return room;
-}
-
-function cleanup() {
-  const now = Date.now();
-  const maxAge = 60 * 60 * 1000; // 1 hour
-  for (const [id, room] of rooms) {
-    if (now - room.created > maxAge) {
-      rooms.delete(id);
-      messages.delete(id);
-    }
-  }
 }

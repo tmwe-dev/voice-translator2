@@ -8,7 +8,7 @@ export async function POST(req) {
     if (!roomId || !sender || !original) {
       return NextResponse.json({ error: 'roomId, sender, original required' }, { status: 400 });
     }
-    const msg = addMessage(roomId, { sender, original, translated, sourceLang, targetLang });
+    const msg = await addMessage(roomId, { sender, original, translated, sourceLang, targetLang });
     if (!msg) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ message: msg });
   } catch (e) {
@@ -24,7 +24,7 @@ export async function GET(req) {
     const room = searchParams.get('room');
     const after = parseInt(searchParams.get('after') || '0', 10);
     if (!room) return NextResponse.json({ error: 'room required' }, { status: 400 });
-    const msgs = getMessages(room, after);
+    const msgs = await getMessages(room, after);
     return NextResponse.json({ messages: msgs });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });
