@@ -48,6 +48,7 @@ export default function Home() {
   const [partnerSpeaking, setPartnerSpeaking] = useState(false);
   const [playingMsgId, setPlayingMsgId] = useState(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
+  const [audioTestOk, setAudioTestOk] = useState(false);
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -57,9 +58,13 @@ export default function Home() {
   const prefsRef = useRef(prefs);
   const audioQueueRef = useRef([]);
   const isPlayingRef = useRef(false);
+  const myLangRef = useRef(myLang);
+  const roomInfoRef = useRef(roomInfo);
 
-  // Keep prefsRef in sync
+  // Keep refs in sync
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
+  useEffect(() => { myLangRef.current = myLang; }, [myLang]);
+  useEffect(() => { roomInfoRef.current = roomInfo; }, [roomInfo]);
 
   // --- Unlock audio on first user interaction ---
   function unlockAudio() {
@@ -78,6 +83,36 @@ export default function Home() {
       setAudioUnlocked(true);
       console.log('Audio unlocked!');
     } catch (e) { console.log('Audio unlock failed:', e); }
+  }
+
+  // --- Test audio ---
+  async function testAudio() {
+    unlockAudio();
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: 'Audio test OK!', voice: prefsRef.current.voice || 'nova' })
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.onended = () => { URL.revokeObjectURL(url); setAudioTestOk(true); };
+      audio.onerror = () => { URL.revokeObjectURL(url); setAudioTestOk(false); };
+      await audio.play();
+      setAudioTestOk(true);
+    } catch {
+      // Fallback: browser speech
+      if (typeof speechSynthesis !== 'undefined') {
+        const u = new SpeechSynthesisUtterance('Audio test OK');
+        u.lang = 'en-US'; u.rate = 0.9;
+        speechSynthesis.speak(u);
+        setAudioTestOk(true);
+      } else {
+        setAudioTestOk(false);
+      }
+    }
   }
 
   // --- Load prefs on mount ---
@@ -160,9 +195,11 @@ export default function Home() {
 
   // Play a specific message manually
   async function playMessage(msg) {
+    unlockAudio();
     setPlayingMsgId(msg.id);
-    const isMine = msg.sender === prefsRef.current.name;
-    const text = isMine ? msg.translated : msg.translated;
+    // If it's my message, play the translated version (what partner hears)
+    // If it's partner's message, play the translated version (what I should hear)
+    const text = msg.translated;
     const lang = getLang(msg.targetLang).speech;
     await playTTS(text, lang);
     setPlayingMsgId(null);
@@ -227,12 +264,12 @@ export default function Home() {
   }
 
   // --- Notify server of speaking state ---
-  async function setSpeakingState(roomId, speaking) {
+  async function setSpeakingState(rid, speaking) {
     try {
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'speaking', roomId, name: prefsRef.current.name, speaking })
+        body: JSON.stringify({ action: 'speaking', roomId: rid, name: prefsRef.current.name, speaking })
       });
     } catch (e) { /* ignore */ }
   }
@@ -326,13 +363,25 @@ export default function Home() {
       const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
       if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
 
-      const myL = getLang(myLang);
-      let otherLangCode = myLang === 'it' ? 'th' : 'it';
-      if (roomInfo && roomInfo.members) {
-        const other = roomInfo.members.find(m => m.name !== prefs.name);
+      // Use refs for current values (avoids stale closures)
+      const currentMyLang = myLangRef.current;
+      const currentRoomInfo = roomInfoRef.current;
+      const currentPrefs = prefsRef.current;
+      const myL = getLang(currentMyLang);
+
+      // Find the other member's language from room info
+      let otherLangCode = null;
+      if (currentRoomInfo && currentRoomInfo.members) {
+        const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
         if (other) otherLangCode = other.lang;
       }
+      // Fallback: if no partner found, use a sensible default
+      if (!otherLangCode) {
+        otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
+      }
       const otherL = getLang(otherLangCode);
+
+      console.log('Translation:', myL.code, '->', otherL.code, '| Room members:', currentRoomInfo?.members?.map(m => m.name + ':' + m.lang));
 
       try {
         const form = new FormData();
@@ -351,7 +400,7 @@ export default function Home() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              roomId, sender: prefs.name, original, translated,
+              roomId, sender: currentPrefs.name, original, translated,
               sourceLang: myL.code, targetLang: otherL.code
             })
           });
@@ -388,8 +437,8 @@ export default function Home() {
   // --- WELCOME ---
   if (view === 'welcome') return (
     <div style={S.page}>
-      <div style={S.center}>
-        <div style={{fontSize:64, marginBottom:8}}>{'\u{1F30D}'}</div>
+      <div style={S.scrollCenter}>
+        <div style={{fontSize:48, marginBottom:4}}>{'\u{1F30D}'}</div>
         <div style={S.title}>VoiceTranslate</div>
         <div style={S.sub}>Traduttore vocale in tempo reale</div>
         <div style={S.card}>
@@ -401,7 +450,7 @@ export default function Home() {
           </div>
           <div style={S.field}>
             <div style={S.label}>AVATAR</div>
-            <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
+            <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
               {AVATARS.map(a => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar: a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {})}}>
@@ -430,14 +479,14 @@ export default function Home() {
           </div>
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <span style={S.label}>RIPRODUZIONE AUTOMATICA</span>
+              <span style={S.label}>AUTO-PLAY</span>
               <button onClick={() => setPrefs({...prefs, autoPlay: !prefs.autoPlay})}
                 style={{...S.toggle, background: prefs.autoPlay ? '#e94560' : '#333'}}>
                 <div style={{...S.toggleDot, transform: prefs.autoPlay ? 'translateX(20px)' : 'translateX(0)'}} />
               </button>
             </div>
           </div>
-          <button style={{...S.btn, marginTop:16, opacity: prefs.name.trim()?1:0.5}}
+          <button style={{...S.btn, marginTop:12, opacity: prefs.name.trim()?1:0.5}}
             disabled={!prefs.name.trim()}
             onClick={() => { savePrefs(prefs); setView(joinCode ? 'join' : 'home'); }}>
             Iniziamo! {'\u25B6'}
@@ -450,7 +499,7 @@ export default function Home() {
   // --- SETTINGS ---
   if (view === 'settings') return (
     <div style={S.page}>
-      <div style={S.center}>
+      <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView('home')}>{'\u2190'}</button>
           <span style={{fontWeight:700, fontSize:18}}>Impostazioni</span>
@@ -463,7 +512,7 @@ export default function Home() {
           </div>
           <div style={S.field}>
             <div style={S.label}>AVATAR</div>
-            <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
+            <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
               {AVATARS.map(a => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar: a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {})}}>
@@ -492,14 +541,14 @@ export default function Home() {
           </div>
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <span style={S.label}>RIPRODUZIONE AUTOMATICA</span>
+              <span style={S.label}>AUTO-PLAY</span>
               <button onClick={() => setPrefs({...prefs, autoPlay: !prefs.autoPlay})}
                 style={{...S.toggle, background: prefs.autoPlay ? '#e94560' : '#333'}}>
                 <div style={{...S.toggleDot, transform: prefs.autoPlay ? 'translateX(20px)' : 'translateX(0)'}} />
               </button>
             </div>
           </div>
-          <button style={{...S.btn, marginTop:16}} onClick={() => { savePrefs(prefs); setView('home'); }}>
+          <button style={{...S.btn, marginTop:12}} onClick={() => { savePrefs(prefs); setView('home'); }}>
             Salva {'\u2713'}
           </button>
         </div>
@@ -511,22 +560,22 @@ export default function Home() {
   if (view === 'home') return (
     <div style={S.page}>
       <div style={S.center}>
-        <div style={{fontSize:48, marginBottom:4}}>{prefs.avatar}</div>
-        <div style={{fontSize:20, fontWeight:700, marginBottom:2}}>Ciao, {prefs.name}!</div>
-        <div style={{color:'#fff8', fontSize:13, marginBottom:28}}>{getLang(prefs.lang).flag} {getLang(prefs.lang).name}</div>
+        <div style={{fontSize:44, marginBottom:4}}>{prefs.avatar}</div>
+        <div style={{fontSize:18, fontWeight:700, marginBottom:2}}>Ciao, {prefs.name}!</div>
+        <div style={{color:'#fff8', fontSize:13, marginBottom:24}}>{getLang(prefs.lang).flag} {getLang(prefs.lang).name}</div>
         <button style={S.bigBtn} onClick={handleCreateRoom}>
-          <span style={{fontSize:28}}>{'\u2795'}</span>
+          <span style={{fontSize:24}}>{'\u2795'}</span>
           <div>
-            <div style={{fontWeight:700, fontSize:16}}>Crea Stanza</div>
-            <div style={{fontSize:12, color:'#fffa'}}>Avvia una nuova traduzione</div>
+            <div style={{fontWeight:700, fontSize:15}}>Crea Stanza</div>
+            <div style={{fontSize:11, color:'#fffa'}}>Avvia una nuova traduzione</div>
           </div>
         </button>
         <button style={{...S.bigBtn, background:'linear-gradient(135deg,#0f3460,#16213e)'}}
           onClick={() => setView('join')}>
-          <span style={{fontSize:28}}>{'\u{1F517}'}</span>
+          <span style={{fontSize:24}}>{'\u{1F517}'}</span>
           <div>
-            <div style={{fontWeight:700, fontSize:16}}>Entra nella Stanza</div>
-            <div style={{fontSize:12, color:'#fffa'}}>Inserisci il codice o scansiona il QR</div>
+            <div style={{fontWeight:700, fontSize:15}}>Entra nella Stanza</div>
+            <div style={{fontSize:11, color:'#fffa'}}>Inserisci il codice o scansiona il QR</div>
           </div>
         </button>
         <button style={S.settingsBtn} onClick={() => setView('settings')}>
@@ -571,25 +620,25 @@ export default function Home() {
   // --- LOBBY ---
   if (view === 'lobby') return (
     <div style={S.page}>
-      <div style={S.center}>
+      <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={leaveRoom}>{'\u2190'}</button>
           <span style={{fontWeight:700, fontSize:18}}>La tua Stanza</span>
         </div>
         <div style={S.card}>
-          <div style={{textAlign:'center', marginBottom:16}}>
+          <div style={{textAlign:'center', marginBottom:12}}>
             <div style={S.label}>CODICE STANZA</div>
-            <div style={{fontSize:36, fontWeight:800, letterSpacing:8, color:'#e94560'}}>{roomId}</div>
-          </div>
-          <div style={{textAlign:'center', marginBottom:16}}>
-            <img src={qrUrl} alt="QR Code" style={{width:180, height:180, borderRadius:12, background:'#fff', padding:8}} />
+            <div style={{fontSize:32, fontWeight:800, letterSpacing:8, color:'#e94560'}}>{roomId}</div>
           </div>
           <div style={{textAlign:'center', marginBottom:12}}>
+            <img src={qrUrl} alt="QR Code" style={{width:160, height:160, borderRadius:12, background:'#fff', padding:6}} />
+          </div>
+          <div style={{textAlign:'center', marginBottom:10}}>
             <button style={S.shareBtn} onClick={shareRoom}>
               {'\u{1F4E4}'} Condividi Link
             </button>
           </div>
-          <div style={{textAlign:'center', color:'#fff8', fontSize:13, marginBottom:12}}>
+          <div style={{textAlign:'center', color:'#fff8', fontSize:13, marginBottom:10}}>
             {partnerConnected
               ? <span style={{color:'#4ecdc4'}}>{'\u2705'} Partner connesso! ({roomInfo?.members?.[1]?.name})</span>
               : <span>{'\u23F3'} In attesa dell{"'"}altra persona...</span>
@@ -617,11 +666,16 @@ export default function Home() {
         <div style={S.roomHeader}>
           <button style={S.backBtnSmall} onClick={leaveRoom}>{'\u2190'}</button>
           <div style={{flex:1, textAlign:'center'}}>
-            <span style={{fontSize:14}}>{myL.flag} {myL.name}</span>
-            <span style={{margin:'0 8px', color:'#e94560'}}>{'\u21C4'}</span>
-            <span style={{fontSize:14}}>{otherL.flag} {otherL.name}</span>
+            <span style={{fontSize:13}}>{myL.flag} {myL.name}</span>
+            <span style={{margin:'0 6px', color:'#e94560'}}>{'\u21C4'}</span>
+            <span style={{fontSize:13}}>{otherL.flag} {otherL.name}</span>
           </div>
-          <div style={{fontSize:11, color: partnerConnected ? '#4ecdc4' : '#ff6b6b'}}>
+          {/* Audio status indicator */}
+          <button onClick={testAudio} style={S.audioIndicator}
+            title={audioUnlocked ? 'Audio attivo - tocca per test' : 'Audio non attivo - tocca per attivare'}>
+            {audioUnlocked ? '\u{1F50A}' : '\u{1F507}'}
+          </button>
+          <div style={{fontSize:10, color: partnerConnected ? '#4ecdc4' : '#ff6b6b', marginLeft:4}}>
             {partnerConnected ? '\u{1F7E2}' : '\u{1F534}'}
           </div>
         </div>
@@ -650,15 +704,15 @@ export default function Home() {
             const isMine = m.sender === prefs.name;
             return (
               <div key={m.id || i} style={{display:'flex', flexDirection:'column',
-                alignItems: isMine ? 'flex-end' : 'flex-start', marginBottom:12}}>
-                <div style={{fontSize:11, color:'#fff6', marginBottom:2}}>
-                  {isMine ? 'Tu' : m.sender}
+                alignItems: isMine ? 'flex-end' : 'flex-start', marginBottom:10}}>
+                <div style={{fontSize:10, color:'#fff6', marginBottom:2}}>
+                  {isMine ? 'Tu' : m.sender} {'\u2022'} {getLang(m.sourceLang).flag}{'\u2192'}{getLang(m.targetLang).flag}
                 </div>
                 <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
-                  <div style={{fontSize:15, fontWeight:600}}>
+                  <div style={{fontSize:14, fontWeight:600, paddingRight:30}}>
                     {isMine ? m.original : m.translated}
                   </div>
-                  <div style={{fontSize:12, color:'#fff8', fontStyle:'italic', marginTop:3}}>
+                  <div style={{fontSize:11, color:'#fff8', fontStyle:'italic', marginTop:2}}>
                     {isMine ? m.translated : m.original}
                   </div>
                   {/* Play button */}
@@ -676,17 +730,17 @@ export default function Home() {
 
         {/* Status + Push to talk */}
         <div style={S.talkBar}>
-          {status && <div style={{fontSize:12, color:'#e94560', marginBottom:6}}>{status}</div>}
+          {status && <div style={{fontSize:12, color:'#e94560', marginBottom:4}}>{status}</div>}
           {!audioUnlocked && (
-            <div style={{fontSize:11, color:'#ff9', marginBottom:6}}>
-              Tocca il microfono per attivare l{"'"}audio
+            <div style={{fontSize:11, color:'#ff9', marginBottom:4, textAlign:'center'}}>
+              Tocca {'\u{1F50A}'} in alto o il microfono per attivare l{"'"}audio
             </div>
           )}
           <button style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}
             onTouchStart={startRecording} onTouchEnd={stopRecording}
             onMouseDown={startRecording} onMouseUp={stopRecording}>
-            <span style={{fontSize:28}}>{'\u{1F3A4}'}</span>
-            <span style={{fontSize:11, marginTop:4}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
+            <span style={{fontSize:26}}>{'\u{1F3A4}'}</span>
+            <span style={{fontSize:10, marginTop:2}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
           </button>
         </div>
 
@@ -708,71 +762,78 @@ export default function Home() {
 // STYLES
 // ========================================
 const S = {
-  page: { minHeight:'100vh', background:'linear-gradient(135deg,#0a0a0f,#1a1a2e 50%,#16213e)', color:'#fff',
-    fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
+  page: { height:'100dvh', height:'100vh', background:'linear-gradient(135deg,#0a0a0f,#1a1a2e 50%,#16213e)', color:'#fff',
+    fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif', overflow:'hidden', position:'fixed', top:0, left:0, right:0, bottom:0 },
   center: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-    minHeight:'100vh', padding:'24px 16px' },
-  title: { fontSize:32, fontWeight:800, background:'linear-gradient(90deg,#e94560,#c23152)',
-    WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:4 },
-  sub: { color:'#fff9', fontSize:14, marginBottom:24 },
-  card: { width:'100%', maxWidth:380, background:'rgba(255,255,255,0.06)', borderRadius:20,
-    padding:'24px 20px', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.1)' },
-  cardTitle: { fontSize:16, fontWeight:600, textAlign:'center', marginBottom:20, color:'#fffc' },
-  field: { marginBottom:16 },
-  label: { fontSize:11, textTransform:'uppercase', letterSpacing:1, color:'#fff9', marginBottom:6 },
-  input: { width:'100%', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,0.08)',
-    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:15, outline:'none', boxSizing:'border-box' },
-  select: { width:'100%', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,0.08)',
-    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:15, outline:'none', boxSizing:'border-box' },
-  btn: { width:'100%', padding:'14px', borderRadius:14, border:'none',
-    background:'linear-gradient(135deg,#e94560,#c23152)', color:'#fff', fontSize:16, fontWeight:700,
+    height:'100%', padding:'20px 16px', boxSizing:'border-box' },
+  scrollCenter: { display:'flex', flexDirection:'column', alignItems:'center',
+    height:'100%', padding:'20px 16px', boxSizing:'border-box', overflowY:'auto', WebkitOverflowScrolling:'touch',
+    justifyContent:'safe center' },
+  title: { fontSize:28, fontWeight:800, background:'linear-gradient(90deg,#e94560,#c23152)',
+    WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:2 },
+  sub: { color:'#fff9', fontSize:13, marginBottom:16 },
+  card: { width:'100%', maxWidth:380, background:'rgba(255,255,255,0.06)', borderRadius:16,
+    padding:'18px 16px', backdropFilter:'blur(10px)', border:'1px solid rgba(255,255,255,0.1)' },
+  cardTitle: { fontSize:15, fontWeight:600, textAlign:'center', marginBottom:14, color:'#fffc' },
+  field: { marginBottom:12 },
+  label: { fontSize:10, textTransform:'uppercase', letterSpacing:1, color:'#fff9', marginBottom:4 },
+  input: { width:'100%', padding:'10px 12px', borderRadius:10, background:'rgba(255,255,255,0.08)',
+    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:14, outline:'none', boxSizing:'border-box' },
+  select: { width:'100%', padding:'10px 12px', borderRadius:10, background:'rgba(255,255,255,0.08)',
+    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:14, outline:'none', boxSizing:'border-box' },
+  btn: { width:'100%', padding:'12px', borderRadius:12, border:'none',
+    background:'linear-gradient(135deg,#e94560,#c23152)', color:'#fff', fontSize:15, fontWeight:700,
     cursor:'pointer', textAlign:'center' },
-  bigBtn: { width:'100%', maxWidth:380, display:'flex', alignItems:'center', gap:14, padding:'18px 20px',
-    borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', color:'#fff', cursor:'pointer', marginBottom:12,
+  bigBtn: { width:'100%', maxWidth:380, display:'flex', alignItems:'center', gap:12, padding:'14px 16px',
+    borderRadius:14, border:'1px solid rgba(255,255,255,0.1)', color:'#fff', cursor:'pointer', marginBottom:10,
     background:'linear-gradient(135deg,#e94560,#c23152)', textAlign:'left' },
-  settingsBtn: { marginTop:20, padding:'10px 20px', borderRadius:12, background:'transparent',
-    border:'1px solid rgba(255,255,255,0.2)', color:'#fff9', fontSize:14, cursor:'pointer' },
-  avatarBtn: { width:44, height:44, borderRadius:12, border:'2px solid transparent', background:'rgba(255,255,255,0.06)',
-    fontSize:24, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
+  settingsBtn: { marginTop:16, padding:'8px 18px', borderRadius:10, background:'transparent',
+    border:'1px solid rgba(255,255,255,0.2)', color:'#fff9', fontSize:13, cursor:'pointer' },
+  avatarBtn: { width:40, height:40, borderRadius:10, border:'2px solid transparent', background:'rgba(255,255,255,0.06)',
+    fontSize:22, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
   avatarSel: { borderColor:'#e94560', background:'rgba(233,69,96,0.15)' },
-  voiceBtn: { padding:'6px 14px', borderRadius:20, border:'1px solid rgba(255,255,255,0.15)',
-    background:'transparent', color:'#fff9', fontSize:13, cursor:'pointer', textTransform:'capitalize' },
+  voiceBtn: { padding:'5px 12px', borderRadius:16, border:'1px solid rgba(255,255,255,0.15)',
+    background:'transparent', color:'#fff9', fontSize:12, cursor:'pointer', textTransform:'capitalize' },
   voiceSel: { borderColor:'#e94560', background:'rgba(233,69,96,0.2)', color:'#fff' },
   toggle: { width:44, height:24, borderRadius:12, border:'none', padding:2, cursor:'pointer',
     display:'flex', alignItems:'center', transition:'background 0.2s' },
   toggleDot: { width:20, height:20, borderRadius:10, background:'#fff', transition:'transform 0.2s' },
-  topBar: { display:'flex', alignItems:'center', gap:12, width:'100%', maxWidth:380, marginBottom:20 },
-  backBtn: { width:40, height:40, borderRadius:12, background:'rgba(255,255,255,0.08)',
-    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:20, cursor:'pointer' },
-  shareBtn: { padding:'10px 24px', borderRadius:12, border:'1px solid rgba(255,255,255,0.2)',
-    background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, cursor:'pointer' },
-  statusMsg: { marginTop:12, fontSize:13, color:'#e94560', textAlign:'center' },
+  topBar: { display:'flex', alignItems:'center', gap:12, width:'100%', maxWidth:380, marginBottom:14, flexShrink:0 },
+  backBtn: { width:36, height:36, borderRadius:10, background:'rgba(255,255,255,0.08)',
+    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:18, cursor:'pointer' },
+  shareBtn: { padding:'8px 20px', borderRadius:10, border:'1px solid rgba(255,255,255,0.2)',
+    background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:13, cursor:'pointer' },
+  statusMsg: { marginTop:10, fontSize:12, color:'#e94560', textAlign:'center' },
   // Room
-  roomPage: { display:'flex', flexDirection:'column', height:'100vh', background:'#0a0a0f', color:'#fff',
-    fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
-  roomHeader: { display:'flex', alignItems:'center', padding:'10px 12px', background:'rgba(255,255,255,0.04)',
+  roomPage: { display:'flex', flexDirection:'column', height:'100dvh', background:'#0a0a0f', color:'#fff',
+    fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+    position:'fixed', top:0, left:0, right:0, bottom:0 },
+  roomHeader: { display:'flex', alignItems:'center', padding:'8px 10px', background:'rgba(255,255,255,0.04)',
     borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 },
-  backBtnSmall: { width:32, height:32, borderRadius:8, background:'transparent', border:'1px solid rgba(255,255,255,0.15)',
-    color:'#fff', fontSize:16, cursor:'pointer' },
-  speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'8px 16px',
+  backBtnSmall: { width:30, height:30, borderRadius:8, background:'transparent', border:'1px solid rgba(255,255,255,0.15)',
+    color:'#fff', fontSize:14, cursor:'pointer', flexShrink:0 },
+  audioIndicator: { width:30, height:30, borderRadius:8, background:'rgba(255,255,255,0.06)',
+    border:'1px solid rgba(255,255,255,0.15)', color:'#fff', fontSize:14, cursor:'pointer',
+    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 },
+  speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'6px 14px',
     background:'rgba(233,69,96,0.15)', borderBottom:'1px solid rgba(233,69,96,0.3)',
-    color:'#e94560', fontSize:13, flexShrink:0 },
+    color:'#e94560', fontSize:12, flexShrink:0 },
   speakingDots: { display:'flex', gap:3, alignItems:'center' },
-  dot: { width:8, height:8, borderRadius:'50%', background:'#e94560',
+  dot: { width:7, height:7, borderRadius:'50%', background:'#e94560',
     animation:'vtPulse 1.2s infinite ease-in-out', display:'inline-block' },
-  chatArea: { flex:1, overflowY:'auto', padding:'16px 12px', minHeight:0 },
-  bubble: { maxWidth:'80%', padding:'10px 14px', borderRadius:16, position:'relative' },
+  chatArea: { flex:1, overflowY:'auto', padding:'12px 10px', minHeight:0, WebkitOverflowScrolling:'touch' },
+  bubble: { maxWidth:'82%', padding:'8px 12px', borderRadius:14, position:'relative' },
   bubbleMine: { background:'rgba(233,69,96,0.2)', borderBottomRightRadius:4 },
   bubbleOther: { background:'rgba(15,52,96,0.5)', borderBottomLeftRadius:4 },
-  playBtn: { position:'absolute', top:4, right:4, width:28, height:28, borderRadius:'50%',
-    background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', fontSize:14,
+  playBtn: { position:'absolute', top:4, right:4, width:26, height:26, borderRadius:'50%',
+    background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', fontSize:12,
     cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
   playBtnActive: { background:'rgba(233,69,96,0.4)' },
-  talkBar: { flexShrink:0, padding:'12px 16px 24px', display:'flex', flexDirection:'column', alignItems:'center',
+  talkBar: { flexShrink:0, padding:'8px 16px 16px', display:'flex', flexDirection:'column', alignItems:'center',
     background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.08)' },
   talkBtn: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-    width:80, height:80, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.2)',
+    width:72, height:72, borderRadius:'50%', border:'3px solid rgba(255,255,255,0.2)',
     background:'rgba(255,255,255,0.06)', color:'#fff', cursor:'pointer', touchAction:'manipulation' },
   talkBtnRec: { borderColor:'#e94560', background:'rgba(233,69,96,0.25)',
-    boxShadow:'0 0 0 10px rgba(233,69,96,0.15), 0 0 0 20px rgba(233,69,96,0.08)' },
+    boxShadow:'0 0 0 8px rgba(233,69,96,0.15), 0 0 0 16px rgba(233,69,96,0.08)' },
 };
