@@ -4,12 +4,14 @@ import { NextResponse } from 'next/server';
 export async function POST(req) {
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const { text } = await req.json();
+    const { text, voice } = await req.json();
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
+
+    const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'nova';
 
     const response = await openai.audio.speech.create({
       model: 'tts-1',
-      voice: 'nova',
+      voice: selectedVoice,
       input: text,
       response_format: 'mp3'
     });
