@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat } from '../../lib/store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking } from '../../lib/store.js';
 
 // POST /api/room - Create or join a room
 export async function POST(req) {
   try {
-    const { action, roomId, name, lang } = await req.json();
+    const { action, roomId, name, lang, speaking } = await req.json();
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
@@ -22,6 +22,13 @@ export async function POST(req) {
     if (action === 'heartbeat') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
       const room = await updateHeartbeat(roomId, name);
+      if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      return NextResponse.json({ room });
+    }
+
+    if (action === 'speaking') {
+      if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
+      const room = await setSpeaking(roomId, name, !!speaking);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }

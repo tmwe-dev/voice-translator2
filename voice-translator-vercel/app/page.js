@@ -35,7 +35,6 @@ const AVATARS = ['\u{1F9D1}\u200D\u{1F4BB}','\u{1F468}\u200D\u{1F4BC}','\u{1F469
 function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
 
 export default function Home() {
-  // --- State ---
   const [view, setView] = useState('loading');
   const [prefs, setPrefs] = useState({ name: '', lang: 'it', avatar: AVATARS[0], voice: 'nova', autoPlay: true });
   const [roomId, setRoomId] = useState(null);
@@ -46,13 +45,40 @@ export default function Home() {
   const [recording, setRecording] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [partnerConnected, setPartnerConnected] = useState(false);
-  const [showQR, setShowQR] = useState(false);
+  const [partnerSpeaking, setPartnerSpeaking] = useState(false);
+  const [playingMsgId, setPlayingMsgId] = useState(null);
+  const [audioUnlocked, setAudioUnlocked] = useState(false);
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
   const pollRef = useRef(null);
   const lastMsgRef = useRef(0);
   const msgsEndRef = useRef(null);
+  const prefsRef = useRef(prefs);
+  const audioQueueRef = useRef([]);
+  const isPlayingRef = useRef(false);
+
+  // Keep prefsRef in sync
+  useEffect(() => { prefsRef.current = prefs; }, [prefs]);
+
+  // --- Unlock audio on first user interaction ---
+  function unlockAudio() {
+    if (audioUnlocked) return;
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+      // Also play a silent HTML audio
+      const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+      a.volume = 0.01;
+      a.play().catch(() => {});
+      setAudioUnlocked(true);
+      console.log('Audio unlocked!');
+    } catch (e) { console.log('Audio unlock failed:', e); }
+  }
 
   // --- Load prefs on mount ---
   useEffect(() => {
@@ -71,26 +97,83 @@ export default function Home() {
           setView('home');
         }
       } else {
-        if (roomParam) {
-          setJoinCode(roomParam.toUpperCase());
-        }
+        if (roomParam) setJoinCode(roomParam.toUpperCase());
         setView('welcome');
       }
     } catch { setView('welcome'); }
   }, []);
 
-  // --- Auto-scroll messages ---
+  // Auto-scroll
   useEffect(() => {
     msgsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // --- Polling for messages ---
+  // --- Audio queue system ---
+  async function queueAudio(text, lang) {
+    audioQueueRef.current.push({ text, lang });
+    processAudioQueue();
+  }
+
+  async function processAudioQueue() {
+    if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
+    isPlayingRef.current = true;
+    const { text, lang } = audioQueueRef.current.shift();
+    try {
+      await playTTS(text, lang);
+    } catch (e) { console.error('Audio play error:', e); }
+    isPlayingRef.current = false;
+    processAudioQueue();
+  }
+
+  async function playTTS(text, lang) {
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova' })
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      return new Promise((resolve, reject) => {
+        const audio = new Audio(url);
+        audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+        audio.onerror = () => { URL.revokeObjectURL(url); reject(); };
+        audio.play().catch(() => {
+          URL.revokeObjectURL(url);
+          // Fallback to browser speech
+          browserSpeak(text, lang);
+          resolve();
+        });
+      });
+    } catch {
+      browserSpeak(text, lang);
+    }
+  }
+
+  function browserSpeak(text, lang) {
+    if (typeof speechSynthesis === 'undefined') return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang; u.rate = 0.9;
+    speechSynthesis.speak(u);
+  }
+
+  // Play a specific message manually
+  async function playMessage(msg) {
+    setPlayingMsgId(msg.id);
+    const isMine = msg.sender === prefsRef.current.name;
+    const text = isMine ? msg.translated : msg.translated;
+    const lang = getLang(msg.targetLang).speech;
+    await playTTS(text, lang);
+    setPlayingMsgId(null);
+  }
+
+  // --- Polling ---
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
     lastMsgRef.current = Date.now();
     pollRef.current = setInterval(async () => {
       try {
-        // Poll messages
         const mRes = await fetch(`/api/messages?room=${rid}&after=${lastMsgRef.current}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
@@ -101,40 +184,57 @@ export default function Home() {
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
-            // Auto-play latest translation for me
-            const latest = newMsgs[newMsgs.length - 1];
-            if (latest && latest.sender !== prefs.name && latest.translated && prefs.autoPlay) {
-              speak(latest.translated, getLang(latest.targetLang).speech);
+            // Auto-play translations from partner
+            for (const msg of newMsgs) {
+              if (msg.sender !== prefsRef.current.name && msg.translated && prefsRef.current.autoPlay) {
+                queueAudio(msg.translated, getLang(msg.targetLang).speech);
+              }
             }
           }
         }
-        // Poll room info (heartbeat + check partner)
+        // Heartbeat + room info
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat', roomId: rid, name: prefs.name })
+          body: JSON.stringify({ action: 'heartbeat', roomId: rid, name: prefsRef.current.name })
         });
         if (rRes.ok) {
           const { room } = await rRes.json();
           setRoomInfo(room);
           setPartnerConnected(room.members.length >= 2);
+          // Check if partner is speaking
+          const partner = room.members.find(m => m.name !== prefsRef.current.name);
+          if (partner && partner.speaking && (Date.now() - partner.speakingAt < 30000)) {
+            setPartnerSpeaking(true);
+          } else {
+            setPartnerSpeaking(false);
+          }
         }
       } catch (e) { console.error('Poll error:', e); }
-    }, 1500);
-  }, [prefs.name, prefs.autoPlay]);
+    }, 1200);
+  }, []);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
   }, []);
 
-  // Cleanup on unmount
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  // --- Save preferences ---
   function savePrefs(newPrefs) {
     setPrefs(newPrefs);
     setMyLang(newPrefs.lang);
     localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
+  }
+
+  // --- Notify server of speaking state ---
+  async function setSpeakingState(roomId, speaking) {
+    try {
+      await fetch('/api/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'speaking', roomId, name: prefsRef.current.name, speaking })
+      });
+    } catch (e) { /* ignore */ }
   }
 
   // --- Create Room ---
@@ -181,17 +281,14 @@ export default function Home() {
     } catch (e) { setStatus('Errore: ' + e.message); }
   }
 
-  // --- Enter room from lobby ---
-  function enterRoom() {
-    setView('room');
-  }
+  function enterRoom() { setView('room'); }
 
-  // --- Leave Room ---
   function leaveRoom() {
     stopPolling();
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);
+    setPartnerSpeaking(false);
     setView('home');
   }
 
@@ -199,8 +296,10 @@ export default function Home() {
   async function startRecording(e) {
     e.preventDefault();
     if (recording) return;
+    unlockAudio(); // Unlock audio on user gesture!
     setRecording(true);
     setStatus('Ascoltando...');
+    if (roomId) setSpeakingState(roomId, true);
     chunksRef.current = [];
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -212,6 +311,7 @@ export default function Home() {
     } catch (err) {
       setStatus('Errore microfono: ' + err.message);
       setRecording(false);
+      if (roomId) setSpeakingState(roomId, false);
     }
   }
 
@@ -219,6 +319,7 @@ export default function Home() {
     e.preventDefault();
     if (!recording || !recRef.current) return;
     setStatus('Elaborazione...');
+    if (roomId) setSpeakingState(roomId, false);
 
     recRef.current.onstop = async () => {
       recRef.current.stream.getTracks().forEach(t => t.stop());
@@ -226,7 +327,6 @@ export default function Home() {
       if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
 
       const myL = getLang(myLang);
-      // Find other language from room members or default
       let otherLangCode = myLang === 'it' ? 'th' : 'it';
       if (roomInfo && roomInfo.members) {
         const other = roomInfo.members.find(m => m.name !== prefs.name);
@@ -247,17 +347,12 @@ export default function Home() {
         const { original, translated } = await res.json();
 
         if (original && roomId) {
-          // Send to room
           await fetch('/api/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              roomId,
-              sender: prefs.name,
-              original,
-              translated,
-              sourceLang: myL.code,
-              targetLang: otherL.code
+              roomId, sender: prefs.name, original, translated,
+              sourceLang: myL.code, targetLang: otherL.code
             })
           });
         }
@@ -270,35 +365,11 @@ export default function Home() {
     recRef.current.stop();
   }
 
-  // --- TTS ---
-  async function speak(text, lang) {
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: prefs.voice || 'nova' })
-      });
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.onended = () => URL.revokeObjectURL(url);
-      await audio.play().catch(() => browserSpeak(text, lang));
-    } catch { browserSpeak(text, lang); }
-  }
-
-  function browserSpeak(text, lang) {
-    if (typeof speechSynthesis === 'undefined') return;
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang; u.rate = 0.9;
-    speechSynthesis.speak(u);
-  }
-
   // --- Share ---
   function shareRoom() {
     const url = `${window.location.origin}?room=${roomId}`;
     if (navigator.share) {
-      navigator.share({ title: 'VoiceTranslate', text: `Join my translation room: ${roomId}`, url });
+      navigator.share({ title: 'VoiceTranslate', text: `Entra nella traduzione: ${roomId}`, url });
     } else {
       navigator.clipboard.writeText(url);
       setStatus('Link copiato!');
@@ -323,13 +394,11 @@ export default function Home() {
         <div style={S.sub}>Traduttore vocale in tempo reale</div>
         <div style={S.card}>
           <div style={S.cardTitle}>Benvenuto! Configura il tuo profilo</div>
-
           <div style={S.field}>
             <div style={S.label}>IL TUO NOME</div>
             <input style={S.input} placeholder="Come ti chiami?" value={prefs.name}
               onChange={e => setPrefs({...prefs, name: e.target.value})} maxLength={20} />
           </div>
-
           <div style={S.field}>
             <div style={S.label}>AVATAR</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
@@ -341,7 +410,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div style={S.field}>
             <div style={S.label}>LA TUA LINGUA</div>
             <select style={S.select} value={prefs.lang}
@@ -349,7 +417,6 @@ export default function Home() {
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
-
           <div style={S.field}>
             <div style={S.label}>VOCE TRADUZIONE</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
@@ -361,7 +428,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <span style={S.label}>RIPRODUZIONE AUTOMATICA</span>
@@ -371,7 +437,6 @@ export default function Home() {
               </button>
             </div>
           </div>
-
           <button style={{...S.btn, marginTop:16, opacity: prefs.name.trim()?1:0.5}}
             disabled={!prefs.name.trim()}
             onClick={() => { savePrefs(prefs); setView(joinCode ? 'join' : 'home'); }}>
@@ -387,7 +452,7 @@ export default function Home() {
     <div style={S.page}>
       <div style={S.center}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => setView('home')}>&larr;</button>
+          <button style={S.backBtn} onClick={() => setView('home')}>{'\u2190'}</button>
           <span style={{fontWeight:700, fontSize:18}}>Impostazioni</span>
         </div>
         <div style={S.card}>
@@ -396,7 +461,6 @@ export default function Home() {
             <input style={S.input} value={prefs.name}
               onChange={e => setPrefs({...prefs, name: e.target.value})} maxLength={20} />
           </div>
-
           <div style={S.field}>
             <div style={S.label}>AVATAR</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:8}}>
@@ -408,7 +472,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div style={S.field}>
             <div style={S.label}>LA TUA LINGUA</div>
             <select style={S.select} value={prefs.lang}
@@ -416,7 +479,6 @@ export default function Home() {
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
-
           <div style={S.field}>
             <div style={S.label}>VOCE TRADUZIONE</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
@@ -428,7 +490,6 @@ export default function Home() {
               ))}
             </div>
           </div>
-
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <span style={S.label}>RIPRODUZIONE AUTOMATICA</span>
@@ -438,7 +499,6 @@ export default function Home() {
               </button>
             </div>
           </div>
-
           <button style={{...S.btn, marginTop:16}} onClick={() => { savePrefs(prefs); setView('home'); }}>
             Salva {'\u2713'}
           </button>
@@ -454,7 +514,6 @@ export default function Home() {
         <div style={{fontSize:48, marginBottom:4}}>{prefs.avatar}</div>
         <div style={{fontSize:20, fontWeight:700, marginBottom:2}}>Ciao, {prefs.name}!</div>
         <div style={{color:'#fff8', fontSize:13, marginBottom:28}}>{getLang(prefs.lang).flag} {getLang(prefs.lang).name}</div>
-
         <button style={S.bigBtn} onClick={handleCreateRoom}>
           <span style={{fontSize:28}}>{'\u2795'}</span>
           <div>
@@ -462,7 +521,6 @@ export default function Home() {
             <div style={{fontSize:12, color:'#fffa'}}>Avvia una nuova traduzione</div>
           </div>
         </button>
-
         <button style={{...S.bigBtn, background:'linear-gradient(135deg,#0f3460,#16213e)'}}
           onClick={() => setView('join')}>
           <span style={{fontSize:28}}>{'\u{1F517}'}</span>
@@ -471,11 +529,9 @@ export default function Home() {
             <div style={{fontSize:12, color:'#fffa'}}>Inserisci il codice o scansiona il QR</div>
           </div>
         </button>
-
         <button style={S.settingsBtn} onClick={() => setView('settings')}>
           {'\u2699\uFE0F'} Impostazioni
         </button>
-
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
     </div>
@@ -486,7 +542,7 @@ export default function Home() {
     <div style={S.page}>
       <div style={S.center}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); }}>&larr;</button>
+          <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); }}>{'\u2190'}</button>
           <span style={{fontWeight:700, fontSize:18}}>Entra nella Stanza</span>
         </div>
         <div style={S.card}>
@@ -496,31 +552,28 @@ export default function Home() {
               placeholder="ABC123" value={joinCode} maxLength={6}
               onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
           </div>
-
           <div style={S.field}>
             <div style={S.label}>LA TUA LINGUA</div>
             <select style={S.select} value={myLang} onChange={e => setMyLang(e.target.value)}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
-
           <button style={{...S.btn, marginTop:12, opacity: joinCode.length>=4?1:0.5}}
             disabled={joinCode.length<4} onClick={handleJoinRoom}>
             Entra {'\u25B6'}
           </button>
-
           {status && <div style={S.statusMsg}>{status}</div>}
         </div>
       </div>
     </div>
   );
 
-  // --- LOBBY (waiting for partner) ---
+  // --- LOBBY ---
   if (view === 'lobby') return (
     <div style={S.page}>
       <div style={S.center}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={leaveRoom}>&larr;</button>
+          <button style={S.backBtn} onClick={leaveRoom}>{'\u2190'}</button>
           <span style={{fontWeight:700, fontSize:18}}>La tua Stanza</span>
         </div>
         <div style={S.card}>
@@ -528,26 +581,22 @@ export default function Home() {
             <div style={S.label}>CODICE STANZA</div>
             <div style={{fontSize:36, fontWeight:800, letterSpacing:8, color:'#e94560'}}>{roomId}</div>
           </div>
-
           <div style={{textAlign:'center', marginBottom:16}}>
             <img src={qrUrl} alt="QR Code" style={{width:180, height:180, borderRadius:12, background:'#fff', padding:8}} />
           </div>
-
           <div style={{textAlign:'center', marginBottom:12}}>
             <button style={S.shareBtn} onClick={shareRoom}>
               {'\u{1F4E4}'} Condividi Link
             </button>
           </div>
-
           <div style={{textAlign:'center', color:'#fff8', fontSize:13, marginBottom:12}}>
             {partnerConnected
               ? <span style={{color:'#4ecdc4'}}>{'\u2705'} Partner connesso! ({roomInfo?.members?.[1]?.name})</span>
               : <span>{'\u23F3'} In attesa dell{"'"}altra persona...</span>
             }
           </div>
-
           {partnerConnected && (
-            <button style={S.btn} onClick={enterRoom}>
+            <button style={S.btn} onClick={() => { unlockAudio(); enterRoom(); }}>
               Inizia a Tradurre {'\u25B6'}
             </button>
           )}
@@ -556,7 +605,7 @@ export default function Home() {
     </div>
   );
 
-  // --- ROOM (translator) ---
+  // --- ROOM ---
   if (view === 'room') {
     const partner = roomInfo?.members?.find(m => m.name !== prefs.name);
     const myL = getLang(myLang);
@@ -566,7 +615,7 @@ export default function Home() {
       <div style={S.roomPage}>
         {/* Header */}
         <div style={S.roomHeader}>
-          <button style={S.backBtnSmall} onClick={leaveRoom}>&larr;</button>
+          <button style={S.backBtnSmall} onClick={leaveRoom}>{'\u2190'}</button>
           <div style={{flex:1, textAlign:'center'}}>
             <span style={{fontSize:14}}>{myL.flag} {myL.name}</span>
             <span style={{margin:'0 8px', color:'#e94560'}}>{'\u21C4'}</span>
@@ -576,6 +625,18 @@ export default function Home() {
             {partnerConnected ? '\u{1F7E2}' : '\u{1F534}'}
           </div>
         </div>
+
+        {/* Partner speaking indicator */}
+        {partnerSpeaking && (
+          <div style={S.speakingBar}>
+            <div style={S.speakingDots}>
+              <span style={{...S.dot, animationDelay:'0s'}}/>
+              <span style={{...S.dot, animationDelay:'0.2s'}}/>
+              <span style={{...S.dot, animationDelay:'0.4s'}}/>
+            </div>
+            <span style={{fontSize:13}}>{partner?.name || 'Partner'} sta parlando...</span>
+          </div>
+        )}
 
         {/* Messages */}
         <div style={S.chatArea}>
@@ -594,10 +655,18 @@ export default function Home() {
                   {isMine ? 'Tu' : m.sender}
                 </div>
                 <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
-                  <div style={{fontSize:15, fontWeight:600}}>{isMine ? m.original : m.translated}</div>
+                  <div style={{fontSize:15, fontWeight:600}}>
+                    {isMine ? m.original : m.translated}
+                  </div>
                   <div style={{fontSize:12, color:'#fff8', fontStyle:'italic', marginTop:3}}>
                     {isMine ? m.translated : m.original}
                   </div>
+                  {/* Play button */}
+                  <button
+                    onClick={() => playMessage(m)}
+                    style={{...S.playBtn, ...(playingMsgId === m.id ? S.playBtnActive : {})}}>
+                    {playingMsgId === m.id ? '\u{1F50A}' : '\u{1F509}'}
+                  </button>
                 </div>
               </div>
             );
@@ -605,16 +674,29 @@ export default function Home() {
           <div ref={msgsEndRef} />
         </div>
 
-        {/* Push to talk */}
+        {/* Status + Push to talk */}
         <div style={S.talkBar}>
           {status && <div style={{fontSize:12, color:'#e94560', marginBottom:6}}>{status}</div>}
+          {!audioUnlocked && (
+            <div style={{fontSize:11, color:'#ff9', marginBottom:6}}>
+              Tocca il microfono per attivare l{"'"}audio
+            </div>
+          )}
           <button style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}
             onTouchStart={startRecording} onTouchEnd={stopRecording}
             onMouseDown={startRecording} onMouseUp={stopRecording}>
             <span style={{fontSize:28}}>{'\u{1F3A4}'}</span>
-            <span style={{fontSize:12, marginTop:4}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
+            <span style={{fontSize:11, marginTop:4}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
           </button>
         </div>
+
+        {/* CSS animation for speaking dots */}
+        <style>{`
+          @keyframes vtPulse {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -665,17 +747,27 @@ const S = {
   shareBtn: { padding:'10px 24px', borderRadius:12, border:'1px solid rgba(255,255,255,0.2)',
     background:'rgba(255,255,255,0.06)', color:'#fff', fontSize:14, cursor:'pointer' },
   statusMsg: { marginTop:12, fontSize:13, color:'#e94560', textAlign:'center' },
-  // Room styles
+  // Room
   roomPage: { display:'flex', flexDirection:'column', height:'100vh', background:'#0a0a0f', color:'#fff',
     fontFamily:'-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif' },
   roomHeader: { display:'flex', alignItems:'center', padding:'10px 12px', background:'rgba(255,255,255,0.04)',
     borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0 },
   backBtnSmall: { width:32, height:32, borderRadius:8, background:'transparent', border:'1px solid rgba(255,255,255,0.15)',
     color:'#fff', fontSize:16, cursor:'pointer' },
+  speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'8px 16px',
+    background:'rgba(233,69,96,0.15)', borderBottom:'1px solid rgba(233,69,96,0.3)',
+    color:'#e94560', fontSize:13, flexShrink:0 },
+  speakingDots: { display:'flex', gap:3, alignItems:'center' },
+  dot: { width:8, height:8, borderRadius:'50%', background:'#e94560',
+    animation:'vtPulse 1.2s infinite ease-in-out', display:'inline-block' },
   chatArea: { flex:1, overflowY:'auto', padding:'16px 12px', minHeight:0 },
-  bubble: { maxWidth:'80%', padding:'10px 14px', borderRadius:16 },
+  bubble: { maxWidth:'80%', padding:'10px 14px', borderRadius:16, position:'relative' },
   bubbleMine: { background:'rgba(233,69,96,0.2)', borderBottomRightRadius:4 },
   bubbleOther: { background:'rgba(15,52,96,0.5)', borderBottomLeftRadius:4 },
+  playBtn: { position:'absolute', top:4, right:4, width:28, height:28, borderRadius:'50%',
+    background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', fontSize:14,
+    cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' },
+  playBtnActive: { background:'rgba(233,69,96,0.4)' },
   talkBar: { flexShrink:0, padding:'12px 16px 24px', display:'flex', flexDirection:'column', alignItems:'center',
     background:'rgba(255,255,255,0.02)', borderTop:'1px solid rgba(255,255,255,0.08)' },
   talkBtn: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',

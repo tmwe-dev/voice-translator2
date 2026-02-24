@@ -87,6 +87,20 @@ export async function getMessages(roomId, after = 0) {
     .filter(m => m.timestamp > after);
 }
 
+export async function setSpeaking(roomId, memberName, speaking) {
+  const key = `room:${roomId.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
+  const member = room.members.find(m => m.name === memberName);
+  if (member) {
+    member.speaking = speaking;
+    member.speakingAt = speaking ? Date.now() : 0;
+  }
+  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
+  return room;
+}
+
 export async function updateHeartbeat(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
