@@ -4,10 +4,10 @@ import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
 export async function POST(req) {
   try {
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
     const formData = await req.formData();
     const audioFile = formData.get('audio');
     const sourceLang = formData.get('sourceLang');
@@ -17,14 +17,12 @@ export async function POST(req) {
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
-    // Save audio to temp file
     const bytes = await audioFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
     const ext = audioFile.type?.includes('webm') ? 'webm' : audioFile.type?.includes('mp4') ? 'mp4' : 'webm';
     const tempPath = join('/tmp', `audio-${Date.now()}.${ext}`);
     await writeFile(tempPath, buffer);
 
-    // 1) Whisper transcription
     const transcription = await openai.audio.transcriptions.create({
       file: createReadStream(tempPath),
       model: 'whisper-1',
@@ -35,7 +33,6 @@ export async function POST(req) {
     const original = transcription.text;
     if (!original.trim()) return NextResponse.json({ original: '', translated: '' });
 
-    // 2) GPT translation
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
@@ -56,5 +53,3 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
-
-export const config = { api: { bodyParser: false } };
