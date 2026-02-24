@@ -32,6 +32,12 @@ const LANGS = [
 const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
 const AVATARS = ['\u{1F9D1}\u200D\u{1F4BB}','\u{1F468}\u200D\u{1F4BC}','\u{1F469}\u200D\u{1F4BC}','\u{1F9D1}\u200D\u{1F3A8}','\u{1F468}\u200D\u{1F3EB}','\u{1F469}\u200D\u{1F3EB}','\u{1F9D1}\u200D\u{1F52C}','\u{1F468}\u200D\u{1F373}','\u{1F469}\u200D\u{1F680}','\u{1F9D1}\u200D\u{1F3A4}','\u{1F47D}','\u{1F916}'];
 
+const MODES = [
+  { id:'conversation', name:'Conversazione', icon:'\u{1F4AC}', desc:'Push-to-talk a turni' },
+  { id:'classroom', name:'Classroom', icon:'\u{1F3EB}', desc:'Host parla, gli altri ascoltano' },
+  { id:'freetalk', name:'Free Talk', icon:'\u{1F389}', desc:'Parla liberamente, traduzione automatica' },
+];
+
 function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
 
 export default function Home() {
@@ -49,6 +55,8 @@ export default function Home() {
   const [playingMsgId, setPlayingMsgId] = useState(null);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
   const [audioTestOk, setAudioTestOk] = useState(false);
+  const [selectedMode, setSelectedMode] = useState('conversation');
+  const [isListening, setIsListening] = useState(false); // For freetalk VAD
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -60,6 +68,11 @@ export default function Home() {
   const isPlayingRef = useRef(false);
   const myLangRef = useRef(myLang);
   const roomInfoRef = useRef(roomInfo);
+  const vadStreamRef = useRef(null);
+  const vadRecRef = useRef(null);
+  const vadTimerRef = useRef(null);
+  const silenceTimerRef = useRef(null);
+  const vadAnalyserRef = useRef(null);
 
   // Keep refs in sync
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
@@ -281,7 +294,7 @@ export default function Home() {
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', name: prefs.name, lang: myLang })
+        body: JSON.stringify({ action: 'create', name: prefs.name, lang: myLang, mode: selectedMode })
       });
       if (!res.ok) throw new Error('Errore creazione');
       const { room } = await res.json();
@@ -322,6 +335,7 @@ export default function Home() {
 
   function leaveRoom() {
     stopPolling();
+    stopFreeTalk();
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);
@@ -363,48 +377,9 @@ export default function Home() {
       const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
       if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
 
-      // Use refs for current values (avoids stale closures)
-      const currentMyLang = myLangRef.current;
-      const currentRoomInfo = roomInfoRef.current;
-      const currentPrefs = prefsRef.current;
-      const myL = getLang(currentMyLang);
-
-      // Find the other member's language from room info
-      let otherLangCode = null;
-      if (currentRoomInfo && currentRoomInfo.members) {
-        const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
-        if (other) otherLangCode = other.lang;
-      }
-      // Fallback: if no partner found, use a sensible default
-      if (!otherLangCode) {
-        otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
-      }
-      const otherL = getLang(otherLangCode);
-
-      console.log('Translation:', myL.code, '->', otherL.code, '| Room members:', currentRoomInfo?.members?.map(m => m.name + ':' + m.lang));
-
       try {
-        const form = new FormData();
-        form.append('audio', blob, 'audio.webm');
-        form.append('sourceLang', myL.code);
-        form.append('targetLang', otherL.code);
-        form.append('sourceLangName', myL.name);
-        form.append('targetLangName', otherL.name);
-
-        const res = await fetch('/api/process', { method: 'POST', body: form });
-        if (!res.ok) throw new Error('Errore server');
-        const { original, translated } = await res.json();
-
-        if (original && roomId) {
-          await fetch('/api/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              roomId, sender: currentPrefs.name, original, translated,
-              sourceLang: myL.code, targetLang: otherL.code
-            })
-          });
-        }
+        setStatus('Traduzione...');
+        await processAndSendAudio(blob);
       } catch (err) {
         setStatus('Errore: ' + err.message);
       }
@@ -413,6 +388,135 @@ export default function Home() {
     };
     recRef.current.stop();
   }
+
+  // --- Free Talk: Voice Activity Detection ---
+  async function startFreeTalk() {
+    if (isListening) return;
+    unlockAudio();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      vadStreamRef.current = stream;
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      vadAnalyserRef.current = analyser;
+      setIsListening(true);
+
+      let isRecording = false;
+      const threshold = 25; // volume threshold
+      const silenceDelay = 1500; // ms of silence before stopping
+
+      function checkVolume() {
+        if (!vadAnalyserRef.current) return;
+        const data = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(data);
+        const avg = data.reduce((a, b) => a + b, 0) / data.length;
+
+        if (avg > threshold && !isRecording) {
+          // Start recording
+          isRecording = true;
+          if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+          const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+          const chunks = [];
+          const rec = new MediaRecorder(stream, { mimeType: mime });
+          rec.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+          rec.onstop = async () => {
+            const blob = new Blob(chunks, { type: rec.mimeType });
+            if (blob.size > 1000) {
+              await processAndSendAudio(blob);
+            }
+          };
+          vadRecRef.current = rec;
+          rec.start(100);
+          setRecording(true);
+          if (roomId) setSpeakingState(roomId, true);
+        } else if (avg <= threshold && isRecording) {
+          // Start silence timer
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              // Stop recording after silence
+              if (vadRecRef.current && vadRecRef.current.state === 'recording') {
+                vadRecRef.current.stop();
+              }
+              isRecording = false;
+              setRecording(false);
+              if (roomId) setSpeakingState(roomId, false);
+              silenceTimerRef.current = null;
+            }, silenceDelay);
+          }
+        } else if (avg > threshold && isRecording) {
+          // Voice resumed, cancel silence timer
+          if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+        }
+
+        vadTimerRef.current = requestAnimationFrame(checkVolume);
+      }
+      checkVolume();
+    } catch (err) {
+      setStatus('Errore microfono: ' + err.message);
+    }
+  }
+
+  function stopFreeTalk() {
+    setIsListening(false);
+    setRecording(false);
+    if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+    if (vadRecRef.current && vadRecRef.current.state === 'recording') vadRecRef.current.stop();
+    if (vadStreamRef.current) { vadStreamRef.current.getTracks().forEach(t => t.stop()); vadStreamRef.current = null; }
+    vadAnalyserRef.current = null;
+  }
+
+  // Shared audio processing for both push-to-talk and freetalk
+  async function processAndSendAudio(blob) {
+    const currentMyLang = myLangRef.current;
+    const currentRoomInfo = roomInfoRef.current;
+    const currentPrefs = prefsRef.current;
+    const myL = getLang(currentMyLang);
+
+    let otherLangCode = null;
+    if (currentRoomInfo && currentRoomInfo.members) {
+      const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
+      if (other) otherLangCode = other.lang;
+    }
+    if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
+    const otherL = getLang(otherLangCode);
+
+    try {
+      const form = new FormData();
+      form.append('audio', blob, 'audio.webm');
+      form.append('sourceLang', myL.code);
+      form.append('targetLang', otherL.code);
+      form.append('sourceLangName', myL.name);
+      form.append('targetLangName', otherL.name);
+
+      const res = await fetch('/api/process', { method: 'POST', body: form });
+      if (!res.ok) throw new Error('Errore server');
+      const { original, translated } = await res.json();
+
+      if (original && roomId) {
+        await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId, sender: currentPrefs.name, original, translated,
+            sourceLang: myL.code, targetLang: otherL.code
+          })
+        });
+      }
+    } catch (err) {
+      console.error('Process error:', err);
+    }
+  }
+
+  // Cleanup freetalk on unmount or view change
+  useEffect(() => {
+    return () => stopFreeTalk();
+  }, []);
 
   // --- Share ---
   function shareRoom() {
@@ -559,23 +663,41 @@ export default function Home() {
   // --- HOME ---
   if (view === 'home') return (
     <div style={S.page}>
-      <div style={S.center}>
-        <div style={{fontSize:44, marginBottom:4}}>{prefs.avatar}</div>
-        <div style={{fontSize:18, fontWeight:700, marginBottom:2}}>Ciao, {prefs.name}!</div>
-        <div style={{color:'#fff8', fontSize:13, marginBottom:24}}>{getLang(prefs.lang).flag} {getLang(prefs.lang).name}</div>
+      <div style={S.scrollCenter}>
+        <div style={{fontSize:40, marginBottom:2}}>{prefs.avatar}</div>
+        <div style={{fontSize:17, fontWeight:700, marginBottom:2}}>Ciao, {prefs.name}!</div>
+        <div style={{color:'#fff8', fontSize:12, marginBottom:16}}>{getLang(prefs.lang).flag} {getLang(prefs.lang).name}</div>
+
+        {/* Mode selector */}
+        <div style={{width:'100%', maxWidth:380, marginBottom:14}}>
+          <div style={{...S.label, marginBottom:6}}>MODALIT{"A'"}</div>
+          <div style={{display:'flex', gap:6}}>
+            {MODES.map(m => (
+              <button key={m.id} onClick={() => setSelectedMode(m.id)}
+                style={{...S.modeBtn, ...(selectedMode===m.id ? S.modeBtnSel : {})}}>
+                <span style={{fontSize:20}}>{m.icon}</span>
+                <span style={{fontSize:11, fontWeight:600}}>{m.name}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11, color:'#fff7', marginTop:4, textAlign:'center'}}>
+            {MODES.find(m => m.id === selectedMode)?.desc}
+          </div>
+        </div>
+
         <button style={S.bigBtn} onClick={handleCreateRoom}>
-          <span style={{fontSize:24}}>{'\u2795'}</span>
+          <span style={{fontSize:22}}>{'\u2795'}</span>
           <div>
-            <div style={{fontWeight:700, fontSize:15}}>Crea Stanza</div>
-            <div style={{fontSize:11, color:'#fffa'}}>Avvia una nuova traduzione</div>
+            <div style={{fontWeight:700, fontSize:14}}>Crea Stanza</div>
+            <div style={{fontSize:10, color:'#fffa'}}>{MODES.find(m => m.id === selectedMode)?.name}</div>
           </div>
         </button>
         <button style={{...S.bigBtn, background:'linear-gradient(135deg,#0f3460,#16213e)'}}
           onClick={() => setView('join')}>
-          <span style={{fontSize:24}}>{'\u{1F517}'}</span>
+          <span style={{fontSize:22}}>{'\u{1F517}'}</span>
           <div>
-            <div style={{fontWeight:700, fontSize:15}}>Entra nella Stanza</div>
-            <div style={{fontSize:11, color:'#fffa'}}>Inserisci il codice o scansiona il QR</div>
+            <div style={{fontWeight:700, fontSize:14}}>Entra nella Stanza</div>
+            <div style={{fontSize:10, color:'#fffa'}}>Inserisci il codice o scansiona il QR</div>
           </div>
         </button>
         <button style={S.settingsBtn} onClick={() => setView('settings')}>
@@ -659,6 +781,12 @@ export default function Home() {
     const partner = roomInfo?.members?.find(m => m.name !== prefs.name);
     const myL = getLang(myLang);
     const otherL = partner ? getLang(partner.lang) : getLang('en');
+    const roomMode = roomInfo?.mode || 'conversation';
+    const isHost = roomInfo?.host === prefs.name;
+    const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
+
+    // Classroom: only host can talk (or guest with permission - future)
+    const canTalk = roomMode === 'classroom' ? isHost : true;
 
     return (
       <div style={S.roomPage}>
@@ -666,13 +794,14 @@ export default function Home() {
         <div style={S.roomHeader}>
           <button style={S.backBtnSmall} onClick={leaveRoom}>{'\u2190'}</button>
           <div style={{flex:1, textAlign:'center'}}>
-            <span style={{fontSize:13}}>{myL.flag} {myL.name}</span>
-            <span style={{margin:'0 6px', color:'#e94560'}}>{'\u21C4'}</span>
-            <span style={{fontSize:13}}>{otherL.flag} {otherL.name}</span>
+            <span style={{fontSize:12}}>{myL.flag}</span>
+            <span style={{margin:'0 4px', color:'#e94560', fontSize:11}}>{'\u21C4'}</span>
+            <span style={{fontSize:12}}>{otherL.flag}</span>
+            <span style={{marginLeft:6, fontSize:10, color:'#fff6', background:'rgba(255,255,255,0.08)', padding:'2px 6px', borderRadius:8}}>
+              {modeInfo.icon} {modeInfo.name}
+            </span>
           </div>
-          {/* Audio status indicator */}
-          <button onClick={testAudio} style={S.audioIndicator}
-            title={audioUnlocked ? 'Audio attivo - tocca per test' : 'Audio non attivo - tocca per attivare'}>
+          <button onClick={testAudio} style={S.audioIndicator}>
             {audioUnlocked ? '\u{1F50A}' : '\u{1F507}'}
           </button>
           <div style={{fontSize:10, color: partnerConnected ? '#4ecdc4' : '#ff6b6b', marginLeft:4}}>
@@ -688,16 +817,30 @@ export default function Home() {
               <span style={{...S.dot, animationDelay:'0.2s'}}/>
               <span style={{...S.dot, animationDelay:'0.4s'}}/>
             </div>
-            <span style={{fontSize:13}}>{partner?.name || 'Partner'} sta parlando...</span>
+            <span style={{fontSize:12}}>{partner?.name || 'Partner'} sta parlando...</span>
+          </div>
+        )}
+
+        {/* Classroom: guest info bar */}
+        {roomMode === 'classroom' && !isHost && (
+          <div style={{padding:'6px 14px', background:'rgba(78,205,196,0.1)', borderBottom:'1px solid rgba(78,205,196,0.2)',
+            fontSize:11, color:'#4ecdc4', textAlign:'center', flexShrink:0}}>
+            {'\u{1F3EB}'} Modalit{"a'"} Classroom - {roomInfo?.host || 'Host'} sta presentando
           </div>
         )}
 
         {/* Messages */}
         <div style={S.chatArea}>
           {messages.length === 0 && (
-            <div style={{textAlign:'center', color:'#fff5', marginTop:40, fontSize:14}}>
-              Tieni premuto il microfono per parlare.<br/>
-              La traduzione apparir{"à"} qui.
+            <div style={{textAlign:'center', color:'#fff5', marginTop:40, fontSize:13}}>
+              {roomMode === 'freetalk'
+                ? <>Attiva il microfono per iniziare.<br/>La traduzione avverr{"a'"} automaticamente.</>
+                : roomMode === 'classroom'
+                  ? isHost
+                    ? <>Tieni premuto per parlare.<br/>I tuoi ospiti riceveranno la traduzione.</>
+                    : <>In ascolto del presentatore.<br/>La traduzione apparir{"a'"} qui.</>
+                  : <>Tieni premuto il microfono per parlare.<br/>La traduzione apparir{"a'"} qui.</>
+              }
             </div>
           )}
           {messages.map((m, i) => {
@@ -715,7 +858,6 @@ export default function Home() {
                   <div style={{fontSize:11, color:'#fff8', fontStyle:'italic', marginTop:2}}>
                     {isMine ? m.translated : m.original}
                   </div>
-                  {/* Play button */}
                   <button
                     onClick={() => playMessage(m)}
                     style={{...S.playBtn, ...(playingMsgId === m.id ? S.playBtnActive : {})}}>
@@ -728,23 +870,48 @@ export default function Home() {
           <div ref={msgsEndRef} />
         </div>
 
-        {/* Status + Push to talk */}
+        {/* Talk bar - different per mode */}
         <div style={S.talkBar}>
-          {status && <div style={{fontSize:12, color:'#e94560', marginBottom:4}}>{status}</div>}
+          {status && <div style={{fontSize:11, color:'#e94560', marginBottom:4}}>{status}</div>}
           {!audioUnlocked && (
-            <div style={{fontSize:11, color:'#ff9', marginBottom:4, textAlign:'center'}}>
-              Tocca {'\u{1F50A}'} in alto o il microfono per attivare l{"'"}audio
+            <div style={{fontSize:10, color:'#ff9', marginBottom:4, textAlign:'center'}}>
+              Tocca {'\u{1F50A}'} o il microfono per attivare l{"'"}audio
             </div>
           )}
-          <button style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}
-            onTouchStart={startRecording} onTouchEnd={stopRecording}
-            onMouseDown={startRecording} onMouseUp={stopRecording}>
-            <span style={{fontSize:26}}>{'\u{1F3A4}'}</span>
-            <span style={{fontSize:10, marginTop:2}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
-          </button>
+
+          {/* CONVERSATION / CLASSROOM: Push-to-talk */}
+          {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
+            <button style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}
+              onTouchStart={startRecording} onTouchEnd={stopRecording}
+              onMouseDown={startRecording} onMouseUp={stopRecording}>
+              <span style={{fontSize:24}}>{'\u{1F3A4}'}</span>
+              <span style={{fontSize:9, marginTop:2}}>{recording ? 'Rilascia per inviare' : 'Tieni premuto'}</span>
+            </button>
+          )}
+
+          {/* CLASSROOM: Guest can't talk */}
+          {roomMode === 'classroom' && !canTalk && (
+            <div style={{display:'flex', alignItems:'center', gap:8, color:'#fff6', fontSize:12}}>
+              <span>{'\u{1F3EB}'}</span>
+              <span>Solo l{"'"}host pu{"o'"} parlare</span>
+            </div>
+          )}
+
+          {/* FREE TALK: Toggle mic */}
+          {roomMode === 'freetalk' && (
+            <button
+              onClick={() => isListening ? stopFreeTalk() : startFreeTalk()}
+              style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
+                ...(recording ? {boxShadow:'0 0 0 8px rgba(233,69,96,0.3), 0 0 0 16px rgba(233,69,96,0.15)'} : {})}}>
+              <span style={{fontSize:24}}>{isListening ? '\u{1F534}' : '\u{1F3A4}'}</span>
+              <span style={{fontSize:9, marginTop:2}}>
+                {isListening ? (recording ? 'Parlo...' : 'In ascolto') : 'Attiva mic'}
+              </span>
+            </button>
+          )}
         </div>
 
-        {/* CSS animation for speaking dots */}
+        {/* CSS animations */}
         <style>{`
           @keyframes vtPulse {
             0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
@@ -836,4 +1003,9 @@ const S = {
     background:'rgba(255,255,255,0.06)', color:'#fff', cursor:'pointer', touchAction:'manipulation' },
   talkBtnRec: { borderColor:'#e94560', background:'rgba(233,69,96,0.25)',
     boxShadow:'0 0 0 8px rgba(233,69,96,0.15), 0 0 0 16px rgba(233,69,96,0.08)' },
+  // Mode buttons
+  modeBtn: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+    padding:'8px 4px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)',
+    background:'rgba(255,255,255,0.04)', color:'#fff9', cursor:'pointer' },
+  modeBtnSel: { borderColor:'#e94560', background:'rgba(233,69,96,0.15)', color:'#fff' },
 };

@@ -4,11 +4,11 @@ import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking } from '../
 // POST /api/room - Create or join a room
 export async function POST(req) {
   try {
-    const { action, roomId, name, lang, speaking } = await req.json();
+    const { action, roomId, name, lang, speaking, mode } = await req.json();
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
-      const room = await createRoom(name, lang);
+      const room = await createRoom(name, lang, mode || 'conversation');
       return NextResponse.json({ room });
     }
 

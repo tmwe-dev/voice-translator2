@@ -18,12 +18,14 @@ async function redis(command, ...args) {
   return data.result;
 }
 
-export async function createRoom(creatorName, creatorLang) {
+export async function createRoom(creatorName, creatorLang, mode = 'conversation') {
   const id = Math.random().toString(36).substring(2, 8).toUpperCase();
   const room = {
     id,
     created: Date.now(),
-    members: [{ name: creatorName, lang: creatorLang, joined: Date.now() }]
+    mode, // 'conversation', 'classroom', 'freetalk'
+    host: creatorName, // creator is always host
+    members: [{ name: creatorName, lang: creatorLang, joined: Date.now(), role: 'host' }]
   };
   // Store room with 1 hour TTL
   await redis('SET', `room:${id}`, JSON.stringify(room), 'EX', 3600);
@@ -48,9 +50,9 @@ export async function joinRoom(id, name, lang) {
     room.members[existing].lang = lang;
     room.members[existing].joined = Date.now();
   } else if (room.members.length < 2) {
-    room.members.push({ name, lang, joined: Date.now() });
+    room.members.push({ name, lang, joined: Date.now(), role: 'guest' });
   } else {
-    room.members[1] = { name, lang, joined: Date.now() };
+    room.members[1] = { name, lang, joined: Date.now(), role: 'guest' };
   }
 
   // Update with refreshed TTL
