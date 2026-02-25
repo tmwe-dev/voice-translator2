@@ -86,6 +86,24 @@ export default function Home() {
     queueAudio: audio.queueAudio,
     getEffectiveToken: auth.getEffectiveToken
   });
+  const translation = useTranslation({
+    myLangRef,
+    roomInfoRef,
+    prefsRef,
+    roomId: roomPolling.roomId,
+    roomContextRef,
+    isTrialRef: auth.isTrialRef,
+    isTopProRef: auth.isTopProRef,
+    freeCharsRef,
+    useOwnKeys: auth.useOwnKeys,
+    getMicStream: audio.getMicStream,
+    unlockAudio: audio.unlockAudio,
+    broadcastLiveText: roomPolling.broadcastLiveText,
+    setSpeakingState: roomPolling.setSpeakingState,
+    getEffectiveToken: auth.getEffectiveToken,
+    refreshBalance: auth.refreshBalance,
+    trackFreeChars
+  });
 
   // =============================================
   // STYLES & THEME
@@ -116,18 +134,6 @@ export default function Home() {
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomPolling.roomInfo; }, [roomPolling.roomInfo]);
 
-  // Update hooks with current prefs/roomInfo/roomId
-  useEffect(() => {
-    audio.getMicStream = async () => {
-      if (audio.persistentMicRef.current) {
-        const tracks = audio.persistentMicRef.current.getTracks();
-        if (tracks.length > 0 && tracks[0].readyState === 'live') return audio.persistentMicRef.current;
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audio.persistentMicRef.current = stream;
-      return stream;
-    };
-  }, []);
 
   // =============================================
   // FREE TIER USAGE TRACKING
@@ -482,15 +488,15 @@ export default function Home() {
 
   if (view === 'room') return (
     <RoomView L={L} S={S} prefs={prefs} myLang={myLang} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
-      messages={roomPolling.messages} streamingMsg={null} recording={false}
-      isListening={false} partnerConnected={roomPolling.partnerConnected}
+      messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
+      isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
       partnerTyping={roomPolling.partnerTyping} playingMsgId={audio.playingMsgId}
       audioEnabled={audio.audioEnabled} setAudioEnabled={audio.setAudioEnabled}
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} showModeSelector={showModeSelector}
-      setShowModeSelector={setShowModeSelector} textInput={''} setTextInput={() => {}}
-      sendingText={false} sendTextMessage={() => {}} sendTypingState={roomPolling.sendTypingState}
-      toggleRecording={() => {}} startFreeTalk={() => {}} stopFreeTalk={() => {}}
+      setShowModeSelector={setShowModeSelector} textInput={translation.textInput} setTextInput={translation.setTextInput}
+      sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}
+      toggleRecording={translation.toggleRecording} startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
       endChatAndSave={endChatAndSave} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
