@@ -278,6 +278,10 @@ export default function Home() {
       const roomParam = urlParams.get('room');
       if (saved) {
         const p = JSON.parse(saved);
+        // Migrate old emoji avatars to new image paths
+        if (!p.avatar || !p.avatar.startsWith('/avatars/')) {
+          p.avatar = AVATARS[0];
+        }
         setPrefs(p);
         setMyLang(p.lang);
         if (roomParam) { setJoinCode(roomParam.toUpperCase()); setView('join'); }
@@ -1130,12 +1134,18 @@ export default function Home() {
 
   const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${typeof window!=='undefined'?window.location.origin:''}?room=${roomId}`)}` : '';
 
-  // Avatar image component
-  function AvatarImg({ src, size = 32, style = {} }) {
-    return <img src={src || AVATARS[0]} alt="" style={{
-      width:size, height:size, borderRadius:'50%', objectFit:'cover',
-      background:'rgba(255,255,255,0.06)', flexShrink:0, ...style
-    }} />;
+  // Avatar image component - validates src is a valid image path
+  function AvatarImg({ src, size = 36, style = {} }) {
+    const validSrc = (src && src.startsWith('/avatars/')) ? src : AVATARS[0];
+    return <div style={{
+      width:size, height:size, borderRadius:'50%', flexShrink:0, overflow:'hidden',
+      background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center',
+      ...style
+    }}>
+      <img src={validSrc} alt="" style={{
+        width: size * 0.95, height: size * 0.95, objectFit:'contain'
+      }} />
+    </div>;
   }
 
   // =============================================
@@ -1290,7 +1300,7 @@ export default function Home() {
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
-                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:36, height:36, borderRadius:'50%'}} />
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:38, height:38, objectFit:'contain'}} />
                 </button>
               ))}
             </div>
@@ -1343,7 +1353,7 @@ export default function Home() {
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
-                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:36, height:36, borderRadius:'50%'}} />
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:38, height:38, objectFit:'contain'}} />
                 </button>
               ))}
             </div>
@@ -1639,7 +1649,7 @@ export default function Home() {
               <div key={m.id || i} style={{display:'flex', gap:8,
                 flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end'}}>
                 {/* Avatar */}
-                <AvatarImg src={isMine ? prefs.avatar : (partner?.avatar || AVATARS[0])} size={28} style={{marginBottom:2}} />
+                <AvatarImg src={isMine ? prefs.avatar : (partner?.avatar || AVATARS[0])} size={36} style={{marginBottom:2}} />
                 <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
                   alignItems:isMine ? 'flex-end' : 'flex-start'}}>
                   <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3}}>
@@ -1667,7 +1677,7 @@ export default function Home() {
           {/* Streaming live bubble */}
           {streamingMsg && streamingMsg.original && (
             <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
-              <AvatarImg src={prefs.avatar} size={28} style={{marginBottom:2}} />
+              <AvatarImg src={prefs.avatar} size={36} style={{marginBottom:2}} />
               <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
                 <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
                   <span>Tu</span>
@@ -1931,9 +1941,9 @@ const S = {
     border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.45)', fontSize:13,
     cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
     backdropFilter:'blur(10px)' },
-  avatarBtn: { width:42, height:42, borderRadius:14, border:'2px solid transparent',
+  avatarBtn: { width:48, height:48, borderRadius:14, border:'2px solid transparent',
     background:'rgba(255,255,255,0.04)', fontSize:22, cursor:'pointer',
-    display:'flex', alignItems:'center', justifyContent:'center',
+    display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
     WebkitTapHighlightColor:'transparent', transition:'all 0.15s' },
   avatarSel: { borderColor:'#f5576c', background:'rgba(245,87,108,0.12)',
     boxShadow:'0 0 0 3px rgba(245,87,108,0.2)' },
