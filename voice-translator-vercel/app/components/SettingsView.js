@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits, getLang } from '../lib/constants.js';
+import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS } from '../lib/constants.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 
@@ -465,6 +465,76 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               {L('voiceTestPage') || 'Test completo voci'}
             </button>
           </div>
+
+          {/* ══════════════════════════════════════════════════
+              AI TRANSLATION MODEL SELECTOR
+             ══════════════════════════════════════════════════ */}
+          {!isGuest && (() => {
+            // Filter models: own-key users see all models for which they have keys
+            // Platform users only see gpt-4o-mini (default)
+            const availableModels = AI_MODELS.filter(m => {
+              if (!m.ownKeyOnly) return true;
+              if (!useOwnKeys) return false;
+              if (m.provider === 'openai') return hasOpenAI;
+              if (m.provider === 'anthropic') return hasAnthropic;
+              if (m.provider === 'gemini') return hasGemini;
+              return false;
+            });
+
+            const PROVIDER_ICONS = { openai:'\u26A1', anthropic:'\u{1F9E0}', gemini:'\u2728' };
+
+            return (
+              <div style={S.field}>
+                <div style={S.label}>{L('aiTranslationModel') || 'Modello AI traduzione'}</div>
+                <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+                  {useOwnKeys
+                    ? (L('aiModelHintOwnKeys') || 'Scegli il motore AI \u2022 Usa le tue API keys')
+                    : (L('aiModelHint') || 'Scegli il motore di traduzione AI')}
+                </div>
+                <div style={{display:'flex', flexDirection:'column', gap:6}}>
+                  {availableModels.map(m => {
+                    const isSelected = (prefs.aiModel || 'gpt-4o-mini') === m.id;
+                    return (
+                      <button key={m.id} onClick={() => setPrefs({...prefs, aiModel: m.id})}
+                        style={{display:'flex', alignItems:'center', gap:10,
+                          padding:'10px 14px', borderRadius:14, cursor:'pointer',
+                          background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(232,234,255,0.02)',
+                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.06)',
+                          fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
+                        <div style={{width:32, height:32, borderRadius:10, flexShrink:0,
+                          background: isSelected ? 'rgba(108,99,255,0.15)' : 'rgba(232,234,255,0.04)',
+                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                          display:'flex', alignItems:'center', justifyContent:'center'}}>
+                          <span style={{fontSize:14}}>{PROVIDER_ICONS[m.provider] || '\u26A1'}</span>
+                        </div>
+                        <div style={{flex:1, textAlign:'left'}}>
+                          <div style={{fontSize:14, fontWeight: isSelected ? 700 : 500,
+                            color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.6)', letterSpacing:-0.2}}>
+                            {m.name}
+                          </div>
+                          <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                            {m.desc} \u2022 {m.cost}
+                          </div>
+                        </div>
+                        {isSelected && (
+                          <div style={{width:24, height:24, borderRadius:12,
+                            background:'rgba(108,99,255,0.15)', border:'1.5px solid rgba(108,99,255,0.3)',
+                            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                            <span style={{fontSize:12, color:'#6C63FF'}}>{'\u2713'}</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {useOwnKeys && !hasAnthropic && !hasGemini && (
+                  <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', marginTop:8, lineHeight:1.4}}>
+                    {L('addMoreKeysHint') || 'Aggiungi chiavi Anthropic o Gemini per sbloccare altri modelli AI'}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* ══════════════════════════════════════════════════
               ELEVENLABS — TOP PRO

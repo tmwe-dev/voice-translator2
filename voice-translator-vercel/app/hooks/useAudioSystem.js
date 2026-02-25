@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
+import { getLang, AVATAR_NAMES, AVATARS, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
 
 export default function useAudioSystem({
   prefsRef,
@@ -210,6 +210,14 @@ export default function useAudioSystem({
     speechSynthesis.speak(u);
   }
 
+  // Get avatar name from prefs (avatar URL like /avatars/1.png → 'Marcus')
+  function getAvatarName() {
+    const avatar = prefsRef.current?.avatar;
+    if (!avatar) return undefined;
+    const idx = AVATARS.indexOf(avatar);
+    return idx >= 0 ? AVATAR_NAMES[idx] : undefined;
+  }
+
   async function playTTSElevenLabs(text, langCode) {
     try {
       const res = await fetch('/api/tts-elevenlabs', {
@@ -218,7 +226,8 @@ export default function useAudioSystem({
         body: JSON.stringify({
           text,
           voiceId: selectedELVoice || undefined,
-          langCode: langCode?.split('-')[0] || undefined,
+          langCode: langCode || undefined,
+          avatarName: getAvatarName(),
           userToken: getEffectiveToken(),
           roomId: roomIdRef.current || undefined
         })

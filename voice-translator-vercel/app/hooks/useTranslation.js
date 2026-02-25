@@ -91,6 +91,7 @@ export default function useTranslation({
         sourceLangName,
         targetLangName,
         roomId,
+        aiModel: prefsRef.current?.aiModel || undefined,
         ...options,
         userToken: getEffectiveToken()
       })
@@ -269,6 +270,7 @@ export default function useTranslation({
           targetLangName: otherL.name,
           roomId,
           isReview: true,
+          aiModel: prefsRef.current?.aiModel || undefined,
           domainContext: roomContextRef.current.contextPrompt || undefined,
           description: roomContextRef.current.description || undefined,
           userToken: getEffectiveToken()
@@ -366,6 +368,7 @@ export default function useTranslation({
             targetLangName: otherL.name,
             roomId,
             isReview: true,
+            aiModel: prefsRef.current?.aiModel || undefined,
             domainContext: roomContextRef.current.contextPrompt || undefined,
             description: roomContextRef.current.description || undefined,
             userToken: getEffectiveToken()
@@ -476,6 +479,7 @@ export default function useTranslation({
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
+    if (prefsRef.current?.aiModel) form.append('aiModel', prefsRef.current.aiModel);
 
     const res = await fetch('/api/process', { method: 'POST', body: form });
     if (!res.ok) throw new Error('Server error');

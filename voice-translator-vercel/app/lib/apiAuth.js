@@ -30,9 +30,13 @@ export async function resolveAuth({
   skipCreditCheck = false,
   requiredHostTier = null, // null = any non-FREE tier
 }) {
-  const defaultKey = provider === 'elevenlabs'
-    ? process.env.ELEVENLABS_API_KEY
-    : process.env.OPENAI_API_KEY;
+  const envKeys = {
+    openai: process.env.OPENAI_API_KEY,
+    elevenlabs: process.env.ELEVENLABS_API_KEY,
+    anthropic: process.env.ANTHROPIC_API_KEY,
+    gemini: process.env.GEMINI_API_KEY,
+  };
+  const defaultKey = envKeys[provider] || process.env.OPENAI_API_KEY;
 
   let apiKey = defaultKey;
   let isOwnKey = false;

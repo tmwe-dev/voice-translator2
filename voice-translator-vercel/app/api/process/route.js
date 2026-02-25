@@ -20,6 +20,7 @@ export async function POST(req) {
     const domainContext = formData.get('domainContext') || '';
     const description = formData.get('description') || '';
     const userToken = formData.get('userToken') || '';
+    const aiModel = formData.get('aiModel') || '';
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
@@ -56,8 +57,12 @@ export async function POST(req) {
     if (domainContext) sysPrompt += `\n\n${domainContext}`;
     if (description) sysPrompt += `\nAdditional context about this conversation: ${description}`;
 
+    // Allow model selection: gpt-4o-mini (default) or gpt-4o
+    const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o'];
+    const selectedModel = ALLOWED_MODELS.includes(aiModel) ? aiModel : 'gpt-4o-mini';
+
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: selectedModel,
       messages: [
         { role: 'system', content: sysPrompt },
         { role: 'user', content: original }

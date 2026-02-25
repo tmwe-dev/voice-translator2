@@ -31,6 +31,17 @@ export const LANGS = [
 ];
 
 export const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
+
+// AI translation models
+// ownKeyOnly: true means only available for users with own API keys
+export const AI_MODELS = [
+  { id:'gpt-4o-mini', name:'GPT-4o Mini', desc:'Veloce ed economico', cost:'~0.1¢/msg', provider:'openai', default:true },
+  { id:'gpt-4o', name:'GPT-4o', desc:'Più preciso, costo 10x', cost:'~1¢/msg', provider:'openai', ownKeyOnly:true },
+  { id:'claude-sonnet', name:'Claude Sonnet 4.5', desc:'Eccellente qualità', cost:'~0.5¢/msg', provider:'anthropic', ownKeyOnly:true },
+  { id:'claude-haiku', name:'Claude Haiku 4.5', desc:'Veloce e preciso', cost:'~0.1¢/msg', provider:'anthropic', ownKeyOnly:true },
+  { id:'gemini-flash', name:'Gemini 2.0 Flash', desc:'Ultra veloce, Google', cost:'~0.05¢/msg', provider:'gemini', ownKeyOnly:true },
+  { id:'gemini-pro', name:'Gemini 2.5 Pro', desc:'Alta qualità, Google', cost:'~0.3¢/msg', provider:'gemini', ownKeyOnly:true },
+];
 export const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.png`);
 export const AVATAR_NAMES = ['Marcus','Elena','Omar','Aisha','Alex','Thomas','Yuki','Margaret','Leo'];
 

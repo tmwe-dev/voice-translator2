@@ -4,30 +4,55 @@ import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 
-// Default voices by language
-// Default multilingual voice (ElevenLabs eleven_multilingual_v2 supports all these languages)
-const DEFAULT_VOICES = {
-  'it': 'EXAVITQu4vr4xnSDxMaL',
-  'en': 'EXAVITQu4vr4xnSDxMaL',
-  'es': 'EXAVITQu4vr4xnSDxMaL',
-  'fr': 'EXAVITQu4vr4xnSDxMaL',
-  'de': 'EXAVITQu4vr4xnSDxMaL',
-  'pt': 'EXAVITQu4vr4xnSDxMaL',
-  'zh': 'EXAVITQu4vr4xnSDxMaL',
-  'ja': 'EXAVITQu4vr4xnSDxMaL',
-  'ko': 'EXAVITQu4vr4xnSDxMaL',
-  'th': 'EXAVITQu4vr4xnSDxMaL',
-  'ar': 'EXAVITQu4vr4xnSDxMaL',
-  'hi': 'EXAVITQu4vr4xnSDxMaL',
-  'ru': 'EXAVITQu4vr4xnSDxMaL',
-  'tr': 'EXAVITQu4vr4xnSDxMaL',
-  'vi': 'EXAVITQu4vr4xnSDxMaL',
-  'default': 'EXAVITQu4vr4xnSDxMaL'
+// Languages NOT supported by eleven_multilingual_v2 (need v3 or flash_v2_5)
+const V3_ONLY_LANGS = new Set(['th', 'vi', 'hu']);
+
+// ElevenLabs language_code mapping (ISO 639-1 → ElevenLabs code)
+const LANG_CODES = {
+  'it':'it', 'en':'en', 'es':'es', 'fr':'fr', 'de':'de', 'pt':'pt',
+  'zh':'zh', 'ja':'ja', 'ko':'ko', 'ar':'ar', 'hi':'hi', 'ru':'ru',
+  'tr':'tr', 'id':'id', 'ms':'ms', 'nl':'nl', 'pl':'pl', 'sv':'sv',
+  'el':'el', 'cs':'cs', 'ro':'ro', 'fi':'fi', 'th':'th', 'vi':'vi', 'hu':'hu'
+};
+
+// Default curated voices per avatar gender (ElevenLabs premade voice IDs)
+// Male voices:
+const MALE_VOICES = {
+  default: 'pNInz6obpgDQGcFmaJgB', // Adam - deep male
+  alt1: 'ErXwobaYiN019PkySvjV',    // Antoni - warm male
+  alt2: 'TxGEqnHWrfWFTfGW9XjX',    // Josh - young male
+  alt3: 'VR6AewLTigWG4xSOukaG',    // Arnold - strong male
+  alt4: 'GBv7mTt0atIp3Br8iCZE',    // Thomas - calm male
+  alt5: '29vD33N1CtxCmqQRPOHJ',    // Drew - confident male
+};
+
+// Female voices:
+const FEMALE_VOICES = {
+  default: 'EXAVITQu4vr4xnSDxMaL', // Sarah/Bella - warm female
+  alt1: '21m00Tcm4TlvDq8ikWAM',    // Rachel - natural female
+  alt2: 'XB0fDUnXU5powFXDhCwa',    // Charlotte - elegant female
+  alt3: 'piTKgcLEGmPE4e6mEKli',    // Nicole - friendly female
+  alt4: 'MF3mGyEYCl7XYWbV9V6O',    // Elli - soft female
+};
+
+// Avatar name → voice mapping
+// Marcus=male, Elena=female, Omar=male, Aisha=female, Alex=male,
+// Thomas=male, Yuki=female, Margaret=female, Leo=male
+const AVATAR_VOICE_MAP = {
+  'Marcus':   MALE_VOICES.default,   // Adam - deep, authoritative
+  'Elena':    FEMALE_VOICES.default,  // Sarah - warm, natural
+  'Omar':     MALE_VOICES.alt1,       // Antoni - warm
+  'Aisha':    FEMALE_VOICES.alt1,     // Rachel - natural
+  'Alex':     MALE_VOICES.alt2,       // Josh - young
+  'Thomas':   MALE_VOICES.alt4,       // Thomas - calm
+  'Yuki':     FEMALE_VOICES.alt2,     // Charlotte - elegant
+  'Margaret': FEMALE_VOICES.alt3,     // Nicole - friendly
+  'Leo':      MALE_VOICES.alt5,       // Drew - confident
 };
 
 export async function POST(req) {
   try {
-    const { text, voiceId, langCode, userToken, roomId } = await req.json();
+    const { text, voiceId, langCode, userToken, roomId, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
     // 3-tier auth: userToken → roomId → reject (TOP PRO only for guests)
@@ -39,7 +64,17 @@ export async function POST(req) {
       requiredHostTier: 'TOP PRO',
     });
 
-    const selectedVoice = voiceId || DEFAULT_VOICES[langCode] || DEFAULT_VOICES.default;
+    // Voice selection priority: explicit voiceId → avatar mapping → default
+    const selectedVoice = voiceId
+      || (avatarName && AVATAR_VOICE_MAP[avatarName])
+      || FEMALE_VOICES.default;
+
+    // Choose model: v3 for Thai/Vietnamese/Hungarian, multilingual_v2 for others
+    const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
+    const modelId = V3_ONLY_LANGS.has(lang2) ? 'eleven_v3' : 'eleven_multilingual_v2';
+
+    // Map language code for pronunciation
+    const elLangCode = LANG_CODES[lang2] || undefined;
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
       method: 'POST',
@@ -50,7 +85,8 @@ export async function POST(req) {
       },
       body: JSON.stringify({
         text: text.trim(),
-        model_id: 'eleven_multilingual_v2',
+        model_id: modelId,
+        language_code: elLangCode,
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
@@ -63,6 +99,30 @@ export async function POST(req) {
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
       console.error('ElevenLabs TTS error:', response.status, errText);
+
+      // If v3 fails, fallback to multilingual_v2
+      if (modelId === 'eleven_v3') {
+        console.log('v3 failed, trying multilingual_v2 fallback');
+        const fallback = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
+          method: 'POST',
+          headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
+          body: JSON.stringify({
+            text: text.trim(), model_id: 'eleven_multilingual_v2',
+            language_code: elLangCode,
+            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+          })
+        });
+        if (fallback.ok) {
+          const buf = Buffer.from(await fallback.arrayBuffer());
+          // Deduct cost
+          if (billingEmail && !isOwnKey) {
+            const cost = usdToEurCents(calcElevenLabsCost(text.trim().length));
+            try { await deductCredits(billingEmail, Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost)); } catch {}
+          }
+          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString() } });
+        }
+      }
+
       return NextResponse.json(
         { error: `ElevenLabs error: ${response.status}`, details: errText },
         { status: response.status }
@@ -137,10 +197,16 @@ export async function GET(req) {
       name: v.name,
       category: v.category,
       labels: v.labels || {},
-      preview: v.preview_url || null
+      preview: v.preview_url || null,
+      language: v.labels?.language || null,
+      accent: v.labels?.accent || null,
+      gender: v.labels?.gender || null,
+      age: v.labels?.age || null,
+      useCase: v.labels?.use_case || v.labels?.['use case'] || null,
     }));
 
-    return NextResponse.json({ voices });
+    // Also return our avatar mapping for the frontend
+    return NextResponse.json({ voices, avatarVoiceMap: AVATAR_VOICE_MAP });
   } catch (e) {
     console.error('ElevenLabs voices error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });

@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { addCost } from '../../lib/store.js';
 import { deductCredits } from '../../lib/users.js';
@@ -6,6 +8,16 @@ import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
+
+// Model mapping: our model IDs → actual API model strings + provider
+const MODEL_MAP = {
+  'gpt-4o-mini':    { actual: 'gpt-4o-mini', provider: 'openai' },
+  'gpt-4o':         { actual: 'gpt-4o', provider: 'openai' },
+  'claude-sonnet':  { actual: 'claude-sonnet-4-5-20250929', provider: 'anthropic' },
+  'claude-haiku':   { actual: 'claude-haiku-4-5-20251001', provider: 'anthropic' },
+  'gemini-flash':   { actual: 'gemini-2.0-flash', provider: 'gemini' },
+  'gemini-pro':     { actual: 'gemini-2.5-pro-preview-05-06', provider: 'gemini' },
+};
 
 // Simple hash for cache key (first 32 chars of base64-encoded text)
 function getSimpleHash(text) {
@@ -23,7 +35,7 @@ export async function POST(req) {
     }
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
-            roomId, context, isReview, domainContext, description, userToken } = await req.json();
+            roomId, context, isReview, domainContext, description, userToken, aiModel } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
@@ -54,19 +66,22 @@ export async function POST(req) {
       });
     }
 
+    // Resolve model selection
+    const modelInfo = MODEL_MAP[aiModel] || MODEL_MAP['gpt-4o-mini'];
+    const authProvider = modelInfo.provider === 'openai' ? 'openai'
+      : modelInfo.provider === 'anthropic' ? 'anthropic'
+      : modelInfo.provider === 'gemini' ? 'gemini' : 'openai';
+
     // 3-tier auth: userToken → roomId → reject
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
       roomId,
-      provider: 'openai',
+      provider: authProvider,
       minCredits: MIN_CREDITS.TRANSLATE,
       skipCreditCheck: !!isReview,
     });
 
-    const openai = new OpenAI({ apiKey });
-
     // Build system prompt
-    // Tonal/special script languages need extra guidance
     const TONAL_LANGS = { 'th': 'Thai (tonal, no spaces between words)', 'zh': 'Chinese', 'ja': 'Japanese', 'vi': 'Vietnamese (tonal, diacritics critical)', 'ko': 'Korean' };
     const srcTonal = TONAL_LANGS[sourceLang];
     const tgtTonal = TONAL_LANGS[targetLang];
@@ -80,17 +95,48 @@ export async function POST(req) {
     if (context) systemPrompt += `\n\nPrevious translation context (for continuity): "${context}"`;
     if (isReview) systemPrompt += `\nThis is a review pass. Ensure the translation is coherent and contextually accurate as a whole.`;
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: text }
-      ],
-      temperature: 0.3,
-      max_tokens: 500
-    });
+    let translated;
+    let usage = null;
 
-    const translated = completion.choices[0].message.content.trim();
+    if (modelInfo.provider === 'anthropic') {
+      // ── Anthropic Claude ──
+      const anthropic = new Anthropic({ apiKey });
+      const msg = await anthropic.messages.create({
+        model: modelInfo.actual,
+        max_tokens: 500,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: text }],
+      });
+      translated = msg.content[0]?.text?.trim() || '';
+      usage = { prompt_tokens: msg.usage?.input_tokens || 0, completion_tokens: msg.usage?.output_tokens || 0,
+        total_tokens: (msg.usage?.input_tokens || 0) + (msg.usage?.output_tokens || 0) };
+    } else if (modelInfo.provider === 'gemini') {
+      // ── Google Gemini ──
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: modelInfo.actual });
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nText to translate:\n${text}` }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
+      });
+      translated = result.response.text()?.trim() || '';
+      const gUsage = result.response.usageMetadata;
+      usage = { prompt_tokens: gUsage?.promptTokenCount || 0, completion_tokens: gUsage?.candidatesTokenCount || 0,
+        total_tokens: gUsage?.totalTokenCount || 0 };
+    } else {
+      // ── OpenAI (default) ──
+      const openai = new OpenAI({ apiKey });
+      const completion = await openai.chat.completions.create({
+        model: modelInfo.actual,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text }
+        ],
+        temperature: 0.3,
+        max_tokens: 500
+      });
+      translated = completion.choices[0].message.content.trim();
+      usage = completion.usage;
+    }
 
     // Cache simple translations in Redis with 24h TTL
     if (isSimpleTranslation && cacheKey) {
@@ -98,12 +144,11 @@ export async function POST(req) {
         await redis('SET', cacheKey, translated, 'EX', 86400);
       } catch (e) {
         console.error('Cache store error:', e);
-        // Continue even if cache write fails
       }
     }
 
-    // Calculate cost
-    const gptCost = calcGptCost(completion.usage);
+    // Calculate cost (approximate — uses OpenAI pricing as baseline)
+    const gptCost = calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 });
     const ttsCost = calcTtsCost(translated.length);
     const msgCostUsd = gptCost + ttsCost;
     const msgCostEurCents = usdToEurCents(msgCostUsd);

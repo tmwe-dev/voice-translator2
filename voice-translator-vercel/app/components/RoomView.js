@@ -167,7 +167,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
           <span style={{fontSize:9, color:'rgba(232,234,255,0.25)', whiteSpace:'nowrap'}}>
-            {isTrial ? 'AI: Free API' : 'AI: GPT-4o-mini'}
+            {isTrial ? 'AI: Free API' : `AI: ${(prefs?.aiModel || 'gpt-4o-mini').toUpperCase()}`}
           </span>
           {!audioEnabled && (
             <span style={{fontSize:8, fontWeight:700, padding:'1px 4px', borderRadius:3,
