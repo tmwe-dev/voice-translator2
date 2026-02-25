@@ -149,6 +149,35 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
       )}
 
+      {/* Voice engine + AI info bar */}
+      <div style={{padding:'3px 12px', background:'rgba(108,99,255,0.04)',
+        borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center',
+        justifyContent:'space-between', flexShrink:0, gap:6}}>
+        <div style={{display:'flex', alignItems:'center', gap:6, minWidth:0}}>
+          <span style={{fontSize:9, color:'rgba(232,234,255,0.35)', fontWeight:600, whiteSpace:'nowrap'}}>
+            {isTrial ? '\u{1F50A} Browser Voice' : isTopPro ? '\u{1F3A4} ElevenLabs' : `\u{1F3A4} OpenAI`}
+          </span>
+          {!isTrial && (
+            <span style={{fontSize:9, color:'rgba(232,234,255,0.25)', fontWeight:500,
+              padding:'1px 5px', borderRadius:4, background:'rgba(255,255,255,0.04)',
+              border:'1px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap'}}>
+              {isTopPro ? 'Multilingual v2' : (prefs.voice || 'nova')}
+            </span>
+          )}
+        </div>
+        <div style={{display:'flex', alignItems:'center', gap:6}}>
+          <span style={{fontSize:9, color:'rgba(232,234,255,0.25)', whiteSpace:'nowrap'}}>
+            {isTrial ? 'AI: Free API' : 'AI: GPT-4o-mini'}
+          </span>
+          {!audioEnabled && (
+            <span style={{fontSize:8, fontWeight:700, padding:'1px 4px', borderRadius:3,
+              background:'rgba(255,107,107,0.12)', color:'#ff6b6b', border:'1px solid rgba(255,107,107,0.2)'}}>
+              MUTED
+            </span>
+          )}
+        </div>
+      </div>
+
       {/* FREE tier usage bar */}
       {isTrial && isHost && (
         <div style={{padding:'4px 12px', background: freeLimitExceeded ? 'rgba(255,82,82,0.08)' : 'rgba(78,205,196,0.05)',

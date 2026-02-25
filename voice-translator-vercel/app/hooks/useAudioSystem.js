@@ -251,10 +251,34 @@ export default function useAudioSystem({
     }
   }
 
+  // Notification "ding" sound using Web Audio API — works even in privacy mode
+  function playNotifSound() {
+    try {
+      const ctx = audioContextRef.current || new (window.AudioContext || window.webkitAudioContext)();
+      if (!audioContextRef.current) audioContextRef.current = ctx;
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.06); // E6
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.25);
+    } catch {}
+  }
+
   async function queueAudio(text, lang, msgId) {
-    if (!audioEnabledRef.current) return;
     if (msgId && playedMsgIdsRef.current.has(msgId)) return;
     if (msgId) playedMsgIdsRef.current.add(msgId);
+    // Always play notification ding for new messages
+    if (!audioEnabledRef.current) {
+      playNotifSound();
+      return;
+    }
     audioQueueRef.current.push({ text, lang });
     processAudioQueue();
   }
@@ -303,6 +327,7 @@ export default function useAudioSystem({
     unlockAudio,
     queueAudio,
     playMessage,
+    playNotifSound,
     getMicStream,
     requestMicEarly,
     getPersistentAudio,
