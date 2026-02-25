@@ -1,0 +1,74 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Alien head -->
+  <ellipse cx="60" cy="45" rx="22" ry="25" fill="#4CAF50"/>
+
+  <!-- Big eyes -->
+  <ellipse cx="50" cy="38" rx="7" ry="10" fill="#000000"/>
+  <ellipse cx="70" cy="38" rx="7" ry="10" fill="#000000"/>
+
+  <!-- Eye pupils - large and expressive -->
+  <circle cx="50" cy="40" r="4" fill="#00FF00"/>
+  <circle cx="70" cy="40" r="4" fill="#00FF00"/>
+
+  <!-- Eye shine -->
+  <circle cx="51" cy="38" r="1.5" fill="white"/>
+  <circle cx="71" cy="38" r="1.5" fill="white"/>
+
+  <!-- Eyebrows/ridges -->
+  <ellipse cx="50" cy="30" rx="6" ry="2" fill="#2E7D32"/>
+  <ellipse cx="70" cy="30" rx="6" ry="2" fill="#2E7D32"/>
+
+  <!-- Small nose slits -->
+  <ellipse cx="56" cy="48" rx="2" ry="1.5" fill="#2E7D32"/>
+  <ellipse cx="64" cy="48" rx="2" ry="1.5" fill="#2E7D32"/>
+
+  <!-- Small mouth -->
+  <path d="M 56 53 Q 60 55 64 53" stroke="#2E7D32" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+
+  <!-- Chin detail -->
+  <ellipse cx="60" cy="68" rx="12" ry="4" fill="#2E7D32"/>
+
+  <!-- Antenna - left -->
+  <line x1="50" y1="20" x2="45" y2="5" stroke="#2E7D32" stroke-width="2"/>
+  <circle cx="45" cy="3" r="2.5" fill="#4CAF50"/>
+
+  <!-- Antenna - right -->
+  <line x1="70" y1="20" x2="75" y2="5" stroke="#2E7D32" stroke-width="2"/>
+  <circle cx="75" cy="3" r="2.5" fill="#4CAF50"/>
+
+  <!-- Body -->
+  <ellipse cx="60" cy="70" rx="16" ry="18" fill="#4CAF50"/>
+
+  <!-- Body spots/markings -->
+  <circle cx="50" cy="65" r="2.5" fill="#2E7D32"/>
+  <circle cx="70" cy="65" r="2.5" fill="#2E7D32"/>
+  <circle cx="60" cy="75" r="2" fill="#2E7D32"/>
+
+  <!-- Left arm -->
+  <ellipse cx="38" cy="65" rx="6" ry="12" fill="#4CAF50"/>
+  <circle cx="33" cy="75" r="4" fill="#4CAF50"/>
+
+  <!-- Right arm -->
+  <ellipse cx="82" cy="65" rx="6" ry="12" fill="#4CAF50"/>
+  <circle cx="87" cy="75" r="4" fill="#4CAF50"/>
+
+  <!-- Three fingers on each hand -->
+  <circle cx="28" cy="73" r="2" fill="#2E7D32"/>
+  <circle cx="32" cy="78" r="2" fill="#2E7D32"/>
+  <circle cx="36" cy="75" r="2" fill="#2E7D32"/>
+
+  <circle cx="92" cy="73" r="2" fill="#2E7D32"/>
+  <circle cx="88" cy="78" r="2" fill="#2E7D32"/>
+  <circle cx="84" cy="75" r="2" fill="#2E7D32"/>
+
+  <!-- Leg - left -->
+  <rect x="48" y="85" width="6" height="12" rx="3" fill="#4CAF50"/>
+  <ellipse cx="51" cy="99" rx="5" ry="3" fill="#2E7D32"/>
+
+  <!-- Leg - right -->
+  <rect x="66" y="85" width="6" height="12" rx="3" fill="#4CAF50"/>
+  <ellipse cx="69" cy="99" rx="5" ry="3" fill="#2E7D32"/>
+</svg>

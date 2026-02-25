@@ -1,0 +1,49 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Head -->
+  <circle cx="60" cy="46" r="22" fill="#D4A89C"/>
+
+  <!-- Hair - white -->
+  <path d="M 38 40 Q 38 20 60 18 Q 82 20 82 40 L 82 50 Q 82 58 60 60 Q 38 58 38 50 Z" fill="#E8E8E8"/>
+
+  <!-- Hair texture -->
+  <path d="M 42 28 Q 50 25 60 24 Q 70 25 78 28" stroke="#D3D3D3" stroke-width="1" fill="none" opacity="0.5"/>
+
+  <!-- Eyes -->
+  <circle cx="53" cy="44" r="3" fill="#333333"/>
+  <circle cx="67" cy="44" r="3" fill="#333333"/>
+  <circle cx="54" cy="42" r="1.5" fill="white"/>
+  <circle cx="68" cy="42" r="1.5" fill="white"/>
+
+  <!-- Glasses -->
+  <circle cx="51" cy="44" r="6" fill="none" stroke="#8B7355" stroke-width="1.2"/>
+  <circle cx="69" cy="44" r="6" fill="none" stroke="#8B7355" stroke-width="1.2"/>
+  <line x1="57" y1="44" x2="63" y2="44" stroke="#8B7355" stroke-width="1"/>
+
+  <!-- Bushy eyebrows -->
+  <path d="M 48 38 Q 53 36 58 38" stroke="#D3D3D3" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 62 38 Q 67 36 72 38" stroke="#D3D3D3" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+  <!-- Nose -->
+  <line x1="60" y1="45" x2="60" y2="50" stroke="#C09080" stroke-width="1.2"/>
+
+  <!-- Mouth (gentle smile) -->
+  <path d="M 56 54 Q 60 55 64 54" stroke="#C0756C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Wrinkles -->
+  <path d="M 45 52 Q 48 54 50 52" stroke="#B39FA0" stroke-width="0.8" fill="none" opacity="0.4"/>
+  <path d="M 70 52 Q 72 54 75 52" stroke="#B39FA0" stroke-width="0.8" fill="none" opacity="0.4"/>
+
+  <!-- Neck -->
+  <rect x="54" y="67" width="12" height="8" fill="#D4A89C"/>
+
+  <!-- Cardigan -->
+  <path d="M 38 75 L 82 75 L 78 95 L 42 95 Z" fill="#A0826D"/>
+
+  <!-- Cardigan buttons -->
+  <circle cx="60" cy="80" r="1.5" fill="#8B7355"/>
+  <circle cx="60" cy="86" r="1.5" fill="#8B7355"/>
+  <circle cx="60" cy="92" r="1.5" fill="#8B7355"/>
+</svg>

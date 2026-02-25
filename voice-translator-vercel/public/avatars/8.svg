@@ -1,0 +1,53 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Dog head -->
+  <circle cx="60" cy="48" r="24" fill="#8B6F47"/>
+
+  <!-- Left ear -->
+  <ellipse cx="40" cy="32" rx="10" ry="16" fill="#8B6F47"/>
+  <ellipse cx="40" cy="34" rx="6" ry="12" fill="#A0826D"/>
+
+  <!-- Right ear -->
+  <ellipse cx="80" cy="32" rx="10" ry="16" fill="#8B6F47"/>
+  <ellipse cx="80" cy="34" rx="6" ry="12" fill="#A0826D"/>
+
+  <!-- Snout -->
+  <ellipse cx="60" cy="56" rx="16" ry="13" fill="#A0826D"/>
+
+  <!-- Nose -->
+  <ellipse cx="60" cy="54" rx="4" ry="3.5" fill="#333333"/>
+
+  <!-- Mouth -->
+  <path d="M 60 54 Q 60 60 55 61" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M 60 54 Q 60 60 65 61" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- Tongue -->
+  <ellipse cx="60" cy="63" rx="3" ry="2.5" fill="#FF69B4"/>
+
+  <!-- Eyes -->
+  <circle cx="50" cy="44" r="3" fill="#333333"/>
+  <circle cx="70" cy="44" r="3" fill="#333333"/>
+  <circle cx="51" cy="43" r="1.2" fill="white"/>
+  <circle cx="71" cy="43" r="1.2" fill="white"/>
+
+  <!-- Eyebrows/spots -->
+  <ellipse cx="48" cy="38" rx="4" ry="2" fill="#6B5639"/>
+  <ellipse cx="72" cy="38" rx="4" ry="2" fill="#6B5639"/>
+
+  <!-- Cheek spots -->
+  <circle cx="40" cy="50" r="3" fill="#6B5639" opacity="0.5"/>
+  <circle cx="80" cy="50" r="3" fill="#6B5639" opacity="0.5"/>
+
+  <!-- Body -->
+  <ellipse cx="60" cy="72" rx="18" ry="16" fill="#8B6F47"/>
+
+  <!-- Front paws -->
+  <rect x="48" y="82" width="6" height="12" rx="3" fill="#A0826D"/>
+  <rect x="66" y="82" width="6" height="12" rx="3" fill="#A0826D"/>
+
+  <!-- Paw pads -->
+  <circle cx="51" cy="92" r="2" fill="#8B6F47"/>
+  <circle cx="69" cy="92" r="2" fill="#8B6F47"/>
+</svg>

@@ -1,0 +1,62 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Bear head -->
+  <circle cx="60" cy="45" r="26" fill="#8B6F47"/>
+
+  <!-- Left ear -->
+  <circle cx="42" cy="25" r="8" fill="#8B6F47"/>
+  <circle cx="42" cy="27" r="5" fill="#A0826D"/>
+
+  <!-- Right ear -->
+  <circle cx="78" cy="25" r="8" fill="#8B6F47"/>
+  <circle cx="78" cy="27" r="5" fill="#A0826D"/>
+
+  <!-- Face patch -->
+  <ellipse cx="60" cy="48" rx="20" ry="18" fill="#A0826D"/>
+
+  <!-- Snout -->
+  <ellipse cx="60" cy="52" rx="12" ry="10" fill="#B5956B"/>
+
+  <!-- Nose -->
+  <ellipse cx="60" cy="50" rx="3.5" ry="3" fill="#333333"/>
+
+  <!-- Mouth -->
+  <path d="M 60 50 Q 57 54 54 53" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M 60 50 Q 63 54 66 53" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- Eyes -->
+  <circle cx="50" cy="42" r="3.5" fill="#333333"/>
+  <circle cx="70" cy="42" r="3.5" fill="#333333"/>
+  <circle cx="51" cy="40" r="1.5" fill="white"/>
+  <circle cx="71" cy="40" r="1.5" fill="white"/>
+
+  <!-- Rosy cheeks -->
+  <circle cx="38" cy="48" r="4" fill="#FFB5BA" opacity="0.6"/>
+  <circle cx="82" cy="48" r="4" fill="#FFB5BA" opacity="0.6"/>
+
+  <!-- Body -->
+  <ellipse cx="60" cy="70" rx="20" ry="18" fill="#8B6F47"/>
+
+  <!-- Belly patch -->
+  <ellipse cx="60" cy="72" rx="14" ry="12" fill="#A0826D"/>
+
+  <!-- Left arm -->
+  <ellipse cx="42" cy="65" rx="7" ry="14" fill="#8B6F47"/>
+
+  <!-- Right arm -->
+  <ellipse cx="78" cy="65" rx="7" ry="14" fill="#8B6F47"/>
+
+  <!-- Left foot -->
+  <ellipse cx="45" cy="85" rx="7" ry="9" fill="#8B6F47"/>
+  <path d="M 40 89 L 42 92 L 48 92 L 50 89" fill="#6B5639"/>
+
+  <!-- Right foot -->
+  <ellipse cx="75" cy="85" rx="7" ry="9" fill="#8B6F47"/>
+  <path d="M 70 89 L 72 92 L 78 92 L 80 89" fill="#6B5639"/>
+
+  <!-- Happy expression dots -->
+  <circle cx="48" cy="38" r="1.5" fill="#6B5639"/>
+  <circle cx="72" cy="38" r="1.5" fill="#6B5639"/>
+</svg>

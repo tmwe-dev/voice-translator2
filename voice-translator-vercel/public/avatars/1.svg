@@ -1,0 +1,37 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Head -->
+  <circle cx="60" cy="45" r="22" fill="#F4A89D"/>
+
+  <!-- Hair -->
+  <path d="M 38 40 Q 38 20 60 18 Q 82 20 82 40 Q 82 35 60 33 Q 38 35 38 40" fill="#8B6F47"/>
+
+  <!-- Hair detail -->
+  <ellipse cx="60" cy="22" rx="20" ry="8" fill="#A0826D"/>
+
+  <!-- Eyes -->
+  <circle cx="53" cy="43" r="2.5" fill="#333333"/>
+  <circle cx="67" cy="43" r="2.5" fill="#333333"/>
+
+  <!-- Glasses -->
+  <circle cx="51" cy="43" r="5" fill="none" stroke="#666666" stroke-width="1.2"/>
+  <circle cx="69" cy="43" r="5" fill="none" stroke="#666666" stroke-width="1.2"/>
+  <line x1="56" y1="43" x2="64" y2="43" stroke="#666666" stroke-width="1"/>
+
+  <!-- Nose -->
+  <line x1="60" y1="45" x2="60" y2="50" stroke="#D89080" stroke-width="1"/>
+
+  <!-- Mouth -->
+  <path d="M 56 53 Q 60 56 64 53" stroke="#D67C6C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <rect x="54" y="66" width="12" height="8" fill="#F4A89D"/>
+
+  <!-- Shirt -->
+  <path d="M 40 74 L 45 74 L 50 95 L 70 95 L 75 74 L 80 74 Q 80 80 75 90 L 45 90 Q 40 80 40 74" fill="#4A90E2"/>
+
+  <!-- Shirt collar -->
+  <path d="M 54 74 L 60 78 L 66 74" fill="#3A7BC8"/>
+</svg>

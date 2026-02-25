@@ -30,7 +30,9 @@ const LANGS = [
 ];
 
 const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
-const AVATARS = ['\u{1F9D1}\u200D\u{1F4BB}','\u{1F468}\u200D\u{1F4BC}','\u{1F469}\u200D\u{1F4BC}','\u{1F9D1}\u200D\u{1F3A8}','\u{1F468}\u200D\u{1F3EB}','\u{1F469}\u200D\u{1F3EB}','\u{1F9D1}\u200D\u{1F52C}','\u{1F468}\u200D\u{1F373}','\u{1F469}\u200D\u{1F680}','\u{1F9D1}\u200D\u{1F3A4}','\u{1F47D}','\u{1F916}'];
+const AVATARS = Array.from({length:14}, (_,i) => `/avatars/${i+1}.svg`);
+const AVATAR_NAMES = ['Donna Pro','Uomo Baffi','Ragazza','Ragazzo','Donna Riccia','Nonno',
+  'Gatto','Cane','Robot','Orso','Donna Rossa','Barba','Ragazza Rosa','Alieno'];
 
 const MODES = [
   { id:'conversation', name:'Conversazione', icon:'\u{1F4AC}', desc:'Tocca per parlare, tocca per fermare' },
@@ -45,6 +47,9 @@ function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
 export default function Home() {
   const [view, setView] = useState('loading');
   const [prefs, setPrefs] = useState({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
+  const [convHistory, setConvHistory] = useState([]);
+  const [currentConv, setCurrentConv] = useState(null); // for viewing summary
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [roomId, setRoomId] = useState(null);
   const [roomInfo, setRoomInfo] = useState(null);
   const [myLang, setMyLang] = useState('it');
@@ -357,7 +362,7 @@ export default function Home() {
     try {
       setStatus('Creazione stanza...');
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode }) });
+        body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar }) });
       if (!res.ok) throw new Error('Errore');
       const { room } = await res.json();
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('lobby');
@@ -370,7 +375,7 @@ export default function Home() {
     try {
       setStatus('Connessione...');
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'join', roomId:joinCode.trim().toUpperCase(), name:prefs.name, lang:myLang }) });
+        body: JSON.stringify({ action:'join', roomId:joinCode.trim().toUpperCase(), name:prefs.name, lang:myLang, avatar:prefs.avatar }) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Stanza non trovata'); }
       const { room } = await res.json();
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('room');
@@ -1125,6 +1130,140 @@ export default function Home() {
 
   const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${typeof window!=='undefined'?window.location.origin:''}?room=${roomId}`)}` : '';
 
+  // Avatar image component
+  function AvatarImg({ src, size = 32, style = {} }) {
+    return <img src={src || AVATARS[0]} alt="" style={{
+      width:size, height:size, borderRadius:'50%', objectFit:'cover',
+      background:'rgba(255,255,255,0.06)', flexShrink:0, ...style
+    }} />;
+  }
+
+  // =============================================
+  // CONVERSATION HISTORY & SUMMARY
+  // =============================================
+
+  async function loadHistory() {
+    if (!prefs.name) return;
+    try {
+      const res = await fetch('/api/conversation', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'list', userName:prefs.name })
+      });
+      if (res.ok) {
+        const { conversations } = await res.json();
+        setConvHistory(conversations || []);
+      }
+    } catch (e) { console.error('History error:', e); }
+  }
+
+  async function endChatAndSave() {
+    if (!roomId) return;
+    stopPolling(); stopFreeTalk();
+    // Clean up streaming
+    if (streamingModeRef.current) {
+      streamingModeRef.current = false;
+      if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} speechRecRef.current = null; }
+      if (reviewTimerRef.current) { clearInterval(reviewTimerRef.current); reviewTimerRef.current = null; }
+    }
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      try { backupRecRef.current.stop(); } catch {}
+    }
+    backupRecRef.current = null;
+    if (backupStreamRef.current) {
+      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      backupStreamRef.current = null;
+    }
+    setStreamingMsg(null);
+    setStatus('Salvataggio conversazione...');
+
+    try {
+      // Save conversation
+      const res = await fetch('/api/conversation', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'end', roomId })
+      });
+      if (res.ok) {
+        const { conversation } = await res.json();
+        const isHost = roomInfo?.host === prefs.name;
+        if (isHost && conversation) {
+          // Generate AI summary for host
+          setStatus('Generazione report AI...');
+          setSummaryLoading(true);
+          try {
+            const sumRes = await fetch('/api/summary', {
+              method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ convId: roomId })
+            });
+            if (sumRes.ok) {
+              const { summary } = await sumRes.json();
+              conversation.summary = summary;
+            }
+          } catch (e) { console.error('Summary error:', e); }
+          setSummaryLoading(false);
+          setCurrentConv(conversation);
+          setView('summary');
+        } else {
+          // Non-host: show the conversation in read-only view
+          setCurrentConv(conversation);
+          setView('summary');
+        }
+      } else {
+        setView('home');
+      }
+    } catch (e) {
+      console.error('End chat error:', e);
+      setView('home');
+    }
+    setRoomId(null); setRoomInfo(null); setMessages([]);
+    setPartnerSpeaking(false); setStatus('');
+  }
+
+  async function viewConversation(convId) {
+    setStatus('Caricamento...');
+    try {
+      const res = await fetch(`/api/conversation?id=${convId}`);
+      if (res.ok) {
+        const { conversation } = await res.json();
+        if (conversation) {
+          // If host and no summary yet, generate it
+          if (conversation.host === prefs.name && !conversation.summary) {
+            setSummaryLoading(true);
+            try {
+              const sumRes = await fetch('/api/summary', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ convId })
+              });
+              if (sumRes.ok) {
+                const { summary } = await sumRes.json();
+                conversation.summary = summary;
+              }
+            } catch {}
+            setSummaryLoading(false);
+          }
+          setCurrentConv(conversation);
+          setView('summary');
+        }
+      }
+    } catch (e) { console.error('View conv error:', e); }
+    setStatus('');
+  }
+
+  function shareSummary() {
+    if (!currentConv?.summary) return;
+    const s = currentConv.summary;
+    const text = `${s.title || 'Conversazione'}\n\n${s.summary || ''}\n\n` +
+      (s.keyPoints?.length ? 'Punti chiave:\n' + s.keyPoints.map(p => `• ${p}`).join('\n') + '\n\n' : '') +
+      `Partecipanti: ${s.participants || ''}\nDurata: ${s.duration || ''}\nMessaggi: ${s.messageCount || 0}`;
+
+    if (navigator.share) {
+      navigator.share({ title: s.title || 'Report Conversazione', text });
+    } else {
+      navigator.clipboard.writeText(text);
+      setStatus('Report copiato!');
+      setTimeout(() => setStatus(''), 2000);
+    }
+  }
+
   // =============================================
   // VIEWS
   // =============================================
@@ -1148,10 +1287,10 @@ export default function Home() {
           <div style={S.field}>
             <div style={S.label}>Avatar</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-              {AVATARS.map(a => (
+              {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
-                  style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {})}}>
-                  {a}
+                  style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:36, height:36, borderRadius:'50%'}} />
                 </button>
               ))}
             </div>
@@ -1201,10 +1340,10 @@ export default function Home() {
           <div style={S.field}>
             <div style={S.label}>Avatar</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-              {AVATARS.map(a => (
+              {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
-                  style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {})}}>
-                  {a}
+                  style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:36, height:36, borderRadius:'50%'}} />
                 </button>
               ))}
             </div>
@@ -1248,7 +1387,7 @@ export default function Home() {
   if (view === 'home') return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
-        <div style={{fontSize:36, marginBottom:4}}>{prefs.avatar}</div>
+        <AvatarImg src={prefs.avatar} size={56} style={{marginBottom:4}} />
         <div style={{fontSize:18, fontWeight:600, marginBottom:2, letterSpacing:-0.3}}>Ciao, {prefs.name}</div>
         <div style={{color:'rgba(255,255,255,0.5)', fontSize:13, marginBottom:20}}>
           {getLang(prefs.lang).flag} {getLang(prefs.lang).name}
@@ -1290,7 +1429,10 @@ export default function Home() {
             <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>Codice o QR</div>
           </div>
         </button>
-        <button style={S.settingsBtn} onClick={() => setView('settings')}>Impostazioni</button>
+        <div style={{display:'flex', gap:10, marginTop:16}}>
+          <button style={S.settingsBtn} onClick={() => setView('settings')}>Impostazioni</button>
+          <button style={S.settingsBtn} onClick={() => { loadHistory(); setView('history'); }}>Cronologia</button>
+        </div>
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
     </div>
@@ -1377,7 +1519,7 @@ export default function Home() {
       <div style={S.roomPage}>
         {/* Header */}
         <div style={S.roomHeader}>
-          <button style={S.backBtnSmall} onClick={leaveRoom}>{'\u2190'}</button>
+          <button style={S.backBtnSmall} onClick={endChatAndSave} title="Termina e salva">{'\u2716'}</button>
           <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
             <span style={{fontSize:18}}>{myL.flag}</span>
             <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
@@ -1497,9 +1639,7 @@ export default function Home() {
               <div key={m.id || i} style={{display:'flex', gap:8,
                 flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end'}}>
                 {/* Avatar */}
-                <div style={{fontSize:22, flexShrink:0, marginBottom:2}}>
-                  {isMine ? prefs.avatar : '\u{1F464}'}
-                </div>
+                <AvatarImg src={isMine ? prefs.avatar : (partner?.avatar || AVATARS[0])} size={28} style={{marginBottom:2}} />
                 <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
                   alignItems:isMine ? 'flex-end' : 'flex-start'}}>
                   <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3}}>
@@ -1527,7 +1667,7 @@ export default function Home() {
           {/* Streaming live bubble */}
           {streamingMsg && streamingMsg.original && (
             <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
-              <div style={{fontSize:22, flexShrink:0, marginBottom:2}}>{prefs.avatar}</div>
+              <AvatarImg src={prefs.avatar} size={28} style={{marginBottom:2}} />
               <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
                 <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
                   <span>Tu</span>
@@ -1588,6 +1728,158 @@ export default function Home() {
             40% { transform: scale(1); opacity: 1; }
           }
         `}</style>
+      </div>
+    );
+  }
+
+  // --- HISTORY ---
+  if (view === 'history') return (
+    <div style={S.page}>
+      <div style={S.scrollCenter}>
+        <div style={S.topBar}>
+          <button style={S.backBtn} onClick={() => setView('home')}>{'\u2190'}</button>
+          <span style={{fontWeight:600, fontSize:17}}>Cronologia</span>
+        </div>
+        {convHistory.length === 0 ? (
+          <div style={{color:'rgba(255,255,255,0.3)', fontSize:14, textAlign:'center', marginTop:40}}>
+            Nessuna conversazione salvata
+          </div>
+        ) : (
+          <div style={{width:'100%', maxWidth:380, display:'flex', flexDirection:'column', gap:8}}>
+            {convHistory.map((c, i) => (
+              <button key={c.id + i} onClick={() => viewConversation(c.id)}
+                style={{width:'100%', padding:'14px 16px', borderRadius:16,
+                  background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+                  color:'#fff', textAlign:'left', cursor:'pointer', fontFamily:FONT,
+                  backdropFilter:'blur(8px)', WebkitTapHighlightColor:'transparent'}}>
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
+                  <span style={{fontWeight:600, fontSize:14}}>{c.members?.join(' & ') || 'Conversazione'}</span>
+                  <span style={{fontSize:10, color:'rgba(255,255,255,0.3)'}}>
+                    {c.msgCount || 0} msg
+                  </span>
+                </div>
+                <div style={{fontSize:11, color:'rgba(255,255,255,0.4)'}}>
+                  {c.created ? new Date(c.created).toLocaleDateString('it-IT', {
+                    day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
+                  }) : ''}
+                  {c.host === prefs.name && <span style={{color:'#f5576c', marginLeft:6}}>Host</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+        {status && <div style={S.statusMsg}>{status}</div>}
+      </div>
+    </div>
+  );
+
+  // --- SUMMARY / REPORT ---
+  if (view === 'summary' && currentConv) {
+    const s = currentConv.summary;
+    const isHost = currentConv.host === prefs.name;
+    return (
+      <div style={S.page}>
+        <div style={S.scrollCenter}>
+          <div style={S.topBar}>
+            <button style={S.backBtn} onClick={() => { setCurrentConv(null); setView('home'); }}>{'\u2190'}</button>
+            <span style={{fontWeight:600, fontSize:17}}>Report</span>
+          </div>
+
+          {summaryLoading ? (
+            <div style={{textAlign:'center', marginTop:40}}>
+              <div style={{fontSize:24, marginBottom:8}}>...</div>
+              <div style={{color:'rgba(255,255,255,0.4)', fontSize:13}}>Generazione report AI...</div>
+            </div>
+          ) : s ? (
+            <div style={{...S.card, width:'100%', maxWidth:380}}>
+              <div style={{fontSize:18, fontWeight:700, marginBottom:8, color:'rgba(255,255,255,0.95)',
+                lineHeight:1.3}}>{s.title || 'Report Conversazione'}</div>
+
+              {s.topics?.length > 0 && (
+                <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
+                  {s.topics.map((t,i) => (
+                    <span key={i} style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight:600,
+                      background:'rgba(245,87,108,0.12)', color:'#f5576c', textTransform:'uppercase',
+                      letterSpacing:0.5}}>{t}</span>
+                  ))}
+                  {s.sentiment && (
+                    <span style={{padding:'3px 10px', borderRadius:12, fontSize:10, fontWeight:600,
+                      background:'rgba(78,205,196,0.12)', color:'#4ecdc4', letterSpacing:0.5}}>
+                      {s.sentiment}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{fontSize:13, color:'rgba(255,255,255,0.7)', lineHeight:1.6, marginBottom:16}}>
+                {s.summary}
+              </div>
+
+              {s.keyPoints?.length > 0 && (
+                <div style={{marginBottom:16}}>
+                  <div style={{...S.label, marginBottom:8}}>Punti Chiave</div>
+                  {s.keyPoints.map((p,i) => (
+                    <div key={i} style={{display:'flex', gap:8, marginBottom:6, fontSize:13,
+                      color:'rgba(255,255,255,0.65)', lineHeight:1.5}}>
+                      <span style={{color:'#f5576c', flexShrink:0}}>{'•'}</span>
+                      <span>{p}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{display:'flex', justifyContent:'space-between', padding:'10px 0',
+                borderTop:'1px solid rgba(255,255,255,0.06)', fontSize:11, color:'rgba(255,255,255,0.35)'}}>
+                <span>{s.participants || currentConv.members?.map(m => m.name).join(' & ')}</span>
+                <span>{s.duration || ''} | {s.messageCount || currentConv.msgCount} msg</span>
+              </div>
+
+              {isHost && (
+                <button style={{...S.btn, marginTop:12}} onClick={shareSummary}>
+                  Condividi Report
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{...S.card, width:'100%', maxWidth:380}}>
+              <div style={{fontSize:15, fontWeight:600, marginBottom:12, color:'rgba(255,255,255,0.8)'}}>
+                Conversazione Salvata
+              </div>
+              <div style={{fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:8}}>
+                {currentConv.members?.map(m => m.name).join(' & ')} - {currentConv.msgCount} messaggi
+              </div>
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.35)'}}>
+                {currentConv.created ? new Date(currentConv.created).toLocaleString('it-IT') : ''}
+              </div>
+            </div>
+          )}
+
+          {/* Message transcript */}
+          {currentConv.messages?.length > 0 && (
+            <div style={{width:'100%', maxWidth:380, marginTop:12}}>
+              <div style={{...S.label, marginBottom:8}}>Trascrizione</div>
+              <div style={{background:'rgba(255,255,255,0.03)', borderRadius:16, padding:'12px 14px',
+                border:'1px solid rgba(255,255,255,0.06)', maxHeight:300, overflowY:'auto'}}>
+                {currentConv.messages.map((m,i) => (
+                  <div key={i} style={{marginBottom:10, paddingBottom:10,
+                    borderBottom:i < currentConv.messages.length-1 ? '1px solid rgba(255,255,255,0.04)' : 'none'}}>
+                    <div style={{fontSize:10, color:'rgba(255,255,255,0.35)', marginBottom:2}}>
+                      {m.sender}
+                    </div>
+                    <div style={{fontSize:13, color:'rgba(255,255,255,0.8)', lineHeight:1.5}}>
+                      {m.original}
+                    </div>
+                    <div style={{fontSize:12, color:'rgba(255,255,255,0.45)', marginTop:2, lineHeight:1.4}}>
+                      {m.translated}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {status && <div style={S.statusMsg}>{status}</div>}
+        </div>
       </div>
     );
   }

@@ -1,0 +1,48 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Cat head -->
+  <circle cx="60" cy="48" r="24" fill="#FF9D42"/>
+
+  <!-- Ears -->
+  <path d="M 40 28 L 35 8 L 45 20 Z" fill="#FF9D42"/>
+  <path d="M 45 18 L 43 12 L 48 22 Z" fill="#FFB366"/>
+
+  <path d="M 80 28 L 85 8 L 75 20 Z" fill="#FF9D42"/>
+  <path d="M 75 18 L 77 12 L 72 22 Z" fill="#FFB366"/>
+
+  <!-- Eyes -->
+  <ellipse cx="52" cy="45" rx="2.5" ry="4.5" fill="#333333"/>
+  <ellipse cx="68" cy="45" rx="2.5" ry="4.5" fill="#333333"/>
+  <ellipse cx="52.5" cy="44" rx="1" ry="2" fill="white"/>
+  <ellipse cx="68.5" cy="44" rx="1" ry="2" fill="white"/>
+
+  <!-- Muzzle -->
+  <ellipse cx="60" cy="55" rx="14" ry="11" fill="#FFB366"/>
+
+  <!-- Nose -->
+  <path d="M 58 52 L 60 54 L 62 52 Z" fill="#FF6B9D"/>
+
+  <!-- Mouth -->
+  <path d="M 60 54 Q 56 57 54 56" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+  <path d="M 60 54 Q 64 57 66 56" stroke="#333333" stroke-width="1" fill="none" stroke-linecap="round"/>
+
+  <!-- Whiskers -->
+  <line x1="35" y1="50" x2="45" y2="49" stroke="#333333" stroke-width="0.8"/>
+  <line x1="35" y1="55" x2="45" y2="56" stroke="#333333" stroke-width="0.8"/>
+
+  <line x1="85" y1="50" x2="75" y2="49" stroke="#333333" stroke-width="0.8"/>
+  <line x1="85" y1="55" x2="75" y2="56" stroke="#333333" stroke-width="0.8"/>
+
+  <!-- Smile expression -->
+  <circle cx="50" cy="42" r="2" fill="#FFB366" opacity="0.5"/>
+  <circle cx="70" cy="42" r="2" fill="#FFB366" opacity="0.5"/>
+
+  <!-- Chest/body -->
+  <ellipse cx="60" cy="72" rx="18" ry="16" fill="#FF9D42"/>
+
+  <!-- Paws -->
+  <ellipse cx="48" cy="85" rx="6" ry="8" fill="#FFB366"/>
+  <ellipse cx="72" cy="85" rx="6" ry="8" fill="#FFB366"/>
+</svg>

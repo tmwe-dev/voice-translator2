@@ -1,0 +1,39 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Head -->
+  <circle cx="60" cy="45" r="22" fill="#E8B5A0"/>
+
+  <!-- Hair -->
+  <path d="M 38 40 Q 38 20 60 18 Q 82 20 82 40 L 82 45 Q 82 55 60 58 Q 38 55 38 45 Z" fill="#2C2C2C"/>
+
+  <!-- Hair sides -->
+  <ellipse cx="38" cy="45" rx="6" ry="12" fill="#2C2C2C"/>
+  <ellipse cx="82" cy="45" rx="6" ry="12" fill="#2C2C2C"/>
+
+  <!-- Eyes -->
+  <circle cx="53" cy="42" r="2.5" fill="#333333"/>
+  <circle cx="67" cy="42" r="2.5" fill="#333333"/>
+
+  <!-- Mustache -->
+  <path d="M 56 50 Q 60 52 64 50" stroke="#2C2C2C" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 52 50 Q 56 51.5 56 50" stroke="#2C2C2C" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+  <path d="M 68 50 Q 64 51.5 64 50" stroke="#2C2C2C" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+
+  <!-- Nose -->
+  <ellipse cx="60" cy="46" rx="2" ry="2.5" fill="#D89080"/>
+
+  <!-- Mouth -->
+  <path d="M 56 54 Q 60 56 64 54" stroke="#D67C6C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <rect x="54" y="66" width="12" height="8" fill="#E8B5A0"/>
+
+  <!-- Shirt -->
+  <path d="M 40 74 L 80 74 L 75 95 L 45 95 Z" fill="#E74C3C"/>
+
+  <!-- Shirt buttons -->
+  <circle cx="60" cy="82" r="1.5" fill="#C0392B"/>
+  <circle cx="60" cy="88" r="1.5" fill="#C0392B"/>
+</svg>

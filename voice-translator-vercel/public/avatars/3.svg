@@ -1,0 +1,46 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Head -->
+  <circle cx="60" cy="46" r="21" fill="#FDBF8F"/>
+
+  <!-- Hair -->
+  <path d="M 39 42 Q 39 22 60 20 Q 81 22 81 42 L 81 46 Q 81 52 60 54 Q 39 52 39 46 Z" fill="#FFD700"/>
+
+  <!-- Left pigtail -->
+  <circle cx="35" cy="38" r="7" fill="#FFD700"/>
+  <path d="M 32 35 Q 28 35 26 38 Q 28 40 32 40" fill="#FFD700"/>
+
+  <!-- Right pigtail -->
+  <circle cx="85" cy="38" r="7" fill="#FFD700"/>
+  <path d="M 88 35 Q 92 35 94 38 Q 92 40 88 40" fill="#FFD700"/>
+
+  <!-- Pigtail ribbons -->
+  <rect x="32" y="28" width="6" height="10" fill="#FF69B4" rx="2"/>
+  <rect x="82" y="28" width="6" height="10" fill="#FF69B4" rx="2"/>
+
+  <!-- Eyes -->
+  <circle cx="53" cy="44" r="3" fill="#333333"/>
+  <circle cx="67" cy="44" r="3" fill="#333333"/>
+  <circle cx="54" cy="42" r="1.5" fill="white"/>
+  <circle cx="68" cy="42" r="1.5" fill="white"/>
+
+  <!-- Rosy cheeks -->
+  <circle cx="42" cy="50" r="4" fill="#FFB5BA" opacity="0.6"/>
+  <circle cx="78" cy="50" r="4" fill="#FFB5BA" opacity="0.6"/>
+
+  <!-- Mouth -->
+  <path d="M 57 53 Q 60 55 63 53" stroke="#FF69B4" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Neck -->
+  <rect x="54" y="66" width="12" height="8" fill="#FDBF8F"/>
+
+  <!-- Dress -->
+  <path d="M 40 74 L 80 74 L 75 95 L 45 95 Z" fill="#FF69B4"/>
+
+  <!-- Dress pattern -->
+  <circle cx="60" cy="82" r="2" fill="#FFB6C1"/>
+  <circle cx="50" cy="88" r="1.5" fill="#FFB6C1"/>
+  <circle cx="70" cy="88" r="1.5" fill="#FFB6C1"/>
+</svg>

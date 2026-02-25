@@ -1,0 +1,43 @@
+<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="60" cy="60" r="58" fill="#FFB5BA"/>
+
+  <!-- Head -->
+  <circle cx="60" cy="45" r="22" fill="#F4A89D"/>
+
+  <!-- Hair - curly -->
+  <circle cx="45" cy="28" r="8" fill="#4A3728"/>
+  <circle cx="55" cy="22" r="9" fill="#4A3728"/>
+  <circle cx="65" cy="22" r="9" fill="#4A3728"/>
+  <circle cx="75" cy="28" r="8" fill="#4A3728"/>
+  <circle cx="78" cy="40" r="7" fill="#4A3728"/>
+  <circle cx="42" cy="40" r="7" fill="#4A3728"/>
+  <circle cx="38" cy="30" r="6" fill="#4A3728"/>
+  <circle cx="82" cy="32" r="6" fill="#4A3728"/>
+  <path d="M 42 58 Q 60 62 78 58" fill="#4A3728"/>
+
+  <!-- Eyes -->
+  <circle cx="53" cy="42" r="2.5" fill="#333333"/>
+  <circle cx="67" cy="42" r="2.5" fill="#333333"/>
+  <circle cx="54" cy="40" r="1.2" fill="white"/>
+  <circle cx="68" cy="40" r="1.2" fill="white"/>
+
+  <!-- Nose -->
+  <ellipse cx="60" cy="46" rx="1.5" ry="2.5" fill="#D89080"/>
+
+  <!-- Mouth -->
+  <path d="M 56 52 Q 60 54 64 52" stroke="#D67C6C" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Rosy cheeks -->
+  <circle cx="40" cy="47" r="3.5" fill="#FFB5BA" opacity="0.6"/>
+  <circle cx="80" cy="47" r="3.5" fill="#FFB5BA" opacity="0.6"/>
+
+  <!-- Neck -->
+  <rect x="54" y="66" width="12" height="8" fill="#F4A89D"/>
+
+  <!-- Purple top -->
+  <path d="M 38 74 L 82 74 L 78 95 L 42 95 Z" fill="#9B59B6"/>
+
+  <!-- Top accent -->
+  <path d="M 54 74 L 60 80 L 66 74" fill="#8E44AD"/>
+</svg>
