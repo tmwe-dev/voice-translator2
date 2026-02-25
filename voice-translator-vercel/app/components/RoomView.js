@@ -59,6 +59,65 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               border:'1px solid rgba(255,255,255,0.06)'}}>
             {'\u{1F4CB}'}
           </button>
+          {/* FREE tier battery indicator */}
+          {isTrial && (() => {
+            const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
+            const remaining = 100 - pct;
+            const battColor = freeLimitExceeded ? '#ff4444'
+              : remaining <= 20 ? '#ff4444'
+              : remaining <= 50 ? '#ffaa00'
+              : '#44dd66';
+            const battGlow = freeLimitExceeded ? '0 0 6px rgba(255,68,68,0.5)'
+              : remaining <= 20 ? '0 0 6px rgba(255,68,68,0.4)'
+              : remaining <= 50 ? '0 0 4px rgba(255,170,0,0.3)'
+              : '0 0 4px rgba(68,221,102,0.3)';
+            return (
+              <div title={freeLimitExceeded
+                ? `${L('freeLimitReached') || 'Limite raggiunto'} — ${L('freeResetsIn') || 'Reset tra'} ${freeResetTime}`
+                : `FREE: ${Math.round(freeCharsUsed/1000)}K / ${FREE_DAILY_LIMIT/1000}K`}
+                style={{position:'relative', display:'flex', alignItems:'center', cursor:'default'}}>
+                {/* Battery body */}
+                <div style={{
+                  width:26, height:14, borderRadius:3,
+                  border:`1.5px solid ${battColor}`,
+                  padding:1.5, display:'flex', alignItems:'stretch',
+                  boxShadow: battGlow, transition:'all 0.4s ease',
+                  position:'relative', overflow:'hidden'
+                }}>
+                  {/* Fill level (inverted: full = green = lots remaining) */}
+                  <div style={{
+                    width: `${remaining}%`, height:'100%', borderRadius:1.5,
+                    background: `linear-gradient(90deg, ${battColor}cc, ${battColor})`,
+                    transition:'width 0.5s ease, background 0.4s ease',
+                    minWidth: remaining > 0 ? 2 : 0
+                  }} />
+                  {/* Animated pulse when low */}
+                  {remaining <= 20 && remaining > 0 && (
+                    <div style={{
+                      position:'absolute', inset:0, borderRadius:1.5,
+                      background: `${battColor}33`,
+                      animation:'vtBattPulse 1.2s ease-in-out infinite'
+                    }} />
+                  )}
+                </div>
+                {/* Battery tip */}
+                <div style={{
+                  width:3, height:6, borderRadius:'0 2px 2px 0',
+                  background: battColor, marginLeft:0.5,
+                  opacity:0.7, transition:'background 0.4s ease'
+                }} />
+                {/* Percentage label below */}
+                <span style={{
+                  position:'absolute', top:16, left:'50%', transform:'translateX(-50%)',
+                  fontSize:7, fontWeight:700, color: battColor,
+                  whiteSpace:'nowrap', opacity:0.85, transition:'color 0.4s ease',
+                  fontFamily:'monospace', letterSpacing:'-0.5px'
+                }}>
+                  {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
+                </span>
+              </div>
+            );
+          })()}
           <div style={{width:8, height:8, borderRadius:4,
             background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
         </div>
@@ -178,34 +237,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
       </div>
 
-      {/* FREE tier usage bar */}
-      {isTrial && isHost && (
-        <div style={{padding:'4px 12px', background: freeLimitExceeded ? 'rgba(255,82,82,0.08)' : 'rgba(78,205,196,0.05)',
-          borderBottom:'1px solid rgba(255,255,255,0.04)', flexShrink:0}}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3}}>
-            <span style={{fontSize:9, color: freeLimitExceeded ? '#ff5252' : 'rgba(255,255,255,0.35)', fontWeight:600}}>
-              {freeLimitExceeded ? L('freeLimitReached') : L('freeUsage')}
-            </span>
-            <span style={{fontSize:9, color:'rgba(255,255,255,0.55)', fontFamily:'monospace'}}>
-              {freeLimitExceeded
-                ? `${L('freeResetsIn')} ${freeResetTime}`
-                : `${Math.round(freeCharsUsed / 1000)}K / ${FREE_DAILY_LIMIT / 1000}K`}
-            </span>
-          </div>
-          <div style={{height:3, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden'}}>
-            <div style={{
-              height:'100%', borderRadius:2, transition:'width 0.3s',
-              width: `${Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100)}%`,
-              background: freeLimitExceeded ? '#ff5252'
-                : (freeCharsUsed / FREE_DAILY_LIMIT) > 0.8 ? '#ff9800'
-                : '#4ecdc4'
-            }} />
-          </div>
-          <div style={{marginTop:3, fontSize:8, color:'rgba(255,255,255,0.25)', textAlign:'center'}}>
-            {L('poweredByMyMemory') || 'Traduzione gratuita offerta da MyMemory by Translated'}
-          </div>
-        </div>
-      )}
+      {/* Battery pulse animation */}
+      <style>{`
+        @keyframes vtBattPulse {
+          0%, 100% { opacity: 0.3; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
 
       {/* Messages */}
       <div style={S.chatArea}>
