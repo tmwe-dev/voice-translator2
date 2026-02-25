@@ -1,7 +1,6 @@
 // Service Worker for VoiceTranslate - Offline Support
-const CACHE_NAME = 'vt-cache-v2';
+const CACHE_NAME = 'vt-cache-v3';
 const STATIC_ASSETS = [
-  '/',
   '/manifest.json',
   '/avatars/1.png',
   '/avatars/2.png',
@@ -14,21 +13,17 @@ const STATIC_ASSETS = [
   '/avatars/9.png'
 ];
 
-// Install event - pre-cache static assets
+// Install event - pre-cache static assets (NOT the HTML page)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.error('Cache addAll error:', err);
-        // Continue even if some assets fail to cache
-        return Promise.all(
-          STATIC_ASSETS.map((asset) =>
-            cache.add(asset).catch((e) => {
-              console.warn(`Failed to cache ${asset}:`, e);
-            })
-          )
-        );
-      });
+      return Promise.all(
+        STATIC_ASSETS.map((asset) =>
+          cache.add(asset).catch((e) => {
+            console.warn(`Failed to cache ${asset}:`, e);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
@@ -57,22 +52,22 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
 
   // Skip non-GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
+  if (request.method !== 'GET') return;
 
   // Skip chrome extensions
-  if (url.protocol === 'chrome-extension:') {
+  if (url.protocol === 'chrome-extension:') return;
+
+  // API requests - network only (no caching)
+  if (url.pathname.startsWith('/api/')) {
     return;
   }
 
-  // API requests - network-first with cache fallback for GET
-  if (url.pathname.startsWith('/api/')) {
+  // HTML pages / navigation - NETWORK-FIRST (always get latest)
+  if (request.destination === 'document' || request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Only cache successful GET requests
-          if (response.ok && request.method === 'GET') {
+          if (response && response.status === 200) {
             const cacheClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, cacheClone);
@@ -81,35 +76,42 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Fall back to cache for GET requests
-          if (request.method === 'GET') {
-            return caches.match(request);
-          }
-          // For failed POST/PUT requests, return error response
-          return new Response('Offline - request not available', {
-            status: 503,
-            statusText: 'Service Unavailable'
-          });
+          return caches.match(request).then(r => r || caches.match('/'));
         })
     );
     return;
   }
 
-  // Static assets (JS, CSS, images) - cache-first strategy
+  // JS/CSS bundles - NETWORK-FIRST (Next.js uses hashed filenames, but always prefer fresh)
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const cacheClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(request, cacheClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(request);
+        })
+    );
+    return;
+  }
+
+  // Images and fonts - cache-first (these rarely change)
   if (
-    request.destination === 'style' ||
-    request.destination === 'script' ||
-    request.destination === 'font' ||
     request.destination === 'image' ||
+    request.destination === 'font' ||
     url.pathname.startsWith('/avatars/')
   ) {
     event.respondWith(
       caches.match(request).then((response) => {
-        if (response) {
-          return response;
-        }
+        if (response) return response;
         return fetch(request).then((response) => {
-          // Cache successful responses
           if (response && response.status === 200) {
             const cacheClone = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -123,38 +125,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Main page shell - cache-first with network fallback
-  if (request.destination === 'document' || request.mode === 'navigate') {
-    event.respondWith(
-      caches.match(request).then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(request)
-          .then((response) => {
-            // Cache successful page responses
-            if (response && response.status === 200) {
-              const cacheClone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, cacheClone);
-              });
-            }
-            return response;
-          })
-          .catch(() => {
-            // Return cached index/home page if available
-            return caches.match('/');
-          });
-      })
-    );
-    return;
-  }
-
-  // Default - network-first strategy
+  // Default - network-first
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response && response.status === 200 && request.method === 'GET') {
+        if (response && response.status === 200) {
           const cacheClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, cacheClone);

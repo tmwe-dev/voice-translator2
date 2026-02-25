@@ -252,10 +252,13 @@ export default function Home() {
     } catch { setView('welcome'); }
   }, []);
 
-  // Register service worker for offline support
+  // Register service worker for offline support + force update stale caches
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW registration failed:', err));
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        // Force check for updates immediately
+        reg.update().catch(() => {});
+      }).catch(err => console.error('SW registration failed:', err));
     }
   }, []);
 
@@ -483,7 +486,7 @@ export default function Home() {
       partnerTyping={roomPolling.partnerTyping} playingMsgId={audio.playingMsgId}
       audioEnabled={audio.audioEnabled} setAudioEnabled={audio.setAudioEnabled}
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} showModeSelector={showModeSelector}
-      setShowModeSelector={setShowModeSelector} textInput={null} setTextInput={() => {}}
+      setShowModeSelector={setShowModeSelector} textInput={''} setTextInput={() => {}}
       sendingText={false} sendTextMessage={() => {}} sendTypingState={roomPolling.sendTypingState}
       toggleRecording={() => {}} startFreeTalk={() => {}} stopFreeTalk={() => {}}
       endChatAndSave={endChatAndSave} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
