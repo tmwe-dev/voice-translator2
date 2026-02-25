@@ -3,6 +3,25 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, REVIEW_INTERVAL, CHUNK_MIN_WORDS, CHUNK_MAX_WORDS, LIVE_TEXT_THROTTLE, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
 
+// Languages that don't use spaces between words - need Intl.Segmenter or char-based counting
+const NO_SPACE_LANGS = new Set(['th', 'zh', 'ja', 'km', 'lo', 'my']);
+
+function countWords(text, langCode) {
+  if (!text || !text.trim()) return 0;
+  // For languages without word spaces, use Intl.Segmenter if available, else estimate by chars
+  if (NO_SPACE_LANGS.has(langCode)) {
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
+      try {
+        const segmenter = new Intl.Segmenter(langCode, { granularity: 'word' });
+        return [...segmenter.segment(text)].filter(s => s.isWordLike).length;
+      } catch {}
+    }
+    // Fallback: estimate ~2 chars per "word" for Thai/CJK (triggers chunking more often)
+    return Math.ceil(text.trim().length / 2);
+  }
+  return text.split(/\s+/).filter(w => w).length;
+}
+
 export default function useTranslation({
   myLangRef,
   roomInfoRef,
@@ -162,7 +181,7 @@ export default function useTranslation({
             allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
             setStreamingMsg(prev => (prev ? { ...prev, original: allWordsRef.current } : null));
             broadcastLiveText(allWordsRef.current);
-            const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+            const bufferWords = countWords(wordBufferRef.current, myLangRef.current);
             if (bufferWords >= CHUNK_MIN_WORDS) emitChunk();
           }
         } else {
@@ -175,7 +194,7 @@ export default function useTranslation({
         setStreamingMsg(prev => (prev ? { ...prev, original: preview } : null));
         broadcastLiveText(preview);
         const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
-        if (totalPending.split(/\s+/).filter(w => w).length >= CHUNK_MAX_WORDS && wordBufferRef.current.trim())
+        if (countWords(totalPending, myLangRef.current) >= CHUNK_MAX_WORDS && wordBufferRef.current.trim())
           emitChunk();
       }
     };
@@ -217,7 +236,7 @@ export default function useTranslation({
     }
     chunkingActiveRef.current = false;
     if (wordBufferRef.current.trim()) {
-      const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+      const bufferWords = countWords(wordBufferRef.current, myLangRef.current);
       if (bufferWords >= CHUNK_MIN_WORDS) emitChunk();
     }
   }
@@ -225,10 +244,17 @@ export default function useTranslation({
   async function postHocReview() {
     const allOriginal = allWordsRef.current.trim();
     if (!allOriginal) return;
-    const wordCount = allOriginal.split(/\s+/).filter(w => w).length;
+    const lang = myLangRef.current;
+    const wordCount = countWords(allOriginal, lang);
     if (wordCount < 10) return;
-    const words = allOriginal.split(/\s+/).filter(w => w);
-    const reviewText = words.slice(-25).join(' ');
+    // For no-space languages, take last ~50 chars; for others, last 25 words
+    let reviewText;
+    if (NO_SPACE_LANGS.has(lang)) {
+      reviewText = allOriginal.slice(-80);
+    } else {
+      const words = allOriginal.split(/\s+/).filter(w => w);
+      reviewText = words.slice(-25).join(' ');
+    }
     const { myL, otherL } = getTargetLangInfo();
     try {
       if (isTrialRef.current) return;
@@ -251,7 +277,7 @@ export default function useTranslation({
       if (res.ok) {
         const { translated } = await res.json();
         if (translated && translatedChunksRef.current.length > 0) {
-          const reviewWordCount = reviewText.split(/\s+/).length;
+          const reviewWordCount = countWords(reviewText, lang);
           const avgWordsPerChunk = Math.max(1, wordCount / translatedChunksRef.current.length);
           const chunksToReplace = Math.min(
             translatedChunksRef.current.length,
@@ -573,7 +599,7 @@ export default function useTranslation({
                 allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
                 setStreamingMsg(prev => (prev ? { ...prev, original: allWordsRef.current } : null));
                 broadcastLiveText(allWordsRef.current);
-                const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+                const bufferWords = countWords(wordBufferRef.current, myLangRef.current);
                 if (bufferWords >= CHUNK_MIN_WORDS) emitChunk();
               }
             } else {
@@ -587,7 +613,7 @@ export default function useTranslation({
             broadcastLiveText(preview);
             const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
             if (
-              totalPending.split(/\s+/).filter(w => w).length >= CHUNK_MAX_WORDS &&
+              countWords(totalPending, myLangRef.current) >= CHUNK_MAX_WORDS &&
               wordBufferRef.current.trim()
             )
               emitChunk();

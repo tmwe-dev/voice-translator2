@@ -5,6 +5,7 @@ import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 
 // Default voices by language
+// Default multilingual voice (ElevenLabs eleven_multilingual_v2 supports all these languages)
 const DEFAULT_VOICES = {
   'it': 'EXAVITQu4vr4xnSDxMaL',
   'en': 'EXAVITQu4vr4xnSDxMaL',
@@ -15,6 +16,12 @@ const DEFAULT_VOICES = {
   'zh': 'EXAVITQu4vr4xnSDxMaL',
   'ja': 'EXAVITQu4vr4xnSDxMaL',
   'ko': 'EXAVITQu4vr4xnSDxMaL',
+  'th': 'EXAVITQu4vr4xnSDxMaL',
+  'ar': 'EXAVITQu4vr4xnSDxMaL',
+  'hi': 'EXAVITQu4vr4xnSDxMaL',
+  'ru': 'EXAVITQu4vr4xnSDxMaL',
+  'tr': 'EXAVITQu4vr4xnSDxMaL',
+  'vi': 'EXAVITQu4vr4xnSDxMaL',
   'default': 'EXAVITQu4vr4xnSDxMaL'
 };
 

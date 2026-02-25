@@ -66,7 +66,15 @@ export async function POST(req) {
     const openai = new OpenAI({ apiKey });
 
     // Build system prompt
-    let systemPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.`;
+    // Tonal/special script languages need extra guidance
+    const TONAL_LANGS = { 'th': 'Thai (tonal, no spaces between words)', 'zh': 'Chinese', 'ja': 'Japanese', 'vi': 'Vietnamese (tonal, diacritics critical)', 'ko': 'Korean' };
+    const srcTonal = TONAL_LANGS[sourceLang];
+    const tgtTonal = TONAL_LANGS[targetLang];
+    let toneNote = '';
+    if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing.`;
+    else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
+
+    let systemPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.${toneNote}`;
     if (domainContext) systemPrompt += `\n\n${domainContext}`;
     if (description) systemPrompt += `\nAdditional context about this conversation: ${description}`;
     if (context) systemPrompt += `\n\nPrevious translation context (for continuity): "${context}"`;
