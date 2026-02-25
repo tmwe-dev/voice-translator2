@@ -130,6 +130,13 @@ export default function Home() {
   const [selectedELVoice, setSelectedELVoice] = useState(''); // ElevenLabs voice ID
   const roomTierOverrideRef = useRef(null); // when guest joins, inherit host's tier
 
+  // FREE tier usage tracking
+  const FREE_DAILY_LIMIT = 50000;
+  const [freeCharsUsed, setFreeCharsUsed] = useState(0);
+  const [freeLimitExceeded, setFreeLimitExceeded] = useState(false);
+  const [freeResetTime, setFreeResetTime] = useState('');
+  const freeCharsRef = useRef(0);
+
   const recRef = useRef(null);
   const chunksRef = useRef([]);
   const pollRef = useRef(null);
@@ -184,6 +191,73 @@ export default function Home() {
       setIsTopPro(false);
     }
   }, [userToken, creditBalance, useOwnKeys]);
+
+  // =============================================
+  // FREE TIER USAGE TRACKING - localStorage + midnight UTC reset
+  // =============================================
+
+  // Load free usage from localStorage, reset if new day
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('vt-free-usage');
+      if (saved) {
+        const data = JSON.parse(saved);
+        const savedDate = data.date || '';
+        const todayUTC = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        if (savedDate === todayUTC) {
+          setFreeCharsUsed(data.chars || 0);
+          freeCharsRef.current = data.chars || 0;
+          if ((data.chars || 0) >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
+        } else {
+          // New day - reset counter
+          localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
+          setFreeCharsUsed(0);
+          freeCharsRef.current = 0;
+          setFreeLimitExceeded(false);
+        }
+      }
+    } catch {}
+  }, []);
+
+  // Save free usage to localStorage whenever it changes
+  useEffect(() => {
+    if (freeCharsUsed > 0) {
+      const todayUTC = new Date().toISOString().split('T')[0];
+      localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: freeCharsUsed }));
+      freeCharsRef.current = freeCharsUsed;
+    }
+  }, [freeCharsUsed]);
+
+  // Countdown to midnight UTC - updates every minute
+  useEffect(() => {
+    function updateCountdown() {
+      const now = new Date();
+      const midnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+      const diff = midnightUTC - now;
+      const hours = Math.floor(diff / 3600000);
+      const mins = Math.floor((diff % 3600000) / 60000);
+      setFreeResetTime(`${hours}h ${mins}m`);
+
+      // Auto-reset at midnight
+      if (hours === 0 && mins === 0) {
+        setFreeCharsUsed(0);
+        freeCharsRef.current = 0;
+        setFreeLimitExceeded(false);
+      }
+    }
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 60000); // every minute
+    return () => clearInterval(timer);
+  }, []);
+
+  // Track free chars used after translation
+  function trackFreeChars(chars) {
+    setFreeCharsUsed(prev => {
+      const newTotal = prev + chars;
+      if (newTotal >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
+      return newTotal;
+    });
+  }
 
   // =============================================
   // MIC SYSTEM - Request permission once, reuse stream
@@ -409,6 +483,11 @@ export default function Home() {
 
   async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
     if (isTrialRef.current) {
+      // Check free limit before calling API
+      if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
+        setFreeLimitExceeded(true);
+        return { translated: text, fallback: true, limitExceeded: true };
+      }
       // Free translation via server-side MyMemory proxy
       const res = await fetch('/api/translate-free', {
         method: 'POST',
@@ -416,7 +495,11 @@ export default function Home() {
         body: JSON.stringify({ text, sourceLang, targetLang })
       });
       if (!res.ok) return { translated: text }; // fallback to original
-      return await res.json();
+      const data = await res.json();
+      // Track chars used
+      if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+      if (data.limitExceeded) setFreeLimitExceeded(true);
+      return data;
     }
     // Pro: OpenAI GPT-4o-mini
     const res = await fetch('/api/translate', {
@@ -2418,6 +2501,33 @@ export default function Home() {
                   <span style={{fontSize:9, fontWeight:600, marginTop:1}}>{L(m.nameKey)}</span>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* FREE tier usage bar */}
+        {isTrial && (
+          <div style={{padding:'4px 12px', background: freeLimitExceeded ? 'rgba(255,82,82,0.08)' : 'rgba(78,205,196,0.05)',
+            borderBottom:'1px solid rgba(255,255,255,0.04)', flexShrink:0}}>
+            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3}}>
+              <span style={{fontSize:9, color: freeLimitExceeded ? '#ff5252' : 'rgba(255,255,255,0.35)', fontWeight:600}}>
+                {freeLimitExceeded ? L('freeLimitReached') : L('freeUsage')}
+              </span>
+              <span style={{fontSize:9, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
+                {freeLimitExceeded
+                  ? `${L('freeResetsIn')} ${freeResetTime}`
+                  : `${Math.round(freeCharsUsed / 1000)}K / ${FREE_DAILY_LIMIT / 1000}K`}
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div style={{height:3, borderRadius:2, background:'rgba(255,255,255,0.06)', overflow:'hidden'}}>
+              <div style={{
+                height:'100%', borderRadius:2, transition:'width 0.3s',
+                width: `${Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100)}%`,
+                background: freeLimitExceeded ? '#ff5252'
+                  : (freeCharsUsed / FREE_DAILY_LIMIT) > 0.8 ? '#ff9800'
+                  : '#4ecdc4'
+              }} />
             </div>
           </div>
         )}

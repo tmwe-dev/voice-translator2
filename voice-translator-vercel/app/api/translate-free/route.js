@@ -2,19 +2,22 @@ import { NextResponse } from 'next/server';
 
 // Free translation using MyMemory API
 // No API key needed, no cost - uses community translation memory
-// Limit: ~5000 chars/day per IP (server IP, but low usage expected for trial)
-// With email param: 50000 chars/day
+// With email param: 50000 chars/day (resets at midnight UTC)
 
 const MYMEMORY_URL = 'https://api.mymemory.translated.net/get';
+const FREE_DAILY_LIMIT = 50000; // chars per day with email registration
 
 export async function POST(req) {
   try {
     const { text, sourceLang, targetLang } = await req.json();
-    if (!text?.trim()) return NextResponse.json({ translated: '' });
+    if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 });
+
+    const trimmed = text.trim();
+    const charsUsed = trimmed.length;
 
     // MyMemory supports standard ISO 639-1 codes with pipe separator
     const langpair = `${sourceLang}|${targetLang}`;
-    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(text.trim())}&langpair=${langpair}&de=voicetranslator@app.com`;
+    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(trimmed)}&langpair=${langpair}&de=voicetranslator@app.com`;
 
     const res = await fetch(url, {
       headers: { 'User-Agent': 'VoiceTranslator/2.0' }
@@ -25,25 +28,37 @@ export async function POST(req) {
 
     const translated = data.responseData?.translatedText || '';
 
+    // Detect daily limit exceeded
+    // MyMemory returns 429 or specific messages when limit is hit
+    if (data.responseStatus === 429 ||
+        (translated && translated.includes('MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS')) ||
+        (translated && translated.includes('MYMEMORY WARNING'))) {
+      return NextResponse.json({
+        translated: trimmed,
+        fallback: true,
+        limitExceeded: true,
+        charsUsed: 0,
+        dailyLimit: FREE_DAILY_LIMIT
+      });
+    }
+
     // MyMemory sometimes returns the original text in UPPERCASE when it can't translate
     // or returns "PLEASE SELECT TWO LANGUAGES" - handle these
     if (!translated ||
-        translated === text.trim().toUpperCase() ||
-        translated.includes('PLEASE SELECT') ||
-        translated.includes('MYMEMORY WARNING')) {
-      // Fallback: return empty so client can try speechSynthesis with original
-      return NextResponse.json({ translated: text.trim(), fallback: true });
+        translated === trimmed.toUpperCase() ||
+        translated.includes('PLEASE SELECT')) {
+      return NextResponse.json({ translated: trimmed, fallback: true, charsUsed });
     }
 
     return NextResponse.json({
       translated: translated.trim(),
       match: data.responseData?.match || 0,
-      fallback: false
+      fallback: false,
+      charsUsed,
+      dailyLimit: FREE_DAILY_LIMIT
     });
   } catch (e) {
     console.error('Free translate error:', e);
-    // On error, return original text so the app doesn't break
-    const { text } = await req.json().catch(() => ({ text: '' }));
-    return NextResponse.json({ translated: text || '', fallback: true, error: e.message });
+    return NextResponse.json({ translated: '', fallback: true, error: e.message, charsUsed: 0 });
   }
 }
