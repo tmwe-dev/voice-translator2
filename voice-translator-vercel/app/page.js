@@ -76,6 +76,8 @@ export default function Home() {
   const vadTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const vadAnalyserRef = useRef(null);
+  const persistentAudioRef = useRef(null); // persistent Audio element for auto-play
+  const playedMsgIdsRef = useRef(new Set()); // track already-played messages
 
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
@@ -83,19 +85,38 @@ export default function Home() {
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
 
   // =============================================
-  // AUDIO SYSTEM - Comprehensive fix
+  // AUDIO SYSTEM - Persistent Audio element for reliable auto-play
   // =============================================
+
+  // Get or create persistent Audio element (reusing it avoids mobile play() blocks)
+  function getPersistentAudio() {
+    if (!persistentAudioRef.current) {
+      persistentAudioRef.current = new Audio();
+      persistentAudioRef.current.volume = 1.0;
+    }
+    return persistentAudioRef.current;
+  }
 
   // Unlock audio on ANY user interaction (critical for joiners)
   function unlockAudio() {
     if (audioReady) return;
     try {
+      // 1) Unlock AudioContext
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const buf = ctx.createBuffer(1, 1, 22050);
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(ctx.destination);
       src.start(0);
+      // 2) Unlock persistent Audio element with silent sound
+      const pa = getPersistentAudio();
+      pa.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+      pa.play().then(() => {
+        console.log('[Audio] Persistent element unlocked');
+      }).catch(() => {
+        console.log('[Audio] Persistent element unlock failed');
+      });
+      // 3) Also unlock a throwaway Audio (belt and suspenders)
       const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
       a.volume = 0.01;
       a.play().catch(() => {});
@@ -106,11 +127,12 @@ export default function Home() {
     }
   }
 
-  // Global touch listener to unlock audio ASAP
+  // Global touch/click listener to unlock audio ASAP (especially for joiners)
   useEffect(() => {
+    if (audioReady) return;
     const handler = () => unlockAudio();
-    document.addEventListener('touchstart', handler, { once: true, passive: true });
-    document.addEventListener('click', handler, { once: true, passive: true });
+    document.addEventListener('touchstart', handler, { passive: true });
+    document.addEventListener('click', handler, { passive: true });
     return () => {
       document.removeEventListener('touchstart', handler);
       document.removeEventListener('click', handler);
@@ -128,8 +150,9 @@ export default function Home() {
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
+      const audio = getPersistentAudio();
       audio.onended = () => { URL.revokeObjectURL(url); setStatus(''); };
+      audio.src = url;
       await audio.play();
       setStatus('Audio OK!');
       setTimeout(() => setStatus(''), 1500);
@@ -139,9 +162,12 @@ export default function Home() {
     }
   }
 
-  // Audio queue
-  async function queueAudio(text, lang) {
+  // Audio queue - plays for ALL participants
+  async function queueAudio(text, lang, msgId) {
     if (!audioEnabledRef.current) return; // respect user toggle
+    // Avoid playing the same message twice (sender plays immediately + polling picks it up)
+    if (msgId && playedMsgIdsRef.current.has(msgId)) return;
+    if (msgId) playedMsgIdsRef.current.add(msgId);
     audioQueueRef.current.push({ text, lang });
     processAudioQueue();
   }
@@ -163,20 +189,46 @@ export default function Home() {
       if (!res.ok) throw new Error('TTS failed');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      return new Promise((resolve, reject) => {
-        const audio = new Audio(url);
+      return new Promise((resolve) => {
+        // Try persistent Audio element first (pre-unlocked)
+        const audio = getPersistentAudio();
         audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
-        audio.onerror = () => { URL.revokeObjectURL(url); reject(); };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          console.log('[Audio] Persistent element error, trying new Audio');
+          playWithNewAudio(text, lang, resolve);
+        };
+        audio.src = url;
         audio.play().catch(() => {
           URL.revokeObjectURL(url);
-          console.log('[Audio] play() blocked, trying browserSpeak');
-          browserSpeak(text, lang);
-          resolve();
+          console.log('[Audio] Persistent play() blocked, trying new Audio');
+          playWithNewAudio(text, lang, resolve);
         });
       });
     } catch {
       browserSpeak(text, lang);
     }
+  }
+
+  // Fallback: try with a fresh Audio element, then browserSpeak
+  function playWithNewAudio(text, lang, resolve) {
+    fetch('/api/tts', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova' })
+    }).then(r => r.blob()).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.onended = () => { URL.revokeObjectURL(url); resolve(); };
+      a.play().catch(() => {
+        URL.revokeObjectURL(url);
+        console.log('[Audio] New Audio also blocked, using browserSpeak');
+        browserSpeak(text, lang);
+        resolve();
+      });
+    }).catch(() => {
+      browserSpeak(text, lang);
+      resolve();
+    });
   }
 
   function browserSpeak(text, lang) {
@@ -240,9 +292,12 @@ export default function Home() {
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
+            // Auto-play for ALL participants (sender + receiver)
             for (const msg of newMsgs) {
-              if (msg.sender !== prefsRef.current.name && msg.translated && prefsRef.current.autoPlay) {
-                queueAudio(msg.translated, getLang(msg.targetLang).speech);
+              if (msg.translated && prefsRef.current.autoPlay) {
+                // For sender's own messages: play in TARGET lang (what partner hears)
+                // For partner's messages: play in TARGET lang (translation for me)
+                queueAudio(msg.translated, getLang(msg.targetLang).speech, msg.id);
               }
             }
           }
@@ -377,9 +432,17 @@ export default function Home() {
     if (!res.ok) throw new Error('Errore server');
     const { original, translated } = await res.json();
     if (original && roomId) {
-      await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
+      const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ roomId, sender:currentPrefs.name, original, translated,
           sourceLang:myL.code, targetLang:otherL.code }) });
+      // Auto-play the translation immediately for the sender (user just tapped, audio is warm)
+      if (translated && prefsRef.current.autoPlay && audioEnabledRef.current) {
+        try {
+          const msgData = await msgRes.json();
+          if (msgData.message?.id) playedMsgIdsRef.current.add(msgData.message.id); // prevent double-play from polling
+        } catch {}
+        queueAudio(translated, otherL.speech, null);
+      }
     }
   }
 
