@@ -31,6 +31,18 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96x96.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
+        {/* OAuth: inject client IDs from env vars + preload SDKs */}
+        <script dangerouslySetInnerHTML={{__html: `
+          window.__VT_GOOGLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}";
+          window.__VT_APPLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''}";
+        `}} />
+        {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          <script src="https://accounts.google.com/gsi/client" async defer />
+        )}
+        <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''} />
+        <meta name="appleid-signin-scope" content="name email" />
+        <meta name="appleid-signin-redirect-uri" content="https://voice-translator2.vercel.app" />
+        <meta name="appleid-signin-use-popup" content="true" />
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'#0B0D1A'}}>{children}</body>
     </html>

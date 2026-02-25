@@ -201,6 +201,77 @@ export default function useAuth() {
     }
   }
 
+  // OAuth: handle Google/Apple sign-in response
+  async function handleOAuthLogin(data, provider) {
+    if (data.ok && data.token) {
+      setUserToken(data.token);
+      userTokenRef.current = data.token;
+      localStorage.setItem('vt-token', data.token);
+      setUserAccount(data.user);
+      setCreditBalance(data.user.credits || 0);
+      setUseOwnKeys(data.user.useOwnKeys || false);
+      if (data.referralCode) setReferralCode(data.referralCode);
+      if (data.platformHasElevenLabs) setPlatformHasEL(true);
+      if (data.referralInfo?.applied) {
+        // referral bonus applied
+      }
+      setPendingReferralCode(null);
+      // Restore API keys if available
+      if (data.user.useOwnKeys && data.user.apiKeys) {
+        setApiKeyInputs({
+          openai: data.user.apiKeys.openai || '',
+          anthropic: data.user.apiKeys.anthropic || '',
+          gemini: data.user.apiKeys.gemini || '',
+          elevenlabs: data.user.apiKeys.elevenlabs || ''
+        });
+        if (data.user.apiKeys.elevenlabs) setIsTopPro(true);
+      }
+      setAuthStep('choose');
+      return true;
+    }
+    return false;
+  }
+
+  async function loginWithGoogle(credential, pendingRef) {
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential, referralCode: pendingRef })
+      });
+      const data = await res.json();
+      return handleOAuthLogin(data, 'google');
+    } catch (e) {
+      console.error('Google login error:', e);
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function loginWithApple(authResponse, pendingRef) {
+    setAuthLoading(true);
+    try {
+      const res = await fetch('/api/auth/apple', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id_token: authResponse.authorization?.id_token,
+          user: authResponse.user,
+          referralCode: pendingRef
+        })
+      });
+      const data = await res.json();
+      return handleOAuthLogin(data, 'apple');
+    } catch (e) {
+      console.error('Apple login error:', e);
+      return false;
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
   function logout(opts = {}) {
     localStorage.removeItem('vt-token');
     if (opts.clearPrefs) {
@@ -262,6 +333,8 @@ export default function useAuth() {
     getEffectiveToken,
     sendAuthCode,
     verifyAuthCodeFn,
+    loginWithGoogle,
+    loginWithApple,
     refreshBalance,
     buyCredits,
     saveUserApiKeys,

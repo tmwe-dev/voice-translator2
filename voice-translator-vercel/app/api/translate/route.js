@@ -4,7 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { addCost } from '../../lib/store.js';
 import { deductCredits } from '../../lib/users.js';
-import { resolveAuth } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
@@ -162,8 +162,10 @@ export async function POST(req) {
     let remainingCredits = undefined;
     if (billingEmail && !isOwnKey && !isReview) {
       try {
-        const updatedUser = await deductCredits(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents));
+        const charge = Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents);
+        const updatedUser = await deductCredits(billingEmail, charge);
         if (updatedUser) remainingCredits = updatedUser.credits;
+        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Credit deduct error:', e); }
     }
 

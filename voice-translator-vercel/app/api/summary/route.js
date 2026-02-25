@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { getConversation, updateConversationSummary } from '../../lib/store.js';
 import { getSession, getUser, deductCredits } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
+import { trackDailySpend } from '../../lib/apiAuth.js';
 
 export async function POST(req) {
   try {
@@ -90,7 +91,9 @@ Output ONLY valid JSON, no markdown, no code blocks.`
 
     if (billingEmail && !isOwnKey) {
       try {
-        await deductCredits(billingEmail, Math.max(MIN_CHARGE.SUMMARY, costEurCents));
+        const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
+        await deductCredits(billingEmail, charge);
+        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Summary credit deduct error:', e); }
     }
 

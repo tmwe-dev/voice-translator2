@@ -5,7 +5,7 @@ import { createReadStream } from 'fs';
 import { join } from 'path';
 import { addCost } from '../../lib/store.js';
 import { deductCredits } from '../../lib/users.js';
-import { resolveAuth } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, calcWhisperCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 
 export async function POST(req) {
@@ -87,8 +87,10 @@ export async function POST(req) {
     let remainingCredits = undefined;
     if (billingEmail && !isOwnKey) {
       try {
-        const updatedUser = await deductCredits(billingEmail, Math.max(MIN_CHARGE.PROCESS, msgCostEurCents));
+        const charge = Math.max(MIN_CHARGE.PROCESS, msgCostEurCents);
+        const updatedUser = await deductCredits(billingEmail, charge);
         if (updatedUser) remainingCredits = updatedUser.credits;
+        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Credit deduct error:', e); }
     }
 

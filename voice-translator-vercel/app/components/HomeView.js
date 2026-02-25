@@ -51,6 +51,16 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           </div>
           {/* Right icons: history, tutorial, logout, settings */}
           <div style={{display:'flex', gap:4}}>
+            {!isGuest && (
+              <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
+                background:'rgba(0,210,255,0.06)', border:'1px solid rgba(0,210,255,0.15)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent'}}
+                onClick={() => setView('contacts')}
+                title={L('createRoom') === 'Crea Stanza' ? 'Contatti' : 'Contacts'}>
+                <span style={{fontSize:14}}>{'👥'}</span>
+              </button>
+            )}
             <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
               background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
               display:'flex', alignItems:'center', justifyContent:'center',

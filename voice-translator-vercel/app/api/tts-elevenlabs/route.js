@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { deductCredits } from '../../lib/users.js';
 import { getSession, getUser } from '../../lib/users.js';
-import { resolveAuth } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 
 // Languages NOT supported by eleven_multilingual_v2 (need v3 or flash_v2_5)
@@ -117,7 +117,8 @@ export async function POST(req) {
           // Deduct cost
           if (billingEmail && !isOwnKey) {
             const cost = usdToEurCents(calcElevenLabsCost(text.trim().length));
-            try { await deductCredits(billingEmail, Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost)); } catch {}
+            const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
+            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch {}
           }
           return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString() } });
         }
@@ -135,7 +136,9 @@ export async function POST(req) {
 
     if (billingEmail && !isOwnKey) {
       try {
-        await deductCredits(billingEmail, Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents));
+        const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
+        await deductCredits(billingEmail, charge);
+        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('ElevenLabs credit deduct error:', e); }
     }
 

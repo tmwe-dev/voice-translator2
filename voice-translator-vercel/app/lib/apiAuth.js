@@ -6,7 +6,8 @@
 import { NextResponse } from 'next/server';
 import { getSession, getUser } from './users.js';
 import { getRoom } from './store.js';
-import { ERRORS } from './config.js';
+import { ERRORS, DAILY_LIMITS } from './config.js';
+import { redis } from './redis.js';
 
 /**
  * Resolve API key and billing for a paid API route.
@@ -99,5 +100,57 @@ export async function resolveAuth({
     throw NextResponse.json({ error: 'No ElevenLabs API key configured' }, { status: 400 });
   }
 
+  // Check daily spending limits (only for platform credits, not own keys)
+  if (billingEmail && !isOwnKey && !skipCreditCheck) {
+    try {
+      const todayUTC = new Date().toISOString().split('T')[0];
+      const dailyKey = `daily:${billingEmail}:${todayUTC}`;
+      const dailySpent = parseInt(await redis('GET', dailyKey) || '0');
+
+      if (DAILY_LIMITS.PER_USER > 0 && dailySpent >= DAILY_LIMITS.PER_USER) {
+        throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
+      }
+
+      // Check platform total daily spend
+      const platformDailyKey = `daily:platform:${todayUTC}`;
+      const platformSpent = parseInt(await redis('GET', platformDailyKey) || '0');
+      if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && platformSpent >= DAILY_LIMITS.PLATFORM_TOTAL) {
+        throw NextResponse.json({ error: ERRORS.PLATFORM_LIMIT }, { status: 503 });
+      }
+    } catch (e) {
+      // If it's a NextResponse (our own error), re-throw it
+      if (e instanceof Response || e?.status) throw e;
+      // Otherwise log and continue (fail-open for Redis errors)
+      console.error('Daily limit check error:', e);
+    }
+  }
+
   return { apiKey, isOwnKey, billingEmail };
+}
+
+/**
+ * Track daily spending after a successful API call
+ * Call this after deducting credits
+ */
+export async function trackDailySpend(email, amountCents) {
+  if (!email || amountCents <= 0) return;
+  try {
+    const todayUTC = new Date().toISOString().split('T')[0];
+
+    // Track per-user daily spend
+    const dailyKey = `daily:${email}:${todayUTC}`;
+    const newAmount = await redis('INCRBY', dailyKey, Math.ceil(amountCents));
+    if (newAmount === Math.ceil(amountCents)) {
+      await redis('EXPIRE', dailyKey, 90000); // ~25 hours TTL
+    }
+
+    // Track platform total daily spend
+    const platformKey = `daily:platform:${todayUTC}`;
+    const platformAmount = await redis('INCRBY', platformKey, Math.ceil(amountCents));
+    if (platformAmount === Math.ceil(amountCents)) {
+      await redis('EXPIRE', platformKey, 90000);
+    }
+  } catch (e) {
+    console.error('Daily spend tracking error:', e);
+  }
 }

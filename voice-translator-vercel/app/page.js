@@ -10,6 +10,7 @@ import useAudioSystem from './hooks/useAudioSystem.js';
 import useTranslation from './hooks/useTranslation.js';
 import useRoomPolling from './hooks/useRoomPolling.js';
 import useAuth from './hooks/useAuth.js';
+import useContacts from './hooks/useContacts.js';
 
 // View components
 import WelcomeView from './components/WelcomeView.js';
@@ -24,6 +25,7 @@ import RoomView from './components/RoomView.js';
 import HistoryView from './components/HistoryView.js';
 import SummaryView from './components/SummaryView.js';
 import VoiceTestView from './components/VoiceTestView.js';
+import ContactsView from './components/ContactsView.js';
 
 
 export default function Home() {
@@ -111,6 +113,7 @@ export default function Home() {
     trackFreeChars,
     userEmail: auth.userAccount?.email || auth.authEmail || ''
   });
+  const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 
   // =============================================
   // STYLES & THEME
@@ -228,6 +231,14 @@ export default function Home() {
       const refParam = urlParams.get('ref');
       if (refParam) {
         auth.setPendingReferralCode(refParam);
+      }
+
+      // Capture invite code from URL (contacts system)
+      const inviteParam = urlParams.get('invite');
+      if (inviteParam) {
+        // Store for processing after auth
+        localStorage.setItem('vt-pending-invite', inviteParam);
+        window.history.replaceState({}, '', window.location.pathname);
       }
 
       if (roomParam) setJoinCode(roomParam.toUpperCase());
@@ -384,8 +395,39 @@ export default function Home() {
     localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
   }
 
+  // Process pending invite after auth
+  useEffect(() => {
+    if (!auth.userToken) return;
+    const pendingInvite = localStorage.getItem('vt-pending-invite');
+    if (pendingInvite) {
+      localStorage.removeItem('vt-pending-invite');
+      contactsHook.acceptInvite(pendingInvite).then(result => {
+        if (result.ok) {
+          setStatus(L('createRoom') === 'Crea Stanza'
+            ? `Contatto aggiunto: ${result.inviter?.name || result.inviter?.email || ''}`
+            : `Contact added: ${result.inviter?.name || result.inviter?.email || ''}`);
+          setTimeout(() => setStatus(''), 3000);
+        }
+      });
+    }
+  }, [auth.userToken]);
 
-
+  // Start chat with a contact — create room and go to lobby
+  async function handleStartChatWithContact(contact) {
+    try {
+      setStatus('...');
+      const room = await roomPolling.handleCreateRoom(
+        prefs.name, myLang, 'conversation', prefs.avatar,
+        'general', 'conversation', '',
+        auth.isTrial, auth.isTopPro, auth.userAccount
+      );
+      roomContextRef.current = { contextId: 'general', contextPrompt: '', description: '' };
+      // Send invite link to the contact (could also push notification in future)
+      setInviteLang(contact.lang || 'en');
+      setView('lobby');
+      setStatus('');
+    } catch (e) { setStatus('Error: ' + e.message); }
+  }
 
   // =============================================
   // SHARE
@@ -535,6 +577,8 @@ export default function Home() {
     <AccountView L={L} S={S} authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
       authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
       authTestCode={auth.authTestCode} sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
+      loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
+      pendingReferralCode={auth.pendingReferralCode}
       setAuthStep={auth.setAuthStep} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
   );
 
@@ -624,6 +668,18 @@ export default function Home() {
       elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
       setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
       userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
+  );
+
+  if (view === 'contacts') return (
+    <ContactsView L={L} S={S} prefs={prefs}
+      contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
+      inviteCode={contactsHook.inviteCode}
+      fetchContacts={contactsHook.fetchContacts} addContact={contactsHook.addContact}
+      removeContact={contactsHook.removeContact} createInvite={contactsHook.createInvite}
+      shareInvite={contactsHook.shareInvite} acceptInvite={contactsHook.acceptInvite}
+      startPolling={contactsHook.startPolling}
+      handleStartChat={handleStartChatWithContact}
+      setView={setView} status={status} theme={theme} />
   );
 
   return null;

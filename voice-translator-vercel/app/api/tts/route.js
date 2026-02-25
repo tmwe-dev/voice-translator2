@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { deductCredits } from '../../lib/users.js';
-import { resolveAuth } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
 
 export async function POST(req) {
@@ -33,7 +33,9 @@ export async function POST(req) {
 
     if (billingEmail && !isOwnKey) {
       try {
-        await deductCredits(billingEmail, Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents));
+        const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
+        await deductCredits(billingEmail, charge);
+        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('TTS credit deduct error:', e); }
     }
 

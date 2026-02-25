@@ -37,6 +37,16 @@ export const MIN_CHARGE = {
 };
 
 // =============================================
+// Daily spending limits (euro-cents per day)
+// Protects platform budget from rapid credit drain
+// =============================================
+export const DAILY_LIMITS = {
+  PER_USER: 500,      // €5.00/day per user (platform credits)
+  PER_USER_OWN_KEYS: 0, // no limit when using own keys (0 = unlimited)
+  PLATFORM_TOTAL: 10000, // €100/day total platform spend
+};
+
+// =============================================
 // Error messages (standardized, English)
 // =============================================
 export const ERRORS = {
@@ -45,6 +55,8 @@ export const ERRORS = {
   AUTH_REQUIRED: 'Authentication required.',
   UNAUTHORIZED: 'Unauthorized.',
   INVALID_SESSION: 'Invalid session.',
+  DAILY_LIMIT: 'Daily spending limit reached. Try again tomorrow.',
+  PLATFORM_LIMIT: 'Service temporarily unavailable. Please try again later.',
 };
 
 // =============================================
