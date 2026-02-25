@@ -451,7 +451,7 @@ export default function Home() {
   );
 
   if (view === 'home') return (
-    <HomeView L={L} S={S} prefs={prefs} myLang={myLang} selectedMode={selectedMode}
+    <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} selectedMode={selectedMode}
       setSelectedMode={setSelectedMode} selectedContext={selectedContext}
       setSelectedContext={setSelectedContext} roomDescription={roomDescription}
       setRoomDescription={setRoomDescription} handleCreateRoom={handleCreateRoom} setView={setView}
