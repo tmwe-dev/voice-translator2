@@ -15,6 +15,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   const langInfo = getLang(prefs.lang);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showContextDropdown, setShowContextDropdown] = useState(false);
   const [playingVoice, setPlayingVoice] = useState(null);
   const audioRef = useRef(null);
 
@@ -176,21 +177,49 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           <div style={{width:'100%', maxWidth:400, padding:'16px', borderRadius:18,
             background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
             marginBottom:12, backdropFilter:'blur(20px)'}}>
-            <div style={{marginBottom:12}}>
-              <div style={{...S.label, marginBottom:8}}>{L('context')}</div>
-              <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-                {CONTEXTS.map(c => (
-                  <button key={c.id} onClick={() => setSelectedContext(c.id)}
-                    style={{padding:'7px 11px', borderRadius:10, fontSize:12, fontWeight:600,
-                      fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center', gap:5,
-                      WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                      background: selectedContext === c.id ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.03)',
-                      border: selectedContext === c.id ? '1px solid rgba(108,99,255,0.3)' : '1px solid rgba(232,234,255,0.06)',
-                      color: selectedContext === c.id ? '#6C63FF' : 'rgba(232,234,255,0.45)'}}>
-                    <span style={{fontSize:15}}>{c.icon}</span> {L(c.nameKey)}
-                  </button>
-                ))}
-              </div>
+            <div style={{marginBottom:12, position:'relative'}}>
+              <div style={{...S.label, marginBottom:6}}>{L('context')}</div>
+              {/* Selected context — tap to open dropdown */}
+              <button onClick={() => setShowContextDropdown(!showContextDropdown)}
+                style={{width:'100%', padding:'12px 14px', borderRadius:12, cursor:'pointer',
+                  background:'rgba(108,99,255,0.08)', border:'1.5px solid rgba(108,99,255,0.2)',
+                  display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                  WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}>
+                <span style={{fontSize:22}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
+                <span style={{flex:1, textAlign:'left', fontSize:14, fontWeight:600, color:'#6C63FF'}}>
+                  {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+                </span>
+                <Icon name={showContextDropdown ? 'chevUp' : 'chevDown'} size={18} color="rgba(232,234,255,0.4)" />
+              </button>
+              {/* Dropdown list */}
+              {showContextDropdown && (
+                <div style={{position:'absolute', top:'100%', left:0, right:0, zIndex:50,
+                  marginTop:4, borderRadius:14, overflow:'hidden',
+                  background:'rgba(15,18,53,0.95)', border:'1.5px solid rgba(108,99,255,0.2)',
+                  backdropFilter:'blur(20px)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
+                  maxHeight:280, overflowY:'auto'}}>
+                  {CONTEXTS.map(c => {
+                    const isSel = selectedContext === c.id;
+                    return (
+                      <button key={c.id} onClick={() => { setSelectedContext(c.id); setShowContextDropdown(false); }}
+                        style={{width:'100%', padding:'11px 14px', cursor:'pointer',
+                          display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                          WebkitTapHighlightColor:'transparent', transition:'all 0.1s',
+                          background: isSel ? 'rgba(108,99,255,0.12)' : 'transparent',
+                          borderBottom:'1px solid rgba(232,234,255,0.04)',
+                          border:'none', borderBottom:'1px solid rgba(232,234,255,0.04)',
+                          color:'#E8EAFF'}}>
+                        <span style={{fontSize:20, width:28, textAlign:'center'}}>{c.icon}</span>
+                        <span style={{flex:1, textAlign:'left', fontSize:13, fontWeight: isSel ? 700 : 500,
+                          color: isSel ? '#6C63FF' : 'rgba(232,234,255,0.6)'}}>
+                          {L(c.nameKey)}
+                        </span>
+                        {isSel && <span style={{fontSize:12, color:'#6C63FF'}}>{'\u2713'}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div style={{marginBottom:14}}>
               <div style={{...S.label, marginBottom:5}}>{L('descriptionOptional')}</div>
