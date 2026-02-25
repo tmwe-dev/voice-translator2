@@ -91,6 +91,10 @@ export default function Home() {
   const reviewTimerRef = useRef(null); // post-hoc review interval
   const streamingModeRef = useRef(false); // true when streaming active
   const chunkingActiveRef = useRef(false); // prevent concurrent emitChunk
+  const lastInterimRef = useRef(''); // last interim text (safety net)
+  const backupRecRef = useRef(null); // parallel MediaRecorder for Whisper fallback
+  const backupChunksRef = useRef([]); // audio chunks from backup recorder
+  const backupStreamRef = useRef(null); // mic stream for backup recorder
   const [streamingMsg, setStreamingMsg] = useState(null); // live streaming bubble
 
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
@@ -382,6 +386,15 @@ export default function Home() {
       if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} speechRecRef.current = null; }
       if (reviewTimerRef.current) { clearInterval(reviewTimerRef.current); reviewTimerRef.current = null; }
     }
+    // Clean up backup recorder
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      try { backupRecRef.current.stop(); } catch {}
+    }
+    backupRecRef.current = null;
+    if (backupStreamRef.current) {
+      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      backupStreamRef.current = null;
+    }
     setStreamingMsg(null);
     setRoomId(null); setRoomInfo(null); setMessages([]); setPartnerSpeaking(false); setView('home');
   }
@@ -460,10 +473,9 @@ export default function Home() {
     return { myL, otherL: getLang(otherLangCode) };
   }
 
-  function startStreamingTranslation() {
+  async function startStreamingTranslation() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      // Fallback to classic recording if SpeechRecognition unavailable
       startClassicRecording();
       return;
     }
@@ -476,12 +488,36 @@ export default function Home() {
     // Reset streaming state
     wordBufferRef.current = '';
     allWordsRef.current = '';
+    lastInterimRef.current = '';
     translatedChunksRef.current = [];
     chunkingActiveRef.current = false;
     streamingModeRef.current = true;
+    backupChunksRef.current = [];
 
     setStreamingMsg({ original: '', translated: '', isStreaming: true });
 
+    // === 1) Start BACKUP MediaRecorder (always captures audio for Whisper fallback) ===
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      backupStreamRef.current = stream;
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      const backup = new MediaRecorder(stream, { mimeType: mime });
+      backup.ondataavailable = e => { if (e.data.size > 0) backupChunksRef.current.push(e.data); };
+      backupRecRef.current = backup;
+      backup.start(250); // collect chunks every 250ms
+      console.log('[Backup] MediaRecorder started alongside SpeechRecognition');
+    } catch (e) {
+      console.error('[Backup] MediaRecorder failed:', e);
+      // If mic access fails entirely, abort
+      setRecording(false);
+      setStatus('Errore microfono');
+      streamingModeRef.current = false;
+      setStreamingMsg(null);
+      return;
+    }
+
+    // === 2) Start SpeechRecognition for streaming chunks ===
     const recognition = new SpeechRecognition();
     recognition.lang = getLang(myLangRef.current).speech;
     recognition.interimResults = true;
@@ -489,7 +525,7 @@ export default function Home() {
     recognition.maxAlternatives = 1;
     speechRecRef.current = recognition;
 
-    let lastFinalLength = 0; // track cumulative final transcript length
+    let lastFinalLength = 0;
 
     recognition.onresult = (event) => {
       let fullFinal = '';
@@ -503,22 +539,23 @@ export default function Home() {
         }
       }
 
+      // Track interim text as safety net (in case isFinal never arrives)
+      if (interimTranscript) {
+        lastInterimRef.current = interimTranscript.trim();
+      }
+
       // Detect NEW finalized text
       if (fullFinal.length > lastFinalLength) {
         const newText = fullFinal.substring(lastFinalLength).trim();
         lastFinalLength = fullFinal.length;
 
         if (newText) {
+          lastInterimRef.current = ''; // clear interim since we got final
           wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
           allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
 
-          // Update display
-          setStreamingMsg(prev => prev ? {
-            ...prev,
-            original: allWordsRef.current
-          } : null);
+          setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
 
-          // Check chunk threshold (min 4 words on final result = natural pause)
           const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
           if (bufferWords >= 4) {
             emitChunk();
@@ -528,10 +565,9 @@ export default function Home() {
 
       // Show interim preview
       if (interimTranscript) {
-        const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript.trim() : '');
+        const preview = allWordsRef.current + ' ' + interimTranscript.trim();
         setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
 
-        // Force emit buffer if total pending words >= 12 (max threshold)
         const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
         const pendingWordCount = totalPending.split(/\s+/).filter(w => w).length;
         if (pendingWordCount >= 12 && wordBufferRef.current.trim()) {
@@ -542,11 +578,9 @@ export default function Home() {
 
     recognition.onerror = (e) => {
       console.log('[StreamRec] Error:', e.error);
-      if (e.error === 'no-speech' || e.error === 'aborted') return;
     };
 
     recognition.onend = () => {
-      // Auto-restart if still in streaming mode
       if (streamingModeRef.current) {
         try { recognition.start(); } catch (err) {
           console.log('[StreamRec] Restart failed:', err);
@@ -554,7 +588,12 @@ export default function Home() {
       }
     };
 
-    recognition.start();
+    try {
+      recognition.start();
+    } catch (e) {
+      console.error('[StreamRec] Start failed:', e);
+      // SpeechRecognition failed to start - backup recorder is still running
+    }
 
     // Start post-hoc review timer (every 12 seconds)
     reviewTimerRef.current = setInterval(() => {
@@ -662,7 +701,7 @@ export default function Home() {
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
 
-    // Stop recognition
+    // Stop SpeechRecognition
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
       speechRecRef.current = null;
@@ -674,21 +713,62 @@ export default function Home() {
       reviewTimerRef.current = null;
     }
 
+    // Stop backup MediaRecorder and get the audio blob
+    let backupBlob = null;
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      await new Promise(resolve => {
+        backupRecRef.current.onstop = () => resolve();
+        backupRecRef.current.stop();
+      });
+      if (backupChunksRef.current.length > 0) {
+        backupBlob = new Blob(backupChunksRef.current, { type: backupRecRef.current.mimeType });
+      }
+    }
+    backupRecRef.current = null;
+    // Stop backup mic stream
+    if (backupStreamRef.current) {
+      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      backupStreamRef.current = null;
+    }
+
+    // Include any pending interim text that never got finalized
+    if (lastInterimRef.current && !allWordsRef.current.includes(lastInterimRef.current)) {
+      wordBufferRef.current = (wordBufferRef.current + ' ' + lastInterimRef.current).trim();
+      allWordsRef.current = (allWordsRef.current + ' ' + lastInterimRef.current).trim();
+    }
+
     // Emit any remaining buffered words
     if (wordBufferRef.current.trim()) {
       await emitChunk();
     }
 
     const allOriginal = allWordsRef.current.trim();
+
+    // === FALLBACK: If SpeechRecognition captured nothing, use Whisper with backup audio ===
+    if (!allOriginal && backupBlob && backupBlob.size > 1000) {
+      console.log('[Fallback] SpeechRecognition empty, using Whisper with backup audio (' + backupBlob.size + ' bytes)');
+      setStatus('Traduzione...');
+      setStreamingMsg(null);
+      try {
+        await processAndSendAudio(backupBlob);
+      } catch (err) {
+        console.error('[Fallback] Whisper error:', err);
+        setStatus('Errore: ' + err.message);
+      }
+      setStatus('');
+      return;
+    }
+
+    // If still nothing (very short tap, no audio)
     if (!allOriginal) {
       setStreamingMsg(null);
       setStatus('');
       return;
     }
 
+    // === STREAMING PATH: SpeechRecognition captured text, do final review ===
     setStatus('Revisione finale...');
 
-    // Final full-text translation for best accuracy
     const { myL, otherL } = getTargetLangInfo();
     let finalTranslation = translatedChunksRef.current.join(' ');
 
@@ -712,6 +792,19 @@ export default function Home() {
       }
     } catch (e) {
       console.error('[Final] Translation error:', e);
+    }
+
+    // If streaming chunks failed but we have original text, use Whisper as last resort
+    if (!finalTranslation && backupBlob && backupBlob.size > 1000) {
+      console.log('[Fallback] Chunk translations empty, using Whisper');
+      setStreamingMsg(null);
+      try {
+        await processAndSendAudio(backupBlob);
+      } catch (err) {
+        console.error('[Fallback] Whisper error:', err);
+      }
+      setStatus('');
+      return;
     }
 
     // Save as permanent message
@@ -1015,6 +1108,12 @@ export default function Home() {
     streamingModeRef.current = false;
     if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} }
     if (reviewTimerRef.current) clearInterval(reviewTimerRef.current);
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      try { backupRecRef.current.stop(); } catch {}
+    }
+    if (backupStreamRef.current) {
+      backupStreamRef.current.getTracks().forEach(t => t.stop());
+    }
   }, []);
 
   // Share
