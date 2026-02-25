@@ -92,7 +92,7 @@ export async function createUser(email, name, lang, avatar) {
     email: email.toLowerCase(),
     name: name || '',
     lang: lang || 'it',
-    avatar: avatar || '/avatars/1.svg',
+    avatar: avatar || '/avatars/1.png',
     credits: 0, // in euro-cents (e.g. 200 = €2.00)
     totalSpent: 0,
     totalMessages: 0,

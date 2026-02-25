@@ -1,20 +1,17 @@
 // Service Worker for VoiceTranslate - Offline Support
-const CACHE_NAME = 'vt-cache-v1';
+const CACHE_NAME = 'vt-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
-  '/avatars/1.jpg',
-  '/avatars/2.jpg',
-  '/avatars/3.jpg',
-  '/avatars/4.jpg',
-  '/avatars/5.jpg',
-  '/avatars/6.jpg',
-  '/avatars/7.jpg',
-  '/avatars/8.jpg',
-  '/avatars/9.jpg',
-  '/avatars/10.jpg',
-  '/avatars/11.jpg',
-  '/avatars/12.jpg'
+  '/avatars/1.png',
+  '/avatars/2.png',
+  '/avatars/3.png',
+  '/avatars/4.png',
+  '/avatars/5.png',
+  '/avatars/6.png',
+  '/avatars/7.png',
+  '/avatars/8.png',
+  '/avatars/9.png'
 ];
 
 // Install event - pre-cache static assets

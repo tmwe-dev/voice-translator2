@@ -31,8 +31,8 @@ export const LANGS = [
 ];
 
 export const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
-export const AVATARS = Array.from({length:12}, (_,i) => `/avatars/${i+1}.jpg`);
-export const AVATAR_NAMES = ['Elena','Marcus','Yuki','Alex','Aisha','Omar','Fatima','Thomas','Richard','Kenji','Margaret','Leo'];
+export const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.png`);
+export const AVATAR_NAMES = ['Marcus','Elena','Omar','Aisha','Alex','Thomas','Yuki','Margaret','Leo'];
 
 export const MODES = [
   { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },

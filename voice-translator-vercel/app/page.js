@@ -197,7 +197,7 @@ export default function Home() {
 
       if (saved) {
         const p = JSON.parse(saved);
-        if (!p.avatar || !p.avatar.startsWith('/avatars/')) p.avatar = AVATARS[0];
+        if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
         setPrefs(p); setMyLang(p.lang);
       }
 

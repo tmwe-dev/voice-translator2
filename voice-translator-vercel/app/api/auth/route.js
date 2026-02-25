@@ -71,7 +71,7 @@ export async function POST(req) {
       let user = await getUser(email);
       const isNewUser = !user;
       if (!user) {
-        user = await createUser(email, name || '', lang || 'it', avatar || '/avatars/1.svg');
+        user = await createUser(email, name || '', lang || 'it', avatar || '/avatars/1.png');
       }
 
       // Apply referral bonus if referral code provided and this is a new user
