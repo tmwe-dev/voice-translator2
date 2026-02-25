@@ -39,18 +39,22 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
     vi:'Xin chào! Tôi là giọng dịch của bạn.',
   };
 
-  const previewVoice = useCallback(async (voiceName) => {
-    // Stop any current playback
+  // Stop any current audio
+  const stopAudio = useCallback(() => {
     if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    setPlayingVoice(null);
+  }, []);
 
-    if (playingVoice === voiceName) { setPlayingVoice(null); return; }
+  // Preview OpenAI voice via real TTS API
+  const previewVoice = useCallback(async (voiceName) => {
+    stopAudio();
+    if (playingVoice === voiceName) return; // was playing, now stopped
 
     setPlayingVoice(voiceName);
     const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
-    const langInfo = getLang(prefs.lang);
 
-    // PRO with own keys or credits → use OpenAI TTS
+    // Must have token + (own keys OR credits) to use OpenAI TTS
     if (userToken && (useOwnKeys || creditBalance > 0)) {
       try {
         const res = await fetch('/api/tts', {
@@ -70,19 +74,46 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
         }
       } catch {}
     }
+    // No API available → show message
+    setPlayingVoice(null);
+  }, [playingVoice, prefs.lang, userToken, useOwnKeys, creditBalance, userTokenRef, stopAudio]);
 
-    // Fallback: browser speechSynthesis (free, works for all)
-    if (typeof speechSynthesis !== 'undefined') {
-      const u = new SpeechSynthesisUtterance(sampleText);
-      u.lang = langInfo.speech;
-      u.rate = 0.9;
-      u.onend = () => setPlayingVoice(null);
-      u.onerror = () => setPlayingVoice(null);
-      speechSynthesis.speak(u);
-    } else {
-      setPlayingVoice(null);
-    }
-  }, [playingVoice, prefs.lang, userToken, useOwnKeys, creditBalance, userTokenRef]);
+  // Preview ElevenLabs voice via preview_url or TTS API
+  const previewELVoice = useCallback(async (voice) => {
+    stopAudio();
+    if (playingVoice === `el_${voice.id}`) return;
+
+    setPlayingVoice(`el_${voice.id}`);
+    try {
+      // First try the preview_url from ElevenLabs API (free, no cost)
+      if (voice.preview) {
+        const audio = new Audio(voice.preview);
+        audioRef.current = audio;
+        audio.onended = () => setPlayingVoice(null);
+        audio.onerror = () => setPlayingVoice(null);
+        await audio.play();
+        return;
+      }
+      // Fallback: use our TTS API
+      const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
+      const res = await fetch('/api/tts-elevenlabs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: sampleText, voiceId: voice.id, langCode: prefs.lang, userToken: userTokenRef?.current })
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
+        audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
+        await audio.play();
+        return;
+      }
+    } catch {}
+    setPlayingVoice(null);
+  }, [playingVoice, prefs.lang, userTokenRef, stopAudio]);
 
   // API key status helpers
   const hasOpenAI = !!(apiKeyInputs?.openai?.trim());
@@ -405,61 +436,100 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 );
               })}
             </div>
-            {!isGuest && (
-              <div style={{fontSize:9, color:'rgba(232,234,255,0.25)', marginTop:6}}>
-                {useOwnKeys ? (L('previewUsesYourKey') || 'Anteprima con la tua chiave OpenAI') :
-                  (L('previewUsesBrowserVoice') || 'Anteprima con voce del browser (la voce reale OpenAI si sente nella stanza)')}
-              </div>
-            )}
+            <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', marginTop:8, lineHeight:1.4}}>
+              {(userToken && (useOwnKeys || creditBalance > 0))
+                ? (L('previewUsesRealVoice') || '\u2713 Anteprima con la vera voce OpenAI TTS')
+                : (L('previewRequiresAccount') || 'Accedi con account PRO o configura le chiavi API per ascoltare l\'anteprima delle voci')}
+            </div>
           </div>
 
-          {/* TOP PRO toggle */}
-          {!isTrial && ((useOwnKeys && apiKeyInputs.elevenlabs) || platformHasEL) && (
-            <div style={S.field}>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-                <span style={{...S.label, marginBottom:0, color:'#ffd700'}}>{'⭐'} TOP PRO (ElevenLabs)</span>
+          {/* ══════════════════════════════════════════════════
+              ELEVENLABS — TOP PRO
+             ══════════════════════════════════════════════════ */}
+          {!isTrial && ((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL) && (
+            <div style={{...S.field, padding:'14px', borderRadius:16,
+              background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.12)'}}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                <span style={{fontSize:14, fontWeight:700, color:'#ffd700', display:'flex', alignItems:'center', gap:6}}>
+                  {'\u2B50'} TOP PRO \u2014 ElevenLabs
+                </span>
                 <button onClick={() => setIsTopPro(!isTopPro)}
                   style={{...S.toggle, background:isTopPro ? '#ffd700' : '#333'}}>
                   <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
                 </button>
               </div>
               {!useOwnKeys && platformHasEL && (
-                <div style={{fontSize:11, color:'#999', marginTop:4}}>
+                <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
                   ElevenLabs via piattaforma (costo ~20x TTS standard)
                 </div>
               )}
-            </div>
-          )}
 
-          {/* ElevenLabs voice selection */}
-          {isTopPro && elevenLabsVoices.length > 0 && (
-            <div style={S.field}>
-              <div style={S.label}>{L('elevenLabsVoice')}</div>
-              <select style={S.select} value={selectedELVoice}
-                onChange={e => setSelectedELVoice(e.target.value)}>
-                <option value="">{L('autoVoice')}</option>
-                {elevenLabsVoices.map(v => (
-                  <option key={v.id} value={v.id}>
-                    {v.name} ({v.category})
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+              {/* Load voices button */}
+              {isTopPro && elevenLabsVoices.length === 0 && (
+                <button style={{width:'100%', padding:'10px 14px', borderRadius:10, cursor:'pointer',
+                  background:'rgba(255,215,0,0.08)', border:'1px solid rgba(255,215,0,0.2)',
+                  color:'#ffd700', fontSize:13, fontWeight:700, fontFamily:FONT,
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                  WebkitTapHighlightColor:'transparent'}}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
+                      if (res.ok) {
+                        const data = await res.json();
+                        setElevenLabsVoices(data.voices || []);
+                      }
+                    } catch(e) { console.error('Failed to load voices:', e); }
+                  }}>
+                  <Icon name="refresh" size={16} color="#ffd700" />
+                  {L('loadVoices') || 'Carica voci ElevenLabs'}
+                </button>
+              )}
 
-          {isTopPro && elevenLabsVoices.length === 0 && (
-            <button style={{...S.settingsBtn, marginTop:4, color:'#ffd700', borderColor:'rgba(255,215,0,0.2)'}}
-              onClick={async () => {
-                try {
-                  const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
-                  if (res.ok) {
-                    const data = await res.json();
-                    setElevenLabsVoices(data.voices || []);
-                  }
-                } catch(e) { console.error('Failed to load voices:', e); }
-              }}>
-              {L('loadVoices')}
-            </button>
+              {/* ElevenLabs voice list with preview */}
+              {isTopPro && elevenLabsVoices.length > 0 && (
+                <div>
+                  <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+                    {elevenLabsVoices.length} {L('voicesAvailable') || 'voci disponibili'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:4, maxHeight:300, overflowY:'auto'}}>
+                    {elevenLabsVoices.map(v => {
+                      const isSel = selectedELVoice === v.id;
+                      const isPlaying = playingVoice === `el_${v.id}`;
+                      return (
+                        <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
+                          padding:'8px 12px', borderRadius:12, transition:'all 0.15s',
+                          background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(232,234,255,0.02)',
+                          border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(232,234,255,0.04)'}}>
+                          {/* Play button */}
+                          <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
+                            style={{width:32, height:32, borderRadius:8, cursor:'pointer', flexShrink:0,
+                              background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
+                              border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              WebkitTapHighlightColor:'transparent'}}>
+                            <Icon name={isPlaying ? 'stop' : 'play'} size={14}
+                              color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                          </button>
+                          {/* Voice info — click to select */}
+                          <button onClick={() => setSelectedELVoice(v.id)}
+                            style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
+                              fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
+                            <div style={{fontSize:13, fontWeight: isSel ? 700 : 500,
+                              color: isSel ? '#ffd700' : 'rgba(232,234,255,0.6)'}}>
+                              {v.name}
+                            </div>
+                            <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                              {v.category}{v.labels?.accent ? ` \u2022 ${v.labels.accent}` : ''}{v.labels?.gender ? ` \u2022 ${v.labels.gender}` : ''}
+                            </div>
+                          </button>
+                          {isSel && <span style={{fontSize:12, color:'#ffd700'}}>{'\u2713'}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           <div style={S.field}>
