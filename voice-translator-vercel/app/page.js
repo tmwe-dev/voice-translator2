@@ -247,7 +247,16 @@ export default function Home() {
             auth.setUseOwnKeys(data.user.useOwnKeys || false);
             if (data.referralCode) auth.setReferralCode(data.referralCode);
             if (data.platformHasElevenLabs) auth.setPlatformHasEL(true);
-            if (data.user.useOwnKeys && data.user.apiKeys?.elevenlabs) auth.setIsTopPro(true);
+            // Restore saved API keys into state so Settings shows them
+            if (data.user.useOwnKeys && data.user.apiKeys) {
+              auth.setApiKeyInputs({
+                openai: data.user.apiKeys.openai || '',
+                anthropic: data.user.apiKeys.anthropic || '',
+                gemini: data.user.apiKeys.gemini || '',
+                elevenlabs: data.user.apiKeys.elevenlabs || ''
+              });
+              if (data.user.apiKeys.elevenlabs) auth.setIsTopPro(true);
+            }
             setView(pickView(!!saved));
           } else {
             localStorage.removeItem('vt-token');
