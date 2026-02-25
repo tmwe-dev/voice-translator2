@@ -81,6 +81,7 @@ export default function Home() {
   const vadAnalyserRef = useRef(null);
   const persistentAudioRef = useRef(null); // persistent Audio element for auto-play
   const playedMsgIdsRef = useRef(new Set()); // track already-played messages
+  const sentByMeRef = useRef(new Set()); // track message IDs sent by THIS client
 
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
@@ -295,9 +296,14 @@ export default function Home() {
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
-            // Auto-play ONLY for messages from others (receiver hears, sender does NOT)
+            // Auto-play ONLY for messages NOT sent by this client
             for (const msg of newMsgs) {
-              if (msg.sender !== prefsRef.current.name && msg.translated && prefsRef.current.autoPlay) {
+              // Skip if this message was sent by THIS client (tracked by ID)
+              if (sentByMeRef.current.has(msg.id)) continue;
+              // Also skip by name as fallback
+              if (msg.sender === prefsRef.current.name) continue;
+              // Auto-play if enabled
+              if (msg.translated && prefsRef.current.autoPlay) {
                 queueAudio(msg.translated, getLang(msg.targetLang).speech, msg.id);
               }
             }
@@ -434,10 +440,14 @@ export default function Home() {
     if (!res.ok) throw new Error('Errore server');
     const { original, translated, cost } = await res.json();
     if (original && roomId) {
-      await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
+      const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ roomId, sender:currentPrefs.name, original, translated,
           sourceLang:myL.code, targetLang:otherL.code }) });
-      // Sender does NOT hear auto-play - only the receiver does via polling
+      // Track this message ID so polling won't auto-play it for the sender
+      try {
+        const msgData = await msgRes.json();
+        if (msgData.message?.id) sentByMeRef.current.add(msgData.message.id);
+      } catch {}
     }
   }
 
@@ -468,9 +478,14 @@ export default function Home() {
       if (!res.ok) throw new Error('Errore traduzione');
       const { translated } = await res.json();
       if (translated) {
-        await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
+        const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ roomId, sender:currentPrefs.name, original:textInput.trim(), translated,
             sourceLang:myL.code, targetLang:otherL.code }) });
+        // Track this message ID so polling won't auto-play it for the sender
+        try {
+          const msgData = await msgRes.json();
+          if (msgData.message?.id) sentByMeRef.current.add(msgData.message.id);
+        } catch {}
         setTextInput('');
       }
     } catch (err) { setStatus('Errore: ' + err.message); }
