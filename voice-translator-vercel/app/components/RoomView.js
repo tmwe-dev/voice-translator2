@@ -1,6 +1,6 @@
 'use client';
-import { memo } from 'react';
-import { MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS } from '../lib/constants.js';
+import { memo, useState } from 'react';
+import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
@@ -9,7 +9,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
   toggleRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
-  freeCharsUsed, freeLimitExceeded, freeResetTime, setView, theme, setTheme }) {
+  freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs, theme, setTheme }) {
+
+  const [showLangPicker, setShowLangPicker] = useState(false);
 
   const partner = roomInfo?.members?.find(m => m.name !== prefs.name);
   const myL = getLang(myLang);
@@ -22,13 +24,24 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const msgCount = roomInfo?.msgCount || 0;
   const roomCtx = CONTEXTS.find(c => c.id === (roomInfo?.context || 'general')) || CONTEXTS[0];
 
+  function handleLangChange(langCode) {
+    if (setMyLang) setMyLang(langCode);
+    if (savePrefs) savePrefs({...prefs, lang: langCode});
+    setShowLangPicker(false);
+  }
+
   return (
     <div style={S.roomPage}>
       {/* Header */}
       <div style={{...S.roomHeader, position:'relative'}}>
         <button style={S.backBtnSmall} onClick={endChatAndSave} title={L('endChat')}>{'\u2716'}</button>
         <div style={{position:'absolute', left:'50%', transform:'translateX(-50%)', display:'flex', alignItems:'center', gap:8}}>
-          <span style={{fontSize:18}}>{myL.flag}</span>
+          <button onClick={() => setShowLangPicker(!showLangPicker)}
+            style={{fontSize:18, background:'none', border:'none', cursor:'pointer', padding:'2px 6px',
+              borderRadius:8, transition:'background 0.15s',
+              outline: showLangPicker ? '2px solid rgba(78,205,196,0.5)' : 'none'}}>
+            {myL.flag}
+          </button>
           <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
           <span style={{fontSize:18}}>{otherL.flag}</span>
         </div>
@@ -50,6 +63,34 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
         </div>
       </div>
+
+      {/* Language picker dropdown */}
+      {showLangPicker && (
+        <div style={{position:'absolute', top:48, left:'50%', transform:'translateX(-50%)', zIndex:100,
+          background: theme === 'dark' ? '#1a1a2e' : '#fff',
+          border: theme === 'dark' ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.15)',
+          borderRadius:14, padding:'6px 0', maxHeight:280, overflowY:'auto', width:200,
+          boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
+          {LANGS.map(l => (
+            <button key={l.code} onClick={() => handleLangChange(l.code)}
+              style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'8px 14px',
+                background: l.code === myLang ? (theme === 'dark' ? 'rgba(78,205,196,0.15)' : 'rgba(78,205,196,0.1)') : 'transparent',
+                border:'none', cursor:'pointer', fontFamily:FONT, fontSize:13,
+                color: theme === 'dark' ? '#fff' : '#333',
+                transition:'background 0.1s'}}>
+              <span style={{fontSize:18}}>{l.flag}</span>
+              <span>{l.name}</span>
+              {l.code === myLang && <span style={{marginLeft:'auto', color:'#4ecdc4', fontSize:14}}>{'\u2713'}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Backdrop to close lang picker */}
+      {showLangPicker && (
+        <div onClick={() => setShowLangPicker(false)}
+          style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
+      )}
 
       {/* Mode bar + Cost */}
       <div style={{padding:'5px 12px', background:'rgba(255,255,255,0.02)',
