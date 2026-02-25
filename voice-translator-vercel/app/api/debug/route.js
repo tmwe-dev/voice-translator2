@@ -6,6 +6,7 @@ const WHISPER_PER_MINUTE = 0.006;
 const GPT4OMINI_INPUT_PER_TOKEN = 0.00000015;
 const GPT4OMINI_OUTPUT_PER_TOKEN = 0.0000006;
 const TTS_PER_CHAR = 0.000015;
+const ELEVENLABS_PER_CHAR = 0.0003; // ~$0.30 per 1K chars (Creator plan overage)
 const USD_TO_EUR = 0.92;
 
 // Token estimation (~4 chars per token for English, ~2-3 for other languages)
@@ -78,12 +79,16 @@ export async function POST(req) {
       const whisperSeconds = audioSeconds || 0;
       const whisperCost = (whisperSeconds / 60) * WHISPER_PER_MINUTE;
 
-      // TTS costs
+      // TTS costs (OpenAI TTS-1)
       const ttsChars = estimatedOutputChars;
       const ttsCost = ttsChars * TTS_PER_CHAR;
 
-      // Total
+      // ElevenLabs TTS costs (TOP PRO)
+      const elevenLabsCost = ttsChars * ELEVENLABS_PER_CHAR;
+
+      // Totals
       const totalUsd = gptTotalCost + whisperCost + ttsCost;
+      const totalTopProUsd = gptTotalCost + whisperCost + elevenLabsCost;
       const totalEur = totalUsd * USD_TO_EUR;
       const totalEurCents = totalEur * 100;
 
@@ -120,8 +125,10 @@ export async function POST(req) {
           gptOutput: gptOutputCost.toFixed(8),
           gptTotal: gptTotalCost.toFixed(8),
           whisper: whisperCost.toFixed(8),
-          tts: ttsCost.toFixed(8),
-          total: totalUsd.toFixed(8),
+          tts_openai: ttsCost.toFixed(8),
+          tts_elevenlabs: elevenLabsCost.toFixed(8),
+          total_pro: totalUsd.toFixed(8),
+          total_topPro: totalTopProUsd.toFixed(8),
         },
         costs_eur: {
           total: totalEur.toFixed(8),
@@ -133,7 +140,8 @@ export async function POST(req) {
           gpt4oMini_input: '$0.15 per 1M tokens',
           gpt4oMini_output: '$0.60 per 1M tokens',
           whisper: '$0.006 per minute',
-          tts1: '$0.015 per 1K characters',
+          tts1_openai: '$0.015 per 1K characters',
+          tts_elevenlabs: '$0.30 per 1K characters (~20x OpenAI)',
           usdToEur: USD_TO_EUR,
         },
         packages_estimate: packages.map(p => ({

@@ -117,14 +117,18 @@ export default function Home() {
   const [authStep, setAuthStep] = useState('email'); // email, code, choose
   const [authLoading, setAuthLoading] = useState(false);
   const [authTestCode, setAuthTestCode] = useState('');
-  const [apiKeyInputs, setApiKeyInputs] = useState({ openai:'', anthropic:'', gemini:'' });
+  const [apiKeyInputs, setApiKeyInputs] = useState({ openai:'', anthropic:'', gemini:'', elevenlabs:'' });
   const [useOwnKeys, setUseOwnKeys] = useState(false);
   const [creditBalance, setCreditBalance] = useState(0);
   const userTokenRef = useRef(null);
 
-  // Trial mode: free for everyone, no account needed
+  // Tier system: FREE (trial) / PRO (OpenAI) / TOP PRO (ElevenLabs)
   const [isTrial, setIsTrial] = useState(true);
   const isTrialRef = useRef(true);
+  const [isTopPro, setIsTopPro] = useState(false);
+  const isTopProRef = useRef(false);
+  const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
+  const [selectedELVoice, setSelectedELVoice] = useState(''); // ElevenLabs voice ID
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -168,13 +172,15 @@ export default function Home() {
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { userTokenRef.current = userToken; }, [userToken]);
   useEffect(() => { isTrialRef.current = isTrial; }, [isTrial]);
+  useEffect(() => { isTopProRef.current = isTopPro; }, [isTopPro]);
 
-  // Update trial mode based on account status
+  // Update tier based on account status
   useEffect(() => {
     if (userToken && (creditBalance > 0 || useOwnKeys)) {
       setIsTrial(false);
     } else {
       setIsTrial(true);
+      setIsTopPro(false);
     }
   }, [userToken, creditBalance, useOwnKeys]);
 
@@ -304,6 +310,8 @@ export default function Home() {
           browserSpeak(text, lang);
           setTimeout(resolve, Math.max(1500, text.length * 80));
         });
+      } else if (isTopProRef.current) {
+        await playTTSElevenLabs(text, lang);
       } else {
         await playTTS(text, lang);
       }
@@ -377,9 +385,10 @@ export default function Home() {
       // Free TTS via browser speechSynthesis
       await new Promise(resolve => {
         browserSpeak(msg.translated, getLang(msg.targetLang).speech);
-        // speechSynthesis doesn't reliably fire onend, use timeout
         setTimeout(resolve, Math.max(1500, msg.translated.length * 80));
       });
+    } else if (isTopProRef.current) {
+      await playTTSElevenLabs(msg.translated, getLang(msg.targetLang).speech);
     } else {
       await playTTS(msg.translated, getLang(msg.targetLang).speech);
     }
@@ -417,13 +426,50 @@ export default function Home() {
     return await res.json();
   }
 
-  // Universal TTS playback
+  // ElevenLabs TTS playback (TOP PRO tier)
+  async function playTTSElevenLabs(text, langCode) {
+    try {
+      const res = await fetch('/api/tts-elevenlabs', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          voiceId: selectedELVoice || undefined,
+          langCode: langCode?.split('-')[0] || undefined,
+          userToken: userTokenRef.current || undefined
+        })
+      });
+      if (!res.ok) throw new Error('ElevenLabs TTS failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      return new Promise((resolve) => {
+        const audio = getPersistentAudio();
+        audio.onended = () => { URL.revokeObjectURL(url); resolve(); };
+        audio.onerror = () => {
+          URL.revokeObjectURL(url);
+          playTTS(text, langCode).then(resolve); // fallback to OpenAI
+        };
+        audio.src = url;
+        audio.play().catch(() => {
+          URL.revokeObjectURL(url);
+          playTTS(text, langCode).then(resolve);
+        });
+      });
+    } catch {
+      // Fallback to OpenAI TTS on ElevenLabs error
+      return playTTS(text, langCode);
+    }
+  }
+
+  // Universal TTS playback - routes FREE→browser, PRO→OpenAI, TOP PRO→ElevenLabs
   async function playUniversalTTS(text, langCode) {
     if (isTrialRef.current) {
       return new Promise(resolve => {
         browserSpeak(text, langCode);
         setTimeout(resolve, Math.max(1500, text.length * 80));
       });
+    }
+    if (isTopProRef.current) {
+      return playTTSElevenLabs(text, langCode);
     }
     return playTTS(text, langCode);
   }
@@ -473,6 +519,10 @@ export default function Home() {
             setUserAccount(data.user);
             setCreditBalance(data.user.credits || 0);
             setUseOwnKeys(data.user.useOwnKeys || false);
+            // Detect TOP PRO: user has ElevenLabs key
+            if (data.user.useOwnKeys && data.user.apiKeys?.elevenlabs) {
+              setIsTopPro(true);
+            }
             setView(pickView(!!saved));
           } else {
             localStorage.removeItem('vt-token');
@@ -1598,6 +1648,10 @@ export default function Home() {
       const data = await res.json();
       if (data.ok) {
         setUseOwnKeys(true);
+        // Auto-enable TOP PRO if ElevenLabs key is present
+        if (apiKeyInputs.elevenlabs?.trim()) {
+          setIsTopPro(true);
+        }
         setStatus(L('apiKeysSaved'));
         setTimeout(() => { setStatus(''); setView('home'); }, 1000);
       } else { setStatus(data.error || 'Save error'); }
@@ -1924,6 +1978,21 @@ export default function Home() {
             <input style={S.input} placeholder="AIza..." value={apiKeyInputs.gemini}
               onChange={e => setApiKeyInputs({...apiKeyInputs, gemini:e.target.value})} />
           </div>
+
+          <div style={{marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,215,0,0.1)'}}>
+            <div style={{fontSize:13, fontWeight:600, color:'#ffd700', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
+              {'\u2B50'} TOP PRO - ElevenLabs
+            </div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:10, lineHeight:1.5}}>
+              {L('elevenLabsDesc')}
+            </div>
+            <div style={S.field}>
+              <div style={S.label}>ElevenLabs API Key</div>
+              <input style={S.input} placeholder="xi_..." value={apiKeyInputs.elevenlabs}
+                onChange={e => setApiKeyInputs({...apiKeyInputs, elevenlabs:e.target.value})} />
+            </div>
+          </div>
+
           <button style={{...S.btn, marginTop:8, opacity:apiKeyInputs.openai.trim()?1:0.4}}
             disabled={!apiKeyInputs.openai.trim() || authLoading}
             onClick={saveUserApiKeys}>
@@ -1968,7 +2037,7 @@ export default function Home() {
             </select>
           </div>
           <div style={S.field}>
-            <div style={S.label}>{L('voiceTranslation')}</div>
+            <div style={S.label}>{L('voiceTranslation')} (OpenAI)</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:5}}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
@@ -1978,6 +2047,51 @@ export default function Home() {
               ))}
             </div>
           </div>
+
+          {/* TOP PRO toggle */}
+          {!isTrial && useOwnKeys && apiKeyInputs.elevenlabs && (
+            <div style={S.field}>
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+                <span style={{...S.label, marginBottom:0, color:'#ffd700'}}>{'\u2B50'} TOP PRO (ElevenLabs)</span>
+                <button onClick={() => setIsTopPro(!isTopPro)}
+                  style={{...S.toggle, background:isTopPro ? '#ffd700' : '#333'}}>
+                  <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ElevenLabs voice selection when TOP PRO active */}
+          {isTopPro && elevenLabsVoices.length > 0 && (
+            <div style={S.field}>
+              <div style={S.label}>{L('elevenLabsVoice')}</div>
+              <select style={S.select} value={selectedELVoice}
+                onChange={e => setSelectedELVoice(e.target.value)}>
+                <option value="">{L('autoVoice')}</option>
+                {elevenLabsVoices.map(v => (
+                  <option key={v.id} value={v.id}>
+                    {v.name} ({v.category})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {isTopPro && elevenLabsVoices.length === 0 && (
+            <button style={{...S.settingsBtn, marginTop:4, color:'#ffd700', borderColor:'rgba(255,215,0,0.2)'}}
+              onClick={async () => {
+                try {
+                  const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
+                  if (res.ok) {
+                    const data = await res.json();
+                    setElevenLabsVoices(data.voices || []);
+                  }
+                } catch(e) { console.error('Failed to load voices:', e); }
+              }}>
+              {L('loadVoices')}
+            </button>
+          )}
+
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <span style={{...S.label, marginBottom:0}}>{L('autoplayTranslation')}</span>
@@ -2239,10 +2353,10 @@ export default function Home() {
           </button>
           {/* Trial / Pro badge */}
           <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
-            background: isTrial ? 'rgba(78,205,196,0.15)' : 'rgba(245,87,108,0.15)',
-            color: isTrial ? '#4ecdc4' : '#f5576c',
-            border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
-            {isTrial ? 'FREE' : 'PRO'}
+            background: isTrial ? 'rgba(78,205,196,0.15)' : isTopPro ? 'rgba(255,215,0,0.15)' : 'rgba(245,87,108,0.15)',
+            color: isTrial ? '#4ecdc4' : isTopPro ? '#ffd700' : '#f5576c',
+            border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : isTopPro ? 'rgba(255,215,0,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
+            {isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO'}
           </span>
           {/* Connection status */}
           <div style={{width:8, height:8, borderRadius:4, marginLeft:4,
