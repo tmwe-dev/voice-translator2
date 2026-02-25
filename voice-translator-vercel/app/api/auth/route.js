@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession } from '../../lib/users.js';
+import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 // POST /api/auth - Handle auth actions
 export async function POST(req) {
   try {
-    const { action, email, code, name, lang, avatar, token } = await req.json();
+    const { action, email, code, name, lang, avatar, token, referralCode } = await req.json();
 
     // Rate limit auth actions (stricter: 10/min for send-code/verify)
     if (action === 'send-code' || action === 'verify') {
@@ -69,14 +69,32 @@ export async function POST(req) {
 
       // Create or get user
       let user = await getUser(email);
+      const isNewUser = !user;
       if (!user) {
         user = await createUser(email, name || '', lang || 'it', avatar || '/avatars/1.svg');
+      }
+
+      // Apply referral bonus if referral code provided and this is a new user
+      let referralInfo = { applied: false };
+      if (isNewUser && referralCode) {
+        try {
+          const referralResult = await applyReferral(email, referralCode);
+          if (referralResult.success) {
+            user = await getUser(email); // Refresh user to get updated credits
+            referralInfo = { applied: true, referrerEmail: referralResult.referrerEmail };
+          }
+        } catch (e) {
+          console.error('Referral error:', e);
+        }
       }
 
       // Create session
       const sessionToken = await createSession(email);
 
-      return NextResponse.json({ ok: true, token: sessionToken, user });
+      // Get referral code for this user
+      const userReferralCode = await getReferralCode(email);
+
+      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode });
     }
 
     // === CHECK SESSION (me) ===
@@ -86,9 +104,11 @@ export async function POST(req) {
       if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
       const user = await getUser(session.email);
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      // Get user's referral code
+      const userReferralCode = await getReferralCode(session.email);
       // Tell frontend if platform has ElevenLabs key configured
       const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
-      return NextResponse.json({ user, platformHasElevenLabs });
+      return NextResponse.json({ user, referralCode: userReferralCode, platformHasElevenLabs });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

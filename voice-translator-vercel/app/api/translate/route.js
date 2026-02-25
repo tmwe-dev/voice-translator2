@@ -5,6 +5,13 @@ import { deductCredits } from '../../lib/users.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { redis } from '../../lib/redis.js';
+
+// Simple hash for cache key (first 32 chars of base64-encoded text)
+function getSimpleHash(text) {
+  const encoded = Buffer.from(text).toString('base64');
+  return encoded.substring(0, 32);
+}
 
 export async function POST(req) {
   try {
@@ -19,6 +26,33 @@ export async function POST(req) {
             roomId, context, isReview, domainContext, description, userToken } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
+
+    // Check if this is a simple translation (no context/review/domain/description)
+    const isSimpleTranslation = !context && !isReview && !domainContext && !description;
+
+    // Build cache key for simple translations only
+    let cacheKey = null;
+    let cachedTranslation = null;
+    if (isSimpleTranslation) {
+      const textHash = getSimpleHash(text);
+      cacheKey = `tc:${sourceLang}:${targetLang}:${textHash}`;
+      try {
+        cachedTranslation = await redis('GET', cacheKey);
+      } catch (e) {
+        console.error('Cache lookup error:', e);
+        // Continue without cache on error
+      }
+    }
+
+    // If we have a cached translation, return it immediately
+    if (cachedTranslation) {
+      return NextResponse.json({
+        translated: cachedTranslation,
+        cost: 0,
+        costEurCents: 0,
+        cached: true
+      });
+    }
 
     // 3-tier auth: userToken → roomId → reject
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
@@ -49,6 +83,16 @@ export async function POST(req) {
     });
 
     const translated = completion.choices[0].message.content.trim();
+
+    // Cache simple translations in Redis with 24h TTL
+    if (isSimpleTranslation && cacheKey) {
+      try {
+        await redis('SET', cacheKey, translated, 'EX', 86400);
+      } catch (e) {
+        console.error('Cache store error:', e);
+        // Continue even if cache write fails
+      }
+    }
 
     // Calculate cost
     const gptCost = calcGptCost(completion.usage);

@@ -177,3 +177,88 @@ export async function getPaymentHistory(email) {
   if (!entries || !Array.isArray(entries)) return [];
   return entries.map(e => JSON.parse(e)).reverse();
 }
+
+// =============================================
+// REFERRAL SYSTEM
+// =============================================
+
+function generateRandomCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+export async function generateReferralCode(email) {
+  const lowerEmail = email.toLowerCase();
+  const existingKey = `ref:email:${lowerEmail}`;
+  const existing = await redis('GET', existingKey);
+  if (existing) return existing;
+
+  let code = generateRandomCode();
+  let attempts = 0;
+  while (attempts < 10) {
+    const codeKey = `ref:code:${code}`;
+    const codeExists = await redis('GET', codeKey);
+    if (!codeExists) break;
+    code = generateRandomCode();
+    attempts++;
+  }
+
+  const codeKey = `ref:code:${code}`;
+  await redis('SET', codeKey, lowerEmail);
+  await redis('SET', existingKey, code);
+  return code;
+}
+
+export async function getReferralCode(email) {
+  const lowerEmail = email.toLowerCase();
+  const existingKey = `ref:email:${lowerEmail}`;
+  let code = await redis('GET', existingKey);
+  if (code) return code;
+  return await generateReferralCode(email);
+}
+
+export async function applyReferral(newUserEmail, referralCode) {
+  const lowerEmail = newUserEmail.toLowerCase();
+  const codeKey = `ref:code:${referralCode}`;
+  const referrerEmail = await redis('GET', codeKey);
+
+  if (!referrerEmail) {
+    return { success: false, error: 'Invalid referral code' };
+  }
+
+  if (referrerEmail === lowerEmail) {
+    return { success: false, error: 'Cannot use your own referral code' };
+  }
+
+  const usedKey = `ref:used:${lowerEmail}`;
+  const alreadyUsed = await redis('GET', usedKey);
+  if (alreadyUsed) {
+    return { success: false, error: 'You have already used a referral code' };
+  }
+
+  // Mark this email as having used a referral code
+  await redis('SET', usedKey, referrerEmail);
+
+  // Add bonus credits to new user (50 credits)
+  await addCredits(lowerEmail, 50);
+
+  // Add bonus credits to referrer (100 credits)
+  await addCredits(referrerEmail, 100);
+
+  // Increment referral count for referrer
+  const statsKey = `ref:stats:${referrerEmail}`;
+  await redis('INCR', statsKey);
+
+  return { success: true, referrerEmail };
+}
+
+export async function getReferralStats(email) {
+  const lowerEmail = email.toLowerCase();
+  const statsKey = `ref:stats:${lowerEmail}`;
+  const count = await redis('GET', statsKey);
+  return parseInt(count || '0');
+}

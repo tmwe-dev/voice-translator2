@@ -1,0 +1,97 @@
+// Shared constants for VoiceTranslate app
+
+export const APP_URL = 'https://voice-translator2.vercel.app';
+
+export const LANGS = [
+  { code:'it', name:'Italiano', flag:'\u{1F1EE}\u{1F1F9}', speech:'it-IT' },
+  { code:'th', name:'\u0E44\u0E17\u0E22 (Thai)', flag:'\u{1F1F9}\u{1F1ED}', speech:'th-TH' },
+  { code:'en', name:'English', flag:'\u{1F1EC}\u{1F1E7}', speech:'en-US' },
+  { code:'es', name:'Espa\u00F1ol', flag:'\u{1F1EA}\u{1F1F8}', speech:'es-ES' },
+  { code:'fr', name:'Fran\u00E7ais', flag:'\u{1F1EB}\u{1F1F7}', speech:'fr-FR' },
+  { code:'de', name:'Deutsch', flag:'\u{1F1E9}\u{1F1EA}', speech:'de-DE' },
+  { code:'pt', name:'Portugu\u00EAs', flag:'\u{1F1E7}\u{1F1F7}', speech:'pt-BR' },
+  { code:'zh', name:'\u4E2D\u6587', flag:'\u{1F1E8}\u{1F1F3}', speech:'zh-CN' },
+  { code:'ja', name:'\u65E5\u672C\u8A9E', flag:'\u{1F1EF}\u{1F1F5}', speech:'ja-JP' },
+  { code:'ko', name:'\uD55C\uAD6D\uC5B4', flag:'\u{1F1F0}\u{1F1F7}', speech:'ko-KR' },
+  { code:'ar', name:'\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag:'\u{1F1F8}\u{1F1E6}', speech:'ar-SA' },
+  { code:'hi', name:'\u0939\u093F\u0928\u094D\u0926\u0940', flag:'\u{1F1EE}\u{1F1F3}', speech:'hi-IN' },
+  { code:'ru', name:'\u0420\u0443\u0441\u0441\u043A\u0438\u0439', flag:'\u{1F1F7}\u{1F1FA}', speech:'ru-RU' },
+  { code:'tr', name:'T\u00FCrk\u00E7e', flag:'\u{1F1F9}\u{1F1F7}', speech:'tr-TR' },
+  { code:'vi', name:'Ti\u1EBFng Vi\u1EC7t', flag:'\u{1F1FB}\u{1F1F3}', speech:'vi-VN' },
+  { code:'id', name:'Bahasa Indonesia', flag:'\u{1F1EE}\u{1F1E9}', speech:'id-ID' },
+  { code:'ms', name:'Bahasa Melayu', flag:'\u{1F1F2}\u{1F1FE}', speech:'ms-MY' },
+  { code:'nl', name:'Nederlands', flag:'\u{1F1F3}\u{1F1F1}', speech:'nl-NL' },
+  { code:'pl', name:'Polski', flag:'\u{1F1F5}\u{1F1F1}', speech:'pl-PL' },
+  { code:'sv', name:'Svenska', flag:'\u{1F1F8}\u{1F1EA}', speech:'sv-SE' },
+  { code:'el', name:'\u0395\u03BB\u03BB\u03B7\u03BD\u03B9\u03BA\u03AC', flag:'\u{1F1EC}\u{1F1F7}', speech:'el-GR' },
+  { code:'cs', name:'\u010Ce\u0161tina', flag:'\u{1F1E8}\u{1F1FF}', speech:'cs-CZ' },
+  { code:'ro', name:'Rom\u00E2n\u0103', flag:'\u{1F1F7}\u{1F1F4}', speech:'ro-RO' },
+  { code:'hu', name:'Magyar', flag:'\u{1F1ED}\u{1F1FA}', speech:'hu-HU' },
+  { code:'fi', name:'Suomi', flag:'\u{1F1EB}\u{1F1EE}', speech:'fi-FI' },
+];
+
+export const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
+export const AVATARS = Array.from({length:12}, (_,i) => `/avatars/${i+1}.jpg`);
+export const AVATAR_NAMES = ['Elena','Marcus','Yuki','Alex','Aisha','Omar','Fatima','Thomas','Richard','Kenji','Margaret','Leo'];
+
+export const MODES = [
+  { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
+  { id:'classroom', nameKey:'classroom', icon:'\u{1F3EB}', descKey:'classroomDesc' },
+  { id:'freetalk', nameKey:'freeTalk', icon:'\u{1F389}', descKey:'freeTalkDesc' },
+  { id:'simultaneous', nameKey:'simultaneous', icon:'\u{26A1}', descKey:'simultaneousDesc' },
+];
+
+export const CONTEXTS = [
+  { id:'general', icon:'\u{1F30D}', nameKey:'ctxGeneral', descKey:'ctxGeneralDesc', prompt:'' },
+  { id:'tourism', icon:'\u{1F3D6}\uFE0F', nameKey:'ctxTourism', descKey:'ctxTourismDesc',
+    prompt:'This is a tourism/travel conversation. Use travel terminology: directions, accommodation, sightseeing, transportation, restaurants, bookings. Keep translations practical and clear for travelers.' },
+  { id:'medical', icon:'\u{1F3E5}', nameKey:'ctxMedical', descKey:'ctxMedicalDesc',
+    prompt:'This is a medical conversation. Use precise medical terminology: symptoms, medications, dosages, diagnoses, body parts, medical procedures. Accuracy is critical - never approximate medical terms.' },
+  { id:'education', icon:'\u{1F393}', nameKey:'ctxEducation', descKey:'ctxEducationDesc',
+    prompt:'This is an educational conversation. Use academic terminology: courses, grades, assignments, lectures, exams, enrollment. Keep the tone educational and clear.' },
+  { id:'business', icon:'\u{1F4BC}', nameKey:'ctxBusiness', descKey:'ctxBusinessDesc',
+    prompt:'This is a business conversation. Use professional/corporate terminology: contracts, negotiations, deadlines, KPIs, deliverables, stakeholders. Maintain formal register.' },
+  { id:'restaurant', icon:'\u{1F37D}\uFE0F', nameKey:'ctxRestaurant', descKey:'ctxRestaurantDesc',
+    prompt:'This is a restaurant/dining conversation. Use food and hospitality terminology: menu items, ingredients, allergies, dietary restrictions, cooking methods, reservations. Be precise about food terms.' },
+  { id:'personal', icon:'\u{1F91D}', nameKey:'ctxPersonal', descKey:'ctxPersonalDesc',
+    prompt:'This is an informal personal meeting. Use friendly, conversational tone. Translate idioms and colloquialisms naturally rather than literally. Preserve humor and warmth.' },
+  { id:'legal', icon:'\u{2696}\uFE0F', nameKey:'ctxLegal', descKey:'ctxLegalDesc',
+    prompt:'This is a legal conversation. Use precise legal terminology: contracts, clauses, liability, compliance, jurisdiction, regulations. Never paraphrase legal terms - translate them exactly.' },
+  { id:'shopping', icon:'\u{1F6CD}\uFE0F', nameKey:'ctxShopping', descKey:'ctxShoppingDesc',
+    prompt:'This is a shopping conversation. Use retail terminology: prices, sizes, colors, discounts, returns, payment methods, warranties. Be precise with numbers and measurements.' },
+  { id:'realestate', icon:'\u{1F3E0}', nameKey:'ctxRealEstate', descKey:'ctxRealEstateDesc',
+    prompt:'This is a real estate conversation. Use property terminology: rent, lease, mortgage, square meters, rooms, amenities, neighborhood, deposits, inspections.' },
+  { id:'tech', icon:'\u{1F527}', nameKey:'ctxTech', descKey:'ctxTechDesc',
+    prompt:'This is a technical support conversation. Use technical terminology: troubleshooting, error codes, specifications, warranties, repairs, configurations. Be precise with technical terms.' },
+  { id:'emergency', icon:'\u{1F6A8}', nameKey:'ctxEmergency', descKey:'ctxEmergencyDesc',
+    prompt:'This is an EMERGENCY conversation. Translate with maximum clarity and urgency. Use direct, unambiguous language. Include emergency-specific terms: location, danger, injury, police, ambulance, fire. Speed and clarity are paramount.' },
+];
+
+export const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+export const THEMES = { DARK: 'dark', LIGHT: 'light' };
+
+export const FREE_DAILY_LIMIT = 50000;
+
+export const CREDIT_PACKAGES = [
+  { id:'pack_starter', euros:0.90, credits:90, label:'\u20AC0.90', messages:'~180 msg', starter:true },
+  { id:'pack_2', euros:2, credits:200, label:'\u20AC2', messages:'~400 msg' },
+  { id:'pack_5', euros:5, credits:550, label:'\u20AC5', messages:'~1100 msg', bonus:'+10%' },
+  { id:'pack_10', euros:10, credits:1200, label:'\u20AC10', messages:'~2400 msg', bonus:'+20%' },
+  { id:'pack_20', euros:20, credits:2600, label:'\u20AC20', messages:'~5200 msg', bonus:'+30%' },
+];
+
+// Referral system
+export const REFERRAL_BONUS_NEW = 50;
+export const REFERRAL_BONUS_REFERRER = 100;
+
+// Helpers
+export function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
+
+export function vibrate(ms = 15) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+}
+
+export function formatCredits(cents) {
+  return '\u20AC' + (cents / 100).toFixed(2);
+}
