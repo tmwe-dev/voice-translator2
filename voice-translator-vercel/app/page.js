@@ -33,8 +33,8 @@ const LANGS = [
 ];
 
 const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
-const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.svg`);
-const AVATAR_NAMES = ['Emma','Marcus','Sofia','Alex','Clara','Giorgio','Yuki','Tommy','Aisha'];
+const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.jpg`);
+const AVATAR_NAMES = ['Elena','Marcus','Yuki','Alex','Aisha','Omar','Fatima','Thomas','Richard'];
 
 const MODES = [
   { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
@@ -107,6 +107,8 @@ export default function Home() {
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [partnerLiveText, setPartnerLiveText] = useState('');
   const [partnerTyping, setPartnerTyping] = useState(false);
+  const [inviteLang, setInviteLang] = useState('en'); // language for invite message
+  const [inviteMsgLang, setInviteMsgLang] = useState(null); // language from invite URL
 
   // Account & Credits state
   const [userToken, setUserToken] = useState(null);
@@ -590,7 +592,13 @@ export default function Home() {
         setMyLang(p.lang);
       }
 
-      if (roomParam) setJoinCode(roomParam.toUpperCase());
+      if (roomParam) {
+        setJoinCode(roomParam.toUpperCase());
+        const langParam = urlParams.get('lang');
+        if (langParam && LANGS.find(l => l.code === langParam)) {
+          setInviteMsgLang(langParam);
+        }
+      }
 
       // Check for payment return
       if (paymentStatus === 'success' && paymentCredits) {
@@ -1541,12 +1549,12 @@ export default function Home() {
 
   // Share
   function shareRoom() {
-    const url = `${APP_URL}?room=${roomId}`;
-    if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(prefs.lang,'enterRoom')}: ${roomId}`, url });
+    const url = `${APP_URL}?room=${roomId}&lang=${inviteLang}`;
+    if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(inviteLang,'inviteText')}`, url });
     else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
   }
 
-  const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${APP_URL}?room=${roomId}`)}` : '';
+  const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${APP_URL}?room=${roomId}&lang=${inviteLang}`)}` : '';
 
   // Avatar image component - validates src is a valid image path
   function AvatarImg({ src, size = 36, style = {} }) {
@@ -2335,43 +2343,54 @@ export default function Home() {
   );
 
   // --- JOIN ---
-  if (view === 'join') return (
+  if (view === 'join') {
+    const iL = inviteMsgLang || prefs.lang || 'en';
+    return (
     <div style={S.page}>
       <div style={S.center}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); }}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>{L('joinRoom')}</span>
+          <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); setInviteMsgLang(null); }}>{'\u2190'}</button>
+          <span style={{fontWeight:600, fontSize:17}}>{inviteMsgLang ? t(iL,'inviteTitle') : L('joinRoom')}</span>
         </div>
         <div style={S.card}>
+          {/* Invite welcome message when arriving from shared link */}
+          {inviteMsgLang && (
+            <div style={{textAlign:'center', marginBottom:18, padding:'12px 8px', background:'rgba(78,205,196,0.1)', borderRadius:12}}>
+              <div style={{fontSize:28, marginBottom:8}}>{'\u{1F30D}\u{1F399}\uFE0F'}</div>
+              <div style={{fontSize:15, color:'#fff', lineHeight:1.5, marginBottom:4, fontWeight:600}}>{t(iL,'inviteWelcome')}</div>
+              <div style={{fontSize:13, color:'rgba(255,255,255,0.7)', lineHeight:1.4}}>{t(iL,'inviteInstructions')}</div>
+            </div>
+          )}
           {/* Inline name setup for guests without prefs */}
-          {!prefs.name.trim() && (
+          <div style={S.field}>
+            <div style={S.label}>{inviteMsgLang ? t(iL,'name') : L('name')}</div>
+            <input style={S.input} placeholder={inviteMsgLang ? t(iL,'namePlaceholder') : L('namePlaceholder')} value={prefs.name}
+              onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20} />
+          </div>
+          {!inviteMsgLang && (
             <div style={S.field}>
-              <div style={S.label}>{L('name')}</div>
-              <input style={S.input} placeholder={L('namePlaceholder')} value={prefs.name}
-                onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20} />
+              <div style={S.label}>{L('roomCode')}</div>
+              <input style={{...S.input, textAlign:'center', fontSize:22, letterSpacing:6, textTransform:'uppercase'}}
+                placeholder="ABC123" value={joinCode} maxLength={6}
+                onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
             </div>
           )}
           <div style={S.field}>
-            <div style={S.label}>{L('roomCode')}</div>
-            <input style={{...S.input, textAlign:'center', fontSize:22, letterSpacing:6, textTransform:'uppercase'}}
-              placeholder="ABC123" value={joinCode} maxLength={6}
-              onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
-          </div>
-          <div style={S.field}>
-            <div style={S.label}>{L('yourLang')}</div>
+            <div style={S.label}>{inviteMsgLang ? t(iL,'yourLang') : L('yourLang')}</div>
             <select style={S.select} value={myLang} onChange={e => setMyLang(e.target.value)}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
           <button style={{...S.btn, marginTop:12, opacity:(joinCode.length>=4 && prefs.name.trim())?1:0.4}}
             disabled={joinCode.length<4 || !prefs.name.trim()} onClick={() => { vibrate(); savePrefs(prefs); handleJoinRoom(); }}>
-            {L('enterRoom')}
+            {inviteMsgLang ? t(iL,'inviteJoinBtn') : L('enterRoom')}
           </button>
           {status && <div style={S.statusMsg}>{status}</div>}
         </div>
       </div>
     </div>
   );
+  }
 
   // --- LOBBY ---
   if (view === 'lobby') return (
@@ -2388,6 +2407,12 @@ export default function Home() {
           </div>
           <div style={{textAlign:'center', marginBottom:14}}>
             <img src={qrUrl} alt="QR" style={{width:150, height:150, borderRadius:14, background:'#fff', padding:8}} />
+          </div>
+          <div style={{marginBottom:12}}>
+            <div style={S.label}>{L('inviteLangLabel')}</div>
+            <select style={{...S.select, fontSize:14}} value={inviteLang} onChange={e => setInviteLang(e.target.value)}>
+              {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+            </select>
           </div>
           <div style={{textAlign:'center', marginBottom:12}}>
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
