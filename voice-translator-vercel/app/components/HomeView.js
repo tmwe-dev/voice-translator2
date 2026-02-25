@@ -343,8 +343,9 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                   border:'1px solid rgba(255,107,157,0.2)', color:'#FF6B9D', fontSize:11, fontWeight:700,
                   cursor:'pointer', fontFamily:FONT, display:'flex', alignItems:'center', gap:4}}
                   onClick={() => {
-                    const text = `Join me on VoiceTranslate! Use code ${referralCode} for 50 bonus credits. ${APP_URL}?ref=${referralCode}`;
-                    if (navigator.share) { navigator.share({ title:'VoiceTranslate', text }); }
+                    const url = `${APP_URL}?ref=${referralCode}&lang=${shareAppLang}`;
+                    const text = `${L('referralInviteText') || 'Join me on VoiceTranslate!'} ${referralCode} - ${url}`;
+                    if (navigator.share) { navigator.share({ title:'VoiceTranslate', text, url }); }
                     else { navigator.clipboard.writeText(text); }
                   }}>
                   <Icon name="copy" size={14} color="#FF6B9D" />
