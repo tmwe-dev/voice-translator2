@@ -10,17 +10,23 @@ const TTS_PER_CHAR = 0.000015;                   // $15/1M chars
 export async function POST(req) {
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const { text, sourceLang, targetLang, sourceLangName, targetLangName, roomId } = await req.json();
+    const { text, sourceLang, targetLang, sourceLangName, targetLangName, roomId, context, isReview } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
+
+    // Build system prompt with optional context for streaming chunks
+    let systemPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.`;
+    if (context) {
+      systemPrompt += `\n\nPrevious translation context (for continuity): "${context}"`;
+    }
+    if (isReview) {
+      systemPrompt += `\nThis is a review pass. Ensure the translation is coherent and contextually accurate as a whole.`;
+    }
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
-        {
-          role: 'system',
-          content: `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.`
-        },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: text }
       ],
       temperature: 0.3,

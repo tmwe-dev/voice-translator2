@@ -83,6 +83,16 @@ export default function Home() {
   const playedMsgIdsRef = useRef(new Set()); // track already-played messages
   const sentByMeRef = useRef(new Set()); // track message IDs sent by THIS client
 
+  // Streaming translation refs
+  const speechRecRef = useRef(null);
+  const wordBufferRef = useRef(''); // words pending chunk emission
+  const allWordsRef = useRef(''); // all finalized words so far
+  const translatedChunksRef = useRef([]); // translated chunk strings
+  const reviewTimerRef = useRef(null); // post-hoc review interval
+  const streamingModeRef = useRef(false); // true when streaming active
+  const chunkingActiveRef = useRef(false); // prevent concurrent emitChunk
+  const [streamingMsg, setStreamingMsg] = useState(null); // live streaming bubble
+
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomInfo; }, [roomInfo]);
@@ -366,49 +376,30 @@ export default function Home() {
 
   function leaveRoom() {
     stopPolling(); stopFreeTalk();
+    // Clean up streaming if active
+    if (streamingModeRef.current) {
+      streamingModeRef.current = false;
+      if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} speechRecRef.current = null; }
+      if (reviewTimerRef.current) { clearInterval(reviewTimerRef.current); reviewTimerRef.current = null; }
+    }
+    setStreamingMsg(null);
     setRoomId(null); setRoomInfo(null); setMessages([]); setPartnerSpeaking(false); setView('home');
   }
 
   // =============================================
-  // RECORDING - TAP TO TALK (not hold!)
+  // RECORDING - TAP TO TALK with streaming translation
   // =============================================
   async function toggleRecording() {
     if (recording) {
       // STOP recording
-      if (recRef.current && recRef.current.state === 'recording') {
-        setStatus('Traduzione...');
-        if (roomId) setSpeakingState(roomId, false);
-        recRef.current.stop();
+      if (streamingModeRef.current) {
+        stopStreamingTranslation();
+      } else {
+        stopClassicRecording();
       }
     } else {
-      // START recording
-      unlockAudio();
-      setRecording(true);
-      setStatus('Parla ora...');
-      if (roomId) setSpeakingState(roomId, true);
-      chunksRef.current = [];
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
-        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-          : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-        recRef.current = new MediaRecorder(stream, { mimeType:mime });
-        recRef.current.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-        recRef.current.onstop = async () => {
-          recRef.current.stream.getTracks().forEach(t => t.stop());
-          const blob = new Blob(chunksRef.current, { type:recRef.current.mimeType });
-          if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
-          try {
-            await processAndSendAudio(blob);
-          } catch (err) { setStatus('Errore: ' + err.message); }
-          setRecording(false);
-          setStatus('');
-        };
-        recRef.current.start(100);
-      } catch (err) {
-        setStatus('Errore microfono: ' + err.message);
-        setRecording(false);
-        if (roomId) setSpeakingState(roomId, false);
-      }
+      // START recording - use streaming by default
+      startStreamingTranslation();
     }
   }
 
@@ -448,6 +439,344 @@ export default function Home() {
         const msgData = await msgRes.json();
         if (msgData.message?.id) sentByMeRef.current.add(msgData.message.id);
       } catch {}
+    }
+  }
+
+  // =============================================
+  // STREAMING TRANSLATION - Word-based chunking
+  // =============================================
+
+  function getTargetLangInfo() {
+    const currentMyLang = myLangRef.current;
+    const currentRoomInfo = roomInfoRef.current;
+    const currentPrefs = prefsRef.current;
+    const myL = getLang(currentMyLang);
+    let otherLangCode = null;
+    if (currentRoomInfo && currentRoomInfo.members) {
+      const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
+      if (other) otherLangCode = other.lang;
+    }
+    if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
+    return { myL, otherL: getLang(otherLangCode) };
+  }
+
+  function startStreamingTranslation() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      // Fallback to classic recording if SpeechRecognition unavailable
+      startClassicRecording();
+      return;
+    }
+
+    unlockAudio();
+    setRecording(true);
+    setStatus('');
+    if (roomId) setSpeakingState(roomId, true);
+
+    // Reset streaming state
+    wordBufferRef.current = '';
+    allWordsRef.current = '';
+    translatedChunksRef.current = [];
+    chunkingActiveRef.current = false;
+    streamingModeRef.current = true;
+
+    setStreamingMsg({ original: '', translated: '', isStreaming: true });
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = getLang(myLangRef.current).speech;
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.maxAlternatives = 1;
+    speechRecRef.current = recognition;
+
+    let lastFinalLength = 0; // track cumulative final transcript length
+
+    recognition.onresult = (event) => {
+      let fullFinal = '';
+      let interimTranscript = '';
+
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          fullFinal += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
+      // Detect NEW finalized text
+      if (fullFinal.length > lastFinalLength) {
+        const newText = fullFinal.substring(lastFinalLength).trim();
+        lastFinalLength = fullFinal.length;
+
+        if (newText) {
+          wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
+          allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
+
+          // Update display
+          setStreamingMsg(prev => prev ? {
+            ...prev,
+            original: allWordsRef.current
+          } : null);
+
+          // Check chunk threshold (min 4 words on final result = natural pause)
+          const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+          if (bufferWords >= 4) {
+            emitChunk();
+          }
+        }
+      }
+
+      // Show interim preview
+      if (interimTranscript) {
+        const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript.trim() : '');
+        setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+
+        // Force emit buffer if total pending words >= 12 (max threshold)
+        const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
+        const pendingWordCount = totalPending.split(/\s+/).filter(w => w).length;
+        if (pendingWordCount >= 12 && wordBufferRef.current.trim()) {
+          emitChunk();
+        }
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.log('[StreamRec] Error:', e.error);
+      if (e.error === 'no-speech' || e.error === 'aborted') return;
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still in streaming mode
+      if (streamingModeRef.current) {
+        try { recognition.start(); } catch (err) {
+          console.log('[StreamRec] Restart failed:', err);
+        }
+      }
+    };
+
+    recognition.start();
+
+    // Start post-hoc review timer (every 12 seconds)
+    reviewTimerRef.current = setInterval(() => {
+      postHocReview();
+    }, 12000);
+  }
+
+  async function emitChunk() {
+    const chunk = wordBufferRef.current.trim();
+    if (!chunk || chunkingActiveRef.current) return;
+    wordBufferRef.current = '';
+    chunkingActiveRef.current = true;
+
+    const { myL, otherL } = getTargetLangInfo();
+
+    try {
+      // Build context from previous chunks for continuity
+      const prevContext = translatedChunksRef.current.slice(-2).join(' ');
+
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: chunk,
+          sourceLang: myL.code,
+          targetLang: otherL.code,
+          sourceLangName: myL.name,
+          targetLangName: otherL.name,
+          roomId,
+          context: prevContext || undefined
+        })
+      });
+
+      if (res.ok) {
+        const { translated } = await res.json();
+        if (translated) {
+          translatedChunksRef.current.push(translated);
+          const fullTranslation = translatedChunksRef.current.join(' ');
+          setStreamingMsg(prev => prev ? { ...prev, translated: fullTranslation } : null);
+        }
+      }
+    } catch (e) {
+      console.error('[Chunk] Translation error:', e);
+    }
+    chunkingActiveRef.current = false;
+
+    // If more words accumulated while we were translating, emit again
+    if (wordBufferRef.current.trim()) {
+      const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+      if (bufferWords >= 4) emitChunk();
+    }
+  }
+
+  async function postHocReview() {
+    const allOriginal = allWordsRef.current.trim();
+    if (!allOriginal) return;
+    const wordCount = allOriginal.split(/\s+/).filter(w => w).length;
+    if (wordCount < 10) return; // Not enough for meaningful review
+
+    // Review last ~25 words
+    const words = allOriginal.split(/\s+/).filter(w => w);
+    const reviewText = words.slice(-25).join(' ');
+    const { myL, otherL } = getTargetLangInfo();
+
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: reviewText,
+          sourceLang: myL.code,
+          targetLang: otherL.code,
+          sourceLangName: myL.name,
+          targetLangName: otherL.name,
+          roomId,
+          isReview: true
+        })
+      });
+
+      if (res.ok) {
+        const { translated } = await res.json();
+        if (translated && translatedChunksRef.current.length > 0) {
+          // Figure out how many chunks correspond to the reviewed words
+          // Heuristic: each chunk was ~6-10 words, so review of ~25 words = last 3-4 chunks
+          const reviewWordCount = reviewText.split(/\s+/).length;
+          const avgWordsPerChunk = Math.max(1, wordCount / translatedChunksRef.current.length);
+          const chunksToReplace = Math.min(
+            translatedChunksRef.current.length,
+            Math.ceil(reviewWordCount / avgWordsPerChunk)
+          );
+          const keptChunks = translatedChunksRef.current.slice(0, -chunksToReplace);
+          translatedChunksRef.current = [...keptChunks, translated];
+          const fullTranslation = translatedChunksRef.current.join(' ');
+          setStreamingMsg(prev => prev ? { ...prev, translated: fullTranslation } : null);
+          console.log('[Review] Updated last', chunksToReplace, 'chunks with coherent translation');
+        }
+      }
+    } catch (e) {
+      console.error('[Review] Error:', e);
+    }
+  }
+
+  async function stopStreamingTranslation() {
+    streamingModeRef.current = false;
+    setRecording(false);
+    if (roomId) setSpeakingState(roomId, false);
+
+    // Stop recognition
+    if (speechRecRef.current) {
+      try { speechRecRef.current.stop(); } catch {}
+      speechRecRef.current = null;
+    }
+
+    // Stop review timer
+    if (reviewTimerRef.current) {
+      clearInterval(reviewTimerRef.current);
+      reviewTimerRef.current = null;
+    }
+
+    // Emit any remaining buffered words
+    if (wordBufferRef.current.trim()) {
+      await emitChunk();
+    }
+
+    const allOriginal = allWordsRef.current.trim();
+    if (!allOriginal) {
+      setStreamingMsg(null);
+      setStatus('');
+      return;
+    }
+
+    setStatus('Revisione finale...');
+
+    // Final full-text translation for best accuracy
+    const { myL, otherL } = getTargetLangInfo();
+    let finalTranslation = translatedChunksRef.current.join(' ');
+
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: allOriginal,
+          sourceLang: myL.code,
+          targetLang: otherL.code,
+          sourceLangName: myL.name,
+          targetLangName: otherL.name,
+          roomId,
+          isReview: true
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.translated) finalTranslation = data.translated;
+      }
+    } catch (e) {
+      console.error('[Final] Translation error:', e);
+    }
+
+    // Save as permanent message
+    if (finalTranslation && roomId) {
+      try {
+        const msgRes = await fetch('/api/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId,
+            sender: prefsRef.current.name,
+            original: allOriginal,
+            translated: finalTranslation,
+            sourceLang: myL.code,
+            targetLang: otherL.code
+          })
+        });
+        try {
+          const msgData = await msgRes.json();
+          if (msgData.message?.id) sentByMeRef.current.add(msgData.message.id);
+        } catch {}
+      } catch (e) {
+        console.error('[Final] Message save error:', e);
+      }
+    }
+
+    setStreamingMsg(null);
+    setStatus('');
+  }
+
+  // Classic recording fallback (for browsers without SpeechRecognition)
+  async function startClassicRecording() {
+    unlockAudio();
+    setRecording(true);
+    setStatus('Parla ora...');
+    if (roomId) setSpeakingState(roomId, true);
+    chunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+      recRef.current = new MediaRecorder(stream, { mimeType: mime });
+      recRef.current.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      recRef.current.onstop = async () => {
+        recRef.current.stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
+        if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
+        try { await processAndSendAudio(blob); }
+        catch (err) { setStatus('Errore: ' + err.message); }
+        setRecording(false);
+        setStatus('');
+      };
+      recRef.current.start(100);
+    } catch (err) {
+      setStatus('Errore microfono: ' + err.message);
+      setRecording(false);
+      if (roomId) setSpeakingState(roomId, false);
+    }
+  }
+
+  function stopClassicRecording() {
+    if (recRef.current && recRef.current.state === 'recording') {
+      setStatus('Traduzione...');
+      if (roomId) setSpeakingState(roomId, false);
+      recRef.current.stop();
     }
   }
 
@@ -506,11 +835,15 @@ export default function Home() {
   }
 
   // =============================================
-  // FREE TALK (VAD)
+  // FREE TALK (VAD) - now with streaming translation
   // =============================================
   async function startFreeTalk() {
     if (isListening) return;
     unlockAudio();
+
+    // Check SpeechRecognition availability
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
       vadStreamRef.current = stream;
@@ -522,35 +855,133 @@ export default function Home() {
       source.connect(analyser);
       vadAnalyserRef.current = analyser;
       setIsListening(true);
+
       let isRec = false;
-      const threshold = 25, silenceDelay = 1500;
+      const threshold = 25, silenceDelay = 2000; // slightly longer for streaming
+
+      // If SpeechRecognition available, use streaming mode for free talk
+      if (SpeechRecognition) {
+        wordBufferRef.current = '';
+        allWordsRef.current = '';
+        translatedChunksRef.current = [];
+        streamingModeRef.current = true;
+        chunkingActiveRef.current = false;
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = getLang(myLangRef.current).speech;
+        recognition.interimResults = true;
+        recognition.continuous = true;
+        recognition.maxAlternatives = 1;
+        speechRecRef.current = recognition;
+
+        let lastFinalLength = 0;
+
+        recognition.onresult = (event) => {
+          let fullFinal = '';
+          let interimTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            if (event.results[i].isFinal) fullFinal += event.results[i][0].transcript;
+            else interimTranscript += event.results[i][0].transcript;
+          }
+
+          if (fullFinal.length > lastFinalLength) {
+            const newText = fullFinal.substring(lastFinalLength).trim();
+            lastFinalLength = fullFinal.length;
+            if (newText) {
+              wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
+              allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
+              setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+              const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+              if (bufferWords >= 4) emitChunk();
+            }
+          }
+          if (interimTranscript) {
+            const preview = allWordsRef.current + ' ' + interimTranscript.trim();
+            setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+            const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
+            if (totalPending.split(/\s+/).filter(w => w).length >= 12 && wordBufferRef.current.trim()) emitChunk();
+          }
+        };
+        recognition.onerror = (e) => { console.log('[FreeTalkRec] Error:', e.error); };
+        recognition.onend = () => {
+          if (streamingModeRef.current && isListening) {
+            try { recognition.start(); } catch {}
+          }
+        };
+        recognition.start();
+
+        // Post-hoc review timer
+        reviewTimerRef.current = setInterval(() => postHocReview(), 12000);
+      }
+
+      // VAD loop - controls recording state indicator, and classic fallback
       function check() {
         if (!vadAnalyserRef.current) return;
         const data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a,b) => a+b, 0) / data.length;
+
         if (avg > threshold && !isRec) {
           isRec = true;
           if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
-          const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-            : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-          const ch = [];
-          const r = new MediaRecorder(stream, { mimeType:mime });
-          r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
-          r.onstop = async () => {
-            const blob = new Blob(ch, { type:r.mimeType });
-            if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
-          };
-          vadRecRef.current = r;
-          r.start(100);
-          setRecording(true);
-          if (roomId) setSpeakingState(roomId, true);
+
+          // For streaming mode, just show recording state + init streaming msg
+          if (SpeechRecognition) {
+            if (!streamingMsg) setStreamingMsg({ original: '', translated: '', isStreaming: true });
+            setRecording(true);
+            if (roomId) setSpeakingState(roomId, true);
+          } else {
+            // Classic fallback with MediaRecorder
+            const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+              : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+            const ch = [];
+            const r = new MediaRecorder(stream, { mimeType:mime });
+            r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
+            r.onstop = async () => {
+              const blob = new Blob(ch, { type:r.mimeType });
+              if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
+            };
+            vadRecRef.current = r;
+            r.start(100);
+            setRecording(true);
+            if (roomId) setSpeakingState(roomId, true);
+          }
         } else if (avg <= threshold && isRec) {
           if (!silenceTimerRef.current) {
-            silenceTimerRef.current = setTimeout(() => {
-              if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
-              isRec = false; setRecording(false);
-              if (roomId) setSpeakingState(roomId, false);
+            silenceTimerRef.current = setTimeout(async () => {
+              if (SpeechRecognition) {
+                // In streaming mode, silence = finalize current segment
+                isRec = false;
+                setRecording(false);
+                if (roomId) setSpeakingState(roomId, false);
+                // Emit remaining buffer
+                if (wordBufferRef.current.trim()) await emitChunk();
+                // Finalize the streaming message after a longer pause
+                // (We DON'T stop recognition - it keeps listening for next utterance)
+                // But we do save the current message if there's content
+                const allOriginal = allWordsRef.current.trim();
+                if (allOriginal && translatedChunksRef.current.length > 0) {
+                  const { myL, otherL } = getTargetLangInfo();
+                  const finalTranslation = translatedChunksRef.current.join(' ');
+                  try {
+                    const msgRes = await fetch('/api/messages', {
+                      method:'POST', headers:{'Content-Type':'application/json'},
+                      body: JSON.stringify({ roomId, sender: prefsRef.current.name, original: allOriginal,
+                        translated: finalTranslation, sourceLang: myL.code, targetLang: otherL.code })
+                    });
+                    try { const d = await msgRes.json(); if (d.message?.id) sentByMeRef.current.add(d.message.id); } catch {}
+                  } catch {}
+                  // Reset for next utterance
+                  wordBufferRef.current = '';
+                  allWordsRef.current = '';
+                  translatedChunksRef.current = [];
+                  setStreamingMsg({ original: '', translated: '', isStreaming: true });
+                }
+              } else {
+                if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
+                isRec = false; setRecording(false);
+                if (roomId) setSpeakingState(roomId, false);
+              }
               silenceTimerRef.current = null;
             }, silenceDelay);
           }
@@ -562,6 +993,7 @@ export default function Home() {
       check();
     } catch (err) { setStatus('Errore microfono: ' + err.message); }
   }
+
   function stopFreeTalk() {
     setIsListening(false); setRecording(false);
     if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
@@ -569,8 +1001,21 @@ export default function Home() {
     if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
     if (vadStreamRef.current) { vadStreamRef.current.getTracks().forEach(t => t.stop()); vadStreamRef.current = null; }
     vadAnalyserRef.current = null;
+    // Clean up streaming in freetalk
+    if (streamingModeRef.current) {
+      streamingModeRef.current = false;
+      if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} speechRecRef.current = null; }
+      if (reviewTimerRef.current) { clearInterval(reviewTimerRef.current); reviewTimerRef.current = null; }
+      setStreamingMsg(null);
+    }
   }
-  useEffect(() => () => stopFreeTalk(), []);
+
+  useEffect(() => () => {
+    stopFreeTalk();
+    streamingModeRef.current = false;
+    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} }
+    if (reviewTimerRef.current) clearInterval(reviewTimerRef.current);
+  }, []);
 
   // Share
   function shareRoom() {
@@ -980,6 +1425,35 @@ export default function Home() {
               </div>
             );
           })}
+          {/* Streaming live bubble */}
+          {streamingMsg && streamingMsg.original && (
+            <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
+              <div style={{fontSize:22, flexShrink:0, marginBottom:2}}>{prefs.avatar}</div>
+              <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
+                <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
+                  <span>Tu</span>
+                  <span style={{display:'inline-block', width:6, height:6, borderRadius:3, background:'#f5576c',
+                    animation:'vtPulse 1.2s infinite ease-in-out'}} />
+                  <span style={{color:'#f5576c', fontSize:9, fontWeight:600}}>LIVE</span>
+                </div>
+                <div style={{...S.bubble, ...S.bubbleMine, border:'1px solid rgba(245,87,108,0.2)'}}>
+                  <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:'rgba(255,255,255,0.95)'}}>
+                    {streamingMsg.original}
+                  </div>
+                  {streamingMsg.translated ? (
+                    <div style={{fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:4, lineHeight:1.4,
+                      borderTop:'1px solid rgba(255,255,255,0.06)', paddingTop:4}}>
+                      {streamingMsg.translated}
+                    </div>
+                  ) : (
+                    <div style={{fontSize:11, color:'rgba(255,255,255,0.25)', marginTop:4, fontStyle:'italic'}}>
+                      traduzione in corso...
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={msgsEndRef} />
         </div>
 
