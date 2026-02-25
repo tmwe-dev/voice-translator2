@@ -1,12 +1,26 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { getSession, getUser } from '../../lib/users.js';
 
 export async function POST(req) {
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const { text, voice } = await req.json();
+    const { text, voice, userToken } = await req.json();
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
+    // Determine API key: user's own or platform
+    let apiKey = process.env.OPENAI_API_KEY;
+
+    if (userToken) {
+      const session = await getSession(userToken);
+      if (session) {
+        const user = await getUser(session.email);
+        if (user?.useOwnKeys && user.apiKeys?.openai) {
+          apiKey = user.apiKeys.openai;
+        }
+      }
+    }
+
+    const openai = new OpenAI({ apiKey });
     const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'nova';
 
     const response = await openai.audio.speech.create({

@@ -253,7 +253,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova' })
+        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
       });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -292,7 +292,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova' })
+        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
       });
       if (!res.ok) throw new Error('TTS failed');
       const blob = await res.blob();
@@ -322,7 +322,7 @@ export default function Home() {
   function playWithNewAudio(text, lang, resolve) {
     fetch('/api/tts', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova' })
+      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
     }).then(r => r.blob()).then(blob => {
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
