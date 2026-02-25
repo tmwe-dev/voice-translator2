@@ -75,11 +75,20 @@ export async function POST(req) {
     }
 
     // Deduct credits if using platform key (only for non-review, non-trivial calls)
+    let remainingCredits = undefined;
     if (userEmail && !isOwnKey && !isReview) {
-      try { await deductCredits(userEmail, Math.max(0.1, msgCostEurCents)); } catch (e) { console.error('Credit deduct error:', e); }
+      try {
+        const updatedUser = await deductCredits(userEmail, Math.max(0.1, msgCostEurCents));
+        if (updatedUser) remainingCredits = updatedUser.credits;
+      } catch (e) { console.error('Credit deduct error:', e); }
     }
 
-    return NextResponse.json({ translated, cost: Math.round(msgCostUsd * 1000000) / 1000000 });
+    return NextResponse.json({
+      translated,
+      cost: Math.round(msgCostUsd * 1000000) / 1000000,
+      costEurCents: Math.round(msgCostEurCents * 100) / 100,
+      ...(remainingCredits !== undefined ? { remainingCredits } : {})
+    });
   } catch (e) {
     console.error('Translate error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });

@@ -52,6 +52,9 @@ export async function POST(req) {
           : '0',
         useOwnKeys: user.useOwnKeys,
         hasOpenaiKey: !!user.apiKeys?.openai,
+        hasElevenlabsKey: !!user.apiKeys?.elevenlabs,
+        tier: !user.useOwnKeys && user.credits <= 0 ? 'FREE'
+              : user.apiKeys?.elevenlabs ? 'TOP PRO' : 'PRO',
       });
     }
 

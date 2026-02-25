@@ -1,7 +1,7 @@
 # VoiceTranslator - Guida Completa del Progetto
 
 > **Ultimo aggiornamento:** 25 Febbraio 2026
-> **Commit corrente:** `f574127`
+> **Commit corrente:** `699ab8d`
 > **URL produzione:** https://voice-translator2.vercel.app
 
 ---
@@ -11,10 +11,12 @@
 App di traduzione vocale in tempo reale per 2 persone. Ogni utente parla nella propria lingua, l'app trascrive, traduce e riproduce audio nella lingua dell'altro. Supporta 24 lingue, 4 modalità di conversazione, 12 contesti tematici.
 
 **Stack tecnologico:**
-- Frontend: Next.js 14 App Router (single page `app/page.js`, ~2650 righe, client-side React)
+- Frontend: Next.js 14 App Router (single page `app/page.js`, ~2800+ righe, client-side React)
 - Backend: Next.js API Routes (serverless su Vercel)
 - Database: Upstash Redis (REST API, no npm package)
-- AI: OpenAI (Whisper STT, GPT-4o-mini traduzione, TTS-1 sintesi vocale)
+- AI PRO: OpenAI (Whisper STT, GPT-4o-mini traduzione, TTS-1 sintesi vocale)
+- AI TOP PRO: ElevenLabs TTS (voci professionali multilingual v2)
+- AI FREE: MyMemory API (traduzione gratuita) + Browser speechSynthesis (TTS)
 - Pagamenti: Stripe Checkout (EUR)
 - Auth: Magic code via email (Resend API)
 - UI: Glassmorphism, 14 avatar SVG, icone emoji
@@ -45,6 +47,8 @@ voice-translator-vercel/          ← Root Vercel
         ├── translate/route.js      (traduzione testo GPT-4o-mini)
         ├── process/route.js        (pipeline completa: Whisper→GPT→costo)
         ├── tts/route.js            (text-to-speech OpenAI TTS-1)
+        ├── tts-elevenlabs/route.js (text-to-speech ElevenLabs TOP PRO + lista voci)
+        ├── translate-free/route.js (traduzione gratuita via MyMemory API)
         ├── auth/route.js           (send-code/verify/me)
         ├── user/route.js           (profile/update/save-keys/credits/payments)
         ├── stripe/route.js         (crea checkout session)
@@ -59,6 +63,7 @@ voice-translator-vercel/          ← Root Vercel
 
 ```env
 OPENAI_API_KEY=sk-proj-***                  (OpenAI API key - vedi Vercel dashboard)
+ELEVENLABS_API_KEY=                         (opzionale - per TOP PRO con chiave piattaforma)
 
 UPSTASH_REDIS_REST_URL=https://climbing-wasp-54272.upstash.io
 UPSTASH_REDIS_REST_TOKEN=***                (vedi Vercel dashboard)
@@ -220,50 +225,73 @@ L'app usa un sistema di viste con `useState('view')`:
 ### 6.3 Translate (`/api/translate`)
 
 **POST** `{ text, sourceLang, targetLang, sourceLangName, targetLangName, roomId, context, isReview, domainContext, description, userToken }`
-→ `{ translated, cost }`
+→ `{ translated, cost, costEurCents, remainingCredits? }`
 
 - Usa API key dell'utente se `useOwnKeys=true`
-- Altrimenti deduce crediti piattaforma
+- Altrimenti deduce crediti piattaforma (min 0.1 cent €)
 - Errore 402 se crediti esauriti
+- Ritorna `remainingCredits` dopo ogni deduzione (aggiornamento saldo in tempo reale)
 
 ### 6.4 Process (`/api/process`)
 
 **POST** FormData: `audio, sourceLang, targetLang, sourceLangName, targetLangName, roomId, domainContext, description, userToken`
-→ `{ original, translated, cost }`
+→ `{ original, translated, cost, costEurCents, remainingCredits? }`
 
-Pipeline: Whisper STT → GPT-4o-mini traduzione
+Pipeline: Whisper STT → GPT-4o-mini traduzione. Deduce min 0.2 cent € per messaggio.
+Ritorna `remainingCredits` per aggiornamento saldo in tempo reale.
 
-### 6.5 TTS (`/api/tts`)
+### 6.5 TTS OpenAI (`/api/tts`)
 
-**POST** `{ text, voice }`
+**POST** `{ text, voice, userToken? }`
 → Binary audio/mpeg (MP3)
 
-### 6.6 Auth (`/api/auth`)
+Usa TTS-1 di OpenAI. Supporta chiavi utente proprie.
+
+### 6.6 TTS ElevenLabs (`/api/tts-elevenlabs`) — TOP PRO
+
+**POST** `{ text, voiceId?, langCode?, userToken? }`
+→ Binary audio/mpeg (MP3)
+
+Usa `eleven_multilingual_v2` model. Voice settings: stability 0.5, similarity_boost 0.75.
+Supporta chiavi utente proprie o chiave piattaforma (`ELEVENLABS_API_KEY`).
+Se `voiceId` non fornito, seleziona voce automatica per lingua (Rachel default).
+
+**GET** `?userToken=xxx` → Lista voci disponibili `[{ id, name, category, labels, preview }]`
+
+### 6.7 Translate Free (`/api/translate-free`) — FREE Tier
+
+**POST** `{ text, sourceLang, targetLang }`
+→ `{ translated, match, fallback }`
+
+Proxy per MyMemory API (gratuito, nessuna API key). 50K chars/giorno.
+Gestisce edge case: risposte UPPERCASE, errori "PLEASE SELECT", warning MyMemory.
+
+### 6.8 Auth (`/api/auth`)
 
 **POST** Actions:
 - `send-code`: `{ email }` → `{ ok, emailSent, testCode? }`
 - `verify`: `{ email, code, name?, lang?, avatar? }` → `{ ok, token, user }`
 - `me`: `{ token }` → `{ user }`
 
-### 6.7 User (`/api/user`)
+### 6.9 User (`/api/user`)
 
 **POST** (richiede `token`):
 - `profile` → user data (API keys mascherate)
 - `update`: `{ name?, lang?, avatar? }`
-- `save-keys`: `{ apiKeys: { openai, anthropic, gemini }, useOwnKeys }`
+- `save-keys`: `{ apiKeys: { openai, anthropic, gemini, elevenlabs }, useOwnKeys }`
 - `credits` → `{ credits, useOwnKeys }`
 - `payments` → lista pagamenti
 
-### 6.8 Stripe (`/api/stripe`)
+### 6.10 Stripe (`/api/stripe`)
 
 **POST** `{ action: 'checkout', packageId: 'pack_5', token }`
 → `{ url, sessionId }` (redirect a Stripe Checkout)
 
-### 6.9 Stripe Webhook (`/api/stripe/webhook`)
+### 6.11 Stripe Webhook (`/api/stripe/webhook`)
 
 Riceve eventi `checkout.session.completed`, accredita crediti all'utente.
 
-### 6.10 Conversation (`/api/conversation`)
+### 6.12 Conversation (`/api/conversation`)
 
 **POST**:
 - `end`: `{ roomId }` → salva conversazione con TTL 7 giorni
@@ -271,13 +299,51 @@ Riceve eventi `checkout.session.completed`, accredita crediti all'utente.
 
 **GET** `?id=ABC123` → conversazione completa con messaggi
 
-### 6.11 Summary (`/api/summary`)
+### 6.13 Summary (`/api/summary`)
 
 **POST** `{ convId }` → genera summary AI (GPT-4o-mini) con title, summary, keyPoints, topics, sentiment
 
+### 6.14 Debug (`/api/debug`)
+
+**POST** Actions:
+- `user-info`: `{ userToken }` → info utente con crediti, tier (FREE/PRO/TOP PRO), chiavi API
+- `simulate`: `{ text?, sourceLang?, targetLang?, ..., audioSeconds? }` → simulazione costi dettagliata per tutti i tier, confronto pacchetti, scenari di esempio
+
 ---
 
-## 7. DATA MODEL (Redis)
+## 7. SISTEMA 3 TIER
+
+| Tier | STT | Traduzione | TTS | Costo | Requisiti |
+|------|-----|------------|-----|-------|-----------|
+| **FREE** | Web Speech API (browser) | MyMemory API (gratuito) | Browser speechSynthesis | Gratis | Nessun account necessario |
+| **PRO** | OpenAI Whisper | GPT-4o-mini | OpenAI TTS-1 | ~0.1-1.0 cent €/msg | Account + crediti o chiave OpenAI |
+| **TOP PRO** | OpenAI Whisper | GPT-4o-mini | ElevenLabs v2 | ~1-5 cent €/msg | Account + chiave ElevenLabs propria |
+
+**Rilevamento automatico tier:**
+- FREE: nessun token, o crediti esauriti senza chiavi proprie
+- PRO: ha crediti > 0, oppure ha chiave OpenAI propria
+- TOP PRO: ha chiave ElevenLabs propria + toggle TOP PRO attivato
+
+**FREE tier dettagli:**
+- Traduzione: proxy MyMemory API (`/api/translate-free`), 50K chars/giorno
+- TTS: `window.speechSynthesis` del browser (qualità variabile per lingua)
+- STT: Web Speech API del browser (SpeechRecognition)
+- Nessun addebito crediti
+
+**TOP PRO dettagli:**
+- Voci ElevenLabs: lista dinamica caricata da API (`GET /api/tts-elevenlabs`)
+- Modello: `eleven_multilingual_v2` (supporto 28+ lingue)
+- Fallback automatico a OpenAI TTS-1 se ElevenLabs fallisce
+- Costo ~20x OpenAI TTS-1 ($0.30 vs $0.015 per 1K chars)
+
+**Aggiornamento saldo in tempo reale:**
+- Le API translate/process ritornano `remainingCredits` dopo ogni deduzione
+- `translateUniversal()` aggiorna `setCreditBalance()` inline dalla risposta API
+- `refreshBalance()` chiamato come fallback dopo: sendTextMessage, stopStreamingTranslation, stopClassicRecording
+
+---
+
+## 8. DATA MODEL (Redis)
 
 ### Room (`room:{ID}`)
 ```json
@@ -321,7 +387,7 @@ Max 200 messaggi, TTL 7200s
   "credits": 550,
   "totalSpent": 120,
   "totalMessages": 47,
-  "apiKeys": { "openai": "sk-...", "anthropic": "", "gemini": "" },
+  "apiKeys": { "openai": "sk-...", "anthropic": "", "gemini": "", "elevenlabs": "xi_..." },
   "useOwnKeys": false,
   "created": 1708800000000,
   "lastLogin": 1708900000000
@@ -336,7 +402,7 @@ Nessun TTL (persistente)
 
 ---
 
-## 8. SISTEMA CREDITI
+## 9. SISTEMA CREDITI
 
 | Pacchetto | Prezzo | Crediti (cent €) | Messaggi stimati | Bonus |
 |-----------|--------|-----------------|------------------|-------|
@@ -352,7 +418,7 @@ Nessun TTL (persistente)
 
 ---
 
-## 9. i18n - LINGUE UI SUPPORTATE
+## 10. i18n - LINGUE UI SUPPORTATE
 
 15 lingue per l'interfaccia: Italiano, English, Español, Français, Deutsch, Português, 中文, 日本語, 한국어, ไทย, العربية, हिन्दी, Русский, Türkçe, Tiếng Việt
 
@@ -369,7 +435,7 @@ Categorie chiavi principali:
 
 ---
 
-## 10. FEATURES IMPLEMENTATE
+## 11. FEATURES IMPLEMENTATE
 
 ### Core
 - [x] Traduzione vocale bidirezionale in tempo reale (24 lingue)
@@ -378,8 +444,17 @@ Categorie chiavi principali:
 - [x] QR code per invitare partner
 - [x] Chat con messaggi originali + tradotti
 - [x] Auto-play audio traduzione
-- [x] 6 voci TTS selezionabili
+- [x] 6 voci OpenAI TTS selezionabili
 - [x] 14 avatar SVG
+
+### Sistema 3 Tier
+- [x] FREE tier: MyMemory + browser speechSynthesis (zero costo)
+- [x] PRO tier: OpenAI Whisper + GPT-4o-mini + TTS-1
+- [x] TOP PRO tier: OpenAI + ElevenLabs TTS (voci professionali)
+- [x] Selezione voci ElevenLabs per utente (caricamento dinamico da API)
+- [x] Fallback automatico ElevenLabs → OpenAI TTS-1 → browser speechSynthesis
+- [x] Badge tier colorato in room header (verde FREE, rosa PRO, oro TOP PRO)
+- [x] Rilevamento automatico tier basato su crediti e chiavi API
 
 ### Live & Social
 - [x] Live text broadcasting (testo in tempo reale al partner)
@@ -391,9 +466,11 @@ Categorie chiavi principali:
 - [x] Auth magic code (email + 6 cifre)
 - [x] Sistema crediti con 4 pacchetti
 - [x] Stripe Checkout (EUR)
-- [x] Opzione "usa le tue API keys" (OpenAI, Anthropic, Gemini)
+- [x] Opzione "usa le tue API keys" (OpenAI, Anthropic, Gemini, ElevenLabs)
+- [x] Aggiornamento saldo crediti in tempo reale (dopo ogni messaggio)
 - [x] Storico pagamenti
 - [x] Storico conversazioni con summary AI
+- [x] Pagina debug con simulazione costi e scenari
 
 ### UI/UX
 - [x] Glassmorphism design
@@ -401,10 +478,11 @@ Categorie chiavi principali:
 - [x] Responsive mobile-first
 - [x] Persistent mic stream (evita ripetute richieste permesso)
 - [x] Dropdown contesti con icone
+- [x] Sezione API keys con ElevenLabs gold styling
 
 ---
 
-## 11. TODO / FEATURES DA IMPLEMENTARE
+## 12. TODO / FEATURES DA IMPLEMENTARE
 
 - [ ] **Resend API key**: Configurare per invio email reali (attualmente testCode in risposta)
 - [ ] **Guest account prompt**: Mostrare invito registrazione in angolo per utenti invitati
@@ -416,7 +494,7 @@ Categorie chiavi principali:
 
 ---
 
-## 12. STILE UI
+## 13. STILE UI
 
 Design: Glassmorphism con sfondo gradient animato (#0a0a2e → #1a1a4e → #0f3460)
 
@@ -432,7 +510,7 @@ Elementi chiave:
 
 ---
 
-## 13. COME CONTINUARE LO SVILUPPO
+## 14. COME CONTINUARE LO SVILUPPO
 
 ### Setup locale
 ```bash
@@ -448,7 +526,7 @@ Push su main → Vercel deploya automaticamente.
 Root directory su Vercel: `voice-translator-vercel`
 
 ### Architettura chiave da ricordare
-1. **TUTTO in un file**: `page.js` contiene tutta la UI (~2650 righe). È un singolo componente React client-side.
+1. **TUTTO in un file**: `page.js` contiene tutta la UI (~2800+ righe). È un singolo componente React client-side.
 2. **Redis via REST**: Nessun npm package per Redis. Tutto via fetch a Upstash REST API.
 3. **Polling, non WebSocket**: La comunicazione tra utenti usa polling HTTP ogni 1.2s.
 4. **Doppia registrazione audio**: SpeechRecognition (browser) + MediaRecorder (Whisper fallback).

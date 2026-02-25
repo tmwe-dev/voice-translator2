@@ -100,14 +100,20 @@ export async function POST(req) {
     }
 
     // Deduct credits
+    let remainingCredits = undefined;
     if (userEmail && !isOwnKey) {
-      try { await deductCredits(userEmail, Math.max(0.2, msgCostEurCents)); } catch (e) { console.error('Credit deduct error:', e); }
+      try {
+        const updatedUser = await deductCredits(userEmail, Math.max(0.2, msgCostEurCents));
+        if (updatedUser) remainingCredits = updatedUser.credits;
+      } catch (e) { console.error('Credit deduct error:', e); }
     }
 
     return NextResponse.json({
       original,
       translated,
-      cost: Math.round(msgCostUsd * 1000000) / 1000000
+      cost: Math.round(msgCostUsd * 1000000) / 1000000,
+      costEurCents: Math.round(msgCostEurCents * 100) / 100,
+      ...(remainingCredits !== undefined ? { remainingCredits } : {})
     });
   } catch (e) {
     console.error('Process error:', e);

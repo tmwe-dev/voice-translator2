@@ -423,7 +423,12 @@ export default function Home() {
       if (res.status === 402) throw new Error(errData.error || 'No credits');
       throw new Error('Translation error');
     }
-    return await res.json();
+    const data = await res.json();
+    // Update credit balance inline if returned
+    if (data.remainingCredits !== undefined) {
+      setCreditBalance(data.remainingCredits);
+    }
+    return data;
   }
 
   // ElevenLabs TTS playback (TOP PRO tier)
@@ -1132,6 +1137,8 @@ export default function Home() {
 
     setStreamingMsg(null);
     setStatus('');
+    // Refresh credit balance after streaming message (non-blocking)
+    if (!isTrialRef.current && !useOwnKeys) refreshBalance();
   }
 
   // Classic recording fallback (for browsers without SpeechRecognition)
@@ -1155,6 +1162,8 @@ export default function Home() {
         catch (err) { setStatus('Error: ' + err.message); }
         setRecording(false);
         setStatus('');
+        // Refresh credit balance after audio message (non-blocking)
+        if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       };
       recRef.current.start(100);
     } catch (err) {
@@ -1208,8 +1217,14 @@ export default function Home() {
           if (msgData.message?.id) sentByMeRef.current.add(msgData.message.id);
         } catch {}
         setTextInput('');
+        // Refresh credit balance after sending (non-blocking)
+        if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       }
-    } catch (err) { setStatus('Error: ' + err.message); }
+    } catch (err) {
+      setStatus('Error: ' + err.message);
+      // Refresh balance on error too (might be 402 credit exhausted)
+      if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+    }
     setSendingText(false);
     setStatus('');
   }
