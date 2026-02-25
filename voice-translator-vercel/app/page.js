@@ -133,6 +133,7 @@ export default function Home() {
   const isTopProRef = useRef(false);
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState(''); // ElevenLabs voice ID
+  const [platformHasEL, setPlatformHasEL] = useState(false); // platform ELEVENLABS_API_KEY exists
   const roomTierOverrideRef = useRef(null); // when guest joins, inherit host's tier
 
   // FREE tier usage tracking
@@ -193,9 +194,12 @@ export default function Home() {
       setIsTrial(false);
     } else {
       setIsTrial(true);
-      setIsTopPro(false);
+      // Only reset TOP PRO if user doesn't have ElevenLabs key
+      if (!(useOwnKeys && apiKeyInputs.elevenlabs?.trim())) {
+        setIsTopPro(false);
+      }
     }
-  }, [userToken, creditBalance, useOwnKeys]);
+  }, [userToken, creditBalance, useOwnKeys, apiKeyInputs.elevenlabs]);
 
   // =============================================
   // FREE TIER USAGE TRACKING - localStorage + midnight UTC reset
@@ -636,9 +640,14 @@ export default function Home() {
             setUserAccount(data.user);
             setCreditBalance(data.user.credits || 0);
             setUseOwnKeys(data.user.useOwnKeys || false);
-            // Detect TOP PRO: user has ElevenLabs key
+            // Track if platform has ElevenLabs key
+            if (data.platformHasElevenLabs) setPlatformHasEL(true);
+            // Detect TOP PRO: user has ElevenLabs key OR platform has it and user has credits
             if (data.user.useOwnKeys && data.user.apiKeys?.elevenlabs) {
               setIsTopPro(true);
+            } else if (data.platformHasElevenLabs && !data.user.useOwnKeys && data.user.credits >= 2) {
+              // User with credits can use platform ElevenLabs — enable TOP PRO option
+              // Don't auto-enable, but make the toggle available
             }
             setView(pickView(!!saved));
           } else {
@@ -2172,8 +2181,8 @@ export default function Home() {
             </div>
           </div>
 
-          {/* TOP PRO toggle */}
-          {!isTrial && useOwnKeys && apiKeyInputs.elevenlabs && (
+          {/* TOP PRO toggle — visible if user has own EL key OR platform has EL key */}
+          {!isTrial && ((useOwnKeys && apiKeyInputs.elevenlabs) || platformHasEL) && (
             <div style={S.field}>
               <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
                 <span style={{...S.label, marginBottom:0, color:'#ffd700'}}>{'\u2B50'} TOP PRO (ElevenLabs)</span>
@@ -2182,6 +2191,11 @@ export default function Home() {
                   <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
                 </button>
               </div>
+              {!useOwnKeys && platformHasEL && (
+                <div style={{fontSize:11, color:'#999', marginTop:4}}>
+                  ElevenLabs via piattaforma (costo ~20x TTS standard)
+                </div>
+              )}
             </div>
           )}
 

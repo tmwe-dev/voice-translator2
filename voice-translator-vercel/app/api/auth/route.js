@@ -77,7 +77,9 @@ export async function POST(req) {
       if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
       const user = await getUser(session.email);
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      return NextResponse.json({ user });
+      // Tell frontend if platform has ElevenLabs key configured
+      const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
+      return NextResponse.json({ user, platformHasElevenLabs });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
