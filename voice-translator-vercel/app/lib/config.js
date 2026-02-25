@@ -20,18 +20,19 @@ export const MIN_CREDITS = {
   TRANSLATE: 0.1,    // text translation
   PROCESS: 0.5,      // whisper + GPT pipeline
   TTS_OPENAI: 0.3,   // OpenAI TTS
-  TTS_ELEVENLABS: 2,  // ElevenLabs TTS (expensive)
+  TTS_ELEVENLABS: 6,  // ElevenLabs TTS (premium, ~4x cost → priced for 75% margin)
   SUMMARY: 0.5,      // conversation summary
 };
 
 // =============================================
 // Minimum charge per operation (euro-cents)
+// Margin target: ~75% on all operations
 // =============================================
 export const MIN_CHARGE = {
   TRANSLATE: 0.1,
   PROCESS: 0.2,
   TTS_OPENAI: 0.3,
-  TTS_ELEVENLABS: 1,
+  TTS_ELEVENLABS: 5,  // ElevenLabs: real cost ~1.4¢/msg → charge 5¢ for 75% margin
   SUMMARY: 0.5,
 };
 

@@ -107,6 +107,11 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
           <div style={{fontSize:10, color:'rgba(232,234,255,0.30)', marginTop:4}}>
             {pLang === 'it' ? '1 credito = 1 euro-centesimo' : '1 credit = 1 euro-cent'}
           </div>
+          <div style={{fontSize:9, color:'rgba(255,215,0,0.45)', marginTop:4}}>
+            {pLang === 'it'
+              ? '\u26A1 Voce standard: ~0.5 crediti/msg \u2022 Voce ElevenLabs: ~5 crediti/msg'
+              : '\u26A1 Standard voice: ~0.5 credits/msg \u2022 ElevenLabs voice: ~5 credits/msg'}
+          </div>
         </div>
 
         {/* Packages */}

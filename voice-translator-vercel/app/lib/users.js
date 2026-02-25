@@ -141,11 +141,11 @@ export async function updateUser(email, updates) {
 
 // Credit packages: { id, euros, credits (in euro-cents), label }
 export const CREDIT_PACKAGES = [
-  { id: 'pack_starter', euros: 0.90, credits: 90, label: '€0.90', messages: '~180 messaggi', starter: true },
-  { id: 'pack_2', euros: 2, credits: 200, label: '€2', messages: '~400 messaggi' },
-  { id: 'pack_5', euros: 5, credits: 550, label: '€5', messages: '~1100 messaggi', bonus: '+10%' },
-  { id: 'pack_10', euros: 10, credits: 1200, label: '€10', messages: '~2400 messaggi', bonus: '+20%' },
-  { id: 'pack_20', euros: 20, credits: 2600, label: '€20', messages: '~5200 messaggi', bonus: '+30%' },
+  { id: 'pack_starter', euros: 0.90, credits: 90, label: '€0.90', messages: '90 crediti', starter: true },
+  { id: 'pack_2', euros: 2, credits: 200, label: '€2', messages: '200 crediti' },
+  { id: 'pack_5', euros: 5, credits: 550, label: '€5', messages: '550 crediti', bonus: '+10%' },
+  { id: 'pack_10', euros: 10, credits: 1200, label: '€10', messages: '1200 crediti', bonus: '+20%' },
+  { id: 'pack_20', euros: 20, credits: 2600, label: '€20', messages: '2600 crediti', bonus: '+30%' },
 ];
 
 export async function addCredits(email, amount) {

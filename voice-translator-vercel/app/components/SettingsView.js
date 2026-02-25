@@ -732,8 +732,10 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   </button>
                 </div>
                 {!useOwnKeys && platformHasEL && (
-                  <div style={{fontSize:11, color:'rgba(255,255,255,0.65)', marginBottom:8}}>
-                    ElevenLabs via piattaforma (costo ~20x TTS standard)
+                  <div style={{fontSize:10, color:'rgba(255,215,0,0.65)', marginBottom:8, lineHeight:1.5,
+                    padding:'6px 10px', borderRadius:8, background:'rgba(255,215,0,0.04)',
+                    border:'1px solid rgba(255,215,0,0.08)'}}>
+                    {'\u26A1'} {L('elCostNote') || 'Voci premium ElevenLabs: ogni messaggio consuma ~5 crediti (vs ~0.5 standard). Usa le tue chiavi API per costo zero.'}
                   </div>
                 )}
 
