@@ -13,6 +13,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [playingVoice, setPlayingVoice] = useState(null);
+  const [elLangFilter, setElLangFilter] = useState('all');
+  const [elGenderFilter, setElGenderFilter] = useState('all');
+  const [avatarVoiceMap, setAvatarVoiceMap] = useState({});
   const audioRef = useRef(null);
 
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
@@ -539,91 +542,221 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {/* ══════════════════════════════════════════════════
               ELEVENLABS — TOP PRO
              ══════════════════════════════════════════════════ */}
-          {!isTrial && ((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL) && (
-            <div style={{...S.field, padding:'14px', borderRadius:16,
-              background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.12)'}}>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
-                <span style={{fontSize:14, fontWeight:700, color:'#ffd700', display:'flex', alignItems:'center', gap:6}}>
-                  {'\u2B50'} TOP PRO \u2014 ElevenLabs
-                </span>
-                <button onClick={() => setIsTopPro(!isTopPro)}
-                  style={{...S.toggle, background:isTopPro ? '#ffd700' : '#333'}}>
-                  <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
-                </button>
-              </div>
-              {!useOwnKeys && platformHasEL && (
-                <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
-                  ElevenLabs via piattaforma (costo ~20x TTS standard)
+          {!isTrial && ((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL) && (() => {
+            // Accent/language → flag mapping
+            const ACCENT_FLAGS = {
+              american:'\u{1F1FA}\u{1F1F8}', british:'\u{1F1EC}\u{1F1E7}', english:'\u{1F1EC}\u{1F1E7}',
+              italian:'\u{1F1EE}\u{1F1F9}', spanish:'\u{1F1EA}\u{1F1F8}', french:'\u{1F1EB}\u{1F1F7}',
+              german:'\u{1F1E9}\u{1F1EA}', portuguese:'\u{1F1E7}\u{1F1F7}', brazilian:'\u{1F1E7}\u{1F1F7}',
+              chinese:'\u{1F1E8}\u{1F1F3}', japanese:'\u{1F1EF}\u{1F1F5}', korean:'\u{1F1F0}\u{1F1F7}',
+              arabic:'\u{1F1F8}\u{1F1E6}', hindi:'\u{1F1EE}\u{1F1F3}', indian:'\u{1F1EE}\u{1F1F3}',
+              russian:'\u{1F1F7}\u{1F1FA}', turkish:'\u{1F1F9}\u{1F1F7}', dutch:'\u{1F1F3}\u{1F1F1}',
+              polish:'\u{1F1F5}\u{1F1F1}', swedish:'\u{1F1F8}\u{1F1EA}', thai:'\u{1F1F9}\u{1F1ED}',
+              vietnamese:'\u{1F1FB}\u{1F1F3}', indonesian:'\u{1F1EE}\u{1F1E9}', malay:'\u{1F1F2}\u{1F1FE}',
+              greek:'\u{1F1EC}\u{1F1F7}', czech:'\u{1F1E8}\u{1F1FF}', romanian:'\u{1F1F7}\u{1F1F4}',
+              hungarian:'\u{1F1ED}\u{1F1FA}', finnish:'\u{1F1EB}\u{1F1EE}', irish:'\u{1F1EE}\u{1F1EA}',
+              australian:'\u{1F1E6}\u{1F1FA}', african:'\u{1F30D}', middle_eastern:'\u{1F30D}',
+            };
+            const getVoiceFlag = (v) => {
+              const accent = (v.accent || v.labels?.accent || '').toLowerCase();
+              for (const [key, flag] of Object.entries(ACCENT_FLAGS)) {
+                if (accent.includes(key)) return flag;
+              }
+              return '\u{1F30D}';
+            };
+
+            // Get unique accents for filter
+            const allAccents = elevenLabsVoices.length > 0
+              ? [...new Set(elevenLabsVoices.map(v => (v.accent || v.labels?.accent || '').toLowerCase()).filter(Boolean))].sort()
+              : [];
+
+            // Filter voices
+            const filteredVoices = elevenLabsVoices.filter(v => {
+              if (elLangFilter !== 'all') {
+                const accent = (v.accent || v.labels?.accent || '').toLowerCase();
+                if (!accent.includes(elLangFilter)) return false;
+              }
+              if (elGenderFilter !== 'all') {
+                const gender = (v.gender || v.labels?.gender || '').toLowerCase();
+                if (gender !== elGenderFilter) return false;
+              }
+              return true;
+            });
+
+            // Check if a voice is assigned to any avatar
+            const voiceToAvatars = {};
+            if (avatarVoiceMap) {
+              Object.entries(avatarVoiceMap).forEach(([name, vid]) => {
+                if (!voiceToAvatars[vid]) voiceToAvatars[vid] = [];
+                voiceToAvatars[vid].push(name);
+              });
+            }
+
+            return (
+              <div style={{...S.field, padding:'14px', borderRadius:16,
+                background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.12)'}}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
+                  <span style={{fontSize:14, fontWeight:700, color:'#ffd700', display:'flex', alignItems:'center', gap:6}}>
+                    {'\u2B50'} TOP PRO \u2014 ElevenLabs
+                  </span>
+                  <button onClick={() => setIsTopPro(!isTopPro)}
+                    style={{...S.toggle, background:isTopPro ? '#ffd700' : '#333'}}>
+                    <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
+                  </button>
                 </div>
-              )}
-
-              {/* Load voices button */}
-              {isTopPro && elevenLabsVoices.length === 0 && (
-                <button style={{width:'100%', padding:'10px 14px', borderRadius:10, cursor:'pointer',
-                  background:'rgba(255,215,0,0.08)', border:'1px solid rgba(255,215,0,0.2)',
-                  color:'#ffd700', fontSize:13, fontWeight:700, fontFamily:FONT,
-                  display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                  WebkitTapHighlightColor:'transparent'}}
-                  onClick={async () => {
-                    try {
-                      const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
-                      if (res.ok) {
-                        const data = await res.json();
-                        setElevenLabsVoices(data.voices || []);
-                      }
-                    } catch(e) { console.error('Failed to load voices:', e); }
-                  }}>
-                  <Icon name="refresh" size={16} color="#ffd700" />
-                  {L('loadVoices') || 'Carica voci ElevenLabs'}
-                </button>
-              )}
-
-              {/* ElevenLabs voice list with preview */}
-              {isTopPro && elevenLabsVoices.length > 0 && (
-                <div>
-                  <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
-                    {elevenLabsVoices.length} {L('voicesAvailable') || 'voci disponibili'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
+                {!useOwnKeys && platformHasEL && (
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
+                    ElevenLabs via piattaforma (costo ~20x TTS standard)
                   </div>
-                  <div style={{display:'flex', flexDirection:'column', gap:4, maxHeight:300, overflowY:'auto'}}>
-                    {elevenLabsVoices.map(v => {
-                      const isSel = selectedELVoice === v.id;
-                      const isPlaying = playingVoice === `el_${v.id}`;
-                      return (
-                        <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
-                          padding:'8px 12px', borderRadius:12, transition:'all 0.15s',
-                          background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(232,234,255,0.02)',
-                          border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(232,234,255,0.04)'}}>
-                          {/* Play button */}
-                          <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
-                            style={{width:32, height:32, borderRadius:8, cursor:'pointer', flexShrink:0,
-                              background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
-                              border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
-                              display:'flex', alignItems:'center', justifyContent:'center',
-                              WebkitTapHighlightColor:'transparent'}}>
-                            <Icon name={isPlaying ? 'stop' : 'play'} size={14}
-                              color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                )}
+
+                {/* Load voices button */}
+                {isTopPro && elevenLabsVoices.length === 0 && (
+                  <button style={{width:'100%', padding:'10px 14px', borderRadius:10, cursor:'pointer',
+                    background:'rgba(255,215,0,0.08)', border:'1px solid rgba(255,215,0,0.2)',
+                    color:'#ffd700', fontSize:13, fontWeight:700, fontFamily:FONT,
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                    WebkitTapHighlightColor:'transparent'}}
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          setElevenLabsVoices(data.voices || []);
+                          if (data.avatarVoiceMap) setAvatarVoiceMap(data.avatarVoiceMap);
+                        }
+                      } catch(e) { console.error('Failed to load voices:', e); }
+                    }}>
+                    <Icon name="refresh" size={16} color="#ffd700" />
+                    {L('loadVoices') || 'Carica voci ElevenLabs'}
+                  </button>
+                )}
+
+                {/* ElevenLabs voice browser with filters */}
+                {isTopPro && elevenLabsVoices.length > 0 && (
+                  <div>
+                    {/* ── Filter bar ── */}
+                    <div style={{display:'flex', gap:8, marginBottom:10, flexWrap:'wrap'}}>
+                      {/* Language/accent filter */}
+                      <select value={elLangFilter} onChange={e => setElLangFilter(e.target.value)}
+                        style={{flex:1, minWidth:120, padding:'6px 10px', borderRadius:8, fontSize:11, fontWeight:600,
+                          background:'rgba(232,234,255,0.04)', border:'1px solid rgba(255,215,0,0.15)',
+                          color:'#E8EAFF', fontFamily:FONT, cursor:'pointer',
+                          WebkitAppearance:'none', MozAppearance:'none'}}>
+                        <option value="all">{'\u{1F30D}'} {L('allLanguages') || 'Tutte le lingue'}</option>
+                        {allAccents.map(a => (
+                          <option key={a} value={a}>{ACCENT_FLAGS[a] || '\u{1F30D}'} {a.charAt(0).toUpperCase() + a.slice(1)}</option>
+                        ))}
+                      </select>
+                      {/* Gender filter */}
+                      <div style={{display:'flex', gap:0, borderRadius:8, overflow:'hidden',
+                        border:'1px solid rgba(255,215,0,0.15)'}}>
+                        {['all','male','female'].map(g => (
+                          <button key={g} onClick={() => setElGenderFilter(g)}
+                            style={{padding:'6px 10px', fontSize:11, fontWeight:600, cursor:'pointer',
+                              fontFamily:FONT, border:'none', WebkitTapHighlightColor:'transparent',
+                              background: elGenderFilter === g ? 'rgba(255,215,0,0.15)' : 'rgba(232,234,255,0.04)',
+                              color: elGenderFilter === g ? '#ffd700' : 'rgba(232,234,255,0.4)'}}>
+                            {g === 'all' ? (L('allGenders') || 'Tutti') : g === 'male' ? '\u2642\uFE0F' : '\u2640\uFE0F'}
                           </button>
-                          {/* Voice info — click to select */}
-                          <button onClick={() => setSelectedELVoice(v.id)}
-                            style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
-                              fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
-                            <div style={{fontSize:13, fontWeight: isSel ? 700 : 500,
-                              color: isSel ? '#ffd700' : 'rgba(232,234,255,0.6)'}}>
-                              {v.name}
-                            </div>
-                            <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
-                              {v.category}{v.labels?.accent ? ` \u2022 ${v.labels.accent}` : ''}{v.labels?.gender ? ` \u2022 ${v.labels.gender}` : ''}
-                            </div>
-                          </button>
-                          {isSel && <span style={{fontSize:12, color:'#ffd700'}}>{'\u2713'}</span>}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+                      {filteredVoices.length}/{elevenLabsVoices.length} {L('voicesAvailable') || 'voci'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
+                    </div>
+
+                    {/* Voice list */}
+                    <div style={{display:'flex', flexDirection:'column', gap:4, maxHeight:320, overflowY:'auto',
+                      WebkitOverflowScrolling:'touch'}}>
+                      {filteredVoices.map(v => {
+                        const isSel = selectedELVoice === v.id;
+                        const isPlaying = playingVoice === `el_${v.id}`;
+                        const flag = getVoiceFlag(v);
+                        const assignedAvatars = voiceToAvatars[v.id] || [];
+                        return (
+                          <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
+                            padding:'8px 12px', borderRadius:12, transition:'all 0.15s',
+                            background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(232,234,255,0.02)',
+                            border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(232,234,255,0.04)'}}>
+                            {/* Flag */}
+                            <span style={{fontSize:18, flexShrink:0}}>{flag}</span>
+                            {/* Play button */}
+                            <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
+                              style={{width:30, height:30, borderRadius:8, cursor:'pointer', flexShrink:0,
+                                background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
+                                border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                                display:'flex', alignItems:'center', justifyContent:'center',
+                                WebkitTapHighlightColor:'transparent'}}>
+                              <Icon name={isPlaying ? 'stop' : 'play'} size={12}
+                                color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                            </button>
+                            {/* Voice info */}
+                            <button onClick={() => setSelectedELVoice(v.id)}
+                              style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
+                                fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
+                              <div style={{display:'flex', alignItems:'center', gap:5}}>
+                                <span style={{fontSize:13, fontWeight: isSel ? 700 : 500,
+                                  color: isSel ? '#ffd700' : 'rgba(232,234,255,0.6)'}}>
+                                  {v.name}
+                                </span>
+                                {/* Gender badge */}
+                                {(v.gender || v.labels?.gender) && (
+                                  <span style={{fontSize:9, padding:'1px 5px', borderRadius:4,
+                                    background: (v.gender || v.labels?.gender) === 'male' ? 'rgba(0,150,255,0.1)' : 'rgba(255,100,180,0.1)',
+                                    color: (v.gender || v.labels?.gender) === 'male' ? '#4da6ff' : '#ff6bb4',
+                                    border: (v.gender || v.labels?.gender) === 'male' ? '1px solid rgba(0,150,255,0.15)' : '1px solid rgba(255,100,180,0.15)'}}>
+                                    {(v.gender || v.labels?.gender) === 'male' ? '\u2642' : '\u2640'}
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                                {v.accent || v.labels?.accent || v.category || ''}
+                                {v.age || v.labels?.age ? ` \u2022 ${v.age || v.labels?.age}` : ''}
+                                {v.useCase ? ` \u2022 ${v.useCase}` : ''}
+                              </div>
+                              {/* Avatar assignment badges */}
+                              {assignedAvatars.length > 0 && (
+                                <div style={{display:'flex', gap:3, marginTop:3}}>
+                                  {assignedAvatars.map(name => (
+                                    <span key={name} style={{fontSize:8, padding:'1px 5px', borderRadius:4,
+                                      background:'rgba(108,99,255,0.1)', border:'1px solid rgba(108,99,255,0.2)',
+                                      color:'#6C63FF', fontWeight:700}}>
+                                      {name}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </button>
+                            {isSel && <span style={{fontSize:12, color:'#ffd700'}}>{'\u2713'}</span>}
+                          </div>
+                        );
+                      })}
+                      {filteredVoices.length === 0 && (
+                        <div style={{textAlign:'center', padding:16, fontSize:12, color:'rgba(232,234,255,0.3)'}}>
+                          {L('noVoicesMatch') || 'Nessuna voce corrisponde ai filtri'}
                         </div>
-                      );
-                    })}
+                      )}
+                    </div>
+
+                    {/* Avatar voice defaults info */}
+                    {Object.keys(avatarVoiceMap).length > 0 && (
+                      <div style={{marginTop:10, padding:'8px 10px', borderRadius:8,
+                        background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)'}}>
+                        <div style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.4)', marginBottom:4}}>
+                          {L('avatarDefaults') || 'Voci predefinite avatar'}
+                        </div>
+                        <div style={{fontSize:9, color:'rgba(232,234,255,0.3)', lineHeight:1.6}}>
+                          {L('avatarDefaultsHint') || 'Ogni avatar usa una voce dedicata se non ne selezioni una manualmente. Seleziona una voce qui per sovrascrivere il default.'}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
