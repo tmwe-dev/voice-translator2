@@ -2222,53 +2222,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* Partner speaking / typing indicator with live text */}
-        {(partnerSpeaking || partnerTyping) && (
-          <div style={{...S.speakingBar, flexDirection:'column', alignItems:'stretch', gap:4}}>
-            <div style={{display:'flex', alignItems:'center', gap:8}}>
-              <div style={S.speakingDots}>
-                <span style={{...S.dot, animationDelay:'0s'}}/>
-                <span style={{...S.dot, animationDelay:'0.2s'}}/>
-                <span style={{...S.dot, animationDelay:'0.4s'}}/>
-              </div>
-              <span style={{fontSize:12}}>
-                {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}...
-              </span>
-            </div>
-            {partnerLiveText && (
-              <div style={{fontSize:13, color:'rgba(255,255,255,0.65)', padding:'4px 8px',
-                background:'rgba(255,255,255,0.04)', borderRadius:10, lineHeight:1.4,
-                fontStyle:'italic', maxHeight:60, overflow:'hidden'}}>
-                {partnerLiveText}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Text input bar */}
-        <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
-          background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
-          <input
-            style={{flex:1, padding:'8px 12px', borderRadius:20, background:'rgba(255,255,255,0.06)',
-              border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none',
-              fontFamily:FONT, boxSizing:'border-box'}}
-            placeholder={L('typePlaceholder')}
-            value={textInput}
-            onChange={e => { setTextInput(e.target.value); if (e.target.value.trim()) sendTypingState(true); }}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); sendTextMessage(); }}}
-            onBlur={() => sendTypingState(false)}
-            disabled={sendingText}
-          />
-          <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
-            style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
-              background: textInput.trim() ? 'linear-gradient(135deg, #e94560, #c23152)' : 'rgba(255,255,255,0.06)',
-              color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
-              fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-              WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
-            {sendingText ? '...' : '\u{27A4}'}
-          </button>
-        </div>
-
         {/* Messages */}
         <div style={S.chatArea}>
           {messages.length === 0 && (
@@ -2341,7 +2294,55 @@ export default function Home() {
               </div>
             </div>
           )}
+          {/* Partner speaking / typing indicator - inside chat flow */}
+          {(partnerSpeaking || partnerTyping) && (
+            <div style={{display:'flex', flexDirection:'column', gap:4, padding:'6px 10px',
+              margin:'4px 0 8px', borderRadius:14, background:'rgba(245,87,108,0.06)',
+              border:'1px solid rgba(245,87,108,0.1)'}}>
+              <div style={{display:'flex', alignItems:'center', gap:8}}>
+                <div style={S.speakingDots}>
+                  <span style={{...S.dot, animationDelay:'0s'}}/>
+                  <span style={{...S.dot, animationDelay:'0.2s'}}/>
+                  <span style={{...S.dot, animationDelay:'0.4s'}}/>
+                </div>
+                <span style={{fontSize:12, color:'#f5576c'}}>
+                  {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}...
+                </span>
+              </div>
+              {partnerLiveText && (
+                <div style={{fontSize:13, color:'rgba(255,255,255,0.65)', padding:'4px 8px',
+                  background:'rgba(255,255,255,0.04)', borderRadius:10, lineHeight:1.4,
+                  fontStyle:'italic', maxHeight:60, overflow:'hidden'}}>
+                  {partnerLiveText}
+                </div>
+              )}
+            </div>
+          )}
           <div ref={msgsEndRef} />
+        </div>
+
+        {/* Text input bar - fixed above talk bar */}
+        <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
+          background:'rgba(0,0,0,0.15)', borderTop:'1px solid rgba(255,255,255,0.05)'}}>
+          <input
+            style={{flex:1, padding:'8px 12px', borderRadius:20, background:'rgba(255,255,255,0.06)',
+              border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none',
+              fontFamily:FONT, boxSizing:'border-box'}}
+            placeholder={L('typePlaceholder')}
+            value={textInput}
+            onChange={e => { setTextInput(e.target.value); if (e.target.value.trim()) sendTypingState(true); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); sendTextMessage(); }}}
+            onBlur={() => sendTypingState(false)}
+            disabled={sendingText}
+          />
+          <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
+            style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
+              background: textInput.trim() ? 'linear-gradient(135deg, #e94560, #c23152)' : 'rgba(255,255,255,0.06)',
+              color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+              fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
+            {sendingText ? '...' : '\u{27A4}'}
+          </button>
         </div>
 
         {/* Talk bar */}
