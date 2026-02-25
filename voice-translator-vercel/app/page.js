@@ -33,9 +33,8 @@ const LANGS = [
 ];
 
 const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
-const AVATARS = Array.from({length:14}, (_,i) => `/avatars/${i+1}.svg`);
-const AVATAR_NAMES = ['Donna Pro','Uomo Baffi','Ragazza','Ragazzo','Donna Riccia','Nonno',
-  'Gatto','Cane','Robot','Orso','Donna Rossa','Barba','Ragazza Rosa','Alieno'];
+const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.svg`);
+const AVATAR_NAMES = ['Emma','Marcus','Sofia','Alex','Clara','Giorgio','Yuki','Tommy','Aisha'];
 
 const MODES = [
   { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
@@ -1469,15 +1468,10 @@ export default function Home() {
   // Avatar image component - validates src is a valid image path
   function AvatarImg({ src, size = 36, style = {} }) {
     const validSrc = (src && src.startsWith('/avatars/')) ? src : AVATARS[0];
-    return <div style={{
-      width:size, height:size, borderRadius:'50%', flexShrink:0, overflow:'hidden',
-      background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center',
+    return <img src={validSrc} alt="" style={{
+      width:size, height:size, objectFit:'contain', flexShrink:0,
       ...style
-    }}>
-      <img src={validSrc} alt="" style={{
-        width: size * 0.95, height: size * 0.95, objectFit:'contain'
-      }} />
-    </div>;
+    }} />;
   }
 
   // =============================================
@@ -1728,7 +1722,7 @@ export default function Home() {
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
-                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:38, height:38, objectFit:'contain'}} />
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:46, height:46, objectFit:'contain'}} />
                 </button>
               ))}
             </div>
@@ -2035,7 +2029,7 @@ export default function Home() {
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
                   style={{...S.avatarBtn, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2}}>
-                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:38, height:38, objectFit:'contain'}} />
+                  <img src={a} alt={AVATAR_NAMES[i]} style={{width:46, height:46, objectFit:'contain'}} />
                 </button>
               ))}
             </div>
@@ -2806,12 +2800,12 @@ const S = {
     border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.45)', fontSize:13,
     cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
     backdropFilter:'blur(10px)' },
-  avatarBtn: { width:48, height:48, borderRadius:14, border:'2px solid transparent',
-    background:'rgba(255,255,255,0.04)', fontSize:22, cursor:'pointer',
+  avatarBtn: { width:52, height:52, borderRadius:16, border:'2px solid transparent',
+    background:'none', fontSize:22, cursor:'pointer',
     display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
-    WebkitTapHighlightColor:'transparent', transition:'all 0.15s' },
-  avatarSel: { borderColor:'#f5576c', background:'rgba(245,87,108,0.12)',
-    boxShadow:'0 0 0 3px rgba(245,87,108,0.2)' },
+    WebkitTapHighlightColor:'transparent', transition:'all 0.15s', padding:0 },
+  avatarSel: { borderColor:'#f5576c', background:'rgba(245,87,108,0.08)',
+    boxShadow:'0 0 0 3px rgba(245,87,108,0.15)' },
   voiceBtn: { padding:'6px 14px', borderRadius:20, border:'1px solid rgba(255,255,255,0.08)',
     background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.45)', fontSize:12, cursor:'pointer',
     textTransform:'capitalize', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
