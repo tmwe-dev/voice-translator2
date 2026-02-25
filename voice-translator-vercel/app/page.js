@@ -952,14 +952,30 @@ export default function Home() {
     speechRecRef.current = recognition;
 
     let lastFinalLength = 0;
+    let processedFinals = new Set(); // deduplicate final results across restarts
 
     recognition.onresult = (event) => {
-      let fullFinal = '';
       let interimTranscript = '';
 
+      // Process results individually to avoid duplication on restart
       for (let i = 0; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          fullFinal += event.results[i][0].transcript;
+          const text = event.results[i][0].transcript.trim();
+          const key = i + ':' + text; // unique key per result index + content
+          if (text && !processedFinals.has(key)) {
+            processedFinals.add(key);
+            lastInterimRef.current = ''; // clear interim since we got final
+            wordBufferRef.current = (wordBufferRef.current + ' ' + text).trim();
+            allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
+
+            setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+            broadcastLiveText(allWordsRef.current);
+
+            const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+            if (bufferWords >= 4) {
+              emitChunk();
+            }
+          }
         } else {
           interimTranscript += event.results[i][0].transcript;
         }
@@ -968,26 +984,6 @@ export default function Home() {
       // Track interim text as safety net (in case isFinal never arrives)
       if (interimTranscript) {
         lastInterimRef.current = interimTranscript.trim();
-      }
-
-      // Detect NEW finalized text
-      if (fullFinal.length > lastFinalLength) {
-        const newText = fullFinal.substring(lastFinalLength).trim();
-        lastFinalLength = fullFinal.length;
-
-        if (newText) {
-          lastInterimRef.current = ''; // clear interim since we got final
-          wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
-          allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
-
-          setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
-          broadcastLiveText(allWordsRef.current);
-
-          const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
-          if (bufferWords >= 4) {
-            emitChunk();
-          }
-        }
       }
 
       // Show interim preview
@@ -1010,6 +1006,8 @@ export default function Home() {
 
     recognition.onend = () => {
       if (streamingModeRef.current) {
+        // Reset processed finals on restart - results array resets
+        processedFinals = new Set();
         try { recognition.start(); } catch (err) {
           console.log('[StreamRec] Restart failed:', err);
         }
@@ -1152,9 +1150,17 @@ export default function Home() {
     }
 
     // Include any pending interim text that never got finalized
-    if (lastInterimRef.current && !allWordsRef.current.includes(lastInterimRef.current)) {
-      wordBufferRef.current = (wordBufferRef.current + ' ' + lastInterimRef.current).trim();
-      allWordsRef.current = (allWordsRef.current + ' ' + lastInterimRef.current).trim();
+    // Use endsWith check to avoid adding text that's already captured
+    if (lastInterimRef.current) {
+      const pending = lastInterimRef.current.trim();
+      const existing = allWordsRef.current.trim();
+      // Only add if the pending text isn't already at the end of existing text
+      // and the existing text doesn't contain the pending text as a whole segment
+      if (pending && !existing.endsWith(pending) && !existing.includes(pending)) {
+        wordBufferRef.current = (wordBufferRef.current + ' ' + pending).trim();
+        allWordsRef.current = (existing + ' ' + pending).trim();
+      }
+      lastInterimRef.current = '';
     }
 
     // Emit any remaining buffered words
@@ -1408,29 +1414,30 @@ export default function Home() {
         recognition.maxAlternatives = 1;
         speechRecRef.current = recognition;
 
-        let lastFinalLength = 0;
+        let ftProcessedFinals = new Set(); // deduplicate final results across restarts
 
         recognition.onresult = (event) => {
-          let fullFinal = '';
           let interimTranscript = '';
           for (let i = 0; i < event.results.length; i++) {
-            if (event.results[i].isFinal) fullFinal += event.results[i][0].transcript;
-            else interimTranscript += event.results[i][0].transcript;
-          }
-
-          if (fullFinal.length > lastFinalLength) {
-            const newText = fullFinal.substring(lastFinalLength).trim();
-            lastFinalLength = fullFinal.length;
-            if (newText) {
-              wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
-              allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
-              setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
-              broadcastLiveText(allWordsRef.current);
-              const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
-              if (bufferWords >= 4) emitChunk();
+            if (event.results[i].isFinal) {
+              const text = event.results[i][0].transcript.trim();
+              const key = i + ':' + text;
+              if (text && !ftProcessedFinals.has(key)) {
+                ftProcessedFinals.add(key);
+                lastInterimRef.current = '';
+                wordBufferRef.current = (wordBufferRef.current + ' ' + text).trim();
+                allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
+                setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+                broadcastLiveText(allWordsRef.current);
+                const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
+                if (bufferWords >= 4) emitChunk();
+              }
+            } else {
+              interimTranscript += event.results[i][0].transcript;
             }
           }
           if (interimTranscript) {
+            lastInterimRef.current = interimTranscript.trim();
             const preview = allWordsRef.current + ' ' + interimTranscript.trim();
             setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
             broadcastLiveText(preview);
@@ -1441,6 +1448,7 @@ export default function Home() {
         recognition.onerror = (e) => { console.log('[FreeTalkRec] Error:', e.error); };
         recognition.onend = () => {
           if (streamingModeRef.current && isListening) {
+            ftProcessedFinals = new Set(); // reset on restart
             try { recognition.start(); } catch {}
           }
         };
