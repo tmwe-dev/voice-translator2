@@ -129,6 +129,7 @@ export default function Home() {
   const isTopProRef = useRef(false);
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState(''); // ElevenLabs voice ID
+  const roomTierOverrideRef = useRef(null); // when guest joins, inherit host's tier
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -174,8 +175,9 @@ export default function Home() {
   useEffect(() => { isTrialRef.current = isTrial; }, [isTrial]);
   useEffect(() => { isTopProRef.current = isTopPro; }, [isTopPro]);
 
-  // Update tier based on account status
+  // Update tier based on account status (but respect room tier override for guests)
   useEffect(() => {
+    if (roomTierOverrideRef.current) return; // guest in room - don't override host's tier
     if (userToken && (creditBalance > 0 || useOwnKeys)) {
       setIsTrial(false);
     } else {
@@ -273,7 +275,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
+        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
       });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -324,7 +326,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
+        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
       });
       if (!res.ok) throw new Error('TTS failed');
       const blob = await res.blob();
@@ -354,7 +356,7 @@ export default function Home() {
   function playWithNewAudio(text, lang, resolve) {
     fetch('/api/tts', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: userTokenRef.current || undefined })
+      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
     }).then(r => r.blob()).then(blob => {
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
@@ -398,6 +400,14 @@ export default function Home() {
   // =============================================
   // UNIVERSAL TRANSLATE - routes trial (MyMemory) vs pro (OpenAI)
   // =============================================
+  // Get the effective token: null for guests in host-paid rooms (uses platform key)
+  function getEffectiveToken() {
+    if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') {
+      return undefined; // guest in PRO/TOP PRO room - use platform key, host pays
+    }
+    return userTokenRef.current || undefined;
+  }
+
   async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
     if (isTrialRef.current) {
       // Free translation via server-side MyMemory proxy
@@ -415,7 +425,7 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text, sourceLang, targetLang, sourceLangName, targetLangName,
-        roomId, ...options, userToken: userTokenRef.current || undefined
+        roomId, ...options, userToken: getEffectiveToken()
       })
     });
     if (!res.ok) {
@@ -440,7 +450,7 @@ export default function Home() {
           text,
           voiceId: selectedELVoice || undefined,
           langCode: langCode?.split('-')[0] || undefined,
-          userToken: userTokenRef.current || undefined
+          userToken: getEffectiveToken()
         })
       });
       if (!res.ok) throw new Error('ElevenLabs TTS failed');
@@ -638,9 +648,10 @@ export default function Home() {
     try {
       setStatus('...');
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
+      const currentTier = isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO';
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar,
-          context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription }) });
+          context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription, hostTier: currentTier }) });
       if (!res.ok) throw new Error('Error');
       const { room } = await res.json();
       roomContextRef.current = { contextId: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription };
@@ -662,6 +673,16 @@ export default function Home() {
         contextPrompt: room.contextPrompt || '',
         description: room.description || ''
       };
+      // Guest inherits host's tier configuration
+      const hostTier = room.hostTier || 'FREE';
+      roomTierOverrideRef.current = hostTier; // prevent auto-detection from overriding
+      if (hostTier === 'FREE') {
+        setIsTrial(true); setIsTopPro(false);
+      } else if (hostTier === 'TOP PRO') {
+        setIsTrial(false); setIsTopPro(true);
+      } else {
+        setIsTrial(false); setIsTopPro(false);
+      }
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('room');
       startPolling(room.id); setStatus('');
     } catch (e) { setStatus('Error: ' + e.message); }
@@ -690,6 +711,8 @@ export default function Home() {
       persistentMicRef.current.getTracks().forEach(t => t.stop());
       persistentMicRef.current = null;
     }
+    // Clear room tier override so auto-detection resumes
+    roomTierOverrideRef.current = null;
     setRoomId(null); setRoomInfo(null); setMessages([]); setPartnerSpeaking(false); setView('home');
   }
 
@@ -736,7 +759,8 @@ export default function Home() {
     if (roomId) form.append('roomId', roomId);
     if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
-    if (userTokenRef.current) form.append('userToken', userTokenRef.current);
+    const effectiveToken = getEffectiveToken();
+    if (effectiveToken) form.append('userToken', effectiveToken);
     const res = await fetch('/api/process', { method:'POST', body:form });
     if (!res.ok) throw new Error('Server error');
     const { original, translated, cost } = await res.json();
@@ -962,7 +986,7 @@ export default function Home() {
           isReview: true,
           domainContext: roomContextRef.current.contextPrompt || undefined,
           description: roomContextRef.current.description || undefined,
-          userToken: userTokenRef.current || undefined
+          userToken: getEffectiveToken()
         })
       });
 
@@ -1086,7 +1110,7 @@ export default function Home() {
             isReview: true,
             domainContext: roomContextRef.current.contextPrompt || undefined,
             description: roomContextRef.current.description || undefined,
-            userToken: userTokenRef.current || undefined
+            userToken: getEffectiveToken()
           })
         });
         if (res.ok) {
@@ -1495,45 +1519,17 @@ export default function Home() {
     setStatus('...');
 
     try {
-      // Save conversation
-      const res = await fetch('/api/conversation', {
+      // Save conversation (no auto-report - user can request it from history)
+      await fetch('/api/conversation', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'end', roomId })
       });
-      if (res.ok) {
-        const { conversation } = await res.json();
-        const isHost = roomInfo?.host === prefs.name;
-        if (isHost && conversation) {
-          // Generate AI summary for host
-          setStatus('AI Report...');
-          setSummaryLoading(true);
-          try {
-            const sumRes = await fetch('/api/summary', {
-              method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ convId: roomId })
-            });
-            if (sumRes.ok) {
-              const { summary } = await sumRes.json();
-              conversation.summary = summary;
-            }
-          } catch (e) { console.error('Summary error:', e); }
-          setSummaryLoading(false);
-          setCurrentConv(conversation);
-          setView('summary');
-        } else {
-          // Non-host: show the conversation in read-only view
-          setCurrentConv(conversation);
-          setView('summary');
-        }
-      } else {
-        setView('home');
-      }
     } catch (e) {
       console.error('End chat error:', e);
-      setView('home');
     }
     setRoomId(null); setRoomInfo(null); setMessages([]);
     setPartnerSpeaking(false); setStatus('');
+    setView('home');
   }
 
   async function viewConversation(convId) {
@@ -2350,32 +2346,29 @@ export default function Home() {
     return (
       <div style={S.roomPage}>
         {/* Header */}
-        <div style={S.roomHeader}>
+        <div style={{...S.roomHeader, position:'relative'}}>
           <button style={S.backBtnSmall} onClick={endChatAndSave} title={L('endChat')}>{'\u2716'}</button>
-          <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
+          {/* Flags - absolutely centered */}
+          <div style={{position:'absolute', left:'50%', transform:'translateX(-50%)', display:'flex', alignItems:'center', gap:8}}>
             <span style={{fontSize:18}}>{myL.flag}</span>
             <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
             <span style={{fontSize:18}}>{otherL.flag}</span>
           </div>
-          {/* Privacy / Audio toggle */}
-          <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            style={{...S.iconBtn, display:'flex', alignItems:'center', gap:3, width:'auto', padding:'0 8px',
-              color: audioEnabled ? '#4ecdc4' : '#ff6b6b',
-              background: audioEnabled ? 'rgba(78,205,196,0.08)' : 'rgba(255,107,107,0.08)',
-              border: audioEnabled ? '1px solid rgba(78,205,196,0.2)' : '1px solid rgba(255,107,107,0.2)'}}>
-            <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
-            <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
-          </button>
-          {/* Trial / Pro badge */}
-          <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
-            background: isTrial ? 'rgba(78,205,196,0.15)' : isTopPro ? 'rgba(255,215,0,0.15)' : 'rgba(245,87,108,0.15)',
-            color: isTrial ? '#4ecdc4' : isTopPro ? '#ffd700' : '#f5576c',
-            border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : isTopPro ? 'rgba(255,215,0,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
-            {isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO'}
-          </span>
-          {/* Connection status */}
-          <div style={{width:8, height:8, borderRadius:4, marginLeft:4,
-            background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
+          {/* Right controls */}
+          <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
+            {/* Privacy / Audio toggle */}
+            <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
+              style={{...S.iconBtn, display:'flex', alignItems:'center', gap:3, width:'auto', padding:'0 8px',
+                color: audioEnabled ? '#4ecdc4' : '#ff6b6b',
+                background: audioEnabled ? 'rgba(78,205,196,0.08)' : 'rgba(255,107,107,0.08)',
+                border: audioEnabled ? '1px solid rgba(78,205,196,0.2)' : '1px solid rgba(255,107,107,0.2)'}}>
+              <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
+              <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
+            </button>
+            {/* Connection status */}
+            <div style={{width:8, height:8, borderRadius:4,
+              background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
+          </div>
         </div>
 
         {/* Mode bar + Cost (tappable by host to change mode) */}
@@ -2396,17 +2389,26 @@ export default function Home() {
               </span>
             )}
           </button>
-          {/* Cost display - visible to host */}
-          {isHost && (
-            <div style={{display:'flex', alignItems:'center', gap:6}}>
-              <span style={{fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
-                ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)}
-              </span>
-              <span style={{fontSize:9, color:'rgba(255,255,255,0.2)'}}>
-                {msgCount} msg
-              </span>
-            </div>
-          )}
+          <div style={{display:'flex', alignItems:'center', gap:6}}>
+            {/* Tier badge */}
+            <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
+              background: isTrial ? 'rgba(78,205,196,0.15)' : isTopPro ? 'rgba(255,215,0,0.15)' : 'rgba(245,87,108,0.15)',
+              color: isTrial ? '#4ecdc4' : isTopPro ? '#ffd700' : '#f5576c',
+              border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : isTopPro ? 'rgba(255,215,0,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
+              {isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO'}
+            </span>
+            {/* Cost display - visible to host */}
+            {isHost && !isTrial && (
+              <>
+                <span style={{fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
+                  ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)}
+                </span>
+                <span style={{fontSize:9, color:'rgba(255,255,255,0.2)'}}>
+                  {msgCount} msg
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Mode selector dropdown (host only) */}

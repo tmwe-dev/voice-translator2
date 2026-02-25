@@ -22,13 +22,14 @@ async function redis(command, ...args) {
 // ROOMS
 // =============================================
 
-export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null) {
+export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE') {
   const id = Math.random().toString(36).substring(2, 8).toUpperCase();
   const room = {
     id,
     created: Date.now(),
     mode,
     host: creatorName,
+    hostTier: hostTier, // FREE, PRO, or TOP PRO - guests inherit this
     members: [{ name: creatorName, lang: creatorLang, joined: Date.now(), role: 'host', avatar }],
     context: context || 'general',
     contextPrompt: contextPrompt || '',
