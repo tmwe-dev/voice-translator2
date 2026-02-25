@@ -1,13 +1,9 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
-import { addCost, getRoom } from '../../lib/store.js';
-import { getSession, getUser, deductCredits, getUserApiKey } from '../../lib/users.js';
-
-// OpenAI pricing (USD) - used for cost estimation
-const GPT4OMINI_INPUT_PER_TOKEN = 0.00000015;
-const GPT4OMINI_OUTPUT_PER_TOKEN = 0.0000006;
-const TTS_PER_CHAR = 0.000015;
-const USD_TO_EUR_CENTS = 92; // ~$1 = 92 euro cents
+import { addCost } from '../../lib/store.js';
+import { deductCredits } from '../../lib/users.js';
+import { resolveAuth } from '../../lib/apiAuth.js';
+import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 
 export async function POST(req) {
   try {
@@ -16,50 +12,14 @@ export async function POST(req) {
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // Determine API key: user's own or platform
-    let apiKey = process.env.OPENAI_API_KEY;
-    let isOwnKey = false;
-    let billingEmail = null; // email to charge credits to
-
-    if (userToken) {
-      // Authenticated user (host or user with own account)
-      const session = await getSession(userToken);
-      if (session) {
-        billingEmail = session.email;
-        const user = await getUser(billingEmail);
-        if (user) {
-          if (user.useOwnKeys) {
-            const ownKey = user.apiKeys?.openai;
-            if (ownKey) { apiKey = ownKey; isOwnKey = true; }
-          } else {
-            if (user.credits < 0.1 && !isReview) {
-              return NextResponse.json({ error: 'Credito esaurito. Ricarica per continuare.' }, { status: 402 });
-            }
-          }
-        }
-      }
-    } else if (roomId) {
-      // Guest in a room - bill to host
-      const room = await getRoom(roomId);
-      if (!room || (room.hostTier === 'FREE')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      if (room.hostEmail) {
-        billingEmail = room.hostEmail;
-        const hostUser = await getUser(billingEmail);
-        if (hostUser) {
-          if (hostUser.useOwnKeys) {
-            const ownKey = hostUser.apiKeys?.openai;
-            if (ownKey) { apiKey = ownKey; isOwnKey = true; }
-          } else if (hostUser.credits < 0.1 && !isReview) {
-            return NextResponse.json({ error: 'Host credits exhausted' }, { status: 402 });
-          }
-        }
-      }
-    } else {
-      // No token, no room - reject
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
+    // 3-tier auth: userToken → roomId → reject
+    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+      userToken,
+      roomId,
+      provider: 'openai',
+      minCredits: MIN_CREDITS.TRANSLATE,
+      skipCreditCheck: !!isReview,
+    });
 
     const openai = new OpenAI({ apiKey });
 
@@ -83,34 +43,34 @@ export async function POST(req) {
     const translated = completion.choices[0].message.content.trim();
 
     // Calculate cost
-    const usage = completion.usage || {};
-    const gptCost = (usage.prompt_tokens || 0) * GPT4OMINI_INPUT_PER_TOKEN
-                  + (usage.completion_tokens || 0) * GPT4OMINI_OUTPUT_PER_TOKEN;
-    const ttsCost = translated.length * TTS_PER_CHAR;
+    const gptCost = calcGptCost(completion.usage);
+    const ttsCost = calcTtsCost(translated.length);
     const msgCostUsd = gptCost + ttsCost;
-    const msgCostEurCents = msgCostUsd * USD_TO_EUR_CENTS;
+    const msgCostEurCents = usdToEurCents(msgCostUsd);
 
     // Track cost in room
     if (roomId) {
       try { await addCost(roomId, msgCostUsd); } catch (e) { console.error('Cost tracking error:', e); }
     }
 
-    // Deduct credits from billing email (host or user)
+    // Deduct credits
     let remainingCredits = undefined;
     if (billingEmail && !isOwnKey && !isReview) {
       try {
-        const updatedUser = await deductCredits(billingEmail, Math.max(0.1, msgCostEurCents));
+        const updatedUser = await deductCredits(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents));
         if (updatedUser) remainingCredits = updatedUser.credits;
       } catch (e) { console.error('Credit deduct error:', e); }
     }
 
     return NextResponse.json({
       translated,
-      cost: Math.round(msgCostUsd * 1000000) / 1000000,
-      costEurCents: Math.round(msgCostEurCents * 100) / 100,
+      cost: roundCost(msgCostUsd),
+      costEurCents: roundEurCents(msgCostEurCents),
       ...(remainingCredits !== undefined ? { remainingCredits } : {})
     });
   } catch (e) {
+    // resolveAuth throws NextResponse objects on auth failure
+    if (e instanceof NextResponse) return e;
     console.error('Translate error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

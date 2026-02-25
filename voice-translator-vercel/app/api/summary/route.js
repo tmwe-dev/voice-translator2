@@ -2,11 +2,7 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { getConversation, updateConversationSummary } from '../../lib/store.js';
 import { getSession, getUser, deductCredits } from '../../lib/users.js';
-
-// GPT-4o-mini pricing
-const GPT4OMINI_INPUT_PER_TOKEN = 0.00000015;
-const GPT4OMINI_OUTPUT_PER_TOKEN = 0.0000006;
-const USD_TO_EUR_CENTS = 92;
+import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 
 export async function POST(req) {
   try {
@@ -14,9 +10,9 @@ export async function POST(req) {
 
     if (!convId) return NextResponse.json({ error: 'convId required' }, { status: 400 });
 
-    // Authentication required
+    // Authentication required (no guest/room path for summaries)
     if (!userToken) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      return NextResponse.json({ error: ERRORS.AUTH_REQUIRED }, { status: 401 });
     }
 
     let billingEmail = null;
@@ -25,7 +21,7 @@ export async function POST(req) {
 
     const session = await getSession(userToken);
     if (!session) {
-      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+      return NextResponse.json({ error: ERRORS.INVALID_SESSION }, { status: 401 });
     }
     billingEmail = session.email;
     const user = await getUser(billingEmail);
@@ -89,14 +85,12 @@ Output ONLY valid JSON, no markdown, no code blocks.`
     });
 
     // Calculate and deduct cost
-    const usage = completion.usage || {};
-    const costUsd = (usage.prompt_tokens || 0) * GPT4OMINI_INPUT_PER_TOKEN
-                  + (usage.completion_tokens || 0) * GPT4OMINI_OUTPUT_PER_TOKEN;
-    const costEurCents = costUsd * USD_TO_EUR_CENTS;
+    const costUsd = calcGptCost(completion.usage);
+    const costEurCents = usdToEurCents(costUsd);
 
     if (billingEmail && !isOwnKey) {
       try {
-        await deductCredits(billingEmail, Math.max(0.5, costEurCents));
+        await deductCredits(billingEmail, Math.max(MIN_CHARGE.SUMMARY, costEurCents));
       } catch (e) { console.error('Summary credit deduct error:', e); }
     }
 
@@ -124,6 +118,7 @@ Output ONLY valid JSON, no markdown, no code blocks.`
 
     return NextResponse.json({ summary });
   } catch (e) {
+    if (e instanceof NextResponse) return e;
     console.error('Summary error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }

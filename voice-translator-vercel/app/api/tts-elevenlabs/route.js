@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getSession, getUser, deductCredits } from '../../lib/users.js';
-import { getRoom } from '../../lib/store.js';
-
-// ElevenLabs pricing: ~$0.30 per 1K characters (Creator plan)
-const EL_PER_CHAR_USD = 0.0003;
-const USD_TO_EUR_CENTS = 92;
+import { deductCredits } from '../../lib/users.js';
+import { getSession, getUser } from '../../lib/users.js';
+import { resolveAuth } from '../../lib/apiAuth.js';
+import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 
 // Default voices by language
 const DEFAULT_VOICES = {
@@ -25,51 +23,14 @@ export async function POST(req) {
     const { text, voiceId, langCode, userToken, roomId } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // Resolve ElevenLabs API key and billing
-    let apiKey = process.env.ELEVENLABS_API_KEY || null;
-    let isOwnKey = false;
-    let billingEmail = null;
-
-    if (userToken) {
-      const session = await getSession(userToken);
-      if (session) {
-        billingEmail = session.email;
-        const user = await getUser(billingEmail);
-        if (user) {
-          if (user.useOwnKeys && user.apiKeys?.elevenlabs) {
-            apiKey = user.apiKeys.elevenlabs;
-            isOwnKey = true;
-          } else if (!user.useOwnKeys && user.credits < 2) {
-            // ElevenLabs is expensive - require at least 2 eurocent credits
-            return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
-          }
-        }
-      }
-    } else if (roomId) {
-      // Guest in a room - bill to host
-      const room = await getRoom(roomId);
-      if (!room || room.hostTier !== 'TOP PRO') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
-      if (room.hostEmail) {
-        billingEmail = room.hostEmail;
-        const hostUser = await getUser(billingEmail);
-        if (hostUser) {
-          if (hostUser.useOwnKeys && hostUser.apiKeys?.elevenlabs) {
-            apiKey = hostUser.apiKeys.elevenlabs;
-            isOwnKey = true;
-          } else if (!hostUser.useOwnKeys && hostUser.credits < 2) {
-            return NextResponse.json({ error: 'Host credits exhausted' }, { status: 402 });
-          }
-        }
-      }
-    } else {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    if (!apiKey) {
-      return NextResponse.json({ error: 'No ElevenLabs API key configured' }, { status: 400 });
-    }
+    // 3-tier auth: userToken → roomId → reject (TOP PRO only for guests)
+    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+      userToken,
+      roomId,
+      provider: 'elevenlabs',
+      minCredits: MIN_CREDITS.TTS_ELEVENLABS,
+      requiredHostTier: 'TOP PRO',
+    });
 
     const selectedVoice = voiceId || DEFAULT_VOICES[langCode] || DEFAULT_VOICES.default;
 
@@ -102,12 +63,12 @@ export async function POST(req) {
     }
 
     // Calculate and deduct cost
-    const elCostUsd = text.trim().length * EL_PER_CHAR_USD;
-    const elCostEurCents = elCostUsd * USD_TO_EUR_CENTS;
+    const elCostUsd = calcElevenLabsCost(text.trim().length);
+    const elCostEurCents = usdToEurCents(elCostUsd);
 
     if (billingEmail && !isOwnKey) {
       try {
-        await deductCredits(billingEmail, Math.max(1, elCostEurCents));
+        await deductCredits(billingEmail, Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents));
       } catch (e) { console.error('ElevenLabs credit deduct error:', e); }
     }
 
@@ -119,6 +80,7 @@ export async function POST(req) {
       }
     });
   } catch (e) {
+    if (e instanceof NextResponse) return e;
     console.error('ElevenLabs TTS error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
