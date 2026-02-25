@@ -33,8 +33,8 @@ const LANGS = [
 ];
 
 const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];
-const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.jpg`);
-const AVATAR_NAMES = ['Elena','Marcus','Yuki','Alex','Aisha','Omar','Fatima','Thomas','Richard'];
+const AVATARS = Array.from({length:12}, (_,i) => `/avatars/${i+1}.jpg`);
+const AVATAR_NAMES = ['Elena','Marcus','Yuki','Alex','Aisha','Omar','Fatima','Thomas','Richard','Kenji','Margaret','Leo'];
 
 const MODES = [
   { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
