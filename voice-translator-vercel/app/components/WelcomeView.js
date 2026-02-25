@@ -41,8 +41,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   // Step label
   const stepLabel = (title, subtitle) => (
     <div style={{textAlign:'center', marginBottom:16}}>
-      <div style={{fontSize:16, fontWeight:700, color:'#E8EAFF', letterSpacing:-0.3}}>{title}</div>
-      {subtitle && <div style={{fontSize:12, color:'rgba(232,234,255,0.4)', marginTop:4}}>{subtitle}</div>}
+      <div style={{fontSize:16, fontWeight:700, color:'#FFFFFF', letterSpacing:-0.3}}>{title}</div>
+      {subtitle && <div style={{fontSize:12, color:'rgba(255,255,255,0.65)', marginTop:4}}>{subtitle}</div>}
     </div>
   );
 
@@ -58,7 +58,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
         <div style={{...S.card, padding:'20px 18px', position:'relative', overflow:'hidden'}}>
           {/* Step counter */}
-          <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', fontWeight:700, textAlign:'center',
+          <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', fontWeight:700, textAlign:'center',
             marginBottom:12, letterSpacing:1}}>
             {step + 1} / {STEPS.length}
           </div>
@@ -118,7 +118,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     }}>
                       <img src={avatar} alt={AVATAR_NAMES[i]} style={{width:52, height:52, objectFit:'contain'}} />
                     </div>
-                    <span style={{fontSize:9, marginTop:3, color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.4)',
+                    <span style={{fontSize:9, marginTop:3, color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.65)',
                       fontWeight: isSelected ? 600 : 400, fontFamily:FONT}}>{AVATAR_NAMES[i]}</span>
                   </div>
                 )}
@@ -153,7 +153,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <div style={{
                       width:52, height:52, borderRadius:26,
                       border: isSelected ? '2.5px solid #6C63FF' : '2.5px solid transparent',
-                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(232,234,255,0.04)',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(255,255,255,0.05)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition:'all 0.2s', fontSize:26
                     }}>
@@ -161,7 +161,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     </div>
                     <span style={{fontSize:9, marginTop:3, maxWidth:68, overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center',
-                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.4)',
+                      color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.65)',
                       fontWeight: isSelected ? 600 : 400, fontFamily:FONT}}>{lang.name}</span>
                   </div>
                 )}
@@ -183,16 +183,16 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
                       style={{padding:'10px 16px', borderRadius:12, cursor:'pointer',
                         fontFamily:FONT, fontSize:13, fontWeight: sel ? 700 : 500,
-                        background: sel ? 'rgba(108,99,255,0.15)' : 'rgba(232,234,255,0.03)',
-                        border: sel ? '1.5px solid rgba(108,99,255,0.35)' : '1.5px solid rgba(232,234,255,0.08)',
-                        color: sel ? '#6C63FF' : 'rgba(232,234,255,0.5)',
+                        background: sel ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: sel ? '1.5px solid rgba(108,99,255,0.35)' : '1.5px solid rgba(255,255,255,0.09)',
+                        color: sel ? '#6C63FF' : 'rgba(255,255,255,0.72)',
                         transition:'all 0.15s', WebkitTapHighlightColor:'transparent'}}>
                       {v.charAt(0).toUpperCase() + v.slice(1)}
                     </button>
                   );
                 })}
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', textAlign:'center', marginBottom:16}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', textAlign:'center', marginBottom:16}}>
                 {L('welcomeVoiceHint') || 'Le voci AI sono disponibili con account PRO. La modalità FREE usa la voce del browser.'}
               </div>
             </div>
@@ -202,8 +202,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
           <div style={{display:'flex', gap:10, marginTop:16}}>
             {step > 0 && (
               <button onClick={prev} style={{flex:'0 0 48px', height:48, borderRadius:14, cursor:'pointer',
-                background:'rgba(232,234,255,0.04)', border:'1px solid rgba(232,234,255,0.1)',
-                color:'rgba(232,234,255,0.5)', fontSize:18, display:'flex', alignItems:'center',
+                background:'rgba(255,255,255,0.05)', border:'1px solid rgba(232,234,255,0.1)',
+                color:'rgba(255,255,255,0.72)', fontSize:18, display:'flex', alignItems:'center',
                 justifyContent:'center', WebkitTapHighlightColor:'transparent'}}>
                 {'\u2190'}
               </button>
@@ -211,8 +211,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
             {!isLast ? (
               <button onClick={next} disabled={!canNext}
                 style={{flex:1, height:48, borderRadius:14, cursor: canNext ? 'pointer' : 'default',
-                  background: canNext ? 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)' : 'rgba(232,234,255,0.06)',
-                  border:'none', color: canNext ? '#fff' : 'rgba(232,234,255,0.25)',
+                  background: canNext ? 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)' : 'rgba(255,255,255,0.07)',
+                  border:'none', color: canNext ? '#fff' : 'rgba(255,255,255,0.50)',
                   fontFamily:FONT, fontSize:15, fontWeight:700, letterSpacing:-0.3,
                   display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                   opacity: canNext ? 1 : 0.5, transition:'all 0.2s',
@@ -251,7 +251,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <button style={{
                     width:'100%', padding:'12px 16px', borderRadius:14, cursor:'pointer',
                     background:'rgba(108,99,255,0.08)', border:'1px solid rgba(108,99,255,0.2)',
-                    color:'#E8EAFF', fontFamily:FONT,
+                    color:'#FFFFFF', fontFamily:FONT,
                     display:'flex', alignItems:'center', gap:10,
                     WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
                   }}
@@ -263,7 +263,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <Icon name="lock" size={16} color="#6C63FF" />
                     <div style={{flex:1, textAlign:'left'}}>
                       <div style={{fontWeight:700, fontSize:13}}>{L('signInPro')}</div>
-                      <div style={{fontSize:10, color:'rgba(232,234,255,0.4)'}}>
+                      <div style={{fontSize:10, color:'rgba(255,255,255,0.65)'}}>
                         {L('signInProDesc')}
                       </div>
                     </div>

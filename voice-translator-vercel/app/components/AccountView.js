@@ -94,7 +94,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               background:'linear-gradient(135deg, rgba(0,255,148,0.10), rgba(0,210,255,0.06))',
               border:'2px solid rgba(0,255,148,0.30)', marginBottom:16,
               fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-              color:'#E8EAFF', position:'relative', textAlign:'left', display:'block'
+              color:'#FFFFFF', position:'relative', textAlign:'left', display:'block'
             }}
               onClick={() => setView('home')}>
 
@@ -149,11 +149,11 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
 
             {/* ══════ Divider ══════ */}
             <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
-              <div style={{flex:1, height:1, background:'rgba(232,234,255,0.06)'}} />
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5}}>
+              <div style={{flex:1, height:1, background:'rgba(255,255,255,0.07)'}} />
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5}}>
                 {isIT ? 'Oppure passa a Pro' : 'Or go Pro'}
               </div>
-              <div style={{flex:1, height:1, background:'rgba(232,234,255,0.06)'}} />
+              <div style={{flex:1, height:1, background:'rgba(255,255,255,0.07)'}} />
             </div>
 
             {/* ══════ PRO Options ══════ */}
@@ -165,7 +165,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                 background:'linear-gradient(135deg, rgba(108,99,255,0.10), rgba(0,210,255,0.05))',
                 border:'1.5px solid rgba(108,99,255,0.22)',
                 fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                color:'#E8EAFF', textAlign:'left', display:'block'
+                color:'#FFFFFF', textAlign:'left', display:'block'
               }}
                 onClick={() => setView('credits')}>
                 <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:10}}>
@@ -177,11 +177,11 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                   </div>
                   <div style={{flex:1}}>
                     <div style={{fontWeight:800, fontSize:16, color:'#6C63FF'}}>{L('starterPack')} — {'\u20AC'}0.90</div>
-                    <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:2}}>
+                    <div style={{fontSize:11, color:'rgba(255,255,255,0.68)', marginTop:2}}>
                       {isIT ? '900 testo o 180 voce AI' : '900 text or 180 AI voice msgs'}
                     </div>
                   </div>
-                  <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
+                  <Icon name="chevDown" size={18} color="rgba(255,255,255,0.55)" style={{transform:'rotate(-90deg)'}} />
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
@@ -202,14 +202,14 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               {/* Buy Credits — expanded */}
               <button style={{
                 width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
-                background:'rgba(232,234,255,0.03)', border:'1px solid rgba(232,234,255,0.08)',
+                background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)',
                 fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                color:'#E8EAFF', textAlign:'left', display:'block'
+                color:'#FFFFFF', textAlign:'left', display:'block'
               }}
                 onClick={() => setView('credits')}>
                 <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:10}}>
                   <div style={{width:48, height:48, borderRadius:14,
-                    background:'rgba(232,234,255,0.05)', border:'1px solid rgba(232,234,255,0.08)',
+                    background:'rgba(232,234,255,0.05)', border:'1px solid rgba(255,255,255,0.09)',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
                     <span style={{fontSize:24}}>{'\u{1F4B3}'}</span>
                   </div>
@@ -219,7 +219,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                       {L('payAsYouGo')} — {L('from')} {'\u20AC'}2 {isIT ? 'a' : 'to'} {'\u20AC'}20
                     </div>
                   </div>
-                  <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
+                  <Icon name="chevDown" size={18} color="rgba(255,255,255,0.55)" style={{transform:'rotate(-90deg)'}} />
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
@@ -228,10 +228,10 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                     { val: isIT ? 'fino a +30%' : 'up to +30%', label: 'bonus', color:'#FFD700' },
                   ].map((s, i) => (
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
-                      padding:'4px 10px', borderRadius:8, background:'rgba(232,234,255,0.03)',
-                      border:'1px solid rgba(232,234,255,0.06)'}}>
+                      padding:'4px 10px', borderRadius:8, background:'rgba(255,255,255,0.04)',
+                      border:'1px solid rgba(255,255,255,0.07)'}}>
                       <span style={{fontSize:12, fontWeight:800, color:s.color}}>{s.val}</span>
-                      <span style={{fontSize:9, color:'rgba(232,234,255,0.35)', fontWeight:600}}>{s.label}</span>
+                      <span style={{fontSize:9, color:'rgba(255,255,255,0.58)', fontWeight:600}}>{s.label}</span>
                     </div>
                   ))}
                 </div>
@@ -240,10 +240,10 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               {/* API Keys */}
               <button style={{
                 width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
-                background:'rgba(232,234,255,0.02)', border:'1px solid rgba(232,234,255,0.06)',
+                background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)',
                 display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
                 WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                color:'#E8EAFF'
+                color:'#FFFFFF'
               }}
                 onClick={() => setView('apikeys')}>
                 <div style={{width:48, height:48, borderRadius:14,
@@ -257,7 +257,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                     {isIT ? 'Messaggi illimitati con le tue API' : 'Unlimited messages with your APIs'}
                   </div>
                 </div>
-                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
+                <Icon name="chevDown" size={18} color="rgba(255,255,255,0.55)" style={{transform:'rotate(-90deg)'}} />
               </button>
             </div>
 

@@ -1,57 +1,114 @@
 import { FONT } from './constants.js';
 
 // ========================================
-// STYLES - Cosmic Space Theme
-// Dynamic, modern, luminous UI
+// STYLES - Multi-theme support
+// 4 themes: dark, light, brown, orange
+// HIGH CONTRAST: no invisible grays
 // ========================================
 export default function getStyles(theme = 'dark') {
-  const isDark = theme === 'dark';
+  const isDark = theme === 'dark' || theme === 'brown' || theme === 'orange';
 
-  const colors = isDark ? {
-    bgGradient: 'linear-gradient(135deg, #0B0D1A 0%, #111638 35%, #1B1145 65%, #0D0F24 100%)',
-    roomGradient: 'linear-gradient(160deg, #080A15 0%, #0F1235 30%, #181050 60%, #0D0F24 100%)',
-    textPrimary: '#E8EAFF',
-    textSecondary: 'rgba(232,234,255,0.55)',
-    textTertiary: 'rgba(232,234,255,0.35)',
-    cardBg: 'rgba(255,255,255,0.04)',
-    cardBorder: 'rgba(120,130,255,0.12)',
-    inputBg: 'rgba(255,255,255,0.04)',
-    inputBorder: 'rgba(120,130,255,0.1)',
-    buttonOverlay: 'rgba(255,255,255,0.03)',
-    headerBg: 'rgba(8,10,20,0.85)',
-    headerBorder: 'rgba(120,130,255,0.08)',
-    accent1: '#6C63FF',  // Electric purple
-    accent2: '#00D2FF',  // Cyan neon
-    accent3: '#FF6B9D',  // Pink neon
-    accent4: '#00FF94',  // Green neon
-    accentGradient: 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 50%, #00FF94 100%)',
-    btnGradient: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 50%, #4A3FD4 100%)',
-    btnGlow: '0 4px 24px rgba(108,99,255,0.4), 0 0 60px rgba(108,99,255,0.12)',
-    cardShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-    glassCard: 'rgba(15,18,53,0.65)',
-  } : {
-    bgGradient: 'linear-gradient(135deg, #F0F2FF 0%, #E8EDFF 50%, #F5F0FF 100%)',
-    roomGradient: 'linear-gradient(135deg, #F5F6FF 0%, #EBEEFF 100%)',
-    textPrimary: '#1A1D3A',
-    textSecondary: 'rgba(26,29,58,0.6)',
-    textTertiary: 'rgba(26,29,58,0.4)',
-    cardBg: 'rgba(255,255,255,0.7)',
-    cardBorder: 'rgba(108,99,255,0.15)',
-    inputBg: 'rgba(255,255,255,0.6)',
-    inputBorder: 'rgba(108,99,255,0.12)',
-    buttonOverlay: 'rgba(255,255,255,0.7)',
-    headerBg: 'rgba(240,242,255,0.9)',
-    headerBorder: 'rgba(108,99,255,0.1)',
-    accent1: '#6C63FF',
-    accent2: '#00B4D8',
-    accent3: '#FF6B9D',
-    accent4: '#00CC7A',
-    accentGradient: 'linear-gradient(135deg, #6C63FF 0%, #00B4D8 50%, #00CC7A 100%)',
-    btnGradient: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)',
-    btnGlow: '0 4px 20px rgba(108,99,255,0.25)',
-    cardShadow: '0 4px 24px rgba(108,99,255,0.08), 0 1px 0 rgba(255,255,255,0.9)',
-    glassCard: 'rgba(255,255,255,0.6)',
+  // ── COLOR PALETTES ──
+  const palettes = {
+    dark: {
+      bgGradient: 'linear-gradient(135deg, #0B0D1A 0%, #111638 35%, #1B1145 65%, #0D0F24 100%)',
+      roomGradient: 'linear-gradient(160deg, #080A15 0%, #0F1235 30%, #181050 60%, #0D0F24 100%)',
+      textPrimary: '#FFFFFF',
+      textSecondary: 'rgba(255,255,255,0.78)',
+      textTertiary: 'rgba(255,255,255,0.55)',
+      textMuted: 'rgba(255,255,255,0.42)',
+      cardBg: 'rgba(255,255,255,0.06)',
+      cardBorder: 'rgba(140,150,255,0.18)',
+      inputBg: 'rgba(255,255,255,0.07)',
+      inputBorder: 'rgba(140,150,255,0.15)',
+      buttonOverlay: 'rgba(255,255,255,0.05)',
+      headerBg: 'rgba(8,10,20,0.88)',
+      headerBorder: 'rgba(140,150,255,0.12)',
+      accent1: '#7B73FF',  // Brighter purple
+      accent2: '#00D2FF',
+      accent3: '#FF6B9D',
+      accent4: '#00FF94',
+      accentGradient: 'linear-gradient(135deg, #7B73FF 0%, #00D2FF 50%, #00FF94 100%)',
+      btnGradient: 'linear-gradient(135deg, #7B73FF 0%, #6058E8 50%, #5046DC 100%)',
+      btnGlow: '0 4px 24px rgba(108,99,255,0.4), 0 0 60px rgba(108,99,255,0.12)',
+      cardShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06)',
+      glassCard: 'rgba(15,18,53,0.7)',
+    },
+    light: {
+      bgGradient: 'linear-gradient(135deg, #F0F2FF 0%, #E8EDFF 50%, #F5F0FF 100%)',
+      roomGradient: 'linear-gradient(135deg, #F5F6FF 0%, #EBEEFF 100%)',
+      textPrimary: '#1A1D3A',
+      textSecondary: 'rgba(26,29,58,0.72)',
+      textTertiary: 'rgba(26,29,58,0.52)',
+      textMuted: 'rgba(26,29,58,0.38)',
+      cardBg: 'rgba(255,255,255,0.75)',
+      cardBorder: 'rgba(108,99,255,0.18)',
+      inputBg: 'rgba(255,255,255,0.65)',
+      inputBorder: 'rgba(108,99,255,0.15)',
+      buttonOverlay: 'rgba(255,255,255,0.75)',
+      headerBg: 'rgba(240,242,255,0.92)',
+      headerBorder: 'rgba(108,99,255,0.12)',
+      accent1: '#5A52E0',
+      accent2: '#00A3C4',
+      accent3: '#E0527A',
+      accent4: '#00AA6B',
+      accentGradient: 'linear-gradient(135deg, #5A52E0 0%, #00A3C4 50%, #00AA6B 100%)',
+      btnGradient: 'linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)',
+      btnGlow: '0 4px 20px rgba(108,99,255,0.25)',
+      cardShadow: '0 4px 24px rgba(108,99,255,0.08), 0 1px 0 rgba(255,255,255,0.9)',
+      glassCard: 'rgba(255,255,255,0.65)',
+    },
+    brown: {
+      bgGradient: 'linear-gradient(135deg, #1A120B 0%, #2C1E12 35%, #3A2718 65%, #1A120B 100%)',
+      roomGradient: 'linear-gradient(160deg, #15100A 0%, #261A10 30%, #352316 60%, #1A120B 100%)',
+      textPrimary: '#FFF5E8',
+      textSecondary: 'rgba(255,245,232,0.78)',
+      textTertiary: 'rgba(255,245,232,0.55)',
+      textMuted: 'rgba(255,245,232,0.40)',
+      cardBg: 'rgba(255,220,180,0.06)',
+      cardBorder: 'rgba(200,160,100,0.20)',
+      inputBg: 'rgba(255,220,180,0.07)',
+      inputBorder: 'rgba(200,160,100,0.18)',
+      buttonOverlay: 'rgba(255,220,180,0.05)',
+      headerBg: 'rgba(20,14,8,0.88)',
+      headerBorder: 'rgba(200,160,100,0.15)',
+      accent1: '#D4A06A',  // Warm gold
+      accent2: '#E8B87A',  // Light gold
+      accent3: '#FF8A65',  // Warm coral
+      accent4: '#A5D6A7',  // Soft green
+      accentGradient: 'linear-gradient(135deg, #D4A06A 0%, #E8B87A 50%, #A5D6A7 100%)',
+      btnGradient: 'linear-gradient(135deg, #D4A06A 0%, #B8864E 50%, #9C7040 100%)',
+      btnGlow: '0 4px 24px rgba(212,160,106,0.35), 0 0 40px rgba(212,160,106,0.1)',
+      cardShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,220,180,0.06)',
+      glassCard: 'rgba(40,28,16,0.7)',
+    },
+    orange: {
+      bgGradient: 'linear-gradient(135deg, #1A0E05 0%, #2D1508 35%, #3D1E0A 65%, #1A0E05 100%)',
+      roomGradient: 'linear-gradient(160deg, #150C04 0%, #281206 30%, #381C08 60%, #1A0E05 100%)',
+      textPrimary: '#FFF8F0',
+      textSecondary: 'rgba(255,248,240,0.78)',
+      textTertiary: 'rgba(255,248,240,0.55)',
+      textMuted: 'rgba(255,248,240,0.40)',
+      cardBg: 'rgba(255,150,50,0.06)',
+      cardBorder: 'rgba(255,160,60,0.20)',
+      inputBg: 'rgba(255,150,50,0.07)',
+      inputBorder: 'rgba(255,160,60,0.18)',
+      buttonOverlay: 'rgba(255,150,50,0.05)',
+      headerBg: 'rgba(20,10,3,0.88)',
+      headerBorder: 'rgba(255,160,60,0.15)',
+      accent1: '#FF8C00',  // Deep orange
+      accent2: '#FFB347',  // Light orange
+      accent3: '#FF6347',  // Tomato red
+      accent4: '#7CFC00',  // Lime green
+      accentGradient: 'linear-gradient(135deg, #FF8C00 0%, #FFB347 50%, #7CFC00 100%)',
+      btnGradient: 'linear-gradient(135deg, #FF8C00 0%, #E67A00 50%, #CC6C00 100%)',
+      btnGlow: '0 4px 24px rgba(255,140,0,0.4), 0 0 40px rgba(255,140,0,0.12)',
+      cardShadow: '0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,150,50,0.06)',
+      glassCard: 'rgba(40,18,5,0.7)',
+    },
   };
+
+  const colors = palettes[theme] || palettes.dark;
 
   const S = {
     // === LAYOUT ===
@@ -81,11 +138,11 @@ export default function getStyles(theme = 'dark') {
     // === FORM ===
     field: { marginBottom:12 },
     label: { fontSize:9, fontWeight:700, letterSpacing:1.5, color: colors.accent1, marginBottom:5,
-      textTransform:'uppercase', opacity: isDark ? 0.7 : 0.9 },
+      textTransform:'uppercase', opacity: isDark ? 0.85 : 0.9 },
     input: { width:'100%', padding:'11px 14px', borderRadius:12, background: colors.inputBg,
       border: `1px solid ${colors.inputBorder}`, color: colors.textPrimary, fontSize:14, outline:'none',
       boxSizing:'border-box', fontFamily:FONT, transition:'border-color 0.2s, box-shadow 0.2s',
-      backdropFilter:'blur(8px)' },
+      backdropFilter:'blur(8px)', fontWeight:400 },
     select: { width:'100%', padding:'11px 14px', borderRadius:12, background: colors.inputBg,
       border: `1px solid ${colors.inputBorder}`, color: colors.textPrimary, fontSize:14, outline:'none',
       boxSizing:'border-box', fontFamily:FONT, backdropFilter:'blur(8px)' },
@@ -112,16 +169,16 @@ export default function getStyles(theme = 'dark') {
       background:'none', fontSize:22, cursor:'pointer',
       display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden',
       WebkitTapHighlightColor:'transparent', transition:'all 0.2s', padding:0 },
-    avatarSel: { borderColor: colors.accent1, background:`rgba(108,99,255,0.1)`,
-      boxShadow:`0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)` },
+    avatarSel: { borderColor: colors.accent1, background:`${colors.accent1}1A`,
+      boxShadow:`0 0 0 3px ${colors.accent1}33, 0 0 16px ${colors.accent1}1A` },
 
     // === VOICE ===
     voiceBtn: { padding:'6px 14px', borderRadius:20, border: `1px solid ${colors.cardBorder}`,
       background: colors.buttonOverlay, color: colors.textSecondary, fontSize:12, cursor:'pointer',
       textTransform:'capitalize', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
       transition:'all 0.2s', fontWeight:600 },
-    voiceSel: { borderColor: colors.accent1, background:'rgba(108,99,255,0.12)', color: colors.textPrimary,
-      boxShadow:'0 0 12px rgba(108,99,255,0.15)' },
+    voiceSel: { borderColor: colors.accent1, background:`${colors.accent1}1F`, color: colors.textPrimary,
+      boxShadow:`0 0 12px ${colors.accent1}26` },
 
     // === TOGGLE ===
     toggle: { width:44, height:24, borderRadius:12, border:'none', padding:2, cursor:'pointer',
@@ -146,8 +203,8 @@ export default function getStyles(theme = 'dark') {
       padding:'8px 4px', borderRadius:14, border: `1px solid ${colors.cardBorder}`,
       background: colors.buttonOverlay, color: colors.textSecondary, cursor:'pointer',
       WebkitTapHighlightColor:'transparent', transition:'all 0.2s', backdropFilter:'blur(8px)' },
-    modeBtnSel: { borderColor:'rgba(108,99,255,0.4)', background:'rgba(108,99,255,0.12)', color: colors.textPrimary,
-      boxShadow:'0 0 20px rgba(108,99,255,0.15)' },
+    modeBtnSel: { borderColor:`${colors.accent1}66`, background:`${colors.accent1}1F`, color: colors.textPrimary,
+      boxShadow:`0 0 20px ${colors.accent1}26` },
 
     // === ROOM ===
     roomPage: { display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, right:0, bottom:0,
@@ -165,8 +222,8 @@ export default function getStyles(theme = 'dark') {
       display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
       WebkitTapHighlightColor:'transparent', transition:'all 0.15s' },
     speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'4px 12px',
-      background:`rgba(${isDark ? '108,99,255' : '108,99,255'},0.06)`,
-      borderBottom:`1px solid rgba(108,99,255,0.1)`,
+      background:`${colors.accent1}0F`,
+      borderBottom:`1px solid ${colors.accent1}1A`,
       color: colors.accent1, fontSize:11, flexShrink:0, fontWeight:600 },
     speakingDots: { display:'flex', gap:3, alignItems:'center' },
     dot: { width:4, height:4, borderRadius:'50%', background: colors.accent1,
@@ -176,10 +233,10 @@ export default function getStyles(theme = 'dark') {
     chatArea: { flex:1, overflowY:'auto', padding:'12px 10px', minHeight:0, WebkitOverflowScrolling:'touch' },
     bubble: { padding:'10px 14px', borderRadius:16, position:'relative',
       backdropFilter:'blur(16px)',
-      border: `1px solid ${isDark ? 'rgba(120,130,255,0.08)' : 'rgba(108,99,255,0.1)'}` },
-    bubbleMine: { background: isDark ? 'rgba(108,99,255,0.12)' : 'rgba(108,99,255,0.08)', borderBottomRightRadius:4,
-      boxShadow:'0 2px 16px rgba(108,99,255,0.1)' },
-    bubbleOther: { background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', borderBottomLeftRadius:4,
+      border: `1px solid ${isDark ? colors.cardBorder : 'rgba(108,99,255,0.1)'}` },
+    bubbleMine: { background: `${colors.accent1}1F`, borderBottomRightRadius:4,
+      boxShadow:`0 2px 16px ${colors.accent1}1A` },
+    bubbleOther: { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderBottomLeftRadius:4,
       boxShadow: isDark ? '0 2px 12px rgba(0,0,0,0.2)' : '0 2px 8px rgba(0,0,0,0.06)' },
 
     // === TALK BAR ===
@@ -187,13 +244,16 @@ export default function getStyles(theme = 'dark') {
       background:'transparent' },
     talkBtn: { display:'flex', alignItems:'center', justifyContent:'center',
       width:56, height:56, borderRadius:'50%', border:`2px solid ${colors.cardBorder}`,
-      background: isDark ? 'rgba(108,99,255,0.08)' : 'rgba(108,99,255,0.06)',
+      background: `${colors.accent1}14`,
       color: colors.textPrimary, fontSize:24, cursor:'pointer', touchAction:'manipulation',
       WebkitTapHighlightColor:'transparent', transition:'all 0.25s',
-      boxShadow: isDark ? '0 0 20px rgba(108,99,255,0.1)' : 'none' },
+      boxShadow: isDark ? `0 0 20px ${colors.accent1}1A` : 'none' },
     talkBtnRec: { color: colors.accent3, fontSize:26, borderColor: colors.accent3,
-      background:'rgba(255,107,157,0.1)',
-      boxShadow:'0 0 0 6px rgba(255,107,157,0.1), 0 0 30px rgba(255,107,157,0.15)' },
+      background:`${colors.accent3}1A`,
+      boxShadow:`0 0 0 6px ${colors.accent3}1A, 0 0 30px ${colors.accent3}26` },
+
+    // Expose colors for components that need direct access
+    colors,
   };
 
   return S;

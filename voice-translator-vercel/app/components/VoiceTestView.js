@@ -187,7 +187,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
       return <span style={{fontSize:10, color:'#FF6B9D'}}>{'\u2715'} {result.replace('error_', '')}</span>;
     }
     if (result.startsWith('playing')) return <span style={{fontSize:10, color:'#00D2FF'}}>{'\u266B'}</span>;
-    return <span style={{fontSize:10, color:'rgba(232,234,255,0.3)'}}>{result}</span>;
+    return <span style={{fontSize:10, color:'rgba(255,255,255,0.55)'}}>{result}</span>;
   }
 
   // Voice descriptions
@@ -217,7 +217,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
         <div style={{width:'100%', maxWidth:400, marginBottom:16, borderRadius:16,
           background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
           padding:'14px 16px'}}>
-          <div style={{fontSize:11, fontWeight:700, color:'rgba(232,234,255,0.4)',
+          <div style={{fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.65)',
             textTransform:'uppercase', letterSpacing:1, marginBottom:10}}>
             {L('systemStatus') || 'Stato Sistema'}
           </div>
@@ -231,16 +231,16 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
             ].map(s => (
               <div key={s.name} style={{display:'flex', alignItems:'center', gap:10,
                 padding:'8px 12px', borderRadius:10,
-                background: s.status === 'ok' ? 'rgba(0,255,148,0.04)' : 'rgba(232,234,255,0.02)',
+                background: s.status === 'ok' ? 'rgba(0,255,148,0.04)' : 'rgba(255,255,255,0.03)',
                 border: `1px solid ${s.status === 'ok' ? 'rgba(0,255,148,0.1)' : 'rgba(232,234,255,0.05)'}`}}>
                 <span style={{fontSize:14, width:20, textAlign:'center'}}>
                   {s.status === 'ok' ? '\u2713' : '\u2715'}
                 </span>
                 <div style={{flex:1}}>
-                  <div style={{fontSize:13, fontWeight:600, color: s.status === 'ok' ? s.color : 'rgba(232,234,255,0.35)'}}>
+                  <div style={{fontSize:13, fontWeight:600, color: s.status === 'ok' ? s.color : 'rgba(255,255,255,0.58)'}}>
                     {s.name}
                   </div>
-                  {s.detail && <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>{s.detail}</div>}
+                  {s.detail && <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>{s.detail}</div>}
                 </div>
                 <span style={{fontSize:9, fontWeight:700, padding:'2px 8px', borderRadius:6,
                   background:`rgba(${s.tier === 'FREE' ? '0,255,148' : s.tier === 'PRO' ? '0,210,255' : '255,215,0'},0.1)`,
@@ -252,7 +252,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
 
         {/* ── Custom text input ── */}
         <div style={{...S.card, width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:'rgba(232,234,255,0.4)',
+          <div style={{fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.65)',
             textTransform:'uppercase', letterSpacing:1, marginBottom:8}}>
             {L('testText') || 'Testo di prova'}
           </div>
@@ -262,7 +262,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
             onChange={e => setTestText(e.target.value)}
             placeholder={SAMPLES[prefs.lang] || SAMPLES.en}
           />
-          <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', marginTop:4}}>
+          <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', marginTop:4}}>
             {L('testTextHint') || 'Lascia vuoto per usare il testo di esempio'} ({langInfo?.flag} {langInfo?.name})
           </div>
         </div>
@@ -274,7 +274,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
               <div style={{fontSize:14, fontWeight:700, color:'#00FF94', display:'flex', alignItems:'center', gap:6}}>
                 {'\u{1F50A}'} Browser Speech
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:2}}>FREE — {L('noCost') || 'Nessun costo'}</div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:2}}>FREE — {L('noCost') || 'Nessun costo'}</div>
             </div>
             <StatusBadge result={testResults.browser} />
           </div>
@@ -301,7 +301,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
               <div style={{fontSize:14, fontWeight:700, color:'#00D2FF', display:'flex', alignItems:'center', gap:6}}>
                 {'\u{1F3A4}'} OpenAI TTS
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:2}}>PRO — 6 {L('uniqueVoices') || 'voci uniche'}</div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:2}}>PRO — 6 {L('uniqueVoices') || 'voci uniche'}</div>
             </div>
             {!hasApiAccess && (
               <span style={{fontSize:10, padding:'3px 8px', borderRadius:6,
@@ -317,23 +317,23 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
               return (
                 <div key={v} style={{display:'flex', alignItems:'center', gap:8,
                   padding:'8px 12px', borderRadius:12,
-                  background: isPlaying ? 'rgba(0,210,255,0.06)' : 'rgba(232,234,255,0.02)',
+                  background: isPlaying ? 'rgba(0,210,255,0.06)' : 'rgba(255,255,255,0.03)',
                   border: isPlaying ? '1px solid rgba(0,210,255,0.15)' : '1px solid rgba(232,234,255,0.05)'}}>
                   <button onClick={() => testOpenAIVoice(v)}
                     style={{width:34, height:34, borderRadius:9, cursor: hasApiAccess ? 'pointer' : 'not-allowed', flexShrink:0,
-                      background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
-                      border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                      background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       opacity: hasApiAccess ? 1 : 0.4,
                       WebkitTapHighlightColor:'transparent'}}>
                     <Icon name={isPlaying ? 'stop' : 'play'} size={15}
-                      color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                      color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.72)'} />
                   </button>
                   <div style={{flex:1}}>
                     <div style={{fontSize:13, fontWeight:600, color:'rgba(232,234,255,0.7)'}}>
                       {v.charAt(0).toUpperCase() + v.slice(1)}
                     </div>
-                    <div style={{fontSize:10, color:'rgba(232,234,255,0.3)'}}>
+                    <div style={{fontSize:10, color:'rgba(255,255,255,0.55)'}}>
                       {VOICE_DESC[v] || ''}
                     </div>
                   </div>
@@ -344,7 +344,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
           </div>
 
           {!hasApiAccess && (
-            <div style={{fontSize:11, color:'rgba(232,234,255,0.35)', marginTop:10, padding:'8px 12px',
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.58)', marginTop:10, padding:'8px 12px',
               borderRadius:10, background:'rgba(255,107,157,0.04)', border:'1px solid rgba(255,107,157,0.08)',
               lineHeight:1.5}}>
               {L('openaiTestNote') || 'Per testare le voci OpenAI, accedi con un account PRO o configura le tue API key nelle impostazioni.'}
@@ -381,7 +381,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
               <div style={{fontSize:14, fontWeight:700, color:'#ffd700', display:'flex', alignItems:'center', gap:6}}>
                 {'\u2B50'} ElevenLabs
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:2}}>TOP PRO — {L('premiumVoices') || 'Voci premium'}</div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:2}}>TOP PRO — {L('premiumVoices') || 'Voci premium'}</div>
             </div>
             {!elAvailable && (
               <span style={{fontSize:10, padding:'3px 8px', borderRadius:6,
@@ -406,7 +406,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
 
           {elAvailable && elevenLabsVoices.length > 0 && (
             <div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
                 {elevenLabsVoices.length} {L('voicesAvailable') || 'voci disponibili'} — {L('previewFree') || 'anteprima gratuita'}
               </div>
               <div style={{display:'flex', flexDirection:'column', gap:4, maxHeight:350, overflowY:'auto'}}>
@@ -417,24 +417,24 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
                   return (
                     <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
                       padding:'8px 12px', borderRadius:12,
-                      background: isSel ? 'rgba(255,215,0,0.06)' : (isPlaying ? 'rgba(255,215,0,0.03)' : 'rgba(232,234,255,0.02)'),
+                      background: isSel ? 'rgba(255,215,0,0.06)' : (isPlaying ? 'rgba(255,215,0,0.03)' : 'rgba(255,255,255,0.03)'),
                       border: isSel ? '1px solid rgba(255,215,0,0.2)' : '1px solid rgba(232,234,255,0.05)'}}>
                       <button onClick={() => testELVoice(v)}
                         style={{width:32, height:32, borderRadius:8, cursor:'pointer', flexShrink:0,
-                          background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
-                          border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                          background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
+                          border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
                           display:'flex', alignItems:'center', justifyContent:'center',
                           WebkitTapHighlightColor:'transparent'}}>
                         <Icon name={isPlaying ? 'stop' : 'play'} size={14}
-                          color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                          color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.72)'} />
                       </button>
                       <div style={{flex:1, minWidth:0}}>
                         <div style={{fontSize:12, fontWeight: isSel ? 700 : 500,
-                          color: isSel ? '#ffd700' : 'rgba(232,234,255,0.6)',
+                          color: isSel ? '#ffd700' : 'rgba(255,255,255,0.80)',
                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                           {v.name}
                         </div>
-                        <div style={{fontSize:9, color:'rgba(232,234,255,0.25)', marginTop:1}}>
+                        <div style={{fontSize:9, color:'rgba(255,255,255,0.50)', marginTop:1}}>
                           {v.category}{v.labels?.accent ? ` \u2022 ${v.labels.accent}` : ''}{v.labels?.gender ? ` \u2022 ${v.labels.gender}` : ''}
                         </div>
                       </div>
@@ -448,7 +448,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
           )}
 
           {!elAvailable && (
-            <div style={{fontSize:11, color:'rgba(232,234,255,0.35)', padding:'8px 12px',
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.58)', padding:'8px 12px',
               borderRadius:10, background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.08)',
               lineHeight:1.5}}>
               {L('elTestNote') || 'ElevenLabs richiede una chiave API propria o l\'accesso piattaforma. Configura nelle impostazioni > API Keys.'}
@@ -458,12 +458,12 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
 
         {/* ── Legend / Info ── */}
         <div style={{width:'100%', maxWidth:400, padding:'12px 16px', marginBottom:20,
-          borderRadius:14, background:'rgba(232,234,255,0.02)', border:'1px solid rgba(232,234,255,0.05)'}}>
-          <div style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.3)',
+          borderRadius:14, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(232,234,255,0.05)'}}>
+          <div style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)',
             textTransform:'uppercase', letterSpacing:1, marginBottom:8}}>
             {L('legend') || 'Legenda'}
           </div>
-          <div style={{display:'flex', flexDirection:'column', gap:4, fontSize:11, color:'rgba(232,234,255,0.4)'}}>
+          <div style={{display:'flex', flexDirection:'column', gap:4, fontSize:11, color:'rgba(255,255,255,0.65)'}}>
             <div>{'\u2713'} <span style={{color:'#00FF94'}}>Verde</span> = {L('testOk') || 'Funziona correttamente'}</div>
             <div>{'\u2715'} <span style={{color:'#FF6B9D'}}>Rosso</span> = {L('testError') || 'Errore o non disponibile'}</div>
             <div>ms = {L('responseTime') || 'Tempo di risposta'} \u2022 kb = {L('fileSize') || 'Dimensione audio'}</div>

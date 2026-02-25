@@ -42,7 +42,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               outline: showLangPicker ? '2px solid rgba(78,205,196,0.5)' : 'none'}}>
             {myL.flag}
           </button>
-          <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
+          <span style={{color:'rgba(255,255,255,0.55)', fontSize:16}}>{'\u21C4'}</span>
           <span style={{fontSize:18}}>{otherL.flag}</span>
         </div>
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
@@ -105,7 +105,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           </span>
           {isHost && <span style={{fontSize:9, color:'rgba(255,255,255,0.25)'}}>{'\u25BC'}</span>}
           {!isHost && roomMode === 'classroom' && (
-            <span style={{fontSize:10, color:'rgba(255,255,255,0.3)'}}>
+            <span style={{fontSize:10, color:'rgba(255,255,255,0.55)'}}>
               {' \u2022 '}{roomInfo?.host || 'Host'} presenta
             </span>
           )}
@@ -121,7 +121,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
           {isHost && !isTrial && (
             <>
-              <span style={{fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
+              <span style={{fontSize:10, color:'rgba(255,255,255,0.55)', fontFamily:'monospace'}}>
                 ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)}
               </span>
               <span style={{fontSize:9, color:'rgba(255,255,255,0.2)'}}>
@@ -154,11 +154,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         borderBottom:'1px solid rgba(255,255,255,0.04)', display:'flex', alignItems:'center',
         justifyContent:'space-between', flexShrink:0, gap:6}}>
         <div style={{display:'flex', alignItems:'center', gap:6, minWidth:0}}>
-          <span style={{fontSize:9, color:'rgba(232,234,255,0.35)', fontWeight:600, whiteSpace:'nowrap'}}>
+          <span style={{fontSize:9, color:'rgba(255,255,255,0.58)', fontWeight:600, whiteSpace:'nowrap'}}>
             {isTrial ? '\u{1F50A} Browser Voice' : isTopPro ? '\u{1F3A4} ElevenLabs' : `\u{1F3A4} OpenAI`}
           </span>
           {!isTrial && (
-            <span style={{fontSize:9, color:'rgba(232,234,255,0.25)', fontWeight:500,
+            <span style={{fontSize:9, color:'rgba(255,255,255,0.50)', fontWeight:500,
               padding:'1px 5px', borderRadius:4, background:'rgba(255,255,255,0.04)',
               border:'1px solid rgba(255,255,255,0.06)', whiteSpace:'nowrap'}}>
               {isTopPro ? 'Multilingual v2' : (prefs.voice || 'nova')}
@@ -166,7 +166,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
-          <span style={{fontSize:9, color:'rgba(232,234,255,0.25)', whiteSpace:'nowrap'}}>
+          <span style={{fontSize:9, color:'rgba(255,255,255,0.50)', whiteSpace:'nowrap'}}>
             {isTrial ? 'AI: Free API' : `AI: ${(prefs?.aiModel || 'gpt-4o-mini').toUpperCase()}`}
           </span>
           {!audioEnabled && (
@@ -186,7 +186,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             <span style={{fontSize:9, color: freeLimitExceeded ? '#ff5252' : 'rgba(255,255,255,0.35)', fontWeight:600}}>
               {freeLimitExceeded ? L('freeLimitReached') : L('freeUsage')}
             </span>
-            <span style={{fontSize:9, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
+            <span style={{fontSize:9, color:'rgba(255,255,255,0.55)', fontFamily:'monospace'}}>
               {freeLimitExceeded
                 ? `${L('freeResetsIn')} ${freeResetTime}`
                 : `${Math.round(freeCharsUsed / 1000)}K / ${FREE_DAILY_LIMIT / 1000}K`}
@@ -224,7 +224,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               <AvatarImg src={isMine ? prefs.avatar : (partner?.avatar || AVATARS[0])} size={36} style={{marginBottom:2}} />
               <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
                 alignItems:isMine ? 'flex-end' : 'flex-start'}}>
-                <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3}}>
+                <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:3}}>
                   {isMine ? 'Tu' : m.sender}
                 </div>
                 <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
@@ -250,7 +250,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
             <AvatarImg src={prefs.avatar} size={36} style={{marginBottom:2}} />
             <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
-              <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
                 <span>Tu</span>
                 <span style={{display:'inline-block', width:6, height:6, borderRadius:3, background:'#f5576c',
                   animation:'vtPulse 1.2s infinite ease-in-out'}} />
@@ -318,7 +318,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
           style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
             background: textInput.trim() ? 'linear-gradient(135deg, #e94560, #c23152)' : 'rgba(255,255,255,0.06)',
-            color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+            color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.55)',
             fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
             WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
           {sendingText ? '...' : '\u{27A4}'}
@@ -328,7 +328,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       {/* Talk bar */}
       <div style={S.talkBar}>
         {status && <div style={{fontSize:11, color:'#e94560', marginBottom:4}}>{status}</div>}
-        <div style={{fontSize:9, color:'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:1}}>
+        <div style={{fontSize:9, color:'rgba(255,255,255,0.55)', marginBottom:4, textTransform:'uppercase', letterSpacing:1}}>
           {modeInfo.icon} {L(modeInfo.nameKey)}
           {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
             <span style={{color:'#4ecdc4', marginLeft:6}}>{'\u{1F7E2}'} LIVE</span>

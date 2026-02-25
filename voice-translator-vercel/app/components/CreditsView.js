@@ -72,7 +72,7 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
           <div style={{width:'100%', maxWidth:380, marginBottom:14, padding:'12px 16px', borderRadius:16,
             background:'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,210,255,0.05))',
             border:'1px solid rgba(108,99,255,0.15)', textAlign:'center'}}>
-            <div style={{fontSize:10, color:'rgba(232,234,255,0.4)', marginBottom:3, fontWeight:600, textTransform:'uppercase', letterSpacing:1}}>
+            <div style={{fontSize:10, color:'rgba(255,255,255,0.65)', marginBottom:3, fontWeight:600, textTransform:'uppercase', letterSpacing:1}}>
               {L('currentBalance')}
             </div>
             <div style={{fontSize:28, fontWeight:800, background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
@@ -93,7 +93,7 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
               {getPerk(pLang, 'creditsNoExpiry')}
             </div>
           </div>
-          <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', lineHeight:1.5, paddingLeft:46}}>
+          <div style={{fontSize:11, color:'rgba(255,255,255,0.68)', lineHeight:1.5, paddingLeft:46}}>
             {getPerk(pLang, 'creditsGuarantee')}
           </div>
         </div>
@@ -121,13 +121,13 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
                     ? 'linear-gradient(135deg, rgba(108,99,255,0.12), rgba(0,210,255,0.08))'
                     : pkg.starter
                       ? 'linear-gradient(135deg, rgba(0,255,148,0.06), rgba(0,210,255,0.04))'
-                      : 'rgba(232,234,255,0.03)',
+                      : 'rgba(255,255,255,0.04)',
                   border: isPopular
                     ? '2px solid rgba(108,99,255,0.35)'
                     : pkg.starter
                       ? '1.5px solid rgba(0,255,148,0.18)'
-                      : '1px solid rgba(232,234,255,0.08)',
-                  color:'#E8EAFF', cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                      : '1px solid rgba(255,255,255,0.09)',
+                  color:'#FFFFFF', cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
                   transition:'all 0.15s', position:'relative', textAlign:'left',
                   display:'block'}}>
 
@@ -157,12 +157,12 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
                         </span>
                       )}
                     </div>
-                    <div style={{fontSize:12, color:'rgba(232,234,255,0.45)', marginTop:2}}>{pkg.messages}</div>
+                    <div style={{fontSize:12, color:'rgba(255,255,255,0.68)', marginTop:2}}>{pkg.messages}</div>
                   </div>
                   <div style={{width:40, height:40, borderRadius:12,
-                    background: isPopular ? 'rgba(108,99,255,0.15)' : 'rgba(232,234,255,0.06)',
+                    background: isPopular ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.07)',
                     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                    <Icon name="zap" size={20} color={isPopular ? '#6C63FF' : 'rgba(232,234,255,0.35)'} />
+                    <Icon name="zap" size={20} color={isPopular ? '#6C63FF' : 'rgba(255,255,255,0.58)'} />
                   </div>
                 </div>
 
@@ -190,9 +190,9 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
 
         {/* Payment info footer */}
         <div style={{width:'100%', maxWidth:380, marginTop:8, padding:'10px 14px', borderRadius:12,
-          background:'rgba(232,234,255,0.02)', border:'1px solid rgba(232,234,255,0.05)',
+          background:'rgba(255,255,255,0.03)', border:'1px solid rgba(232,234,255,0.05)',
           display:'flex', alignItems:'center', gap:8}}>
-          <Icon name="lock" size={14} color="rgba(232,234,255,0.3)" />
+          <Icon name="lock" size={14} color="rgba(255,255,255,0.55)" />
           <div style={{fontSize:10, color:'rgba(232,234,255,0.30)', lineHeight:1.4}}>
             {getPerk(pLang, 'securePayment')} {'\u2022'} Visa, Mastercard, Apple Pay, Google Pay
           </div>

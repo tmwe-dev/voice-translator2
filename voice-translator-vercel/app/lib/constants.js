@@ -80,7 +80,13 @@ export const CONTEXTS = [
 
 export const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
-export const THEMES = { DARK: 'dark', LIGHT: 'light' };
+export const THEMES = { DARK: 'dark', LIGHT: 'light', BROWN: 'brown', ORANGE: 'orange' };
+export const THEME_LIST = [
+  { id:'dark', name:'Dark', icon:'\uD83C\uDF19', desc:'Tema scuro classico' },
+  { id:'light', name:'Light', icon:'\u2600\uFE0F', desc:'Tema chiaro' },
+  { id:'brown', name:'Elegante', icon:'\u{1F33F}', desc:'Marrone scuro elegante' },
+  { id:'orange', name:'Vivace', icon:'\u{1F525}', desc:'Arancione energico' },
+];
 
 export const FREE_DAILY_LIMIT = 50000;
 

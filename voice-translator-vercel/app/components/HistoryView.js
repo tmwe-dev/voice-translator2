@@ -10,7 +10,7 @@ export default function HistoryView({ L, S, prefs, convHistory, viewConversation
           <span style={{fontWeight:600, fontSize:17}}>{L('history')}</span>
         </div>
         {convHistory.length === 0 ? (
-          <div style={{color:'rgba(255,255,255,0.3)', fontSize:14, textAlign:'center', marginTop:40}}>
+          <div style={{color:'rgba(255,255,255,0.55)', fontSize:14, textAlign:'center', marginTop:40}}>
             {L('noHistory')}
           </div>
         ) : (
@@ -23,7 +23,7 @@ export default function HistoryView({ L, S, prefs, convHistory, viewConversation
                   backdropFilter:'blur(8px)', WebkitTapHighlightColor:'transparent'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
                   <span style={{fontWeight:600, fontSize:14}}>{c.members?.join(' & ') || 'Conversazione'}</span>
-                  <span style={{fontSize:10, color:'rgba(255,255,255,0.3)'}}>
+                  <span style={{fontSize:10, color:'rgba(255,255,255,0.55)'}}>
                     {c.msgCount || 0} msg
                   </span>
                 </div>

@@ -115,7 +115,7 @@ export default function Home() {
   useEffect(() => {
     try {
       const savedTheme = localStorage.getItem('vt-theme');
-      if (savedTheme && (savedTheme === THEMES.DARK || savedTheme === THEMES.LIGHT)) {
+      if (savedTheme && Object.values(THEMES).includes(savedTheme)) {
         setTheme(savedTheme);
       }
     } catch {}

@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS } from '../lib/constants.js';
+import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS } from '../lib/constants.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 
@@ -160,10 +160,10 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   color={isGuest ? '#00FF94' : (useOwnKeys ? '#00D2FF' : '#6C63FF')} />
               </div>
               <div>
-                <div style={{fontSize:14, fontWeight:700, color:'#E8EAFF'}}>
+                <div style={{fontSize:14, fontWeight:700, color:'#FFFFFF'}}>
                   {isGuest ? 'FREE Mode' : (useOwnKeys ? L('personalApiKeys') : 'PRO Mode')}
                 </div>
-                <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:1}}>
+                <div style={{fontSize:11, color:'rgba(255,255,255,0.68)', marginTop:1}}>
                   {isGuest ? L('startFreeDesc') : (userAccount?.email || '')}
                 </div>
               </div>
@@ -171,11 +171,11 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             {/* Refresh button */}
             <button onClick={handleRefresh}
               style={{width:36, height:36, borderRadius:12, cursor:'pointer',
-                background:'rgba(232,234,255,0.04)', border:'1px solid rgba(232,234,255,0.08)',
+                background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.09)',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
                 animation: refreshing ? 'spin 0.8s linear infinite' : 'none'}}>
-              <Icon name="refresh" size={16} color="rgba(232,234,255,0.5)" />
+              <Icon name="refresh" size={16} color="rgba(255,255,255,0.72)" />
             </button>
           </div>
 
@@ -184,22 +184,22 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             /* FREE tier usage bar */
             <div style={{padding:'0 18px 16px'}}>
               <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-                <span style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.35)', textTransform:'uppercase', letterSpacing:1}}>
+                <span style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.58)', textTransform:'uppercase', letterSpacing:1}}>
                   {L('dailyUsage') || 'Utilizzo giornaliero'}
                 </span>
                 <span style={{fontSize:11, fontWeight:600, color: freePercent >= 90 ? '#FF6B9D' : '#00FF94'}}>
                   {freePercent}%
                 </span>
               </div>
-              <div style={{width:'100%', height:6, borderRadius:3, background:'rgba(232,234,255,0.06)', overflow:'hidden'}}>
+              <div style={{width:'100%', height:6, borderRadius:3, background:'rgba(255,255,255,0.07)', overflow:'hidden'}}>
                 <div style={{width:`${freePercent}%`, height:'100%', borderRadius:3, transition:'width 0.3s',
                   background: freePercent >= 90 ? 'linear-gradient(90deg, #FF6B9D, #ff4757)' :
                     freePercent >= 60 ? 'linear-gradient(90deg, #ffd700, #FF6B9D)' :
                       'linear-gradient(90deg, #00FF94, #00D2FF)'}} />
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:5}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.58)', marginTop:5}}>
                 {((freeCharsUsed || 0) / 1000).toFixed(1)}k / {(FREE_DAILY_LIMIT / 1000).toFixed(0)}k {L('characters') || 'caratteri'}
-                <span style={{marginLeft:8, color: freePercent >= 90 ? '#FF6B9D' : 'rgba(232,234,255,0.25)'}}>
+                <span style={{marginLeft:8, color: freePercent >= 90 ? '#FF6B9D' : 'rgba(255,255,255,0.50)'}}>
                   ({(freeCharsLeft / 1000).toFixed(1)}k {L('remaining') || 'rimanenti'})
                 </span>
               </div>
@@ -219,9 +219,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     ].map(k => (
                       <div key={k.name} style={{display:'flex', alignItems:'center', gap:5, padding:'4px 10px',
                         borderRadius:8, fontSize:11, fontWeight:600,
-                        background: k.ok ? 'rgba(0,255,148,0.08)' : 'rgba(232,234,255,0.03)',
-                        border: k.ok ? '1px solid rgba(0,255,148,0.15)' : '1px solid rgba(232,234,255,0.06)',
-                        color: k.ok ? '#00FF94' : 'rgba(232,234,255,0.3)'}}>
+                        background: k.ok ? 'rgba(0,255,148,0.08)' : 'rgba(255,255,255,0.04)',
+                        border: k.ok ? '1px solid rgba(0,255,148,0.15)' : '1px solid rgba(255,255,255,0.07)',
+                        color: k.ok ? '#00FF94' : 'rgba(255,255,255,0.55)'}}>
                         <span style={{fontSize:12}}>{k.ok ? '\u2713' : '\u2715'}</span>
                         {k.name}
                         {k.required && !k.ok && <span style={{fontSize:9, color:'#FF6B9D'}}>*</span>}
@@ -235,7 +235,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       color: hasOpenAI ? '#00FF94' : '#FF6B9D'}}>
                       {hasOpenAI ? (L('ready') || 'Ready') : (L('incomplete') || 'Incomplete')}
                     </span>
-                    <span style={{fontSize:11, color:'rgba(232,234,255,0.4)'}}>
+                    <span style={{fontSize:11, color:'rgba(255,255,255,0.65)'}}>
                       {keyCount > 0
                         ? `${keyCount} key${keyCount > 1 ? 's' : ''} ${L('configured') || 'configurate'}`
                         : L('noKeysConfigured') || 'Nessuna chiave configurata'}
@@ -263,11 +263,11 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       color: creditBalance > 50 ? '#00FF94' : creditBalance > 0 ? '#ffd700' : '#FF6B9D'}}>
                       {formatCredits(creditBalance)}
                     </span>
-                    <span style={{fontSize:11, color:'rgba(232,234,255,0.35)'}}>
+                    <span style={{fontSize:11, color:'rgba(255,255,255,0.58)'}}>
                       {L('credit')}
                     </span>
                   </div>
-                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
+                  <div style={{fontSize:11, color:'rgba(255,255,255,0.65)', marginBottom:8}}>
                     ~{Math.floor(creditBalance / 0.5)} {L('messagesRemaining') || 'messaggi rimanenti'}
                   </div>
                   <div style={{display:'flex', gap:8}}>
@@ -309,7 +309,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <div style={S.label}>{L('avatar')}</div>
               <button onClick={() => setShowAvatarDropdown(!showAvatarDropdown)}
-                style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
+                style={{background:'none', border:'none', color:'rgba(255,255,255,0.72)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
                 {showAvatarDropdown ? '\u2715' : '\u25BC lista'}
               </button>
             </div>
@@ -319,7 +319,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   <button key={a} onClick={() => { setPrefs({...prefs, avatar:a}); setShowAvatarDropdown(false); }}
                     style={{...S.avatarBtn, width:60, height:74, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2, flexDirection:'column'}}>
                     <img src={a} alt={AVATAR_NAMES[i]} style={{width:46, height:46, objectFit:'contain', borderRadius:12}} />
-                    <span style={{fontSize:9, marginTop:2, color:'rgba(232,234,255,0.6)'}}>{AVATAR_NAMES[i]}</span>
+                    <span style={{fontSize:9, marginTop:2, color:'rgba(255,255,255,0.80)'}}>{AVATAR_NAMES[i]}</span>
                   </button>
                 ))}
               </div>
@@ -344,7 +344,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     </div>
                     <span style={{
                       fontSize:10, marginTop:4, textAlign:'center',
-                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.72)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{AVATAR_NAMES[i]}</span>
                   </div>
@@ -358,7 +358,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <div style={S.label}>{L('yourLang')}</div>
               <button onClick={() => setShowLangDropdown(!showLangDropdown)}
-                style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
+                style={{background:'none', border:'none', color:'rgba(255,255,255,0.72)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
                 {showLangDropdown ? '\u2715' : '\u25BC lista'}
               </button>
             </div>
@@ -380,7 +380,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       width:56, height:56, borderRadius:28, overflow:'hidden',
                       border: isSelected ? '3px solid #6C63FF' : '3px solid transparent',
                       boxShadow: isSelected ? '0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)' : 'none',
-                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(232,234,255,0.04)',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(255,255,255,0.05)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition: 'all 0.2s', fontSize: 28
                     }}>
@@ -389,7 +389,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     <span style={{
                       fontSize:9, marginTop:4, textAlign:'center', maxWidth:76, overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap',
-                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.72)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{lang.name}</span>
                   </div>
@@ -400,7 +400,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
           <div style={S.field}>
             <div style={S.label}>{L('voiceTranslation')} (OpenAI)</div>
-            <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+            <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
               {L('tapToSelect') || 'Tocca per selezionare'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
             </div>
             <div style={{display:'flex', flexDirection:'column', gap:6}}>
@@ -410,28 +410,28 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 return (
                   <div key={v} style={{display:'flex', alignItems:'center', gap:8,
                     padding:'10px 14px', borderRadius:14, transition:'all 0.15s',
-                    background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(232,234,255,0.02)',
-                    border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.06)'}}>
+                    background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(255,255,255,0.03)',
+                    border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(255,255,255,0.07)'}}>
                     {/* Play/Stop button */}
                     <button onClick={(e) => { e.stopPropagation(); previewVoice(v); }}
                       style={{width:36, height:36, borderRadius:10, cursor:'pointer', flexShrink:0,
-                        background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
-                        border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                        background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
+                        border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
                         display:'flex', alignItems:'center', justifyContent:'center',
                         WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
                       <Icon name={isPlaying ? 'stop' : 'play'} size={16}
-                        color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                        color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.72)'} />
                     </button>
                     {/* Voice name — click to select */}
                     <button onClick={() => setPrefs({...prefs, voice:v})}
                       style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
                         fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
                       <div style={{fontSize:14, fontWeight:isSelected ? 700 : 500,
-                        color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.6)',
+                        color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.80)',
                         letterSpacing:-0.2}}>
                         {v.charAt(0).toUpperCase() + v.slice(1)}
                       </div>
-                      <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                      <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>
                         {v === 'alloy' ? (L('voiceAlloyDesc') || 'Neutra, versatile') :
                          v === 'echo' ? (L('voiceEchoDesc') || 'Maschile, calda') :
                          v === 'fable' ? (L('voiceFableDesc') || 'Espressiva, narrativa') :
@@ -452,7 +452,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 );
               })}
             </div>
-            <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', marginTop:8, lineHeight:1.4}}>
+            <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', marginTop:8, lineHeight:1.4}}>
               {(userToken && (useOwnKeys || creditBalance > 0))
                 ? (L('previewUsesRealVoice') || '\u2713 Anteprima con la vera voce OpenAI TTS')
                 : (L('previewRequiresAccount') || 'Accedi con account PRO o configura le chiavi API per ascoltare l\'anteprima delle voci')}
@@ -489,7 +489,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             return (
               <div style={S.field}>
                 <div style={S.label}>{L('aiTranslationModel') || 'Modello AI traduzione'}</div>
-                <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+                <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
                   {useOwnKeys
                     ? (L('aiModelHintOwnKeys') || 'Scegli il motore AI \u2022 Usa le tue API keys')
                     : (L('aiModelHint') || 'Scegli il motore di traduzione AI')}
@@ -501,21 +501,21 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       <button key={m.id} onClick={() => setPrefs({...prefs, aiModel: m.id})}
                         style={{display:'flex', alignItems:'center', gap:10,
                           padding:'10px 14px', borderRadius:14, cursor:'pointer',
-                          background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(232,234,255,0.02)',
-                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.06)',
+                          background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(255,255,255,0.03)',
+                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(255,255,255,0.07)',
                           fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
                         <div style={{width:32, height:32, borderRadius:10, flexShrink:0,
-                          background: isSelected ? 'rgba(108,99,255,0.15)' : 'rgba(232,234,255,0.04)',
-                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                          background: isSelected ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.05)',
+                          border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
                           display:'flex', alignItems:'center', justifyContent:'center'}}>
                           <span style={{fontSize:14}}>{PROVIDER_ICONS[m.provider] || '\u26A1'}</span>
                         </div>
                         <div style={{flex:1, textAlign:'left'}}>
                           <div style={{fontSize:14, fontWeight: isSelected ? 700 : 500,
-                            color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.6)', letterSpacing:-0.2}}>
+                            color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.80)', letterSpacing:-0.2}}>
                             {m.name}
                           </div>
-                          <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                          <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>
                             {m.desc} \u2022 {m.cost}
                           </div>
                         </div>
@@ -531,7 +531,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   })}
                 </div>
                 {useOwnKeys && !hasAnthropic && !hasGemini && (
-                  <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', marginTop:8, lineHeight:1.4}}>
+                  <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', marginTop:8, lineHeight:1.4}}>
                     {L('addMoreKeysHint') || 'Aggiungi chiavi Anthropic o Gemini per sbloccare altri modelli AI'}
                   </div>
                 )}
@@ -605,7 +605,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   </button>
                 </div>
                 {!useOwnKeys && platformHasEL && (
-                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
+                  <div style={{fontSize:11, color:'rgba(255,255,255,0.65)', marginBottom:8}}>
                     ElevenLabs via piattaforma (costo ~20x TTS standard)
                   </div>
                 )}
@@ -640,8 +640,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       {/* Language/accent filter */}
                       <select value={elLangFilter} onChange={e => setElLangFilter(e.target.value)}
                         style={{flex:1, minWidth:120, padding:'6px 10px', borderRadius:8, fontSize:11, fontWeight:600,
-                          background:'rgba(232,234,255,0.04)', border:'1px solid rgba(255,215,0,0.15)',
-                          color:'#E8EAFF', fontFamily:FONT, cursor:'pointer',
+                          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,215,0,0.15)',
+                          color:'#FFFFFF', fontFamily:FONT, cursor:'pointer',
                           WebkitAppearance:'none', MozAppearance:'none'}}>
                         <option value="all">{'\u{1F30D}'} {L('allLanguages') || 'Tutte le lingue'}</option>
                         {allAccents.map(a => (
@@ -655,15 +655,15 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                           <button key={g} onClick={() => setElGenderFilter(g)}
                             style={{padding:'6px 10px', fontSize:11, fontWeight:600, cursor:'pointer',
                               fontFamily:FONT, border:'none', WebkitTapHighlightColor:'transparent',
-                              background: elGenderFilter === g ? 'rgba(255,215,0,0.15)' : 'rgba(232,234,255,0.04)',
-                              color: elGenderFilter === g ? '#ffd700' : 'rgba(232,234,255,0.4)'}}>
+                              background: elGenderFilter === g ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.05)',
+                              color: elGenderFilter === g ? '#ffd700' : 'rgba(255,255,255,0.65)'}}>
                             {g === 'all' ? (L('allGenders') || 'Tutti') : g === 'male' ? '\u2642\uFE0F' : '\u2640\uFE0F'}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+                    <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
                       {filteredVoices.length}/{elevenLabsVoices.length} {L('voicesAvailable') || 'voci'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
                     </div>
 
@@ -678,19 +678,19 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                         return (
                           <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
                             padding:'8px 12px', borderRadius:12, transition:'all 0.15s',
-                            background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(232,234,255,0.02)',
-                            border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(232,234,255,0.04)'}}>
+                            background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.03)',
+                            border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(255,255,255,0.05)'}}>
                             {/* Flag */}
                             <span style={{fontSize:18, flexShrink:0}}>{flag}</span>
                             {/* Play button */}
                             <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
                               style={{width:30, height:30, borderRadius:8, cursor:'pointer', flexShrink:0,
-                                background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
-                                border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                                background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
+                                border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
                                 display:'flex', alignItems:'center', justifyContent:'center',
                                 WebkitTapHighlightColor:'transparent'}}>
                               <Icon name={isPlaying ? 'stop' : 'play'} size={12}
-                                color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                                color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.72)'} />
                             </button>
                             {/* Voice info */}
                             <button onClick={() => setSelectedELVoice(v.id)}
@@ -698,7 +698,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                                 fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
                               <div style={{display:'flex', alignItems:'center', gap:5}}>
                                 <span style={{fontSize:13, fontWeight: isSel ? 700 : 500,
-                                  color: isSel ? '#ffd700' : 'rgba(232,234,255,0.6)'}}>
+                                  color: isSel ? '#ffd700' : 'rgba(255,255,255,0.80)'}}>
                                   {v.name}
                                 </span>
                                 {/* Gender badge */}
@@ -711,7 +711,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                                   </span>
                                 )}
                               </div>
-                              <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>
                                 {v.accent || v.labels?.accent || v.category || ''}
                                 {v.age || v.labels?.age ? ` \u2022 ${v.age || v.labels?.age}` : ''}
                                 {v.useCase ? ` \u2022 ${v.useCase}` : ''}
@@ -734,7 +734,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                         );
                       })}
                       {filteredVoices.length === 0 && (
-                        <div style={{textAlign:'center', padding:16, fontSize:12, color:'rgba(232,234,255,0.3)'}}>
+                        <div style={{textAlign:'center', padding:16, fontSize:12, color:'rgba(255,255,255,0.55)'}}>
                           {L('noVoicesMatch') || 'Nessuna voce corrisponde ai filtri'}
                         </div>
                       )}
@@ -744,10 +744,10 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     {Object.keys(avatarVoiceMap).length > 0 && (
                       <div style={{marginTop:10, padding:'8px 10px', borderRadius:8,
                         background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)'}}>
-                        <div style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.4)', marginBottom:4}}>
+                        <div style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.65)', marginBottom:4}}>
                           {L('avatarDefaults') || 'Voci predefinite avatar'}
                         </div>
-                        <div style={{fontSize:9, color:'rgba(232,234,255,0.3)', lineHeight:1.6}}>
+                        <div style={{fontSize:9, color:'rgba(255,255,255,0.55)', lineHeight:1.6}}>
                           {L('avatarDefaultsHint') || 'Ogni avatar usa una voce dedicata se non ne selezioni una manualmente. Seleziona una voce qui per sovrascrivere il default.'}
                         </div>
                       </div>
@@ -768,18 +768,44 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             </div>
           </div>
 
-          {/* Theme toggle */}
+          {/* Theme selector */}
           <div style={S.field}>
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <span style={{...S.label, marginBottom:0}}>{L('theme') || 'Theme'}</span>
-              <button onClick={() => setTheme(theme === THEMES.DARK ? THEMES.LIGHT : THEMES.DARK)}
-                style={{...S.toggle, background:theme === THEMES.DARK ? '#333' : '#ffd700'}}>
-                <div style={{...S.toggleDot, transform:theme === THEMES.DARK ? 'translateX(0)' : 'translateX(20px)'}} />
-              </button>
-              <span style={{fontSize:14, marginLeft:8}}>{theme === THEMES.DARK ? '\uD83C\uDF19' : '\u2600\uFE0F'}</span>
-            </div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:4}}>
-              {theme === THEMES.DARK ? 'Dark Mode' : 'Light Mode'}
+            <div style={S.label}>{L('theme') || 'Tema'}</div>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>
+              {THEME_LIST.map(t => {
+                const isSelected = theme === t.id;
+                const themeColors = {
+                  dark: { bg:'#0B0D1A', accent:'#7B73FF' },
+                  light: { bg:'#F0F2FF', accent:'#5A52E0' },
+                  brown: { bg:'#1A120B', accent:'#D4A06A' },
+                  orange: { bg:'#1A0E05', accent:'#FF8C00' },
+                };
+                const tc = themeColors[t.id] || themeColors.dark;
+                return (
+                  <button key={t.id} onClick={() => setTheme(t.id)}
+                    style={{display:'flex', alignItems:'center', gap:10, padding:'10px 12px',
+                      borderRadius:12, cursor:'pointer', fontFamily:FONT,
+                      WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                      background: isSelected ? `${tc.accent}1F` : 'rgba(255,255,255,0.03)',
+                      border: isSelected ? `2px solid ${tc.accent}` : '2px solid rgba(255,255,255,0.08)'}}>
+                    {/* Color preview dot */}
+                    <div style={{width:28, height:28, borderRadius:8, flexShrink:0,
+                      background:tc.bg, border:`2px solid ${tc.accent}`,
+                      display:'flex', alignItems:'center', justifyContent:'center'}}>
+                      <span style={{fontSize:14}}>{t.icon}</span>
+                    </div>
+                    <div style={{textAlign:'left'}}>
+                      <div style={{fontSize:12, fontWeight: isSelected ? 700 : 500,
+                        color: isSelected ? tc.accent : 'rgba(255,255,255,0.6)'}}>
+                        {t.name}
+                      </div>
+                      <div style={{fontSize:9, color:'rgba(255,255,255,0.35)', marginTop:1}}>
+                        {t.desc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -788,7 +814,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           </button>
           {userToken && (
             <div style={{marginTop:20, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.06)'}}>
-              <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', marginBottom:8}}>
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
                 Account: {userAccount?.email || ''}
               </div>
               <button style={{...S.settingsBtn, color:'#FF6B9D', borderColor:'rgba(255,107,157,0.2)'}}

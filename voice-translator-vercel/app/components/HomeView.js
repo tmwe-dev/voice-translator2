@@ -32,7 +32,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           <AvatarImg src={prefs.avatar} size={40} style={{borderRadius:12}} />
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:15, fontWeight:800, letterSpacing:-0.3}}>{prefs.name}</div>
-            <div style={{fontSize:11, color:'rgba(232,234,255,0.5)', display:'flex', alignItems:'center', gap:4}}>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.72)', display:'flex', alignItems:'center', gap:4}}>
               <span style={{fontSize:15}}>{langInfo.flag}</span>
               <span style={{fontSize:9, fontWeight:800, padding:'1px 7px', borderRadius:6,
                 background: isTrial || isGuest ? 'rgba(0,255,148,0.12)' : 'rgba(108,99,255,0.15)',
@@ -64,7 +64,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               display:'flex', alignItems:'center', justifyContent:'center',
               WebkitTapHighlightColor:'transparent'}}
               onClick={() => setView('settings')}>
-              <Icon name="settings" size={18} color="rgba(232,234,255,0.6)" />
+              <Icon name="settings" size={18} color="rgba(255,255,255,0.80)" />
             </button>
           </div>
         </div>
@@ -83,7 +83,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               <div style={{fontSize:12, fontWeight:700, color:'#FF6B9D'}}>
                 {L('lowCreditsWarning') || 'Crediti in esaurimento'}
               </div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.4)', marginTop:1}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.65)', marginTop:1}}>
                 {formatCredits(creditBalance)} {L('remaining') || 'rimanenti'} — {L('tapToRecharge') || 'tocca per ricaricare'}
               </div>
             </div>
@@ -96,12 +96,12 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           <button style={{width:'100%', maxWidth:400, marginBottom:10, padding:'12px 14px', borderRadius:14,
             background:'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,210,255,0.04))',
             border:'1.5px solid rgba(108,99,255,0.18)', cursor:'pointer', fontFamily:FONT,
-            display:'flex', alignItems:'center', gap:10, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            display:'flex', alignItems:'center', gap:10, WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
             onClick={() => { setAuthStep('email'); setView('account'); }}>
             <Icon name="user" size={22} color="#6C63FF" />
             <div style={{flex:1, textAlign:'left'}}>
               <div style={{fontWeight:700, fontSize:13, color:'#6C63FF'}}>{L('loginToCreateRooms')}</div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.4)'}}>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.65)'}}>
                 {L('signInProDesc')}
               </div>
             </div>
@@ -119,7 +119,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           border:'2px solid rgba(108,99,255,0.25)',
           display:'flex', alignItems:'center', gap:14,
           fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-          color:'#E8EAFF', marginBottom:12,
+          color:'#FFFFFF', marginBottom:12,
           boxShadow:'0 4px 30px rgba(108,99,255,0.08)'
         }}
           onClick={() => {
@@ -140,7 +140,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
             </div>
           </div>
-          <Icon name={showCreatePanel ? 'chevUp' : 'chevDown'} size={20} color="rgba(232,234,255,0.3)" />
+          <Icon name={showCreatePanel ? 'chevUp' : 'chevDown'} size={20} color="rgba(255,255,255,0.55)" />
         </button>
 
         {/* Create Room — expandable config */}
@@ -154,12 +154,12 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 style={{width:'100%', padding:'10px 12px', borderRadius:12, cursor:'pointer',
                   background:'rgba(108,99,255,0.08)', border:'1.5px solid rgba(108,99,255,0.2)',
                   display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-                  WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}>
+                  WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}>
                 <span style={{fontSize:20}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
                 <span style={{flex:1, textAlign:'left', fontSize:13, fontWeight:600, color:'#6C63FF'}}>
                   {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
                 </span>
-                <Icon name={showContextDropdown ? 'chevUp' : 'chevDown'} size={16} color="rgba(232,234,255,0.4)" />
+                <Icon name={showContextDropdown ? 'chevUp' : 'chevDown'} size={16} color="rgba(255,255,255,0.65)" />
               </button>
               {showContextDropdown && (
                 <div style={{position:'absolute', top:'100%', left:0, right:0, zIndex:50,
@@ -175,11 +175,11 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                           display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
                           WebkitTapHighlightColor:'transparent', transition:'all 0.1s',
                           background: isSel ? 'rgba(108,99,255,0.12)' : 'transparent',
-                          border:'none', borderBottom:'1px solid rgba(232,234,255,0.04)',
-                          color:'#E8EAFF'}}>
+                          border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)',
+                          color:'#FFFFFF'}}>
                         <span style={{fontSize:18, width:26, textAlign:'center'}}>{c.icon}</span>
                         <span style={{flex:1, textAlign:'left', fontSize:12, fontWeight: isSel ? 700 : 500,
-                          color: isSel ? '#6C63FF' : 'rgba(232,234,255,0.6)'}}>
+                          color: isSel ? '#6C63FF' : 'rgba(255,255,255,0.80)'}}>
                           {L(c.nameKey)}
                         </span>
                         {isSel && <span style={{fontSize:11, color:'#6C63FF'}}>{'\u2713'}</span>}
@@ -209,14 +209,14 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         <button style={{width:'100%', maxWidth:400, marginBottom:8, padding:'12px 14px', borderRadius:16,
           background:'rgba(0,210,255,0.04)', border:'1px solid rgba(0,210,255,0.1)',
           display:'flex', alignItems:'center', gap:12, cursor:'pointer', fontFamily:FONT,
-          WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+          WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
           onClick={() => setShowShareApp(!showShareApp)}>
           <img src="/avatars/2.png" alt="" style={{width:42, height:42, objectFit:'contain', borderRadius:12}} />
           <div style={{flex:1, textAlign:'left'}}>
             <div style={{fontWeight:700, fontSize:13}}>
               {L('inviteFriend') || 'Invita un amico'}
             </div>
-            <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:1}}>
+            <div style={{fontSize:10, color:'rgba(255,255,255,0.58)', marginTop:1}}>
               {L('inviteFriendDesc') || 'Condividi VoiceTranslate con QR o link'}
             </div>
           </div>
@@ -275,20 +275,20 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
             background:'rgba(108,99,255,0.03)', border:'1px solid rgba(108,99,255,0.08)',
             display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-            WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
             onClick={() => { loadHistory(); setView('history'); }}>
-            <Icon name="history" size={18} color="rgba(232,234,255,0.4)" />
-            <span style={{fontSize:12, fontWeight:600, color:'rgba(232,234,255,0.4)'}}>
+            <Icon name="history" size={18} color="rgba(255,255,255,0.65)" />
+            <span style={{fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.65)'}}>
               {L('history')}
             </span>
           </button>
           <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
             background:'rgba(255,107,157,0.03)', border:'1px solid rgba(255,107,157,0.08)',
             display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-            WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
             onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
-            <Icon name="graduation" size={18} color="rgba(232,234,255,0.4)" />
-            <span style={{fontSize:12, fontWeight:600, color:'rgba(232,234,255,0.4)'}}>
+            <Icon name="graduation" size={18} color="rgba(255,255,255,0.65)" />
+            <span style={{fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.65)'}}>
               {L('tutorial')}
             </span>
           </button>
