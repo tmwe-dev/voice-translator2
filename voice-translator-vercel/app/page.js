@@ -40,6 +40,33 @@ const MODES = [
   { id:'freetalk', name:'Free Talk', icon:'\u{1F389}', desc:'Microfono aperto, traduzione automatica' },
 ];
 
+const CONTEXTS = [
+  { id:'general', icon:'\u{1F30D}', name:'Generale', desc:'Conversazione libera senza contesto specifico',
+    prompt:'' },
+  { id:'tourism', icon:'\u{1F3D6}\uFE0F', name:'Turismo', desc:'Viaggi, hotel, ristoranti, indicazioni, trasporti',
+    prompt:'This is a tourism/travel conversation. Use travel terminology: directions, accommodation, sightseeing, transportation, restaurants, bookings. Keep translations practical and clear for travelers.' },
+  { id:'medical', icon:'\u{1F3E5}', name:'Medicina', desc:'Sintomi, farmaci, visite mediche, emergenze',
+    prompt:'This is a medical conversation. Use precise medical terminology: symptoms, medications, dosages, diagnoses, body parts, medical procedures. Accuracy is critical - never approximate medical terms.' },
+  { id:'education', icon:'\u{1F393}', name:'Scuola', desc:'Lezioni, corsi, formazione, esami',
+    prompt:'This is an educational conversation. Use academic terminology: courses, grades, assignments, lectures, exams, enrollment. Keep the tone educational and clear.' },
+  { id:'business', icon:'\u{1F4BC}', name:'Business', desc:'Riunioni, contratti, negoziazioni, presentazioni',
+    prompt:'This is a business conversation. Use professional/corporate terminology: contracts, negotiations, deadlines, KPIs, deliverables, stakeholders. Maintain formal register.' },
+  { id:'restaurant', icon:'\u{1F37D}\uFE0F', name:'Ristorante', desc:'Ordini, menu, allergie, prenotazioni',
+    prompt:'This is a restaurant/dining conversation. Use food and hospitality terminology: menu items, ingredients, allergies, dietary restrictions, cooking methods, reservations. Be precise about food terms.' },
+  { id:'personal', icon:'\u{1F91D}', name:'Incontro', desc:'Presentazioni, conversazione informale, sociale',
+    prompt:'This is an informal personal meeting. Use friendly, conversational tone. Translate idioms and colloquialisms naturally rather than literally. Preserve humor and warmth.' },
+  { id:'legal', icon:'\u{2696}\uFE0F', name:'Legale', desc:'Documenti, consulenze, procedure, contratti',
+    prompt:'This is a legal conversation. Use precise legal terminology: contracts, clauses, liability, compliance, jurisdiction, regulations. Never paraphrase legal terms - translate them exactly.' },
+  { id:'shopping', icon:'\u{1F6CD}\uFE0F', name:'Shopping', desc:'Acquisti, prezzi, taglie, resi, pagamenti',
+    prompt:'This is a shopping conversation. Use retail terminology: prices, sizes, colors, discounts, returns, payment methods, warranties. Be precise with numbers and measurements.' },
+  { id:'realestate', icon:'\u{1F3E0}', name:'Immobiliare', desc:'Affitti, acquisti, visite, contratti',
+    prompt:'This is a real estate conversation. Use property terminology: rent, lease, mortgage, square meters, rooms, amenities, neighborhood, deposits, inspections.' },
+  { id:'tech', icon:'\u{1F527}', name:'Assistenza', desc:'Supporto tecnico, riparazioni, problemi',
+    prompt:'This is a technical support conversation. Use technical terminology: troubleshooting, error codes, specifications, warranties, repairs, configurations. Be precise with technical terms.' },
+  { id:'emergency', icon:'\u{1F6A8}', name:'Emergenza', desc:'Situazioni urgenti, polizia, pronto soccorso',
+    prompt:'This is an EMERGENCY conversation. Translate with maximum clarity and urgency. Use direct, unambiguous language. Include emergency-specific terms: location, danger, injury, police, ambulance, fire. Speed and clarity are paramount.' },
+];
+
 const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
@@ -63,10 +90,25 @@ export default function Home() {
   const [audioEnabled, setAudioEnabled] = useState(true); // user toggle
   const [audioReady, setAudioReady] = useState(false); // system unlocked
   const [selectedMode, setSelectedMode] = useState('conversation');
+  const [selectedContext, setSelectedContext] = useState('general');
+  const [roomDescription, setRoomDescription] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [sendingText, setSendingText] = useState(false);
   const [showModeSelector, setShowModeSelector] = useState(false);
+
+  // Account & Credits state
+  const [userToken, setUserToken] = useState(null);
+  const [userAccount, setUserAccount] = useState(null);
+  const [authEmail, setAuthEmail] = useState('');
+  const [authCode, setAuthCode] = useState('');
+  const [authStep, setAuthStep] = useState('email'); // email, code, choose
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authTestCode, setAuthTestCode] = useState('');
+  const [apiKeyInputs, setApiKeyInputs] = useState({ openai:'', anthropic:'', gemini:'' });
+  const [useOwnKeys, setUseOwnKeys] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const userTokenRef = useRef(null);
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -79,6 +121,7 @@ export default function Home() {
   const myLangRef = useRef(myLang);
   const roomInfoRef = useRef(roomInfo);
   const audioEnabledRef = useRef(audioEnabled);
+  const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
   const vadStreamRef = useRef(null);
   const vadRecRef = useRef(null);
   const vadTimerRef = useRef(null);
@@ -106,6 +149,7 @@ export default function Home() {
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomInfo; }, [roomInfo]);
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
+  useEffect(() => { userTokenRef.current = userToken; }, [userToken]);
 
   // =============================================
   // AUDIO SYSTEM - Persistent Audio element for reliable auto-play
@@ -274,21 +318,58 @@ export default function Home() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem('vt-prefs');
+      const savedToken = localStorage.getItem('vt-token');
       const urlParams = new URLSearchParams(window.location.search);
       const roomParam = urlParams.get('room');
+      const paymentStatus = urlParams.get('payment');
+      const paymentCredits = urlParams.get('credits');
+
       if (saved) {
         const p = JSON.parse(saved);
-        // Migrate old emoji avatars to new image paths
-        if (!p.avatar || !p.avatar.startsWith('/avatars/')) {
-          p.avatar = AVATARS[0];
-        }
+        if (!p.avatar || !p.avatar.startsWith('/avatars/')) p.avatar = AVATARS[0];
         setPrefs(p);
         setMyLang(p.lang);
-        if (roomParam) { setJoinCode(roomParam.toUpperCase()); setView('join'); }
-        else setView('home');
+      }
+
+      if (roomParam) setJoinCode(roomParam.toUpperCase());
+
+      // Check for payment return
+      if (paymentStatus === 'success' && paymentCredits) {
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
+      if (savedToken) {
+        setUserToken(savedToken);
+        userTokenRef.current = savedToken;
+        // Verify session
+        fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({ action:'me', token:savedToken })
+        }).then(r => r.json()).then(data => {
+          if (data.user) {
+            setUserAccount(data.user);
+            setCreditBalance(data.user.credits || 0);
+            setUseOwnKeys(data.user.useOwnKeys || false);
+            if (!saved) { setView('welcome'); }
+            else if (roomParam) { setView('join'); }
+            else { setView('home'); }
+          } else {
+            // Token expired
+            localStorage.removeItem('vt-token');
+            setUserToken(null);
+            if (!saved) setView('welcome');
+            else if (roomParam) setView('join');
+            else setView('home');
+          }
+        }).catch(() => {
+          if (!saved) setView('welcome');
+          else if (roomParam) setView('join');
+          else setView('home');
+        });
       } else {
-        if (roomParam) setJoinCode(roomParam.toUpperCase());
-        setView('welcome');
+        if (!saved) setView('welcome');
+        else if (roomParam) setView('join');
+        else setView('home');
       }
     } catch { setView('welcome'); }
   }, []);
@@ -365,10 +446,13 @@ export default function Home() {
   async function handleCreateRoom() {
     try {
       setStatus('Creazione stanza...');
+      const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar }) });
+        body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar,
+          context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription }) });
       if (!res.ok) throw new Error('Errore');
       const { room } = await res.json();
+      roomContextRef.current = { contextId: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription };
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('lobby');
       startPolling(room.id); setStatus('');
     } catch (e) { setStatus('Errore: ' + e.message); }
@@ -382,6 +466,11 @@ export default function Home() {
         body: JSON.stringify({ action:'join', roomId:joinCode.trim().toUpperCase(), name:prefs.name, lang:myLang, avatar:prefs.avatar }) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Stanza non trovata'); }
       const { room } = await res.json();
+      roomContextRef.current = {
+        contextId: room.context || 'general',
+        contextPrompt: room.contextPrompt || '',
+        description: room.description || ''
+      };
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('room');
       startPolling(room.id); setStatus('');
     } catch (e) { setStatus('Errore: ' + e.message); }
@@ -448,7 +537,10 @@ export default function Home() {
     form.append('targetLang', otherL.code);
     form.append('sourceLangName', myL.name);
     form.append('targetLangName', otherL.name);
-    if (roomId) form.append('roomId', roomId); // for cost tracking
+    if (roomId) form.append('roomId', roomId);
+    if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
+    if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
+    if (userTokenRef.current) form.append('userToken', userTokenRef.current);
     const res = await fetch('/api/process', { method:'POST', body:form });
     if (!res.ok) throw new Error('Errore server');
     const { original, translated, cost } = await res.json();
@@ -632,7 +724,10 @@ export default function Home() {
           sourceLangName: myL.name,
           targetLangName: otherL.name,
           roomId,
-          context: prevContext || undefined
+          context: prevContext || undefined,
+          domainContext: roomContextRef.current.contextPrompt || undefined,
+          description: roomContextRef.current.description || undefined,
+          userToken: userTokenRef.current || undefined
         })
       });
 
@@ -678,7 +773,10 @@ export default function Home() {
           sourceLangName: myL.name,
           targetLangName: otherL.name,
           roomId,
-          isReview: true
+          isReview: true,
+          domainContext: roomContextRef.current.contextPrompt || undefined,
+          description: roomContextRef.current.description || undefined,
+          userToken: userTokenRef.current || undefined
         })
       });
 
@@ -792,7 +890,10 @@ export default function Home() {
           sourceLangName: myL.name,
           targetLangName: otherL.name,
           roomId,
-          isReview: true
+          isReview: true,
+          domainContext: roomContextRef.current.contextPrompt || undefined,
+          description: roomContextRef.current.description || undefined,
+          userToken: userTokenRef.current || undefined
         })
       });
       if (res.ok) {
@@ -905,7 +1006,10 @@ export default function Home() {
       // Use GPT-4o-mini directly for text translation (no Whisper needed)
       const res = await fetch('/api/translate', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ text:textInput.trim(), sourceLang:myL.code, targetLang:otherL.code,
-          sourceLangName:myL.name, targetLangName:otherL.name, roomId }) });
+          sourceLangName:myL.name, targetLangName:otherL.name, roomId,
+          domainContext: roomContextRef.current.contextPrompt || undefined,
+          description: roomContextRef.current.description || undefined,
+          userToken: userTokenRef.current || undefined }) });
       if (!res.ok) throw new Error('Errore traduzione');
       const { translated } = await res.json();
       if (translated) {
@@ -1275,6 +1379,123 @@ export default function Home() {
   }
 
   // =============================================
+  // AUTH & CREDITS FUNCTIONS
+  // =============================================
+
+  async function sendAuthCode() {
+    if (!authEmail.trim() || !authEmail.includes('@')) { setStatus('Email non valida'); return; }
+    setAuthLoading(true); setStatus('');
+    try {
+      const res = await fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'send-code', email:authEmail.trim() }) });
+      const data = await res.json();
+      if (data.ok) {
+        setAuthStep('code');
+        if (data.testCode) setAuthTestCode(data.testCode);
+        setStatus('');
+      } else { setStatus(data.error || 'Errore invio codice'); }
+    } catch (e) { setStatus('Errore: ' + e.message); }
+    setAuthLoading(false);
+  }
+
+  async function verifyAuthCodeFn() {
+    if (!authCode.trim()) return;
+    setAuthLoading(true); setStatus('');
+    try {
+      const res = await fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'verify', email:authEmail.trim(), code:authCode.trim(),
+          name:prefs.name, lang:prefs.lang, avatar:prefs.avatar }) });
+      const data = await res.json();
+      if (data.ok && data.token) {
+        setUserToken(data.token);
+        userTokenRef.current = data.token;
+        localStorage.setItem('vt-token', data.token);
+        setUserAccount(data.user);
+        setCreditBalance(data.user.credits || 0);
+        setUseOwnKeys(data.user.useOwnKeys || false);
+        setAuthStep('choose');
+        setStatus('');
+      } else { setStatus(data.error || 'Codice non valido'); }
+    } catch (e) { setStatus('Errore: ' + e.message); }
+    setAuthLoading(false);
+  }
+
+  async function refreshBalance() {
+    const token = userTokenRef.current;
+    if (!token) return;
+    try {
+      const res = await fetch('/api/user', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'credits', token }) });
+      const data = await res.json();
+      if (data.credits !== undefined) {
+        setCreditBalance(data.credits);
+        setUseOwnKeys(data.useOwnKeys || false);
+      }
+    } catch {}
+  }
+
+  async function buyCredits(packageId) {
+    const token = userTokenRef.current;
+    if (!token) { setStatus('Devi accedere prima'); return; }
+    setAuthLoading(true); setStatus('');
+    try {
+      const res = await fetch('/api/stripe', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'checkout', packageId, token }) });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else { setStatus(data.error || 'Errore creazione pagamento'); }
+    } catch (e) { setStatus('Errore: ' + e.message); }
+    setAuthLoading(false);
+  }
+
+  async function saveUserApiKeys() {
+    const token = userTokenRef.current;
+    if (!token) return;
+    setAuthLoading(true); setStatus('');
+    try {
+      const res = await fetch('/api/user', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'save-keys', token, apiKeys:apiKeyInputs, useOwnKeys:true }) });
+      const data = await res.json();
+      if (data.ok) {
+        setUseOwnKeys(true);
+        setStatus('Chiavi API salvate!');
+        setTimeout(() => { setStatus(''); setView('home'); }, 1000);
+      } else { setStatus(data.error || 'Errore salvataggio'); }
+    } catch (e) { setStatus('Errore: ' + e.message); }
+    setAuthLoading(false);
+  }
+
+  async function switchToCredits() {
+    const token = userTokenRef.current;
+    if (!token) return;
+    try {
+      await fetch('/api/user', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'save-keys', token, apiKeys:{}, useOwnKeys:false }) });
+      setUseOwnKeys(false);
+    } catch {}
+  }
+
+  function logout() {
+    localStorage.removeItem('vt-token');
+    setUserToken(null);
+    setUserAccount(null);
+    setCreditBalance(0);
+    setView('home');
+  }
+
+  const CREDIT_PACKAGES = [
+    { id:'pack_2', euros:2, credits:200, label:'\u20AC2', messages:'~400 msg' },
+    { id:'pack_5', euros:5, credits:550, label:'\u20AC5', messages:'~1100 msg', bonus:'+10%' },
+    { id:'pack_10', euros:10, credits:1200, label:'\u20AC10', messages:'~2400 msg', bonus:'+20%' },
+    { id:'pack_20', euros:20, credits:2600, label:'\u20AC20', messages:'~5200 msg', bonus:'+30%' },
+  ];
+
+  function formatCredits(cents) {
+    return '\u20AC' + (cents / 100).toFixed(2);
+  }
+
+  // =============================================
   // VIEWS
   // =============================================
 
@@ -1325,10 +1546,214 @@ export default function Home() {
           </div>
           <button style={{...S.btn, marginTop:12, opacity:prefs.name.trim()?1:0.4}}
             disabled={!prefs.name.trim()}
-            onClick={() => { savePrefs(prefs); setView(joinCode ? 'join' : 'home'); }}>
+            onClick={() => {
+              savePrefs(prefs);
+              if (joinCode) { setView('join'); }
+              else if (userToken) { setView('home'); }
+              else { setAuthStep('email'); setView('account'); }
+            }}>
             Iniziamo
           </button>
+          {!joinCode && (
+            <button style={{marginTop:10, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
+              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8}}
+              onClick={() => { savePrefs(prefs); setView('home'); }}>
+              Continua senza account (ospite)
+            </button>
+          )}
         </div>
+      </div>
+    </div>
+  );
+
+  // --- ACCOUNT SETUP ---
+  if (view === 'account') return (
+    <div style={S.page}>
+      <div style={S.scrollCenter}>
+        <div style={{fontSize:42, marginBottom:8}}>{authStep === 'choose' ? '\u2705' : '\u{1F512}'}</div>
+        <div style={S.title}>Account</div>
+        <div style={S.sub}>{authStep === 'choose' ? 'Accesso effettuato!' : 'Accedi per creare stanze e tradurre'}</div>
+
+        {authStep === 'email' && (
+          <div style={S.card}>
+            <div style={S.cardTitle}>Inserisci la tua email</div>
+            <div style={S.field}>
+              <div style={S.label}>Email</div>
+              <input style={S.input} type="email" placeholder="tua@email.com" value={authEmail}
+                onChange={e => setAuthEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendAuthCode()} />
+            </div>
+            <button style={{...S.btn, marginTop:8, opacity:authLoading?0.5:1}}
+              disabled={authLoading} onClick={sendAuthCode}>
+              {authLoading ? 'Invio...' : 'Invia codice di accesso'}
+            </button>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', textAlign:'center', marginTop:10}}>
+              Riceverai un codice a 6 cifre via email
+            </div>
+          </div>
+        )}
+
+        {authStep === 'code' && (
+          <div style={S.card}>
+            <div style={S.cardTitle}>Inserisci il codice</div>
+            <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', textAlign:'center', marginBottom:12}}>
+              Inviato a {authEmail}
+            </div>
+            {authTestCode && (
+              <div style={{fontSize:13, color:'#f5576c', textAlign:'center', marginBottom:12,
+                padding:'8px 12px', background:'rgba(245,87,108,0.1)', borderRadius:12}}>
+                Codice di test: <strong>{authTestCode}</strong>
+              </div>
+            )}
+            <div style={S.field}>
+              <input style={{...S.input, fontSize:24, textAlign:'center', letterSpacing:8}}
+                placeholder="000000" value={authCode} maxLength={6}
+                onChange={e => setAuthCode(e.target.value.replace(/\D/g,''))}
+                onKeyDown={e => e.key === 'Enter' && verifyAuthCodeFn()} />
+            </div>
+            <button style={{...S.btn, marginTop:8, opacity:authLoading?0.5:1}}
+              disabled={authLoading} onClick={verifyAuthCodeFn}>
+              {authLoading ? 'Verifica...' : 'Verifica'}
+            </button>
+            <button style={{marginTop:10, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
+              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, width:'100%', textAlign:'center'}}
+              onClick={() => { setAuthStep('email'); setAuthCode(''); setAuthTestCode(''); }}>
+              Cambia email
+            </button>
+          </div>
+        )}
+
+        {authStep === 'choose' && (
+          <div style={{width:'100%', maxWidth:380}}>
+            <div style={S.card}>
+              <div style={S.cardTitle}>Come vuoi tradurre?</div>
+
+              <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #f5576c, #e94560)'}}
+                onClick={() => setView('credits')}>
+                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>{'\u{1F4B3}'}</div>
+                <div>
+                  <div style={{fontWeight:600, fontSize:15}}>Compra crediti</div>
+                  <div style={{fontSize:11, color:'rgba(255,255,255,0.7)', marginTop:1}}>
+                    Paga solo quando usi - da \u20AC2
+                  </div>
+                </div>
+              </button>
+
+              <button style={{...S.bigBtn, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)'}}
+                onClick={() => setView('apikeys')}>
+                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.08)',
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>{'\u{1F511}'}</div>
+                <div>
+                  <div style={{fontWeight:600, fontSize:15}}>Usa le tue API key</div>
+                  <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>
+                    OpenAI, Anthropic o Gemini
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <button style={{marginTop:16, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
+              fontSize:13, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', textAlign:'center'}}
+              onClick={() => setView('home')}>
+              Scegli dopo
+            </button>
+          </div>
+        )}
+
+        {status && <div style={S.statusMsg}>{status}</div>}
+      </div>
+    </div>
+  );
+
+  // --- CREDITS / BUY ---
+  if (view === 'credits') return (
+    <div style={S.page}>
+      <div style={S.scrollCenter}>
+        <div style={S.topBar}>
+          <button style={S.backBtn} onClick={() => setView(userAccount ? 'home' : 'account')}>{'\u2190'}</button>
+          <span style={{fontWeight:600, fontSize:17}}>Ricarica Crediti</span>
+        </div>
+
+        {creditBalance > 0 && (
+          <div style={{width:'100%', maxWidth:380, marginBottom:16, padding:'14px 18px', borderRadius:18,
+            background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)',
+            textAlign:'center'}}>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:4}}>SALDO ATTUALE</div>
+            <div style={{fontSize:28, fontWeight:700, color:'#4facfe'}}>{formatCredits(creditBalance)}</div>
+          </div>
+        )}
+
+        <div style={{width:'100%', maxWidth:380}}>
+          {CREDIT_PACKAGES.map(pkg => (
+            <button key={pkg.id} onClick={() => buyCredits(pkg.id)}
+              style={{width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+                padding:'16px 18px', marginBottom:10, borderRadius:18,
+                background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)',
+                color:'#fff', cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                transition:'all 0.15s'}}>
+              <div style={{textAlign:'left'}}>
+                <div style={{fontSize:22, fontWeight:700}}>{pkg.label}</div>
+                <div style={{fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:2}}>
+                  {pkg.messages}
+                </div>
+              </div>
+              {pkg.bonus && (
+                <div style={{padding:'4px 10px', borderRadius:10, background:'rgba(79,172,254,0.15)',
+                  color:'#4facfe', fontSize:12, fontWeight:600}}>
+                  {pkg.bonus}
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div style={{width:'100%', maxWidth:380, marginTop:12, padding:'12px 16px', borderRadius:14,
+          background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)'}}>
+          <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6}}>
+            {'\u{1F4B3}'} Pagamento sicuro via Stripe (Visa, Mastercard, Apple Pay, Google Pay)
+          </div>
+        </div>
+
+        {status && <div style={S.statusMsg}>{status}</div>}
+      </div>
+    </div>
+  );
+
+  // --- API KEYS ---
+  if (view === 'apikeys') return (
+    <div style={S.page}>
+      <div style={S.scrollCenter}>
+        <div style={S.topBar}>
+          <button style={S.backBtn} onClick={() => setView(userAccount ? 'home' : 'account')}>{'\u2190'}</button>
+          <span style={{fontWeight:600, fontSize:17}}>Le tue API Key</span>
+        </div>
+        <div style={S.card}>
+          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:16, lineHeight:1.5}}>
+            Inserisci le tue chiavi API per tradurre senza limiti di credito. Serve almeno una chiave OpenAI.
+          </div>
+          <div style={S.field}>
+            <div style={S.label}>OpenAI (obbligatorio)</div>
+            <input style={S.input} placeholder="sk-proj-..." value={apiKeyInputs.openai}
+              onChange={e => setApiKeyInputs({...apiKeyInputs, openai:e.target.value})} />
+          </div>
+          <div style={S.field}>
+            <div style={S.label}>Anthropic (opzionale)</div>
+            <input style={S.input} placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
+              onChange={e => setApiKeyInputs({...apiKeyInputs, anthropic:e.target.value})} />
+          </div>
+          <div style={S.field}>
+            <div style={S.label}>Google Gemini (opzionale)</div>
+            <input style={S.input} placeholder="AIza..." value={apiKeyInputs.gemini}
+              onChange={e => setApiKeyInputs({...apiKeyInputs, gemini:e.target.value})} />
+          </div>
+          <button style={{...S.btn, marginTop:8, opacity:apiKeyInputs.openai.trim()?1:0.4}}
+            disabled={!apiKeyInputs.openai.trim() || authLoading}
+            onClick={saveUserApiKeys}>
+            {authLoading ? 'Salvataggio...' : 'Salva e Usa le mie Key'}
+          </button>
+        </div>
+        {status && <div style={S.statusMsg}>{status}</div>}
       </div>
     </div>
   );
@@ -1388,6 +1813,17 @@ export default function Home() {
           <button style={{...S.btn, marginTop:12}} onClick={() => { savePrefs(prefs); setView('home'); }}>
             Salva
           </button>
+          {userToken && (
+            <div style={{marginTop:20, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.06)'}}>
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', marginBottom:8}}>
+                Account: {userAccount?.email || ''}
+              </div>
+              <button style={{...S.settingsBtn, color:'#f5576c', borderColor:'rgba(245,87,108,0.2)'}}
+                onClick={logout}>
+                Esci dall'account
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1420,13 +1856,49 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Context selector */}
+        <div style={{width:'100%', maxWidth:380, marginBottom:16}}>
+          <div style={{...S.label, marginBottom:8}}>Contesto</div>
+          <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+            {CONTEXTS.map(c => (
+              <button key={c.id} onClick={() => setSelectedContext(c.id)}
+                style={{display:'flex', alignItems:'center', gap:5, padding:'7px 12px', borderRadius:12,
+                  border: selectedContext===c.id ? '1px solid rgba(245,87,108,0.35)' : '1px solid rgba(255,255,255,0.06)',
+                  background: selectedContext===c.id ? 'rgba(245,87,108,0.1)' : 'rgba(255,255,255,0.03)',
+                  color: selectedContext===c.id ? '#fff' : 'rgba(255,255,255,0.45)',
+                  fontSize:12, cursor:'pointer', fontFamily:FONT,
+                  WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
+                <span style={{fontSize:15}}>{c.icon}</span>
+                <span style={{fontWeight:500}}>{c.name}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:6, textAlign:'center'}}>
+            {CONTEXTS.find(c => c.id === selectedContext)?.desc}
+          </div>
+        </div>
+
+        {/* Description field */}
+        <div style={{width:'100%', maxWidth:380, marginBottom:16}}>
+          <div style={{...S.label, marginBottom:6}}>Descrizione (opzionale)</div>
+          <input style={{...S.input, fontSize:13}} value={roomDescription}
+            onChange={e => setRoomDescription(e.target.value)}
+            placeholder="Es: Visita medica dal dentista, Riunione con cliente giapponese..."
+            maxLength={150} />
+          <div style={{fontSize:10, color:'rgba(255,255,255,0.2)', marginTop:4, textAlign:'right'}}>
+            {roomDescription.length}/150
+          </div>
+        </div>
+
         <button style={S.bigBtn} onClick={handleCreateRoom}>
           <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
             display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>+</div>
           <div>
             <div style={{fontWeight:600, fontSize:15}}>Crea Stanza</div>
             <div style={{fontSize:11, color:'rgba(255,255,255,0.6)', marginTop:1}}>
-              {MODES.find(m => m.id === selectedMode)?.name}
+              {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
+              {CONTEXTS.find(c => c.id === selectedContext)?.name}
+              {' \u2022 '}{MODES.find(m => m.id === selectedMode)?.name}
             </div>
           </div>
         </button>
@@ -1439,9 +1911,40 @@ export default function Home() {
             <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>Codice o QR</div>
           </div>
         </button>
+        {/* Balance / Account indicator */}
+        {userToken && userAccount ? (
+          <div style={{width:'100%', maxWidth:380, marginTop:10, padding:'10px 16px', borderRadius:14,
+            background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.06)',
+            display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2}}>
+                {useOwnKeys ? 'API KEY PERSONALI' : 'CREDITO'}
+              </div>
+              <div style={{fontSize:16, fontWeight:600, color: useOwnKeys ? '#4facfe' : creditBalance > 50 ? '#4facfe' : '#f5576c'}}>
+                {useOwnKeys ? '\u2713 Attive' : formatCredits(creditBalance)}
+              </div>
+            </div>
+            <button style={{padding:'7px 14px', borderRadius:10, background:'rgba(245,87,108,0.1)',
+              border:'1px solid rgba(245,87,108,0.2)', color:'#f5576c', fontSize:12, fontWeight:600,
+              cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}
+              onClick={() => { refreshBalance(); setView('credits'); }}>
+              {useOwnKeys ? 'Crediti' : 'Ricarica'}
+            </button>
+          </div>
+        ) : (
+          <button style={{width:'100%', maxWidth:380, marginTop:10, padding:'12px 16px', borderRadius:14,
+            background:'rgba(79,172,254,0.08)', border:'1px solid rgba(79,172,254,0.15)',
+            color:'#4facfe', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:FONT,
+            textAlign:'center', WebkitTapHighlightColor:'transparent'}}
+            onClick={() => { setAuthStep('email'); setView('account'); }}>
+            {'\u{1F512}'} Accedi per creare stanze
+          </button>
+        )}
+
         <div style={{display:'flex', gap:10, marginTop:16}}>
           <button style={S.settingsBtn} onClick={() => setView('settings')}>Impostazioni</button>
           <button style={S.settingsBtn} onClick={() => { loadHistory(); setView('history'); }}>Cronologia</button>
+          {userToken && <button style={S.settingsBtn} onClick={() => setView('apikeys')}>API Key</button>}
         </div>
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
@@ -1524,6 +2027,7 @@ export default function Home() {
     const canTalk = roomMode === 'classroom' ? isHost : true;
     const totalCost = roomInfo?.totalCost || 0;
     const msgCount = roomInfo?.msgCount || 0;
+    const roomCtx = CONTEXTS.find(c => c.id === (roomInfo?.context || roomContextRef.current.contextId)) || CONTEXTS[0];
 
     return (
       <div style={S.roomPage}>
@@ -1558,6 +2062,7 @@ export default function Home() {
               display:'flex', alignItems:'center', gap:4, WebkitTapHighlightColor:'transparent'}}>
             <span style={{fontSize:11, color:'rgba(255,255,255,0.45)'}}>
               {modeInfo.icon} {modeInfo.name}
+              {roomCtx.id !== 'general' && <span style={{marginLeft:4}}>{roomCtx.icon} {roomCtx.name}</span>}
             </span>
             {isHost && <span style={{fontSize:9, color:'rgba(255,255,255,0.25)'}}>{'\u25BC'}</span>}
             {!isHost && roomMode === 'classroom' && (
