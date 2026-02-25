@@ -69,7 +69,7 @@ export async function joinRoom(id, name, lang, avatar = null) {
   return room;
 }
 
-export async function setSpeaking(roomId, memberName, speaking) {
+export async function setSpeaking(roomId, memberName, speaking, liveText = null, typing = false) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
@@ -78,6 +78,10 @@ export async function setSpeaking(roomId, memberName, speaking) {
   if (member) {
     member.speaking = speaking;
     member.speakingAt = speaking ? Date.now() : 0;
+    if (liveText !== null) member.liveText = liveText;
+    else if (!speaking) member.liveText = '';
+    member.typing = typing;
+    member.typingAt = typing ? Date.now() : 0;
   }
   await redis('SET', key, JSON.stringify(room), 'EX', 7200);
   return room;

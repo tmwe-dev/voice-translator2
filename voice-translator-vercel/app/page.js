@@ -41,7 +41,13 @@ const MODES = [
   { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
   { id:'classroom', nameKey:'classroom', icon:'\u{1F3EB}', descKey:'classroomDesc' },
   { id:'freetalk', nameKey:'freeTalk', icon:'\u{1F389}', descKey:'freeTalkDesc' },
+  { id:'simultaneous', nameKey:'simultaneous', icon:'\u{26A1}', descKey:'simultaneousDesc' },
 ];
+
+// Haptic vibration helper
+function vibrate(ms = 15) {
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}
+}
 
 const CONTEXTS = [
   { id:'general', icon:'\u{1F30D}', nameKey:'ctxGeneral', descKey:'ctxGeneralDesc', prompt:'' },
@@ -100,6 +106,8 @@ export default function Home() {
   const [textInput, setTextInput] = useState('');
   const [sendingText, setSendingText] = useState(false);
   const [showModeSelector, setShowModeSelector] = useState(false);
+  const [partnerLiveText, setPartnerLiveText] = useState('');
+  const [partnerTyping, setPartnerTyping] = useState(false);
 
   // Account & Credits state
   const [userToken, setUserToken] = useState(null);
@@ -454,6 +462,8 @@ export default function Home() {
           setPartnerConnected(room.members.length >= 2);
           const partner = room.members.find(m => m.name !== prefsRef.current.name);
           setPartnerSpeaking(!!(partner && partner.speaking && (Date.now() - partner.speakingAt < 30000)));
+          setPartnerLiveText((partner && partner.speaking && partner.liveText) ? partner.liveText : '');
+          setPartnerTyping(!!(partner && partner.typing && (Date.now() - (partner.typingAt || 0) < 5000)));
         }
       } catch (e) { console.error('[Poll] error:', e); }
     }, 1200);
@@ -467,11 +477,31 @@ export default function Home() {
   // =============================================
   // ROOM ACTIONS
   // =============================================
-  async function setSpeakingState(rid, speaking) {
+  async function setSpeakingState(rid, speaking, liveText = null, typing = false) {
     try {
       await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'speaking', roomId:rid, name:prefsRef.current.name, speaking }) });
+        body: JSON.stringify({ action:'speaking', roomId:rid, name:prefsRef.current.name, speaking, liveText, typing }) });
     } catch {}
+  }
+
+  // Broadcast live text to partner (throttled - max every 800ms)
+  const liveTextTimerRef = useRef(null);
+  const lastLiveTextRef = useRef('');
+  function broadcastLiveText(text) {
+    if (!roomId || text === lastLiveTextRef.current) return;
+    lastLiveTextRef.current = text;
+    if (liveTextTimerRef.current) return; // throttled
+    liveTextTimerRef.current = setTimeout(() => {
+      liveTextTimerRef.current = null;
+      setSpeakingState(roomId, true, lastLiveTextRef.current);
+    }, 800);
+  }
+
+  // Send typing indicator for text input
+  function sendTypingState(isTyping) {
+    if (!roomId) return;
+    fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ action:'speaking', roomId, name:prefsRef.current.name, speaking:false, typing:isTyping }) }).catch(() => {});
   }
 
   async function handleCreateRoom() {
@@ -692,6 +722,7 @@ export default function Home() {
           allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
 
           setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+          broadcastLiveText(allWordsRef.current);
 
           const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
           if (bufferWords >= 4) {
@@ -704,6 +735,7 @@ export default function Home() {
       if (interimTranscript) {
         const preview = allWordsRef.current + ' ' + interimTranscript.trim();
         setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+        broadcastLiveText(preview);
 
         const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
         const pendingWordCount = totalPending.split(/\s+/).filter(w => w).length;
@@ -1133,6 +1165,7 @@ export default function Home() {
               wordBufferRef.current = (wordBufferRef.current + ' ' + newText).trim();
               allWordsRef.current = (allWordsRef.current + ' ' + newText).trim();
               setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+              broadcastLiveText(allWordsRef.current);
               const bufferWords = wordBufferRef.current.split(/\s+/).filter(w => w).length;
               if (bufferWords >= 4) emitChunk();
             }
@@ -1140,6 +1173,7 @@ export default function Home() {
           if (interimTranscript) {
             const preview = allWordsRef.current + ' ' + interimTranscript.trim();
             setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+            broadcastLiveText(preview);
             const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
             if (totalPending.split(/\s+/).filter(w => w).length >= 12 && wordBufferRef.current.trim()) emitChunk();
           }
@@ -1969,7 +2003,7 @@ export default function Home() {
           </div>
         </div>
 
-        <button style={S.bigBtn} onClick={handleCreateRoom}>
+        <button style={S.bigBtn} onClick={() => { vibrate(); handleCreateRoom(); }}>
           <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
             display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>+</div>
           <div>
@@ -2060,7 +2094,7 @@ export default function Home() {
             </select>
           </div>
           <button style={{...S.btn, marginTop:12, opacity:(joinCode.length>=4 && prefs.name.trim())?1:0.4}}
-            disabled={joinCode.length<4 || !prefs.name.trim()} onClick={() => { savePrefs(prefs); handleJoinRoom(); }}>
+            disabled={joinCode.length<4 || !prefs.name.trim()} onClick={() => { vibrate(); savePrefs(prefs); handleJoinRoom(); }}>
             {L('enterRoom')}
           </button>
           {status && <div style={S.statusMsg}>{status}</div>}
@@ -2188,15 +2222,26 @@ export default function Home() {
           </div>
         )}
 
-        {/* Partner speaking */}
-        {partnerSpeaking && (
-          <div style={S.speakingBar}>
-            <div style={S.speakingDots}>
-              <span style={{...S.dot, animationDelay:'0s'}}/>
-              <span style={{...S.dot, animationDelay:'0.2s'}}/>
-              <span style={{...S.dot, animationDelay:'0.4s'}}/>
+        {/* Partner speaking / typing indicator with live text */}
+        {(partnerSpeaking || partnerTyping) && (
+          <div style={{...S.speakingBar, flexDirection:'column', alignItems:'stretch', gap:4}}>
+            <div style={{display:'flex', alignItems:'center', gap:8}}>
+              <div style={S.speakingDots}>
+                <span style={{...S.dot, animationDelay:'0s'}}/>
+                <span style={{...S.dot, animationDelay:'0.2s'}}/>
+                <span style={{...S.dot, animationDelay:'0.4s'}}/>
+              </div>
+              <span style={{fontSize:12}}>
+                {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}...
+              </span>
             </div>
-            <span style={{fontSize:12}}>{partner?.name}...</span>
+            {partnerLiveText && (
+              <div style={{fontSize:13, color:'rgba(255,255,255,0.65)', padding:'4px 8px',
+                background:'rgba(255,255,255,0.04)', borderRadius:10, lineHeight:1.4,
+                fontStyle:'italic', maxHeight:60, overflow:'hidden'}}>
+                {partnerLiveText}
+              </div>
+            )}
           </div>
         )}
 
@@ -2209,11 +2254,12 @@ export default function Home() {
               fontFamily:FONT, boxSizing:'border-box'}}
             placeholder={L('typePlaceholder')}
             value={textInput}
-            onChange={e => setTextInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); }}}
+            onChange={e => { setTextInput(e.target.value); if (e.target.value.trim()) sendTypingState(true); }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); sendTextMessage(); }}}
+            onBlur={() => sendTypingState(false)}
             disabled={sendingText}
           />
-          <button onClick={sendTextMessage}
+          <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
             style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
               background: textInput.trim() ? 'linear-gradient(135deg, #e94560, #c23152)' : 'rgba(255,255,255,0.06)',
               color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
@@ -2228,8 +2274,8 @@ export default function Home() {
           {messages.length === 0 && (
             <div style={{textAlign:'center', color:'rgba(255,255,255,0.25)', marginTop:60, fontSize:13, lineHeight:1.6}}>
               {L('speakNow')}{'\n'}
-              {roomMode === 'freetalk'
-                ? L('freeTalkDesc')
+              {roomMode === 'freetalk' ? L('freeTalkDesc')
+                : roomMode === 'simultaneous' ? L('simultaneousDesc')
                 : roomMode === 'classroom' && !isHost
                   ? `${roomInfo?.host || 'Host'} - ${L('classroomDesc')}`
                   : L('conversationDesc')}
@@ -2298,12 +2344,20 @@ export default function Home() {
           <div ref={msgsEndRef} />
         </div>
 
-        {/* Talk bar - minimal, no text */}
+        {/* Talk bar */}
         <div style={S.talkBar}>
           {status && <div style={{fontSize:11, color:'#e94560', marginBottom:4}}>{status}</div>}
 
+          {/* Mode indicator */}
+          <div style={{fontSize:9, color:'rgba(255,255,255,0.3)', marginBottom:4, textTransform:'uppercase', letterSpacing:1}}>
+            {modeInfo.icon} {L(modeInfo.nameKey)}
+            {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
+              <span style={{color:'#4ecdc4', marginLeft:6}}>{'\u{1F7E2}'} LIVE</span>
+            )}
+          </div>
+
           {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
-            <button onClick={toggleRecording}
+            <button onClick={() => { vibrate(25); toggleRecording(); }}
               style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}>
               {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
             </button>
@@ -2315,11 +2369,13 @@ export default function Home() {
             </div>
           )}
 
-          {roomMode === 'freetalk' && (
-            <button onClick={() => isListening ? stopFreeTalk() : startFreeTalk()}
+          {(roomMode === 'freetalk' || roomMode === 'simultaneous') && (
+            <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
               style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
-                ...(recording ? {boxShadow:'0 0 0 8px rgba(233,69,96,0.15), 0 0 0 18px rgba(233,69,96,0.06)'} : {})}}>
-              {isListening ? (recording ? '\u{1F534}' : '\u{1F7E2}') : '\u{1F399}\uFE0F'}
+                ...(recording ? {boxShadow:'0 0 0 8px rgba(233,69,96,0.15), 0 0 0 18px rgba(233,69,96,0.06)'} : {}),
+                ...(roomMode === 'simultaneous' && isListening ? {background:'linear-gradient(135deg, #e94560, #ff6b35)',
+                  boxShadow:'0 0 0 8px rgba(255,107,53,0.15), 0 0 0 18px rgba(255,107,53,0.06)'} : {})}}>
+              {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
             </button>
           )}
         </div>

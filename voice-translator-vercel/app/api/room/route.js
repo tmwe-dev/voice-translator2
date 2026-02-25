@@ -4,7 +4,7 @@ import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoom
 // POST /api/room - Create or join a room
 export async function POST(req) {
   try {
-    const { action, roomId, name, lang, speaking, mode, avatar, context, contextPrompt, description } = await req.json();
+    const { action, roomId, name, lang, speaking, mode, avatar, context, contextPrompt, description, liveText, typing } = await req.json();
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
@@ -28,7 +28,7 @@ export async function POST(req) {
 
     if (action === 'speaking') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
-      const room = await setSpeaking(roomId, name, !!speaking);
+      const room = await setSpeaking(roomId, name, !!speaking, liveText || null, !!typing);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }
