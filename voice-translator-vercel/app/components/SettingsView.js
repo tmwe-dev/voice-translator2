@@ -1,17 +1,39 @@
 'use client';
 import { memo, useState } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT } from '../lib/constants.js';
+import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits } from '../lib/constants.js';
 import Carousel from './Carousel.js';
+import Icon from './Icon.js';
 
 const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
-  setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout, status, theme, setTheme }) {
+  setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout, status,
+  theme, setTheme, creditBalance, refreshBalance, freeCharsUsed }) {
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
+
+  const isGuest = !userToken;
+
+  // API key status helpers
+  const hasOpenAI = !!(apiKeyInputs?.openai?.trim());
+  const hasAnthropic = !!(apiKeyInputs?.anthropic?.trim());
+  const hasGemini = !!(apiKeyInputs?.gemini?.trim());
+  const hasElevenLabs = !!(apiKeyInputs?.elevenlabs?.trim());
+  const keyCount = [hasOpenAI, hasAnthropic, hasGemini, hasElevenLabs].filter(Boolean).length;
+
+  // Free usage
+  const freePercent = Math.min(100, Math.round((freeCharsUsed || 0) / FREE_DAILY_LIMIT * 100));
+  const freeCharsLeft = Math.max(0, FREE_DAILY_LIMIT - (freeCharsUsed || 0));
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    try { await refreshBalance?.(); } catch {}
+    setTimeout(() => setRefreshing(false), 800);
+  }
 
   return (
     <div style={S.page}>
@@ -20,6 +42,148 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           <button style={S.backBtn} onClick={() => setView('home')}>{'←'}</button>
           <span style={{fontWeight:600, fontSize:17}}>{L('settings')}</span>
         </div>
+
+        {/* ══════════════════════════════════════════════════
+            ACCOUNT & API STATUS DASHBOARD
+           ══════════════════════════════════════════════════ */}
+        <div style={{width:'100%', maxWidth:400, marginBottom:16, borderRadius:20,
+          background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
+          overflow:'hidden'}}>
+
+          {/* Status header */}
+          <div style={{padding:'16px 18px 12px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
+            <div style={{display:'flex', alignItems:'center', gap:10}}>
+              <div style={{width:36, height:36, borderRadius:12,
+                background: isGuest ? 'rgba(0,255,148,0.1)' : (useOwnKeys ? 'rgba(0,210,255,0.1)' : 'rgba(108,99,255,0.1)'),
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+                <Icon name={isGuest ? 'zap' : (useOwnKeys ? 'key' : 'credit')} size={18}
+                  color={isGuest ? '#00FF94' : (useOwnKeys ? '#00D2FF' : '#6C63FF')} />
+              </div>
+              <div>
+                <div style={{fontSize:14, fontWeight:700, color:'#E8EAFF'}}>
+                  {isGuest ? 'FREE Mode' : (useOwnKeys ? L('personalApiKeys') : 'PRO Mode')}
+                </div>
+                <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:1}}>
+                  {isGuest ? L('startFreeDesc') : (userAccount?.email || '')}
+                </div>
+              </div>
+            </div>
+            {/* Refresh button */}
+            <button onClick={handleRefresh}
+              style={{width:36, height:36, borderRadius:12, cursor:'pointer',
+                background:'rgba(232,234,255,0.04)', border:'1px solid rgba(232,234,255,0.08)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                animation: refreshing ? 'spin 0.8s linear infinite' : 'none'}}>
+              <Icon name="refresh" size={16} color="rgba(232,234,255,0.5)" />
+            </button>
+          </div>
+
+          {/* ── Usage info ── */}
+          {isGuest ? (
+            /* FREE tier usage bar */
+            <div style={{padding:'0 18px 16px'}}>
+              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
+                <span style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.35)', textTransform:'uppercase', letterSpacing:1}}>
+                  {L('dailyUsage') || 'Utilizzo giornaliero'}
+                </span>
+                <span style={{fontSize:11, fontWeight:600, color: freePercent >= 90 ? '#FF6B9D' : '#00FF94'}}>
+                  {freePercent}%
+                </span>
+              </div>
+              <div style={{width:'100%', height:6, borderRadius:3, background:'rgba(232,234,255,0.06)', overflow:'hidden'}}>
+                <div style={{width:`${freePercent}%`, height:'100%', borderRadius:3, transition:'width 0.3s',
+                  background: freePercent >= 90 ? 'linear-gradient(90deg, #FF6B9D, #ff4757)' :
+                    freePercent >= 60 ? 'linear-gradient(90deg, #ffd700, #FF6B9D)' :
+                      'linear-gradient(90deg, #00FF94, #00D2FF)'}} />
+              </div>
+              <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:5}}>
+                {((freeCharsUsed || 0) / 1000).toFixed(1)}k / {(FREE_DAILY_LIMIT / 1000).toFixed(0)}k {L('characters') || 'caratteri'}
+                <span style={{marginLeft:8, color: freePercent >= 90 ? '#FF6B9D' : 'rgba(232,234,255,0.25)'}}>
+                  ({(freeCharsLeft / 1000).toFixed(1)}k {L('remaining') || 'rimanenti'})
+                </span>
+              </div>
+            </div>
+          ) : (
+            /* PRO: credits or own-keys status */
+            <div style={{padding:'0 18px 16px'}}>
+              {useOwnKeys ? (
+                /* Own API Keys status */
+                <div>
+                  <div style={{display:'flex', flexWrap:'wrap', gap:8, marginBottom:8}}>
+                    {[
+                      { name:'OpenAI', ok:hasOpenAI, required:true },
+                      { name:'Anthropic', ok:hasAnthropic },
+                      { name:'Gemini', ok:hasGemini },
+                      { name:'ElevenLabs', ok:hasElevenLabs },
+                    ].map(k => (
+                      <div key={k.name} style={{display:'flex', alignItems:'center', gap:5, padding:'4px 10px',
+                        borderRadius:8, fontSize:11, fontWeight:600,
+                        background: k.ok ? 'rgba(0,255,148,0.08)' : 'rgba(232,234,255,0.03)',
+                        border: k.ok ? '1px solid rgba(0,255,148,0.15)' : '1px solid rgba(232,234,255,0.06)',
+                        color: k.ok ? '#00FF94' : 'rgba(232,234,255,0.3)'}}>
+                        <span style={{fontSize:12}}>{k.ok ? '\u2713' : '\u2715'}</span>
+                        {k.name}
+                        {k.required && !k.ok && <span style={{fontSize:9, color:'#FF6B9D'}}>*</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', lineHeight:1.5}}>
+                    {keyCount > 0
+                      ? `${keyCount} API key${keyCount > 1 ? 's' : ''} ${L('configured') || 'configurate'} \u2014 ${L('allOk') || 'tutto OK!'}`
+                      : L('noKeysConfigured') || 'Nessuna chiave configurata'}
+                  </div>
+                  <button style={{marginTop:8, padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
+                    cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                    background:'rgba(0,210,255,0.08)', border:'1px solid rgba(0,210,255,0.15)',
+                    color:'#00D2FF', display:'flex', alignItems:'center', gap:6}}
+                    onClick={() => setView('apikeys')}>
+                    <Icon name="key" size={14} color="#00D2FF" />
+                    {L('manageKeys') || 'Gestisci chiavi API'}
+                  </button>
+                </div>
+              ) : (
+                /* Platform credits */
+                <div>
+                  <div style={{display:'flex', alignItems:'baseline', gap:8, marginBottom:4}}>
+                    <span style={{fontSize:24, fontWeight:800,
+                      color: creditBalance > 50 ? '#00FF94' : creditBalance > 0 ? '#ffd700' : '#FF6B9D'}}>
+                      {formatCredits(creditBalance)}
+                    </span>
+                    <span style={{fontSize:11, color:'rgba(232,234,255,0.35)'}}>
+                      {L('credit')}
+                    </span>
+                  </div>
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', marginBottom:8}}>
+                    ~{Math.floor(creditBalance / 0.5)} {L('messagesRemaining') || 'messaggi rimanenti'}
+                  </div>
+                  <div style={{display:'flex', gap:8}}>
+                    <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
+                      cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                      background:'rgba(108,99,255,0.12)', border:'1px solid rgba(108,99,255,0.2)',
+                      color:'#6C63FF', display:'flex', alignItems:'center', gap:5}}
+                      onClick={() => setView('credits')}>
+                      <Icon name="zap" size={14} color="#6C63FF" />
+                      {L('recharge')}
+                    </button>
+                    <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
+                      cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                      background:'rgba(0,210,255,0.08)', border:'1px solid rgba(0,210,255,0.15)',
+                      color:'#00D2FF', display:'flex', alignItems:'center', gap:5}}
+                      onClick={() => setView('apikeys')}>
+                      <Icon name="key" size={14} color="#00D2FF" />
+                      {L('useOwnKeysBtn') || 'Usa API personali'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ══════════════════════════════════════════════════
+            MAIN SETTINGS CARD
+           ══════════════════════════════════════════════════ */}
         <div style={S.card}>
           <div style={S.field}>
             <div style={S.label}>{L('name')}</div>
@@ -33,7 +197,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={S.label}>{L('avatar')}</div>
               <button onClick={() => setShowAvatarDropdown(!showAvatarDropdown)}
                 style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
-                {showAvatarDropdown ? '✕' : '▼ lista'}
+                {showAvatarDropdown ? '\u2715' : '\u25BC lista'}
               </button>
             </div>
             {showAvatarDropdown ? (
@@ -82,7 +246,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={S.label}>{L('yourLang')}</div>
               <button onClick={() => setShowLangDropdown(!showLangDropdown)}
                 style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
-                {showLangDropdown ? '✕' : '▼ lista'}
+                {showLangDropdown ? '\u2715' : '\u25BC lista'}
               </button>
             </div>
             {showLangDropdown ? (
@@ -200,7 +364,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 style={{...S.toggle, background:theme === THEMES.DARK ? '#333' : '#ffd700'}}>
                 <div style={{...S.toggleDot, transform:theme === THEMES.DARK ? 'translateX(0)' : 'translateX(20px)'}} />
               </button>
-              <span style={{fontSize:14, marginLeft:8}}>{theme === THEMES.DARK ? '🌙' : '☀️'}</span>
+              <span style={{fontSize:14, marginLeft:8}}>{theme === THEMES.DARK ? '\uD83C\uDF19' : '\u2600\uFE0F'}</span>
             </div>
             <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', marginTop:4}}>
               {theme === THEMES.DARK ? 'Dark Mode' : 'Light Mode'}
@@ -223,6 +387,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           )}
         </div>
       </div>
+
+      {/* CSS animation for refresh spinner */}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 });

@@ -447,7 +447,8 @@ export default function Home() {
       apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL} elevenLabsVoices={auth.elevenLabsVoices}
       selectedELVoice={auth.selectedELVoice} setSelectedELVoice={auth.setSelectedELVoice}
       setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken} userTokenRef={auth.userTokenRef}
-      userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme} />
+      userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme}
+      creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed} />
   );
 
   if (view === 'home') return (
