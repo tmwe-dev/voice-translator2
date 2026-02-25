@@ -28,26 +28,6 @@ import VoiceTestView from './components/VoiceTestView.js';
 
 export default function Home() {
   // =============================================
-  // HOOKS
-  // =============================================
-  const auth = useAuth();
-  const audio = useAudioSystem({
-    prefsRef: useRef(null),
-    isTrialRef: auth.isTrialRef,
-    isTopProRef: auth.isTopProRef,
-    selectedELVoice: auth.selectedELVoice,
-    roomId: null,
-    getEffectiveToken: auth.getEffectiveToken
-  });
-  const roomPolling = useRoomPolling({
-    prefsRef: useRef(null),
-    myLangRef: useRef('it'),
-    roomInfoRef: useRef(null),
-    queueAudio: audio.queueAudio,
-    getEffectiveToken: auth.getEffectiveToken
-  });
-
-  // =============================================
   // LOCAL STATE
   // =============================================
   const [view, setView] = useState('loading');
@@ -80,12 +60,32 @@ export default function Home() {
   // Theme state
   const [theme, setTheme] = useState(THEMES.DARK);
 
-  // Refs
+  // Refs — created BEFORE hooks so they can be shared
   const msgsEndRef = useRef(null);
-  const prefsRef = useRef(prefs);
-  const myLangRef = useRef(myLang);
-  const roomInfoRef = useRef(roomPolling.roomInfo);
+  const prefsRef = useRef({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
+  const myLangRef = useRef('it');
+  const roomInfoRef = useRef(null);
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
+
+  // =============================================
+  // HOOKS — now use the SAME refs that get synced below
+  // =============================================
+  const auth = useAuth();
+  const audio = useAudioSystem({
+    prefsRef,
+    isTrialRef: auth.isTrialRef,
+    isTopProRef: auth.isTopProRef,
+    selectedELVoice: auth.selectedELVoice,
+    roomId: null,
+    getEffectiveToken: auth.getEffectiveToken
+  });
+  const roomPolling = useRoomPolling({
+    prefsRef,
+    myLangRef,
+    roomInfoRef,
+    queueAudio: audio.queueAudio,
+    getEffectiveToken: auth.getEffectiveToken
+  });
 
   // =============================================
   // STYLES & THEME
