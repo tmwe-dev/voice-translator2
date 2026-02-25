@@ -225,11 +225,24 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       </div>
                     ))}
                   </div>
-                  <div style={{fontSize:11, color:'rgba(232,234,255,0.4)', lineHeight:1.5}}>
-                    {keyCount > 0
-                      ? `${keyCount} API key${keyCount > 1 ? 's' : ''} ${L('configured') || 'configurate'} \u2014 ${L('allOk') || 'tutto OK!'}`
-                      : L('noKeysConfigured') || 'Nessuna chiave configurata'}
+                  <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
+                    <span style={{fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:6,
+                      background: hasOpenAI ? 'rgba(0,255,148,0.1)' : 'rgba(255,107,157,0.1)',
+                      border: hasOpenAI ? '1px solid rgba(0,255,148,0.2)' : '1px solid rgba(255,107,157,0.2)',
+                      color: hasOpenAI ? '#00FF94' : '#FF6B9D'}}>
+                      {hasOpenAI ? (L('ready') || 'Ready') : (L('incomplete') || 'Incomplete')}
+                    </span>
+                    <span style={{fontSize:11, color:'rgba(232,234,255,0.4)'}}>
+                      {keyCount > 0
+                        ? `${keyCount} key${keyCount > 1 ? 's' : ''} ${L('configured') || 'configurate'}`
+                        : L('noKeysConfigured') || 'Nessuna chiave configurata'}
+                    </span>
                   </div>
+                  {!hasOpenAI && (
+                    <div style={{fontSize:10, color:'#FF6B9D', marginTop:4}}>
+                      {L('openaiRequired') || 'OpenAI key richiesta per traduzione e voci AI'}
+                    </div>
+                  )}
                   <button style={{marginTop:8, padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
                     cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
                     background:'rgba(0,210,255,0.08)', border:'1px solid rgba(0,210,255,0.15)',

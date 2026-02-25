@@ -1,5 +1,5 @@
 // Service Worker for VoiceTranslate - Offline Support
-const CACHE_NAME = 'vt-cache-v4';
+const CACHE_NAME = 'vt-cache-v5';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/avatars/1.png',
