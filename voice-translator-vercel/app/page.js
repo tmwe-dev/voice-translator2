@@ -962,19 +962,19 @@ export default function Home() {
                     {isMine ? 'Tu' : m.sender}
                   </div>
                   <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
-                    <div style={{fontSize:14, fontWeight:500, lineHeight:1.4}}>
+                    <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:'rgba(255,255,255,0.95)'}}>
                       {isMine ? m.original : m.translated}
                     </div>
-                    <div style={{fontSize:11, color:'rgba(255,255,255,0.45)', fontStyle:'italic', marginTop:3}}>
+                    <div style={{fontSize:12, color:'rgba(255,255,255,0.6)', marginTop:4, lineHeight:1.4}}>
                       {isMine ? m.translated : m.original}
                     </div>
                   </div>
-                  {/* Play */}
+                  {/* Play - minimal */}
                   <button onClick={() => playMessage(m)}
-                    style={{marginTop:3, padding:'3px 10px', borderRadius:10,
-                      background:'rgba(255,255,255,0.06)', border:'none', color:'rgba(255,255,255,0.5)',
+                    style={{marginTop:2, padding:'2px 8px', borderRadius:8,
+                      background:'transparent', border:'none', color:'rgba(255,255,255,0.35)',
                       fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                    {playingMsgId === m.id ? '\u{1F50A} ...' : '\u{25B6} Ascolta'}
+                    {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
                   </button>
                 </div>
               </div>
@@ -983,34 +983,28 @@ export default function Home() {
           <div ref={msgsEndRef} />
         </div>
 
-        {/* Talk bar */}
+        {/* Talk bar - minimal, no text */}
         <div style={S.talkBar}>
-          {status && <div style={{fontSize:11, color:'#e94560', marginBottom:6}}>{status}</div>}
+          {status && <div style={{fontSize:11, color:'#e94560', marginBottom:4}}>{status}</div>}
 
           {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
             <button onClick={toggleRecording}
               style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}>
-              <span style={{fontSize:24}}>{recording ? '\u{23F9}' : '\u{1F3A4}'}</span>
-              <span style={{fontSize:10, marginTop:3, opacity:0.7}}>
-                {recording ? 'Tocca per fermare' : 'Tocca per parlare'}
-              </span>
+              {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
             </button>
           )}
 
           {roomMode === 'classroom' && !canTalk && (
-            <div style={{color:'rgba(255,255,255,0.35)', fontSize:12, padding:12}}>
-              Solo l{"'"}host pu{"o'"} parlare
+            <div style={{color:'rgba(255,255,255,0.25)', fontSize:11, padding:8}}>
+              {'\u{1F512}'} Solo l{"'"}host parla
             </div>
           )}
 
           {roomMode === 'freetalk' && (
             <button onClick={() => isListening ? stopFreeTalk() : startFreeTalk()}
               style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
-                ...(recording ? {boxShadow:'0 0 0 10px rgba(233,69,96,0.2), 0 0 0 20px rgba(233,69,96,0.1)'} : {})}}>
-              <span style={{fontSize:24}}>{isListening ? '\u{1F534}' : '\u{1F3A4}'}</span>
-              <span style={{fontSize:10, marginTop:3, opacity:0.7}}>
-                {isListening ? (recording ? 'Parlo...' : 'In ascolto...') : 'Attiva mic'}
-              </span>
+                ...(recording ? {boxShadow:'0 0 0 8px rgba(233,69,96,0.15), 0 0 0 18px rgba(233,69,96,0.06)'} : {})}}>
+              {isListening ? (recording ? '\u{1F534}' : '\u{1F7E2}') : '\u{1F399}\uFE0F'}
             </button>
           )}
         </div>
@@ -1029,11 +1023,11 @@ export default function Home() {
 }
 
 // ========================================
-// STYLES - Modern, glassmorphism, clean
+// STYLES - Premium, elegant, glassmorphism
 // ========================================
 const S = {
   page: { position:'fixed', top:0, left:0, right:0, bottom:0,
-    background:'linear-gradient(160deg, #0c0c1d 0%, #1a1a2e 40%, #16213e 100%)',
+    background:'linear-gradient(145deg, #0f0c29 0%, #302b63 50%, #24243e 100%)',
     color:'#fff', fontFamily:FONT, overflow:'hidden' },
   center: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
     height:'100%', padding:'20px 16px', boxSizing:'border-box' },
@@ -1041,96 +1035,103 @@ const S = {
     height:'100%', padding:'20px 16px', boxSizing:'border-box',
     overflowY:'auto', WebkitOverflowScrolling:'touch' },
   title: { fontSize:26, fontWeight:700, letterSpacing:-0.5,
-    background:'linear-gradient(135deg, #e94560, #ff6b8a)',
+    background:'linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%)',
     WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:4 },
-  sub: { color:'rgba(255,255,255,0.4)', fontSize:13, marginBottom:20, letterSpacing:0.2 },
-  card: { width:'100%', maxWidth:380, background:'rgba(255,255,255,0.04)', borderRadius:20,
-    padding:'20px 18px', backdropFilter:'blur(20px)', border:'1px solid rgba(255,255,255,0.08)',
-    boxShadow:'0 8px 32px rgba(0,0,0,0.3)' },
+  sub: { color:'rgba(255,255,255,0.45)', fontSize:13, marginBottom:20, letterSpacing:0.3 },
+  card: { width:'100%', maxWidth:380, background:'rgba(255,255,255,0.06)', borderRadius:24,
+    padding:'22px 20px', backdropFilter:'blur(24px)', border:'1px solid rgba(255,255,255,0.1)',
+    boxShadow:'0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)' },
   cardTitle: { fontSize:15, fontWeight:600, textAlign:'center', marginBottom:16,
-    color:'rgba(255,255,255,0.7)', letterSpacing:-0.2 },
+    color:'rgba(255,255,255,0.75)', letterSpacing:-0.2 },
   field: { marginBottom:14 },
-  label: { fontSize:11, fontWeight:500, letterSpacing:0.5, color:'rgba(255,255,255,0.4)', marginBottom:6,
+  label: { fontSize:10, fontWeight:600, letterSpacing:1, color:'rgba(255,255,255,0.35)', marginBottom:6,
     textTransform:'uppercase' },
-  input: { width:'100%', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,0.06)',
-    border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:15, outline:'none',
+  input: { width:'100%', padding:'12px 14px', borderRadius:14, background:'rgba(255,255,255,0.05)',
+    border:'1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:15, outline:'none',
     boxSizing:'border-box', fontFamily:FONT, transition:'border-color 0.2s' },
-  select: { width:'100%', padding:'12px 14px', borderRadius:12, background:'rgba(255,255,255,0.06)',
-    border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:15, outline:'none',
+  select: { width:'100%', padding:'12px 14px', borderRadius:14, background:'rgba(255,255,255,0.05)',
+    border:'1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:15, outline:'none',
     boxSizing:'border-box', fontFamily:FONT },
-  btn: { width:'100%', padding:'14px', borderRadius:14, border:'none',
-    background:'linear-gradient(135deg, #e94560, #c23152)', color:'#fff', fontSize:15, fontWeight:600,
+  btn: { width:'100%', padding:'14px', borderRadius:16, border:'none',
+    background:'linear-gradient(135deg, #f5576c, #e94560)', color:'#fff', fontSize:15, fontWeight:600,
     cursor:'pointer', textAlign:'center', fontFamily:FONT, letterSpacing:-0.2,
-    boxShadow:'0 4px 15px rgba(233,69,96,0.3)', transition:'transform 0.1s',
+    boxShadow:'0 6px 20px rgba(233,69,96,0.35)', transition:'transform 0.1s',
     WebkitTapHighlightColor:'transparent' },
   bigBtn: { width:'100%', maxWidth:380, display:'flex', alignItems:'center', gap:14, padding:'14px 16px',
-    borderRadius:16, border:'none', color:'#fff', cursor:'pointer', marginBottom:10,
-    background:'linear-gradient(135deg, #e94560, #c23152)', textAlign:'left',
-    boxShadow:'0 4px 20px rgba(233,69,96,0.25)', fontFamily:FONT,
+    borderRadius:18, border:'none', color:'#fff', cursor:'pointer', marginBottom:10,
+    background:'linear-gradient(135deg, #f5576c, #e94560)', textAlign:'left',
+    boxShadow:'0 6px 24px rgba(233,69,96,0.3)', fontFamily:FONT,
     WebkitTapHighlightColor:'transparent' },
-  settingsBtn: { marginTop:16, padding:'10px 24px', borderRadius:12, background:'transparent',
-    border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', fontSize:13,
-    cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent' },
-  avatarBtn: { width:42, height:42, borderRadius:12, border:'2px solid transparent',
+  settingsBtn: { marginTop:16, padding:'10px 24px', borderRadius:14, background:'rgba(255,255,255,0.04)',
+    border:'1px solid rgba(255,255,255,0.08)', color:'rgba(255,255,255,0.45)', fontSize:13,
+    cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+    backdropFilter:'blur(10px)' },
+  avatarBtn: { width:42, height:42, borderRadius:14, border:'2px solid transparent',
     background:'rgba(255,255,255,0.04)', fontSize:22, cursor:'pointer',
     display:'flex', alignItems:'center', justifyContent:'center',
     WebkitTapHighlightColor:'transparent', transition:'all 0.15s' },
-  avatarSel: { borderColor:'#e94560', background:'rgba(233,69,96,0.12)',
-    boxShadow:'0 0 0 3px rgba(233,69,96,0.2)' },
-  voiceBtn: { padding:'6px 14px', borderRadius:20, border:'1px solid rgba(255,255,255,0.1)',
-    background:'transparent', color:'rgba(255,255,255,0.5)', fontSize:12, cursor:'pointer',
+  avatarSel: { borderColor:'#f5576c', background:'rgba(245,87,108,0.12)',
+    boxShadow:'0 0 0 3px rgba(245,87,108,0.2)' },
+  voiceBtn: { padding:'6px 14px', borderRadius:20, border:'1px solid rgba(255,255,255,0.08)',
+    background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.45)', fontSize:12, cursor:'pointer',
     textTransform:'capitalize', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
     transition:'all 0.15s' },
-  voiceSel: { borderColor:'#e94560', background:'rgba(233,69,96,0.15)', color:'#fff' },
+  voiceSel: { borderColor:'#f5576c', background:'rgba(245,87,108,0.12)', color:'#fff' },
   toggle: { width:44, height:24, borderRadius:12, border:'none', padding:2, cursor:'pointer',
     display:'flex', alignItems:'center', transition:'background 0.2s',
     WebkitTapHighlightColor:'transparent' },
   toggleDot: { width:20, height:20, borderRadius:10, background:'#fff', transition:'transform 0.2s' },
   topBar: { display:'flex', alignItems:'center', gap:12, width:'100%', maxWidth:380, marginBottom:16, flexShrink:0 },
-  backBtn: { width:38, height:38, borderRadius:12, background:'rgba(255,255,255,0.06)',
-    border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:18, cursor:'pointer',
+  backBtn: { width:38, height:38, borderRadius:14, background:'rgba(255,255,255,0.05)',
+    border:'1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:18, cursor:'pointer',
     display:'flex', alignItems:'center', justifyContent:'center', fontFamily:FONT,
-    WebkitTapHighlightColor:'transparent' },
-  shareBtn: { padding:'10px 24px', borderRadius:12, border:'1px solid rgba(255,255,255,0.1)',
-    background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.7)', fontSize:13, cursor:'pointer',
-    fontFamily:FONT, WebkitTapHighlightColor:'transparent' },
-  statusMsg: { marginTop:10, fontSize:12, color:'#e94560', textAlign:'center' },
+    WebkitTapHighlightColor:'transparent', backdropFilter:'blur(10px)' },
+  shareBtn: { padding:'10px 24px', borderRadius:14, border:'1px solid rgba(255,255,255,0.08)',
+    background:'rgba(255,255,255,0.04)', color:'rgba(255,255,255,0.6)', fontSize:13, cursor:'pointer',
+    fontFamily:FONT, WebkitTapHighlightColor:'transparent', backdropFilter:'blur(10px)' },
+  statusMsg: { marginTop:10, fontSize:12, color:'#f5576c', textAlign:'center' },
   // Mode buttons
   modeBtn: { flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-    padding:'10px 4px', borderRadius:14, border:'1px solid rgba(255,255,255,0.06)',
-    background:'rgba(255,255,255,0.02)', color:'rgba(255,255,255,0.5)', cursor:'pointer',
-    WebkitTapHighlightColor:'transparent', transition:'all 0.2s' },
-  modeBtnSel: { borderColor:'rgba(233,69,96,0.4)', background:'rgba(233,69,96,0.1)', color:'#fff',
-    boxShadow:'0 2px 10px rgba(233,69,96,0.15)' },
+    padding:'10px 4px', borderRadius:16, border:'1px solid rgba(255,255,255,0.05)',
+    background:'rgba(255,255,255,0.03)', color:'rgba(255,255,255,0.45)', cursor:'pointer',
+    WebkitTapHighlightColor:'transparent', transition:'all 0.2s', backdropFilter:'blur(8px)' },
+  modeBtnSel: { borderColor:'rgba(245,87,108,0.35)', background:'rgba(245,87,108,0.1)', color:'#fff',
+    boxShadow:'0 4px 16px rgba(245,87,108,0.15)' },
   // Room
   roomPage: { display:'flex', flexDirection:'column', position:'fixed', top:0, left:0, right:0, bottom:0,
-    background:'#0a0a14', color:'#fff', fontFamily:FONT },
+    background:'linear-gradient(160deg, #0f0c29 0%, #1a1040 30%, #302b63 60%, #24243e 100%)',
+    color:'#fff', fontFamily:FONT },
   roomHeader: { display:'flex', alignItems:'center', padding:'8px 12px', gap:6,
-    background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.06)', flexShrink:0 },
+    background:'rgba(0,0,0,0.2)', borderBottom:'1px solid rgba(255,255,255,0.05)',
+    flexShrink:0, backdropFilter:'blur(12px)' },
   backBtnSmall: { width:32, height:32, borderRadius:10, background:'transparent',
-    border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, cursor:'pointer',
+    border:'none', color:'rgba(255,255,255,0.6)', fontSize:16, cursor:'pointer',
     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
     WebkitTapHighlightColor:'transparent' },
-  iconBtn: { width:32, height:32, borderRadius:10, background:'rgba(255,255,255,0.04)',
-    border:'1px solid rgba(255,255,255,0.08)', color:'#fff', fontSize:14, cursor:'pointer',
+  iconBtn: { height:32, borderRadius:10, background:'rgba(255,255,255,0.04)',
+    border:'1px solid rgba(255,255,255,0.06)', color:'#fff', fontSize:14, cursor:'pointer',
     display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
     WebkitTapHighlightColor:'transparent' },
-  speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'6px 14px',
-    background:'rgba(233,69,96,0.08)', borderBottom:'1px solid rgba(233,69,96,0.15)',
-    color:'#e94560', fontSize:12, flexShrink:0 },
+  speakingBar: { display:'flex', alignItems:'center', gap:8, padding:'5px 14px',
+    background:'rgba(245,87,108,0.06)', borderBottom:'1px solid rgba(245,87,108,0.1)',
+    color:'#f5576c', fontSize:12, flexShrink:0 },
   speakingDots: { display:'flex', gap:3, alignItems:'center' },
-  dot: { width:6, height:6, borderRadius:'50%', background:'#e94560',
+  dot: { width:5, height:5, borderRadius:'50%', background:'#f5576c',
     animation:'vtPulse 1.2s infinite ease-in-out', display:'inline-block' },
   chatArea: { flex:1, overflowY:'auto', padding:'14px 12px', minHeight:0, WebkitOverflowScrolling:'touch' },
-  bubble: { padding:'10px 14px', borderRadius:16, position:'relative' },
-  bubbleMine: { background:'rgba(233,69,96,0.12)', borderBottomRightRadius:4 },
-  bubbleOther: { background:'rgba(255,255,255,0.06)', borderBottomLeftRadius:4 },
-  talkBar: { flexShrink:0, padding:'10px 16px 20px', display:'flex', flexDirection:'column', alignItems:'center',
-    background:'rgba(255,255,255,0.01)', borderTop:'1px solid rgba(255,255,255,0.06)' },
-  talkBtn: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
-    width:76, height:76, borderRadius:'50%', border:'2px solid rgba(255,255,255,0.15)',
-    background:'rgba(255,255,255,0.04)', color:'#fff', cursor:'pointer', touchAction:'manipulation',
-    WebkitTapHighlightColor:'transparent', transition:'all 0.2s' },
-  talkBtnRec: { borderColor:'#e94560', background:'rgba(233,69,96,0.15)',
-    boxShadow:'0 0 0 6px rgba(233,69,96,0.12), 0 0 0 14px rgba(233,69,96,0.06)' },
+  bubble: { padding:'12px 16px', borderRadius:18, position:'relative',
+    backdropFilter:'blur(16px)', border:'1px solid rgba(255,255,255,0.06)' },
+  bubbleMine: { background:'rgba(245,87,108,0.1)', borderBottomRightRadius:6,
+    boxShadow:'0 2px 12px rgba(245,87,108,0.08)' },
+  bubbleOther: { background:'rgba(255,255,255,0.07)', borderBottomLeftRadius:6,
+    boxShadow:'0 2px 12px rgba(0,0,0,0.15)' },
+  talkBar: { flexShrink:0, padding:'8px 16px 16px', display:'flex', flexDirection:'column', alignItems:'center',
+    background:'transparent' },
+  talkBtn: { display:'flex', alignItems:'center', justifyContent:'center',
+    width:60, height:60, borderRadius:'50%', border:'none',
+    background:'transparent', color:'#fff', fontSize:28, cursor:'pointer', touchAction:'manipulation',
+    WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+    filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' },
+  talkBtnRec: { color:'#f5576c', fontSize:30,
+    filter:'drop-shadow(0 0 12px rgba(245,87,108,0.4))' },
 };
