@@ -38,7 +38,8 @@ export default function useTranslation({
   setSpeakingState,
   getEffectiveToken,
   refreshBalance,
-  trackFreeChars
+  trackFreeChars,
+  userEmail
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -74,7 +75,7 @@ export default function useTranslation({
       const res = await fetch('/api/translate-free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, sourceLang, targetLang })
+        body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
       });
       if (!res.ok) return { translated: text };
       const data = await res.json();

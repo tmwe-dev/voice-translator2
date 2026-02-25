@@ -103,7 +103,8 @@ export default function Home() {
     setSpeakingState: roomPolling.setSpeakingState,
     getEffectiveToken: auth.getEffectiveToken,
     refreshBalance: auth.refreshBalance,
-    trackFreeChars
+    trackFreeChars,
+    userEmail: auth.userAccount?.email || auth.authEmail || ''
   });
 
   // =============================================

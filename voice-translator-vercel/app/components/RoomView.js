@@ -201,6 +201,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 : '#4ecdc4'
             }} />
           </div>
+          <div style={{marginTop:3, fontSize:8, color:'rgba(255,255,255,0.25)', textAlign:'center'}}>
+            {L('poweredByMyMemory') || 'Traduzione gratuita offerta da MyMemory by Translated'}
+          </div>
         </div>
       )}
 

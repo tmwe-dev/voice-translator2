@@ -203,6 +203,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   ({(freeCharsLeft / 1000).toFixed(1)}k {L('remaining') || 'rimanenti'})
                 </span>
               </div>
+              <div style={{fontSize:9, color:'rgba(255,255,255,0.30)', marginTop:6, lineHeight:1.4}}>
+                {L('freePrivacyNote') || 'Il piano gratuito utilizza MyMemory by Translated. La tua email viene condivisa con il servizio per gestire la quota personale.'}
+              </div>
             </div>
           ) : (
             /* PRO: credits or own-keys status */

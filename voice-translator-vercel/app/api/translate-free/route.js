@@ -16,11 +16,17 @@ function getSimpleHash(text) {
 
 export async function POST(req) {
   try {
-    const { text, sourceLang, targetLang } = await req.json();
+    const { text, sourceLang, targetLang, userEmail } = await req.json();
     if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 });
 
     const trimmed = text.trim();
     const charsUsed = trimmed.length;
+
+    // Use user's email for MyMemory per-user quota (50K chars/day each)
+    // Falls back to app email if user email not available
+    const myMemoryEmail = (userEmail && userEmail.includes('@'))
+      ? userEmail
+      : 'voicetranslator@app.com';
 
     // Check Redis cache first
     const textHash = getSimpleHash(trimmed);
@@ -43,7 +49,7 @@ export async function POST(req) {
 
     // MyMemory supports standard ISO 639-1 codes with pipe separator
     const langpair = `${sourceLang}|${targetLang}`;
-    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(trimmed)}&langpair=${langpair}&de=voicetranslator@app.com`;
+    const url = `${MYMEMORY_URL}?q=${encodeURIComponent(trimmed)}&langpair=${langpair}&de=${encodeURIComponent(myMemoryEmail)}`;
 
     const res = await fetch(url, {
       headers: { 'User-Agent': 'VoiceTranslator/2.0' }
