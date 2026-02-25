@@ -7,7 +7,7 @@ export default function useAudioSystem({
   isTrialRef,
   isTopProRef,
   selectedELVoice,
-  roomId,
+  roomIdRef,
   getEffectiveToken
 }) {
   const [audioReady, setAudioReady] = useState(false);
@@ -137,7 +137,7 @@ export default function useAudioSystem({
           text,
           voice: prefsRef.current.voice || 'nova',
           userToken: getEffectiveToken(),
-          roomId: roomId || undefined
+          roomId: roomIdRef.current || undefined
         })
       });
       if (!res.ok) throw new Error('TTS failed');
@@ -176,7 +176,7 @@ export default function useAudioSystem({
         text,
         voice: prefsRef.current.voice || 'nova',
         userToken: getEffectiveToken(),
-        roomId: roomId || undefined
+        roomId: roomIdRef.current || undefined
       })
     })
       .then(r => r.blob())
@@ -220,7 +220,7 @@ export default function useAudioSystem({
           voiceId: selectedELVoice || undefined,
           langCode: langCode?.split('-')[0] || undefined,
           userToken: getEffectiveToken(),
-          roomId: roomId || undefined
+          roomId: roomIdRef.current || undefined
         })
       });
       if (!res.ok) throw new Error('ElevenLabs TTS failed');

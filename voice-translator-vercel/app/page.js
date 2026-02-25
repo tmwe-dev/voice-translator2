@@ -66,6 +66,7 @@ export default function Home() {
   const myLangRef = useRef('it');
   const roomInfoRef = useRef(null);
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
+  const roomIdRef = useRef(null);
 
   // =============================================
   // HOOKS — now use the SAME refs that get synced below
@@ -76,7 +77,7 @@ export default function Home() {
     isTrialRef: auth.isTrialRef,
     isTopProRef: auth.isTopProRef,
     selectedELVoice: auth.selectedELVoice,
-    roomId: null,
+    roomIdRef,
     getEffectiveToken: auth.getEffectiveToken
   });
   const roomPolling = useRoomPolling({
@@ -133,6 +134,7 @@ export default function Home() {
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomPolling.roomInfo; }, [roomPolling.roomInfo]);
+  useEffect(() => { roomIdRef.current = roomPolling.roomId; }, [roomPolling.roomId]);
 
 
   // =============================================
