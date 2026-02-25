@@ -113,3 +113,26 @@ export async function updateHeartbeat(roomId, memberName) {
   await redis('SET', key, JSON.stringify(room), 'EX', 3600);
   return room;
 }
+
+// Add cost to room's running total
+export async function addCost(roomId, amount) {
+  const key = `room:${roomId.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
+  room.totalCost = (room.totalCost || 0) + amount;
+  room.msgCount = (room.msgCount || 0) + 1;
+  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
+  return room;
+}
+
+// Update room mode (host only - validated on frontend)
+export async function updateRoomMode(roomId, newMode) {
+  const key = `room:${roomId.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
+  room.mode = newMode;
+  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
+  return room;
+}

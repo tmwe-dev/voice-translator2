@@ -59,6 +59,9 @@ export default function Home() {
   const [audioReady, setAudioReady] = useState(false); // system unlocked
   const [selectedMode, setSelectedMode] = useState('conversation');
   const [isListening, setIsListening] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [sendingText, setSendingText] = useState(false);
+  const [showModeSelector, setShowModeSelector] = useState(false);
 
   const recRef = useRef(null);
   const chunksRef = useRef([]);
@@ -292,11 +295,9 @@ export default function Home() {
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
-            // Auto-play for ALL participants (sender + receiver)
+            // Auto-play ONLY for messages from others (receiver hears, sender does NOT)
             for (const msg of newMsgs) {
-              if (msg.translated && prefsRef.current.autoPlay) {
-                // For sender's own messages: play in TARGET lang (what partner hears)
-                // For partner's messages: play in TARGET lang (translation for me)
+              if (msg.sender !== prefsRef.current.name && msg.translated && prefsRef.current.autoPlay) {
                 queueAudio(msg.translated, getLang(msg.targetLang).speech, msg.id);
               }
             }
@@ -428,22 +429,65 @@ export default function Home() {
     form.append('targetLang', otherL.code);
     form.append('sourceLangName', myL.name);
     form.append('targetLangName', otherL.name);
+    if (roomId) form.append('roomId', roomId); // for cost tracking
     const res = await fetch('/api/process', { method:'POST', body:form });
     if (!res.ok) throw new Error('Errore server');
-    const { original, translated } = await res.json();
+    const { original, translated, cost } = await res.json();
     if (original && roomId) {
-      const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
+      await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ roomId, sender:currentPrefs.name, original, translated,
           sourceLang:myL.code, targetLang:otherL.code }) });
-      // Auto-play the translation immediately for the sender (user just tapped, audio is warm)
-      if (translated && prefsRef.current.autoPlay && audioEnabledRef.current) {
-        try {
-          const msgData = await msgRes.json();
-          if (msgData.message?.id) playedMsgIdsRef.current.add(msgData.message.id); // prevent double-play from polling
-        } catch {}
-        queueAudio(translated, otherL.speech, null);
-      }
+      // Sender does NOT hear auto-play - only the receiver does via polling
     }
+  }
+
+  // =============================================
+  // TEXT INPUT - Send text instead of voice
+  // =============================================
+  async function sendTextMessage() {
+    if (!textInput.trim() || sendingText || !roomId) return;
+    setSendingText(true);
+    setStatus('Traduzione...');
+    try {
+      const currentMyLang = myLangRef.current;
+      const currentRoomInfo = roomInfoRef.current;
+      const currentPrefs = prefsRef.current;
+      const myL = getLang(currentMyLang);
+      let otherLangCode = null;
+      if (currentRoomInfo && currentRoomInfo.members) {
+        const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
+        if (other) otherLangCode = other.lang;
+      }
+      if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
+      const otherL = getLang(otherLangCode);
+
+      // Use GPT-4o-mini directly for text translation (no Whisper needed)
+      const res = await fetch('/api/translate', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ text:textInput.trim(), sourceLang:myL.code, targetLang:otherL.code,
+          sourceLangName:myL.name, targetLangName:otherL.name, roomId }) });
+      if (!res.ok) throw new Error('Errore traduzione');
+      const { translated } = await res.json();
+      if (translated) {
+        await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ roomId, sender:currentPrefs.name, original:textInput.trim(), translated,
+            sourceLang:myL.code, targetLang:otherL.code }) });
+        setTextInput('');
+      }
+    } catch (err) { setStatus('Errore: ' + err.message); }
+    setSendingText(false);
+    setStatus('');
+  }
+
+  // =============================================
+  // MODE CHANGE (host only)
+  // =============================================
+  async function changeRoomMode(newMode) {
+    if (!roomId) return;
+    try {
+      await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ action:'changeMode', roomId, mode:newMode }) });
+      setShowModeSelector(false);
+    } catch (e) { console.error('Mode change error:', e); }
   }
 
   // =============================================
@@ -767,7 +811,8 @@ export default function Home() {
     const isHost = roomInfo?.host === prefs.name;
     const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
     const canTalk = roomMode === 'classroom' ? isHost : true;
-    const partnerAvatar = partner ? (roomInfo?.members?.find(m => m.name === partner.name)?.avatar || '\u{1F464}') : '\u{1F464}';
+    const totalCost = roomInfo?.totalCost || 0;
+    const msgCount = roomInfo?.msgCount || 0;
 
     return (
       <div style={S.roomPage}>
@@ -779,28 +824,66 @@ export default function Home() {
             <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
             <span style={{fontSize:18}}>{otherL.flag}</span>
           </div>
-          {/* Audio toggle */}
-          <button onClick={() => { unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            style={{...S.iconBtn, color:audioEnabled ? '#4ecdc4' : '#ff6b6b'}}>
-            {audioEnabled ? '\u{1F50A}' : '\u{1F507}'}
-          </button>
-          {/* Test audio */}
-          <button onClick={testAudio} style={{...S.iconBtn, fontSize:11, color:'rgba(255,255,255,0.4)'}}>
-            TEST
+          {/* Privacy / Audio toggle */}
+          <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
+            style={{...S.iconBtn, display:'flex', alignItems:'center', gap:3, width:'auto', padding:'0 8px',
+              color: audioEnabled ? '#4ecdc4' : '#ff6b6b',
+              background: audioEnabled ? 'rgba(78,205,196,0.08)' : 'rgba(255,107,107,0.08)',
+              border: audioEnabled ? '1px solid rgba(78,205,196,0.2)' : '1px solid rgba(255,107,107,0.2)'}}>
+            <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
+            <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
           </button>
           {/* Connection status */}
           <div style={{width:8, height:8, borderRadius:4, marginLeft:4,
             background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
         </div>
 
-        {/* Mode indicator */}
-        <div style={{padding:'4px 12px', background:'rgba(255,255,255,0.02)',
-          borderBottom:'1px solid rgba(255,255,255,0.05)', textAlign:'center', flexShrink:0}}>
-          <span style={{fontSize:10, color:'rgba(255,255,255,0.35)'}}>
-            {modeInfo.icon} {modeInfo.name}
-            {roomMode === 'classroom' && !isHost && ` \u2022 ${roomInfo?.host || 'Host'} presenta`}
-          </span>
+        {/* Mode bar + Cost (tappable by host to change mode) */}
+        <div style={{padding:'5px 12px', background:'rgba(255,255,255,0.02)',
+          borderBottom:'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'center',
+          justifyContent:'space-between', flexShrink:0}}>
+          <button onClick={() => isHost && setShowModeSelector(!showModeSelector)}
+            style={{background:'none', border:'none', padding:0, cursor:isHost ? 'pointer' : 'default',
+              display:'flex', alignItems:'center', gap:4, WebkitTapHighlightColor:'transparent'}}>
+            <span style={{fontSize:11, color:'rgba(255,255,255,0.45)'}}>
+              {modeInfo.icon} {modeInfo.name}
+            </span>
+            {isHost && <span style={{fontSize:9, color:'rgba(255,255,255,0.25)'}}>{'\u25BC'}</span>}
+            {!isHost && roomMode === 'classroom' && (
+              <span style={{fontSize:10, color:'rgba(255,255,255,0.3)'}}>
+                {' \u2022 '}{roomInfo?.host || 'Host'} presenta
+              </span>
+            )}
+          </button>
+          {/* Cost display - visible to host */}
+          {isHost && (
+            <div style={{display:'flex', alignItems:'center', gap:6}}>
+              <span style={{fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
+                ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)}
+              </span>
+              <span style={{fontSize:9, color:'rgba(255,255,255,0.2)'}}>
+                {msgCount} msg
+              </span>
+            </div>
+          )}
         </div>
+
+        {/* Mode selector dropdown (host only) */}
+        {showModeSelector && isHost && (
+          <div style={{padding:'8px 12px', background:'rgba(0,0,0,0.6)', backdropFilter:'blur(10px)',
+            borderBottom:'1px solid rgba(255,255,255,0.08)', flexShrink:0}}>
+            <div style={{display:'flex', gap:6}}>
+              {MODES.map(m => (
+                <button key={m.id} onClick={() => changeRoomMode(m.id)}
+                  style={{...S.modeBtn, flex:1, padding:'8px 4px',
+                    ...(roomMode === m.id ? S.modeBtnSel : {})}}>
+                  <span style={{fontSize:18}}>{m.icon}</span>
+                  <span style={{fontSize:9, fontWeight:600, marginTop:1}}>{m.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Partner speaking */}
         {partnerSpeaking && (
@@ -814,20 +897,43 @@ export default function Home() {
           </div>
         )}
 
+        {/* Text input bar */}
+        <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
+          background:'rgba(255,255,255,0.02)', borderBottom:'1px solid rgba(255,255,255,0.05)'}}>
+          <input
+            style={{flex:1, padding:'8px 12px', borderRadius:20, background:'rgba(255,255,255,0.06)',
+              border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none',
+              fontFamily:FONT, boxSizing:'border-box'}}
+            placeholder="Scrivi un messaggio..."
+            value={textInput}
+            onChange={e => setTextInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); }}}
+            disabled={sendingText}
+          />
+          <button onClick={sendTextMessage}
+            style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
+              background: textInput.trim() ? 'linear-gradient(135deg, #e94560, #c23152)' : 'rgba(255,255,255,0.06)',
+              color: textInput.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
+              fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
+            {sendingText ? '...' : '\u{27A4}'}
+          </button>
+        </div>
+
         {/* Messages */}
         <div style={S.chatArea}>
           {messages.length === 0 && (
             <div style={{textAlign:'center', color:'rgba(255,255,255,0.25)', marginTop:60, fontSize:13, lineHeight:1.6}}>
+              Scrivi o parla per tradurre.{'\n'}
               {roomMode === 'freetalk'
-                ? 'Attiva il microfono per iniziare.\nLa traduzione avviene automaticamente.'
+                ? 'In Free Talk la traduzione avviene automaticamente.'
                 : roomMode === 'classroom' && !isHost
-                  ? 'In ascolto del presentatore.\nLa traduzione apparira\' qui.'
-                  : 'Tocca il microfono per parlare.\nTocca di nuovo per fermare.'}
+                  ? `In ascolto di ${roomInfo?.host || 'Host'}.`
+                  : 'Tocca il microfono per dettare.'}
             </div>
           )}
           {messages.map((m, i) => {
             const isMine = m.sender === prefs.name;
-            const senderAvatar = isMine ? prefs.avatar : (partner?.name === m.sender ? '\u{1F464}' : '\u{1F464}');
             return (
               <div key={m.id || i} style={{display:'flex', gap:8,
                 flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end'}}>
@@ -852,7 +958,7 @@ export default function Home() {
                   <button onClick={() => playMessage(m)}
                     style={{marginTop:3, padding:'3px 10px', borderRadius:10,
                       background:'rgba(255,255,255,0.06)', border:'none', color:'rgba(255,255,255,0.5)',
-                      fontSize:11, cursor:'pointer'}}>
+                      fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
                     {playingMsgId === m.id ? '\u{1F50A} ...' : '\u{25B6} Ascolta'}
                   </button>
                 </div>
