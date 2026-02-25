@@ -144,12 +144,40 @@ export default function Home() {
   const backupChunksRef = useRef([]); // audio chunks from backup recorder
   const backupStreamRef = useRef(null); // mic stream for backup recorder
   const [streamingMsg, setStreamingMsg] = useState(null); // live streaming bubble
+  const persistentMicRef = useRef(null); // persistent mic stream to avoid repeated permission prompts
 
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomInfo; }, [roomInfo]);
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { userTokenRef.current = userToken; }, [userToken]);
+
+  // =============================================
+  // MIC SYSTEM - Request permission once, reuse stream
+  // =============================================
+
+  async function getMicStream() {
+    // Return existing stream if still active
+    if (persistentMicRef.current) {
+      const tracks = persistentMicRef.current.getTracks();
+      if (tracks.length > 0 && tracks[0].readyState === 'live') {
+        return persistentMicRef.current;
+      }
+    }
+    // Request new stream
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    persistentMicRef.current = stream;
+    return stream;
+  }
+
+  // Request mic permission early on first user interaction
+  function requestMicEarly() {
+    if (persistentMicRef.current) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      persistentMicRef.current = stream;
+      console.log('[Mic] Permission granted early');
+    }).catch(() => {});
+  }
 
   // =============================================
   // AUDIO SYSTEM - Persistent Audio element for reliable auto-play
@@ -167,6 +195,7 @@ export default function Home() {
   // Unlock audio on ANY user interaction (critical for joiners)
   function unlockAudio() {
     if (audioReady) return;
+    requestMicEarly(); // Also request mic permission on first interaction
     try {
       // 1) Unlock AudioContext
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -490,10 +519,15 @@ export default function Home() {
     }
     backupRecRef.current = null;
     if (backupStreamRef.current) {
-      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      // Don't stop persistent mic tracks - they'll be reused
       backupStreamRef.current = null;
     }
     setStreamingMsg(null);
+    // Stop persistent mic when leaving room
+    if (persistentMicRef.current) {
+      persistentMicRef.current.getTracks().forEach(t => t.stop());
+      persistentMicRef.current = null;
+    }
     setRoomId(null); setRoomInfo(null); setMessages([]); setPartnerSpeaking(false); setView('home');
   }
 
@@ -599,7 +633,7 @@ export default function Home() {
 
     // === 1) Start BACKUP MediaRecorder (always captures audio for Whisper fallback) ===
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getMicStream();
       backupStreamRef.current = stream;
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
@@ -834,7 +868,7 @@ export default function Home() {
     backupRecRef.current = null;
     // Stop backup mic stream
     if (backupStreamRef.current) {
-      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      // Don't stop persistent mic tracks - they'll be reused
       backupStreamRef.current = null;
     }
 
@@ -953,13 +987,13 @@ export default function Home() {
     if (roomId) setSpeakingState(roomId, true);
     chunksRef.current = [];
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getMicStream();
       const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
       recRef.current = new MediaRecorder(stream, { mimeType: mime });
       recRef.current.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
       recRef.current.onstop = async () => {
-        recRef.current.stream.getTracks().forEach(t => t.stop());
+        // Don't stop persistent mic tracks - stream stays alive for reuse
         const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
         if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
         try { await processAndSendAudio(blob); }
@@ -1051,7 +1085,7 @@ export default function Home() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+      const stream = await getMicStream();
       vadStreamRef.current = stream;
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioCtx.createMediaStreamSource(stream);
@@ -1205,7 +1239,8 @@ export default function Home() {
     if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
-    if (vadStreamRef.current) { vadStreamRef.current.getTracks().forEach(t => t.stop()); vadStreamRef.current = null; }
+    // Don't stop persistent mic tracks when stopping free talk
+    vadStreamRef.current = null;
     vadAnalyserRef.current = null;
     // Clean up streaming in freetalk
     if (streamingModeRef.current) {
@@ -1225,7 +1260,7 @@ export default function Home() {
       try { backupRecRef.current.stop(); } catch {}
     }
     if (backupStreamRef.current) {
-      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      // Don't stop persistent mic tracks - they'll be reused
     }
   }, []);
 
@@ -1284,7 +1319,7 @@ export default function Home() {
     }
     backupRecRef.current = null;
     if (backupStreamRef.current) {
-      backupStreamRef.current.getTracks().forEach(t => t.stop());
+      // Don't stop persistent mic tracks - they'll be reused
       backupStreamRef.current = null;
     }
     setStreamingMsg(null);
@@ -1576,7 +1611,9 @@ export default function Home() {
 
         {authStep === 'email' && (
           <div style={S.card}>
-            <div style={S.cardTitle}>Inserisci la tua email</div>
+            <div style={S.cardTitle}>Accedi al tuo account</div>
+
+            {/* Email magic code */}
             <div style={S.field}>
               <div style={S.label}>Email</div>
               <input style={S.input} type="email" placeholder="tua@email.com" value={authEmail}
@@ -1585,10 +1622,43 @@ export default function Home() {
             </div>
             <button style={{...S.btn, marginTop:8, opacity:authLoading?0.5:1}}
               disabled={authLoading} onClick={sendAuthCode}>
-              {authLoading ? 'Invio...' : 'Invia codice di accesso'}
+              {authLoading ? 'Invio...' : 'Accedi con codice email'}
             </button>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', textAlign:'center', marginTop:10}}>
-              Riceverai un codice a 6 cifre via email
+
+            <div style={{display:'flex', alignItems:'center', gap:12, margin:'16px 0'}}>
+              <div style={{flex:1, height:1, background:'rgba(255,255,255,0.08)'}} />
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.25)'}}>oppure</div>
+              <div style={{flex:1, height:1, background:'rgba(255,255,255,0.08)'}} />
+            </div>
+
+            {/* Google Sign-In */}
+            <button style={{width:'100%', padding:'12px 16px', borderRadius:14, border:'1px solid rgba(255,255,255,0.1)',
+              background:'rgba(255,255,255,0.05)', color:'#fff', fontSize:14, cursor:'pointer',
+              fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+              WebkitTapHighlightColor:'transparent', marginBottom:8}}
+              onClick={() => {
+                setStatus('Google Sign-In richiede configurazione OAuth. Usa email per ora.');
+                setTimeout(() => setStatus(''), 3000);
+              }}>
+              <span style={{fontSize:18}}>G</span>
+              <span>Accedi con Google</span>
+            </button>
+
+            {/* Apple Sign-In */}
+            <button style={{width:'100%', padding:'12px 16px', borderRadius:14, border:'1px solid rgba(255,255,255,0.1)',
+              background:'rgba(255,255,255,0.05)', color:'#fff', fontSize:14, cursor:'pointer',
+              fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
+              WebkitTapHighlightColor:'transparent'}}
+              onClick={() => {
+                setStatus('Apple Sign-In richiede Apple Developer Account. Usa email per ora.');
+                setTimeout(() => setStatus(''), 3000);
+              }}>
+              <span style={{fontSize:18}}>{'\uF8FF'}</span>
+              <span>Accedi con Apple</span>
+            </button>
+
+            <div style={{fontSize:10, color:'rgba(255,255,255,0.2)', textAlign:'center', marginTop:12}}>
+              Nessuna password richiesta
             </div>
           </div>
         )}
