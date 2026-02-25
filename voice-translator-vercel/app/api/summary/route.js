@@ -1,21 +1,48 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { getConversation, updateConversationSummary } from '../../lib/store.js';
+import { getSession, getUser, deductCredits } from '../../lib/users.js';
+
+// GPT-4o-mini pricing
+const GPT4OMINI_INPUT_PER_TOKEN = 0.00000015;
+const GPT4OMINI_OUTPUT_PER_TOKEN = 0.0000006;
+const USD_TO_EUR_CENTS = 92;
 
 export async function POST(req) {
   try {
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const { convId } = await req.json();
+    const { convId, userToken } = await req.json();
 
     if (!convId) return NextResponse.json({ error: 'convId required' }, { status: 400 });
+
+    // Authentication required
+    if (!userToken) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    let billingEmail = null;
+    let isOwnKey = false;
+    let apiKey = process.env.OPENAI_API_KEY;
+
+    const session = await getSession(userToken);
+    if (!session) {
+      return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
+    }
+    billingEmail = session.email;
+    const user = await getUser(billingEmail);
+    if (user?.useOwnKeys && user.apiKeys?.openai) {
+      apiKey = user.apiKeys.openai;
+      isOwnKey = true;
+    }
 
     const conv = await getConversation(convId);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
 
-    // If summary already exists, return it
+    // If summary already exists, return it (no cost)
     if (conv.summary) {
       return NextResponse.json({ summary: conv.summary });
     }
+
+    const openai = new OpenAI({ apiKey });
 
     // Build conversation transcript for GPT
     const members = conv.members.map(m => `${m.name} (${m.lang})`).join(' & ');
@@ -61,10 +88,21 @@ Output ONLY valid JSON, no markdown, no code blocks.`
       max_tokens: 800
     });
 
+    // Calculate and deduct cost
+    const usage = completion.usage || {};
+    const costUsd = (usage.prompt_tokens || 0) * GPT4OMINI_INPUT_PER_TOKEN
+                  + (usage.completion_tokens || 0) * GPT4OMINI_OUTPUT_PER_TOKEN;
+    const costEurCents = costUsd * USD_TO_EUR_CENTS;
+
+    if (billingEmail && !isOwnKey) {
+      try {
+        await deductCredits(billingEmail, Math.max(0.5, costEurCents));
+      } catch (e) { console.error('Summary credit deduct error:', e); }
+    }
+
     let summary;
     try {
       const raw = completion.choices[0].message.content.trim();
-      // Remove potential markdown code blocks
       const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
       summary = JSON.parse(cleaned);
     } catch (parseErr) {

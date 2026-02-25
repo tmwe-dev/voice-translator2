@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
-import { addCost } from '../../lib/store.js';
+import { addCost, getRoom } from '../../lib/store.js';
 import { getSession, getUser, deductCredits, getUserApiKey } from '../../lib/users.js';
 
 // OpenAI pricing (USD) - used for cost estimation
@@ -19,25 +19,46 @@ export async function POST(req) {
     // Determine API key: user's own or platform
     let apiKey = process.env.OPENAI_API_KEY;
     let isOwnKey = false;
-    let userEmail = null;
+    let billingEmail = null; // email to charge credits to
 
     if (userToken) {
+      // Authenticated user (host or user with own account)
       const session = await getSession(userToken);
       if (session) {
-        userEmail = session.email;
-        const user = await getUser(userEmail);
+        billingEmail = session.email;
+        const user = await getUser(billingEmail);
         if (user) {
           if (user.useOwnKeys) {
             const ownKey = user.apiKeys?.openai;
             if (ownKey) { apiKey = ownKey; isOwnKey = true; }
           } else {
-            // Check credits (estimate ~0.5 euro cents per message chunk)
             if (user.credits < 0.1 && !isReview) {
               return NextResponse.json({ error: 'Credito esaurito. Ricarica per continuare.' }, { status: 402 });
             }
           }
         }
       }
+    } else if (roomId) {
+      // Guest in a room - bill to host
+      const room = await getRoom(roomId);
+      if (!room || (room.hostTier === 'FREE')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (room.hostEmail) {
+        billingEmail = room.hostEmail;
+        const hostUser = await getUser(billingEmail);
+        if (hostUser) {
+          if (hostUser.useOwnKeys) {
+            const ownKey = hostUser.apiKeys?.openai;
+            if (ownKey) { apiKey = ownKey; isOwnKey = true; }
+          } else if (hostUser.credits < 0.1 && !isReview) {
+            return NextResponse.json({ error: 'Host credits exhausted' }, { status: 402 });
+          }
+        }
+      }
+    } else {
+      // No token, no room - reject
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const openai = new OpenAI({ apiKey });
@@ -74,11 +95,11 @@ export async function POST(req) {
       try { await addCost(roomId, msgCostUsd); } catch (e) { console.error('Cost tracking error:', e); }
     }
 
-    // Deduct credits if using platform key (only for non-review, non-trivial calls)
+    // Deduct credits from billing email (host or user)
     let remainingCredits = undefined;
-    if (userEmail && !isOwnKey && !isReview) {
+    if (billingEmail && !isOwnKey && !isReview) {
       try {
-        const updatedUser = await deductCredits(userEmail, Math.max(0.1, msgCostEurCents));
+        const updatedUser = await deductCredits(billingEmail, Math.max(0.1, msgCostEurCents));
         if (updatedUser) remainingCredits = updatedUser.credits;
       } catch (e) { console.error('Credit deduct error:', e); }
     }

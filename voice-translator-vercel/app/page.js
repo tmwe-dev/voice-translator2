@@ -352,7 +352,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
+        body: JSON.stringify({ text:'Audio OK!', voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken(), roomId: roomId || undefined })
       });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -403,7 +403,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/tts', {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
+        body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken(), roomId: roomId || undefined })
       });
       if (!res.ok) throw new Error('TTS failed');
       const blob = await res.blob();
@@ -433,7 +433,7 @@ export default function Home() {
   function playWithNewAudio(text, lang, resolve) {
     fetch('/api/tts', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken() })
+      body: JSON.stringify({ text, voice: prefsRef.current.voice || 'nova', userToken: getEffectiveToken(), roomId: roomId || undefined })
     }).then(r => r.blob()).then(blob => {
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
@@ -536,7 +536,8 @@ export default function Home() {
           text,
           voiceId: selectedELVoice || undefined,
           langCode: langCode?.split('-')[0] || undefined,
-          userToken: getEffectiveToken()
+          userToken: getEffectiveToken(),
+          roomId: roomId || undefined
         })
       });
       if (!res.ok) throw new Error('ElevenLabs TTS failed');
@@ -743,7 +744,8 @@ export default function Home() {
       const currentTier = isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO';
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar,
-          context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription, hostTier: currentTier }) });
+          context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription, hostTier: currentTier,
+          hostEmail: userAccount?.email || null }) });
       if (!res.ok) throw new Error('Error');
       const { room } = await res.json();
       roomContextRef.current = { contextId: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription };

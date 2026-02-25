@@ -1,51 +1,76 @@
 import { NextResponse } from 'next/server';
-import { getSession, getUser } from '../../lib/users.js';
+import { getSession, getUser, deductCredits } from '../../lib/users.js';
+import { getRoom } from '../../lib/store.js';
 
-// ElevenLabs TTS API
-// POST /api/tts-elevenlabs
-// Body: { text, voiceId, userToken }
-// Returns: audio/mpeg stream
+// ElevenLabs pricing: ~$0.30 per 1K characters (Creator plan)
+const EL_PER_CHAR_USD = 0.0003;
+const USD_TO_EUR_CENTS = 92;
 
-// ElevenLabs pricing: ~$0.30 per 1K chars (Creator plan overage)
-// Much higher quality than OpenAI TTS-1, with voice cloning support
-
-// Default voices by language (curated for natural conversation)
+// Default voices by language
 const DEFAULT_VOICES = {
-  'it': 'EXAVITQu4vr4xnSDxMaL',  // Sarah - warm female
-  'en': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'es': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'fr': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'de': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'pt': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'zh': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'ja': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'ko': 'EXAVITQu4vr4xnSDxMaL',  // Sarah
-  'default': 'EXAVITQu4vr4xnSDxMaL' // Sarah
+  'it': 'EXAVITQu4vr4xnSDxMaL',
+  'en': 'EXAVITQu4vr4xnSDxMaL',
+  'es': 'EXAVITQu4vr4xnSDxMaL',
+  'fr': 'EXAVITQu4vr4xnSDxMaL',
+  'de': 'EXAVITQu4vr4xnSDxMaL',
+  'pt': 'EXAVITQu4vr4xnSDxMaL',
+  'zh': 'EXAVITQu4vr4xnSDxMaL',
+  'ja': 'EXAVITQu4vr4xnSDxMaL',
+  'ko': 'EXAVITQu4vr4xnSDxMaL',
+  'default': 'EXAVITQu4vr4xnSDxMaL'
 };
 
 export async function POST(req) {
   try {
-    const { text, voiceId, langCode, userToken } = await req.json();
+    const { text, voiceId, langCode, userToken, roomId } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // Resolve ElevenLabs API key
+    // Resolve ElevenLabs API key and billing
     let apiKey = process.env.ELEVENLABS_API_KEY || null;
+    let isOwnKey = false;
+    let billingEmail = null;
 
     if (userToken) {
       const session = await getSession(userToken);
       if (session) {
-        const user = await getUser(session.email);
-        if (user?.useOwnKeys && user.apiKeys?.elevenlabs) {
-          apiKey = user.apiKeys.elevenlabs;
+        billingEmail = session.email;
+        const user = await getUser(billingEmail);
+        if (user) {
+          if (user.useOwnKeys && user.apiKeys?.elevenlabs) {
+            apiKey = user.apiKeys.elevenlabs;
+            isOwnKey = true;
+          } else if (!user.useOwnKeys && user.credits < 2) {
+            // ElevenLabs is expensive - require at least 2 eurocent credits
+            return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
+          }
         }
       }
+    } else if (roomId) {
+      // Guest in a room - bill to host
+      const room = await getRoom(roomId);
+      if (!room || room.hostTier !== 'TOP PRO') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (room.hostEmail) {
+        billingEmail = room.hostEmail;
+        const hostUser = await getUser(billingEmail);
+        if (hostUser) {
+          if (hostUser.useOwnKeys && hostUser.apiKeys?.elevenlabs) {
+            apiKey = hostUser.apiKeys.elevenlabs;
+            isOwnKey = true;
+          } else if (!hostUser.useOwnKeys && hostUser.credits < 2) {
+            return NextResponse.json({ error: 'Host credits exhausted' }, { status: 402 });
+          }
+        }
+      }
+    } else {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     if (!apiKey) {
       return NextResponse.json({ error: 'No ElevenLabs API key configured' }, { status: 400 });
     }
 
-    // Choose voice: explicit voiceId > user preference > language default
     const selectedVoice = voiceId || DEFAULT_VOICES[langCode] || DEFAULT_VOICES.default;
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
@@ -76,6 +101,16 @@ export async function POST(req) {
       );
     }
 
+    // Calculate and deduct cost
+    const elCostUsd = text.trim().length * EL_PER_CHAR_USD;
+    const elCostEurCents = elCostUsd * USD_TO_EUR_CENTS;
+
+    if (billingEmail && !isOwnKey) {
+      try {
+        await deductCredits(billingEmail, Math.max(1, elCostEurCents));
+      } catch (e) { console.error('ElevenLabs credit deduct error:', e); }
+    }
+
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
       headers: {
@@ -89,7 +124,7 @@ export async function POST(req) {
   }
 }
 
-// GET /api/tts-elevenlabs?action=voices - List available voices
+// GET /api/tts-elevenlabs?action=voices - List available voices (requires auth)
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -100,16 +135,18 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
+    if (!userToken) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
     // Resolve API key
     let apiKey = process.env.ELEVENLABS_API_KEY || null;
 
-    if (userToken) {
-      const session = await getSession(userToken);
-      if (session) {
-        const user = await getUser(session.email);
-        if (user?.useOwnKeys && user.apiKeys?.elevenlabs) {
-          apiKey = user.apiKeys.elevenlabs;
-        }
+    const session = await getSession(userToken);
+    if (session) {
+      const user = await getUser(session.email);
+      if (user?.useOwnKeys && user.apiKeys?.elevenlabs) {
+        apiKey = user.apiKeys.elevenlabs;
       }
     }
 
@@ -126,11 +163,10 @@ export async function GET(req) {
     }
 
     const data = await res.json();
-    // Return simplified voice list
     const voices = (data.voices || []).map(v => ({
       id: v.voice_id,
       name: v.name,
-      category: v.category, // premade, cloned, generated
+      category: v.category,
       labels: v.labels || {},
       preview: v.preview_url || null
     }));

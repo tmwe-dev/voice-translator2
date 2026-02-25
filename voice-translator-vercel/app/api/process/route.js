@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
-import { addCost } from '../../lib/store.js';
+import { addCost, getRoom } from '../../lib/store.js';
 import { getSession, getUser, deductCredits } from '../../lib/users.js';
 
 // OpenAI pricing (USD)
@@ -31,13 +31,13 @@ export async function POST(req) {
     // Determine API key and check credits
     let apiKey = process.env.OPENAI_API_KEY;
     let isOwnKey = false;
-    let userEmail = null;
+    let billingEmail = null;
 
     if (userToken) {
       const session = await getSession(userToken);
       if (session) {
-        userEmail = session.email;
-        const user = await getUser(userEmail);
+        billingEmail = session.email;
+        const user = await getUser(billingEmail);
         if (user) {
           if (user.useOwnKeys && user.apiKeys?.openai) {
             apiKey = user.apiKeys.openai;
@@ -47,6 +47,26 @@ export async function POST(req) {
           }
         }
       }
+    } else if (roomId) {
+      // Guest in a room - bill to host
+      const room = await getRoom(roomId);
+      if (!room || room.hostTier === 'FREE') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      if (room.hostEmail) {
+        billingEmail = room.hostEmail;
+        const hostUser = await getUser(billingEmail);
+        if (hostUser) {
+          if (hostUser.useOwnKeys && hostUser.apiKeys?.openai) {
+            apiKey = hostUser.apiKeys.openai;
+            isOwnKey = true;
+          } else if (!hostUser.useOwnKeys && hostUser.credits < 0.5) {
+            return NextResponse.json({ error: 'Host credits exhausted' }, { status: 402 });
+          }
+        }
+      }
+    } else {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     const openai = new OpenAI({ apiKey });
@@ -99,11 +119,11 @@ export async function POST(req) {
       try { await addCost(roomId, msgCostUsd); } catch (e) { console.error('Cost tracking error:', e); }
     }
 
-    // Deduct credits
+    // Deduct credits from billing email (host or user)
     let remainingCredits = undefined;
-    if (userEmail && !isOwnKey) {
+    if (billingEmail && !isOwnKey) {
       try {
-        const updatedUser = await deductCredits(userEmail, Math.max(0.2, msgCostEurCents));
+        const updatedUser = await deductCredits(billingEmail, Math.max(0.2, msgCostEurCents));
         if (updatedUser) remainingCredits = updatedUser.credits;
       } catch (e) { console.error('Credit deduct error:', e); }
     }
