@@ -32,7 +32,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <div style={S.label}>{L('avatar')}</div>
               <button onClick={() => setShowAvatarDropdown(!showAvatarDropdown)}
-                style={{background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
+                style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
                 {showAvatarDropdown ? '✕' : '▼ lista'}
               </button>
             </div>
@@ -42,7 +42,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   <button key={a} onClick={() => { setPrefs({...prefs, avatar:a}); setShowAvatarDropdown(false); }}
                     style={{...S.avatarBtn, width:60, height:74, ...(prefs.avatar===a ? S.avatarSel : {}), padding:2, flexDirection:'column'}}>
                     <img src={a} alt={AVATAR_NAMES[i]} style={{width:46, height:46, objectFit:'contain', borderRadius:12}} />
-                    <span style={{fontSize:9, marginTop:2, color:'rgba(255,255,255,0.6)'}}>{AVATAR_NAMES[i]}</span>
+                    <span style={{fontSize:9, marginTop:2, color:'rgba(232,234,255,0.6)'}}>{AVATAR_NAMES[i]}</span>
                   </button>
                 ))}
               </div>
@@ -57,9 +57,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
                       width:70, height:70, borderRadius:18, overflow:'hidden',
-                      border: isSelected ? '3px solid #f5576c' : '3px solid transparent',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(245,87,108,0.2)' : 'none',
-                      background: isSelected ? 'rgba(245,87,108,0.08)' : 'none',
+                      border: isSelected ? '3px solid #6C63FF' : '3px solid transparent',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)' : 'none',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'none',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition: 'all 0.2s'
                     }}>
@@ -67,7 +67,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     </div>
                     <span style={{
                       fontSize:10, marginTop:4, textAlign:'center',
-                      color: isSelected ? '#f5576c' : 'rgba(255,255,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{AVATAR_NAMES[i]}</span>
                   </div>
@@ -81,7 +81,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <div style={S.label}>{L('yourLang')}</div>
               <button onClick={() => setShowLangDropdown(!showLangDropdown)}
-                style={{background:'none', border:'none', color:'rgba(255,255,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
+                style={{background:'none', border:'none', color:'rgba(232,234,255,0.5)', fontSize:11, cursor:'pointer', fontFamily:FONT, padding:'2px 6px'}}>
                 {showLangDropdown ? '✕' : '▼ lista'}
               </button>
             </div>
@@ -101,9 +101,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
                       width:56, height:56, borderRadius:28, overflow:'hidden',
-                      border: isSelected ? '3px solid #f5576c' : '3px solid transparent',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(245,87,108,0.2)' : 'none',
-                      background: isSelected ? 'rgba(245,87,108,0.08)' : 'rgba(255,255,255,0.05)',
+                      border: isSelected ? '3px solid #6C63FF' : '3px solid transparent',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)' : 'none',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(232,234,255,0.04)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition: 'all 0.2s', fontSize: 28
                     }}>
@@ -112,7 +112,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     <span style={{
                       fontSize:9, marginTop:4, textAlign:'center', maxWidth:76, overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap',
-                      color: isSelected ? '#f5576c' : 'rgba(255,255,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{lang.name}</span>
                   </div>
@@ -186,7 +186,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
               <span style={{...S.label, marginBottom:0}}>{L('autoplayTranslation')}</span>
               <button onClick={() => setPrefs({...prefs, autoPlay:!prefs.autoPlay})}
-                style={{...S.toggle, background:prefs.autoPlay ? '#e94560' : '#333'}}>
+                style={{...S.toggle, background:prefs.autoPlay ? '#6C63FF' : '#333'}}>
                 <div style={{...S.toggleDot, transform:prefs.autoPlay ? 'translateX(20px)' : 'translateX(0)'}} />
               </button>
             </div>
@@ -215,7 +215,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={{fontSize:11, color:'rgba(255,255,255,0.3)', marginBottom:8}}>
                 Account: {userAccount?.email || ''}
               </div>
-              <button style={{...S.settingsBtn, color:'#f5576c', borderColor:'rgba(245,87,108,0.2)'}}
+              <button style={{...S.settingsBtn, color:'#FF6B9D', borderColor:'rgba(255,107,157,0.2)'}}
                 onClick={logout}>
                 {L('logoutAccount')}
               </button>

@@ -55,9 +55,9 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
                       width:70, height:70, borderRadius:18, overflow:'hidden',
-                      border: isSelected ? '3px solid #f5576c' : '3px solid transparent',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(245,87,108,0.2)' : 'none',
-                      background: isSelected ? 'rgba(245,87,108,0.08)' : 'none',
+                      border: isSelected ? '3px solid #6C63FF' : '3px solid transparent',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)' : 'none',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'none',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition: 'all 0.2s'
                     }}>
@@ -65,7 +65,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     </div>
                     <span style={{
                       fontSize:10, marginTop:4, textAlign:'center',
-                      color: isSelected ? '#f5576c' : 'rgba(255,255,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{AVATAR_NAMES[i]}</span>
                   </div>
@@ -99,9 +99,9 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
                       width:56, height:56, borderRadius:28, overflow:'hidden',
-                      border: isSelected ? '3px solid #f5576c' : '3px solid transparent',
-                      boxShadow: isSelected ? '0 0 0 3px rgba(245,87,108,0.2)' : 'none',
-                      background: isSelected ? 'rgba(245,87,108,0.08)' : 'rgba(255,255,255,0.05)',
+                      border: isSelected ? '3px solid #6C63FF' : '3px solid transparent',
+                      boxShadow: isSelected ? '0 0 0 3px rgba(108,99,255,0.2), 0 0 16px rgba(108,99,255,0.1)' : 'none',
+                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(232,234,255,0.04)',
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition: 'all 0.2s', fontSize: 28
                     }}>
@@ -110,7 +110,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <span style={{
                       fontSize:9, marginTop:4, textAlign:'center', maxWidth:76, overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap',
-                      color: isSelected ? '#f5576c' : 'rgba(255,255,255,0.5)',
+                      color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.5)',
                       fontWeight: isSelected ? 600 : 400, fontFamily: FONT
                     }}>{lang.name}</span>
                   </div>
