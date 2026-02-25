@@ -74,11 +74,16 @@ export const THEMES = { DARK: 'dark', LIGHT: 'light' };
 export const FREE_DAILY_LIMIT = 50000;
 
 export const CREDIT_PACKAGES = [
-  { id:'pack_starter', euros:0.90, credits:90, label:'\u20AC0.90', messages:'~180 msg', starter:true },
-  { id:'pack_2', euros:2, credits:200, label:'\u20AC2', messages:'~400 msg' },
-  { id:'pack_5', euros:5, credits:550, label:'\u20AC5', messages:'~1100 msg', bonus:'+10%' },
-  { id:'pack_10', euros:10, credits:1200, label:'\u20AC10', messages:'~2400 msg', bonus:'+20%' },
-  { id:'pack_20', euros:20, credits:2600, label:'\u20AC20', messages:'~5200 msg', bonus:'+30%' },
+  { id:'pack_starter', euros:0.90, credits:90, label:'\u20AC0.90', messages:'~180 msg', starter:true,
+    icon:'\u{1F680}', perks:['creditPerksStarter1','creditPerksStarter2'] },
+  { id:'pack_2', euros:2, credits:200, label:'\u20AC2', messages:'~400 msg',
+    icon:'\u{1F4AC}', perks:['creditPerks2_1','creditPerks2_2'] },
+  { id:'pack_5', euros:5, credits:550, label:'\u20AC5', messages:'~1100 msg', bonus:'+10%', popular:true,
+    icon:'\u{2B50}', perks:['creditPerks5_1','creditPerks5_2','creditPerks5_3'] },
+  { id:'pack_10', euros:10, credits:1200, label:'\u20AC10', messages:'~2400 msg', bonus:'+20%',
+    icon:'\u{1F451}', perks:['creditPerks10_1','creditPerks10_2','creditPerks10_3'], topProTrial:20 },
+  { id:'pack_20', euros:20, credits:2600, label:'\u20AC20', messages:'~5200 msg', bonus:'+30%',
+    icon:'\u{1F48E}', perks:['creditPerks20_1','creditPerks20_2','creditPerks20_3'], topProTrial:50 },
 ];
 
 // Referral system
