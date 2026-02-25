@@ -17,90 +17,137 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   const [showContextDropdown, setShowContextDropdown] = useState(false);
 
   const isGuest = !userToken;
+  const lowCredits = !isGuest && !useOwnKeys && !isTrial && creditBalance < 30;
 
   return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
 
-        {/* ── Profile header — compact ── */}
-        <div style={{display:'flex', alignItems:'center', gap:12, width:'100%', maxWidth:400, marginBottom:14,
-          padding:'12px 16px', borderRadius:18, background:'rgba(108,99,255,0.06)',
-          border:'1px solid rgba(108,99,255,0.1)', backdropFilter:'blur(20px)'}}>
-          <AvatarImg src={prefs.avatar} size={44} style={{borderRadius:14}} />
+        {/* ═══════════════════════════════════════
+            TOP BAR — avatar + name + logout + settings
+           ═══════════════════════════════════════ */}
+        <div style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:14,
+          padding:'10px 14px', borderRadius:18, background:'rgba(108,99,255,0.06)',
+          border:'1px solid rgba(108,99,255,0.1)'}}>
+          <AvatarImg src={prefs.avatar} size={40} style={{borderRadius:12}} />
           <div style={{flex:1, minWidth:0}}>
-            <div style={{fontSize:16, fontWeight:800, letterSpacing:-0.3}}>{prefs.name}</div>
-            <div style={{fontSize:12, color:'rgba(232,234,255,0.5)', display:'flex', alignItems:'center', gap:4, marginTop:1}}>
-              <span style={{fontSize:17}}>{langInfo.flag}</span> <span>{langInfo.name}</span>
-              <span style={{marginLeft:4, fontSize:9, fontWeight:800, padding:'1px 7px', borderRadius:6,
-                background: isGuest ? 'rgba(0,255,148,0.12)' : (isTrial ? 'rgba(0,255,148,0.12)' : 'rgba(108,99,255,0.15)'),
-                color: isGuest ? '#00FF94' : (isTrial ? '#00FF94' : '#6C63FF')}}>
-                {isGuest ? 'FREE' : (isTrial ? 'FREE' : 'PRO')}
+            <div style={{fontSize:15, fontWeight:800, letterSpacing:-0.3}}>{prefs.name}</div>
+            <div style={{fontSize:11, color:'rgba(232,234,255,0.5)', display:'flex', alignItems:'center', gap:4}}>
+              <span style={{fontSize:15}}>{langInfo.flag}</span>
+              <span style={{fontSize:9, fontWeight:800, padding:'1px 7px', borderRadius:6,
+                background: isTrial || isGuest ? 'rgba(0,255,148,0.12)' : 'rgba(108,99,255,0.15)',
+                color: isTrial || isGuest ? '#00FF94' : '#6C63FF'}}>
+                {isGuest || isTrial ? 'FREE' : 'PRO'}
               </span>
+              {useOwnKeys && (
+                <span style={{fontSize:9, padding:'1px 5px', borderRadius:4,
+                  background:'rgba(0,210,255,0.1)', color:'#00D2FF'}}>
+                  <Icon name="key" size={8} color="#00D2FF" /> API
+                </span>
+              )}
             </div>
           </div>
-          <button style={{...S.backBtn, width:40, height:40, borderRadius:12}}
-            onClick={() => setView('settings')}>
-            <Icon name="settings" size={20} color="rgba(232,234,255,0.6)" />
-          </button>
+          {/* Right icons */}
+          <div style={{display:'flex', gap:6}}>
+            {!isGuest && (
+              <button style={{width:36, height:36, borderRadius:10, cursor:'pointer',
+                background:'rgba(255,107,157,0.06)', border:'1px solid rgba(255,107,157,0.12)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent'}}
+                onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}
+                title={L('logoutAccount')}>
+                <Icon name="logout" size={16} color="#FF6B9D" />
+              </button>
+            )}
+            <button style={{width:36, height:36, borderRadius:10, cursor:'pointer',
+              background:'rgba(108,99,255,0.06)', border:'1px solid rgba(108,99,255,0.12)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent'}}
+              onClick={() => setView('settings')}>
+              <Icon name="settings" size={18} color="rgba(232,234,255,0.6)" />
+            </button>
+          </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            MAIN ACTIONS — Create + Join side by side
-           ══════════════════════════════════════════════════ */}
-        <div style={{display:'flex', gap:10, width:'100%', maxWidth:400, marginBottom:12}}>
-
-          {/* ── Create Room ── */}
-          <button style={{
-            flex:1, padding:'18px 10px', borderRadius:20, cursor:'pointer',
-            background:'linear-gradient(135deg, rgba(108,99,255,0.10), rgba(0,210,255,0.05))',
-            border:'1.5px solid rgba(108,99,255,0.20)',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:10,
-            fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-            color:'#E8EAFF'
-          }}
-            onClick={() => { vibrate(); if (isGuest) { setAuthStep('email'); setView('account'); return; } setShowCreatePanel(!showCreatePanel); }}>
-            <div style={{width:56, height:56, borderRadius:16,
-              background:'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(0,210,255,0.10))',
-              border:'1.5px solid rgba(108,99,255,0.25)',
-              display:'flex', alignItems:'center', justifyContent:'center'}}>
-              <Icon name="doorCreate" size={28} color="#6C63FF" />
-            </div>
-            <div style={{textAlign:'center'}}>
-              <div style={{fontWeight:800, fontSize:14, letterSpacing:-0.2}}>{L('createRoom')}</div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:2}}>
-                {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
-                {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+        {/* ═══════════════════════════════════════
+            LOW CREDITS WARNING (only when needed)
+           ═══════════════════════════════════════ */}
+        {lowCredits && (
+          <button style={{width:'100%', maxWidth:400, marginBottom:10, padding:'10px 14px', borderRadius:14,
+            background:'rgba(255,107,157,0.06)', border:'1px solid rgba(255,107,157,0.15)',
+            display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontFamily:FONT,
+            WebkitTapHighlightColor:'transparent'}}
+            onClick={() => { refreshBalance(); setView('credits'); }}>
+            <span style={{fontSize:18}}>{'\u26A0\uFE0F'}</span>
+            <div style={{flex:1, textAlign:'left'}}>
+              <div style={{fontSize:12, fontWeight:700, color:'#FF6B9D'}}>
+                {L('lowCreditsWarning') || 'Crediti in esaurimento'}
+              </div>
+              <div style={{fontSize:10, color:'rgba(232,234,255,0.4)', marginTop:1}}>
+                {formatCredits(creditBalance)} {L('remaining') || 'rimanenti'} — {L('tapToRecharge') || 'tocca per ricaricare'}
               </div>
             </div>
+            <Icon name="zap" size={18} color="#FF6B9D" />
           </button>
+        )}
 
-          {/* ── Join Room ── */}
-          <button style={{
-            flex:1, padding:'18px 10px', borderRadius:20, cursor:'pointer',
-            background:'rgba(0,210,255,0.05)',
-            border:'1.5px solid rgba(0,210,255,0.18)',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:10,
-            fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-            color:'#E8EAFF'
-          }}
-            onClick={() => { vibrate(); if (isGuest) { setAuthStep('email'); setView('account'); return; } setView('join'); }}>
-            <div style={{width:56, height:56, borderRadius:16,
-              background:'rgba(0,210,255,0.10)', border:'1.5px solid rgba(0,210,255,0.22)',
-              display:'flex', alignItems:'center', justifyContent:'center'}}>
-              <Icon name="doorOpen" size={28} color="#00D2FF" />
+        {/* Guest sign in prompt */}
+        {isGuest && (
+          <button style={{width:'100%', maxWidth:400, marginBottom:10, padding:'12px 14px', borderRadius:14,
+            background:'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(0,210,255,0.04))',
+            border:'1.5px solid rgba(108,99,255,0.18)', cursor:'pointer', fontFamily:FONT,
+            display:'flex', alignItems:'center', gap:10, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            onClick={() => { setAuthStep('email'); setView('account'); }}>
+            <Icon name="user" size={22} color="#6C63FF" />
+            <div style={{flex:1, textAlign:'left'}}>
+              <div style={{fontWeight:700, fontSize:13, color:'#6C63FF'}}>{L('loginToCreateRooms')}</div>
+              <div style={{fontSize:10, color:'rgba(232,234,255,0.4)'}}>
+                {L('signInProDesc')}
+              </div>
             </div>
-            <div style={{textAlign:'center'}}>
-              <div style={{fontWeight:800, fontSize:14, letterSpacing:-0.2}}>{L('joinRoom')}</div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:2}}>{L('codeOrQR')}</div>
-            </div>
+            <span style={{fontSize:9, fontWeight:800, padding:'2px 8px', borderRadius:6,
+              background:'rgba(108,99,255,0.15)', color:'#6C63FF'}}>PRO</span>
           </button>
-        </div>
+        )}
 
-        {/* Create Room — expandable config panel */}
+        {/* ═══════════════════════════════════════
+            CREA STANZA — main CTA
+           ═══════════════════════════════════════ */}
+        <button style={{
+          width:'100%', maxWidth:400, padding:'22px 16px', borderRadius:22, cursor:'pointer',
+          background:'linear-gradient(135deg, rgba(108,99,255,0.12), rgba(0,210,255,0.06))',
+          border:'2px solid rgba(108,99,255,0.25)',
+          display:'flex', alignItems:'center', gap:14,
+          fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+          color:'#E8EAFF', marginBottom:12,
+          boxShadow:'0 4px 30px rgba(108,99,255,0.08)'
+        }}
+          onClick={() => {
+            vibrate();
+            if (isGuest) { setAuthStep('email'); setView('account'); return; }
+            setShowCreatePanel(!showCreatePanel);
+          }}>
+          <div style={{width:60, height:60, borderRadius:18,
+            background:'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(0,210,255,0.12))',
+            border:'1.5px solid rgba(108,99,255,0.3)',
+            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+            <Icon name="doorCreate" size={32} color="#6C63FF" />
+          </div>
+          <div style={{flex:1, textAlign:'left'}}>
+            <div style={{fontWeight:800, fontSize:17, letterSpacing:-0.3}}>{L('createRoom')}</div>
+            <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:3}}>
+              {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
+              {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+            </div>
+          </div>
+          <Icon name={showCreatePanel ? 'chevUp' : 'chevDown'} size={20} color="rgba(232,234,255,0.3)" />
+        </button>
+
+        {/* Create Room — expandable config */}
         {showCreatePanel && (
           <div style={{width:'100%', maxWidth:400, padding:'14px', borderRadius:16,
             background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
-            marginBottom:12, backdropFilter:'blur(20px)'}}>
+            marginBottom:12}}>
             <div style={{marginBottom:10, position:'relative'}}>
               <div style={{...S.label, marginBottom:5, fontSize:10}}>{L('context')}</div>
               <button onClick={() => setShowContextDropdown(!showContextDropdown)}
@@ -147,7 +194,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               <input style={{...S.input, fontSize:12, padding:'9px 11px'}} value={roomDescription}
                 onChange={e => setRoomDescription(e.target.value)} placeholder="..." maxLength={150} />
             </div>
-            <button style={{...S.btn, width:'100%', padding:'12px 0', fontSize:15, fontWeight:800,
+            <button style={{...S.btn, width:'100%', padding:'13px 0', fontSize:15, fontWeight:800,
               background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
               boxShadow:'0 4px 24px rgba(108,99,255,0.35)', borderRadius:12}}
               onClick={() => { vibrate(); handleCreateRoom(); }}>
@@ -156,136 +203,30 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════
-            ACCOUNT AREA
-           ══════════════════════════════════════════════════ */}
-
-        {/* Guest → sign in */}
-        {isGuest && (
-          <button style={{
-            width:'100%', maxWidth:400, padding:'14px 16px', borderRadius:18, cursor:'pointer',
-            background:'linear-gradient(135deg, rgba(108,99,255,0.08), rgba(255,107,157,0.05))',
-            border:'1.5px solid rgba(108,99,255,0.18)', marginBottom:14,
-            display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
-            WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
-          }}
-            onClick={() => { setAuthStep('email'); setView('account'); }}>
-            <div style={{width:48, height:48, borderRadius:14,
-              background:'rgba(108,99,255,0.12)', border:'1.5px solid rgba(108,99,255,0.22)',
-              display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-              <Icon name="user" size={26} color="#6C63FF" />
+        {/* ═══════════════════════════════════════
+            INVITE CARD — full width with avatar
+           ═══════════════════════════════════════ */}
+        <button style={{width:'100%', maxWidth:400, marginBottom:8, padding:'12px 14px', borderRadius:16,
+          background:'rgba(0,210,255,0.04)', border:'1px solid rgba(0,210,255,0.1)',
+          display:'flex', alignItems:'center', gap:12, cursor:'pointer', fontFamily:FONT,
+          WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+          onClick={() => setShowShareApp(!showShareApp)}>
+          <img src="/avatars/2.png" alt="" style={{width:42, height:42, objectFit:'contain', borderRadius:12}} />
+          <div style={{flex:1, textAlign:'left'}}>
+            <div style={{fontWeight:700, fontSize:13}}>
+              {L('inviteFriend') || 'Invita un amico'}
             </div>
-            <div style={{flex:1, textAlign:'left'}}>
-              <div style={{fontWeight:700, fontSize:14, color:'#6C63FF'}}>{L('loginToCreateRooms')}</div>
-              <div style={{fontSize:10, color:'rgba(232,234,255,0.4)', marginTop:2}}>{L('signInProDesc')}</div>
-            </div>
-            <span style={{fontSize:9, fontWeight:800, padding:'3px 8px', borderRadius:7,
-              background:'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(0,210,255,0.12))',
-              color:'#6C63FF'}}>PRO</span>
-          </button>
-        )}
-
-        {/* Logged in → balance bar */}
-        {!isGuest && userAccount && (
-          <div style={{width:'100%', maxWidth:400, padding:'12px 16px', borderRadius:16,
-            background:'rgba(108,99,255,0.05)', border:'1px solid rgba(108,99,255,0.1)',
-            display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:14}}>
-            <div style={{display:'flex', alignItems:'center', gap:10}}>
-              <Icon name="credit" size={20} color={useOwnKeys ? '#00D2FF' : creditBalance > 50 ? '#00FF94' : '#FF6B9D'} />
-              <div>
-                <div style={{fontSize:9, color:'rgba(232,234,255,0.35)', fontWeight:600, textTransform:'uppercase', letterSpacing:1}}>
-                  {useOwnKeys ? L('personalApiKeys') : L('credit')}
-                </div>
-                <div style={{fontSize:16, fontWeight:700, color: useOwnKeys ? '#00D2FF' : creditBalance > 50 ? '#00FF94' : '#FF6B9D'}}>
-                  {useOwnKeys ? '\u2713 ' + L('active') : formatCredits(creditBalance)}
-                </div>
-              </div>
-            </div>
-            <div style={{display:'flex', gap:5}}>
-              <button style={{padding:'7px 12px', borderRadius:10, background:'rgba(108,99,255,0.12)',
-                border:'1px solid rgba(108,99,255,0.2)', color:'#6C63FF', fontSize:11, fontWeight:700,
-                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                display:'flex', alignItems:'center', gap:4}}
-                onClick={() => { refreshBalance(); setView('credits'); }}>
-                <Icon name="zap" size={14} color="#6C63FF" />
-                {L('recharge')}
-              </button>
-              <button style={{padding:'7px 10px', borderRadius:10, background:'rgba(0,210,255,0.08)',
-                border:'1px solid rgba(0,210,255,0.15)', color:'#00D2FF', fontSize:11, fontWeight:700,
-                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                display:'flex', alignItems:'center', gap:4}}
-                onClick={() => setView('apikeys')}>
-                <Icon name="key" size={14} color="#00D2FF" />
-                API
-              </button>
+            <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:1}}>
+              {L('inviteFriendDesc') || 'Condividi VoiceTranslate con QR o link'}
             </div>
           </div>
-        )}
+          <Icon name="share" size={20} color="#00D2FF" />
+        </button>
 
-        {/* ══════════════════════════════════════════════════
-            QUICK ACTIONS — compact row
-           ══════════════════════════════════════════════════ */}
-        <div style={{display:'flex', gap:8, justifyContent:'center', width:'100%', maxWidth:400, flexWrap:'wrap'}}>
-          <button style={{
-            flex:'1 1 22%', minWidth:72, padding:'14px 0', borderRadius:16, cursor:'pointer',
-            background:'rgba(0,210,255,0.04)', border:'1px solid rgba(0,210,255,0.10)',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:6,
-            fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
-          }}
-            onClick={() => setShowShareApp(!showShareApp)}>
-            <Icon name="share" size={26} color={showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.45)'} />
-            <span style={{fontSize:10, fontWeight:700, color: showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.40)'}}>
-              {L('shareAppBtn')}
-            </span>
-          </button>
-
-          <button style={{
-            flex:'1 1 22%', minWidth:72, padding:'14px 0', borderRadius:16, cursor:'pointer',
-            background:'rgba(108,99,255,0.03)', border:'1px solid rgba(108,99,255,0.08)',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:6,
-            fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
-          }}
-            onClick={() => { loadHistory(); setView('history'); }}>
-            <Icon name="history" size={26} color="rgba(232,234,255,0.45)" />
-            <span style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.40)'}}>
-              {L('history')}
-            </span>
-          </button>
-
-          <button style={{
-            flex:'1 1 22%', minWidth:72, padding:'14px 0', borderRadius:16, cursor:'pointer',
-            background:'rgba(255,107,157,0.03)', border:'1px solid rgba(255,107,157,0.08)',
-            display:'flex', flexDirection:'column', alignItems:'center', gap:6,
-            fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
-          }}
-            onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
-            <Icon name="graduation" size={26} color="rgba(232,234,255,0.45)" />
-            <span style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.40)'}}>
-              {L('tutorial')}
-            </span>
-          </button>
-
-          {!isGuest && (
-            <button style={{
-              flex:'1 1 22%', minWidth:72, padding:'14px 0', borderRadius:16, cursor:'pointer',
-              background:'rgba(255,107,157,0.03)', border:'1px solid rgba(255,107,157,0.08)',
-              display:'flex', flexDirection:'column', alignItems:'center', gap:6,
-              fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
-            }}
-              onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}>
-              <Icon name="logout" size={26} color="#FF6B9D" />
-              <span style={{fontSize:10, fontWeight:700, color:'#FF6B9D'}}>
-                {L('logoutAccount') || 'Logout'}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {/* ── Share App panel ── */}
+        {/* Share panel (expandable) */}
         {showShareApp && (
-          <div style={{width:'100%', maxWidth:400, marginTop:10, padding:'14px', borderRadius:16,
-            background:'rgba(0,210,255,0.04)', border:'1px solid rgba(0,210,255,0.1)',
-            backdropFilter:'blur(20px)'}}>
+          <div style={{width:'100%', maxWidth:400, marginBottom:8, padding:'14px', borderRadius:16,
+            background:'rgba(0,210,255,0.04)', border:'1px solid rgba(0,210,255,0.1)'}}>
             <div style={{marginBottom:8}}>
               <div style={{...S.label, fontSize:10}}>{L('inviteLangLabel')}</div>
               <select style={{...S.select, fontSize:12}} value={shareAppLang} onChange={e => setShareAppLang(e.target.value)}>
@@ -302,7 +243,6 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               <Icon name="share" size={16} color="#00D2FF" />
               {L('shareLink')}
             </button>
-
             {!isGuest && referralCode && (
               <div style={{marginTop:8, padding:'10px 12px', borderRadius:12,
                 background:'rgba(255,107,157,0.04)', border:'1px solid rgba(255,107,157,0.1)',
@@ -327,6 +267,32 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
             )}
           </div>
         )}
+
+        {/* ═══════════════════════════════════════
+            MINI ACTIONS ROW — history + tutorial
+           ═══════════════════════════════════════ */}
+        <div style={{display:'flex', gap:8, width:'100%', maxWidth:400}}>
+          <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
+            background:'rgba(108,99,255,0.03)', border:'1px solid rgba(108,99,255,0.08)',
+            display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
+            WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            onClick={() => { loadHistory(); setView('history'); }}>
+            <Icon name="history" size={18} color="rgba(232,234,255,0.4)" />
+            <span style={{fontSize:12, fontWeight:600, color:'rgba(232,234,255,0.4)'}}>
+              {L('history')}
+            </span>
+          </button>
+          <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
+            background:'rgba(255,107,157,0.03)', border:'1px solid rgba(255,107,157,0.08)',
+            display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
+            WebkitTapHighlightColor:'transparent', color:'#E8EAFF'}}
+            onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
+            <Icon name="graduation" size={18} color="rgba(232,234,255,0.4)" />
+            <span style={{fontSize:12, fontWeight:600, color:'rgba(232,234,255,0.4)'}}>
+              {L('tutorial')}
+            </span>
+          </button>
+        </div>
 
         {status && <div style={S.statusMsg}>{status}</div>}
 
