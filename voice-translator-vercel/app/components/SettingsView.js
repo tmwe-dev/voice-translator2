@@ -1,6 +1,6 @@
 'use client';
-import { memo, useState } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits } from '../lib/constants.js';
+import { memo, useState, useRef, useCallback } from 'react';
+import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, FONT, FREE_DAILY_LIMIT, formatCredits, getLang } from '../lib/constants.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 
@@ -12,11 +12,77 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [playingVoice, setPlayingVoice] = useState(null);
+  const audioRef = useRef(null);
 
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
 
   const isGuest = !userToken;
+
+  // Voice preview sample texts per language
+  const VOICE_SAMPLES = {
+    it:'Ciao! Sono la tua voce per la traduzione.',
+    en:'Hello! I am your translation voice.',
+    es:'Hola! Soy tu voz de traducción.',
+    fr:'Bonjour! Je suis votre voix de traduction.',
+    de:'Hallo! Ich bin Ihre Übersetzungsstimme.',
+    pt:'Olá! Eu sou sua voz de tradução.',
+    zh:'你好！我是你的翻译语音。',
+    ja:'こんにちは！翻訳音声です。',
+    ko:'안녕하세요! 번역 음성입니다.',
+    th:'สวัสดี! ฉันเป็นเสียงแปลของคุณ',
+    ar:'مرحبا! أنا صوت الترجمة الخاص بك.',
+    hi:'नमस्ते! मैं आपकी अनुवाद आवाज हूं।',
+    ru:'Привет! Я ваш голос для перевода.',
+    tr:'Merhaba! Ben çeviri sesinizim.',
+    vi:'Xin chào! Tôi là giọng dịch của bạn.',
+  };
+
+  const previewVoice = useCallback(async (voiceName) => {
+    // Stop any current playback
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+
+    if (playingVoice === voiceName) { setPlayingVoice(null); return; }
+
+    setPlayingVoice(voiceName);
+    const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
+    const langInfo = getLang(prefs.lang);
+
+    // PRO with own keys or credits → use OpenAI TTS
+    if (userToken && (useOwnKeys || creditBalance > 0)) {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: sampleText, voice: voiceName, userToken: userTokenRef?.current })
+        });
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
+          audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
+          await audio.play();
+          return;
+        }
+      } catch {}
+    }
+
+    // Fallback: browser speechSynthesis (free, works for all)
+    if (typeof speechSynthesis !== 'undefined') {
+      const u = new SpeechSynthesisUtterance(sampleText);
+      u.lang = langInfo.speech;
+      u.rate = 0.9;
+      u.onend = () => setPlayingVoice(null);
+      u.onerror = () => setPlayingVoice(null);
+      speechSynthesis.speak(u);
+    } else {
+      setPlayingVoice(null);
+    }
+  }, [playingVoice, prefs.lang, userToken, useOwnKeys, creditBalance, userTokenRef]);
 
   // API key status helpers
   const hasOpenAI = !!(apiKeyInputs?.openai?.trim());
@@ -287,14 +353,64 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
           <div style={S.field}>
             <div style={S.label}>{L('voiceTranslation')} (OpenAI)</div>
-            <div style={{display:'flex', flexWrap:'wrap', gap:5}}>
-              {VOICES.map(v => (
-                <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
-                  style={{...S.voiceBtn, ...(prefs.voice===v ? S.voiceSel : {})}}>
-                  {v}
-                </button>
-              ))}
+            <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginBottom:8}}>
+              {L('tapToSelect') || 'Tocca per selezionare'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
             </div>
+            <div style={{display:'flex', flexDirection:'column', gap:6}}>
+              {VOICES.map(v => {
+                const isSelected = prefs.voice === v;
+                const isPlaying = playingVoice === v;
+                return (
+                  <div key={v} style={{display:'flex', alignItems:'center', gap:8,
+                    padding:'10px 14px', borderRadius:14, transition:'all 0.15s',
+                    background: isSelected ? 'rgba(108,99,255,0.12)' : 'rgba(232,234,255,0.02)',
+                    border: isSelected ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.06)'}}>
+                    {/* Play/Stop button */}
+                    <button onClick={(e) => { e.stopPropagation(); previewVoice(v); }}
+                      style={{width:36, height:36, borderRadius:10, cursor:'pointer', flexShrink:0,
+                        background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(232,234,255,0.04)',
+                        border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(232,234,255,0.08)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
+                      <Icon name={isPlaying ? 'stop' : 'play'} size={16}
+                        color={isPlaying ? '#FF6B9D' : 'rgba(232,234,255,0.5)'} />
+                    </button>
+                    {/* Voice name — click to select */}
+                    <button onClick={() => setPrefs({...prefs, voice:v})}
+                      style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
+                        fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
+                      <div style={{fontSize:14, fontWeight:isSelected ? 700 : 500,
+                        color: isSelected ? '#6C63FF' : 'rgba(232,234,255,0.6)',
+                        letterSpacing:-0.2}}>
+                        {v.charAt(0).toUpperCase() + v.slice(1)}
+                      </div>
+                      <div style={{fontSize:10, color:'rgba(232,234,255,0.3)', marginTop:1}}>
+                        {v === 'alloy' ? (L('voiceAlloyDesc') || 'Neutra, versatile') :
+                         v === 'echo' ? (L('voiceEchoDesc') || 'Maschile, calda') :
+                         v === 'fable' ? (L('voiceFableDesc') || 'Espressiva, narrativa') :
+                         v === 'onyx' ? (L('voiceOnyxDesc') || 'Profonda, autorevole') :
+                         v === 'nova' ? (L('voiceNovaDesc') || 'Femminile, naturale') :
+                         v === 'shimmer' ? (L('voiceShimmerDesc') || 'Luminosa, chiara') : ''}
+                      </div>
+                    </button>
+                    {/* Selected indicator */}
+                    {isSelected && (
+                      <div style={{width:24, height:24, borderRadius:12,
+                        background:'rgba(108,99,255,0.15)', border:'1.5px solid rgba(108,99,255,0.3)',
+                        display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                        <span style={{fontSize:12, color:'#6C63FF'}}>{'\u2713'}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {!isGuest && (
+              <div style={{fontSize:9, color:'rgba(232,234,255,0.25)', marginTop:6}}>
+                {useOwnKeys ? (L('previewUsesYourKey') || 'Anteprima con la tua chiave OpenAI') :
+                  (L('previewUsesBrowserVoice') || 'Anteprima con voce del browser (la voce reale OpenAI si sente nella stanza)')}
+              </div>
+            )}
           </div>
 
           {/* TOP PRO toggle */}

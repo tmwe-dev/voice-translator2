@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState } from 'react';
+import { memo, useState, useRef, useCallback } from 'react';
 import { LANGS, MODES, CONTEXTS, VOICES, FONT, APP_URL, getLang, vibrate, formatCredits } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import TutorialOverlay from './TutorialOverlay.js';
@@ -15,8 +15,29 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   const langInfo = getLang(prefs.lang);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [playingVoice, setPlayingVoice] = useState(null);
+  const audioRef = useRef(null);
 
   const isGuest = !userToken;
+
+  // Quick voice preview (browser speech only — free, no API cost)
+  const quickPreview = useCallback((voiceName) => {
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+    if (playingVoice === voiceName) { setPlayingVoice(null); return; }
+    setPlayingVoice(voiceName);
+    const samples = { it:'Ciao!', en:'Hello!', es:'Hola!', fr:'Bonjour!', de:'Hallo!', pt:'Olá!',
+      zh:'你好！', ja:'こんにちは！', ko:'안녕하세요!', th:'สวัสดี!', ar:'مرحبا!', hi:'नमस्ते!',
+      ru:'Привет!', tr:'Merhaba!', vi:'Xin chào!' };
+    if (typeof speechSynthesis !== 'undefined') {
+      const u = new SpeechSynthesisUtterance(samples[prefs.lang] || samples.en);
+      u.lang = langInfo.speech;
+      u.rate = 0.9;
+      u.onend = () => setPlayingVoice(null);
+      u.onerror = () => setPlayingVoice(null);
+      speechSynthesis.speak(u);
+    } else { setPlayingVoice(null); }
+  }, [playingVoice, prefs.lang, langInfo.speech]);
 
   return (
     <div style={S.page}>
@@ -82,16 +103,28 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               <div style={{fontSize:10, fontWeight:700, color:'rgba(232,234,255,0.35)', textTransform:'uppercase',
                 letterSpacing:1.2, marginBottom:6}}>{L('voiceTranslation')}</div>
               <div style={{display:'flex', gap:4, flexWrap:'wrap'}}>
-                {VOICES.map(v => (
-                  <button key={v} onClick={() => { const np = {...prefs, voice:v}; setPrefs(np); savePrefs(np); }}
-                    style={{padding:'4px 9px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer',
-                      fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                      background: prefs.voice === v ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.03)',
-                      border: prefs.voice === v ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.05)',
-                      color: prefs.voice === v ? '#6C63FF' : 'rgba(232,234,255,0.4)'}}>
-                    {v}
-                  </button>
-                ))}
+                {VOICES.map(v => {
+                  const isSel = prefs.voice === v;
+                  const isPlaying = playingVoice === v;
+                  return (
+                    <button key={v} onClick={() => { const np = {...prefs, voice:v}; setPrefs(np); savePrefs(np); }}
+                      style={{padding:'4px 9px', borderRadius:8, fontSize:11, fontWeight:600, cursor:'pointer',
+                        fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                        display:'flex', alignItems:'center', gap:4,
+                        background: isSel ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.03)',
+                        border: isSel ? '1.5px solid rgba(108,99,255,0.3)' : '1.5px solid rgba(232,234,255,0.05)',
+                        color: isSel ? '#6C63FF' : 'rgba(232,234,255,0.4)'}}>
+                      {v}
+                      {isSel && (
+                        <span onClick={(e) => { e.stopPropagation(); quickPreview(v); }}
+                          style={{display:'inline-flex', alignItems:'center', marginLeft:2, cursor:'pointer'}}>
+                          <Icon name={isPlaying ? 'stop' : 'play'} size={10}
+                            color={isPlaying ? '#FF6B9D' : '#6C63FF'} />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
             <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:4}}>
