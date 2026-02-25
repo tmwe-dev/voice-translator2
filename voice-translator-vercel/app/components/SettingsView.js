@@ -546,35 +546,73 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               ELEVENLABS — TOP PRO
              ══════════════════════════════════════════════════ */}
           {!isTrial && ((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL) && (() => {
-            // Accent/language → flag mapping
+            // Comprehensive accent/language → flag mapping
             const ACCENT_FLAGS = {
+              // English variants
               american:'\u{1F1FA}\u{1F1F8}', british:'\u{1F1EC}\u{1F1E7}', english:'\u{1F1EC}\u{1F1E7}',
+              australian:'\u{1F1E6}\u{1F1FA}', canadian:'\u{1F1E8}\u{1F1E6}', scottish:'\u{1F1EC}\u{1F1E7}',
+              irish:'\u{1F1EE}\u{1F1EA}', 'new zealand':'\u{1F1F3}\u{1F1FF}', south_african:'\u{1F1FF}\u{1F1E6}',
+              // European
               italian:'\u{1F1EE}\u{1F1F9}', spanish:'\u{1F1EA}\u{1F1F8}', french:'\u{1F1EB}\u{1F1F7}',
-              german:'\u{1F1E9}\u{1F1EA}', portuguese:'\u{1F1E7}\u{1F1F7}', brazilian:'\u{1F1E7}\u{1F1F7}',
+              german:'\u{1F1E9}\u{1F1EA}', dutch:'\u{1F1F3}\u{1F1F1}', belgian:'\u{1F1E7}\u{1F1EA}',
+              swiss:'\u{1F1E8}\u{1F1ED}', austrian:'\u{1F1E6}\u{1F1F9}',
+              portuguese:'\u{1F1F5}\u{1F1F9}', brazilian:'\u{1F1E7}\u{1F1F7}',
+              polish:'\u{1F1F5}\u{1F1F1}', swedish:'\u{1F1F8}\u{1F1EA}', norwegian:'\u{1F1F3}\u{1F1F4}',
+              danish:'\u{1F1E9}\u{1F1F0}', finnish:'\u{1F1EB}\u{1F1EE}',
+              greek:'\u{1F1EC}\u{1F1F7}', czech:'\u{1F1E8}\u{1F1FF}', slovak:'\u{1F1F8}\u{1F1F0}',
+              romanian:'\u{1F1F7}\u{1F1F4}', hungarian:'\u{1F1ED}\u{1F1FA}', bulgarian:'\u{1F1E7}\u{1F1EC}',
+              croatian:'\u{1F1ED}\u{1F1F7}', serbian:'\u{1F1F7}\u{1F1F8}', ukrainian:'\u{1F1FA}\u{1F1E6}',
+              russian:'\u{1F1F7}\u{1F1FA}', estonian:'\u{1F1EA}\u{1F1EA}', latvian:'\u{1F1F1}\u{1F1FB}',
+              lithuanian:'\u{1F1F1}\u{1F1F9}', slovenian:'\u{1F1F8}\u{1F1EE}',
+              // Latin American
+              mexican:'\u{1F1F2}\u{1F1FD}', colombian:'\u{1F1E8}\u{1F1F4}', argentinian:'\u{1F1E6}\u{1F1F7}',
+              chilean:'\u{1F1E8}\u{1F1F1}', peruvian:'\u{1F1F5}\u{1F1EA}', cuban:'\u{1F1E8}\u{1F1FA}',
+              // Asian
               chinese:'\u{1F1E8}\u{1F1F3}', japanese:'\u{1F1EF}\u{1F1F5}', korean:'\u{1F1F0}\u{1F1F7}',
-              arabic:'\u{1F1F8}\u{1F1E6}', hindi:'\u{1F1EE}\u{1F1F3}', indian:'\u{1F1EE}\u{1F1F3}',
-              russian:'\u{1F1F7}\u{1F1FA}', turkish:'\u{1F1F9}\u{1F1F7}', dutch:'\u{1F1F3}\u{1F1F1}',
-              polish:'\u{1F1F5}\u{1F1F1}', swedish:'\u{1F1F8}\u{1F1EA}', thai:'\u{1F1F9}\u{1F1ED}',
-              vietnamese:'\u{1F1FB}\u{1F1F3}', indonesian:'\u{1F1EE}\u{1F1E9}', malay:'\u{1F1F2}\u{1F1FE}',
-              greek:'\u{1F1EC}\u{1F1F7}', czech:'\u{1F1E8}\u{1F1FF}', romanian:'\u{1F1F7}\u{1F1F4}',
-              hungarian:'\u{1F1ED}\u{1F1FA}', finnish:'\u{1F1EB}\u{1F1EE}', irish:'\u{1F1EE}\u{1F1EA}',
-              australian:'\u{1F1E6}\u{1F1FA}', african:'\u{1F30D}', middle_eastern:'\u{1F30D}',
-            };
-            const getVoiceFlag = (v) => {
-              const accent = (v.accent || v.labels?.accent || '').toLowerCase();
-              for (const [key, flag] of Object.entries(ACCENT_FLAGS)) {
-                if (accent.includes(key)) return flag;
-              }
-              return '\u{1F30D}';
+              thai:'\u{1F1F9}\u{1F1ED}', vietnamese:'\u{1F1FB}\u{1F1F3}',
+              indonesian:'\u{1F1EE}\u{1F1E9}', malay:'\u{1F1F2}\u{1F1FE}', filipino:'\u{1F1F5}\u{1F1ED}',
+              hindi:'\u{1F1EE}\u{1F1F3}', indian:'\u{1F1EE}\u{1F1F3}', bengali:'\u{1F1E7}\u{1F1E9}',
+              tamil:'\u{1F1EE}\u{1F1F3}', nepali:'\u{1F1F3}\u{1F1F5}',
+              // Middle East & Africa
+              arabic:'\u{1F1F8}\u{1F1E6}', turkish:'\u{1F1F9}\u{1F1F7}', persian:'\u{1F1EE}\u{1F1F7}',
+              hebrew:'\u{1F1EE}\u{1F1F1}', african:'\u{1F1FF}\u{1F1E6}', middle_eastern:'\u{1F1F8}\u{1F1E6}',
+              nigerian:'\u{1F1F3}\u{1F1EC}', kenyan:'\u{1F1F0}\u{1F1EA}', egyptian:'\u{1F1EA}\u{1F1EC}',
+              // Catch-all for language labels
+              english_us:'\u{1F1FA}\u{1F1F8}', english_uk:'\u{1F1EC}\u{1F1E7}',
+              spanish_mx:'\u{1F1F2}\u{1F1FD}', spanish_es:'\u{1F1EA}\u{1F1F8}',
+              portuguese_br:'\u{1F1E7}\u{1F1F7}', portuguese_pt:'\u{1F1F5}\u{1F1F9}',
+              french_fr:'\u{1F1EB}\u{1F1F7}', french_ca:'\u{1F1E8}\u{1F1E6}',
             };
 
-            // Get unique accents for filter
-            const allAccents = elevenLabsVoices.length > 0
-              ? [...new Set(elevenLabsVoices.map(v => (v.accent || v.labels?.accent || '').toLowerCase()).filter(Boolean))].sort()
+            const getVoiceFlag = (v) => {
+              const accent = (v.accent || v.labels?.accent || '').toLowerCase();
+              const lang = (v.language || v.labels?.language || '').toLowerCase();
+              // Try accent first, then language
+              for (const [key, flag] of Object.entries(ACCENT_FLAGS)) {
+                if (accent.includes(key) || lang.includes(key)) return flag;
+              }
+              // Fallback heuristics for common patterns
+              if (accent.includes('latin') || accent.includes('south america')) return '\u{1F1F2}\u{1F1FD}';
+              if (accent.includes('east') && accent.includes('asia')) return '\u{1F1E8}\u{1F1F3}';
+              if (accent.includes('europe')) return '\u{1F1EA}\u{1F1FA}';
+              return '\u{1F3F3}\u{FE0F}';  // White flag for unknown — NOT globe
+            };
+
+            // Separate personal voices (cloned/professional) from library voices
+            const personalVoices = elevenLabsVoices.filter(v =>
+              v.category === 'cloned' || v.category === 'professional' || v.category === 'generated'
+            );
+            const libraryVoices = elevenLabsVoices.filter(v =>
+              v.category !== 'cloned' && v.category !== 'professional' && v.category !== 'generated'
+            );
+
+            // Get unique accents for filter (from library voices)
+            const allAccents = libraryVoices.length > 0
+              ? [...new Set(libraryVoices.map(v => (v.accent || v.labels?.accent || '').toLowerCase()).filter(Boolean))].sort()
               : [];
 
             // Filter voices
-            const filteredVoices = elevenLabsVoices.filter(v => {
+            const filteredVoices = libraryVoices.filter(v => {
               if (elLangFilter !== 'all') {
                 const accent = (v.accent || v.labels?.accent || '').toLowerCase();
                 if (!accent.includes(elLangFilter)) return false;
@@ -586,7 +624,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               return true;
             });
 
-            // Check if a voice is assigned to any avatar
+            // Check if a voice is assigned to any avatar (= default)
             const voiceToAvatars = {};
             if (avatarVoiceMap) {
               Object.entries(avatarVoiceMap).forEach(([name, vid]) => {
@@ -594,6 +632,92 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 voiceToAvatars[vid].push(name);
               });
             }
+            const defaultVoiceIds = new Set(Object.values(avatarVoiceMap || {}));
+
+            // Render a single voice row
+            const VoiceRow = (v, opts = {}) => {
+              const isSel = selectedELVoice === v.id;
+              const isPlaying = playingVoice === `el_${v.id}`;
+              const flag = getVoiceFlag(v);
+              const gender = (v.gender || v.labels?.gender || '').toLowerCase();
+              const isDefault = defaultVoiceIds.has(v.id);
+              const assignedAvatars = voiceToAvatars[v.id] || [];
+              const isPersonal = opts.personal;
+
+              return (
+                <div key={v.id} style={{display:'flex', alignItems:'center', gap:7,
+                  padding:'7px 10px', borderRadius:11, transition:'all 0.15s',
+                  background: isSel ? 'rgba(255,215,0,0.1)' : isPersonal ? 'rgba(108,99,255,0.05)' : 'rgba(255,255,255,0.02)',
+                  border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(255,255,255,0.04)'}}>
+                  {/* Flag */}
+                  <span style={{fontSize:16, flexShrink:0, lineHeight:1}}>{isPersonal ? '\u{1F3A4}' : flag}</span>
+                  {/* Play */}
+                  <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
+                    style={{width:28, height:28, borderRadius:7, cursor:'pointer', flexShrink:0,
+                      background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
+                      border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.08)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      WebkitTapHighlightColor:'transparent'}}>
+                    <Icon name={isPlaying ? 'stop' : 'play'} size={11}
+                      color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.65)'} />
+                  </button>
+                  {/* Info */}
+                  <button onClick={() => setSelectedELVoice(v.id)}
+                    style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
+                      fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
+                    <div style={{display:'flex', alignItems:'center', gap:4, flexWrap:'wrap'}}>
+                      <span style={{fontSize:12, fontWeight: isSel ? 700 : 500,
+                        color: isSel ? '#ffd700' : 'rgba(255,255,255,0.80)'}}>
+                        {v.name}
+                      </span>
+                      {/* Gender badge */}
+                      {gender && (
+                        <span style={{fontSize:8, padding:'1px 4px', borderRadius:3,
+                          background: gender === 'male' ? 'rgba(0,150,255,0.1)' : 'rgba(255,100,180,0.1)',
+                          color: gender === 'male' ? '#4da6ff' : '#ff6bb4',
+                          border: gender === 'male' ? '1px solid rgba(0,150,255,0.12)' : '1px solid rgba(255,100,180,0.12)',
+                          fontWeight:700}}>
+                          {gender === 'male' ? '\u2642' : '\u2640'}
+                        </span>
+                      )}
+                      {/* Default badge */}
+                      {isDefault && (
+                        <span style={{fontSize:7, padding:'1px 4px', borderRadius:3, fontWeight:800,
+                          background:'rgba(78,205,196,0.12)', border:'1px solid rgba(78,205,196,0.2)',
+                          color:'#4ecdc4', letterSpacing:0.3}}>
+                          DEFAULT
+                        </span>
+                      )}
+                      {/* Personal badge */}
+                      {isPersonal && (
+                        <span style={{fontSize:7, padding:'1px 4px', borderRadius:3, fontWeight:800,
+                          background:'rgba(108,99,255,0.12)', border:'1px solid rgba(108,99,255,0.2)',
+                          color:'#6C63FF', letterSpacing:0.3}}>
+                          {v.category === 'cloned' ? 'CLONED' : v.category === 'professional' ? 'PRO' : 'GENERATED'}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{fontSize:9, color:'rgba(255,255,255,0.50)', marginTop:1}}>
+                      {v.accent || v.labels?.accent || v.language || v.labels?.language || ''}
+                      {(v.age || v.labels?.age) ? ` \u2022 ${v.age || v.labels?.age}` : ''}
+                      {v.useCase ? ` \u2022 ${v.useCase}` : ''}
+                    </div>
+                    {assignedAvatars.length > 0 && (
+                      <div style={{display:'flex', gap:2, marginTop:2}}>
+                        {assignedAvatars.map(name => (
+                          <span key={name} style={{fontSize:7, padding:'1px 4px', borderRadius:3,
+                            background:'rgba(108,99,255,0.08)', border:'1px solid rgba(108,99,255,0.15)',
+                            color:'#6C63FF', fontWeight:700}}>
+                            {name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                  {isSel && <span style={{fontSize:11, color:'#ffd700', flexShrink:0}}>{'\u2713'}</span>}
+                </div>
+              );
+            };
 
             return (
               <div style={{...S.field, padding:'14px', borderRadius:16,
@@ -635,126 +759,78 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   </button>
                 )}
 
-                {/* ElevenLabs voice browser with filters */}
+                {/* ElevenLabs voice browser */}
                 {isTopPro && elevenLabsVoices.length > 0 && (
                   <div>
+                    {/* ── Personal voices section ── */}
+                    {personalVoices.length > 0 && (
+                      <div style={{marginBottom:12}}>
+                        <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:6}}>
+                          <span style={{fontSize:11, fontWeight:700, color:'#6C63FF'}}>{'\u{1F3A4}'} {L('myVoices') || 'Le mie voci'}</span>
+                          <span style={{fontSize:9, padding:'1px 6px', borderRadius:4,
+                            background:'rgba(108,99,255,0.1)', color:'#6C63FF', fontWeight:600}}>
+                            {personalVoices.length}
+                          </span>
+                        </div>
+                        <div style={{display:'flex', flexDirection:'column', gap:3}}>
+                          {personalVoices.map(v => VoiceRow(v, { personal: true }))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Library voices header + filters ── */}
+                    <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:8}}>
+                      <span style={{fontSize:11, fontWeight:700, color:'#ffd700'}}>{'\u{1F4DA}'} {L('voiceLibrary') || 'Libreria voci'}</span>
+                      <span style={{fontSize:9, padding:'1px 6px', borderRadius:4,
+                        background:'rgba(255,215,0,0.1)', color:'#ffd700', fontWeight:600}}>
+                        {filteredVoices.length}/{libraryVoices.length}
+                      </span>
+                    </div>
+
                     {/* ── Filter bar ── */}
-                    <div style={{display:'flex', gap:8, marginBottom:10, flexWrap:'wrap'}}>
-                      {/* Language/accent filter */}
+                    <div style={{display:'flex', gap:6, marginBottom:8, flexWrap:'wrap'}}>
+                      {/* Language/accent filter with flags */}
                       <select value={elLangFilter} onChange={e => setElLangFilter(e.target.value)}
-                        style={{flex:1, minWidth:120, padding:'6px 10px', borderRadius:8, fontSize:11, fontWeight:600,
-                          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,215,0,0.15)',
+                        style={{flex:1, minWidth:110, padding:'5px 8px', borderRadius:7, fontSize:10, fontWeight:600,
+                          background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,215,0,0.12)',
                           color:'#FFFFFF', fontFamily:FONT, cursor:'pointer',
                           WebkitAppearance:'none', MozAppearance:'none'}}>
-                        <option value="all">{'\u{1F30D}'} {L('allLanguages') || 'Tutte le lingue'}</option>
-                        {allAccents.map(a => (
-                          <option key={a} value={a}>{ACCENT_FLAGS[a] || '\u{1F30D}'} {a.charAt(0).toUpperCase() + a.slice(1)}</option>
-                        ))}
+                        <option value="all">{L('allLanguages') || 'Tutte le lingue'}</option>
+                        {allAccents.map(a => {
+                          const fl = ACCENT_FLAGS[a];
+                          const label = a.charAt(0).toUpperCase() + a.slice(1);
+                          return <option key={a} value={a}>{fl ? `${fl} ` : ''}{label}</option>;
+                        })}
                       </select>
                       {/* Gender filter */}
-                      <div style={{display:'flex', gap:0, borderRadius:8, overflow:'hidden',
-                        border:'1px solid rgba(255,215,0,0.15)'}}>
+                      <div style={{display:'flex', gap:0, borderRadius:7, overflow:'hidden',
+                        border:'1px solid rgba(255,215,0,0.12)'}}>
                         {['all','male','female'].map(g => (
                           <button key={g} onClick={() => setElGenderFilter(g)}
-                            style={{padding:'6px 10px', fontSize:11, fontWeight:600, cursor:'pointer',
+                            style={{padding:'5px 9px', fontSize:10, fontWeight:600, cursor:'pointer',
                               fontFamily:FONT, border:'none', WebkitTapHighlightColor:'transparent',
-                              background: elGenderFilter === g ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.05)',
-                              color: elGenderFilter === g ? '#ffd700' : 'rgba(255,255,255,0.65)'}}>
-                            {g === 'all' ? (L('allGenders') || 'Tutti') : g === 'male' ? '\u2642\uFE0F' : '\u2640\uFE0F'}
+                              background: elGenderFilter === g ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.04)',
+                              color: elGenderFilter === g ? '#ffd700' : 'rgba(255,255,255,0.55)'}}>
+                            {g === 'all' ? (L('all') || 'Tutti') : g === 'male' ? '\u2642\uFE0F M' : '\u2640\uFE0F F'}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginBottom:8}}>
-                      {filteredVoices.length}/{elevenLabsVoices.length} {L('voicesAvailable') || 'voci'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
+                    <div style={{fontSize:9, color:'rgba(255,255,255,0.45)', marginBottom:6}}>
+                      {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'} \u2022 {L('tapToSelect') || 'Tocca per selezionare'}
                     </div>
 
                     {/* Voice list */}
-                    <div style={{display:'flex', flexDirection:'column', gap:4, maxHeight:320, overflowY:'auto',
+                    <div style={{display:'flex', flexDirection:'column', gap:3, maxHeight:300, overflowY:'auto',
                       WebkitOverflowScrolling:'touch'}}>
-                      {filteredVoices.map(v => {
-                        const isSel = selectedELVoice === v.id;
-                        const isPlaying = playingVoice === `el_${v.id}`;
-                        const flag = getVoiceFlag(v);
-                        const assignedAvatars = voiceToAvatars[v.id] || [];
-                        return (
-                          <div key={v.id} style={{display:'flex', alignItems:'center', gap:8,
-                            padding:'8px 12px', borderRadius:12, transition:'all 0.15s',
-                            background: isSel ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.03)',
-                            border: isSel ? '1.5px solid rgba(255,215,0,0.25)' : '1.5px solid rgba(255,255,255,0.05)'}}>
-                            {/* Flag */}
-                            <span style={{fontSize:18, flexShrink:0}}>{flag}</span>
-                            {/* Play button */}
-                            <button onClick={(e) => { e.stopPropagation(); previewELVoice(v); }}
-                              style={{width:30, height:30, borderRadius:8, cursor:'pointer', flexShrink:0,
-                                background: isPlaying ? 'rgba(255,107,157,0.15)' : 'rgba(255,255,255,0.05)',
-                                border: isPlaying ? '1.5px solid rgba(255,107,157,0.3)' : '1.5px solid rgba(255,255,255,0.09)',
-                                display:'flex', alignItems:'center', justifyContent:'center',
-                                WebkitTapHighlightColor:'transparent'}}>
-                              <Icon name={isPlaying ? 'stop' : 'play'} size={12}
-                                color={isPlaying ? '#FF6B9D' : 'rgba(255,255,255,0.72)'} />
-                            </button>
-                            {/* Voice info */}
-                            <button onClick={() => setSelectedELVoice(v.id)}
-                              style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
-                                fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
-                              <div style={{display:'flex', alignItems:'center', gap:5}}>
-                                <span style={{fontSize:13, fontWeight: isSel ? 700 : 500,
-                                  color: isSel ? '#ffd700' : 'rgba(255,255,255,0.80)'}}>
-                                  {v.name}
-                                </span>
-                                {/* Gender badge */}
-                                {(v.gender || v.labels?.gender) && (
-                                  <span style={{fontSize:9, padding:'1px 5px', borderRadius:4,
-                                    background: (v.gender || v.labels?.gender) === 'male' ? 'rgba(0,150,255,0.1)' : 'rgba(255,100,180,0.1)',
-                                    color: (v.gender || v.labels?.gender) === 'male' ? '#4da6ff' : '#ff6bb4',
-                                    border: (v.gender || v.labels?.gender) === 'male' ? '1px solid rgba(0,150,255,0.15)' : '1px solid rgba(255,100,180,0.15)'}}>
-                                    {(v.gender || v.labels?.gender) === 'male' ? '\u2642' : '\u2640'}
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>
-                                {v.accent || v.labels?.accent || v.category || ''}
-                                {v.age || v.labels?.age ? ` \u2022 ${v.age || v.labels?.age}` : ''}
-                                {v.useCase ? ` \u2022 ${v.useCase}` : ''}
-                              </div>
-                              {/* Avatar assignment badges */}
-                              {assignedAvatars.length > 0 && (
-                                <div style={{display:'flex', gap:3, marginTop:3}}>
-                                  {assignedAvatars.map(name => (
-                                    <span key={name} style={{fontSize:8, padding:'1px 5px', borderRadius:4,
-                                      background:'rgba(108,99,255,0.1)', border:'1px solid rgba(108,99,255,0.2)',
-                                      color:'#6C63FF', fontWeight:700}}>
-                                      {name}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </button>
-                            {isSel && <span style={{fontSize:12, color:'#ffd700'}}>{'\u2713'}</span>}
-                          </div>
-                        );
-                      })}
+                      {filteredVoices.map(v => VoiceRow(v))}
                       {filteredVoices.length === 0 && (
                         <div style={{textAlign:'center', padding:16, fontSize:12, color:'rgba(255,255,255,0.55)'}}>
                           {L('noVoicesMatch') || 'Nessuna voce corrisponde ai filtri'}
                         </div>
                       )}
                     </div>
-
-                    {/* Avatar voice defaults info */}
-                    {Object.keys(avatarVoiceMap).length > 0 && (
-                      <div style={{marginTop:10, padding:'8px 10px', borderRadius:8,
-                        background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)'}}>
-                        <div style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.65)', marginBottom:4}}>
-                          {L('avatarDefaults') || 'Voci predefinite avatar'}
-                        </div>
-                        <div style={{fontSize:9, color:'rgba(255,255,255,0.55)', lineHeight:1.6}}>
-                          {L('avatarDefaultsHint') || 'Ogni avatar usa una voce dedicata se non ne selezioni una manualmente. Seleziona una voce qui per sovrascrivere il default.'}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
