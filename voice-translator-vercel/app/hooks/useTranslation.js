@@ -780,14 +780,9 @@ export default function useTranslation({
         } catch {}
         backupRecRef.current = null;
       }
-      if (backupStreamRef.current) {
-        backupStreamRef.current.getTracks().forEach(track => {
-          try {
-            track.stop();
-          } catch {}
-        });
-        backupStreamRef.current = null;
-      }
+      // Don't stop backupStream tracks — they are the shared persistentMic stream
+      // managed by useAudioSystem. Stopping them kills the persistent mic.
+      backupStreamRef.current = null;
       backupChunksRef.current = [];
 
       // Clean up classic MediaRecorder
@@ -799,15 +794,9 @@ export default function useTranslation({
       }
       chunksRef.current = [];
 
-      // Clean up VAD stream and timers
-      if (vadStreamRef.current) {
-        vadStreamRef.current.getTracks().forEach(track => {
-          try {
-            track.stop();
-          } catch {}
-        });
-        vadStreamRef.current = null;
-      }
+      // Don't stop vadStream tracks — they are the shared persistentMic stream
+      // managed by useAudioSystem. Stopping them kills the persistent mic.
+      vadStreamRef.current = null;
       if (vadTimerRef.current) {
         cancelAnimationFrame(vadTimerRef.current);
         vadTimerRef.current = null;
