@@ -10,12 +10,21 @@ const TTS_PER_CHAR = 0.000015;                   // $15/1M chars
 export async function POST(req) {
   try {
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const { text, sourceLang, targetLang, sourceLangName, targetLangName, roomId, context, isReview } = await req.json();
+    const { text, sourceLang, targetLang, sourceLangName, targetLangName, roomId, context, isReview, domainContext, description } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
     // Build system prompt with optional context for streaming chunks
     let systemPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.`;
+
+    // Add domain context for better translation quality
+    if (domainContext) {
+      systemPrompt += `\n\n${domainContext}`;
+    }
+    if (description) {
+      systemPrompt += `\nAdditional context about this conversation: ${description}`;
+    }
+
     if (context) {
       systemPrompt += `\n\nPrevious translation context (for continuity): "${context}"`;
     }

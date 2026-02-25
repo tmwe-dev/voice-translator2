@@ -22,6 +22,8 @@ export async function POST(req) {
     const sourceLangName = formData.get('sourceLangName');
     const targetLangName = formData.get('targetLangName');
     const roomId = formData.get('roomId'); // for cost tracking
+    const domainContext = formData.get('domainContext') || '';
+    const description = formData.get('description') || '';
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
@@ -45,12 +47,17 @@ export async function POST(req) {
     const original = transcription.text;
     if (!original.trim()) return NextResponse.json({ original: '', translated: '', cost: 0 });
 
+    // Build system prompt with domain context
+    let sysPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational. Clean up filler words.`;
+    if (domainContext) sysPrompt += `\n\n${domainContext}`;
+    if (description) sysPrompt += `\nAdditional context about this conversation: ${description}`;
+
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational. Clean up filler words.`
+          content: sysPrompt
         },
         { role: 'user', content: original }
       ],
