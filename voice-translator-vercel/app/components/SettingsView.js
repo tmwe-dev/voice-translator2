@@ -216,7 +216,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 Account: {userAccount?.email || ''}
               </div>
               <button style={{...S.settingsBtn, color:'#FF6B9D', borderColor:'rgba(255,107,157,0.2)'}}
-                onClick={logout}>
+                onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}>
                 {L('logoutAccount')}
               </button>
             </div>

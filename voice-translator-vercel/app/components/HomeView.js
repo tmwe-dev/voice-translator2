@@ -1,5 +1,5 @@
 'use client';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { LANGS, MODES, CONTEXTS, FONT, APP_URL, getLang, vibrate, formatCredits } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import TutorialOverlay from './TutorialOverlay.js';
@@ -13,6 +13,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, set
   isTrial, platformHasEL, referralCode, theme, setTheme }) {
 
   const langInfo = getLang(prefs.lang);
+  const [showCreatePanel, setShowCreatePanel] = useState(false);
 
   return (
     <div style={S.page}>
@@ -26,6 +27,13 @@ const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, set
             <div style={{fontSize:15, fontWeight:700, letterSpacing:-0.3}}>{prefs.name}</div>
             <div style={{fontSize:12, color:'rgba(232,234,255,0.5)', display:'flex', alignItems:'center', gap:4}}>
               <span>{langInfo.flag}</span> <span>{langInfo.name}</span>
+              {userToken && userAccount && (
+                <span style={{marginLeft:4, fontSize:9, fontWeight:700, padding:'1px 6px', borderRadius:6,
+                  background: isTrial ? 'rgba(0,255,148,0.12)' : 'rgba(108,99,255,0.15)',
+                  color: isTrial ? '#00FF94' : '#6C63FF'}}>
+                  {isTrial ? 'FREE' : 'PRO'}
+                </span>
+              )}
             </div>
           </div>
           <div style={{display:'flex', gap:6}}>
@@ -37,63 +45,13 @@ const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, set
               onClick={() => { loadHistory(); setView('history'); }}>
               <Icon name="history" size={16} color="rgba(232,234,255,0.6)" />
             </button>
-            {userToken && (
-              <button style={{...S.backBtn, width:34, height:34, borderRadius:10}}
-                onClick={() => setView('apikeys')}>
-                <Icon name="key" size={16} color="rgba(232,234,255,0.6)" />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Mode selector - compact */}
-        <div style={{width:'100%', maxWidth:380, marginBottom:10}}>
-          <div style={{...S.label, marginBottom:6}}>{L('mode')}</div>
-          <div style={{display:'flex', gap:6}}>
-            {MODES.map(m => (
-              <button key={m.id} onClick={() => setSelectedMode(m.id)}
-                style={{...S.modeBtn, ...(selectedMode===m.id ? S.modeBtnSel : {})}}>
-                <span style={{fontSize:18}}>{m.icon}</span>
-                <span style={{fontSize:10, fontWeight:700}}>{L(m.nameKey)}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{fontSize:10, color:'rgba(232,234,255,0.35)', marginTop:4, textAlign:'center'}}>
-            {L(MODES.find(m => m.id === selectedMode)?.descKey)}
-          </div>
-        </div>
-
-        {/* Context + Description - combined row */}
-        <div style={{width:'100%', maxWidth:380, marginBottom:10, display:'flex', gap:8}}>
-          <div style={{flex:'0 0 48%'}}>
-            <div style={{...S.label, marginBottom:5}}>{L('context')}</div>
-            <div style={{position:'relative'}}>
-              <select value={selectedContext} onChange={e => setSelectedContext(e.target.value)}
-                style={{...S.select, fontSize:13, padding:'10px 30px 10px 12px',
-                  appearance:'none', WebkitAppearance:'none'}}>
-                {CONTEXTS.map(c => (
-                  <option key={c.id} value={c.id} style={{background:'#111638', color:'#E8EAFF'}}>
-                    {c.icon} {L(c.nameKey)}
-                  </option>
-                ))}
-              </select>
-              <Icon name="chevDown" size={14} color="rgba(232,234,255,0.4)"
-                style={{position:'absolute', right:10, top:'50%', transform:'translateY(-50%)', pointerEvents:'none'}} />
-            </div>
-          </div>
-          <div style={{flex:1}}>
-            <div style={{...S.label, marginBottom:5}}>{L('descriptionOptional')}</div>
-            <input style={{...S.input, fontSize:13, padding:'10px 12px'}} value={roomDescription}
-              onChange={e => setRoomDescription(e.target.value)}
-              placeholder="..."
-              maxLength={150} />
           </div>
         </div>
 
         {/* Create Room - main CTA */}
         <button style={{...S.bigBtn, background:'linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,210,255,0.08))',
           border:'1px solid rgba(108,99,255,0.25)', marginBottom:8}}
-          onClick={() => { vibrate(); handleCreateRoom(); }}>
+          onClick={() => { vibrate(); setShowCreatePanel(!showCreatePanel); }}>
           <div style={{width:40, height:40, borderRadius:12,
             background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
             display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
@@ -102,13 +60,54 @@ const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, set
           <div style={{flex:1}}>
             <div style={{fontWeight:700, fontSize:14}}>{L('createRoom')}</div>
             <div style={{fontSize:10, color:'rgba(232,234,255,0.5)', marginTop:1}}>
-              {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
-              {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
-              {' \u2022 '}{L(MODES.find(m => m.id === selectedMode)?.nameKey)}
+              {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)} {'\u2022'} {L(MODES.find(m => m.id === selectedMode)?.nameKey)}
             </div>
           </div>
-          <Icon name="zap" size={18} color="#6C63FF" />
+          <Icon name={showCreatePanel ? 'chevUp' : 'chevDown'} size={18} color="rgba(232,234,255,0.4)" />
         </button>
+
+        {/* Create Room - expandable panel with context + description */}
+        {showCreatePanel && (
+          <div style={{width:'100%', maxWidth:380, padding:'14px', borderRadius:14,
+            background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
+            marginBottom:8, backdropFilter:'blur(20px)'}}>
+
+            {/* Context selector */}
+            <div style={{marginBottom:10}}>
+              <div style={{...S.label, marginBottom:6}}>{L('context')}</div>
+              <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
+                {CONTEXTS.map(c => (
+                  <button key={c.id} onClick={() => setSelectedContext(c.id)}
+                    style={{padding:'6px 10px', borderRadius:10, fontSize:12, fontWeight:600,
+                      fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center', gap:4,
+                      WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                      background: selectedContext === c.id ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.04)',
+                      border: selectedContext === c.id ? '1px solid rgba(108,99,255,0.3)' : '1px solid rgba(232,234,255,0.08)',
+                      color: selectedContext === c.id ? '#6C63FF' : 'rgba(232,234,255,0.5)'}}>
+                    <span>{c.icon}</span> {L(c.nameKey)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Description */}
+            <div style={{marginBottom:12}}>
+              <div style={{...S.label, marginBottom:5}}>{L('descriptionOptional')}</div>
+              <input style={{...S.input, fontSize:13, padding:'10px 12px'}} value={roomDescription}
+                onChange={e => setRoomDescription(e.target.value)}
+                placeholder="..."
+                maxLength={150} />
+            </div>
+
+            {/* GO button */}
+            <button style={{...S.btn, width:'100%', background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
+              boxShadow:'0 4px 20px rgba(108,99,255,0.3)'}}
+              onClick={() => { vibrate(); handleCreateRoom(); }}>
+              <Icon name="zap" size={16} color="#fff" style={{marginRight:6}} />
+              {L('createRoom')}
+            </button>
+          </div>
+        )}
 
         {/* Join Room */}
         <button style={{...S.bigBtn, marginBottom:8}} onClick={() => setView('join')}>
@@ -140,14 +139,24 @@ const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, set
                 </div>
               </div>
             </div>
-            <button style={{padding:'6px 12px', borderRadius:10, background:'rgba(108,99,255,0.12)',
-              border:'1px solid rgba(108,99,255,0.25)', color:'#6C63FF', fontSize:11, fontWeight:700,
-              cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-              display:'flex', alignItems:'center', gap:4}}
-              onClick={() => { refreshBalance(); setView('credits'); }}>
-              <Icon name="zap" size={12} color="#6C63FF" />
-              {L('recharge')}
-            </button>
+            <div style={{display:'flex', gap:6}}>
+              <button style={{padding:'6px 10px', borderRadius:10, background:'rgba(108,99,255,0.12)',
+                border:'1px solid rgba(108,99,255,0.25)', color:'#6C63FF', fontSize:11, fontWeight:700,
+                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                display:'flex', alignItems:'center', gap:4}}
+                onClick={() => { refreshBalance(); setView('credits'); }}>
+                <Icon name="zap" size={12} color="#6C63FF" />
+                {L('recharge')}
+              </button>
+              <button style={{padding:'6px 10px', borderRadius:10, background:'rgba(0,210,255,0.08)',
+                border:'1px solid rgba(0,210,255,0.15)', color:'#00D2FF', fontSize:11, fontWeight:700,
+                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                display:'flex', alignItems:'center', gap:4}}
+                onClick={() => setView('apikeys')}>
+                <Icon name="key" size={12} color="#00D2FF" />
+                API
+              </button>
+            </div>
           </div>
         ) : (
           <button style={{width:'100%', maxWidth:380, marginTop:4, padding:'10px 14px', borderRadius:14,

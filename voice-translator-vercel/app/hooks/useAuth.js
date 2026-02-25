@@ -201,11 +201,20 @@ export default function useAuth() {
     }
   }
 
-  function logout() {
+  function logout(opts = {}) {
     localStorage.removeItem('vt-token');
+    if (opts.clearPrefs) {
+      localStorage.removeItem('vt-prefs');
+      localStorage.removeItem('vt-tutorial-done');
+      localStorage.removeItem('vt-free-usage');
+    }
     setUserToken(null);
     setUserAccount(null);
     setCreditBalance(0);
+    setUseOwnKeys(false);
+    setIsTrial(true);
+    setIsTopPro(false);
+    setReferralCode(null);
   }
 
   return {
