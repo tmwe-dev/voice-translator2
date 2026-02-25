@@ -13,7 +13,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   isTrial, platformHasEL, referralCode, theme, setTheme, logout }) {
 
   const langInfo = getLang(prefs.lang);
-  const [showCreatePanel, setShowCreatePanel] = useState(false);
+  const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [showContextDropdown, setShowContextDropdown] = useState(false);
 
   const isGuest = !userToken;
@@ -24,7 +24,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
       <div style={S.scrollCenter}>
 
         {/* ═══════════════════════════════════════
-            TOP BAR — avatar + name + logout + settings
+            TOP BAR — avatar + name + history + tutorial + logout + settings
            ═══════════════════════════════════════ */}
         <div style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:14,
           padding:'10px 14px', borderRadius:18, background:'rgba(108,99,255,0.06)',
@@ -47,24 +47,40 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               )}
             </div>
           </div>
-          {/* Right icons */}
-          <div style={{display:'flex', gap:6}}>
+          {/* Right icons: history, tutorial, logout, settings */}
+          <div style={{display:'flex', gap:4}}>
+            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
+              background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent'}}
+              onClick={() => { loadHistory(); setView('history'); }}
+              title={L('history')}>
+              <Icon name="history" size={15} color="rgba(255,255,255,0.65)" />
+            </button>
+            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
+              background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent'}}
+              onClick={() => { setTutorialStep(0); setShowTutorial(true); }}
+              title={L('tutorial')}>
+              <Icon name="graduation" size={15} color="rgba(255,255,255,0.65)" />
+            </button>
             {!isGuest && (
-              <button style={{width:36, height:36, borderRadius:10, cursor:'pointer',
+              <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
                 background:'rgba(255,107,157,0.06)', border:'1px solid rgba(255,107,157,0.12)',
                 display:'flex', alignItems:'center', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent'}}
                 onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}
                 title={L('logoutAccount')}>
-                <Icon name="logout" size={16} color="#FF6B9D" />
+                <Icon name="logout" size={14} color="#FF6B9D" />
               </button>
             )}
-            <button style={{width:36, height:36, borderRadius:10, cursor:'pointer',
+            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
               background:'rgba(108,99,255,0.06)', border:'1px solid rgba(108,99,255,0.12)',
               display:'flex', alignItems:'center', justifyContent:'center',
               WebkitTapHighlightColor:'transparent'}}
               onClick={() => setView('settings')}>
-              <Icon name="settings" size={18} color="rgba(255,255,255,0.80)" />
+              <Icon name="settings" size={16} color="rgba(255,255,255,0.80)" />
             </button>
           </div>
         </div>
@@ -111,96 +127,180 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         )}
 
         {/* ═══════════════════════════════════════
-            CREA STANZA — main CTA
+            CREA STANZA — standalone icon + text (no card)
            ═══════════════════════════════════════ */}
         <button style={{
-          width:'100%', maxWidth:400, padding:'22px 16px', borderRadius:22, cursor:'pointer',
-          background:'linear-gradient(135deg, rgba(108,99,255,0.12), rgba(0,210,255,0.06))',
-          border:'2px solid rgba(108,99,255,0.25)',
-          display:'flex', alignItems:'center', gap:14,
-          fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-          color:'#FFFFFF', marginBottom:12,
-          boxShadow:'0 4px 30px rgba(108,99,255,0.08)'
+          width:'100%', maxWidth:400, padding:0, cursor:'pointer',
+          background:'transparent', border:'none',
+          display:'flex', alignItems:'center', gap:16,
+          fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+          color:'#FFFFFF', marginBottom:16, marginTop:8,
         }}
           onClick={() => {
             vibrate();
             if (isGuest) { setAuthStep('email'); setView('account'); return; }
-            setShowCreatePanel(!showCreatePanel);
+            setShowCreatePopup(true);
           }}>
-          <div style={{width:60, height:60, borderRadius:18,
-            background:'linear-gradient(135deg, rgba(108,99,255,0.2), rgba(0,210,255,0.12))',
-            border:'1.5px solid rgba(108,99,255,0.3)',
-            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-            <Icon name="doorCreate" size={32} color="#6C63FF" />
+          {/* 3D Door Icon */}
+          <div style={{
+            width:72, height:72, borderRadius:22, flexShrink:0,
+            background:'linear-gradient(145deg, #7B73FF 0%, #5A4FFF 40%, #3D35CC 100%)',
+            boxShadow:'0 8px 32px rgba(108,99,255,0.35), 0 2px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            position:'relative', overflow:'hidden',
+          }}>
+            {/* Shine effect */}
+            <div style={{position:'absolute', top:-10, right:-10, width:40, height:40,
+              background:'radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%)',
+              borderRadius:'50%'}} />
+            {/* Door shape */}
+            <div style={{
+              width:32, height:42, borderRadius:'6px 6px 0 0',
+              background:'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(230,230,255,0.85) 100%)',
+              boxShadow:'0 2px 8px rgba(0,0,0,0.2)',
+              position:'relative',
+            }}>
+              {/* Door handle */}
+              <div style={{width:4, height:4, borderRadius:'50%',
+                background:'#FFD700', boxShadow:'0 0 6px rgba(255,215,0,0.6)',
+                position:'absolute', right:5, top:'50%', transform:'translateY(-50%)'}} />
+              {/* Door panel top line */}
+              <div style={{width:18, height:2, borderRadius:1,
+                background:'rgba(108,99,255,0.15)', position:'absolute', top:8, left:'50%', transform:'translateX(-50%)'}} />
+              {/* Door panel rectangle */}
+              <div style={{width:18, height:14, borderRadius:3,
+                border:'1.5px solid rgba(108,99,255,0.12)',
+                position:'absolute', bottom:6, left:'50%', transform:'translateX(-50%)'}} />
+            </div>
           </div>
           <div style={{flex:1, textAlign:'left'}}>
-            <div style={{fontWeight:800, fontSize:17, letterSpacing:-0.3}}>{L('createRoom')}</div>
-            <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:3}}>
-              {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
-              {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+            <div style={{fontWeight:900, fontSize:20, letterSpacing:-0.5,
+              background:'linear-gradient(135deg, #7B73FF, #00D2FF)',
+              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+              backgroundClip:'text'}}>
+              {L('createRoom')}
+            </div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.58)', marginTop:3, display:'flex', alignItems:'center', gap:4}}>
+              <span style={{fontSize:14}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
+              <span>{L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}</span>
             </div>
           </div>
-          <Icon name={showCreatePanel ? 'chevUp' : 'chevDown'} size={20} color="rgba(255,255,255,0.55)" />
         </button>
 
-        {/* Create Room — expandable config */}
-        {showCreatePanel && (
-          <div style={{width:'100%', maxWidth:400, padding:'14px', borderRadius:16,
-            background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.1)',
-            marginBottom:12}}>
-            <div style={{marginBottom:10, position:'relative'}}>
-              <div style={{...S.label, marginBottom:5, fontSize:10}}>{L('context')}</div>
-              <button onClick={() => setShowContextDropdown(!showContextDropdown)}
-                style={{width:'100%', padding:'10px 12px', borderRadius:12, cursor:'pointer',
-                  background:'rgba(108,99,255,0.08)', border:'1.5px solid rgba(108,99,255,0.2)',
-                  display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-                  WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}>
-                <span style={{fontSize:20}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
-                <span style={{flex:1, textAlign:'left', fontSize:13, fontWeight:600, color:'#6C63FF'}}>
-                  {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
-                </span>
-                <Icon name={showContextDropdown ? 'chevUp' : 'chevDown'} size={16} color="rgba(255,255,255,0.65)" />
-              </button>
-              {showContextDropdown && (
-                <div style={{position:'absolute', top:'100%', left:0, right:0, zIndex:50,
-                  marginTop:4, borderRadius:14, overflow:'hidden',
-                  background:'rgba(15,18,53,0.95)', border:'1.5px solid rgba(108,99,255,0.2)',
-                  backdropFilter:'blur(20px)', boxShadow:'0 8px 32px rgba(0,0,0,0.4)',
-                  maxHeight:260, overflowY:'auto'}}>
-                  {CONTEXTS.map(c => {
-                    const isSel = selectedContext === c.id;
-                    return (
-                      <button key={c.id} onClick={() => { setSelectedContext(c.id); setShowContextDropdown(false); }}
-                        style={{width:'100%', padding:'10px 12px', cursor:'pointer',
-                          display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-                          WebkitTapHighlightColor:'transparent', transition:'all 0.1s',
-                          background: isSel ? 'rgba(108,99,255,0.12)' : 'transparent',
-                          border:'none', borderBottom:'1px solid rgba(255,255,255,0.05)',
-                          color:'#FFFFFF'}}>
-                        <span style={{fontSize:18, width:26, textAlign:'center'}}>{c.icon}</span>
-                        <span style={{flex:1, textAlign:'left', fontSize:12, fontWeight: isSel ? 700 : 500,
-                          color: isSel ? '#6C63FF' : 'rgba(255,255,255,0.80)'}}>
-                          {L(c.nameKey)}
-                        </span>
-                        {isSel && <span style={{fontSize:11, color:'#6C63FF'}}>{'\u2713'}</span>}
-                      </button>
-                    );
-                  })}
+        {/* ═══════════════════════════════════════
+            CREATE ROOM POPUP — modal overlay
+           ═══════════════════════════════════════ */}
+        {showCreatePopup && (
+          <>
+            {/* Backdrop */}
+            <div onClick={() => { setShowCreatePopup(false); setShowContextDropdown(false); }}
+              style={{position:'fixed', inset:0, zIndex:200,
+                background:'rgba(0,0,0,0.6)', backdropFilter:'blur(6px)',
+                animation:'vtFadeIn 0.2s ease-out'}} />
+            {/* Popup */}
+            <div style={{position:'fixed', left:'50%', top:'50%', transform:'translate(-50%, -50%)',
+              zIndex:201, width:'calc(100% - 40px)', maxWidth:380,
+              padding:'22px 18px', borderRadius:24,
+              background:'linear-gradient(160deg, rgba(20,22,50,0.98) 0%, rgba(15,17,40,0.98) 100%)',
+              border:'1.5px solid rgba(108,99,255,0.2)',
+              boxShadow:'0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(108,99,255,0.08)',
+              animation:'vtSlideUp 0.25s ease-out'}}>
+              {/* Header */}
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18}}>
+                <div style={{display:'flex', alignItems:'center', gap:10}}>
+                  <span style={{fontSize:22}}>{'\u{1F6AA}'}</span>
+                  <div style={{fontWeight:800, fontSize:17, letterSpacing:-0.3, color:'#FFFFFF'}}>
+                    {L('createRoom')}
+                  </div>
                 </div>
-              )}
+                <button onClick={() => { setShowCreatePopup(false); setShowContextDropdown(false); }}
+                  style={{width:32, height:32, borderRadius:10, cursor:'pointer',
+                    background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    WebkitTapHighlightColor:'transparent', color:'rgba(255,255,255,0.55)',
+                    fontSize:16, fontWeight:400}}>
+                  {'\u2715'}
+                </button>
+              </div>
+
+              {/* Context selector */}
+              <div style={{marginBottom:14, position:'relative'}}>
+                <div style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)',
+                  textTransform:'uppercase', letterSpacing:1, marginBottom:6}}>
+                  {L('context')}
+                </div>
+                <button onClick={() => setShowContextDropdown(!showContextDropdown)}
+                  style={{width:'100%', padding:'12px 14px', borderRadius:14, cursor:'pointer',
+                    background:'rgba(108,99,255,0.08)', border:'1.5px solid rgba(108,99,255,0.2)',
+                    display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                    WebkitTapHighlightColor:'transparent', color:'#FFFFFF', transition:'all 0.15s'}}>
+                  <span style={{fontSize:22}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
+                  <div style={{flex:1, textAlign:'left'}}>
+                    <span style={{fontSize:14, fontWeight:700, color:'#6C63FF'}}>
+                      {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+                    </span>
+                    <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', marginTop:2}}>
+                      {L(CONTEXTS.find(c => c.id === selectedContext)?.descKey) || ''}
+                    </div>
+                  </div>
+                  <Icon name={showContextDropdown ? 'chevUp' : 'chevDown'} size={16} color="rgba(255,255,255,0.55)" />
+                </button>
+                {showContextDropdown && (
+                  <div style={{position:'absolute', top:'100%', left:0, right:0, zIndex:50,
+                    marginTop:4, borderRadius:16, overflow:'hidden',
+                    background:'rgba(12,14,42,0.98)', border:'1.5px solid rgba(108,99,255,0.2)',
+                    backdropFilter:'blur(20px)', boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
+                    maxHeight:240, overflowY:'auto'}}>
+                    {CONTEXTS.map(c => {
+                      const isSel = selectedContext === c.id;
+                      return (
+                        <button key={c.id} onClick={() => { setSelectedContext(c.id); setShowContextDropdown(false); }}
+                          style={{width:'100%', padding:'10px 14px', cursor:'pointer',
+                            display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                            WebkitTapHighlightColor:'transparent', transition:'all 0.1s',
+                            background: isSel ? 'rgba(108,99,255,0.12)' : 'transparent',
+                            border:'none', borderBottom:'1px solid rgba(255,255,255,0.04)',
+                            color:'#FFFFFF'}}>
+                          <span style={{fontSize:18, width:28, textAlign:'center'}}>{c.icon}</span>
+                          <span style={{flex:1, textAlign:'left', fontSize:13, fontWeight: isSel ? 700 : 500,
+                            color: isSel ? '#6C63FF' : 'rgba(255,255,255,0.80)'}}>
+                            {L(c.nameKey)}
+                          </span>
+                          {isSel && <span style={{fontSize:12, color:'#6C63FF'}}>{'\u2713'}</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.55)',
+                  textTransform:'uppercase', letterSpacing:1, marginBottom:6}}>
+                  {L('descriptionOptional')}
+                </div>
+                <input style={{...S.input, fontSize:13, padding:'11px 14px', borderRadius:14}} value={roomDescription}
+                  onChange={e => setRoomDescription(e.target.value)}
+                  placeholder={L('descriptionPlaceholder') || 'Es. lezione di italiano...'}
+                  maxLength={150} />
+              </div>
+
+              {/* Create button */}
+              <button style={{
+                width:'100%', padding:'16px 0', borderRadius:16, cursor:'pointer', border:'none',
+                background:'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)',
+                boxShadow:'0 6px 24px rgba(108,99,255,0.4), 0 2px 8px rgba(0,0,0,0.2)',
+                color:'#FFFFFF', fontFamily:FONT, fontSize:16, fontWeight:900,
+                letterSpacing:-0.3, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
+              }}
+                onClick={() => { vibrate(); setShowCreatePopup(false); handleCreateRoom(); }}>
+                <span style={{fontSize:20}}>{'\u{1F680}'}</span>
+                {L('createRoom')}
+              </button>
             </div>
-            <div style={{marginBottom:12}}>
-              <div style={{...S.label, marginBottom:4, fontSize:10}}>{L('descriptionOptional')}</div>
-              <input style={{...S.input, fontSize:12, padding:'9px 11px'}} value={roomDescription}
-                onChange={e => setRoomDescription(e.target.value)} placeholder="..." maxLength={150} />
-            </div>
-            <button style={{...S.btn, width:'100%', padding:'13px 0', fontSize:15, fontWeight:800,
-              background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
-              boxShadow:'0 4px 24px rgba(108,99,255,0.35)', borderRadius:12}}
-              onClick={() => { vibrate(); handleCreateRoom(); }}>
-              {L('createRoom')}
-            </button>
-          </div>
+          </>
         )}
 
         {/* ═══════════════════════════════════════
@@ -268,32 +368,6 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           </div>
         )}
 
-        {/* ═══════════════════════════════════════
-            MINI ACTIONS ROW — history + tutorial
-           ═══════════════════════════════════════ */}
-        <div style={{display:'flex', gap:8, width:'100%', maxWidth:400}}>
-          <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
-            background:'rgba(108,99,255,0.03)', border:'1px solid rgba(108,99,255,0.08)',
-            display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-            WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
-            onClick={() => { loadHistory(); setView('history'); }}>
-            <Icon name="history" size={18} color="rgba(255,255,255,0.65)" />
-            <span style={{fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.65)'}}>
-              {L('history')}
-            </span>
-          </button>
-          <button style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer',
-            background:'rgba(255,107,157,0.03)', border:'1px solid rgba(255,107,157,0.08)',
-            display:'flex', alignItems:'center', gap:8, fontFamily:FONT,
-            WebkitTapHighlightColor:'transparent', color:'#FFFFFF'}}
-            onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
-            <Icon name="graduation" size={18} color="rgba(255,255,255,0.65)" />
-            <span style={{fontSize:12, fontWeight:600, color:'rgba(255,255,255,0.65)'}}>
-              {L('tutorial')}
-            </span>
-          </button>
-        </div>
-
         {status && <div style={S.statusMsg}>{status}</div>}
 
         {showTutorial && (
@@ -301,6 +375,18 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
             setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} />
         )}
       </div>
+
+      {/* Popup animations */}
+      <style>{`
+        @keyframes vtFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes vtSlideUp {
+          from { opacity: 0; transform: translate(-50%, -45%); }
+          to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+      `}</style>
     </div>
   );
 });
