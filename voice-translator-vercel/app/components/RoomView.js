@@ -1,8 +1,9 @@
 'use client';
+import { memo } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
-export default function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
+const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
   playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
@@ -305,4 +306,6 @@ export default function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messag
       `}</style>
     </div>
   );
-}
+});
+
+export default RoomView;

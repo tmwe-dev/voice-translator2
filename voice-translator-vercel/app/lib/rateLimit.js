@@ -1,47 +1,46 @@
-// Simple in-memory rate limiter for API routes
-// Uses a Map with automatic cleanup via TTL
-// Note: On Vercel serverless, each instance has its own Map,
-// so this is per-instance rate limiting (still effective for burst protection)
+// Redis-backed rate limiter for API routes
+// Uses Redis with fixed-window counters for distributed rate limiting
+// Works across Vercel serverless instances
 
-const rateLimitMap = new Map();
+import { redis } from './redis.js';
 
-const WINDOW_MS = 60 * 1000; // 1 minute window
-const CLEANUP_INTERVAL = 5 * 60 * 1000; // cleanup every 5 min
-
-// Auto-cleanup old entries
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of rateLimitMap) {
-    if (now - entry.start > WINDOW_MS * 2) {
-      rateLimitMap.delete(key);
-    }
-  }
-}, CLEANUP_INTERVAL);
+const WINDOW_MS = 60 * 1000; // 1 minute window (default)
 
 /**
- * Check rate limit for a given key (IP or email)
+ * Check rate limit for a given key using Redis
+ * Uses a fixed-window counter approach with INCR and EXPIRE
  * @param {string} key - identifier (IP, email, etc.)
- * @param {number} maxRequests - max requests per window
- * @returns {{ allowed: boolean, remaining: number, retryAfterMs: number }}
+ * @param {number} maxRequests - max requests per window (default: 30)
+ * @param {number} windowMs - window duration in milliseconds (default: 60000)
+ * @returns {Promise<{ allowed: boolean, remaining: number, retryAfterMs: number }>}
  */
-export function checkRateLimit(key, maxRequests = 30) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(key);
+export async function checkRateLimit(key, maxRequests = 30, windowMs = WINDOW_MS) {
+  try {
+    const redisKey = `rl:${key}`;
 
-  if (!entry || now - entry.start > WINDOW_MS) {
-    rateLimitMap.set(key, { count: 1, start: now });
+    // Increment counter (returns the new count)
+    const count = await redis('INCR', redisKey);
+
+    // Set TTL on first request in the window
+    if (count === 1) {
+      await redis('EXPIRE', redisKey, Math.ceil(windowMs / 1000));
+    }
+
+    const remaining = Math.max(0, maxRequests - count);
+
+    if (count > maxRequests) {
+      // Get TTL to calculate retry-after
+      const ttl = await redis('TTL', redisKey);
+      const retryAfterMs = ttl > 0 ? ttl * 1000 : windowMs;
+      return { allowed: false, remaining: 0, retryAfterMs };
+    }
+
+    return { allowed: true, remaining, retryAfterMs: 0 };
+  } catch (error) {
+    // Fail-open: if Redis fails, allow the request for availability
+    console.error('Rate limiter error:', error);
     return { allowed: true, remaining: maxRequests - 1, retryAfterMs: 0 };
   }
-
-  entry.count++;
-  const remaining = Math.max(0, maxRequests - entry.count);
-
-  if (entry.count > maxRequests) {
-    const retryAfterMs = WINDOW_MS - (now - entry.start);
-    return { allowed: false, remaining: 0, retryAfterMs };
-  }
-
-  return { allowed: true, remaining, retryAfterMs: 0 };
 }
 
 /**

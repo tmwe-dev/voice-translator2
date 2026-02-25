@@ -40,7 +40,7 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
           )}
           <div style={S.field}>
             <div style={S.label}>{inviteMsgLang ? tI('yourLang') : L('yourLang')}</div>
-            <select style={S.select} value={myLang} onChange={e => setMyLang(e.target.value)}>
+            <select style={S.select} value={myLang} onChange={e => { setMyLang(e.target.value); setPrefs(p => ({...p, lang: e.target.value})); }}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>

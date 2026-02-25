@@ -1,9 +1,11 @@
 'use client';
+import { memo } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES } from '../lib/constants.js';
 
-export default function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
+const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
   setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout, status, theme, setTheme }) {
+  // SettingsView receives 18+ props and re-renders frequently during preference changes
   return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
@@ -139,4 +141,6 @@ export default function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView
       </div>
     </div>
   );
-}
+});
+
+export default SettingsView;

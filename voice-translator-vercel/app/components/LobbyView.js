@@ -1,7 +1,8 @@
 'use client';
+import { memo } from 'react';
 import { LANGS, APP_URL } from '../lib/constants.js';
 
-export default function LobbyView({ L, S, roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
+const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
   shareRoom, leaveRoom, unlockAudio, setView, theme, setTheme }) {
   const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${APP_URL}?room=${roomId}&lang=${inviteLang}`)}` : '';
 
@@ -43,4 +44,6 @@ export default function LobbyView({ L, S, roomId, roomInfo, partnerConnected, in
       </div>
     </div>
   );
-}
+});
+
+export default LobbyView;

@@ -2,6 +2,82 @@
 // Uses shared Redis client from redis.js
 
 import { redis } from './redis.js';
+import crypto from 'crypto';
+
+// =============================================
+// ENCRYPTION HELPERS FOR API KEYS
+// =============================================
+
+/**
+ * Derive encryption key from environment or fallback
+ * Uses ENCRYPTION_KEY env var, or derives from UPSTASH_REDIS_REST_TOKEN if not set
+ */
+function getEncryptionKey() {
+  if (process.env.ENCRYPTION_KEY) {
+    // Should be a 32-byte hex string for AES-256
+    return Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+  }
+
+  // Fallback: derive from UPSTASH token (should only be used for development)
+  if (process.env.UPSTASH_REDIS_REST_TOKEN) {
+    const hash = crypto.createHash('sha256');
+    hash.update(process.env.UPSTASH_REDIS_REST_TOKEN);
+    return hash.digest(); // 32 bytes
+  }
+
+  throw new Error('No encryption key available: set ENCRYPTION_KEY or UPSTASH_REDIS_REST_TOKEN');
+}
+
+/**
+ * Encrypt API keys object using AES-256-GCM
+ * @param {Object} apiKeys - { openai: 'sk-...', anthropic: 'sk-ant-...', etc. }
+ * @returns {Object} { encrypted: <base64>, iv: <base64>, authTag: <base64> }
+ */
+export function encryptKeys(apiKeys) {
+  try {
+    const plaintext = JSON.stringify(apiKeys);
+    const key = getEncryptionKey();
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+
+    let encrypted = cipher.update(plaintext, 'utf8', 'base64');
+    encrypted += cipher.final('base64');
+
+    const authTag = cipher.getAuthTag();
+
+    return {
+      encrypted,
+      iv: iv.toString('base64'),
+      authTag: authTag.toString('base64'),
+    };
+  } catch (error) {
+    console.error('Encryption error:', error);
+    throw error;
+  }
+}
+
+/**
+ * Decrypt API keys object
+ * @param {Object} encryptedData - { encrypted: <base64>, iv: <base64>, authTag: <base64> }
+ * @returns {Object} plaintext API keys object
+ */
+export function decryptKeys(encryptedData) {
+  try {
+    const key = getEncryptionKey();
+    const iv = Buffer.from(encryptedData.iv, 'base64');
+    const authTag = Buffer.from(encryptedData.authTag, 'base64');
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(encryptedData.encrypted, 'base64', 'utf8');
+    decrypted += decipher.final('utf8');
+
+    return JSON.parse(decrypted);
+  } catch (error) {
+    console.error('Decryption error:', error);
+    throw error;
+  }
+}
 
 // =============================================
 // USERS
@@ -33,7 +109,21 @@ export async function getUser(email) {
   if (!email) return null;
   const data = await redis('GET', `user:${email.toLowerCase()}`);
   if (!data) return null;
-  return JSON.parse(data);
+  const user = JSON.parse(data);
+
+  // Decrypt API keys if they exist and are encrypted
+  if (user.apiKeys && user.apiKeys.encrypted) {
+    try {
+      user.apiKeys = decryptKeys(user.apiKeys);
+    } catch (error) {
+      console.error('Failed to decrypt keys for', email, ':', error);
+      // Gradual migration: if decryption fails, treat as unencrypted (empty)
+      user.apiKeys = {};
+    }
+  }
+  // else: apiKeys is either empty or already plaintext (backward compatibility)
+
+  return user;
 }
 
 export async function updateUser(email, updates) {
@@ -97,7 +187,14 @@ export async function saveApiKeys(email, keys, useOwnKeys) {
   const data = await redis('GET', key);
   if (!data) return null;
   const user = JSON.parse(data);
-  user.apiKeys = keys;
+
+  // Encrypt API keys before storing
+  if (keys && Object.keys(keys).length > 0) {
+    user.apiKeys = encryptKeys(keys);
+  } else {
+    user.apiKeys = {};
+  }
+
   user.useOwnKeys = useOwnKeys;
   await redis('SET', key, JSON.stringify(user));
   return user;
@@ -105,6 +202,7 @@ export async function saveApiKeys(email, keys, useOwnKeys) {
 
 export async function getUserApiKey(email, provider = 'openai') {
   const user = await getUser(email);
+  // getUser already handles decryption, so apiKeys is plaintext
   if (!user || !user.useOwnKeys || !user.apiKeys) return null;
   return user.apiKeys[provider] || null;
 }

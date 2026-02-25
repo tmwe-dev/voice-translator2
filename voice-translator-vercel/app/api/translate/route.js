@@ -16,7 +16,7 @@ function getSimpleHash(text) {
 export async function POST(req) {
   try {
     // Rate limit: 30 requests/minute per IP
-    const rl = checkRateLimit(getRateLimitKey(req, 'translate'), 30);
+    const rl = await checkRateLimit(getRateLimitKey(req, 'translate'), 30);
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many requests. Please wait.' }, { status: 429,
         headers: { 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } });

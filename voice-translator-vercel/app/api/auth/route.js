@@ -9,7 +9,7 @@ export async function POST(req) {
 
     // Rate limit auth actions (stricter: 10/min for send-code/verify)
     if (action === 'send-code' || action === 'verify') {
-      const rl = checkRateLimit(getRateLimitKey(req, 'auth'), 10);
+      const rl = await checkRateLimit(getRateLimitKey(req, 'auth'), 10);
       if (!rl.allowed) {
         return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
       }

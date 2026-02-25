@@ -85,6 +85,20 @@ export const CREDIT_PACKAGES = [
 export const REFERRAL_BONUS_NEW = 50;
 export const REFERRAL_BONUS_REFERRER = 100;
 
+// Timing constants
+export const POLLING_INTERVAL = 1200;       // ms between room polls
+export const SILENCE_DELAY = 2000;          // ms of silence before auto-stop
+export const VAD_THRESHOLD = 25;            // Voice Activity Detection volume threshold
+export const REVIEW_INTERVAL = 12000;       // ms between translation reviews
+export const CHUNK_MIN_WORDS = 4;           // words before emitting translation chunk
+export const CHUNK_MAX_WORDS = 12;          // interim words before force-emit
+export const LIVE_TEXT_THROTTLE = 800;      // ms throttle for live text broadcast
+export const TYPING_TIMEOUT = 5000;         // ms before typing indicator expires
+export const SPEAKING_TIMEOUT = 30000;      // ms before speaking indicator expires
+export const STATUS_DISPLAY_TIME = 2000;    // ms to show status messages
+export const BROWSER_SPEAK_MIN_DURATION = 1500;
+export const BROWSER_SPEAK_CHAR_RATE = 80;
+
 // Helpers
 export function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
 

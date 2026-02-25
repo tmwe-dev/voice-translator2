@@ -1,9 +1,10 @@
 'use client';
+import { memo } from 'react';
 import { LANGS, MODES, CONTEXTS, FONT, APP_URL, getLang, vibrate, formatCredits } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import TutorialOverlay from './TutorialOverlay.js';
 
-export default function HomeView({ L, S, prefs, myLang, selectedMode, setSelectedMode, selectedContext,
+const HomeView = memo(function HomeView({ L, S, prefs, myLang, selectedMode, setSelectedMode, selectedContext,
   setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView, userToken,
   userAccount, useOwnKeys, creditBalance, refreshBalance, setAuthStep, loadHistory,
   showShareApp, setShowShareApp, shareAppLang, setShareAppLang, shareApp,
@@ -225,4 +226,6 @@ export default function HomeView({ L, S, prefs, myLang, selectedMode, setSelecte
       </div>
     </div>
   );
-}
+});
+
+export default HomeView;
