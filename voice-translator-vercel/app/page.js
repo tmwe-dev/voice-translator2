@@ -259,7 +259,7 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
+  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
 
   useEffect(() => {
     if (view === 'home' && !localStorage.getItem('vt-tutorial-done')) {
