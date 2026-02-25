@@ -122,6 +122,10 @@ export default function Home() {
   const [creditBalance, setCreditBalance] = useState(0);
   const userTokenRef = useRef(null);
 
+  // Trial mode: free for everyone, no account needed
+  const [isTrial, setIsTrial] = useState(true);
+  const isTrialRef = useRef(true);
+
   const recRef = useRef(null);
   const chunksRef = useRef([]);
   const pollRef = useRef(null);
@@ -163,6 +167,16 @@ export default function Home() {
   useEffect(() => { roomInfoRef.current = roomInfo; }, [roomInfo]);
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { userTokenRef.current = userToken; }, [userToken]);
+  useEffect(() => { isTrialRef.current = isTrial; }, [isTrial]);
+
+  // Update trial mode based on account status
+  useEffect(() => {
+    if (userToken && (creditBalance > 0 || useOwnKeys)) {
+      setIsTrial(false);
+    } else {
+      setIsTrial(true);
+    }
+  }, [userToken, creditBalance, useOwnKeys]);
 
   // =============================================
   // MIC SYSTEM - Request permission once, reuse stream
@@ -283,7 +297,17 @@ export default function Home() {
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
     const { text, lang } = audioQueueRef.current.shift();
-    try { await playTTS(text, lang); } catch (e) { console.error('[Audio] Queue error:', e); }
+    try {
+      if (isTrialRef.current) {
+        // Free TTS via browser speechSynthesis
+        await new Promise(resolve => {
+          browserSpeak(text, lang);
+          setTimeout(resolve, Math.max(1500, text.length * 80));
+        });
+      } else {
+        await playTTS(text, lang);
+      }
+    } catch (e) { console.error('[Audio] Queue error:', e); }
     isPlayingRef.current = false;
     processAudioQueue();
   }
@@ -349,8 +373,59 @@ export default function Home() {
   async function playMessage(msg) {
     unlockAudio();
     setPlayingMsgId(msg.id);
-    await playTTS(msg.translated, getLang(msg.targetLang).speech);
+    if (isTrialRef.current) {
+      // Free TTS via browser speechSynthesis
+      await new Promise(resolve => {
+        browserSpeak(msg.translated, getLang(msg.targetLang).speech);
+        // speechSynthesis doesn't reliably fire onend, use timeout
+        setTimeout(resolve, Math.max(1500, msg.translated.length * 80));
+      });
+    } else {
+      await playTTS(msg.translated, getLang(msg.targetLang).speech);
+    }
     setPlayingMsgId(null);
+  }
+
+  // =============================================
+  // UNIVERSAL TRANSLATE - routes trial (MyMemory) vs pro (OpenAI)
+  // =============================================
+  async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
+    if (isTrialRef.current) {
+      // Free translation via server-side MyMemory proxy
+      const res = await fetch('/api/translate-free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, sourceLang, targetLang })
+      });
+      if (!res.ok) return { translated: text }; // fallback to original
+      return await res.json();
+    }
+    // Pro: OpenAI GPT-4o-mini
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text, sourceLang, targetLang, sourceLangName, targetLangName,
+        roomId, ...options, userToken: userTokenRef.current || undefined
+      })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (res.status === 402) throw new Error(errData.error || 'No credits');
+      throw new Error('Translation error');
+    }
+    return await res.json();
+  }
+
+  // Universal TTS playback
+  async function playUniversalTTS(text, langCode) {
+    if (isTrialRef.current) {
+      return new Promise(resolve => {
+        browserSpeak(text, langCode);
+        setTimeout(resolve, Math.max(1500, text.length * 80));
+      });
+    }
+    return playTTS(text, langCode);
   }
 
   // =============================================
@@ -663,25 +738,27 @@ export default function Home() {
 
     setStreamingMsg({ original: '', translated: '', isStreaming: true });
 
-    // === 1) Start BACKUP MediaRecorder (always captures audio for Whisper fallback) ===
-    try {
-      const stream = await getMicStream();
-      backupStreamRef.current = stream;
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
-      const backup = new MediaRecorder(stream, { mimeType: mime });
-      backup.ondataavailable = e => { if (e.data.size > 0) backupChunksRef.current.push(e.data); };
-      backupRecRef.current = backup;
-      backup.start(250); // collect chunks every 250ms
-      console.log('[Backup] MediaRecorder started alongside SpeechRecognition');
-    } catch (e) {
-      console.error('[Backup] MediaRecorder failed:', e);
-      // If mic access fails entirely, abort
-      setRecording(false);
-      setStatus(t(prefsRef.current?.lang||'en','micError'));
-      streamingModeRef.current = false;
-      setStreamingMsg(null);
-      return;
+    // === 1) Start BACKUP MediaRecorder for Whisper fallback (PRO only - trial skips this) ===
+    if (!isTrialRef.current) {
+      try {
+        const stream = await getMicStream();
+        backupStreamRef.current = stream;
+        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+          : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+        const backup = new MediaRecorder(stream, { mimeType: mime });
+        backup.ondataavailable = e => { if (e.data.size > 0) backupChunksRef.current.push(e.data); };
+        backupRecRef.current = backup;
+        backup.start(250);
+        console.log('[Backup] MediaRecorder started alongside SpeechRecognition');
+      } catch (e) {
+        console.error('[Backup] MediaRecorder failed:', e);
+        // In pro mode, mic failure is fatal. In trial, we still try SpeechRecognition.
+        setRecording(false);
+        setStatus(t(prefsRef.current?.lang||'en','micError'));
+        streamingModeRef.current = false;
+        setStreamingMsg(null);
+        return;
+      }
     }
 
     // === 2) Start SpeechRecognition for streaming chunks ===
@@ -779,33 +856,16 @@ export default function Home() {
     const { myL, otherL } = getTargetLangInfo();
 
     try {
-      // Build context from previous chunks for continuity
       const prevContext = translatedChunksRef.current.slice(-2).join(' ');
-
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: chunk,
-          sourceLang: myL.code,
-          targetLang: otherL.code,
-          sourceLangName: myL.name,
-          targetLangName: otherL.name,
-          roomId,
-          context: prevContext || undefined,
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined,
-          userToken: userTokenRef.current || undefined
-        })
+      const data = await translateUniversal(chunk, myL.code, otherL.code, myL.name, otherL.name, {
+        context: prevContext || undefined,
+        domainContext: roomContextRef.current.contextPrompt || undefined,
+        description: roomContextRef.current.description || undefined
       });
-
-      if (res.ok) {
-        const { translated } = await res.json();
-        if (translated) {
-          translatedChunksRef.current.push(translated);
-          const fullTranslation = translatedChunksRef.current.join(' ');
-          setStreamingMsg(prev => prev ? { ...prev, translated: fullTranslation } : null);
-        }
+      if (data.translated) {
+        translatedChunksRef.current.push(data.translated);
+        const fullTranslation = translatedChunksRef.current.join(' ');
+        setStreamingMsg(prev => prev ? { ...prev, translated: fullTranslation } : null);
       }
     } catch (e) {
       console.error('[Chunk] Translation error:', e);
@@ -831,6 +891,9 @@ export default function Home() {
     const { myL, otherL } = getTargetLangInfo();
 
     try {
+      // Skip post-hoc review in trial mode (saves free API calls)
+      if (isTrialRef.current) return;
+
       const res = await fetch('/api/translate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -919,8 +982,8 @@ export default function Home() {
 
     const allOriginal = allWordsRef.current.trim();
 
-    // === FALLBACK: If SpeechRecognition captured nothing, use Whisper with backup audio ===
-    if (!allOriginal && backupBlob && backupBlob.size > 1000) {
+    // === FALLBACK: If SpeechRecognition captured nothing, use Whisper with backup audio (PRO only) ===
+    if (!allOriginal && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       console.log('[Fallback] SpeechRecognition empty, using Whisper with backup audio (' + backupBlob.size + ' bytes)');
       setStatus(t(prefsRef.current?.lang||'en','translating'));
       setStreamingMsg(null);
@@ -948,32 +1011,40 @@ export default function Home() {
     let finalTranslation = translatedChunksRef.current.join(' ');
 
     try {
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: allOriginal,
-          sourceLang: myL.code,
-          targetLang: otherL.code,
-          sourceLangName: myL.name,
-          targetLangName: otherL.name,
-          roomId,
-          isReview: true,
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined,
-          userToken: userTokenRef.current || undefined
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
+      if (isTrialRef.current) {
+        // In trial, just use the chunk translations as-is (already translated via free API)
+        // Or do one final free translate of the full text
+        const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name);
         if (data.translated) finalTranslation = data.translated;
+      } else {
+        // Pro: OpenAI review pass
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: allOriginal,
+            sourceLang: myL.code,
+            targetLang: otherL.code,
+            sourceLangName: myL.name,
+            targetLangName: otherL.name,
+            roomId,
+            isReview: true,
+            domainContext: roomContextRef.current.contextPrompt || undefined,
+            description: roomContextRef.current.description || undefined,
+            userToken: userTokenRef.current || undefined
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.translated) finalTranslation = data.translated;
+        }
       }
     } catch (e) {
       console.error('[Final] Translation error:', e);
     }
 
-    // If streaming chunks failed but we have original text, use Whisper as last resort
-    if (!finalTranslation && backupBlob && backupBlob.size > 1000) {
+    // If streaming chunks failed but we have original text, use Whisper as last resort (PRO only)
+    if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       console.log('[Fallback] Chunk translations empty, using Whisper');
       setStreamingMsg(null);
       try {
@@ -1071,15 +1142,12 @@ export default function Home() {
       if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
       const otherL = getLang(otherLangCode);
 
-      // Use GPT-4o-mini directly for text translation (no Whisper needed)
-      const res = await fetch('/api/translate', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ text:textInput.trim(), sourceLang:myL.code, targetLang:otherL.code,
-          sourceLangName:myL.name, targetLangName:otherL.name, roomId,
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined,
-          userToken: userTokenRef.current || undefined }) });
-      if (!res.ok) throw new Error('Translation error');
-      const { translated } = await res.json();
+      // Translate text (trial: free API, pro: OpenAI)
+      const data = await translateUniversal(textInput.trim(), myL.code, otherL.code, myL.name, otherL.name, {
+        domainContext: roomContextRef.current.contextPrompt || undefined,
+        description: roomContextRef.current.description || undefined
+      });
+      const translated = data.translated;
       if (translated) {
         const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ roomId, sender:currentPrefs.name, original:textInput.trim(), translated,
@@ -2169,6 +2237,13 @@ export default function Home() {
             <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
             <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
           </button>
+          {/* Trial / Pro badge */}
+          <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
+            background: isTrial ? 'rgba(78,205,196,0.15)' : 'rgba(245,87,108,0.15)',
+            color: isTrial ? '#4ecdc4' : '#f5576c',
+            border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
+            {isTrial ? 'FREE' : 'PRO'}
+          </span>
           {/* Connection status */}
           <div style={{width:8, height:8, borderRadius:4, marginLeft:4,
             background:partnerConnected ? '#4ecdc4' : '#ff6b6b'}} />
@@ -2377,6 +2452,16 @@ export default function Home() {
                 ...(roomMode === 'simultaneous' && isListening ? {background:'linear-gradient(135deg, #e94560, #ff6b35)',
                   boxShadow:'0 0 0 8px rgba(255,107,53,0.15), 0 0 0 18px rgba(255,107,53,0.06)'} : {})}}>
               {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
+            </button>
+          )}
+
+          {/* Trial mode upgrade hint */}
+          {isTrial && (
+            <button onClick={() => { endChatAndSave(); setTimeout(() => setView('account'), 300); }}
+              style={{marginTop:4, padding:'4px 14px', borderRadius:10, border:'1px solid rgba(245,87,108,0.2)',
+                background:'rgba(245,87,108,0.06)', color:'rgba(255,255,255,0.5)', fontSize:10,
+                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}>
+              {'\u2728'} {L('upgradeToPro')}
             </button>
           )}
         </div>
