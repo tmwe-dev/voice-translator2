@@ -5,18 +5,18 @@ import Icon from './Icon.js';
 // Inline perk descriptions (IT + EN fallback)
 const PERKS = {
   it: {
-    creditPerksStarter1: 'Perfetto per provare il servizio',
-    creditPerksStarter2: 'Voce AI OpenAI inclusa',
-    creditPerks2_1: '~400 messaggi tradotti',
-    creditPerks2_2: 'Tutti i contesti disponibili',
-    creditPerks5_1: '~1100 messaggi tradotti',
-    creditPerks5_2: 'Bonus +10% crediti extra',
+    creditPerksStarter1: '~900 msg testo o ~180 msg voce AI',
+    creditPerksStarter2: '6 voci AI OpenAI incluse',
+    creditPerks2_1: '~2000 msg testo o ~400 msg voce AI',
+    creditPerks2_2: 'Tutti i 12 contesti disponibili',
+    creditPerks5_1: '~5500 msg testo o ~1100 msg voce AI',
+    creditPerks5_2: 'Bonus +10% crediti extra (550 crediti)',
     creditPerks5_3: 'Ideale per viaggi e riunioni',
-    creditPerks10_1: '~2400 messaggi tradotti',
-    creditPerks10_2: 'Bonus +20% crediti extra',
+    creditPerks10_1: '~12000 msg testo o ~2400 msg voce AI',
+    creditPerks10_2: 'Bonus +20% crediti extra (1200 crediti)',
     creditPerks10_3: '20 messaggi con voce TOP PRO inclusi',
-    creditPerks20_1: '~5200 messaggi tradotti',
-    creditPerks20_2: 'Bonus +30% crediti extra',
+    creditPerks20_1: '~26000 msg testo o ~5200 msg voce AI',
+    creditPerks20_2: 'Bonus +30% crediti extra (2600 crediti)',
     creditPerks20_3: '50 messaggi con voce TOP PRO inclusi',
     creditsNoExpiry: 'I tuoi crediti non scadono per 24 mesi',
     creditsGuarantee: 'Nessun abbonamento, nessun rinnovo automatico. Paghi solo quello che vuoi, quando vuoi. I crediti restano tuoi.',
@@ -24,20 +24,21 @@ const PERKS = {
     topProBonus: 'msg voce TOP PRO inclusi',
     popularLabel: 'Più scelto',
     bestValue: 'Miglior rapporto',
+    costBreakdown: 'Testo: ~0.1¢/msg \u2022 Voce AI: ~0.5¢/msg',
   },
   en: {
-    creditPerksStarter1: 'Perfect to try the service',
-    creditPerksStarter2: 'OpenAI AI voice included',
-    creditPerks2_1: '~400 translated messages',
-    creditPerks2_2: 'All contexts available',
-    creditPerks5_1: '~1100 translated messages',
-    creditPerks5_2: '+10% bonus credits',
+    creditPerksStarter1: '~900 text msgs or ~180 AI voice msgs',
+    creditPerksStarter2: '6 OpenAI AI voices included',
+    creditPerks2_1: '~2000 text msgs or ~400 AI voice msgs',
+    creditPerks2_2: 'All 12 contexts available',
+    creditPerks5_1: '~5500 text msgs or ~1100 AI voice msgs',
+    creditPerks5_2: '+10% bonus credits (550 credits)',
     creditPerks5_3: 'Ideal for trips and meetings',
-    creditPerks10_1: '~2400 translated messages',
-    creditPerks10_2: '+20% bonus credits',
+    creditPerks10_1: '~12000 text msgs or ~2400 AI voice msgs',
+    creditPerks10_2: '+20% bonus credits (1200 credits)',
     creditPerks10_3: '20 TOP PRO voice messages included',
-    creditPerks20_1: '~5200 translated messages',
-    creditPerks20_2: '+30% bonus credits',
+    creditPerks20_1: '~26000 text msgs or ~5200 AI voice msgs',
+    creditPerks20_2: '+30% bonus credits (2600 credits)',
     creditPerks20_3: '50 TOP PRO voice messages included',
     creditsNoExpiry: 'Your credits never expire for 24 months',
     creditsGuarantee: 'No subscription, no automatic renewal. Pay only what you want, when you want. Credits stay yours.',
@@ -45,6 +46,7 @@ const PERKS = {
     topProBonus: 'TOP PRO voice msgs included',
     popularLabel: 'Most popular',
     bestValue: 'Best value',
+    costBreakdown: 'Text: ~0.1¢/msg \u2022 AI Voice: ~0.5¢/msg',
   }
 };
 
@@ -93,6 +95,17 @@ export default function CreditsView({ L, S, creditBalance, buyCredits, authLoadi
           </div>
           <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', lineHeight:1.5, paddingLeft:46}}>
             {getPerk(pLang, 'creditsGuarantee')}
+          </div>
+        </div>
+
+        {/* Cost breakdown */}
+        <div style={{width:'100%', maxWidth:380, marginBottom:16, padding:'10px 14px', borderRadius:12,
+          background:'rgba(108,99,255,0.04)', border:'1px solid rgba(108,99,255,0.10)', textAlign:'center'}}>
+          <div style={{fontSize:11, color:'rgba(232,234,255,0.50)', fontWeight:600}}>
+            {getPerk(pLang, 'costBreakdown')}
+          </div>
+          <div style={{fontSize:10, color:'rgba(232,234,255,0.30)', marginTop:4}}>
+            {pLang === 'it' ? '1 credito = 1 euro-centesimo' : '1 credit = 1 euro-cent'}
           </div>
         </div>
 

@@ -126,10 +126,10 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', marginBottom:12, paddingLeft:4}}>
                 {[
                   { icon:'\u{1F4AC}', text: isIT ? '~1000 msg testo/giorno' : '~1000 text msgs/day' },
-                  { icon:'\u{1F50A}', text: isIT ? 'Voce browser illimitata' : 'Unlimited browser voice' },
+                  { icon:'\u{1F399}\uFE0F', text: isIT ? 'Input vocale illimitato' : 'Unlimited voice input' },
+                  { icon:'\u{1F50A}', text: isIT ? 'Voce browser gratuita' : 'Free browser voice' },
                   { icon:'\u{1F310}', text: isIT ? '25 lingue disponibili' : '25 languages available' },
                   { icon:'\u{1F3AF}', text: isIT ? '12 contesti tematici' : '12 topic contexts' },
-                  { icon:'\u{1F399}\uFE0F', text: isIT ? 'Input vocale e testo' : 'Voice & text input' },
                   { icon:'\u{267E}\uFE0F', text: isIT ? 'Si rinnova ogni giorno' : 'Renews every day' },
                 ].map((f, i) => (
                   <div key={i} style={{display:'flex', alignItems:'center', gap:6}}>
@@ -178,16 +178,16 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                   <div style={{flex:1}}>
                     <div style={{fontWeight:800, fontSize:16, color:'#6C63FF'}}>{L('starterPack')} — {'\u20AC'}0.90</div>
                     <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:2}}>
-                      {isIT ? 'Voci AI professionali OpenAI' : 'Professional OpenAI AI voices'}
+                      {isIT ? '900 testo o 180 voce AI' : '900 text or 180 AI voice msgs'}
                     </div>
                   </div>
                   <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
-                    { val: '~150', label: isIT ? 'msg vocali' : 'voice msgs', color:'#6C63FF' },
-                    { val: '~225', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
-                    { val: '6', label: isIT ? 'voci AI' : 'AI voices', color:'#00FF94' },
+                    { val: '~900', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
+                    { val: '~180', label: isIT ? 'msg voce AI' : 'AI voice msgs', color:'#6C63FF' },
+                    { val: '6', label: isIT ? 'voci AI OpenAI' : 'OpenAI AI voices', color:'#00FF94' },
                   ].map((s, i) => (
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:'rgba(108,99,255,0.06)',
@@ -223,8 +223,8 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
-                    { val: isIT ? 'fino a 4300' : 'up to 4300', label: isIT ? 'msg vocali' : 'voice msgs', color:'#6C63FF' },
-                    { val: isIT ? 'fino a 6500' : 'up to 6500', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
+                    { val: isIT ? 'fino a 26000' : 'up to 26000', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
+                    { val: isIT ? 'fino a 5200' : 'up to 5200', label: isIT ? 'msg voce AI' : 'AI voice msgs', color:'#6C63FF' },
                     { val: isIT ? 'fino a +30%' : 'up to +30%', label: 'bonus', color:'#FFD700' },
                   ].map((s, i) => (
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
