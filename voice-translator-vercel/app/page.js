@@ -53,6 +53,11 @@ export default function Home() {
   const [freeResetTime, setFreeResetTime] = useState('');
   const freeCharsRef = useRef(0);
 
+  // PWA install + notifications
+  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [notifPermission, setNotifPermission] = useState('default');
+
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -275,10 +280,94 @@ export default function Home() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
-        // Force check for updates immediately
         reg.update().catch(() => {});
       }).catch(err => console.error('SW registration failed:', err));
     }
+  }, []);
+
+  // =============================================
+  // PWA INSTALL PROMPT
+  // =============================================
+  useEffect(() => {
+    // Capture the install prompt event
+    function handleBeforeInstall(e) {
+      e.preventDefault();
+      setDeferredInstallPrompt(e);
+      // Show install banner if not dismissed before
+      if (!localStorage.getItem('vt-install-dismissed')) {
+        setShowInstallBanner(true);
+      }
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+
+    // Check current notification permission
+    if ('Notification' in window) {
+      setNotifPermission(Notification.permission);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  async function handleInstallApp() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const result = await deferredInstallPrompt.userChoice;
+    if (result.outcome === 'accepted') {
+      setShowInstallBanner(false);
+      setDeferredInstallPrompt(null);
+    }
+  }
+
+  function dismissInstallBanner() {
+    setShowInstallBanner(false);
+    localStorage.setItem('vt-install-dismissed', '1');
+  }
+
+  async function requestNotifPermission() {
+    if (!('Notification' in window)) return;
+    const perm = await Notification.requestPermission();
+    setNotifPermission(perm);
+    return perm;
+  }
+
+  // Send local notification when new messages arrive and app is in background
+  const prevMsgCountRef = useRef(0);
+  useEffect(() => {
+    const msgs = roomPolling.messages || [];
+    if (msgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+      const lastMsg = msgs[msgs.length - 1];
+      // Only notify if message is from partner (not from us) and page is hidden
+      if (lastMsg && lastMsg.speaker !== prefs.name && document.hidden) {
+        // Update badge
+        if (navigator.setAppBadge) {
+          const unread = msgs.length - prevMsgCountRef.current;
+          navigator.setAppBadge(unread).catch(() => {});
+        }
+        // Send local notification via SW
+        if (notifPermission === 'granted' && navigator.serviceWorker?.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'SHOW_LOCAL_NOTIFICATION',
+            title: `${lastMsg.speaker || 'Partner'}`,
+            body: lastMsg.translated || lastMsg.original || 'Nuovo messaggio',
+            tag: `vt-msg-${roomPolling.roomId}`,
+            roomId: roomPolling.roomId,
+            url: '/'
+          });
+        }
+      }
+    }
+    prevMsgCountRef.current = msgs.length;
+  }, [roomPolling.messages]);
+
+  // Clear badge when page becomes visible
+  useEffect(() => {
+    function handleVisibility() {
+      if (!document.hidden && navigator.clearAppBadge) {
+        navigator.clearAppBadge().catch(() => {});
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
@@ -481,7 +570,10 @@ export default function Home() {
       shareAppLang={shareAppLang} setShareAppLang={setShareAppLang} shareApp={shareApp}
       showTutorial={showTutorial} setShowTutorial={setShowTutorial} tutorialStep={tutorialStep}
       setTutorialStep={setTutorialStep} status={status} isTrial={auth.isTrial} platformHasEL={auth.platformHasEL}
-      referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} logout={auth.logout} />
+      referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} logout={auth.logout}
+      showInstallBanner={showInstallBanner} handleInstallApp={handleInstallApp} dismissInstallBanner={dismissInstallBanner}
+      notifPermission={notifPermission} requestNotifPermission={requestNotifPermission}
+      deferredInstallPrompt={deferredInstallPrompt} />
   );
 
   if (view === 'join') return (

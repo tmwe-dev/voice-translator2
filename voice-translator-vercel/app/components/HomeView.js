@@ -10,7 +10,9 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   userAccount, useOwnKeys, creditBalance, refreshBalance, setAuthStep, loadHistory,
   showShareApp, setShowShareApp, shareAppLang, setShareAppLang, shareApp,
   showTutorial, setShowTutorial, tutorialStep, setTutorialStep, status,
-  isTrial, platformHasEL, referralCode, theme, setTheme, logout }) {
+  isTrial, platformHasEL, referralCode, theme, setTheme, logout,
+  showInstallBanner, handleInstallApp, dismissInstallBanner,
+  notifPermission, requestNotifPermission, deferredInstallPrompt }) {
 
   const langInfo = getLang(prefs.lang);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -104,6 +106,62 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               </div>
             </div>
             <Icon name="zap" size={18} color="#FF6B9D" />
+          </button>
+        )}
+
+        {/* PWA Install Banner */}
+        {showInstallBanner && deferredInstallPrompt && (
+          <div style={{width:'100%', maxWidth:400, marginBottom:10, padding:'12px 14px', borderRadius:14,
+            background:'linear-gradient(135deg, rgba(78,205,196,0.08), rgba(108,99,255,0.06))',
+            border:'1.5px solid rgba(78,205,196,0.2)', fontFamily:FONT,
+            display:'flex', alignItems:'center', gap:10, animation:'vtFadeIn 0.3s ease'}}>
+            <div style={{width:40, height:40, borderRadius:10,
+              background:'linear-gradient(135deg, #4ecdc4, #6C63FF)',
+              display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+              <span style={{fontSize:20}}>{'📲'}</span>
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:700, fontSize:12, color:'#4ecdc4'}}>
+                {L('installApp') || 'Installa VoiceTranslate'}
+              </div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.60)', marginTop:1}}>
+                {L('installAppDesc') || 'Aggiungi al desktop per accesso rapido e notifiche'}
+              </div>
+            </div>
+            <div style={{display:'flex', gap:4, flexShrink:0}}>
+              <button onClick={handleInstallApp}
+                style={{padding:'6px 12px', borderRadius:8, border:'none', cursor:'pointer',
+                  background:'linear-gradient(135deg, #4ecdc4, #6C63FF)', color:'#fff',
+                  fontSize:10, fontWeight:700, fontFamily:FONT}}>
+                {L('install') || 'Installa'}
+              </button>
+              <button onClick={dismissInstallBanner}
+                style={{padding:'6px 8px', borderRadius:8, border:'1px solid rgba(255,255,255,0.1)',
+                  background:'transparent', color:'rgba(255,255,255,0.4)', cursor:'pointer',
+                  fontSize:12, fontFamily:FONT}}>
+                {'\u2716'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Notification permission prompt (only if app installed but notifications not granted) */}
+        {!showInstallBanner && notifPermission === 'default' && !isGuest && (
+          <button style={{width:'100%', maxWidth:400, marginBottom:10, padding:'10px 14px', borderRadius:14,
+            background:'rgba(255,170,0,0.06)', border:'1px solid rgba(255,170,0,0.15)',
+            display:'flex', alignItems:'center', gap:10, cursor:'pointer', fontFamily:FONT,
+            WebkitTapHighlightColor:'transparent'}}
+            onClick={requestNotifPermission}>
+            <span style={{fontSize:18}}>{'🔔'}</span>
+            <div style={{flex:1, textAlign:'left'}}>
+              <div style={{fontSize:12, fontWeight:700, color:'#ffaa00'}}>
+                {L('enableNotifications') || 'Attiva le notifiche'}
+              </div>
+              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', marginTop:1}}>
+                {L('enableNotifDesc') || 'Ricevi avvisi quando arrivano messaggi nella stanza'}
+              </div>
+            </div>
+            <Icon name="bell" size={18} color="#ffaa00" />
           </button>
         )}
 
