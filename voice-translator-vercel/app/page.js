@@ -1,5 +1,8 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { t, mapLang } from './lib/i18n.js';
+
+const APP_URL = 'https://voice-translator2.vercel.app';
 
 const LANGS = [
   { code:'it', name:'Italiano', flag:'\u{1F1EE}\u{1F1F9}', speech:'it-IT' },
@@ -35,41 +38,42 @@ const AVATAR_NAMES = ['Donna Pro','Uomo Baffi','Ragazza','Ragazzo','Donna Riccia
   'Gatto','Cane','Robot','Orso','Donna Rossa','Barba','Ragazza Rosa','Alieno'];
 
 const MODES = [
-  { id:'conversation', name:'Conversazione', icon:'\u{1F4AC}', desc:'Tocca per parlare, tocca per fermare' },
-  { id:'classroom', name:'Classroom', icon:'\u{1F3EB}', desc:'Host parla, gli altri ascoltano' },
-  { id:'freetalk', name:'Free Talk', icon:'\u{1F389}', desc:'Microfono aperto, traduzione automatica' },
+  { id:'conversation', nameKey:'conversation', icon:'\u{1F4AC}', descKey:'conversationDesc' },
+  { id:'classroom', nameKey:'classroom', icon:'\u{1F3EB}', descKey:'classroomDesc' },
+  { id:'freetalk', nameKey:'freeTalk', icon:'\u{1F389}', descKey:'freeTalkDesc' },
 ];
 
 const CONTEXTS = [
-  { id:'general', icon:'\u{1F30D}', name:'Generale', desc:'Conversazione libera senza contesto specifico',
-    prompt:'' },
-  { id:'tourism', icon:'\u{1F3D6}\uFE0F', name:'Turismo', desc:'Viaggi, hotel, ristoranti, indicazioni, trasporti',
+  { id:'general', icon:'\u{1F30D}', nameKey:'ctxGeneral', descKey:'ctxGeneralDesc', prompt:'' },
+  { id:'tourism', icon:'\u{1F3D6}\uFE0F', nameKey:'ctxTourism', descKey:'ctxTourismDesc',
     prompt:'This is a tourism/travel conversation. Use travel terminology: directions, accommodation, sightseeing, transportation, restaurants, bookings. Keep translations practical and clear for travelers.' },
-  { id:'medical', icon:'\u{1F3E5}', name:'Medicina', desc:'Sintomi, farmaci, visite mediche, emergenze',
+  { id:'medical', icon:'\u{1F3E5}', nameKey:'ctxMedical', descKey:'ctxMedicalDesc',
     prompt:'This is a medical conversation. Use precise medical terminology: symptoms, medications, dosages, diagnoses, body parts, medical procedures. Accuracy is critical - never approximate medical terms.' },
-  { id:'education', icon:'\u{1F393}', name:'Scuola', desc:'Lezioni, corsi, formazione, esami',
+  { id:'education', icon:'\u{1F393}', nameKey:'ctxEducation', descKey:'ctxEducationDesc',
     prompt:'This is an educational conversation. Use academic terminology: courses, grades, assignments, lectures, exams, enrollment. Keep the tone educational and clear.' },
-  { id:'business', icon:'\u{1F4BC}', name:'Business', desc:'Riunioni, contratti, negoziazioni, presentazioni',
+  { id:'business', icon:'\u{1F4BC}', nameKey:'ctxBusiness', descKey:'ctxBusinessDesc',
     prompt:'This is a business conversation. Use professional/corporate terminology: contracts, negotiations, deadlines, KPIs, deliverables, stakeholders. Maintain formal register.' },
-  { id:'restaurant', icon:'\u{1F37D}\uFE0F', name:'Ristorante', desc:'Ordini, menu, allergie, prenotazioni',
+  { id:'restaurant', icon:'\u{1F37D}\uFE0F', nameKey:'ctxRestaurant', descKey:'ctxRestaurantDesc',
     prompt:'This is a restaurant/dining conversation. Use food and hospitality terminology: menu items, ingredients, allergies, dietary restrictions, cooking methods, reservations. Be precise about food terms.' },
-  { id:'personal', icon:'\u{1F91D}', name:'Incontro', desc:'Presentazioni, conversazione informale, sociale',
+  { id:'personal', icon:'\u{1F91D}', nameKey:'ctxPersonal', descKey:'ctxPersonalDesc',
     prompt:'This is an informal personal meeting. Use friendly, conversational tone. Translate idioms and colloquialisms naturally rather than literally. Preserve humor and warmth.' },
-  { id:'legal', icon:'\u{2696}\uFE0F', name:'Legale', desc:'Documenti, consulenze, procedure, contratti',
+  { id:'legal', icon:'\u{2696}\uFE0F', nameKey:'ctxLegal', descKey:'ctxLegalDesc',
     prompt:'This is a legal conversation. Use precise legal terminology: contracts, clauses, liability, compliance, jurisdiction, regulations. Never paraphrase legal terms - translate them exactly.' },
-  { id:'shopping', icon:'\u{1F6CD}\uFE0F', name:'Shopping', desc:'Acquisti, prezzi, taglie, resi, pagamenti',
+  { id:'shopping', icon:'\u{1F6CD}\uFE0F', nameKey:'ctxShopping', descKey:'ctxShoppingDesc',
     prompt:'This is a shopping conversation. Use retail terminology: prices, sizes, colors, discounts, returns, payment methods, warranties. Be precise with numbers and measurements.' },
-  { id:'realestate', icon:'\u{1F3E0}', name:'Immobiliare', desc:'Affitti, acquisti, visite, contratti',
+  { id:'realestate', icon:'\u{1F3E0}', nameKey:'ctxRealEstate', descKey:'ctxRealEstateDesc',
     prompt:'This is a real estate conversation. Use property terminology: rent, lease, mortgage, square meters, rooms, amenities, neighborhood, deposits, inspections.' },
-  { id:'tech', icon:'\u{1F527}', name:'Assistenza', desc:'Supporto tecnico, riparazioni, problemi',
+  { id:'tech', icon:'\u{1F527}', nameKey:'ctxTech', descKey:'ctxTechDesc',
     prompt:'This is a technical support conversation. Use technical terminology: troubleshooting, error codes, specifications, warranties, repairs, configurations. Be precise with technical terms.' },
-  { id:'emergency', icon:'\u{1F6A8}', name:'Emergenza', desc:'Situazioni urgenti, polizia, pronto soccorso',
+  { id:'emergency', icon:'\u{1F6A8}', nameKey:'ctxEmergency', descKey:'ctxEmergencyDesc',
     prompt:'This is an EMERGENCY conversation. Translate with maximum clarity and urgency. Use direct, unambiguous language. Include emergency-specific terms: location, danger, injury, police, ambulance, fire. Speed and clarity are paramount.' },
 ];
 
 const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
 function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
+// i18n shorthand - will be called inside component with current prefs.lang
+
 
 export default function Home() {
   const [view, setView] = useState('loading');
@@ -368,6 +372,13 @@ export default function Home() {
         window.history.replaceState({}, '', window.location.pathname);
       }
 
+      // Helper to decide initial view
+      const pickView = (hasSaved) => {
+        if (roomParam) return 'join'; // Always go to join if room param exists
+        if (!hasSaved) return 'welcome';
+        return 'home';
+      };
+
       if (savedToken) {
         setUserToken(savedToken);
         userTokenRef.current = savedToken;
@@ -379,26 +390,17 @@ export default function Home() {
             setUserAccount(data.user);
             setCreditBalance(data.user.credits || 0);
             setUseOwnKeys(data.user.useOwnKeys || false);
-            if (!saved) { setView('welcome'); }
-            else if (roomParam) { setView('join'); }
-            else { setView('home'); }
+            setView(pickView(!!saved));
           } else {
-            // Token expired
             localStorage.removeItem('vt-token');
             setUserToken(null);
-            if (!saved) setView('welcome');
-            else if (roomParam) setView('join');
-            else setView('home');
+            setView(pickView(!!saved));
           }
         }).catch(() => {
-          if (!saved) setView('welcome');
-          else if (roomParam) setView('join');
-          else setView('home');
+          setView(pickView(!!saved));
         });
       } else {
-        if (!saved) setView('welcome');
-        else if (roomParam) setView('join');
-        else setView('home');
+        setView(pickView(!!saved));
       }
     } catch { setView('welcome'); }
   }, []);
@@ -474,23 +476,23 @@ export default function Home() {
 
   async function handleCreateRoom() {
     try {
-      setStatus('Creazione stanza...');
+      setStatus('...');
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'create', name:prefs.name, lang:myLang, mode:selectedMode, avatar:prefs.avatar,
           context: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription }) });
-      if (!res.ok) throw new Error('Errore');
+      if (!res.ok) throw new Error('Error');
       const { room } = await res.json();
       roomContextRef.current = { contextId: selectedContext, contextPrompt: ctxObj.prompt, description: roomDescription };
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('lobby');
       startPolling(room.id); setStatus('');
-    } catch (e) { setStatus('Errore: ' + e.message); }
+    } catch (e) { setStatus('Error: ' + e.message); }
   }
 
   async function handleJoinRoom() {
     if (!joinCode.trim()) return;
     try {
-      setStatus('Connessione...');
+      setStatus('...');
       const res = await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ action:'join', roomId:joinCode.trim().toUpperCase(), name:prefs.name, lang:myLang, avatar:prefs.avatar }) });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Stanza non trovata'); }
@@ -502,7 +504,7 @@ export default function Home() {
       };
       setRoomId(room.id); setRoomInfo(room); setMessages([]); setView('room');
       startPolling(room.id); setStatus('');
-    } catch (e) { setStatus('Errore: ' + e.message); }
+    } catch (e) { setStatus('Error: ' + e.message); }
   }
 
   function leaveRoom() {
@@ -576,7 +578,7 @@ export default function Home() {
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
     if (userTokenRef.current) form.append('userToken', userTokenRef.current);
     const res = await fetch('/api/process', { method:'POST', body:form });
-    if (!res.ok) throw new Error('Errore server');
+    if (!res.ok) throw new Error('Server error');
     const { original, translated, cost } = await res.json();
     if (original && roomId) {
       const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -646,7 +648,7 @@ export default function Home() {
       console.error('[Backup] MediaRecorder failed:', e);
       // If mic access fails entirely, abort
       setRecording(false);
-      setStatus('Errore microfono');
+      setStatus(t(prefsRef.current?.lang||'en','micError'));
       streamingModeRef.current = false;
       setStreamingMsg(null);
       return;
@@ -888,13 +890,13 @@ export default function Home() {
     // === FALLBACK: If SpeechRecognition captured nothing, use Whisper with backup audio ===
     if (!allOriginal && backupBlob && backupBlob.size > 1000) {
       console.log('[Fallback] SpeechRecognition empty, using Whisper with backup audio (' + backupBlob.size + ' bytes)');
-      setStatus('Traduzione...');
+      setStatus(t(prefsRef.current?.lang||'en','translating'));
       setStreamingMsg(null);
       try {
         await processAndSendAudio(backupBlob);
       } catch (err) {
         console.error('[Fallback] Whisper error:', err);
-        setStatus('Errore: ' + err.message);
+        setStatus('Error: ' + err.message);
       }
       setStatus('');
       return;
@@ -908,7 +910,7 @@ export default function Home() {
     }
 
     // === STREAMING PATH: SpeechRecognition captured text, do final review ===
-    setStatus('Revisione finale...');
+    setStatus(t(prefsRef.current?.lang||'en','finalReview'));
 
     const { myL, otherL } = getTargetLangInfo();
     let finalTranslation = translatedChunksRef.current.join(' ');
@@ -983,7 +985,7 @@ export default function Home() {
   async function startClassicRecording() {
     unlockAudio();
     setRecording(true);
-    setStatus('Parla ora...');
+    setStatus(t(prefsRef.current?.lang||'en','speakNow'));
     if (roomId) setSpeakingState(roomId, true);
     chunksRef.current = [];
     try {
@@ -997,13 +999,13 @@ export default function Home() {
         const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
         if (blob.size < 1000) { setRecording(false); setStatus(''); return; }
         try { await processAndSendAudio(blob); }
-        catch (err) { setStatus('Errore: ' + err.message); }
+        catch (err) { setStatus('Error: ' + err.message); }
         setRecording(false);
         setStatus('');
       };
       recRef.current.start(100);
     } catch (err) {
-      setStatus('Errore microfono: ' + err.message);
+      setStatus('Mic error:' + err.message);
       setRecording(false);
       if (roomId) setSpeakingState(roomId, false);
     }
@@ -1011,7 +1013,7 @@ export default function Home() {
 
   function stopClassicRecording() {
     if (recRef.current && recRef.current.state === 'recording') {
-      setStatus('Traduzione...');
+      setStatus(t(prefsRef.current?.lang||'en','translating'));
       if (roomId) setSpeakingState(roomId, false);
       recRef.current.stop();
     }
@@ -1023,7 +1025,7 @@ export default function Home() {
   async function sendTextMessage() {
     if (!textInput.trim() || sendingText || !roomId) return;
     setSendingText(true);
-    setStatus('Traduzione...');
+    setStatus(t(prefsRef.current?.lang||'en','translating'));
     try {
       const currentMyLang = myLangRef.current;
       const currentRoomInfo = roomInfoRef.current;
@@ -1044,7 +1046,7 @@ export default function Home() {
           domainContext: roomContextRef.current.contextPrompt || undefined,
           description: roomContextRef.current.description || undefined,
           userToken: userTokenRef.current || undefined }) });
-      if (!res.ok) throw new Error('Errore traduzione');
+      if (!res.ok) throw new Error('Translation error');
       const { translated } = await res.json();
       if (translated) {
         const msgRes = await fetch('/api/messages', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -1057,7 +1059,7 @@ export default function Home() {
         } catch {}
         setTextInput('');
       }
-    } catch (err) { setStatus('Errore: ' + err.message); }
+    } catch (err) { setStatus('Error: ' + err.message); }
     setSendingText(false);
     setStatus('');
   }
@@ -1231,7 +1233,7 @@ export default function Home() {
         vadTimerRef.current = requestAnimationFrame(check);
       }
       check();
-    } catch (err) { setStatus('Errore microfono: ' + err.message); }
+    } catch (err) { setStatus('Mic error:' + err.message); }
   }
 
   function stopFreeTalk() {
@@ -1266,12 +1268,12 @@ export default function Home() {
 
   // Share
   function shareRoom() {
-    const url = `${window.location.origin}?room=${roomId}`;
-    if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`Entra: ${roomId}`, url });
-    else { navigator.clipboard.writeText(url); setStatus('Link copiato!'); setTimeout(() => setStatus(''), 2000); }
+    const url = `${APP_URL}?room=${roomId}`;
+    if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(prefs.lang,'enterRoom')}: ${roomId}`, url });
+    else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
   }
 
-  const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${typeof window!=='undefined'?window.location.origin:''}?room=${roomId}`)}` : '';
+  const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${APP_URL}?room=${roomId}`)}` : '';
 
   // Avatar image component - validates src is a valid image path
   function AvatarImg({ src, size = 36, style = {} }) {
@@ -1323,7 +1325,7 @@ export default function Home() {
       backupStreamRef.current = null;
     }
     setStreamingMsg(null);
-    setStatus('Salvataggio conversazione...');
+    setStatus('...');
 
     try {
       // Save conversation
@@ -1336,7 +1338,7 @@ export default function Home() {
         const isHost = roomInfo?.host === prefs.name;
         if (isHost && conversation) {
           // Generate AI summary for host
-          setStatus('Generazione report AI...');
+          setStatus('AI Report...');
           setSummaryLoading(true);
           try {
             const sumRes = await fetch('/api/summary', {
@@ -1368,7 +1370,7 @@ export default function Home() {
   }
 
   async function viewConversation(convId) {
-    setStatus('Caricamento...');
+    setStatus('...');
     try {
       const res = await fetch(`/api/conversation?id=${convId}`);
       if (res.ok) {
@@ -1405,10 +1407,10 @@ export default function Home() {
       `Partecipanti: ${s.participants || ''}\nDurata: ${s.duration || ''}\nMessaggi: ${s.messageCount || 0}`;
 
     if (navigator.share) {
-      navigator.share({ title: s.title || 'Report Conversazione', text });
+      navigator.share({ title: s.title || 'Report', text });
     } else {
       navigator.clipboard.writeText(text);
-      setStatus('Report copiato!');
+      setStatus(L('reportCopied'));
       setTimeout(() => setStatus(''), 2000);
     }
   }
@@ -1418,7 +1420,7 @@ export default function Home() {
   // =============================================
 
   async function sendAuthCode() {
-    if (!authEmail.trim() || !authEmail.includes('@')) { setStatus('Email non valida'); return; }
+    if (!authEmail.trim() || !authEmail.includes('@')) { setStatus('Invalid email'); return; }
     setAuthLoading(true); setStatus('');
     try {
       const res = await fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -1428,8 +1430,8 @@ export default function Home() {
         setAuthStep('code');
         if (data.testCode) setAuthTestCode(data.testCode);
         setStatus('');
-      } else { setStatus(data.error || 'Errore invio codice'); }
-    } catch (e) { setStatus('Errore: ' + e.message); }
+      } else { setStatus(data.error || 'Code send error'); }
+    } catch (e) { setStatus('Error: ' + e.message); }
     setAuthLoading(false);
   }
 
@@ -1451,7 +1453,7 @@ export default function Home() {
         setAuthStep('choose');
         setStatus('');
       } else { setStatus(data.error || 'Codice non valido'); }
-    } catch (e) { setStatus('Errore: ' + e.message); }
+    } catch (e) { setStatus('Error: ' + e.message); }
     setAuthLoading(false);
   }
 
@@ -1471,7 +1473,7 @@ export default function Home() {
 
   async function buyCredits(packageId) {
     const token = userTokenRef.current;
-    if (!token) { setStatus('Devi accedere prima'); return; }
+    if (!token) { setStatus('Login required'); return; }
     setAuthLoading(true); setStatus('');
     try {
       const res = await fetch('/api/stripe', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -1479,8 +1481,8 @@ export default function Home() {
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
-      } else { setStatus(data.error || 'Errore creazione pagamento'); }
-    } catch (e) { setStatus('Errore: ' + e.message); }
+      } else { setStatus(data.error || 'Payment error'); }
+    } catch (e) { setStatus('Error: ' + e.message); }
     setAuthLoading(false);
   }
 
@@ -1494,10 +1496,10 @@ export default function Home() {
       const data = await res.json();
       if (data.ok) {
         setUseOwnKeys(true);
-        setStatus('Chiavi API salvate!');
+        setStatus(L('apiKeysSaved'));
         setTimeout(() => { setStatus(''); setView('home'); }, 1000);
-      } else { setStatus(data.error || 'Errore salvataggio'); }
-    } catch (e) { setStatus('Errore: ' + e.message); }
+      } else { setStatus(data.error || 'Save error'); }
+    } catch (e) { setStatus('Error: ' + e.message); }
     setAuthLoading(false);
   }
 
@@ -1537,21 +1539,24 @@ export default function Home() {
   if (view === 'loading') return <div style={S.page}><div style={S.center}><div style={{fontSize:40, opacity:0.5}}>...</div></div></div>;
 
   // --- WELCOME ---
+  // i18n shorthand for current language
+  const L = (key) => t(prefs.lang, key);
+
   if (view === 'welcome') return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <div style={{fontSize:42, marginBottom:8}}>{'\u{1F30D}'}</div>
-        <div style={S.title}>VoiceTranslate</div>
-        <div style={S.sub}>Traduttore vocale in tempo reale</div>
+        <div style={S.title}>{L('appName')}</div>
+        <div style={S.sub}>{L('appSubtitle')}</div>
         <div style={S.card}>
-          <div style={S.cardTitle}>Configura il tuo profilo</div>
+          <div style={S.cardTitle}>{L('configProfile')}</div>
           <div style={S.field}>
-            <div style={S.label}>Nome</div>
-            <input style={S.input} placeholder="Come ti chiami?" value={prefs.name}
+            <div style={S.label}>{L('name')}</div>
+            <input style={S.input} placeholder={L('namePlaceholder')} value={prefs.name}
               onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20} />
           </div>
           <div style={S.field}>
-            <div style={S.label}>Avatar</div>
+            <div style={S.label}>{L('avatar')}</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
@@ -1562,14 +1567,14 @@ export default function Home() {
             </div>
           </div>
           <div style={S.field}>
-            <div style={S.label}>La tua lingua</div>
+            <div style={S.label}>{L('yourLang')}</div>
             <select style={S.select} value={prefs.lang}
               onChange={e => setPrefs({...prefs, lang:e.target.value})}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
           <div style={S.field}>
-            <div style={S.label}>Voce traduzione</div>
+            <div style={S.label}>{L('voiceTranslation')}</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:5}}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
@@ -1587,13 +1592,13 @@ export default function Home() {
               else if (userToken) { setView('home'); }
               else { setAuthStep('email'); setView('account'); }
             }}>
-            Iniziamo
+            {L('letsStart')}
           </button>
           {!joinCode && (
             <button style={{marginTop:10, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
               fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8}}
               onClick={() => { savePrefs(prefs); setView('home'); }}>
-              Continua senza account (ospite)
+              {L('continueAsGuest')}
             </button>
           )}
         </div>
@@ -1606,28 +1611,28 @@ export default function Home() {
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <div style={{fontSize:42, marginBottom:8}}>{authStep === 'choose' ? '\u2705' : '\u{1F512}'}</div>
-        <div style={S.title}>Account</div>
-        <div style={S.sub}>{authStep === 'choose' ? 'Accesso effettuato!' : 'Accedi per creare stanze e tradurre'}</div>
+        <div style={S.title}>{L('account')}</div>
+        <div style={S.sub}>{authStep === 'choose' ? L('accessDone') : L('accessToCreate')}</div>
 
         {authStep === 'email' && (
           <div style={S.card}>
-            <div style={S.cardTitle}>Accedi al tuo account</div>
+            <div style={S.cardTitle}>{L('loginToAccount')}</div>
 
             {/* Email magic code */}
             <div style={S.field}>
-              <div style={S.label}>Email</div>
-              <input style={S.input} type="email" placeholder="tua@email.com" value={authEmail}
+              <div style={S.label}>{L('email')}</div>
+              <input style={S.input} type="email" placeholder="your@email.com" value={authEmail}
                 onChange={e => setAuthEmail(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && sendAuthCode()} />
             </div>
             <button style={{...S.btn, marginTop:8, opacity:authLoading?0.5:1}}
               disabled={authLoading} onClick={sendAuthCode}>
-              {authLoading ? 'Invio...' : 'Accedi con codice email'}
+              {authLoading ? L('sending') : L('sendAccessCode')}
             </button>
 
             <div style={{display:'flex', alignItems:'center', gap:12, margin:'16px 0'}}>
               <div style={{flex:1, height:1, background:'rgba(255,255,255,0.08)'}} />
-              <div style={{fontSize:11, color:'rgba(255,255,255,0.25)'}}>oppure</div>
+              <div style={{fontSize:11, color:'rgba(255,255,255,0.25)'}}>{L('or')}</div>
               <div style={{flex:1, height:1, background:'rgba(255,255,255,0.08)'}} />
             </div>
 
@@ -1637,11 +1642,11 @@ export default function Home() {
               fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
               WebkitTapHighlightColor:'transparent', marginBottom:8}}
               onClick={() => {
-                setStatus('Google Sign-In richiede configurazione OAuth. Usa email per ora.');
+                setStatus('Google Sign-In: OAuth config needed');
                 setTimeout(() => setStatus(''), 3000);
               }}>
               <span style={{fontSize:18}}>G</span>
-              <span>Accedi con Google</span>
+              <span>{L('loginGoogle')}</span>
             </button>
 
             {/* Apple Sign-In */}
@@ -1650,29 +1655,29 @@ export default function Home() {
               fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
               WebkitTapHighlightColor:'transparent'}}
               onClick={() => {
-                setStatus('Apple Sign-In richiede Apple Developer Account. Usa email per ora.');
+                setStatus('Apple Sign-In: Developer Account needed');
                 setTimeout(() => setStatus(''), 3000);
               }}>
               <span style={{fontSize:18}}>{'\uF8FF'}</span>
-              <span>Accedi con Apple</span>
+              <span>{L('loginApple')}</span>
             </button>
 
             <div style={{fontSize:10, color:'rgba(255,255,255,0.2)', textAlign:'center', marginTop:12}}>
-              Nessuna password richiesta
+              {L('noPasswordRequired')}
             </div>
           </div>
         )}
 
         {authStep === 'code' && (
           <div style={S.card}>
-            <div style={S.cardTitle}>Inserisci il codice</div>
+            <div style={S.cardTitle}>{L('enterCode')}</div>
             <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', textAlign:'center', marginBottom:12}}>
-              Inviato a {authEmail}
+              {L('sentTo')} {authEmail}
             </div>
             {authTestCode && (
               <div style={{fontSize:13, color:'#f5576c', textAlign:'center', marginBottom:12,
                 padding:'8px 12px', background:'rgba(245,87,108,0.1)', borderRadius:12}}>
-                Codice di test: <strong>{authTestCode}</strong>
+                {L('testCode')}: <strong>{authTestCode}</strong>
               </div>
             )}
             <div style={S.field}>
@@ -1683,12 +1688,12 @@ export default function Home() {
             </div>
             <button style={{...S.btn, marginTop:8, opacity:authLoading?0.5:1}}
               disabled={authLoading} onClick={verifyAuthCodeFn}>
-              {authLoading ? 'Verifica...' : 'Verifica'}
+              {authLoading ? L('verifying') : L('verify')}
             </button>
             <button style={{marginTop:10, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
               fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, width:'100%', textAlign:'center'}}
               onClick={() => { setAuthStep('email'); setAuthCode(''); setAuthTestCode(''); }}>
-              Cambia email
+              {L('changeEmail')}
             </button>
           </div>
         )}
@@ -1696,16 +1701,16 @@ export default function Home() {
         {authStep === 'choose' && (
           <div style={{width:'100%', maxWidth:380}}>
             <div style={S.card}>
-              <div style={S.cardTitle}>Come vuoi tradurre?</div>
+              <div style={S.cardTitle}>{L('howToTranslate')}</div>
 
               <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #f5576c, #e94560)'}}
                 onClick={() => setView('credits')}>
                 <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
                   display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>{'\u{1F4B3}'}</div>
                 <div>
-                  <div style={{fontWeight:600, fontSize:15}}>Compra crediti</div>
+                  <div style={{fontWeight:600, fontSize:15}}>{L('buyCredits')}</div>
                   <div style={{fontSize:11, color:'rgba(255,255,255,0.7)', marginTop:1}}>
-                    Paga solo quando usi - da \u20AC2
+                    {L('payAsYouGo')} - {L('from')} {'\u20AC'}2
                   </div>
                 </div>
               </button>
@@ -1715,9 +1720,9 @@ export default function Home() {
                 <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.08)',
                   display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>{'\u{1F511}'}</div>
                 <div>
-                  <div style={{fontWeight:600, fontSize:15}}>Usa le tue API key</div>
+                  <div style={{fontWeight:600, fontSize:15}}>{L('useYourKeys')}</div>
                   <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>
-                    OpenAI, Anthropic o Gemini
+                    {L('openaiAnthropicGemini')}
                   </div>
                 </div>
               </button>
@@ -1726,7 +1731,7 @@ export default function Home() {
             <button style={{marginTop:16, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
               fontSize:13, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', textAlign:'center'}}
               onClick={() => setView('home')}>
-              Scegli dopo
+              {L('chooseLater')}
             </button>
           </div>
         )}
@@ -1742,14 +1747,14 @@ export default function Home() {
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView(userAccount ? 'home' : 'account')}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Ricarica Crediti</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('rechargeCredits')}</span>
         </div>
 
         {creditBalance > 0 && (
           <div style={{width:'100%', maxWidth:380, marginBottom:16, padding:'14px 18px', borderRadius:18,
             background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)',
             textAlign:'center'}}>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:4}}>SALDO ATTUALE</div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:4}}>{L('currentBalance')}</div>
             <div style={{fontSize:28, fontWeight:700, color:'#4facfe'}}>{formatCredits(creditBalance)}</div>
           </div>
         )}
@@ -1781,7 +1786,7 @@ export default function Home() {
         <div style={{width:'100%', maxWidth:380, marginTop:12, padding:'12px 16px', borderRadius:14,
           background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.05)'}}>
           <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', lineHeight:1.6}}>
-            {'\u{1F4B3}'} Pagamento sicuro via Stripe (Visa, Mastercard, Apple Pay, Google Pay)
+            {'\u{1F4B3}'} {L('securePayment')}
           </div>
         </div>
 
@@ -1796,31 +1801,31 @@ export default function Home() {
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView(userAccount ? 'home' : 'account')}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Le tue API Key</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
         </div>
         <div style={S.card}>
           <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:16, lineHeight:1.5}}>
-            Inserisci le tue chiavi API per tradurre senza limiti di credito. Serve almeno una chiave OpenAI.
+            {L('apiKeysDesc')}
           </div>
           <div style={S.field}>
-            <div style={S.label}>OpenAI (obbligatorio)</div>
+            <div style={S.label}>{L('openaiRequired')}</div>
             <input style={S.input} placeholder="sk-proj-..." value={apiKeyInputs.openai}
               onChange={e => setApiKeyInputs({...apiKeyInputs, openai:e.target.value})} />
           </div>
           <div style={S.field}>
-            <div style={S.label}>Anthropic (opzionale)</div>
+            <div style={S.label}>{L('anthropicOptional')}</div>
             <input style={S.input} placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
               onChange={e => setApiKeyInputs({...apiKeyInputs, anthropic:e.target.value})} />
           </div>
           <div style={S.field}>
-            <div style={S.label}>Google Gemini (opzionale)</div>
+            <div style={S.label}>{L('geminiOptional')}</div>
             <input style={S.input} placeholder="AIza..." value={apiKeyInputs.gemini}
               onChange={e => setApiKeyInputs({...apiKeyInputs, gemini:e.target.value})} />
           </div>
           <button style={{...S.btn, marginTop:8, opacity:apiKeyInputs.openai.trim()?1:0.4}}
             disabled={!apiKeyInputs.openai.trim() || authLoading}
             onClick={saveUserApiKeys}>
-            {authLoading ? 'Salvataggio...' : 'Salva e Usa le mie Key'}
+            {authLoading ? L('saving') : L('saveUseMyKeys')}
           </button>
         </div>
         {status && <div style={S.statusMsg}>{status}</div>}
@@ -1834,16 +1839,16 @@ export default function Home() {
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView('home')}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Impostazioni</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('settings')}</span>
         </div>
         <div style={S.card}>
           <div style={S.field}>
-            <div style={S.label}>Nome</div>
+            <div style={S.label}>{L('name')}</div>
             <input style={S.input} value={prefs.name}
               onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20} />
           </div>
           <div style={S.field}>
-            <div style={S.label}>Avatar</div>
+            <div style={S.label}>{L('avatar')}</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
               {AVATARS.map((a,i) => (
                 <button key={a} onClick={() => setPrefs({...prefs, avatar:a})}
@@ -1854,14 +1859,14 @@ export default function Home() {
             </div>
           </div>
           <div style={S.field}>
-            <div style={S.label}>La tua lingua</div>
+            <div style={S.label}>{L('yourLang')}</div>
             <select style={S.select} value={prefs.lang}
               onChange={e => setPrefs({...prefs, lang:e.target.value})}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
           <div style={S.field}>
-            <div style={S.label}>Voce traduzione</div>
+            <div style={S.label}>{L('voiceTranslation')}</div>
             <div style={{display:'flex', flexWrap:'wrap', gap:5}}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
@@ -1873,7 +1878,7 @@ export default function Home() {
           </div>
           <div style={S.field}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-              <span style={{...S.label, marginBottom:0}}>Auto-play audio</span>
+              <span style={{...S.label, marginBottom:0}}>{L('autoplayTranslation')}</span>
               <button onClick={() => setPrefs({...prefs, autoPlay:!prefs.autoPlay})}
                 style={{...S.toggle, background:prefs.autoPlay ? '#e94560' : '#333'}}>
                 <div style={{...S.toggleDot, transform:prefs.autoPlay ? 'translateX(20px)' : 'translateX(0)'}} />
@@ -1881,7 +1886,7 @@ export default function Home() {
             </div>
           </div>
           <button style={{...S.btn, marginTop:12}} onClick={() => { savePrefs(prefs); setView('home'); }}>
-            Salva
+            OK
           </button>
           {userToken && (
             <div style={{marginTop:20, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.06)'}}>
@@ -1890,7 +1895,7 @@ export default function Home() {
               </div>
               <button style={{...S.settingsBtn, color:'#f5576c', borderColor:'rgba(245,87,108,0.2)'}}
                 onClick={logout}>
-                Esci dall'account
+                {L('logoutAccount')}
               </button>
             </div>
           )}
@@ -1904,56 +1909,60 @@ export default function Home() {
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <AvatarImg src={prefs.avatar} size={56} style={{marginBottom:4}} />
-        <div style={{fontSize:18, fontWeight:600, marginBottom:2, letterSpacing:-0.3}}>Ciao, {prefs.name}</div>
+        <div style={{fontSize:18, fontWeight:600, marginBottom:2, letterSpacing:-0.3}}>{prefs.name}</div>
         <div style={{color:'rgba(255,255,255,0.5)', fontSize:13, marginBottom:20}}>
           {getLang(prefs.lang).flag} {getLang(prefs.lang).name}
         </div>
 
         {/* Mode selector */}
         <div style={{width:'100%', maxWidth:380, marginBottom:16}}>
-          <div style={{...S.label, marginBottom:8}}>Modalit{"a'"}</div>
+          <div style={{...S.label, marginBottom:8}}>{L('mode')}</div>
           <div style={{display:'flex', gap:8}}>
             {MODES.map(m => (
               <button key={m.id} onClick={() => setSelectedMode(m.id)}
                 style={{...S.modeBtn, ...(selectedMode===m.id ? S.modeBtnSel : {})}}>
                 <span style={{fontSize:22}}>{m.icon}</span>
-                <span style={{fontSize:11, fontWeight:600, marginTop:2}}>{m.name}</span>
+                <span style={{fontSize:11, fontWeight:600, marginTop:2}}>{L(m.nameKey)}</span>
               </button>
             ))}
           </div>
           <div style={{fontSize:11, color:'rgba(255,255,255,0.4)', marginTop:6, textAlign:'center'}}>
-            {MODES.find(m => m.id === selectedMode)?.desc}
+            {L(MODES.find(m => m.id === selectedMode)?.descKey)}
           </div>
         </div>
 
-        {/* Context selector */}
+        {/* Context dropdown */}
         <div style={{width:'100%', maxWidth:380, marginBottom:16}}>
-          <div style={{...S.label, marginBottom:8}}>Contesto</div>
-          <div style={{display:'flex', flexWrap:'wrap', gap:6}}>
-            {CONTEXTS.map(c => (
-              <button key={c.id} onClick={() => setSelectedContext(c.id)}
-                style={{display:'flex', alignItems:'center', gap:5, padding:'7px 12px', borderRadius:12,
-                  border: selectedContext===c.id ? '1px solid rgba(245,87,108,0.35)' : '1px solid rgba(255,255,255,0.06)',
-                  background: selectedContext===c.id ? 'rgba(245,87,108,0.1)' : 'rgba(255,255,255,0.03)',
-                  color: selectedContext===c.id ? '#fff' : 'rgba(255,255,255,0.45)',
-                  fontSize:12, cursor:'pointer', fontFamily:FONT,
-                  WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
-                <span style={{fontSize:15}}>{c.icon}</span>
-                <span style={{fontWeight:500}}>{c.name}</span>
-              </button>
-            ))}
+          <div style={{...S.label, marginBottom:8}}>{L('context')}</div>
+          <div style={{position:'relative'}}>
+            <select
+              value={selectedContext}
+              onChange={e => setSelectedContext(e.target.value)}
+              style={{width:'100%', padding:'12px 40px 12px 16px', borderRadius:14,
+                background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
+                color:'#fff', fontSize:14, fontFamily:FONT, cursor:'pointer',
+                appearance:'none', WebkitAppearance:'none', outline:'none'}}>
+              {CONTEXTS.map(c => (
+                <option key={c.id} value={c.id} style={{background:'#1a1a2e', color:'#fff'}}>
+                  {c.icon} {L(c.nameKey)}
+                </option>
+              ))}
+            </select>
+            <div style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)',
+              pointerEvents:'none', color:'rgba(255,255,255,0.4)', fontSize:12}}>{'\u25BC'}</div>
           </div>
           <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', marginTop:6, textAlign:'center'}}>
-            {CONTEXTS.find(c => c.id === selectedContext)?.desc}
+            {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
+            {L(CONTEXTS.find(c => c.id === selectedContext)?.descKey)}
           </div>
         </div>
 
         {/* Description field */}
         <div style={{width:'100%', maxWidth:380, marginBottom:16}}>
-          <div style={{...S.label, marginBottom:6}}>Descrizione (opzionale)</div>
+          <div style={{...S.label, marginBottom:6}}>{L('descriptionOptional')}</div>
           <input style={{...S.input, fontSize:13}} value={roomDescription}
             onChange={e => setRoomDescription(e.target.value)}
-            placeholder="Es: Visita medica dal dentista, Riunione con cliente giapponese..."
+            placeholder={L('descriptionPlaceholder')}
             maxLength={150} />
           <div style={{fontSize:10, color:'rgba(255,255,255,0.2)', marginTop:4, textAlign:'right'}}>
             {roomDescription.length}/150
@@ -1964,11 +1973,11 @@ export default function Home() {
           <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
             display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>+</div>
           <div>
-            <div style={{fontWeight:600, fontSize:15}}>Crea Stanza</div>
+            <div style={{fontWeight:600, fontSize:15}}>{L('createRoom')}</div>
             <div style={{fontSize:11, color:'rgba(255,255,255,0.6)', marginTop:1}}>
               {CONTEXTS.find(c => c.id === selectedContext)?.icon}{' '}
-              {CONTEXTS.find(c => c.id === selectedContext)?.name}
-              {' \u2022 '}{MODES.find(m => m.id === selectedMode)?.name}
+              {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
+              {' \u2022 '}{L(MODES.find(m => m.id === selectedMode)?.nameKey)}
             </div>
           </div>
         </button>
@@ -1977,8 +1986,8 @@ export default function Home() {
           <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.08)',
             display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>{'\u{1F517}'}</div>
           <div>
-            <div style={{fontWeight:600, fontSize:15}}>Entra nella Stanza</div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>Codice o QR</div>
+            <div style={{fontWeight:600, fontSize:15}}>{L('joinRoom')}</div>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>{L('codeOrQR')}</div>
           </div>
         </button>
         {/* Balance / Account indicator */}
@@ -1988,17 +1997,17 @@ export default function Home() {
             display:'flex', alignItems:'center', justifyContent:'space-between'}}>
             <div>
               <div style={{fontSize:10, color:'rgba(255,255,255,0.3)', marginBottom:2}}>
-                {useOwnKeys ? 'API KEY PERSONALI' : 'CREDITO'}
+                {useOwnKeys ? L('personalApiKeys') : L('credit')}
               </div>
               <div style={{fontSize:16, fontWeight:600, color: useOwnKeys ? '#4facfe' : creditBalance > 50 ? '#4facfe' : '#f5576c'}}>
-                {useOwnKeys ? '\u2713 Attive' : formatCredits(creditBalance)}
+                {useOwnKeys ? '\u2713 ' + L('active') : formatCredits(creditBalance)}
               </div>
             </div>
             <button style={{padding:'7px 14px', borderRadius:10, background:'rgba(245,87,108,0.1)',
               border:'1px solid rgba(245,87,108,0.2)', color:'#f5576c', fontSize:12, fontWeight:600,
               cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}
               onClick={() => { refreshBalance(); setView('credits'); }}>
-              {useOwnKeys ? 'Crediti' : 'Ricarica'}
+              {L('recharge')}
             </button>
           </div>
         ) : (
@@ -2007,14 +2016,14 @@ export default function Home() {
             color:'#4facfe', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:FONT,
             textAlign:'center', WebkitTapHighlightColor:'transparent'}}
             onClick={() => { setAuthStep('email'); setView('account'); }}>
-            {'\u{1F512}'} Accedi per creare stanze
+            {'\u{1F512}'} {L('loginToCreateRooms')}
           </button>
         )}
 
         <div style={{display:'flex', gap:10, marginTop:16}}>
-          <button style={S.settingsBtn} onClick={() => setView('settings')}>Impostazioni</button>
-          <button style={S.settingsBtn} onClick={() => { loadHistory(); setView('history'); }}>Cronologia</button>
-          {userToken && <button style={S.settingsBtn} onClick={() => setView('apikeys')}>API Key</button>}
+          <button style={S.settingsBtn} onClick={() => setView('settings')}>{L('settings')}</button>
+          <button style={S.settingsBtn} onClick={() => { loadHistory(); setView('history'); }}>{L('history')}</button>
+          {userToken && <button style={S.settingsBtn} onClick={() => setView('apikeys')}>{L('apiKey')}</button>}
         </div>
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
@@ -2027,24 +2036,32 @@ export default function Home() {
       <div style={S.center}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); }}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Entra nella Stanza</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('joinRoom')}</span>
         </div>
         <div style={S.card}>
+          {/* Inline name setup for guests without prefs */}
+          {!prefs.name.trim() && (
+            <div style={S.field}>
+              <div style={S.label}>{L('name')}</div>
+              <input style={S.input} placeholder={L('namePlaceholder')} value={prefs.name}
+                onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20} />
+            </div>
+          )}
           <div style={S.field}>
-            <div style={S.label}>Codice stanza</div>
+            <div style={S.label}>{L('roomCode')}</div>
             <input style={{...S.input, textAlign:'center', fontSize:22, letterSpacing:6, textTransform:'uppercase'}}
               placeholder="ABC123" value={joinCode} maxLength={6}
               onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
           </div>
           <div style={S.field}>
-            <div style={S.label}>La tua lingua</div>
+            <div style={S.label}>{L('yourLang')}</div>
             <select style={S.select} value={myLang} onChange={e => setMyLang(e.target.value)}>
               {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
-          <button style={{...S.btn, marginTop:12, opacity:joinCode.length>=4?1:0.4}}
-            disabled={joinCode.length<4} onClick={handleJoinRoom}>
-            Entra
+          <button style={{...S.btn, marginTop:12, opacity:(joinCode.length>=4 && prefs.name.trim())?1:0.4}}
+            disabled={joinCode.length<4 || !prefs.name.trim()} onClick={() => { savePrefs(prefs); handleJoinRoom(); }}>
+            {L('enterRoom')}
           </button>
           {status && <div style={S.statusMsg}>{status}</div>}
         </div>
@@ -2058,27 +2075,27 @@ export default function Home() {
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={leaveRoom}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>La tua Stanza</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('yourRoom')}</span>
         </div>
         <div style={S.card}>
           <div style={{textAlign:'center', marginBottom:16}}>
-            <div style={S.label}>Codice</div>
+            <div style={S.label}>{L('code')}</div>
             <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:'#e94560'}}>{roomId}</div>
           </div>
           <div style={{textAlign:'center', marginBottom:14}}>
             <img src={qrUrl} alt="QR" style={{width:150, height:150, borderRadius:14, background:'#fff', padding:8}} />
           </div>
           <div style={{textAlign:'center', marginBottom:12}}>
-            <button style={S.shareBtn} onClick={shareRoom}>Condividi Link</button>
+            <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
           </div>
           <div style={{textAlign:'center', color:'rgba(255,255,255,0.5)', fontSize:13, marginBottom:12}}>
             {partnerConnected
-              ? <span style={{color:'#4ecdc4'}}>Partner connesso ({roomInfo?.members?.[1]?.name})</span>
-              : <span>In attesa...</span>}
+              ? <span style={{color:'#4ecdc4'}}>{roomInfo?.members?.[1]?.name} {'\u2714'}</span>
+              : <span>{L('waitingForPartner')}</span>}
           </div>
           {partnerConnected && (
             <button style={S.btn} onClick={() => { unlockAudio(); setView('room'); }}>
-              Inizia a Tradurre
+              {L('letsStart')}
             </button>
           )}
         </div>
@@ -2103,7 +2120,7 @@ export default function Home() {
       <div style={S.roomPage}>
         {/* Header */}
         <div style={S.roomHeader}>
-          <button style={S.backBtnSmall} onClick={endChatAndSave} title="Termina e salva">{'\u2716'}</button>
+          <button style={S.backBtnSmall} onClick={endChatAndSave} title={L('endChat')}>{'\u2716'}</button>
           <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
             <span style={{fontSize:18}}>{myL.flag}</span>
             <span style={{color:'rgba(255,255,255,0.3)', fontSize:16}}>{'\u21C4'}</span>
@@ -2131,8 +2148,8 @@ export default function Home() {
             style={{background:'none', border:'none', padding:0, cursor:isHost ? 'pointer' : 'default',
               display:'flex', alignItems:'center', gap:4, WebkitTapHighlightColor:'transparent'}}>
             <span style={{fontSize:11, color:'rgba(255,255,255,0.45)'}}>
-              {modeInfo.icon} {modeInfo.name}
-              {roomCtx.id !== 'general' && <span style={{marginLeft:4}}>{roomCtx.icon} {roomCtx.name}</span>}
+              {modeInfo.icon} {L(modeInfo.nameKey)}
+              {roomCtx.id !== 'general' && <span style={{marginLeft:4}}>{roomCtx.icon} {L(roomCtx.nameKey)}</span>}
             </span>
             {isHost && <span style={{fontSize:9, color:'rgba(255,255,255,0.25)'}}>{'\u25BC'}</span>}
             {!isHost && roomMode === 'classroom' && (
@@ -2164,7 +2181,7 @@ export default function Home() {
                   style={{...S.modeBtn, flex:1, padding:'8px 4px',
                     ...(roomMode === m.id ? S.modeBtnSel : {})}}>
                   <span style={{fontSize:18}}>{m.icon}</span>
-                  <span style={{fontSize:9, fontWeight:600, marginTop:1}}>{m.name}</span>
+                  <span style={{fontSize:9, fontWeight:600, marginTop:1}}>{L(m.nameKey)}</span>
                 </button>
               ))}
             </div>
@@ -2179,7 +2196,7 @@ export default function Home() {
               <span style={{...S.dot, animationDelay:'0.2s'}}/>
               <span style={{...S.dot, animationDelay:'0.4s'}}/>
             </div>
-            <span style={{fontSize:12}}>{partner?.name} sta parlando...</span>
+            <span style={{fontSize:12}}>{partner?.name}...</span>
           </div>
         )}
 
@@ -2190,7 +2207,7 @@ export default function Home() {
             style={{flex:1, padding:'8px 12px', borderRadius:20, background:'rgba(255,255,255,0.06)',
               border:'1px solid rgba(255,255,255,0.1)', color:'#fff', fontSize:14, outline:'none',
               fontFamily:FONT, boxSizing:'border-box'}}
-            placeholder="Scrivi un messaggio..."
+            placeholder={L('typePlaceholder')}
             value={textInput}
             onChange={e => setTextInput(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTextMessage(); }}}
@@ -2210,12 +2227,12 @@ export default function Home() {
         <div style={S.chatArea}>
           {messages.length === 0 && (
             <div style={{textAlign:'center', color:'rgba(255,255,255,0.25)', marginTop:60, fontSize:13, lineHeight:1.6}}>
-              Scrivi o parla per tradurre.{'\n'}
+              {L('speakNow')}{'\n'}
               {roomMode === 'freetalk'
-                ? 'In Free Talk la traduzione avviene automaticamente.'
+                ? L('freeTalkDesc')
                 : roomMode === 'classroom' && !isHost
-                  ? `In ascolto di ${roomInfo?.host || 'Host'}.`
-                  : 'Tocca il microfono per dettare.'}
+                  ? `${roomInfo?.host || 'Host'} - ${L('classroomDesc')}`
+                  : L('conversationDesc')}
             </div>
           )}
           {messages.map((m, i) => {
@@ -2271,7 +2288,7 @@ export default function Home() {
                     </div>
                   ) : (
                     <div style={{fontSize:11, color:'rgba(255,255,255,0.25)', marginTop:4, fontStyle:'italic'}}>
-                      traduzione in corso...
+                      {L('translating')}
                     </div>
                   )}
                 </div>
@@ -2294,7 +2311,7 @@ export default function Home() {
 
           {roomMode === 'classroom' && !canTalk && (
             <div style={{color:'rgba(255,255,255,0.25)', fontSize:11, padding:8}}>
-              {'\u{1F512}'} Solo l{"'"}host parla
+              {'\u{1F512}'} {L('classroomDesc')}
             </div>
           )}
 
@@ -2323,11 +2340,11 @@ export default function Home() {
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => setView('home')}>{'\u2190'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Cronologia</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('history')}</span>
         </div>
         {convHistory.length === 0 ? (
           <div style={{color:'rgba(255,255,255,0.3)', fontSize:14, textAlign:'center', marginTop:40}}>
-            Nessuna conversazione salvata
+            {L('noHistory')}
           </div>
         ) : (
           <div style={{width:'100%', maxWidth:380, display:'flex', flexDirection:'column', gap:8}}>
@@ -2373,12 +2390,12 @@ export default function Home() {
           {summaryLoading ? (
             <div style={{textAlign:'center', marginTop:40}}>
               <div style={{fontSize:24, marginBottom:8}}>...</div>
-              <div style={{color:'rgba(255,255,255,0.4)', fontSize:13}}>Generazione report AI...</div>
+              <div style={{color:'rgba(255,255,255,0.4)', fontSize:13}}>AI Report...</div>
             </div>
           ) : s ? (
             <div style={{...S.card, width:'100%', maxWidth:380}}>
               <div style={{fontSize:18, fontWeight:700, marginBottom:8, color:'rgba(255,255,255,0.95)',
-                lineHeight:1.3}}>{s.title || 'Report Conversazione'}</div>
+                lineHeight:1.3}}>{s.title || 'Report'}</div>
 
               {s.topics?.length > 0 && (
                 <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
@@ -2402,7 +2419,7 @@ export default function Home() {
 
               {s.keyPoints?.length > 0 && (
                 <div style={{marginBottom:16}}>
-                  <div style={{...S.label, marginBottom:8}}>Punti Chiave</div>
+                  <div style={{...S.label, marginBottom:8}}>Key Points</div>
                   {s.keyPoints.map((p,i) => (
                     <div key={i} style={{display:'flex', gap:8, marginBottom:6, fontSize:13,
                       color:'rgba(255,255,255,0.65)', lineHeight:1.5}}>
@@ -2421,17 +2438,17 @@ export default function Home() {
 
               {isHost && (
                 <button style={{...S.btn, marginTop:12}} onClick={shareSummary}>
-                  Condividi Report
+                  {L('shareReport')}
                 </button>
               )}
             </div>
           ) : (
             <div style={{...S.card, width:'100%', maxWidth:380}}>
               <div style={{fontSize:15, fontWeight:600, marginBottom:12, color:'rgba(255,255,255,0.8)'}}>
-                Conversazione Salvata
+                {L('savedConversation')}
               </div>
               <div style={{fontSize:13, color:'rgba(255,255,255,0.5)', marginBottom:8}}>
-                {currentConv.members?.map(m => m.name).join(' & ')} - {currentConv.msgCount} messaggi
+                {currentConv.members?.map(m => m.name).join(' & ')} - {currentConv.msgCount} {L('messages')}
               </div>
               <div style={{fontSize:11, color:'rgba(255,255,255,0.35)'}}>
                 {currentConv.created ? new Date(currentConv.created).toLocaleString('it-IT') : ''}
@@ -2442,7 +2459,7 @@ export default function Home() {
           {/* Message transcript */}
           {currentConv.messages?.length > 0 && (
             <div style={{width:'100%', maxWidth:380, marginTop:12}}>
-              <div style={{...S.label, marginBottom:8}}>Trascrizione</div>
+              <div style={{...S.label, marginBottom:8}}>{L('transcript')}</div>
               <div style={{background:'rgba(255,255,255,0.03)', borderRadius:16, padding:'12px 14px',
                 border:'1px solid rgba(255,255,255,0.06)', maxHeight:300, overflowY:'auto'}}>
                 {currentConv.messages.map((m,i) => (
