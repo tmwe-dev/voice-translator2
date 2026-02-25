@@ -223,7 +223,11 @@ export default function useTranslation({
     chunkingActiveRef.current = true;
     const { myL, otherL } = getTargetLangInfo();
     try {
-      const prevContext = translatedChunksRef.current.slice(-2).join(' ');
+      // Only use the LAST translated chunk as context (not 2) to avoid confusing the model
+      const lastChunk = translatedChunksRef.current.length > 0
+        ? translatedChunksRef.current[translatedChunksRef.current.length - 1]
+        : '';
+      const prevContext = lastChunk;
       const data = await translateUniversal(chunk, myL.code, otherL.code, myL.name, otherL.name, {
         context: prevContext || undefined,
         domainContext: roomContextRef.current.contextPrompt || undefined,
@@ -249,14 +253,15 @@ export default function useTranslation({
     if (!allOriginal) return;
     const lang = myLangRef.current;
     const wordCount = countWords(allOriginal, lang);
-    if (wordCount < 10) return;
-    // For no-space languages, take last ~50 chars; for others, last 25 words
+    // Only review if we have enough content (at least 3 chunks and 15 words)
+    if (wordCount < 15 || translatedChunksRef.current.length < 3) return;
+    // For no-space languages, take last ~50 chars; for others, last 15 words (reduced from 25)
     let reviewText;
     if (NO_SPACE_LANGS.has(lang)) {
-      reviewText = allOriginal.slice(-80);
+      reviewText = allOriginal.slice(-50);
     } else {
       const words = allOriginal.split(/\s+/).filter(w => w);
-      reviewText = words.slice(-25).join(' ');
+      reviewText = words.slice(-15).join(' ');
     }
     const { myL, otherL } = getTargetLangInfo();
     try {
@@ -273,24 +278,21 @@ export default function useTranslation({
           roomId,
           isReview: true,
           aiModel: prefsRef.current?.aiModel || undefined,
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined,
           userToken: getEffectiveToken()
+          // NOTE: no domainContext/description in review — reduces confusion
         })
       });
       if (res.ok) {
         const { translated } = await res.json();
         if (translated && translatedChunksRef.current.length > 0) {
-          const reviewWordCount = countWords(reviewText, lang);
-          const avgWordsPerChunk = Math.max(1, wordCount / translatedChunksRef.current.length);
-          const chunksToReplace = Math.min(
-            translatedChunksRef.current.length,
-            Math.ceil(reviewWordCount / avgWordsPerChunk)
-          );
-          const keptChunks = translatedChunksRef.current.slice(0, -chunksToReplace);
-          translatedChunksRef.current = [...keptChunks, translated];
-          const fullTranslation = translatedChunksRef.current.join(' ');
-          setStreamingMsg(prev => (prev ? { ...prev, translated: fullTranslation } : null));
+          // Only replace the last 2 chunks max (safer than dynamic calculation)
+          const chunksToReplace = Math.min(2, translatedChunksRef.current.length - 1);
+          if (chunksToReplace > 0) {
+            const keptChunks = translatedChunksRef.current.slice(0, -chunksToReplace);
+            translatedChunksRef.current = [...keptChunks, translated];
+            const fullTranslation = translatedChunksRef.current.join(' ');
+            setStreamingMsg(prev => (prev ? { ...prev, translated: fullTranslation } : null));
+          }
         }
       }
     } catch (e) {

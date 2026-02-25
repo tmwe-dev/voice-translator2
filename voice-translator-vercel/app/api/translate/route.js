@@ -81,7 +81,7 @@ export async function POST(req) {
       skipCreditCheck: !!isReview,
     });
 
-    // Build system prompt
+    // Build system prompt — strict: output ONLY the translation, nothing else
     const TONAL_LANGS = { 'th': 'Thai (tonal, no spaces between words)', 'zh': 'Chinese', 'ja': 'Japanese', 'vi': 'Vietnamese (tonal, diacritics critical)', 'ko': 'Korean' };
     const srcTonal = TONAL_LANGS[sourceLang];
     const tgtTonal = TONAL_LANGS[targetLang];
@@ -89,11 +89,27 @@ export async function POST(req) {
     if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing.`;
     else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
 
-    let systemPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational.${toneNote}`;
-    if (domainContext) systemPrompt += `\n\n${domainContext}`;
-    if (description) systemPrompt += `\nAdditional context about this conversation: ${description}`;
-    if (context) systemPrompt += `\n\nPrevious translation context (for continuity): "${context}"`;
-    if (isReview) systemPrompt += `\nThis is a review pass. Ensure the translation is coherent and contextually accurate as a whole.`;
+    let systemPrompt = `You are a real-time voice translator. Translate from ${sourceLangName} to ${targetLangName}.${toneNote}
+
+RULES:
+- Output ONLY the translated text in ${targetLangName}
+- Do NOT add notes, explanations, labels, context, or commentary
+- Do NOT repeat or reference any previous translations
+- Keep the translation natural and conversational
+- If the text is unclear, translate it as best you can — never explain`;
+    if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
+    if (description) systemPrompt += `\nTopic: ${description}`;
+    if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;
+
+    // Build messages array — context goes as a prior assistant turn, NOT in system prompt
+    const messages = [{ role: 'system', content: systemPrompt }];
+    if (context) {
+      // Provide previous translation as context via conversation history format
+      messages.push({ role: 'assistant', content: context });
+      messages.push({ role: 'user', content: `Continue translating: ${text}` });
+    } else {
+      messages.push({ role: 'user', content: text });
+    }
 
     let translated;
     let usage = null;
@@ -101,11 +117,13 @@ export async function POST(req) {
     if (modelInfo.provider === 'anthropic') {
       // ── Anthropic Claude ──
       const anthropic = new Anthropic({ apiKey });
+      // Convert messages to Anthropic format (system separate, user/assistant messages)
+      const anthropicMsgs = messages.filter(m => m.role !== 'system');
       const msg = await anthropic.messages.create({
         model: modelInfo.actual,
         max_tokens: 500,
         system: systemPrompt,
-        messages: [{ role: 'user', content: text }],
+        messages: anthropicMsgs,
       });
       translated = msg.content[0]?.text?.trim() || '';
       usage = { prompt_tokens: msg.usage?.input_tokens || 0, completion_tokens: msg.usage?.output_tokens || 0,
@@ -114,8 +132,12 @@ export async function POST(req) {
       // ── Google Gemini ──
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({ model: modelInfo.actual });
+      // Gemini: flatten system + context + text into a single user prompt
+      const userText = context
+        ? `${systemPrompt}\n\nPrevious translation for reference:\n${context}\n\nContinue translating:\n${text}`
+        : `${systemPrompt}\n\nTranslate:\n${text}`;
       const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: `${systemPrompt}\n\nText to translate:\n${text}` }] }],
+        contents: [{ role: 'user', parts: [{ text: userText }] }],
         generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
       });
       translated = result.response.text()?.trim() || '';
@@ -127,10 +149,7 @@ export async function POST(req) {
       const openai = new OpenAI({ apiKey });
       const completion = await openai.chat.completions.create({
         model: modelInfo.actual,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text }
-        ],
+        messages,
         temperature: 0.3,
         max_tokens: 500
       });

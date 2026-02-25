@@ -535,6 +535,8 @@ export default function Home() {
         selectedContext, selectedMode, roomDescription,
         auth.isTrial, auth.isTopPro, auth.userAccount
       );
+      // Immediately sync roomInfoRef (don't wait for useEffect re-render)
+      roomInfoRef.current = room;
       roomContextRef.current = { contextId: selectedContext, contextPrompt: CONTEXTS.find(c => c.id === selectedContext)?.prompt || '', description: roomDescription };
       setView('lobby');
       setStatus('');
@@ -548,6 +550,9 @@ export default function Home() {
     try {
       setStatus('...');
       const room = await roomPolling.handleJoinRoom(joinCode, prefs.name, myLang, prefs.avatar);
+      // Immediately sync roomInfoRef (don't wait for useEffect re-render)
+      // This ensures getTargetLangInfo() sees the partner's language right away
+      roomInfoRef.current = room;
       roomContextRef.current = { contextId: room.context || 'general', contextPrompt: room.contextPrompt || '', description: room.description || '' };
       const hostTier = room.hostTier || 'FREE';
       auth.roomTierOverrideRef.current = hostTier;

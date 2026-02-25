@@ -52,10 +52,16 @@ export async function POST(req) {
     const original = transcription.text;
     if (!original.trim()) return NextResponse.json({ original: '', translated: '', cost: 0 });
 
-    // Build system prompt with domain context
-    let sysPrompt = `Translate from ${sourceLangName} to ${targetLangName}. Output ONLY the translation. Keep it natural and conversational. Clean up filler words.`;
-    if (domainContext) sysPrompt += `\n\n${domainContext}`;
-    if (description) sysPrompt += `\nAdditional context about this conversation: ${description}`;
+    // Build system prompt with domain context — strict output rules
+    let sysPrompt = `You are a real-time voice translator. Translate from ${sourceLangName} to ${targetLangName}.
+
+RULES:
+- Output ONLY the translated text in ${targetLangName}
+- Do NOT add notes, explanations, labels, or commentary
+- Clean up filler words (um, uh, etc.) but keep the meaning
+- Keep the translation natural and conversational`;
+    if (domainContext) sysPrompt += `\n\nDomain: ${domainContext}`;
+    if (description) sysPrompt += `\nTopic: ${description}`;
 
     // Allow model selection: gpt-4o-mini (default) or gpt-4o
     const ALLOWED_MODELS = ['gpt-4o-mini', 'gpt-4o'];
