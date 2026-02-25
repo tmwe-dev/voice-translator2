@@ -90,12 +90,11 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
 
             {/* ══════ FREE — Hero card, first and biggest ══════ */}
             <button style={{
-              width:'100%', padding:'24px 20px', borderRadius:22, cursor:'pointer',
+              width:'100%', padding:'22px 18px', borderRadius:22, cursor:'pointer',
               background:'linear-gradient(135deg, rgba(0,255,148,0.10), rgba(0,210,255,0.06))',
               border:'2px solid rgba(0,255,148,0.30)', marginBottom:16,
-              display:'flex', alignItems:'center', gap:18, fontFamily:FONT,
-              WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-              color:'#E8EAFF', position:'relative'
+              fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+              color:'#E8EAFF', position:'relative', textAlign:'left', display:'block'
             }}
               onClick={() => setView('home')}>
 
@@ -105,32 +104,46 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                 {isIT ? 'Consigliato' : 'Recommended'}
               </div>
 
-              <div style={{width:64, height:64, borderRadius:18,
-                background:'linear-gradient(135deg, rgba(0,255,148,0.20), rgba(0,210,255,0.12))',
-                border:'2px solid rgba(0,255,148,0.25)',
-                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                <Icon name="zap" size={32} color="#00FF94" />
+              {/* Header row */}
+              <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:12}}>
+                <div style={{width:56, height:56, borderRadius:16,
+                  background:'linear-gradient(135deg, rgba(0,255,148,0.20), rgba(0,210,255,0.12))',
+                  border:'2px solid rgba(0,255,148,0.25)',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <Icon name="zap" size={28} color="#00FF94" />
+                </div>
+                <div>
+                  <div style={{fontWeight:800, fontSize:20, color:'#00FF94', letterSpacing:-0.3}}>
+                    {L('startFreeMode')}
+                  </div>
+                  <div style={{fontSize:12, color:'rgba(232,234,255,0.50)', marginTop:2}}>
+                    {isIT ? 'Inizia subito, zero costi' : 'Start now, zero cost'}
+                  </div>
+                </div>
               </div>
-              <div style={{flex:1, textAlign:'left'}}>
-                <div style={{fontWeight:800, fontSize:20, color:'#00FF94', letterSpacing:-0.3}}>
-                  {L('startFreeMode')}
-                </div>
-                <div style={{fontSize:12, color:'rgba(232,234,255,0.55)', marginTop:4, lineHeight:1.5}}>
-                  {L('startFreeDesc')}
-                </div>
-                <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:8}}>
-                  {[
-                    isIT ? 'Voce browser' : 'Browser voice',
-                    isIT ? 'Tutti i contesti' : 'All contexts',
-                    isIT ? 'Nessun costo' : 'No cost',
-                  ].map((tag, i) => (
-                    <span key={i} style={{fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:6,
-                      background:'rgba(0,255,148,0.10)', border:'1px solid rgba(0,255,148,0.18)',
-                      color:'#00FF94'}}>
-                      {'\u2713'} {tag}
-                    </span>
-                  ))}
-                </div>
+
+              {/* Feature grid */}
+              <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', marginBottom:12, paddingLeft:4}}>
+                {[
+                  { icon:'\u{1F4AC}', text: isIT ? '~1000 msg testo/giorno' : '~1000 text msgs/day' },
+                  { icon:'\u{1F50A}', text: isIT ? 'Voce browser illimitata' : 'Unlimited browser voice' },
+                  { icon:'\u{1F310}', text: isIT ? '25 lingue disponibili' : '25 languages available' },
+                  { icon:'\u{1F3AF}', text: isIT ? '12 contesti tematici' : '12 topic contexts' },
+                  { icon:'\u{1F399}\uFE0F', text: isIT ? 'Input vocale e testo' : 'Voice & text input' },
+                  { icon:'\u{267E}\uFE0F', text: isIT ? 'Si rinnova ogni giorno' : 'Renews every day' },
+                ].map((f, i) => (
+                  <div key={i} style={{display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{fontSize:13, width:18, textAlign:'center', flexShrink:0}}>{f.icon}</span>
+                    <span style={{fontSize:11, color:'rgba(232,234,255,0.60)', fontWeight:600}}>{f.text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div style={{textAlign:'center', padding:'10px 0 4px', borderTop:'1px solid rgba(0,255,148,0.12)'}}>
+                <span style={{fontSize:13, fontWeight:800, color:'#00FF94', letterSpacing:0.3}}>
+                  {isIT ? 'Inizia Gratis \u2192' : 'Start Free \u2192'}
+                </span>
               </div>
             </button>
 
@@ -146,60 +159,88 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
             {/* ══════ PRO Options ══════ */}
             <div style={{display:'flex', flexDirection:'column', gap:10}}>
 
-              {/* Starter Pack */}
+              {/* Starter Pack — expanded */}
               <button style={{
                 width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
                 background:'linear-gradient(135deg, rgba(108,99,255,0.10), rgba(0,210,255,0.05))',
                 border:'1.5px solid rgba(108,99,255,0.22)',
-                display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
-                WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                color:'#E8EAFF'
+                fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                color:'#E8EAFF', textAlign:'left', display:'block'
               }}
                 onClick={() => setView('credits')}>
-                <div style={{width:48, height:48, borderRadius:14,
-                  background:'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(0,210,255,0.10))',
-                  border:'1.5px solid rgba(108,99,255,0.25)',
-                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                  <span style={{fontSize:24}}>{'\u{1F680}'}</span>
-                </div>
-                <div style={{flex:1, textAlign:'left'}}>
-                  <div style={{fontWeight:800, fontSize:15, color:'#6C63FF'}}>{L('starterPack')} — {'\u20AC'}0.90</div>
-                  <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:2}}>
-                    {isIT ? 'Voci AI OpenAI, ~180 messaggi' : 'OpenAI AI voices, ~180 messages'}
+                <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:10}}>
+                  <div style={{width:48, height:48, borderRadius:14,
+                    background:'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(0,210,255,0.10))',
+                    border:'1.5px solid rgba(108,99,255,0.25)',
+                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                    <span style={{fontSize:24}}>{'\u{1F680}'}</span>
                   </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:800, fontSize:16, color:'#6C63FF'}}>{L('starterPack')} — {'\u20AC'}0.90</div>
+                    <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:2}}>
+                      {isIT ? 'Voci AI professionali OpenAI' : 'Professional OpenAI AI voices'}
+                    </div>
+                  </div>
+                  <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
                 </div>
-                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
+                <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
+                  {[
+                    { val: '~150', label: isIT ? 'msg vocali' : 'voice msgs', color:'#6C63FF' },
+                    { val: '~225', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
+                    { val: '6', label: isIT ? 'voci AI' : 'AI voices', color:'#00FF94' },
+                  ].map((s, i) => (
+                    <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
+                      padding:'4px 10px', borderRadius:8, background:'rgba(108,99,255,0.06)',
+                      border:'1px solid rgba(108,99,255,0.10)'}}>
+                      <span style={{fontSize:15, fontWeight:800, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:9, color:'rgba(232,234,255,0.40)', fontWeight:600}}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
               </button>
 
-              {/* Buy Credits */}
+              {/* Buy Credits — expanded */}
               <button style={{
                 width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
-                background:'rgba(232,234,255,0.03)',
-                border:'1px solid rgba(232,234,255,0.08)',
-                display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
-                WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
-                color:'#E8EAFF'
+                background:'rgba(232,234,255,0.03)', border:'1px solid rgba(232,234,255,0.08)',
+                fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                color:'#E8EAFF', textAlign:'left', display:'block'
               }}
                 onClick={() => setView('credits')}>
-                <div style={{width:48, height:48, borderRadius:14,
-                  background:'rgba(232,234,255,0.05)', border:'1px solid rgba(232,234,255,0.08)',
-                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                  <span style={{fontSize:24}}>{'\u{1F4B3}'}</span>
-                </div>
-                <div style={{flex:1, textAlign:'left'}}>
-                  <div style={{fontWeight:700, fontSize:15}}>{L('buyCredits')}</div>
-                  <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:2}}>
-                    {L('payAsYouGo')} — {L('from')} {'\u20AC'}2
+                <div style={{display:'flex', alignItems:'center', gap:14, marginBottom:10}}>
+                  <div style={{width:48, height:48, borderRadius:14,
+                    background:'rgba(232,234,255,0.05)', border:'1px solid rgba(232,234,255,0.08)',
+                    display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                    <span style={{fontSize:24}}>{'\u{1F4B3}'}</span>
                   </div>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:700, fontSize:16}}>{L('buyCredits')}</div>
+                    <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:2}}>
+                      {L('payAsYouGo')} — {L('from')} {'\u20AC'}2 {isIT ? 'a' : 'to'} {'\u20AC'}20
+                    </div>
+                  </div>
+                  <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
                 </div>
-                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
+                <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
+                  {[
+                    { val: isIT ? 'fino a 4300' : 'up to 4300', label: isIT ? 'msg vocali' : 'voice msgs', color:'#6C63FF' },
+                    { val: isIT ? 'fino a 6500' : 'up to 6500', label: isIT ? 'msg testo' : 'text msgs', color:'#00D2FF' },
+                    { val: isIT ? 'fino a +30%' : 'up to +30%', label: 'bonus', color:'#FFD700' },
+                  ].map((s, i) => (
+                    <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
+                      padding:'4px 10px', borderRadius:8, background:'rgba(232,234,255,0.03)',
+                      border:'1px solid rgba(232,234,255,0.06)'}}>
+                      <span style={{fontSize:12, fontWeight:800, color:s.color}}>{s.val}</span>
+                      <span style={{fontSize:9, color:'rgba(232,234,255,0.35)', fontWeight:600}}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
               </button>
 
               {/* API Keys */}
               <button style={{
                 width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
-                background:'rgba(232,234,255,0.02)',
-                border:'1px solid rgba(232,234,255,0.06)',
+                background:'rgba(232,234,255,0.02)', border:'1px solid rgba(232,234,255,0.06)',
                 display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
                 WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
                 color:'#E8EAFF'
@@ -213,7 +254,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                 <div style={{flex:1, textAlign:'left'}}>
                   <div style={{fontWeight:700, fontSize:15}}>{L('useYourKeys')}</div>
                   <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:2}}>
-                    {L('openaiAnthropicGemini')}
+                    {isIT ? 'Messaggi illimitati con le tue API' : 'Unlimited messages with your APIs'}
                   </div>
                 </div>
                 <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
