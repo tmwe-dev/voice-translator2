@@ -162,6 +162,7 @@ export default function useRoomPolling({
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
+      setPartnerConnected(room.members.length >= 2);
       startPolling(room.id);
       return room;
     } catch (e) {
@@ -191,6 +192,7 @@ export default function useRoomPolling({
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
+      setPartnerConnected(room.members.length >= 2);
       startPolling(room.id);
       return room;
     } catch (e) {

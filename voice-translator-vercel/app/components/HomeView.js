@@ -10,7 +10,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   userAccount, useOwnKeys, creditBalance, refreshBalance, setAuthStep, loadHistory,
   showShareApp, setShowShareApp, shareAppLang, setShareAppLang, shareApp,
   showTutorial, setShowTutorial, tutorialStep, setTutorialStep, status,
-  isTrial, platformHasEL, referralCode, theme, setTheme }) {
+  isTrial, platformHasEL, referralCode, theme, setTheme, logout }) {
 
   const langInfo = getLang(prefs.lang);
   const [showCreatePanel, setShowCreatePanel] = useState(false);
@@ -155,7 +155,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
           color:'#E8EAFF'
         }}
-          onClick={() => { vibrate(); setShowCreatePanel(!showCreatePanel); }}>
+          onClick={() => { vibrate(); if (isGuest) { setAuthStep('email'); setView('account'); return; } setShowCreatePanel(!showCreatePanel); }}>
           <div style={{width:80, height:80, borderRadius:22,
             background:'linear-gradient(135deg, #6C63FF, #00D2FF)',
             display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
@@ -243,7 +243,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
           color:'#E8EAFF'
         }}
-          onClick={() => setView('join')}>
+          onClick={() => { if (isGuest) { setAuthStep('email'); setView('account'); return; } setView('join'); }}>
           <div style={{width:80, height:80, borderRadius:22,
             background:'rgba(0,210,255,0.1)', border:'1.5px solid rgba(0,210,255,0.22)',
             display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
@@ -325,49 +325,65 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         {/* ══════════════════════════════════════════════════
             QUICK ACTIONS — big icon grid
            ══════════════════════════════════════════════════ */}
-        <div style={{display:'flex', gap:12, justifyContent:'center', width:'100%', maxWidth:400}}>
+        <div style={{display:'flex', gap:10, justifyContent:'center', width:'100%', maxWidth:400, flexWrap:'wrap'}}>
 
           {/* Share */}
           <button style={{
-            flex:1, padding:'20px 0', borderRadius:20, cursor:'pointer',
+            flex:'1 1 28%', minWidth:90, padding:'18px 0', borderRadius:20, cursor:'pointer',
             background:'rgba(0,210,255,0.05)', border:'1.5px solid rgba(0,210,255,0.12)',
             display:'flex', flexDirection:'column', alignItems:'center', gap:10,
             fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
           }}
             onClick={() => setShowShareApp(!showShareApp)}>
-            <Icon name="share" size={44} color={showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.5)'} />
-            <span style={{fontSize:12, fontWeight:700, color: showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.45)'}}>
+            <Icon name="share" size={38} color={showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.5)'} />
+            <span style={{fontSize:11, fontWeight:700, color: showShareApp ? '#00D2FF' : 'rgba(232,234,255,0.45)'}}>
               {L('shareAppBtn')}
             </span>
           </button>
 
           {/* History */}
           <button style={{
-            flex:1, padding:'20px 0', borderRadius:20, cursor:'pointer',
+            flex:'1 1 28%', minWidth:90, padding:'18px 0', borderRadius:20, cursor:'pointer',
             background:'rgba(108,99,255,0.04)', border:'1.5px solid rgba(108,99,255,0.1)',
             display:'flex', flexDirection:'column', alignItems:'center', gap:10,
             fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
           }}
             onClick={() => { loadHistory(); setView('history'); }}>
-            <Icon name="history" size={44} color="rgba(232,234,255,0.5)" />
-            <span style={{fontSize:12, fontWeight:700, color:'rgba(232,234,255,0.45)'}}>
+            <Icon name="history" size={38} color="rgba(232,234,255,0.5)" />
+            <span style={{fontSize:11, fontWeight:700, color:'rgba(232,234,255,0.45)'}}>
               {L('history')}
             </span>
           </button>
 
           {/* Tutorial */}
           <button style={{
-            flex:1, padding:'20px 0', borderRadius:20, cursor:'pointer',
+            flex:'1 1 28%', minWidth:90, padding:'18px 0', borderRadius:20, cursor:'pointer',
             background:'rgba(255,107,157,0.04)', border:'1.5px solid rgba(255,107,157,0.1)',
             display:'flex', flexDirection:'column', alignItems:'center', gap:10,
             fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
           }}
             onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
-            <Icon name="graduation" size={44} color="rgba(232,234,255,0.5)" />
-            <span style={{fontSize:12, fontWeight:700, color:'rgba(232,234,255,0.45)'}}>
+            <Icon name="graduation" size={38} color="rgba(232,234,255,0.5)" />
+            <span style={{fontSize:11, fontWeight:700, color:'rgba(232,234,255,0.45)'}}>
               {L('tutorial')}
             </span>
           </button>
+
+          {/* Logout — only if logged in */}
+          {!isGuest && (
+            <button style={{
+              flex:'1 1 28%', minWidth:90, padding:'18px 0', borderRadius:20, cursor:'pointer',
+              background:'rgba(255,107,157,0.04)', border:'1.5px solid rgba(255,107,157,0.1)',
+              display:'flex', flexDirection:'column', alignItems:'center', gap:10,
+              fontFamily:FONT, WebkitTapHighlightColor:'transparent', color:'#E8EAFF'
+            }}
+              onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}>
+              <Icon name="logout" size={38} color="#FF6B9D" />
+              <span style={{fontSize:11, fontWeight:700, color:'#FF6B9D'}}>
+                {L('logoutAccount') || 'Logout'}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* ── Share App panel ── */}

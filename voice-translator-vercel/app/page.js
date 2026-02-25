@@ -23,6 +23,7 @@ import LobbyView from './components/LobbyView.js';
 import RoomView from './components/RoomView.js';
 import HistoryView from './components/HistoryView.js';
 import SummaryView from './components/SummaryView.js';
+import VoiceTestView from './components/VoiceTestView.js';
 
 
 export default function Home() {
@@ -462,7 +463,7 @@ export default function Home() {
       shareAppLang={shareAppLang} setShareAppLang={setShareAppLang} shareApp={shareApp}
       showTutorial={showTutorial} setShowTutorial={setShowTutorial} tutorialStep={tutorialStep}
       setTutorialStep={setTutorialStep} status={status} isTrial={auth.isTrial} platformHasEL={auth.platformHasEL}
-      referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} />
+      referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} logout={auth.logout} />
   );
 
   if (view === 'join') return (
@@ -504,6 +505,15 @@ export default function Home() {
   if (view === 'summary') return (
     <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
       shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+  );
+
+  if (view === 'voicetest') return (
+    <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
+      isTrial={auth.isTrial} isTopPro={auth.isTopPro} useOwnKeys={auth.useOwnKeys}
+      apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL}
+      elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
+      setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
+      userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
   );
 
   return null;

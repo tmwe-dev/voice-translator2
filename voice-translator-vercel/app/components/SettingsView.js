@@ -441,6 +441,16 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 ? (L('previewUsesRealVoice') || '\u2713 Anteprima con la vera voce OpenAI TTS')
                 : (L('previewRequiresAccount') || 'Accedi con account PRO o configura le chiavi API per ascoltare l\'anteprima delle voci')}
             </div>
+            {/* Voice Test Page button */}
+            <button onClick={() => setView('voicetest')}
+              style={{width:'100%', marginTop:10, padding:'10px 14px', borderRadius:12, cursor:'pointer',
+                background:'rgba(108,99,255,0.06)', border:'1px solid rgba(108,99,255,0.15)',
+                color:'#6C63FF', fontSize:12, fontWeight:700, fontFamily:FONT,
+                display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                WebkitTapHighlightColor:'transparent'}}>
+              <Icon name="play" size={16} color="#6C63FF" />
+              {L('voiceTestPage') || 'Test completo voci'}
+            </button>
           </div>
 
           {/* ══════════════════════════════════════════════════
