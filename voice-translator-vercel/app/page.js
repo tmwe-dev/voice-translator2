@@ -666,6 +666,15 @@ export default function Home() {
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
+  // Auto-show tutorial on first home visit
+  useEffect(() => {
+    if (view === 'home' && !localStorage.getItem('vt-tutorial-done')) {
+      setTutorialStep(0);
+      setShowTutorial(true);
+      localStorage.setItem('vt-tutorial-done', '1');
+    }
+  }, [view]);
+
   function savePrefs(newPrefs) {
     setPrefs(newPrefs);
     setMyLang(newPrefs.lang);
@@ -1700,6 +1709,28 @@ export default function Home() {
     }
   }
 
+  // Export conversation as text
+  function exportConversation() {
+    if (!messages.length) return;
+    const roomName = roomInfo?.host ? `${roomInfo.host}'s Room` : roomId;
+    const date = new Date().toLocaleString();
+    let text = `VoiceTranslate - ${roomName}\n${date}\n${'='.repeat(40)}\n\n`;
+    for (const msg of messages) {
+      const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      text += `[${time}] ${msg.sender}:\n`;
+      text += `  ${msg.original}\n`;
+      text += `  \u2192 ${msg.translated}\n\n`;
+    }
+    text += `${'='.repeat(40)}\n${messages.length} ${L('messages')} | VoiceTranslate`;
+    if (navigator.share) {
+      navigator.share({ title: `VoiceTranslate - ${roomName}`, text });
+    } else {
+      navigator.clipboard.writeText(text);
+      setStatus(L('exportCopied'));
+      setTimeout(() => setStatus(''), 2000);
+    }
+  }
+
   // =============================================
   // AUTH & CREDITS FUNCTIONS
   // =============================================
@@ -1811,11 +1842,20 @@ export default function Home() {
   }
 
   const CREDIT_PACKAGES = [
+    { id:'pack_starter', euros:0.90, credits:90, label:'\u20AC0.90', messages:'~180 msg', starter:true },
     { id:'pack_2', euros:2, credits:200, label:'\u20AC2', messages:'~400 msg' },
     { id:'pack_5', euros:5, credits:550, label:'\u20AC5', messages:'~1100 msg', bonus:'+10%' },
     { id:'pack_10', euros:10, credits:1200, label:'\u20AC10', messages:'~2400 msg', bonus:'+20%' },
     { id:'pack_20', euros:20, credits:2600, label:'\u20AC20', messages:'~5200 msg', bonus:'+30%' },
   ];
+
+  // Tutorial / onboarding state
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  // Light/dark mode
+  const [lightMode, setLightMode] = useState(false);
+  // Export
+  const [showExport, setShowExport] = useState(false);
 
   function formatCredits(cents) {
     return '\u20AC' + (cents / 100).toFixed(2);
@@ -1992,6 +2032,17 @@ export default function Home() {
             <div style={S.card}>
               <div style={S.cardTitle}>{L('howToTranslate')}</div>
 
+              <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #4facfe, #4ecdc4)'}}
+                onClick={() => setView('credits')}>
+                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.2)',
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>{'\u{1F680}'}</div>
+                <div>
+                  <div style={{fontWeight:600, fontSize:15}}>{L('starterPack')} - {'\u20AC'}0.90</div>
+                  <div style={{fontSize:11, color:'rgba(255,255,255,0.8)', marginTop:1}}>
+                    {L('starterPackDesc')}
+                  </div>
+                </div>
+              </button>
               <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #f5576c, #e94560)'}}
                 onClick={() => setView('credits')}>
                 <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
@@ -2052,20 +2103,35 @@ export default function Home() {
           {CREDIT_PACKAGES.map(pkg => (
             <button key={pkg.id} onClick={() => buyCredits(pkg.id)}
               style={{width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
-                padding:'16px 18px', marginBottom:10, borderRadius:18,
-                background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.08)',
+                padding: pkg.starter ? '18px 18px' : '16px 18px', marginBottom:10, borderRadius:18,
+                background: pkg.starter ? 'linear-gradient(135deg, rgba(79,172,254,0.15), rgba(78,205,196,0.15))' : 'rgba(255,255,255,0.06)',
+                border: pkg.starter ? '2px solid rgba(79,172,254,0.4)' : '1px solid rgba(255,255,255,0.08)',
                 color:'#fff', cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                transition:'all 0.15s'}}>
+                transition:'all 0.15s', position:'relative'}}>
+              {pkg.starter && (
+                <div style={{position:'absolute', top:-10, left:16, padding:'2px 10px', borderRadius:8,
+                  background:'linear-gradient(135deg, #4facfe, #4ecdc4)', color:'#fff',
+                  fontSize:10, fontWeight:700, letterSpacing:0.5, textTransform:'uppercase'}}>
+                  {L('starterPack')}
+                </div>
+              )}
               <div style={{textAlign:'left'}}>
                 <div style={{fontSize:22, fontWeight:700}}>{pkg.label}</div>
                 <div style={{fontSize:12, color:'rgba(255,255,255,0.5)', marginTop:2}}>
-                  {pkg.messages}
+                  {pkg.starter ? L('starterPackDesc') : pkg.messages}
                 </div>
               </div>
               {pkg.bonus && (
                 <div style={{padding:'4px 10px', borderRadius:10, background:'rgba(79,172,254,0.15)',
                   color:'#4facfe', fontSize:12, fontWeight:600}}>
                   {pkg.bonus}
+                </div>
+              )}
+              {pkg.starter && (
+                <div style={{padding:'6px 14px', borderRadius:10,
+                  background:'linear-gradient(135deg, #4facfe, #4ecdc4)',
+                  color:'#fff', fontSize:12, fontWeight:700}}>
+                  {L('tryNow')}
                 </div>
               )}
             </button>
@@ -2412,7 +2478,66 @@ export default function Home() {
           </div>
         )}
 
+        {/* Tutorial button */}
+        <button style={{width:'100%', maxWidth:380, marginTop:8, padding:'12px 16px', borderRadius:14,
+          background:'rgba(79,172,254,0.06)', border:'1px solid rgba(79,172,254,0.12)',
+          color:'#4facfe', fontSize:13, fontWeight:500, cursor:'pointer', fontFamily:FONT,
+          textAlign:'center', display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+          WebkitTapHighlightColor:'transparent'}}
+          onClick={() => { setTutorialStep(0); setShowTutorial(true); }}>
+          <span style={{fontSize:16}}>{'\u{1F393}'}</span>
+          <span>{L('tutorial')}</span>
+        </button>
+
         {status && <div style={S.statusMsg}>{status}</div>}
+
+        {/* Tutorial Overlay */}
+        {showTutorial && (
+          <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:9999,
+            background:'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)',
+            display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+            padding:20, boxSizing:'border-box'}} onClick={() => setShowTutorial(false)}>
+            <div style={{maxWidth:360, width:'100%', textAlign:'center'}} onClick={e => e.stopPropagation()}>
+              {/* Step indicator */}
+              <div style={{display:'flex', gap:8, justifyContent:'center', marginBottom:24}}>
+                {[0,1,2,3].map(i => (
+                  <div key={i} style={{width:tutorialStep===i?24:8, height:8, borderRadius:4,
+                    background:tutorialStep===i?'#f5576c':'rgba(255,255,255,0.15)',
+                    transition:'all 0.3s'}} />
+                ))}
+              </div>
+              {/* Step content */}
+              <div style={{fontSize:48, marginBottom:16}}>
+                {['\u{1F3E0}','\u{1F517}','\u{1F399}','\u{1F4CB}'][tutorialStep]}
+              </div>
+              <div style={{fontSize:20, fontWeight:700, marginBottom:8, color:'#fff'}}>
+                {L(`tutorialStep${tutorialStep+1}Title`)}
+              </div>
+              <div style={{fontSize:14, color:'rgba(255,255,255,0.6)', lineHeight:1.6, marginBottom:32}}>
+                {L(`tutorialStep${tutorialStep+1}Desc`)}
+              </div>
+              {/* Navigation */}
+              <div style={{display:'flex', gap:12, justifyContent:'center'}}>
+                <button style={{padding:'10px 24px', borderRadius:14, background:'none',
+                  border:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.5)',
+                  fontSize:13, cursor:'pointer', fontFamily:FONT}}
+                  onClick={() => setShowTutorial(false)}>
+                  {L('skip')}
+                </button>
+                <button style={{padding:'10px 32px', borderRadius:14, border:'none',
+                  background:'linear-gradient(135deg, #f5576c, #e94560)', color:'#fff',
+                  fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:FONT,
+                  boxShadow:'0 4px 16px rgba(233,69,96,0.4)'}}
+                  onClick={() => {
+                    if (tutorialStep < 3) setTutorialStep(tutorialStep + 1);
+                    else { setShowTutorial(false); localStorage.setItem('vt-tutorial-done','1'); }
+                  }}>
+                  {tutorialStep < 3 ? L('next') : L('gotIt')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2575,6 +2700,12 @@ export default function Home() {
                 border: audioEnabled ? '1px solid rgba(78,205,196,0.2)' : '1px solid rgba(255,107,107,0.2)'}}>
               <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
               <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
+            </button>
+            {/* Export button */}
+            <button onClick={exportConversation} title={L('exportConversation')}
+              style={{...S.iconBtn, width:32, fontSize:13, background:'rgba(255,255,255,0.04)',
+                border:'1px solid rgba(255,255,255,0.06)'}}>
+              {'\u{1F4CB}'}
             </button>
             {/* Connection status */}
             <div style={{width:8, height:8, borderRadius:4,

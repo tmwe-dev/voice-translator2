@@ -4,9 +4,17 @@ import { addCost } from '../../lib/store.js';
 import { deductCredits } from '../../lib/users.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 export async function POST(req) {
   try {
+    // Rate limit: 30 requests/minute per IP
+    const rl = checkRateLimit(getRateLimitKey(req, 'translate'), 30);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests. Please wait.' }, { status: 429,
+        headers: { 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } });
+    }
+
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken } = await req.json();
 

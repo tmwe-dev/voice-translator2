@@ -1,10 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession } from '../../lib/users.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 // POST /api/auth - Handle auth actions
 export async function POST(req) {
   try {
     const { action, email, code, name, lang, avatar, token } = await req.json();
+
+    // Rate limit auth actions (stricter: 10/min for send-code/verify)
+    if (action === 'send-code' || action === 'verify') {
+      const rl = checkRateLimit(getRateLimitKey(req, 'auth'), 10);
+      if (!rl.allowed) {
+        return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
+      }
+    }
 
     // === SEND CODE ===
     if (action === 'send-code') {

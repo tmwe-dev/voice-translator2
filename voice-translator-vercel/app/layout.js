@@ -1,6 +1,18 @@
 export const metadata = {
   title: 'VoiceTranslate - Traduttore Vocale',
   description: 'Real-time voice translator for two people',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'VoiceTranslate',
+  },
+  openGraph: {
+    title: 'VoiceTranslate',
+    description: 'Real-time voice translator - Traduttore vocale in tempo reale',
+    type: 'website',
+    url: 'https://voice-translator2.vercel.app',
+  },
 };
 export const viewport = {
   width: 'device-width',
