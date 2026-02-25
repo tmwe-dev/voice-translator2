@@ -1,8 +1,13 @@
 'use client';
 import { FONT } from '../lib/constants.js';
+import Icon from './Icon.js';
 
 export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, authCode, setAuthCode,
   authLoading, authTestCode, sendAuthCode, verifyAuthCodeFn, setAuthStep, setView, status, theme, setTheme }) {
+
+  // Language detection
+  const isIT = L('createRoom') === 'Crea Stanza';
+
   return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
@@ -81,45 +86,142 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
         )}
 
         {authStep === 'choose' && (
-          <div style={{width:'100%', maxWidth:380}}>
-            <div style={S.card}>
-              <div style={S.cardTitle}>{L('howToTranslate')}</div>
-              <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #4facfe, #4ecdc4)'}}
+          <div style={{width:'100%', maxWidth:400}}>
+
+            {/* ══════ FREE — Hero card, first and biggest ══════ */}
+            <button style={{
+              width:'100%', padding:'24px 20px', borderRadius:22, cursor:'pointer',
+              background:'linear-gradient(135deg, rgba(0,255,148,0.10), rgba(0,210,255,0.06))',
+              border:'2px solid rgba(0,255,148,0.30)', marginBottom:16,
+              display:'flex', alignItems:'center', gap:18, fontFamily:FONT,
+              WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+              color:'#E8EAFF', position:'relative'
+            }}
+              onClick={() => setView('home')}>
+
+              <div style={{position:'absolute', top:-11, left:18, padding:'3px 14px', borderRadius:8,
+                background:'linear-gradient(135deg, #00FF94, #00D2FF)',
+                color:'#0a0e27', fontSize:10, fontWeight:800, letterSpacing:0.5, textTransform:'uppercase'}}>
+                {isIT ? 'Consigliato' : 'Recommended'}
+              </div>
+
+              <div style={{width:64, height:64, borderRadius:18,
+                background:'linear-gradient(135deg, rgba(0,255,148,0.20), rgba(0,210,255,0.12))',
+                border:'2px solid rgba(0,255,148,0.25)',
+                display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                <Icon name="zap" size={32} color="#00FF94" />
+              </div>
+              <div style={{flex:1, textAlign:'left'}}>
+                <div style={{fontWeight:800, fontSize:20, color:'#00FF94', letterSpacing:-0.3}}>
+                  {L('startFreeMode')}
+                </div>
+                <div style={{fontSize:12, color:'rgba(232,234,255,0.55)', marginTop:4, lineHeight:1.5}}>
+                  {L('startFreeDesc')}
+                </div>
+                <div style={{display:'flex', flexWrap:'wrap', gap:6, marginTop:8}}>
+                  {[
+                    isIT ? 'Voce browser' : 'Browser voice',
+                    isIT ? 'Tutti i contesti' : 'All contexts',
+                    isIT ? 'Nessun costo' : 'No cost',
+                  ].map((tag, i) => (
+                    <span key={i} style={{fontSize:10, fontWeight:700, padding:'3px 8px', borderRadius:6,
+                      background:'rgba(0,255,148,0.10)', border:'1px solid rgba(0,255,148,0.18)',
+                      color:'#00FF94'}}>
+                      {'\u2713'} {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </button>
+
+            {/* ══════ Divider ══════ */}
+            <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
+              <div style={{flex:1, height:1, background:'rgba(232,234,255,0.06)'}} />
+              <div style={{fontSize:10, color:'rgba(232,234,255,0.25)', fontWeight:700, textTransform:'uppercase', letterSpacing:1.5}}>
+                {isIT ? 'Oppure passa a Pro' : 'Or go Pro'}
+              </div>
+              <div style={{flex:1, height:1, background:'rgba(232,234,255,0.06)'}} />
+            </div>
+
+            {/* ══════ PRO Options ══════ */}
+            <div style={{display:'flex', flexDirection:'column', gap:10}}>
+
+              {/* Starter Pack */}
+              <button style={{
+                width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
+                background:'linear-gradient(135deg, rgba(108,99,255,0.10), rgba(0,210,255,0.05))',
+                border:'1.5px solid rgba(108,99,255,0.22)',
+                display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
+                WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                color:'#E8EAFF'
+              }}
                 onClick={() => setView('credits')}>
-                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.2)',
-                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>{'\u{1F680}'}</div>
-                <div>
-                  <div style={{fontWeight:600, fontSize:15}}>{L('starterPack')} - {'\u20AC'}0.90</div>
-                  <div style={{fontSize:11, color:'rgba(255,255,255,0.8)', marginTop:1}}>
-                    {L('starterPackDesc')}
+                <div style={{width:48, height:48, borderRadius:14,
+                  background:'linear-gradient(135deg, rgba(108,99,255,0.18), rgba(0,210,255,0.10))',
+                  border:'1.5px solid rgba(108,99,255,0.25)',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <span style={{fontSize:24}}>{'\u{1F680}'}</span>
+                </div>
+                <div style={{flex:1, textAlign:'left'}}>
+                  <div style={{fontWeight:800, fontSize:15, color:'#6C63FF'}}>{L('starterPack')} — {'\u20AC'}0.90</div>
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.45)', marginTop:2}}>
+                    {isIT ? 'Voci AI OpenAI, ~180 messaggi' : 'OpenAI AI voices, ~180 messages'}
                   </div>
                 </div>
+                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
               </button>
-              <button style={{...S.bigBtn, marginBottom:10, background:'linear-gradient(135deg, #f5576c, #e94560)'}}
+
+              {/* Buy Credits */}
+              <button style={{
+                width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
+                background:'rgba(232,234,255,0.03)',
+                border:'1px solid rgba(232,234,255,0.08)',
+                display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
+                WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                color:'#E8EAFF'
+              }}
                 onClick={() => setView('credits')}>
-                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)',
-                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:20, flexShrink:0}}>{'\u{1F4B3}'}</div>
-                <div>
-                  <div style={{fontWeight:600, fontSize:15}}>{L('buyCredits')}</div>
-                  <div style={{fontSize:11, color:'rgba(255,255,255,0.7)', marginTop:1}}>
-                    {L('payAsYouGo')} - {L('from')} {'\u20AC'}2
+                <div style={{width:48, height:48, borderRadius:14,
+                  background:'rgba(232,234,255,0.05)', border:'1px solid rgba(232,234,255,0.08)',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <span style={{fontSize:24}}>{'\u{1F4B3}'}</span>
+                </div>
+                <div style={{flex:1, textAlign:'left'}}>
+                  <div style={{fontWeight:700, fontSize:15}}>{L('buyCredits')}</div>
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:2}}>
+                    {L('payAsYouGo')} — {L('from')} {'\u20AC'}2
                   </div>
                 </div>
+                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
               </button>
-              <button style={{...S.bigBtn, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)'}}
+
+              {/* API Keys */}
+              <button style={{
+                width:'100%', padding:'16px 18px', borderRadius:18, cursor:'pointer',
+                background:'rgba(232,234,255,0.02)',
+                border:'1px solid rgba(232,234,255,0.06)',
+                display:'flex', alignItems:'center', gap:14, fontFamily:FONT,
+                WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                color:'#E8EAFF'
+              }}
                 onClick={() => setView('apikeys')}>
-                <div style={{width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.08)',
-                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>{'\u{1F511}'}</div>
-                <div>
-                  <div style={{fontWeight:600, fontSize:15}}>{L('useYourKeys')}</div>
-                  <div style={{fontSize:11, color:'rgba(255,255,255,0.5)', marginTop:1}}>
+                <div style={{width:48, height:48, borderRadius:14,
+                  background:'rgba(0,210,255,0.06)', border:'1px solid rgba(0,210,255,0.12)',
+                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
+                  <Icon name="key" size={22} color="#00D2FF" />
+                </div>
+                <div style={{flex:1, textAlign:'left'}}>
+                  <div style={{fontWeight:700, fontSize:15}}>{L('useYourKeys')}</div>
+                  <div style={{fontSize:11, color:'rgba(232,234,255,0.40)', marginTop:2}}>
                     {L('openaiAnthropicGemini')}
                   </div>
                 </div>
+                <Icon name="chevDown" size={18} color="rgba(232,234,255,0.3)" style={{transform:'rotate(-90deg)'}} />
               </button>
             </div>
-            <button style={{marginTop:16, background:'none', border:'none', color:'rgba(255,255,255,0.35)',
-              fontSize:13, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', textAlign:'center'}}
+
+            <button style={{marginTop:16, background:'none', border:'none', color:'rgba(255,255,255,0.25)',
+              fontSize:12, cursor:'pointer', fontFamily:FONT, padding:10, width:'100%', textAlign:'center'}}
               onClick={() => setView('home')}>
               {L('chooseLater')}
             </button>
