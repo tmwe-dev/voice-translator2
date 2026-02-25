@@ -109,6 +109,8 @@ export default function Home() {
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [inviteLang, setInviteLang] = useState('en'); // language for invite message
   const [inviteMsgLang, setInviteMsgLang] = useState(null); // language from invite URL
+  const [showShareApp, setShowShareApp] = useState(false); // share app panel on home
+  const [shareAppLang, setShareAppLang] = useState('en'); // language for app share message
 
   // Account & Credits state
   const [userToken, setUserToken] = useState(null);
@@ -1548,6 +1550,13 @@ export default function Home() {
   }, []);
 
   // Share
+  function shareApp(lang) {
+    const url = `${APP_URL}?lang=${lang || shareAppLang}`;
+    const text = t(lang || shareAppLang, 'shareAppText');
+    if (navigator.share) navigator.share({ title:'VoiceTranslate', text, url });
+    else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
+  }
+
   function shareRoom() {
     const url = `${APP_URL}?room=${roomId}&lang=${inviteLang}`;
     if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(inviteLang,'inviteText')}`, url });
@@ -2337,6 +2346,39 @@ export default function Home() {
           <button style={S.settingsBtn} onClick={() => { loadHistory(); setView('history'); }}>{L('history')}</button>
           {userToken && <button style={S.settingsBtn} onClick={() => setView('apikeys')}>{L('apiKey')}</button>}
         </div>
+
+        {/* Share App button */}
+        <button style={{width:'100%', maxWidth:380, marginTop:14, padding:'12px 16px', borderRadius:14,
+          background: showShareApp ? 'rgba(78,205,196,0.12)' : 'rgba(78,205,196,0.06)',
+          border:'1px solid rgba(78,205,196,0.15)', color:'#4ecdc4', fontSize:13, fontWeight:500,
+          cursor:'pointer', fontFamily:FONT, textAlign:'center', WebkitTapHighlightColor:'transparent',
+          display:'flex', alignItems:'center', justifyContent:'center', gap:8}}
+          onClick={() => setShowShareApp(!showShareApp)}>
+          <span style={{fontSize:16}}>{'\u{1F30D}'}</span>
+          <span>{L('shareAppBtn')}</span>
+          <span style={{fontSize:10, opacity:0.5}}>{showShareApp ? '\u25B2' : '\u25BC'}</span>
+        </button>
+
+        {/* Share App panel */}
+        {showShareApp && (
+          <div style={{width:'100%', maxWidth:380, marginTop:8, padding:'16px', borderRadius:14,
+            background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)'}}>
+            <div style={{marginBottom:12}}>
+              <div style={S.label}>{L('inviteLangLabel')}</div>
+              <select style={{...S.select, fontSize:14}} value={shareAppLang} onChange={e => setShareAppLang(e.target.value)}>
+                {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+              </select>
+            </div>
+            <div style={{textAlign:'center', marginBottom:12}}>
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(`${APP_URL}?lang=${shareAppLang}`)}`}
+                alt="QR" style={{width:140, height:140, borderRadius:14, background:'#fff', padding:8}} />
+            </div>
+            <button style={{...S.shareBtn, width:'100%'}} onClick={() => shareApp()}>
+              {L('shareLink')}
+            </button>
+          </div>
+        )}
+
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
     </div>
@@ -2492,14 +2534,16 @@ export default function Home() {
             )}
           </button>
           <div style={{display:'flex', alignItems:'center', gap:6}}>
-            {/* Tier badge */}
-            <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
-              background: isTrial ? 'rgba(78,205,196,0.15)' : isTopPro ? 'rgba(255,215,0,0.15)' : 'rgba(245,87,108,0.15)',
-              color: isTrial ? '#4ecdc4' : isTopPro ? '#ffd700' : '#f5576c',
-              border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : isTopPro ? 'rgba(255,215,0,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
-              {isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO'}
-            </span>
-            {/* Cost display - visible to host */}
+            {/* Tier badge - only visible to host */}
+            {isHost && (
+              <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
+                background: isTrial ? 'rgba(78,205,196,0.15)' : isTopPro ? 'rgba(255,215,0,0.15)' : 'rgba(245,87,108,0.15)',
+                color: isTrial ? '#4ecdc4' : isTopPro ? '#ffd700' : '#f5576c',
+                border: `1px solid ${isTrial ? 'rgba(78,205,196,0.25)' : isTopPro ? 'rgba(255,215,0,0.25)' : 'rgba(245,87,108,0.25)'}`}}>
+                {isTrial ? 'FREE' : isTopPro ? 'TOP PRO' : 'PRO'}
+              </span>
+            )}
+            {/* Cost display - visible to host only */}
             {isHost && !isTrial && (
               <>
                 <span style={{fontSize:10, color:'rgba(255,255,255,0.3)', fontFamily:'monospace'}}>
@@ -2530,8 +2574,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* FREE tier usage bar */}
-        {isTrial && (
+        {/* FREE tier usage bar - only visible to host */}
+        {isTrial && isHost && (
           <div style={{padding:'4px 12px', background: freeLimitExceeded ? 'rgba(255,82,82,0.08)' : 'rgba(78,205,196,0.05)',
             borderBottom:'1px solid rgba(255,255,255,0.04)', flexShrink:0}}>
             <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:3}}>
@@ -2716,7 +2760,7 @@ export default function Home() {
           )}
 
           {/* Trial mode upgrade hint */}
-          {isTrial && (
+          {isTrial && isHost && (
             <button onClick={() => { endChatAndSave(); setTimeout(() => setView('account'), 300); }}
               style={{marginTop:4, padding:'4px 14px', borderRadius:10, border:'1px solid rgba(245,87,108,0.2)',
                 background:'rgba(245,87,108,0.06)', color:'rgba(255,255,255,0.5)', fontSize:10,
