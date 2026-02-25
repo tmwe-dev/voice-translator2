@@ -145,22 +145,34 @@ export default function useAudioSystem({
       const url = URL.createObjectURL(blob);
       activeBlobUrlsRef.current.add(url);
       return new Promise((resolve) => {
+        // Safety timeout: resolve after 30s max to prevent stuck queue
+        const safetyTimer = setTimeout(() => {
+          activeBlobUrlsRef.current.delete(url);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 30000);
+        const done = () => {
+          clearTimeout(safetyTimer);
+          resolve();
+        };
         const audio = getPersistentAudio();
         audio.onended = () => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          resolve();
+          done();
         };
         audio.onerror = () => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          playWithNewAudio(text, lang, resolve);
+          clearTimeout(safetyTimer);
+          playWithNewAudio(text, lang, done);
         };
         audio.src = url;
         audio.play().catch(() => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          playWithNewAudio(text, lang, resolve);
+          clearTimeout(safetyTimer);
+          playWithNewAudio(text, lang, done);
         });
       });
     } catch {
@@ -237,22 +249,34 @@ export default function useAudioSystem({
       const url = URL.createObjectURL(blob);
       activeBlobUrlsRef.current.add(url);
       return new Promise((resolve) => {
+        // Safety timeout: resolve after 30s max to prevent stuck queue
+        const safetyTimer = setTimeout(() => {
+          activeBlobUrlsRef.current.delete(url);
+          URL.revokeObjectURL(url);
+          resolve();
+        }, 30000);
+        const done = () => {
+          clearTimeout(safetyTimer);
+          resolve();
+        };
         const audio = getPersistentAudio();
         audio.onended = () => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          resolve();
+          done();
         };
         audio.onerror = () => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          playTTS(text, langCode).then(resolve);
+          clearTimeout(safetyTimer);
+          playTTS(text, langCode).then(done);
         };
         audio.src = url;
         audio.play().catch(() => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
-          playTTS(text, langCode).then(resolve);
+          clearTimeout(safetyTimer);
+          playTTS(text, langCode).then(done);
         });
       });
     } catch {

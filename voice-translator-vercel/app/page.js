@@ -543,6 +543,8 @@ export default function Home() {
 
   async function handleJoinRoom() {
     if (!joinCode.trim()) return;
+    // Unlock audio + mic early (must be in user gesture context)
+    audio.unlockAudio();
     try {
       setStatus('...');
       const room = await roomPolling.handleJoinRoom(joinCode, prefs.name, myLang, prefs.avatar);

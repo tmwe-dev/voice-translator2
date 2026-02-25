@@ -66,6 +66,7 @@ export default function useTranslation({
   const vadTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const vadAnalyserRef = useRef(null);
+  const vadAudioCtxRef = useRef(null);
 
   async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
     if (isTrialRef.current) {
@@ -297,7 +298,12 @@ export default function useTranslation({
     }
   }
 
+  const stoppingRef = useRef(false);
+
   async function stopStreamingTranslation() {
+    // Guard against double-call (double tap, race conditions)
+    if (stoppingRef.current) return;
+    stoppingRef.current = true;
     streamingModeRef.current = false;
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
@@ -340,6 +346,11 @@ export default function useTranslation({
 
     if (!allOriginal && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       setStreamingMsg(null);
+      wordBufferRef.current = '';
+      allWordsRef.current = '';
+      translatedChunksRef.current = [];
+      lastInterimRef.current = '';
+      stoppingRef.current = false;
       try {
         await processAndSendAudio(backupBlob);
       } catch (err) {}
@@ -348,6 +359,7 @@ export default function useTranslation({
 
     if (!allOriginal) {
       setStreamingMsg(null);
+      stoppingRef.current = false;
       return;
     }
 
@@ -386,6 +398,11 @@ export default function useTranslation({
 
     if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       setStreamingMsg(null);
+      wordBufferRef.current = '';
+      allWordsRef.current = '';
+      translatedChunksRef.current = [];
+      lastInterimRef.current = '';
+      stoppingRef.current = false;
       try {
         await processAndSendAudio(backupBlob);
       } catch {}
@@ -411,7 +428,13 @@ export default function useTranslation({
       }
     }
     setStreamingMsg(null);
+    // Clear all buffers to prevent duplicate sends on double-call
+    wordBufferRef.current = '';
+    allWordsRef.current = '';
+    translatedChunksRef.current = [];
+    lastInterimRef.current = '';
     if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+    stoppingRef.current = false;
   }
 
   async function startClassicRecording() {
@@ -563,7 +586,12 @@ export default function useTranslation({
     try {
       const stream = await getMicStream();
       vadStreamRef.current = stream;
+      // Close previous AudioContext if any to prevent accumulation
+      if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
+        try { vadAudioCtxRef.current.close(); } catch {}
+      }
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      vadAudioCtxRef.current = audioCtx;
       const source = audioCtx.createMediaStreamSource(stream);
       const analyser = audioCtx.createAnalyser();
       analyser.fftSize = 512;
@@ -737,6 +765,11 @@ export default function useTranslation({
     if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
     vadStreamRef.current = null;
     vadAnalyserRef.current = null;
+    // Close AudioContext to prevent accumulation (browser limit ~6)
+    if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
+      try { vadAudioCtxRef.current.close(); } catch {}
+      vadAudioCtxRef.current = null;
+    }
     if (streamingModeRef.current) {
       streamingModeRef.current = false;
       if (speechRecRef.current) {
@@ -806,6 +839,10 @@ export default function useTranslation({
         silenceTimerRef.current = null;
       }
       vadAnalyserRef.current = null;
+      if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
+        try { vadAudioCtxRef.current.close(); } catch {}
+        vadAudioCtxRef.current = null;
+      }
 
       // Reset all refs
       wordBufferRef.current = '';
