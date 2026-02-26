@@ -10,7 +10,7 @@ export default function HistoryView({ L, S, prefs, convHistory, viewConversation
           <span style={{fontWeight:600, fontSize:17}}>{L('history')}</span>
         </div>
         {convHistory.length === 0 ? (
-          <div style={{color:'rgba(255,255,255,0.55)', fontSize:14, textAlign:'center', marginTop:40}}>
+          <div style={{color:S.colors.textTertiary, fontSize:14, textAlign:'center', marginTop:40}}>
             {L('noHistory')}
           </div>
         ) : (
@@ -18,20 +18,20 @@ export default function HistoryView({ L, S, prefs, convHistory, viewConversation
             {convHistory.map((c, i) => (
               <button key={c.id + i} onClick={() => viewConversation(c.id)}
                 style={{width:'100%', padding:'14px 16px', borderRadius:16,
-                  background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)',
-                  color:'#fff', textAlign:'left', cursor:'pointer', fontFamily:FONT,
+                  background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                  color:S.colors.textPrimary, textAlign:'left', cursor:'pointer', fontFamily:FONT,
                   backdropFilter:'blur(8px)', WebkitTapHighlightColor:'transparent'}}>
                 <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:4}}>
                   <span style={{fontWeight:600, fontSize:14}}>{c.members?.join(' & ') || 'Conversazione'}</span>
-                  <span style={{fontSize:10, color:'rgba(255,255,255,0.55)'}}>
+                  <span style={{fontSize:10, color:S.colors.textTertiary}}>
                     {c.msgCount || 0} msg
                   </span>
                 </div>
-                <div style={{fontSize:11, color:'rgba(255,255,255,0.4)'}}>
+                <div style={{fontSize:11, color:S.colors.textMuted}}>
                   {c.created ? new Date(c.created).toLocaleDateString('it-IT', {
                     day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
                   }) : ''}
-                  {c.host === prefs.name && <span style={{color:'#f5576c', marginLeft:6}}>Host</span>}
+                  {c.host === prefs.name && <span style={{color:S.colors.accent3, marginLeft:6}}>Host</span>}
                 </div>
               </button>
             ))}

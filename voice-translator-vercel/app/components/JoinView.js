@@ -19,10 +19,10 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
         </div>
         <div style={S.card}>
           {inviteMsgLang && (
-            <div style={{textAlign:'center', marginBottom:18, padding:'12px 8px', background:'rgba(78,205,196,0.1)', borderRadius:12}}>
+            <div style={{textAlign:'center', marginBottom:18, padding:'12px 8px', background:S.colors.accent2Bg, borderRadius:12}}>
               <div style={{fontSize:28, marginBottom:8}}>{'\u{1F30D}\u{1F399}\uFE0F'}</div>
-              <div style={{fontSize:15, color:'#fff', lineHeight:1.5, marginBottom:4, fontWeight:600}}>{tI('inviteWelcome')}</div>
-              <div style={{fontSize:13, color:'rgba(255,255,255,0.7)', lineHeight:1.4}}>{tI('inviteInstructions')}</div>
+              <div style={{fontSize:15, color:S.colors.textPrimary, lineHeight:1.5, marginBottom:4, fontWeight:600}}>{tI('inviteWelcome')}</div>
+              <div style={{fontSize:13, color:S.colors.textSecondary, lineHeight:1.4}}>{tI('inviteInstructions')}</div>
             </div>
           )}
           <div style={S.field}>
@@ -49,7 +49,7 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
             {inviteMsgLang ? tI('inviteJoinBtn') : L('enterRoom')}
           </button>
           {inviteMsgLang && !userToken && (
-            <button style={{marginTop:10, background:'none', border:'none', color:'rgba(255,255,255,0.5)',
+            <button style={{marginTop:10, background:'none', border:'none', color:S.colors.textMuted,
               fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, textDecoration:'underline'}}
               onClick={() => setShowInvitePopup(true)}>
               {tI('inviteInfoLink')}
@@ -61,20 +61,20 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
       {showInvitePopup && (
         <div style={{position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:20}}
           onClick={() => setShowInvitePopup(false)}>
-          <div style={{background:'#1a1a2e', borderRadius:18, padding:'28px 22px', maxWidth:360, width:'100%', boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}
+          <div style={{background:S.colors.glassCard, borderRadius:18, padding:'28px 22px', maxWidth:360, width:'100%', boxShadow:S.colors.cardShadow}}
             onClick={e => e.stopPropagation()}>
             <div style={{fontSize:32, textAlign:'center', marginBottom:12}}>{'\u{1F30D}\u{1F399}\uFE0F'}</div>
-            <div style={{fontSize:18, fontWeight:700, color:'#fff', textAlign:'center', marginBottom:12}}>{tI('invitePopupTitle')}</div>
-            <div style={{fontSize:14, color:'rgba(255,255,255,0.8)', lineHeight:1.6, marginBottom:16}}>{tI('invitePopupDesc')}</div>
-            <div style={{fontSize:13, color:'rgba(255,255,255,0.6)', lineHeight:1.5, marginBottom:16, padding:'10px 12px', background:'rgba(78,205,196,0.08)', borderRadius:10}}>
+            <div style={{fontSize:18, fontWeight:700, color:S.colors.textPrimary, textAlign:'center', marginBottom:12}}>{tI('invitePopupTitle')}</div>
+            <div style={{fontSize:14, color:S.colors.textSecondary, lineHeight:1.6, marginBottom:16}}>{tI('invitePopupDesc')}</div>
+            <div style={{fontSize:13, color:S.colors.textTertiary, lineHeight:1.5, marginBottom:16, padding:'10px 12px', background:S.colors.accent2Bg, borderRadius:10}}>
               {tI('invitePopupFeatures')}
             </div>
             <div style={{display:'flex', gap:8}}>
               <button style={{...S.btn, flex:1, fontSize:13}} onClick={() => { setShowInvitePopup(false); setView('account'); setAuthStep('email'); }}>
                 {tI('invitePopupCreateAccount')}
               </button>
-              <button style={{flex:1, padding:'10px 14px', borderRadius:12, border:'1px solid rgba(255,255,255,0.2)',
-                background:'transparent', color:'#fff', fontSize:13, cursor:'pointer', fontFamily:FONT}}
+              <button style={{flex:1, padding:'10px 14px', borderRadius:12, border:`1px solid ${S.colors.overlayBorder}`,
+                background:'transparent', color:S.colors.textPrimary, fontSize:13, cursor:'pointer', fontFamily:FONT}}
                 onClick={() => setShowInvitePopup(false)}>
                 {tI('invitePopupJoinNow')}
               </button>

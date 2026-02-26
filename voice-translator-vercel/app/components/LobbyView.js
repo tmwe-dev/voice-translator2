@@ -16,7 +16,7 @@ const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConne
         <div style={S.card}>
           <div style={{textAlign:'center', marginBottom:16}}>
             <div style={S.label}>{L('code')}</div>
-            <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:'#e94560'}}>{roomId}</div>
+            <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:S.colors.accent3}}>{roomId}</div>
           </div>
           <div style={{textAlign:'center', marginBottom:14}}>
             <img src={qrUrl} alt="QR" style={{width:150, height:150, borderRadius:14, background:'#fff', padding:8}} />
@@ -30,9 +30,9 @@ const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConne
           <div style={{textAlign:'center', marginBottom:12}}>
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
           </div>
-          <div style={{textAlign:'center', color:'rgba(255,255,255,0.5)', fontSize:13, marginBottom:12}}>
+          <div style={{textAlign:'center', color:S.colors.textMuted, fontSize:13, marginBottom:12}}>
             {partnerConnected
-              ? <span style={{color:'#4ecdc4'}}>{roomInfo?.members?.[1]?.name} {'\u2714'}</span>
+              ? <span style={{color:S.colors.accent2}}>{roomInfo?.members?.[1]?.name} {'\u2714'}</span>
               : <span>{L('waitingForPartner')}</span>}
           </div>
           {partnerConnected && (

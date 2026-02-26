@@ -14,6 +14,7 @@ const STEPS = [
 
 export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode, userToken, setView, setAuthStep, theme, setTheme }) {
   const [step, setStep] = useState(0);
+  const themeS = typeof S === 'object' && S.colors ? S : null;
 
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
@@ -32,7 +33,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
           style={{display:'flex', alignItems:'center', gap:4, cursor: i <= step ? 'pointer' : 'default',
             opacity: i <= step ? 1 : 0.35, transition:'all 0.3s'}}>
           <div style={{width: i === step ? 28 : 8, height:8, borderRadius:4, transition:'all 0.3s',
-            background: i < step ? '#00FF94' : i === step ? '#6C63FF' : 'rgba(232,234,255,0.15)'}} />
+            background: i < step ? S.colors.accent4 : i === step ? S.colors.accent1 : S.colors.textMuted}} />
         </div>
       ))}
     </div>
@@ -41,8 +42,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   // Step label
   const stepLabel = (title, subtitle) => (
     <div style={{textAlign:'center', marginBottom:16}}>
-      <div style={{fontSize:16, fontWeight:700, color:'#FFFFFF', letterSpacing:-0.3}}>{title}</div>
-      {subtitle && <div style={{fontSize:12, color:'rgba(255,255,255,0.65)', marginTop:4}}>{subtitle}</div>}
+      <div style={{fontSize:16, fontWeight:700, color:S.colors.textPrimary, letterSpacing:-0.3}}>{title}</div>
+      {subtitle && <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4}}>{subtitle}</div>}
     </div>
   );
 
@@ -58,7 +59,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
         <div style={{...S.card, padding:'20px 18px', position:'relative', overflow:'hidden'}}>
           {/* Step counter */}
-          <div style={{fontSize:10, color:'rgba(255,255,255,0.50)', fontWeight:700, textAlign:'center',
+          <div style={{fontSize:10, color:S.colors.textTertiary, fontWeight:700, textAlign:'center',
             marginBottom:12, letterSpacing:1}}>
             {step + 1} / {STEPS.length}
           </div>
@@ -76,7 +77,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 onChange={e => setPrefs({...prefs, name:e.target.value})} maxLength={20}
                 autoFocus />
               {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 && (
-                <div style={{fontSize:11, color:'#FF6B9D', textAlign:'center', marginTop:8}}>
+                <div style={{fontSize:11, color:S.colors.accent3, textAlign:'center', marginTop:8}}>
                   {L('nameMinChars') || 'Almeno 2 caratteri'}
                 </div>
               )}
@@ -92,33 +93,33 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               )}
               {/* Current selection preview */}
               <div style={{display:'flex', justifyContent:'center', marginBottom:12}}>
-                <div style={{width:80, height:80, borderRadius:20, overflow:'hidden',
-                  border:'3px solid #6C63FF', boxShadow:'0 0 20px rgba(108,99,255,0.2)',
+                <div style={{width:110, height:110, borderRadius:28, overflow:'hidden',
+                  border:`3px solid ${S.colors.accent1}`, boxShadow:`0 0 20px ${S.colors.accent1Bg}`,
                   display:'flex', alignItems:'center', justifyContent:'center',
-                  background:'rgba(108,99,255,0.08)'}}>
-                  <img src={prefs.avatar} alt="" style={{width:68, height:68, objectFit:'contain'}} />
+                  background:S.colors.accent1Bg}}>
+                  <img src={prefs.avatar} alt="" style={{width:100, height:100, objectFit:'contain'}} />
                 </div>
               </div>
-              <div style={{textAlign:'center', fontSize:14, fontWeight:700, color:'#6C63FF', marginBottom:12}}>
+              <div style={{textAlign:'center', fontSize:14, fontWeight:700, color:S.colors.accent1, marginBottom:12}}>
                 {AVATAR_NAMES[selectedAvatarIdx >= 0 ? selectedAvatarIdx : 0]}
               </div>
               <Carousel
                 items={AVATARS}
                 selectedIndex={selectedAvatarIdx >= 0 ? selectedAvatarIdx : 0}
                 onSelect={(i) => setPrefs({...prefs, avatar: AVATARS[i]})}
-                itemWidth={72}
+                itemWidth={90}
                 gap={8}
                 renderItem={(avatar, i, isSelected) => (
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
-                      width:62, height:62, borderRadius:16, overflow:'hidden',
-                      border: isSelected ? '2.5px solid #6C63FF' : '2.5px solid transparent',
-                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'none',
+                      width:80, height:80, borderRadius:20, overflow:'hidden',
+                      border: isSelected ? `2.5px solid ${S.colors.accent1}` : '2.5px solid transparent',
+                      background: isSelected ? S.colors.accent1Bg : 'none',
                       display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s'
                     }}>
-                      <img src={avatar} alt={AVATAR_NAMES[i]} style={{width:52, height:52, objectFit:'contain'}} />
+                      <img src={avatar} alt={AVATAR_NAMES[i]} style={{width:70, height:70, objectFit:'contain'}} />
                     </div>
-                    <span style={{fontSize:9, marginTop:3, color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.65)',
+                    <span style={{fontSize:9, marginTop:3, color: isSelected ? S.colors.accent1 : S.colors.textSecondary,
                       fontWeight: isSelected ? 600 : 400, fontFamily:FONT}}>{AVATAR_NAMES[i]}</span>
                   </div>
                 )}
@@ -139,7 +140,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   {LANGS[selectedLangIdx >= 0 ? selectedLangIdx : 0]?.flag}
                 </div>
               </div>
-              <div style={{textAlign:'center', fontSize:14, fontWeight:700, color:'#6C63FF', marginBottom:12}}>
+              <div style={{textAlign:'center', fontSize:14, fontWeight:700, color:S.colors.accent1, marginBottom:12}}>
                 {LANGS[selectedLangIdx >= 0 ? selectedLangIdx : 0]?.name}
               </div>
               <Carousel
@@ -152,8 +153,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <div style={{display:'flex', flexDirection:'column', alignItems:'center'}}>
                     <div style={{
                       width:52, height:52, borderRadius:26,
-                      border: isSelected ? '2.5px solid #6C63FF' : '2.5px solid transparent',
-                      background: isSelected ? 'rgba(108,99,255,0.08)' : 'rgba(255,255,255,0.05)',
+                      border: isSelected ? `2.5px solid ${S.colors.accent1}` : '2.5px solid transparent',
+                      background: isSelected ? S.colors.accent1Bg : S.colors.textMuted,
                       display:'flex', alignItems:'center', justifyContent:'center',
                       transition:'all 0.2s', fontSize:26
                     }}>
@@ -161,7 +162,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     </div>
                     <span style={{fontSize:9, marginTop:3, maxWidth:68, overflow:'hidden',
                       textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center',
-                      color: isSelected ? '#6C63FF' : 'rgba(255,255,255,0.65)',
+                      color: isSelected ? S.colors.accent1 : S.colors.textSecondary,
                       fontWeight: isSelected ? 600 : 400, fontFamily:FONT}}>{lang.name}</span>
                   </div>
                 )}
@@ -183,16 +184,16 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <button key={v} onClick={() => setPrefs({...prefs, voice:v})}
                       style={{padding:'10px 16px', borderRadius:12, cursor:'pointer',
                         fontFamily:FONT, fontSize:13, fontWeight: sel ? 700 : 500,
-                        background: sel ? 'rgba(108,99,255,0.15)' : 'rgba(255,255,255,0.04)',
-                        border: sel ? '1.5px solid rgba(108,99,255,0.35)' : '1.5px solid rgba(255,255,255,0.09)',
-                        color: sel ? '#6C63FF' : 'rgba(255,255,255,0.72)',
+                        background: sel ? S.colors.accent1Bg : S.colors.overlayBg,
+                        border: sel ? `1.5px solid ${S.colors.accent1Border}` : `1px solid ${S.colors.overlayBorder}`,
+                        color: sel ? S.colors.accent1 : S.colors.textSecondary,
                         transition:'all 0.15s', WebkitTapHighlightColor:'transparent'}}>
                       {v.charAt(0).toUpperCase() + v.slice(1)}
                     </button>
                   );
                 })}
               </div>
-              <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', textAlign:'center', marginBottom:16}}>
+              <div style={{fontSize:10, color:S.colors.textTertiary, textAlign:'center', marginBottom:16}}>
                 {L('welcomeVoiceHint') || 'Le voci AI sono disponibili con account PRO. La modalità FREE usa la voce del browser.'}
               </div>
             </div>
@@ -202,8 +203,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
           <div style={{display:'flex', gap:10, marginTop:16}}>
             {step > 0 && (
               <button onClick={prev} style={{flex:'0 0 48px', height:48, borderRadius:14, cursor:'pointer',
-                background:'rgba(255,255,255,0.05)', border:'1px solid rgba(232,234,255,0.1)',
-                color:'rgba(255,255,255,0.72)', fontSize:18, display:'flex', alignItems:'center',
+                background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                color:S.colors.textSecondary, fontSize:18, display:'flex', alignItems:'center',
                 justifyContent:'center', WebkitTapHighlightColor:'transparent'}}>
                 {'\u2190'}
               </button>
@@ -211,8 +212,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
             {!isLast ? (
               <button onClick={next} disabled={!canNext}
                 style={{flex:1, height:48, borderRadius:14, cursor: canNext ? 'pointer' : 'default',
-                  background: canNext ? 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)' : 'rgba(255,255,255,0.07)',
-                  border:'none', color: canNext ? '#fff' : 'rgba(255,255,255,0.50)',
+                  background: canNext ? `linear-gradient(135deg, ${S.colors.accent1} 0%, ${S.colors.accent2} 100%)` : S.colors.overlayBg,
+                  border:'none', color: canNext ? S.colors.textPrimary : S.colors.textTertiary,
                   fontFamily:FONT, fontSize:15, fontWeight:700, letterSpacing:-0.3,
                   display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                   opacity: canNext ? 1 : 0.5, transition:'all 0.2s',
@@ -226,11 +227,11 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 {/* FREE button */}
                 <button style={{
                   width:'100%', padding:'14px 16px', borderRadius:14, border:'none', cursor:'pointer',
-                  background:'linear-gradient(135deg, #00FF94 0%, #00D2FF 100%)',
+                  background:`linear-gradient(135deg, ${S.colors.accent4} 0%, ${S.colors.accent2} 100%)`,
                   color:'#0B0D1A', fontFamily:FONT,
                   display:'flex', alignItems:'center', gap:10,
                   WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                  boxShadow:'0 4px 20px rgba(0,255,148,0.2)'
+                  boxShadow:`0 4px 20px ${S.colors.accent4Bg}`
                 }}
                   onClick={() => {
                     savePrefs(prefs);
@@ -250,8 +251,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 {!userToken && (
                   <button style={{
                     width:'100%', padding:'12px 16px', borderRadius:14, cursor:'pointer',
-                    background:'rgba(108,99,255,0.08)', border:'1px solid rgba(108,99,255,0.2)',
-                    color:'#FFFFFF', fontFamily:FONT,
+                    background:S.colors.accent1Bg, border:`1px solid ${S.colors.accent1Border}`,
+                    color:S.colors.textPrimary, fontFamily:FONT,
                     display:'flex', alignItems:'center', gap:10,
                     WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
                   }}
@@ -260,15 +261,15 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       setAuthStep('email');
                       setView('account');
                     }}>
-                    <Icon name="lock" size={16} color="#6C63FF" />
+                    <Icon name="lock" size={16} color={S.colors.accent1} />
                     <div style={{flex:1, textAlign:'left'}}>
                       <div style={{fontWeight:700, fontSize:13}}>{L('signInPro')}</div>
-                      <div style={{fontSize:10, color:'rgba(255,255,255,0.65)'}}>
+                      <div style={{fontSize:10, color:S.colors.textSecondary}}>
                         {L('signInProDesc')}
                       </div>
                     </div>
                     <span style={{fontSize:9, fontWeight:800, padding:'2px 7px', borderRadius:6,
-                      background:'rgba(108,99,255,0.15)', color:'#6C63FF', letterSpacing:0.5}}>PRO</span>
+                      background:S.colors.accent1Bg, color:S.colors.accent1, letterSpacing:0.5}}>PRO</span>
                   </button>
                 )}
 
@@ -276,8 +277,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 {userToken && (
                   <button style={{
                     width:'100%', padding:'12px 16px', borderRadius:14, cursor:'pointer',
-                    background:'rgba(108,99,255,0.08)', border:'1px solid rgba(108,99,255,0.2)',
-                    color:'#6C63FF', fontFamily:FONT, fontSize:13, fontWeight:700, textAlign:'center',
+                    background:S.colors.accent1Bg, border:`1px solid ${S.colors.accent1Border}`,
+                    color:S.colors.accent1, fontFamily:FONT, fontSize:13, fontWeight:700, textAlign:'center',
                     WebkitTapHighlightColor:'transparent'
                   }}
                     onClick={() => { savePrefs(prefs); setView('home'); }}>

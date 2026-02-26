@@ -79,11 +79,11 @@ export default function ContactsView({
       <div style={S.scrollCenter}>
         {/* Header */}
         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', maxWidth:400, marginBottom:16}}>
-          <button style={{background:'none', border:'none', color:'rgba(255,255,255,0.5)', cursor:'pointer', padding:8, fontFamily:FONT}}
+          <button style={{background:'none', border:'none', color:S.colors.textMuted, cursor:'pointer', padding:8, fontFamily:FONT}}
             onClick={() => setView('home')}>
-            <Icon name="chevDown" size={20} color="rgba(255,255,255,0.5)" style={{transform:'rotate(90deg)'}} />
+            <Icon name="chevDown" size={20} color={S.colors.textMuted} style={{transform:'rotate(90deg)'}} />
           </button>
-          <div style={{fontSize:18, fontWeight:800, color:'#fff'}}>
+          <div style={{fontSize:18, fontWeight:800, color:S.colors.textPrimary}}>
             {isIT ? 'Contatti' : 'Contacts'}
           </div>
           <div style={{width:36}} />
@@ -91,8 +91,8 @@ export default function ContactsView({
 
         {/* Online count badge */}
         {contacts.length > 0 && (
-          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:16}}>
-            <span style={{display:'inline-block', width:8, height:8, borderRadius:4, background:'#00FF94', marginRight:6}} />
+          <div style={{fontSize:12, color:S.colors.textMuted, marginBottom:16}}>
+            <span style={{display:'inline-block', width:8, height:8, borderRadius:4, background:S.colors.onlineColor, marginRight:6}} />
             {onlineCount} {isIT ? 'online' : 'online'}
             {' · '}
             {contacts.length} {isIT ? 'contatti' : 'contacts'}
@@ -101,7 +101,7 @@ export default function ContactsView({
 
         {/* Add contact section */}
         <div style={{...S.card, marginBottom:16, width:'100%', maxWidth:400}}>
-          <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:'rgba(255,255,255,0.7)'}}>
+          <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:S.colors.textSecondary}}>
             {isIT ? 'Aggiungi contatto' : 'Add contact'}
           </div>
           <div style={{display:'flex', gap:8}}>
@@ -119,17 +119,17 @@ export default function ContactsView({
             </button>
           </div>
           {addError && (
-            <div style={{fontSize:11, color:'#f5576c', marginTop:6}}>{addError}</div>
+            <div style={{fontSize:11, color:S.colors.accent3, marginTop:6}}>{addError}</div>
           )}
           {addSuccess && (
-            <div style={{fontSize:11, color:'#00FF94', marginTop:6}}>{addSuccess}</div>
+            <div style={{fontSize:11, color:S.colors.onlineColor, marginTop:6}}>{addSuccess}</div>
           )}
 
           {/* Invite button */}
           <button style={{
             width:'100%', marginTop:12, padding:'10px 14px', borderRadius:12,
-            background:'linear-gradient(135deg, rgba(108,99,255,0.15), rgba(0,210,255,0.08))',
-            border:'1px solid rgba(108,99,255,0.25)', color:'#fff', fontSize:13,
+            background:`linear-gradient(135deg, ${S.colors.accent1Bg}, ${S.colors.accent2Bg}33)`,
+            border:`1px solid ${S.colors.accent1Border}`, color:S.colors.textPrimary, fontSize:13,
             fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center',
             justifyContent:'center', gap:8
           }}
@@ -142,10 +142,10 @@ export default function ContactsView({
         {/* Invite sharing panel */}
         {showInvite && currentInviteCode && (
           <div style={{...S.card, marginBottom:16, width:'100%', maxWidth:400}}>
-            <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:'rgba(255,255,255,0.7)'}}>
+            <div style={{fontSize:13, fontWeight:700, marginBottom:10, color:S.colors.textSecondary}}>
               {isIT ? 'Condividi invito' : 'Share invite'}
             </div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:12}}>
+            <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:12}}>
               {isIT
                 ? 'Chi riceve il link diventerà automaticamente tuo contatto'
                 : 'Anyone who clicks this link will become your contact'}
@@ -157,27 +157,31 @@ export default function ContactsView({
                 { id:'whatsapp', icon:'💬', label:'WhatsApp', color:'#25D366' },
                 { id:'telegram', icon:'✈️', label:'Telegram', color:'#0088cc' },
                 { id:'sms', icon:'📱', label:'SMS', color:'#FF9500' },
-                { id:'email', icon:'📧', label:'Email', color:'#6C63FF' },
-              ].map(ch => (
+                { id:'email', icon:'📧', label:'Email', color:S.colors.accent1 },
+              ].map(ch => {
+                const bgColor = ch.id === 'email' ? S.colors.accent1Bg : `${ch.color}26`;
+                const borderColor = ch.id === 'email' ? S.colors.accent1Border : `${ch.color}4d`;
+                return (
                 <button key={ch.id} style={{
                   padding:'12px 8px', borderRadius:12, cursor:'pointer',
-                  background:`${ch.color}15`, border:`1px solid ${ch.color}30`,
-                  color:'#fff', fontSize:13, fontFamily:FONT,
+                  background:bgColor, border:`1px solid ${borderColor}`,
+                  color:S.colors.textPrimary, fontSize:13, fontFamily:FONT,
                   display:'flex', alignItems:'center', justifyContent:'center', gap:6
                 }}
                   onClick={() => handleShare(ch.id)}>
                   <span>{ch.icon}</span>
                   <span>{ch.label}</span>
                 </button>
-              ))}
+              );
+              })}
             </div>
 
             {/* Copy link & native share */}
             <div style={{display:'flex', gap:8}}>
               <button style={{
                 flex:1, padding:'10px 12px', borderRadius:10, cursor:'pointer',
-                background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
-                color: linkCopied ? '#00FF94' : '#fff', fontSize:12, fontFamily:FONT,
+                background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                color: linkCopied ? S.colors.onlineColor : S.colors.textPrimary, fontSize:12, fontFamily:FONT,
                 display:'flex', alignItems:'center', justifyContent:'center', gap:6
               }}
                 onClick={() => handleShare('copy')}>
@@ -186,8 +190,8 @@ export default function ContactsView({
               {typeof navigator !== 'undefined' && navigator.share && (
                 <button style={{
                   flex:1, padding:'10px 12px', borderRadius:10, cursor:'pointer',
-                  background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)',
-                  color:'#fff', fontSize:12, fontFamily:FONT,
+                  background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                  color:S.colors.textPrimary, fontSize:12, fontFamily:FONT,
                   display:'flex', alignItems:'center', justifyContent:'center', gap:6
                 }}
                   onClick={() => handleShare('native')}>
@@ -196,7 +200,7 @@ export default function ContactsView({
               )}
             </div>
 
-            <button style={{marginTop:8, background:'none', border:'none', color:'rgba(255,255,255,0.3)',
+            <button style={{marginTop:8, background:'none', border:'none', color:S.colors.textMuted,
               fontSize:11, cursor:'pointer', fontFamily:FONT, padding:6, width:'100%', textAlign:'center'}}
               onClick={() => setShowInvite(false)}>
               {isIT ? 'Chiudi' : 'Close'}
@@ -206,16 +210,16 @@ export default function ContactsView({
 
         {/* Contacts list */}
         {contactsLoading && contacts.length === 0 ? (
-          <div style={{fontSize:13, color:'rgba(255,255,255,0.3)', padding:20}}>
+          <div style={{fontSize:13, color:S.colors.textMuted, padding:20}}>
             {isIT ? 'Caricamento...' : 'Loading...'}
           </div>
         ) : contacts.length === 0 ? (
           <div style={{textAlign:'center', padding:'30px 20px'}}>
             <div style={{fontSize:40, marginBottom:12}}>{'👥'}</div>
-            <div style={{fontSize:14, color:'rgba(255,255,255,0.5)', marginBottom:6}}>
+            <div style={{fontSize:14, color:S.colors.textSecondary, marginBottom:6}}>
               {isIT ? 'Nessun contatto ancora' : 'No contacts yet'}
             </div>
-            <div style={{fontSize:12, color:'rgba(255,255,255,0.3)'}}>
+            <div style={{fontSize:12, color:S.colors.textMuted}}>
               {isIT
                 ? 'Aggiungi contatti per email o invia un invito'
                 : 'Add contacts by email or send an invite'}
@@ -227,28 +231,28 @@ export default function ContactsView({
               <div key={contact.email} style={{
                 display:'flex', alignItems:'center', gap:12, padding:'12px 14px',
                 borderRadius:14, marginBottom:6,
-                background: contact.online ? 'rgba(0,255,148,0.04)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${contact.online ? 'rgba(0,255,148,0.12)' : 'rgba(255,255,255,0.06)'}`,
+                background: contact.online ? S.colors.accent4Bg : S.colors.overlayBg,
+                border: `1px solid ${contact.online ? S.colors.accent4Border : S.colors.overlayBorder}`,
               }}>
                 {/* Avatar with online indicator */}
                 <div style={{position:'relative', flexShrink:0}}>
                   <img src={contact.avatar} alt="" style={{
-                    width:44, height:44, borderRadius:14,
-                    border: `2px solid ${contact.online ? '#00FF94' : 'rgba(255,255,255,0.1)'}`
+                    width:72, height:72, borderRadius:20,
+                    border: `2px solid ${contact.online ? S.colors.onlineColor : S.colors.overlayBorder}`
                   }} />
                   <div style={{
                     position:'absolute', bottom:-1, right:-1, width:14, height:14,
-                    borderRadius:7, border:'2px solid #0B0D1A',
-                    background: contact.online ? '#00FF94' : '#666'
+                    borderRadius:7, border:`2px solid ${S.colors.cardBg}`,
+                    background: contact.online ? S.colors.onlineColor : S.colors.textMuted
                   }} />
                 </div>
 
                 {/* Info */}
                 <div style={{flex:1, minWidth:0}}>
-                  <div style={{fontSize:14, fontWeight:700, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                  <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                     {contact.name || contact.email.split('@')[0]}
                   </div>
-                  <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                  <div style={{fontSize:11, color:S.colors.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
                     {contact.online
                       ? (isIT ? '🟢 Online' : '🟢 Online')
                       : contact.lastSeen
@@ -267,10 +271,10 @@ export default function ContactsView({
                   {/* Start chat button */}
                   <button style={{
                     width:36, height:36, borderRadius:12, cursor:'pointer',
-                    background: contact.online ? 'rgba(0,255,148,0.15)' : 'rgba(108,99,255,0.12)',
-                    border: `1px solid ${contact.online ? 'rgba(0,255,148,0.3)' : 'rgba(108,99,255,0.2)'}`,
+                    background: contact.online ? S.colors.accent4Bg : S.colors.accent1Bg,
+                    border: `1px solid ${contact.online ? S.colors.accent4Border : S.colors.accent1Border}`,
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    color: contact.online ? '#00FF94' : '#6C63FF', fontSize:16
+                    color: contact.online ? S.colors.onlineColor : S.colors.accent1, fontSize:16
                   }}
                     onClick={() => handleStartChat && handleStartChat(contact)}
                     title={isIT ? 'Avvia chat' : 'Start chat'}>
@@ -281,9 +285,9 @@ export default function ContactsView({
                   {confirmRemove === contact.email ? (
                     <button style={{
                       width:36, height:36, borderRadius:12, cursor:'pointer',
-                      background:'rgba(245,87,108,0.15)', border:'1px solid rgba(245,87,108,0.3)',
+                      background:S.colors.accent3Bg, border:`1px solid ${S.colors.accent3Border}`,
                       display:'flex', alignItems:'center', justifyContent:'center',
-                      color:'#f5576c', fontSize:14
+                      color:S.colors.accent3, fontSize:14
                     }}
                       onClick={async () => {
                         await removeContact(contact.email);
@@ -295,9 +299,9 @@ export default function ContactsView({
                   ) : (
                     <button style={{
                       width:36, height:36, borderRadius:12, cursor:'pointer',
-                      background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.06)',
+                      background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
                       display:'flex', alignItems:'center', justifyContent:'center',
-                      color:'rgba(255,255,255,0.25)', fontSize:14
+                      color:S.colors.textMuted, fontSize:14
                     }}
                       onClick={() => setConfirmRemove(contact.email)}
                       title={isIT ? 'Rimuovi' : 'Remove'}>
@@ -310,7 +314,7 @@ export default function ContactsView({
           </div>
         )}
 
-        {status && <div style={S.statusMsg}>{status}</div>}
+        {status && <div style={{...S.statusMsg, color:S.colors.textSecondary}}>{status}</div>}
       </div>
     </div>
   );

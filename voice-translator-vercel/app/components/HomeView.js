@@ -256,7 +256,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
            ═══════════════════════════════════════ */}
         <div style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:14,
           padding:'10px 14px', borderRadius:18, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}}>
-          <AvatarImg src={prefs.avatar} size={40} style={{borderRadius:12}} />
+          <AvatarImg src={prefs.avatar} size={72} style={{borderRadius:18}} />
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:15, fontWeight:800, letterSpacing:-0.3, color:C.textPrimary}}>{prefs.name}</div>
             <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:4}}>

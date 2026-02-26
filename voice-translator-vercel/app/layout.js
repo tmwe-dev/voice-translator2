@@ -44,7 +44,7 @@ export default function RootLayout({ children }) {
         <meta name="appleid-signin-redirect-uri" content="https://voice-translator2.vercel.app" />
         <meta name="appleid-signin-use-popup" content="true" />
       </head>
-      <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'#0B0D1A'}}>{children}</body>
+      <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>{children}</body>
     </html>
   );
 }
