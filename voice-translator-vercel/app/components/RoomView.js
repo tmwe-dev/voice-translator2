@@ -7,7 +7,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
   playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
-  toggleRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
+  toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs, theme, setTheme }) {
 
@@ -377,10 +377,23 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
 
         {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
-          <button onClick={() => { vibrate(25); toggleRecording(); }}
-            style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}>
-            {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
-          </button>
+          <div style={{display:'flex', alignItems:'center', gap:12}}>
+            {recording && (
+              <button onClick={() => { vibrate(15); cancelRecording(); }}
+                title="Annulla"
+                style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
+                  background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
+                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                  boxShadow:`0 0 12px ${S.colors.statusError}33`}}>
+                {'\u2716'}
+              </button>
+            )}
+            <button onClick={() => { vibrate(25); toggleRecording(); }}
+              style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}>
+              {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
+            </button>
+          </div>
         )}
 
         {roomMode === 'classroom' && !canTalk && (
@@ -390,13 +403,26 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         )}
 
         {(roomMode === 'freetalk' || roomMode === 'simultaneous') && (
-          <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
-            style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
-              ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
-              ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
-                boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
-            {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
-          </button>
+          <div style={{display:'flex', alignItems:'center', gap:12}}>
+            {recording && (
+              <button onClick={() => { vibrate(15); cancelRecording(); }}
+                title="Annulla"
+                style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
+                  background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
+                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                  boxShadow:`0 0 12px ${S.colors.statusError}33`}}>
+                {'\u2716'}
+              </button>
+            )}
+            <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
+              style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
+                ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
+                ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
+                  boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
+              {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
+            </button>
+          </div>
         )}
 
         {isTrial && isHost && (

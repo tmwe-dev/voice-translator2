@@ -62,6 +62,9 @@ export default function useTranslation({
   const recRef = useRef(null);
   const chunksRef = useRef([]);
 
+  // Speaking state keepalive ref (refresh every 15s so partner sees dots)
+  const speakingKeepAliveRef = useRef(null);
+
   // FreeTalk VAD refs
   const vadStreamRef = useRef(null);
   const vadRecRef = useRef(null);
@@ -279,7 +282,11 @@ export default function useTranslation({
       }
     };
     try { recognition.start(); } catch {}
-    // NO reviewTimer — no periodic reviews needed
+    // Keepalive: refresh speaking state every 15s so partner keeps seeing dots
+    if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
+    speakingKeepAliveRef.current = setInterval(() => {
+      if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
+    }, 15000);
   }
 
   // =============================================
@@ -290,6 +297,7 @@ export default function useTranslation({
     stoppingRef.current = true;
     streamingModeRef.current = false;
     setRecording(false);
+    if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
     if (roomId) setSpeakingState(roomId, false);
 
     // Stop speech recognition
@@ -439,6 +447,42 @@ export default function useTranslation({
     if (original && roomId) {
       await sendMessage(original, translated, myL.code, otherL.code);
     }
+  }
+
+  // =============================================
+  // Cancel Recording — discard without sending
+  // =============================================
+  function cancelRecording() {
+    // Stop keepalive
+    if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
+    // Stop speech recognition
+    streamingModeRef.current = false;
+    if (speechRecRef.current) {
+      try { speechRecRef.current.stop(); } catch {}
+      speechRecRef.current = null;
+    }
+    // Stop backup audio recording
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      backupRecRef.current.onstop = () => {}; // prevent sending
+      try { backupRecRef.current.stop(); } catch {}
+    }
+    backupRecRef.current = null;
+    backupStreamRef.current = null;
+    backupChunksRef.current = [];
+    // Stop classic recording
+    if (recRef.current && recRef.current.state !== 'inactive') {
+      recRef.current.onstop = () => {}; // prevent sending
+      try { recRef.current.stop(); } catch {}
+    }
+    recRef.current = null;
+    chunksRef.current = [];
+    // Clear all state
+    allWordsRef.current = '';
+    lastInterimRef.current = '';
+    stoppingRef.current = false;
+    setRecording(false);
+    setStreamingMsg(null);
+    if (roomId) setSpeakingState(roomId, false);
   }
 
   // =============================================
@@ -646,6 +690,7 @@ export default function useTranslation({
     return () => {
       stopFreeTalk();
       streamingModeRef.current = false;
+      if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
       if (speechRecRef.current) {
         try { speechRecRef.current.stop(); } catch {}
         speechRecRef.current = null;
@@ -681,6 +726,7 @@ export default function useTranslation({
     textInput,
     setTextInput,
     toggleRecording,
+    cancelRecording,
     sendTextMessage,
     startFreeTalk,
     stopFreeTalk,

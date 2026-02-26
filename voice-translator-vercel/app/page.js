@@ -656,7 +656,8 @@ export default function Home() {
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} showModeSelector={showModeSelector}
       setShowModeSelector={setShowModeSelector} textInput={translation.textInput} setTextInput={translation.setTextInput}
       sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}
-      toggleRecording={translation.toggleRecording} startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
+      toggleRecording={translation.toggleRecording} cancelRecording={translation.cancelRecording}
+      startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
       endChatAndSave={endChatAndSave} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
