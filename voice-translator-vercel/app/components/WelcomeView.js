@@ -29,6 +29,9 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   const C = S.colors;
   const isDark = theme === 'dark' || theme === 'brown' || theme === 'orange';
 
+  // Helper: L() returns the key itself when not found in i18n — this helper uses the fallback instead
+  const Lf = (key, fallback) => { const v = L(key); return (v && v !== key) ? v : fallback; };
+
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
 
@@ -97,14 +100,14 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
   // ── Features data ──
   const features = [
-    { iconKey: 'voice', title: L('featVoice') || 'Traduzione vocale',
-      desc: L('featVoiceDesc') || 'Parla nella tua lingua, il partner sente nella sua', color: C.accent1 },
-    { iconKey: 'instant', title: L('featInstant') || 'Istantaneo',
-      desc: L('featInstantDesc') || 'Traduzione in tempo reale con AI avanzata', color: C.accent2 },
-    { iconKey: 'multilang', title: L('featMulti') || '15+ lingue',
-      desc: L('featMultiDesc') || 'Italiano, inglese, spagnolo, cinese e molto altro', color: C.accent4 },
-    { iconKey: 'contexts', title: L('featContexts') || '12 contesti',
-      desc: L('featContextsDesc') || 'Medico, business, turismo, legale e altri', color: C.accent3 },
+    { iconKey: 'voice', title: Lf('featVoice', 'Traduzione vocale'),
+      desc: Lf('featVoiceDesc', 'Parla nella tua lingua, il partner sente nella sua'), color: C.accent1 },
+    { iconKey: 'instant', title: Lf('featInstant', 'Istantaneo'),
+      desc: Lf('featInstantDesc', 'Traduzione in tempo reale con AI avanzata'), color: C.accent2 },
+    { iconKey: 'multilang', title: Lf('featMulti', '15+ lingue'),
+      desc: Lf('featMultiDesc', 'Italiano, inglese, spagnolo, cinese e molto altro'), color: C.accent4 },
+    { iconKey: 'contexts', title: Lf('featContexts', '12 contesti'),
+      desc: Lf('featContextsDesc', 'Medico, business, turismo, legale e altri'), color: C.accent3 },
   ];
 
   // ── Tier data for PRO scaling section ──
@@ -112,32 +115,32 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     { key: 'free', label: 'FREE', badge: '\u26A1', badgeColor: C.accent4,
       color: C.accent4, borderColor: C.accent4Border, bgColor: C.accent4Bg,
       features: [
-        L('tierFreeF1') || 'Voce browser base',
-        L('tierFreeF2') || '50 traduzioni/giorno',
-        L('tierFreeF3') || 'Contesti limitati',
+        Lf('tierFreeF1', 'Voce browser base'),
+        Lf('tierFreeF2', '50 traduzioni/giorno'),
+        Lf('tierFreeF3', 'Contesti limitati'),
       ],
-      tagline: L('tierFreeTag') || 'Perfetto per iniziare',
+      tagline: Lf('tierFreeTag', 'Perfetto per iniziare'),
     },
     { key: 'starter', label: 'STARTER', badge: '\u2B50', badgeColor: C.accent1,
       color: C.accent1, borderColor: C.accent1Border, bgColor: C.accent1Bg,
       features: [
-        L('tierStarterF1') || 'Voci AI OpenAI',
-        L('tierStarterF2') || '500 traduzioni/giorno',
-        L('tierStarterF3') || 'Tutti i contesti',
-        L('tierStarterF4') || 'Cronologia completa',
+        Lf('tierStarterF1', 'Voci AI OpenAI'),
+        Lf('tierStarterF2', '500 traduzioni/giorno'),
+        Lf('tierStarterF3', 'Tutti i contesti'),
+        Lf('tierStarterF4', 'Cronologia completa'),
       ],
-      tagline: L('tierStarterTag') || 'Per uso quotidiano',
+      tagline: Lf('tierStarterTag', 'Per uso quotidiano'),
     },
     { key: 'pro', label: 'PRO', badge: '\uD83C\uDFC6', badgeColor: C.goldAccent,
       color: C.goldAccent, borderColor: `${C.goldAccent}40`, bgColor: `${C.goldAccent}12`,
       features: [
-        L('tierProF1') || 'Voci ElevenLabs premium',
-        L('tierProF2') || 'Traduzioni illimitate',
-        L('tierProF3') || 'Usa le TUE API keys',
-        L('tierProF4') || 'GPT-4o / Gemini Pro',
-        L('tierProF5') || 'Supporto prioritario',
+        Lf('tierProF1', 'Voci ElevenLabs premium'),
+        Lf('tierProF2', 'Traduzioni illimitate'),
+        Lf('tierProF3', 'Usa le TUE API keys'),
+        Lf('tierProF4', 'GPT-4o / Gemini Pro'),
+        Lf('tierProF5', 'Supporto prioritario'),
       ],
-      tagline: L('tierProTag') || 'Massima libertà e qualità',
+      tagline: Lf('tierProTag', 'Massima libertà e qualità'),
       isPro: true,
     },
   ];
@@ -228,7 +231,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               VoiceTranslate
             </div>
             <div style={{fontSize:13, color:C.textSecondary, marginBottom:28, textAlign:'center', lineHeight:1.5, maxWidth:310}}>
-              {L('heroSubtitle') || 'Il traduttore vocale che abbatte le barriere linguistiche in tempo reale'}
+              {Lf('heroSubtitle', 'Il traduttore vocale che abbatte le barriere linguistiche in tempo reale')}
             </div>
 
             {/* ── Features Grid — Glass Morphism Cards ── */}
@@ -263,7 +266,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               <div style={{textAlign:'center', marginBottom:16}}>
                 <div style={{fontSize:11, fontWeight:800, letterSpacing:1.5, textTransform:'uppercase',
                   color:C.textMuted, marginBottom:6}}>
-                  {L('tierScaleLabel') || 'SCALA VERSO LA QUALITÀ'}
+                  {Lf('tierScaleLabel', 'SCALA VERSO LA QUALITÀ')}
                 </div>
                 {/* Vertical arrow indicator */}
                 <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginBottom:4}}>
@@ -384,11 +387,11 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   </svg>
                 </div>
                 <div style={{fontSize:13, fontWeight:700, color:C.textPrimary}}>
-                  {L('freedomTitle') || 'La tua libertà, le tue regole'}
+                  {Lf('freedomTitle', 'La tua libertà, le tue regole')}
                 </div>
               </div>
               <div style={{fontSize:11.5, color:C.textSecondary, lineHeight:1.6, marginBottom:8}}>
-                {L('freedomDesc') || 'Con PRO puoi usare le tue API keys personali (OpenAI, ElevenLabs) o pagare solo per quello che usi. Noi ti facilitiamo la vita.'}
+                {Lf('freedomDesc', 'Con PRO puoi usare le tue API keys personali (OpenAI, ElevenLabs) o pagare solo per quello che usi. Noi ti facilitiamo la vita.')}
               </div>
               <div style={{display:'flex', alignItems:'center', gap:6}}>
                 <div style={{width:20, height:20, borderRadius:6,
@@ -398,7 +401,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   </svg>
                 </div>
                 <span style={{fontSize:11, color:C.accent4, fontWeight:700}}>
-                  {L('freeSponsored') || 'Uso FREE sponsorizzato — inizia subito senza costi'}
+                  {Lf('freeSponsored', 'Uso FREE sponsorizzato — inizia subito senza costi')}
                 </span>
               </div>
             </div>
@@ -416,7 +419,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.8 5.6 21.2 8 14 2 9.2h7.6L12 2z" />
               </svg>
-              {L('heroStart') || 'Inizia ora'}
+              {Lf('heroStart', 'Inizia ora')}
             </button>
 
             {!userToken && (
@@ -428,7 +431,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
               }} onClick={() => { savePrefs(prefs); setAuthStep('email'); setView('account'); }}>
                 <Icon name="star" size={15} color={C.accent1} />
-                {L('heroSignIn') || 'Accedi a PRO'}
+                {Lf('heroSignIn', 'Accedi a PRO')}
               </button>
             )}
           </div>
@@ -453,10 +456,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div>
                   <div style={{textAlign:'center', marginBottom:16}}>
                     <div style={{fontSize:16, fontWeight:700, color:C.textPrimary, letterSpacing:-0.3}}>
-                      {L('welcomeNameTitle') || 'Come ti chiami?'}
+                      {Lf('welcomeNameTitle', 'Come ti chiami?')}
                     </div>
                     <div style={{fontSize:12, color:C.textSecondary, marginTop:4}}>
-                      {L('welcomeNameSub') || 'Il tuo nome sarà visibile al partner nella stanza'}
+                      {Lf('welcomeNameSub', 'Il tuo nome sarà visibile al partner nella stanza')}
                     </div>
                   </div>
                   <input style={{...S.input, fontSize:18, textAlign:'center', padding:'14px 16px',
@@ -466,7 +469,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     autoFocus />
                   {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 && (
                     <div style={{fontSize:11, color:C.accent3, textAlign:'center', marginTop:8}}>
-                      {L('nameMinChars') || 'Almeno 2 caratteri'}
+                      {Lf('nameMinChars', 'Almeno 2 caratteri')}
                     </div>
                   )}
                 </div>
@@ -477,10 +480,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div>
                   <div style={{textAlign:'center', marginBottom:16}}>
                     <div style={{fontSize:16, fontWeight:700, color:C.textPrimary}}>
-                      {L('welcomeAvatarTitle') || 'Scegli il tuo avatar'}
+                      {Lf('welcomeAvatarTitle', 'Scegli il tuo avatar')}
                     </div>
                     <div style={{fontSize:12, color:C.textSecondary, marginTop:4}}>
-                      {L('welcomeAvatarSub') || 'Il tuo personaggio nella conversazione'}
+                      {Lf('welcomeAvatarSub', 'Il tuo personaggio nella conversazione')}
                     </div>
                   </div>
                   <div style={{display:'flex', justifyContent:'center', marginBottom:12}}>
@@ -519,10 +522,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div>
                   <div style={{textAlign:'center', marginBottom:16}}>
                     <div style={{fontSize:16, fontWeight:700, color:C.textPrimary}}>
-                      {L('welcomeLangTitle') || 'Quale lingua parli?'}
+                      {Lf('welcomeLangTitle', 'Quale lingua parli?')}
                     </div>
                     <div style={{fontSize:12, color:C.textSecondary, marginTop:4}}>
-                      {L('welcomeLangSub') || 'Puoi cambiarla in qualsiasi momento'}
+                      {Lf('welcomeLangSub', 'Puoi cambiarla in qualsiasi momento')}
                     </div>
                   </div>
                   <div style={{display:'flex', justifyContent:'center', marginBottom:8}}>
@@ -559,10 +562,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div>
                   <div style={{textAlign:'center', marginBottom:16}}>
                     <div style={{fontSize:16, fontWeight:700, color:C.textPrimary}}>
-                      {L('welcomeVoiceTitle') || 'Scegli la voce AI'}
+                      {Lf('welcomeVoiceTitle', 'Scegli la voce AI')}
                     </div>
                     <div style={{fontSize:12, color:C.textSecondary, marginTop:4}}>
-                      {L('welcomeVoiceSub') || 'La voce che leggerà le traduzioni'}
+                      {Lf('welcomeVoiceSub', 'La voce che leggerà le traduzioni')}
                     </div>
                   </div>
                   <div style={{display:'flex', flexWrap:'wrap', gap:6, justifyContent:'center', marginBottom:16}}>
@@ -582,7 +585,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     })}
                   </div>
                   <div style={{fontSize:10, color:C.textTertiary, textAlign:'center', marginBottom:12}}>
-                    {L('welcomeVoiceHint') || 'Le voci AI PRO sono molto più naturali della voce browser.'}
+                    {Lf('welcomeVoiceHint', 'Le voci AI PRO sono molto più naturali della voce browser.')}
                   </div>
                 </div>
               )}
@@ -604,7 +607,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                       opacity: canNext ? 1 : 0.5, transition:'all 0.2s',
                       WebkitTapHighlightColor:'transparent'}}>
-                    {L('next') || 'Avanti'}
+                    {Lf('next', 'Avanti')}
                     <span style={{fontSize:16}}>{'\u2192'}</span>
                   </button>
                 ) : (
@@ -621,8 +624,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       onClick={() => { savePrefs(prefs); if (joinCode) setView('join'); else setView('home'); }}>
                       <Icon name="zap" size={18} color="#0B0D1A" />
                       <div style={{flex:1, textAlign:'left'}}>
-                        <div style={{fontWeight:800, fontSize:14}}>{L('startFreeMode') || 'Inizia Gratis'}</div>
-                        <div style={{fontSize:10, opacity:0.7}}>{L('startFreeDesc') || 'Traduzioni base con voce browser'}</div>
+                        <div style={{fontWeight:800, fontSize:14}}>{Lf('startFreeMode', 'Inizia Gratis')}</div>
+                        <div style={{fontSize:10, opacity:0.7}}>{Lf('startFreeDesc', 'Traduzioni base con voce browser')}</div>
                       </div>
                       <span style={{fontSize:9, fontWeight:800, padding:'2px 7px', borderRadius:6,
                         background:'rgba(0,0,0,0.12)', letterSpacing:0.5}}>FREE</span>
@@ -640,9 +643,9 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         onClick={() => { savePrefs(prefs); setAuthStep('email'); setView('account'); }}>
                         <Icon name="star" size={16} color={C.accent1} />
                         <div style={{flex:1, textAlign:'left'}}>
-                          <div style={{fontWeight:700, fontSize:13}}>{L('signInPro') || 'Accedi a PRO'}</div>
+                          <div style={{fontWeight:700, fontSize:13}}>{Lf('signInPro', 'Accedi a PRO')}</div>
                           <div style={{fontSize:10, color:C.textSecondary}}>
-                            {L('signInProDesc') || 'Voci AI naturali, nessun limite'}
+                            {Lf('signInProDesc', 'Voci AI naturali, nessun limite')}
                           </div>
                         </div>
                         <span style={{fontSize:9, fontWeight:800, padding:'2px 7px', borderRadius:6,
@@ -657,7 +660,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         WebkitTapHighlightColor:'transparent'
                       }}
                         onClick={() => { savePrefs(prefs); setView('home'); }}>
-                        {L('letsStart') || 'Iniziamo'} (PRO)
+                        {Lf('letsStart', 'Iniziamo')} (PRO)
                       </button>
                     )}
                   </div>
