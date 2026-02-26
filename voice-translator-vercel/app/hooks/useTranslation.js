@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
+import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════════════════════

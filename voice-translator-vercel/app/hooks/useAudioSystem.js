@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, AVATAR_NAMES, AVATARS, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
+import { getLang, AVATAR_NAMES, AVATARS } from '../lib/constants.js';
 
 export default function useAudioSystem({
   prefsRef,
@@ -23,6 +23,7 @@ export default function useAudioSystem({
   const persistentMicRef = useRef(null);
   const audioEnabledRef = useRef(audioEnabled);
   const activeBlobUrlsRef = useRef(new Set());
+  const voiceCacheRef = useRef({});
 
   // Sync audioEnabled ref
   useEffect(() => {
@@ -32,8 +33,8 @@ export default function useAudioSystem({
   // Preload browser voices (Chrome loads them asynchronously)
   useEffect(() => {
     if (typeof speechSynthesis === 'undefined') return;
-    speechSynthesis.getVoices(); // trigger initial load
-    const handler = () => { voiceCacheRef.current = {}; }; // clear cache when voices change
+    speechSynthesis.getVoices();
+    const handler = () => { voiceCacheRef.current = {}; };
     speechSynthesis.addEventListener('voiceschanged', handler);
     return () => speechSynthesis.removeEventListener('voiceschanged', handler);
   }, []);
@@ -81,40 +82,27 @@ export default function useAudioSystem({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      // Stop all audio playback
       if (persistentAudioRef.current) {
         persistentAudioRef.current.pause();
         persistentAudioRef.current.src = '';
       }
-
-      // Close AudioContext
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        try {
-          audioContextRef.current.close();
-        } catch (e) {}
+        try { audioContextRef.current.close(); } catch (e) {}
       }
-
-      // Stop all microphone tracks
       if (persistentMicRef.current) {
         persistentMicRef.current.getTracks().forEach(track => {
-          try {
-            track.stop();
-          } catch (e) {}
+          try { track.stop(); } catch (e) {}
         });
         persistentMicRef.current = null;
       }
-
-      // Revoke all blob URLs
       activeBlobUrlsRef.current.forEach(url => {
-        try {
-          URL.revokeObjectURL(url);
-        } catch (e) {}
+        try { URL.revokeObjectURL(url); } catch (e) {}
       });
       activeBlobUrlsRef.current.clear();
-
-      // Clear queues
       audioQueueRef.current = [];
       playedMsgIdsRef.current.clear();
+      // Cancel any browser speech
+      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     };
   }, []);
 
@@ -131,149 +119,246 @@ export default function useAudioSystem({
   function requestMicEarly() {
     if (persistentMicRef.current) return;
     navigator.mediaDevices.getUserMedia({ audio: true })
-      .then(stream => {
-        persistentMicRef.current = stream;
-      })
+      .then(stream => { persistentMicRef.current = stream; })
       .catch(() => {});
   }
 
-  async function playTTS(text, lang) {
-    try {
-      const res = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voice: prefsRef.current.voice || 'nova',
-          userToken: getEffectiveToken(),
-          roomId: roomIdRef.current || undefined
-        })
-      });
-      if (!res.ok) throw new Error('TTS failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      activeBlobUrlsRef.current.add(url);
-      return new Promise((resolve) => {
-        // Dynamic safety timeout based on text length (~100ms per char, min 5s, max 30s)
-        const timeoutMs = Math.min(30000, Math.max(5000, text.length * 100));
-        const safetyTimer = setTimeout(() => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          resolve();
-        }, timeoutMs);
-        const done = () => {
-          clearTimeout(safetyTimer);
-          resolve();
-        };
-        const audio = getPersistentAudio();
-        audio.onended = () => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          done();
-        };
-        audio.onerror = () => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          clearTimeout(safetyTimer);
-          playWithNewAudio(text, lang, done);
-        };
-        audio.src = url;
-        audio.play().catch(() => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          clearTimeout(safetyTimer);
-          playWithNewAudio(text, lang, done);
-        });
-      });
-    } catch {
-      browserSpeak(text, lang);
-    }
-  }
-
-  function playWithNewAudio(text, lang, resolve) {
-    fetch('/api/tts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        voice: prefsRef.current.voice || 'nova',
-        userToken: getEffectiveToken(),
-        roomId: roomIdRef.current || undefined
-      })
-    })
-      .then(r => r.blob())
-      .then(blob => {
-        const url = URL.createObjectURL(blob);
-        activeBlobUrlsRef.current.add(url);
-        const a = new Audio(url);
-        a.onended = () => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          resolve();
-        };
-        a.play().catch(() => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          browserSpeak(text, lang);
-          resolve();
-        });
-      })
-      .catch(() => {
-        browserSpeak(text, lang);
-        resolve();
-      });
-  }
-
-  // Cache of best voice per language
-  const voiceCacheRef = useRef({});
+  // =============================================
+  // BROWSER TTS (FREE tier) — Promise-based with onend
+  // =============================================
 
   function findBestVoice(lang) {
     if (typeof speechSynthesis === 'undefined') return null;
-    // Return cached voice if available
     if (voiceCacheRef.current[lang]) return voiceCacheRef.current[lang];
 
     const voices = speechSynthesis.getVoices();
     if (!voices.length) return null;
 
-    const langBase = lang.split('-')[0].toLowerCase(); // 'it-IT' → 'it'
+    const langLower = lang.toLowerCase();
+    const langBase = langLower.split('-')[0];
 
-    // Priority 1: exact match (e.g. 'it-IT' matches 'it-IT')
-    let best = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase());
+    // Collect ALL matching voices for this language
+    const matchingVoices = voices.filter(v => {
+      const vLang = v.lang.toLowerCase();
+      const vBase = vLang.split('-')[0];
+      return vBase === langBase;
+    });
 
-    // Priority 2: base language match (e.g. 'it' matches 'it-IT')
-    if (!best) best = voices.find(v => v.lang.toLowerCase().startsWith(langBase));
+    if (matchingVoices.length === 0) return null;
 
-    // Priority 3: any voice whose lang starts with the base
-    if (!best) best = voices.find(v => v.lang.toLowerCase().split('-')[0] === langBase);
-
-    // Prefer non-default/Google/Microsoft voices (they tend to be better quality)
-    if (best) {
-      const betterVoices = voices.filter(v => {
-        const vBase = v.lang.toLowerCase().split('-')[0];
-        return vBase === langBase && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural') || v.name.includes('Neural'));
-      });
-      if (betterVoices.length > 0) best = betterVoices[0];
+    // Score voices: higher = better quality
+    function scoreVoice(v) {
+      let score = 0;
+      const name = v.name.toLowerCase();
+      // Exact locale match (e.g. it-IT vs it-IT)
+      if (v.lang.toLowerCase() === langLower) score += 10;
+      // Premium voice engines
+      if (name.includes('google')) score += 50;
+      if (name.includes('microsoft')) score += 45;
+      if (name.includes('neural')) score += 40;
+      if (name.includes('natural')) score += 40;
+      if (name.includes('premium')) score += 35;
+      if (name.includes('enhanced')) score += 30;
+      if (name.includes('wavenet')) score += 25;
+      // Avoid compact/espeak voices
+      if (name.includes('compact')) score -= 20;
+      if (name.includes('espeak')) score -= 30;
+      return score;
     }
 
-    if (best) voiceCacheRef.current[lang] = best;
+    matchingVoices.sort((a, b) => scoreVoice(b) - scoreVoice(a));
+    const best = matchingVoices[0];
+    voiceCacheRef.current[lang] = best;
     return best;
   }
 
-  function browserSpeak(text, lang) {
-    if (typeof speechSynthesis === 'undefined') return;
-    // Cancel any ongoing speech first
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = lang;
-    u.rate = 1.0;
-    u.pitch = 1.0;
-    // Select the best voice for this language
-    const voice = findBestVoice(lang);
-    if (voice) u.voice = voice;
-    speechSynthesis.speak(u);
+  // Split text into chunks for Chrome's 15-second speech bug
+  function splitTextForSpeech(text, maxChars = 180) {
+    if (text.length <= maxChars) return [text];
+    const chunks = [];
+    let remaining = text;
+    while (remaining.length > 0) {
+      if (remaining.length <= maxChars) {
+        chunks.push(remaining);
+        break;
+      }
+      // Find best split point: sentence end, comma, or space
+      let splitAt = -1;
+      // Try sentence boundaries first
+      for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
+        if ('.!?;'.includes(remaining[i])) { splitAt = i + 1; break; }
+      }
+      // Try comma
+      if (splitAt === -1) {
+        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
+          if (remaining[i] === ',') { splitAt = i + 1; break; }
+        }
+      }
+      // Try space
+      if (splitAt === -1) {
+        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.3; i--) {
+          if (remaining[i] === ' ') { splitAt = i + 1; break; }
+        }
+      }
+      // Hard split as last resort
+      if (splitAt === -1) splitAt = maxChars;
+      chunks.push(remaining.substring(0, splitAt).trim());
+      remaining = remaining.substring(splitAt).trim();
+    }
+    return chunks.filter(c => c.length > 0);
   }
 
-  // Get avatar name from prefs (avatar URL like /avatars/1.png → 'Marcus')
+  // Speak a single chunk with Promise — resolves when speech ends
+  function speakChunk(text, lang, voice) {
+    return new Promise((resolve) => {
+      if (typeof speechSynthesis === 'undefined') { resolve(); return; }
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang;
+      u.rate = 0.95;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      if (voice) u.voice = voice;
+
+      // Safety timeout: ~120ms per char, min 3s, max 20s
+      const timeoutMs = Math.min(20000, Math.max(3000, text.length * 120));
+      const safetyTimer = setTimeout(() => {
+        speechSynthesis.cancel();
+        resolve();
+      }, timeoutMs);
+
+      u.onend = () => { clearTimeout(safetyTimer); resolve(); };
+      u.onerror = () => { clearTimeout(safetyTimer); resolve(); };
+
+      // Chrome bug workaround: resume if paused
+      if (speechSynthesis.paused) speechSynthesis.resume();
+      speechSynthesis.speak(u);
+
+      // Chrome bug: keep alive with periodic resume for long utterances
+      const keepAlive = setInterval(() => {
+        if (speechSynthesis.speaking && !speechSynthesis.paused) return;
+        if (speechSynthesis.paused) speechSynthesis.resume();
+      }, 5000);
+      u.onend = () => { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); };
+      u.onerror = () => { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); };
+    });
+  }
+
+  // Full browser TTS — splits text, speaks each chunk sequentially
+  async function browserSpeak(text, lang) {
+    if (typeof speechSynthesis === 'undefined') return;
+    speechSynthesis.cancel();
+
+    const voice = findBestVoice(lang);
+    const chunks = splitTextForSpeech(text);
+
+    for (const chunk of chunks) {
+      await speakChunk(chunk, lang, voice);
+    }
+  }
+
+  // =============================================
+  // OPENAI TTS (PRO tier) — with retry
+  // =============================================
+
+  async function fetchTTSBlob(text, retries = 1) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            voice: prefsRef.current.voice || 'nova',
+            userToken: getEffectiveToken(),
+            roomId: roomIdRef.current || undefined
+          })
+        });
+        if (!res.ok) {
+          if (attempt < retries) continue;
+          throw new Error(`TTS ${res.status}`);
+        }
+        return await res.blob();
+      } catch (e) {
+        if (attempt < retries) continue;
+        throw e;
+      }
+    }
+  }
+
+  // Play an audio blob URL via an Audio element, returns Promise
+  function playBlobAudio(blobUrl) {
+    return new Promise((resolve) => {
+      const audio = getPersistentAudio();
+      // Clean up old handlers
+      audio.onended = null;
+      audio.onerror = null;
+
+      const timeoutMs = 30000;
+      const safetyTimer = setTimeout(() => {
+        audio.pause();
+        cleanup();
+        resolve(false);
+      }, timeoutMs);
+
+      function cleanup() {
+        clearTimeout(safetyTimer);
+        audio.onended = null;
+        audio.onerror = null;
+      }
+
+      audio.onended = () => { cleanup(); resolve(true); };
+      audio.onerror = () => { cleanup(); resolve(false); };
+      audio.src = blobUrl;
+      audio.play().catch(() => { cleanup(); resolve(false); });
+    });
+  }
+
+  // Play blob in a fresh Audio element (fallback if persistent one fails)
+  function playBlobNewAudio(blobUrl) {
+    return new Promise((resolve) => {
+      const a = new Audio(blobUrl);
+      a.volume = 1.0;
+      const safetyTimer = setTimeout(() => { a.pause(); resolve(false); }, 30000);
+      a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
+      a.onerror = () => { clearTimeout(safetyTimer); resolve(false); };
+      a.play().catch(() => { clearTimeout(safetyTimer); resolve(false); });
+    });
+  }
+
+  async function playTTS(text, lang) {
+    let blob;
+    try {
+      blob = await fetchTTSBlob(text);
+    } catch {
+      // API failed after retry — fall back to browser
+      await browserSpeak(text, lang);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    activeBlobUrlsRef.current.add(url);
+
+    // Try persistent audio element first
+    let played = await playBlobAudio(url);
+
+    // If persistent failed, try a fresh Audio element (same blob, no re-fetch)
+    if (!played) {
+      played = await playBlobNewAudio(url);
+    }
+
+    // If both failed, browser TTS as last resort
+    if (!played) {
+      await browserSpeak(text, lang);
+    }
+
+    activeBlobUrlsRef.current.delete(url);
+    URL.revokeObjectURL(url);
+  }
+
+  // =============================================
+  // ELEVENLABS TTS (TOP PRO tier)
+  // =============================================
+
   function getAvatarName() {
     const avatar = prefsRef.current?.avatar;
     if (!avatar) return undefined;
@@ -281,62 +366,52 @@ export default function useAudioSystem({
     return idx >= 0 ? AVATAR_NAMES[idx] : undefined;
   }
 
-  async function playTTSElevenLabs(text, langCode) {
-    try {
-      const res = await fetch('/api/tts-elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          voiceId: selectedELVoice || undefined,
-          langCode: langCode || undefined,
-          avatarName: getAvatarName(),
-          userToken: getEffectiveToken(),
-          roomId: roomIdRef.current || undefined
-        })
-      });
-      if (!res.ok) throw new Error('ElevenLabs TTS failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      activeBlobUrlsRef.current.add(url);
-      return new Promise((resolve) => {
-        // Dynamic safety timeout based on text length (~100ms per char, min 5s, max 30s)
-        const timeoutMs = Math.min(30000, Math.max(5000, text.length * 100));
-        const safetyTimer = setTimeout(() => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          resolve();
-        }, timeoutMs);
-        const done = () => {
-          clearTimeout(safetyTimer);
-          resolve();
-        };
-        const audio = getPersistentAudio();
-        audio.onended = () => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          done();
-        };
-        audio.onerror = () => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          clearTimeout(safetyTimer);
-          playTTS(text, langCode).then(done);
-        };
-        audio.src = url;
-        audio.play().catch(() => {
-          activeBlobUrlsRef.current.delete(url);
-          URL.revokeObjectURL(url);
-          clearTimeout(safetyTimer);
-          playTTS(text, langCode).then(done);
-        });
-      });
-    } catch {
-      return playTTS(text, langCode);
-    }
+  async function fetchElevenLabsBlob(text, langCode) {
+    const res = await fetch('/api/tts-elevenlabs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        voiceId: selectedELVoice || undefined,
+        langCode: langCode || undefined,
+        avatarName: getAvatarName(),
+        userToken: getEffectiveToken(),
+        roomId: roomIdRef.current || undefined
+      })
+    });
+    if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
+    return await res.blob();
   }
 
-  // Notification "ding" sound using Web Audio API — works even in privacy mode
+  async function playTTSElevenLabs(text, langCode) {
+    let blob;
+    try {
+      blob = await fetchElevenLabsBlob(text, langCode);
+    } catch {
+      // ElevenLabs failed — try OpenAI as fallback
+      return playTTS(text, langCode);
+    }
+
+    const url = URL.createObjectURL(blob);
+    activeBlobUrlsRef.current.add(url);
+
+    let played = await playBlobAudio(url);
+    if (!played) played = await playBlobNewAudio(url);
+    if (!played) {
+      // All audio playback failed — try OpenAI, then browser
+      activeBlobUrlsRef.current.delete(url);
+      URL.revokeObjectURL(url);
+      return playTTS(text, langCode);
+    }
+
+    activeBlobUrlsRef.current.delete(url);
+    URL.revokeObjectURL(url);
+  }
+
+  // =============================================
+  // NOTIFICATION SOUND
+  // =============================================
+
   function playNotifSound() {
     try {
       const ctx = audioContextRef.current || new (window.AudioContext || window.webkitAudioContext)();
@@ -347,8 +422,8 @@ export default function useAudioSystem({
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
-      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.06); // E6
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.06);
       gain.gain.setValueAtTime(0.12, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.start(ctx.currentTime);
@@ -356,10 +431,13 @@ export default function useAudioSystem({
     } catch {}
   }
 
+  // =============================================
+  // AUDIO QUEUE
+  // =============================================
+
   async function queueAudio(text, lang, msgId) {
     if (msgId && playedMsgIdsRef.current.has(msgId)) return;
     if (msgId) playedMsgIdsRef.current.add(msgId);
-    // Always play notification ding for new messages
     if (!audioEnabledRef.current) {
       playNotifSound();
       return;
@@ -374,16 +452,15 @@ export default function useAudioSystem({
     const { text, lang } = audioQueueRef.current.shift();
     try {
       if (isTrialRef.current) {
-        await new Promise(resolve => {
-          browserSpeak(text, lang);
-          setTimeout(resolve, Math.max(BROWSER_SPEAK_MIN_DURATION, text.length * BROWSER_SPEAK_CHAR_RATE));
-        });
+        await browserSpeak(text, lang);
       } else if (isTopProRef.current) {
         await playTTSElevenLabs(text, lang);
       } else {
         await playTTS(text, lang);
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('[Audio] playback error:', e);
+    }
     isPlayingRef.current = false;
     processAudioQueue();
   }
@@ -391,15 +468,18 @@ export default function useAudioSystem({
   async function playMessage(msg) {
     unlockAudio();
     setPlayingMsgId(msg.id);
-    if (isTrialRef.current) {
-      await new Promise(resolve => {
-        browserSpeak(msg.translated, getLang(msg.targetLang).speech);
-        setTimeout(resolve, Math.max(BROWSER_SPEAK_MIN_DURATION, msg.translated.length * BROWSER_SPEAK_CHAR_RATE));
-      });
-    } else if (isTopProRef.current) {
-      await playTTSElevenLabs(msg.translated, getLang(msg.targetLang).speech);
-    } else {
-      await playTTS(msg.translated, getLang(msg.targetLang).speech);
+    try {
+      const text = msg.translated;
+      const lang = getLang(msg.targetLang).speech;
+      if (isTrialRef.current) {
+        await browserSpeak(text, lang);
+      } else if (isTopProRef.current) {
+        await playTTSElevenLabs(text, lang);
+      } else {
+        await playTTS(text, lang);
+      }
+    } catch (e) {
+      console.error('[Audio] playMessage error:', e);
     }
     setPlayingMsgId(null);
   }
