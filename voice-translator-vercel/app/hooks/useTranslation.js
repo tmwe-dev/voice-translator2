@@ -171,6 +171,15 @@ export default function useTranslation({
         const key = i + ':' + text;
         if (text && !processedFinals.has(key)) {
           processedFinals.add(key);
+          // FASE 7: Guard against cross-restart duplication.
+          // When SpeechRecognition auto-restarts (continuous mode), Chrome can
+          // re-deliver the last recognized text. Check if allWordsRef already
+          // ends with this exact text to prevent doubling.
+          const existing = allWordsRef.current.trim();
+          if (existing.endsWith(text)) {
+            // Already captured — skip to prevent doubling
+            continue;
+          }
           lastInterimRef.current = '';
           wordBufferRef.current = (wordBufferRef.current + ' ' + text).trim();
           allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
@@ -716,8 +725,8 @@ export default function useTranslation({
                     }
                   }
 
-                  // FASE 1B: Clear streamingMsg BEFORE posting
-                  setStreamingMsg({ original: '', translated: '', isStreaming: true });
+                  // FASE 1B: Clear streamingMsg BEFORE posting (use null, not empty object)
+                  setStreamingMsg(null);
 
                   try {
                     await sendMessage(allOriginal, finalTranslation, myL.code, otherL.code);
