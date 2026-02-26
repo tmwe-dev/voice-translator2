@@ -14,7 +14,7 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
     <div style={S.page}>
       <div style={S.center}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => { setView('home'); setJoinCode(''); setInviteMsgLang(null); }}>{'\u2190'}</button>
+          <button style={S.backBtn} onClick={() => { window.history.replaceState({}, '', window.location.pathname); setView('home'); setJoinCode(''); setInviteMsgLang(null); }}>{'\u2190'}</button>
           <span style={{fontWeight:600, fontSize:17}}>{inviteMsgLang ? tI('inviteTitle') : L('joinRoom')}</span>
         </div>
         <div style={S.card}>

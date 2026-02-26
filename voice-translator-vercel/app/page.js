@@ -242,7 +242,11 @@ export default function Home() {
         window.history.replaceState({}, '', window.location.pathname);
       }
 
-      if (roomParam) setJoinCode(roomParam.toUpperCase());
+      if (roomParam) {
+        setJoinCode(roomParam.toUpperCase());
+        // Clean URL so back button works properly (prevents re-entering join on refresh)
+        window.history.replaceState({}, '', window.location.pathname);
+      }
       if (paymentStatus === 'success' && paymentCredits) {
         window.history.replaceState({}, '', window.location.pathname);
       }
