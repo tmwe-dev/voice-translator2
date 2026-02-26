@@ -116,10 +116,20 @@ async function tryLibreTranslate(text, sourceLang, targetLang) {
   return null;
 }
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+}
+
 export async function POST(req) {
   try {
     const { text, sourceLang, targetLang, userEmail } = await req.json();
-    if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 });
+    if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 }, { headers: CORS_HEADERS });
 
     const trimmed = text.trim();
     const charsUsed = trimmed.length;
@@ -144,14 +154,14 @@ export async function POST(req) {
       if (parsed.translated && !parsed.fallback) {
         const validation = validateTranslation(trimmed, parsed.translated, sourceLang, targetLang);
         if (validation.valid) {
-          return NextResponse.json({ ...parsed, cached: true });
+          return NextResponse.json({ ...parsed, cached: true }, { headers: CORS_HEADERS });
         }
         // Cached result is invalid — delete it and re-translate
         try { await redis('DEL', cacheKey); } catch {}
       } else if (parsed.fallback) {
         // Don't serve cached fallback results — retry
       } else {
-        return NextResponse.json({ ...parsed, cached: true });
+        return NextResponse.json({ ...parsed, cached: true }, { headers: CORS_HEADERS });
       }
     }
 
@@ -179,7 +189,7 @@ export async function POST(req) {
             limitExceeded: true,
             charsUsed: 0,
             dailyLimit: FREE_DAILY_LIMIT
-          });
+          }, { headers: CORS_HEADERS });
         }
 
         myMemoryResult = data.responseData?.translatedText || '';
@@ -227,7 +237,7 @@ export async function POST(req) {
       try {
         await redis('SET', cacheKey, JSON.stringify(result), 'EX', 1800); // 30min cache for failures
       } catch {}
-      return NextResponse.json(result);
+      return NextResponse.json(result, { headers: CORS_HEADERS });
     }
 
     // ── Success — cache and return ──
@@ -247,9 +257,9 @@ export async function POST(req) {
       console.error('Cache store error:', e);
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, { headers: CORS_HEADERS });
   } catch (e) {
     console.error('Free translate error:', e);
-    return NextResponse.json({ translated: '', fallback: true, error: e.message, charsUsed: 0 });
+    return NextResponse.json({ translated: '', fallback: true, error: e.message, charsUsed: 0 }, { headers: CORS_HEADERS });
   }
 }
