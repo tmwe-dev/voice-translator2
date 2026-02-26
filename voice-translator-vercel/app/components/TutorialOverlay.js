@@ -1,9 +1,9 @@
 'use client';
 import { FONT } from '../lib/constants.js';
+import getStyles from '../lib/styles.js';
 
 export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setShowTutorial, theme }) {
-  const getStyles = require('../lib/styles.js');
-  const S = typeof getStyles === 'function' ? getStyles(theme) : getStyles;
+  const S = getStyles(theme);
   return (
     <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:9999,
       background:'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)',
