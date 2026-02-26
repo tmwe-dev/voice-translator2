@@ -5,14 +5,14 @@ import AvatarImg from './AvatarImg.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 
-// ═══════════════════════════════════════
-// WELCOME VIEW — Immersive 3D Onboarding
-// Step 0: Hero with animated orbs & emotional CTA
+// ═══════════════════════════════════════════════
+// WELCOME VIEW — Premium Dark Immersive Onboarding
+// Step 0: Hero with mesh gradient & floating glass
 // Step 1: Name
 // Step 2: Avatar
 // Step 3: Language
 // Step 4: Voice + CTA
-// ═══════════════════════════════════════
+// ═══════════════════════════════════════════════
 
 const STEPS = [
   { key:'hero' },
@@ -28,12 +28,26 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   const [hoveredTier, setHoveredTier] = useState(null);
   const [entered, setEntered] = useState(false);
   const C = S.colors;
-  const isDark = theme === 'dark' || theme === 'brown' || theme === 'orange';
 
-  // Helper: L() returns the key itself when not found in i18n — this helper uses the fallback instead
+  // Force dark palette for welcome — premium dark experience
+  const D = {
+    bg1: '#06080F', bg2: '#0A0E1F', bg3: '#0F1332',
+    surface: 'rgba(12,15,35,0.75)',
+    surfaceHover: 'rgba(18,22,52,0.85)',
+    glass: 'rgba(255,255,255,0.03)',
+    glassHover: 'rgba(255,255,255,0.06)',
+    glassBorder: 'rgba(255,255,255,0.06)',
+    glassBorderHover: 'rgba(255,255,255,0.12)',
+    neon1: '#7B73FF', neon2: '#00D2FF', neon3: '#FF6B9D', neon4: '#00FF94',
+    gold: '#FFD700',
+    text: '#FFFFFF',
+    textSoft: 'rgba(255,255,255,0.75)',
+    textMuted: 'rgba(255,255,255,0.50)',
+    textDim: 'rgba(255,255,255,0.30)',
+  };
+
   const Lf = (key, fallback) => { const v = L(key); return (v && v !== key) ? v : fallback; };
 
-  // Trigger entrance animation on mount and step change
   useEffect(() => {
     setEntered(false);
     const t = setTimeout(() => setEntered(true), 60);
@@ -49,28 +63,28 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   function next() { if (canNext && step < STEPS.length - 1) setStep(step + 1); }
   function prev() { if (step > 0) setStep(step - 1); }
 
-  // ── Stagger delay helper ──
+  // ── Stagger animation helper ──
   const stagger = (i, base = 0) => ({
     opacity: entered ? 1 : 0,
-    transform: entered ? 'translateY(0) scale(1)' : 'translateY(24px) scale(0.96)',
-    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${base + i * 0.08}s`,
+    transform: entered ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.97)',
+    transition: `all 0.55s cubic-bezier(0.16, 1, 0.3, 1) ${base + i * 0.07}s`,
   });
 
-  // ── Features data with emoji icons (much more alive than SVG) ──
+  // ── Features ──
   const features = [
     { emoji: '\uD83C\uDFA4', title: Lf('featVoice', 'Traduzione vocale'),
-      desc: Lf('featVoiceDesc', 'Parla nella tua lingua, il partner sente nella sua'), color: C.accent1 },
+      desc: Lf('featVoiceDesc', 'Parla nella tua lingua, il partner sente nella sua'), color: D.neon1 },
     { emoji: '\u26A1', title: Lf('featInstant', 'Istantaneo'),
-      desc: Lf('featInstantDesc', 'Traduzione in tempo reale con AI avanzata'), color: C.accent2 },
+      desc: Lf('featInstantDesc', 'Traduzione in tempo reale con AI avanzata'), color: D.neon2 },
     { emoji: '\uD83C\uDF0D', title: Lf('featMulti', '15+ lingue'),
-      desc: Lf('featMultiDesc', 'Italiano, inglese, spagnolo, cinese e molto altro'), color: C.accent4 },
+      desc: Lf('featMultiDesc', 'Italiano, inglese, spagnolo, cinese e molto altro'), color: D.neon4 },
     { emoji: '\uD83C\uDFAF', title: Lf('featContexts', '12 contesti'),
-      desc: Lf('featContextsDesc', 'Medico, business, turismo, legale e altri'), color: C.accent3 },
+      desc: Lf('featContextsDesc', 'Medico, business, turismo, legale e altri'), color: D.neon3 },
   ];
 
-  // ── Tier data ──
+  // ── Tiers ──
   const tiers = [
-    { key: 'free', label: 'FREE', emoji: '\u26A1', color: C.accent4,
+    { key: 'free', label: 'FREE', emoji: '\u26A1', color: D.neon4,
       features: [
         Lf('tierFreeF1', 'Voce browser base'),
         Lf('tierFreeF2', '50 traduzioni/giorno'),
@@ -78,7 +92,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
       ],
       tagline: Lf('tierFreeTag', 'Perfetto per iniziare'),
     },
-    { key: 'starter', label: 'STARTER', emoji: '\uD83D\uDE80', color: C.accent1,
+    { key: 'starter', label: 'STARTER', emoji: '\uD83D\uDE80', color: D.neon1,
       features: [
         Lf('tierStarterF1', 'Voci AI OpenAI'),
         Lf('tierStarterF2', '500 traduzioni/giorno'),
@@ -87,7 +101,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
       ],
       tagline: Lf('tierStarterTag', 'Per uso quotidiano'),
     },
-    { key: 'pro', label: 'PRO', emoji: '\uD83D\uDC8E', color: C.goldAccent,
+    { key: 'pro', label: 'PRO', emoji: '\uD83D\uDC8E', color: D.gold,
       features: [
         Lf('tierProF1', 'Voci ElevenLabs premium'),
         Lf('tierProF2', 'Traduzioni illimitate'),
@@ -100,24 +114,22 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     },
   ];
 
-  // ── 3D Glass Card — Deep frosted glass ──
-  const glassCard = (isHovered, accentColor, i) => ({
-    padding: '22px 18px',
-    borderRadius: 22,
-    background: isDark
-      ? `linear-gradient(135deg, rgba(255,255,255,${isHovered ? 0.09 : 0.04}), rgba(255,255,255,${isHovered ? 0.05 : 0.02}))`
-      : `linear-gradient(135deg, rgba(255,255,255,${isHovered ? 0.95 : 0.85}), rgba(255,255,255,${isHovered ? 0.88 : 0.75}))`,
-    border: `1px solid ${isHovered ? (accentColor || C.accent1) + '50' : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.4)'}`,
-    backdropFilter: 'blur(40px) saturate(200%)',
-    WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+  // ── Glassmorphism card factory ──
+  const glassCard = (isHovered, accent, i) => ({
+    padding: '20px 16px',
+    borderRadius: 20,
+    background: isHovered ? D.glassHover : D.glass,
+    border: `1px solid ${isHovered ? accent + '35' : D.glassBorder}`,
+    backdropFilter: 'blur(48px) saturate(180%)',
+    WebkitBackdropFilter: 'blur(48px) saturate(180%)',
     boxShadow: isHovered
-      ? `0 20px 60px ${(accentColor || C.accent1)}28, 0 0 0 1px ${(accentColor || C.accent1)}15, 0 0 40px ${(accentColor || C.accent1)}10, inset 0 1px 0 rgba(255,255,255,${isDark?'0.10':'0.9'})`
-      : `0 8px 32px rgba(0,0,0,${isDark?'0.5':'0.06'}), inset 0 1px 0 rgba(255,255,255,${isDark?'0.04':'0.6'})`,
+      ? `0 24px 48px rgba(0,0,0,0.6), 0 0 40px ${accent}12, inset 0 1px 0 rgba(255,255,255,0.06)`
+      : `0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)`,
     transform: isHovered
-      ? 'perspective(800px) rotateX(-2deg) rotateY(2deg) scale(1.05) translateY(-5px)'
-      : 'perspective(800px) rotateX(0) rotateY(0) scale(1) translateY(0)',
-    transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-    cursor: 'default',
+      ? 'perspective(800px) rotateX(-2deg) scale(1.04) translateY(-4px)'
+      : 'perspective(800px) scale(1)',
+    transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+    cursor: 'pointer',
     position: 'relative',
     overflow: 'hidden',
     ...stagger(i, 0.2),
@@ -128,18 +140,18 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginBottom:20}}>
       {STEPS.slice(1).map((s, i) => (
         <div key={s.key} onClick={() => { if (i + 1 <= step) setStep(i + 1); }}
-          style={{cursor: i + 1 <= step ? 'pointer' : 'default', transition:'all 0.4s'}}>
+          style={{cursor: i + 1 <= step ? 'pointer' : 'default'}}>
           <div style={{
             width: (i + 1) === step ? 28 : 10,
             height: 10,
             borderRadius: 5,
             transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
             background: (i + 1) < step
-              ? `linear-gradient(135deg, ${C.accent4}, ${C.accent2})`
+              ? `linear-gradient(135deg, ${D.neon4}, ${D.neon2})`
               : (i + 1) === step
-                ? `linear-gradient(135deg, ${C.accent1}, ${C.accent2})`
-                : isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-            boxShadow: (i + 1) === step ? `0 0 16px ${C.accent1}50, 0 0 4px ${C.accent2}30` : 'none',
+                ? `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`
+                : 'rgba(255,255,255,0.06)',
+            boxShadow: (i + 1) === step ? `0 0 14px ${D.neon1}55, 0 0 4px ${D.neon2}30` : 'none',
           }} />
         </div>
       ))}
@@ -147,100 +159,108 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   ) : null;
 
   return (
-    <div style={{...S.page}}>
+    <div style={{
+      position:'fixed', top:0, left:0, right:0, bottom:0,
+      background: `linear-gradient(165deg, ${D.bg1} 0%, ${D.bg2} 30%, ${D.bg3} 60%, ${D.bg1} 100%)`,
+      color: D.text, fontFamily: FONT, overflow:'hidden',
+    }}>
 
-      {/* ═══ BACKGROUND ORB EFFECTS — Deep immersive glow ═══ */}
+      {/* ═══ MESH GRADIENT BACKGROUND ═══ */}
       <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, pointerEvents:'none', zIndex:0, overflow:'hidden'}}>
-        {/* Main gradient orb - top right — larger, more vibrant */}
+        {/* Primary orb — neon purple/blue */}
         <div style={{
-          position:'absolute', top:'-20%', right:'-25%',
-          width:'80vw', height:'80vw', maxWidth:600, maxHeight:600,
+          position:'absolute', top:'-18%', right:'-20%',
+          width:'75vw', height:'75vw', maxWidth:550, maxHeight:550,
           borderRadius:'50%',
-          background: `radial-gradient(circle, ${C.accent1}${isDark?'30':'18'}, ${C.accent2}${isDark?'15':'08'}, transparent 65%)`,
+          background: `radial-gradient(circle, ${D.neon1}25, ${D.neon2}10, transparent 65%)`,
           filter: 'blur(80px)',
-          animation: 'vtOrb1 8s ease-in-out infinite',
+          animation: 'vtOrb1 9s ease-in-out infinite',
         }} />
-        {/* Secondary orb - bottom left — warm glow */}
+        {/* Secondary orb — green/pink warm glow */}
         <div style={{
-          position:'absolute', bottom:'-15%', left:'-20%',
-          width:'70vw', height:'70vw', maxWidth:500, maxHeight:500,
+          position:'absolute', bottom:'-12%', left:'-18%',
+          width:'65vw', height:'65vw', maxWidth:480, maxHeight:480,
           borderRadius:'50%',
-          background: `radial-gradient(circle, ${C.accent4}${isDark?'25':'12'}, ${C.accent3}${isDark?'12':'06'}, transparent 65%)`,
+          background: `radial-gradient(circle, ${D.neon4}18, ${D.neon3}0A, transparent 65%)`,
           filter: 'blur(70px)',
-          animation: 'vtOrb2 10s ease-in-out infinite',
+          animation: 'vtOrb2 11s ease-in-out infinite',
         }} />
-        {/* Accent orb - center floating */}
+        {/* Center floating accent */}
         <div style={{
-          position:'absolute', top:'35%', left:'50%',
-          width:'50vw', height:'50vw', maxWidth:400, maxHeight:400,
+          position:'absolute', top:'40%', left:'50%',
+          width:'45vw', height:'45vw', maxWidth:350, maxHeight:350,
           borderRadius:'50%',
-          background: `radial-gradient(circle, ${C.accent2}${isDark?'18':'08'}, transparent 65%)`,
-          filter: 'blur(100px)',
-          animation: 'vtOrb3 12s ease-in-out infinite',
+          background: `radial-gradient(circle, ${D.neon2}12, transparent 65%)`,
+          filter: 'blur(90px)',
+          animation: 'vtOrb3 13s ease-in-out infinite',
           transform: 'translateX(-50%)',
         }} />
-        {/* Extra subtle orb - top left accent */}
+        {/* Extra subtle top-left accent */}
         <div style={{
-          position:'absolute', top:'10%', left:'5%',
-          width:'30vw', height:'30vw', maxWidth:200, maxHeight:200,
+          position:'absolute', top:'8%', left:'8%',
+          width:'25vw', height:'25vw', maxWidth:180, maxHeight:180,
           borderRadius:'50%',
-          background: `radial-gradient(circle, ${C.accent3}${isDark?'12':'06'}, transparent 70%)`,
-          filter: 'blur(60px)',
-          animation: 'vtOrb1 15s ease-in-out infinite reverse',
+          background: `radial-gradient(circle, ${D.neon3}0C, transparent 70%)`,
+          filter: 'blur(50px)',
+          animation: 'vtOrb1 16s ease-in-out infinite reverse',
         }} />
-        {/* Subtle noise overlay for depth */}
+        {/* Noise texture overlay */}
         <div style={{
           position:'absolute', top:0, left:0, right:0, bottom:0,
-          opacity: isDark ? 0.03 : 0.02,
+          opacity: 0.025,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'repeat',
-          backgroundSize: '256px 256px',
+          backgroundRepeat: 'repeat', backgroundSize: '256px 256px',
+        }} />
+        {/* Vignette overlay */}
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, bottom:0,
+          background: 'radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.4) 100%)',
         }} />
       </div>
 
-      <div style={{...S.scrollCenter, position:'relative', zIndex:1}}>
+      <div style={{
+        display:'flex', flexDirection:'column', alignItems:'center',
+        height:'100%', padding:'12px 16px', boxSizing:'border-box',
+        overflowY:'auto', WebkitOverflowScrolling:'touch',
+        position:'relative', zIndex:1,
+      }}>
 
         {/* ═══════════════════════════════════════
-            STEP 0: HERO — Immersive 3D Experience
+            STEP 0: HERO — Premium Dark Experience
            ═══════════════════════════════════════ */}
         {step === 0 && (
           <div style={{display:'flex', flexDirection:'column', alignItems:'center', width:'100%', maxWidth:420, padding:'0 8px'}}>
 
-            {/* ── 3D Animated Logo Orb ── */}
+            {/* ── Animated Logo Orb with neon ring ── */}
             <div style={{
-              position:'relative', marginBottom:24, marginTop:12,
+              position:'relative', marginBottom:28, marginTop:16,
               ...stagger(0),
             }}>
-              {/* Outer glow ring */}
+              {/* Rotating neon ring */}
               <div style={{
-                position:'absolute', top:-16, left:-16, right:-16, bottom:-16,
+                position:'absolute', top:-18, left:-18, right:-18, bottom:-18,
                 borderRadius:'50%',
-                background: `conic-gradient(from 0deg, ${C.accent1}00, ${C.accent1}30, ${C.accent2}30, ${C.accent4}20, ${C.accent3}15, ${C.accent1}00)`,
-                animation: 'vtSpin 6s linear infinite',
-                filter: 'blur(12px)',
-                opacity: 0.7,
+                background: `conic-gradient(from 0deg, ${D.neon1}00, ${D.neon1}28, ${D.neon2}25, ${D.neon4}18, ${D.neon3}12, ${D.neon1}00)`,
+                animation: 'vtSpin 7s linear infinite',
+                filter: 'blur(14px)',
+                opacity: 0.65,
               }} />
-              {/* Inner logo container — enhanced neon glow */}
+              {/* Logo sphere */}
               <div style={{
-                width: 110, height: 110, borderRadius: '50%',
+                width: 108, height: 108, borderRadius: '50%',
                 display:'flex', alignItems:'center', justifyContent:'center',
-                background: isDark
-                  ? `radial-gradient(circle at 35% 35%, ${C.accent1}30, ${C.accent2}15, rgba(10,10,28,0.92))`
-                  : `radial-gradient(circle at 35% 35%, ${C.accent1}22, ${C.accent2}12, rgba(255,255,255,0.95))`,
-                boxShadow: isDark
-                  ? `0 0 60px ${C.accent1}35, 0 0 120px ${C.accent2}18, 0 0 200px ${C.accent1}08, inset 0 -4px 12px ${C.accent1}18, inset 0 4px 8px rgba(255,255,255,0.06)`
-                  : `0 0 40px ${C.accent1}20, 0 0 80px ${C.accent2}10, inset 0 -4px 12px ${C.accent1}08, inset 0 4px 8px rgba(255,255,255,0.6)`,
-                border: `1.5px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.5)'}`,
+                background: `radial-gradient(circle at 35% 35%, ${D.neon1}28, ${D.neon2}10, rgba(8,10,22,0.95))`,
+                boxShadow: `0 0 50px ${D.neon1}30, 0 0 100px ${D.neon2}15, 0 0 180px ${D.neon1}06, inset 0 -4px 14px ${D.neon1}15, inset 0 4px 8px rgba(255,255,255,0.04)`,
+                border: '1.5px solid rgba(255,255,255,0.06)',
                 animation: 'vtLogoFloat 4s ease-in-out infinite',
-                position: 'relative',
-                zIndex: 2,
+                position: 'relative', zIndex: 2,
               }}>
-                <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+                <svg width="50" height="50" viewBox="0 0 24 24" fill="none">
                   <defs>
                     <linearGradient id="heroLogoG" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor={C.accent1} />
-                      <stop offset="50%" stopColor={C.accent2} />
-                      <stop offset="100%" stopColor={C.accent1} />
+                      <stop offset="0%" stopColor={D.neon1} />
+                      <stop offset="50%" stopColor={D.neon2} />
+                      <stop offset="100%" stopColor={D.neon1} />
                     </linearGradient>
                     <filter id="heroGlow">
                       <feGaussianBlur stdDeviation="1.5" result="blur" />
@@ -255,64 +275,59 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 </svg>
               </div>
               {/* Orbiting particles */}
-              <div style={{position:'absolute', top:0, left:0, right:0, bottom:0, animation:'vtSpin 8s linear infinite', pointerEvents:'none'}}>
-                <div style={{position:'absolute', top:-8, left:'50%', width:10, height:10, borderRadius:'50%',
-                  background:`radial-gradient(circle, ${C.accent4}, ${C.accent4}00)`,
-                  boxShadow:`0 0 12px ${C.accent4}80`}} />
+              <div style={{position:'absolute', top:0, left:0, right:0, bottom:0, animation:'vtSpin 9s linear infinite', pointerEvents:'none'}}>
+                <div style={{position:'absolute', top:-7, left:'50%', width:8, height:8, borderRadius:'50%',
+                  background:`radial-gradient(circle, ${D.neon4}, ${D.neon4}00)`,
+                  boxShadow:`0 0 10px ${D.neon4}70`}} />
               </div>
-              <div style={{position:'absolute', top:0, left:0, right:0, bottom:0, animation:'vtSpin 12s linear infinite reverse', pointerEvents:'none'}}>
-                <div style={{position:'absolute', bottom:-5, left:'50%', width:7, height:7, borderRadius:'50%',
-                  background:`radial-gradient(circle, ${C.accent3}, ${C.accent3}00)`,
-                  boxShadow:`0 0 10px ${C.accent3}60`}} />
-              </div>
-              <div style={{position:'absolute', top:0, left:0, right:0, bottom:0, animation:'vtSpin 15s linear infinite', pointerEvents:'none'}}>
-                <div style={{position:'absolute', top:'50%', right:-12, width:6, height:6, borderRadius:'50%',
-                  background:`radial-gradient(circle, ${C.accent2}, ${C.accent2}00)`,
-                  boxShadow:`0 0 8px ${C.accent2}50`}} />
+              <div style={{position:'absolute', top:0, left:0, right:0, bottom:0, animation:'vtSpin 13s linear infinite reverse', pointerEvents:'none'}}>
+                <div style={{position:'absolute', bottom:-4, left:'50%', width:6, height:6, borderRadius:'50%',
+                  background:`radial-gradient(circle, ${D.neon3}, ${D.neon3}00)`,
+                  boxShadow:`0 0 8px ${D.neon3}55`}} />
               </div>
             </div>
 
-            {/* ── Title with gradient shimmer ── */}
+            {/* ── App title with animated gradient ── */}
             <div style={{
-              ...S.title, fontSize: 32, marginBottom: 6, textAlign: 'center',
-              background: `linear-gradient(135deg, ${C.textPrimary} 0%, ${C.accent1} 40%, ${C.accent2} 60%, ${C.textPrimary} 100%)`,
+              fontSize: 34, fontWeight: 800, marginBottom: 6, textAlign: 'center',
+              background: `linear-gradient(135deg, #fff 0%, ${D.neon1} 35%, ${D.neon2} 65%, #fff 100%)`,
               backgroundSize: '200% 100%',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               animation: 'vtTitleShimmer 4s ease-in-out infinite',
-              letterSpacing: -1,
+              letterSpacing: -1.2,
               ...stagger(1),
             }}>
               VoiceTranslate
             </div>
             <div style={{
-              fontSize: 14, color: C.textSecondary, marginBottom: 32, textAlign: 'center',
-              lineHeight: 1.6, maxWidth: 320, fontWeight: 500,
+              fontSize: 14, color: D.textSoft, marginBottom: 36, textAlign: 'center',
+              lineHeight: 1.65, maxWidth: 310, fontWeight: 500,
               ...stagger(2),
             }}>
               {Lf('heroSubtitle', 'Il traduttore vocale che abbatte le barriere linguistiche in tempo reale')}
             </div>
 
-            {/* ── Animated sound wave divider ── */}
+            {/* ── Sound wave divider ── */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
-              marginBottom: 28, height: 20,
+              marginBottom: 30, height: 20,
               ...stagger(3, 0.1),
             }}>
               {[0.3, 0.6, 1, 0.7, 1, 0.8, 0.5, 1, 0.6, 0.4, 0.8, 1, 0.5].map((h, i) => (
                 <div key={i} style={{
                   width: 3, borderRadius: 2,
-                  background: `linear-gradient(to top, ${C.accent1}, ${C.accent2})`,
-                  opacity: 0.6,
+                  background: `linear-gradient(to top, ${D.neon1}, ${D.neon2})`,
+                  opacity: 0.5,
                   animation: `vtWave 1.2s ease-in-out ${i * 0.08}s infinite`,
                   height: h * 18,
                 }} />
               ))}
             </div>
 
-            {/* ── Features Grid — 3D Glass Cards with Perspective ── */}
+            {/* ── Features Grid — Glass Cards ── */}
             <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14,
-              width: '100%', marginBottom: 32,
+              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+              width: '100%', marginBottom: 36,
               perspective: '1000px',
             }}>
               {features.map((f, i) => (
@@ -322,84 +337,73 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   onTouchStart={() => setHoveredCard(i)}
                   onTouchEnd={() => setTimeout(() => setHoveredCard(null), 300)}
                   onClick={next}
-                  style={{...glassCard(hoveredCard === i, f.color, i), cursor: 'pointer'}}>
-                  {/* Hover glow effect */}
+                  style={glassCard(hoveredCard === i, f.color, i)}>
+                  {/* Hover glow */}
                   {hoveredCard === i && (
                     <div style={{
                       position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%',
-                      background: `radial-gradient(circle at 50% 80%, ${f.color}18, transparent 60%)`,
+                      background: `radial-gradient(circle at 50% 80%, ${f.color}14, transparent 55%)`,
                       pointerEvents: 'none',
                     }} />
                   )}
-                  {/* 3D Emoji icon with glow */}
+                  {/* Icon */}
                   <div style={{
-                    width: 52, height: 52, borderRadius: 16, marginBottom: 14,
+                    width: 48, height: 48, borderRadius: 14, marginBottom: 12,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 28,
-                    background: isDark
-                      ? `linear-gradient(145deg, ${f.color}20, ${f.color}08)`
-                      : `linear-gradient(145deg, ${f.color}15, ${f.color}05)`,
+                    fontSize: 26,
+                    background: `linear-gradient(145deg, ${f.color}18, ${f.color}06)`,
                     boxShadow: hoveredCard === i
-                      ? `0 8px 24px ${f.color}30, inset 0 1px 0 rgba(255,255,255,${isDark?'0.1':'0.5'})`
-                      : `0 4px 12px ${f.color}12, inset 0 1px 0 rgba(255,255,255,${isDark?'0.06':'0.4'})`,
-                    border: `1px solid ${f.color}${hoveredCard === i ? '40' : '18'}`,
+                      ? `0 8px 20px ${f.color}28, inset 0 1px 0 rgba(255,255,255,0.08)`
+                      : `0 4px 10px ${f.color}0C`,
+                    border: `1px solid ${f.color}${hoveredCard === i ? '30' : '12'}`,
                     transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                    transform: hoveredCard === i ? 'scale(1.1) rotate(-3deg)' : 'scale(1) rotate(0deg)',
+                    transform: hoveredCard === i ? 'scale(1.1) rotate(-3deg)' : 'scale(1)',
                     position: 'relative', zIndex: 1,
                   }}>
                     {f.emoji}
                   </div>
-                  <div style={{
-                    fontSize: 13.5, fontWeight: 700, color: C.textPrimary,
-                    marginBottom: 5, lineHeight: 1.3, position: 'relative', zIndex: 1,
-                  }}>
+                  <div style={{fontSize: 13, fontWeight: 700, color: D.text, marginBottom: 4, lineHeight: 1.3, position: 'relative', zIndex: 1}}>
                     {f.title}
                   </div>
-                  <div style={{
-                    fontSize: 11, color: C.textTertiary, lineHeight: 1.5,
-                    position: 'relative', zIndex: 1,
-                  }}>
+                  <div style={{fontSize: 10.5, color: D.textMuted, lineHeight: 1.5, position: 'relative', zIndex: 1}}>
                     {f.desc}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* ── Tier Scaling — Layered 3D Stack ── */}
+            {/* ── Tier Scaling — Layered Glass Cards ── */}
             <div style={{width: '100%', marginBottom: 28}}>
               <div style={{
-                textAlign: 'center', marginBottom: 18,
+                textAlign: 'center', marginBottom: 16,
                 ...stagger(0, 0.5),
               }}>
                 <div style={{
-                  fontSize: 11, fontWeight: 800, letterSpacing: 2, textTransform: 'uppercase',
-                  background: `linear-gradient(135deg, ${C.textMuted}, ${C.accent1})`,
+                  fontSize: 10, fontWeight: 800, letterSpacing: 2.5, textTransform: 'uppercase',
+                  background: `linear-gradient(135deg, ${D.textDim}, ${D.neon1})`,
                   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
                   marginBottom: 8,
                 }}>
                   {Lf('tierScaleLabel', 'SCALA VERSO LA QUALITÀ')}
                 </div>
-                {/* Animated arrow */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                }}>
-                  <div style={{width: 30, height: 1, background: `linear-gradient(to right, transparent, ${C.accent1}40)`}} />
+                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8}}>
+                  <div style={{width: 28, height: 1, background: `linear-gradient(to right, transparent, ${D.neon1}30)`}} />
                   <div style={{animation: 'vtArrowBounce 2s ease-in-out infinite'}}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                       <defs>
                         <linearGradient id="arrowG" x1="0%" y1="100%" x2="0%" y2="0%">
-                          <stop offset="0%" stopColor={C.accent2} />
-                          <stop offset="100%" stopColor={C.accent1} />
+                          <stop offset="0%" stopColor={D.neon2} />
+                          <stop offset="100%" stopColor={D.neon1} />
                         </linearGradient>
                       </defs>
                       <path d="M12 19V5M5 12l7-7 7 7" stroke="url(#arrowG)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <div style={{width: 30, height: 1, background: `linear-gradient(to left, transparent, ${C.accent1}40)`}} />
+                  <div style={{width: 28, height: 1, background: `linear-gradient(to left, transparent, ${D.neon1}30)`}} />
                 </div>
               </div>
 
-              <div style={{display: 'flex', flexDirection: 'column', gap: 12, perspective: '800px'}}>
+              <div style={{display: 'flex', flexDirection: 'column', gap: 10, perspective: '800px'}}>
                 {tiers.map((tier, i) => {
                   const isH = hoveredTier === i;
                   const isPro = tier.isPro;
@@ -408,9 +412,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       onMouseEnter={() => setHoveredTier(i)}
                       onMouseLeave={() => setHoveredTier(null)}
                       onClick={() => {
-                        // Tap tier → auto-advance to setup wizard
                         if (tier.isPro && !userToken) {
-                          // PRO without login → go to auth
                           savePrefs(prefs); setAuthStep('email'); setView('account');
                         } else {
                           next();
@@ -418,96 +420,79 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       }}
                       style={{
                         cursor: 'pointer',
-                        padding: isPro ? '22px 20px' : '16px 18px',
-                        borderRadius: isPro ? 22 : 18,
-                        background: isDark
-                          ? isPro
-                            ? `linear-gradient(135deg, ${C.goldAccent}10, ${C.accent1}06, rgba(15,15,30,0.85))`
-                            : `linear-gradient(135deg, rgba(255,255,255,${isH ? 0.07 : 0.03}), rgba(255,255,255,${isH ? 0.04 : 0.01}))`
-                          : isPro
-                            ? `linear-gradient(135deg, ${C.goldAccent}10, ${C.accent1}06, rgba(255,255,255,0.92))`
-                            : `linear-gradient(135deg, rgba(255,255,255,${isH ? 0.92 : 0.78}), rgba(255,255,255,${isH ? 0.85 : 0.68}))`,
+                        padding: isPro ? '20px 18px' : '14px 16px',
+                        borderRadius: isPro ? 20 : 16,
+                        background: isPro
+                          ? `linear-gradient(135deg, ${D.gold}08, ${D.neon1}04, rgba(10,12,28,0.85))`
+                          : isH ? D.glassHover : D.glass,
                         border: `1px solid ${isPro
-                          ? (isH ? `${C.goldAccent}55` : `${C.goldAccent}25`)
-                          : (isH ? tier.color + '40' : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.35)')}`,
-                        backdropFilter: 'blur(40px) saturate(200%)',
-                        WebkitBackdropFilter: 'blur(40px) saturate(200%)',
+                          ? (isH ? D.gold + '40' : D.gold + '18')
+                          : (isH ? tier.color + '30' : D.glassBorder)}`,
+                        backdropFilter: 'blur(48px) saturate(180%)',
+                        WebkitBackdropFilter: 'blur(48px) saturate(180%)',
                         boxShadow: isH
                           ? (isPro
-                              ? `0 16px 48px ${C.goldAccent}22, 0 0 40px ${C.goldAccent}08, 0 0 0 1px ${C.goldAccent}12, inset 0 1px 0 rgba(255,255,255,0.08)`
-                              : `0 12px 36px ${tier.color}15, 0 0 30px ${tier.color}06, 0 0 0 1px ${tier.color}10, inset 0 1px 0 rgba(255,255,255,0.06)`)
+                              ? `0 16px 44px ${D.gold}18, 0 0 32px ${D.gold}06, inset 0 1px 0 rgba(255,255,255,0.06)`
+                              : `0 12px 32px ${tier.color}10, 0 0 24px ${tier.color}05, inset 0 1px 0 rgba(255,255,255,0.04)`)
                           : (isPro
-                              ? `0 6px 24px ${C.goldAccent}10, inset 0 1px 0 rgba(255,255,255,0.04)`
-                              : `0 4px 16px rgba(0,0,0,${isDark?'0.25':'0.04'}), inset 0 1px 0 rgba(255,255,255,${isDark?'0.03':'0.5'})`),
-                        transform: isH
-                          ? 'perspective(600px) rotateX(-1deg) scale(1.03) translateY(-4px)'
-                          : 'perspective(600px) rotateX(0) scale(1) translateY(0)',
-                        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-                        position: 'relative',
-                        overflow: 'hidden',
+                              ? `0 6px 20px ${D.gold}0A, inset 0 1px 0 rgba(255,255,255,0.03)`
+                              : `0 4px 14px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.02)`),
+                        transform: isH ? 'perspective(600px) rotateX(-1deg) scale(1.02) translateY(-3px)' : 'perspective(600px) scale(1)',
+                        transition: 'all 0.45s cubic-bezier(0.16, 1, 0.3, 1)',
+                        position: 'relative', overflow: 'hidden',
                         ...stagger(i, 0.6),
                       }}>
-                      {/* PRO animated shimmer */}
+                      {/* PRO shimmer line */}
                       {isPro && (
                         <div style={{
                           position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                          background: `linear-gradient(105deg, transparent 40%, ${C.goldAccent}08 50%, transparent 60%)`,
+                          background: `linear-gradient(105deg, transparent 40%, ${D.gold}06 50%, transparent 60%)`,
                           backgroundSize: '200% 100%',
                           animation: 'vtProShimmer 3s ease-in-out infinite',
                           pointerEvents: 'none',
                         }} />
                       )}
-
-                      <div style={{display: 'flex', alignItems: 'flex-start', gap: 16, position: 'relative', zIndex: 1}}>
-                        {/* 3D Emoji badge */}
+                      <div style={{display: 'flex', alignItems: 'flex-start', gap: 14, position: 'relative', zIndex: 1}}>
+                        {/* Emoji badge */}
                         <div style={{
-                          width: isPro ? 54 : 44, height: isPro ? 54 : 44,
-                          borderRadius: isPro ? 18 : 14,
-                          background: isDark
-                            ? `linear-gradient(145deg, ${tier.color}25, ${tier.color}08)`
-                            : `linear-gradient(145deg, ${tier.color}20, ${tier.color}06)`,
-                          border: `1px solid ${tier.color}${isH ? '45' : '20'}`,
+                          width: isPro ? 50 : 42, height: isPro ? 50 : 42,
+                          borderRadius: isPro ? 16 : 13,
+                          background: `linear-gradient(145deg, ${tier.color}1A, ${tier.color}06)`,
+                          border: `1px solid ${tier.color}${isH ? '35' : '15'}`,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: isPro ? 26 : 22, flexShrink: 0,
-                          boxShadow: isH
-                            ? `0 8px 20px ${tier.color}25, inset 0 1px 0 rgba(255,255,255,0.1)`
-                            : `0 4px 10px ${tier.color}10`,
+                          fontSize: isPro ? 24 : 20, flexShrink: 0,
+                          boxShadow: isH ? `0 6px 16px ${tier.color}20` : `0 3px 8px ${tier.color}0A`,
                           transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                          transform: isH ? 'scale(1.08) rotate(-5deg)' : 'scale(1)',
+                          transform: isH ? 'scale(1.06) rotate(-4deg)' : 'scale(1)',
                         }}>
                           {tier.emoji}
                         </div>
-
                         <div style={{flex: 1, minWidth: 0}}>
-                          <div style={{display: 'flex', alignItems: 'center', gap: 10, marginBottom: 5}}>
-                            <span style={{
-                              fontSize: isPro ? 16 : 14, fontWeight: 800,
-                              color: tier.color, letterSpacing: isPro ? 1.5 : 0.8,
-                            }}>
+                          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4}}>
+                            <span style={{fontSize: isPro ? 15 : 13, fontWeight: 800, color: tier.color, letterSpacing: isPro ? 1.5 : 0.8}}>
                               {tier.label}
                             </span>
                             {isPro && (
                               <span style={{
-                                fontSize: 8, fontWeight: 800, padding: '3px 10px', borderRadius: 8,
-                                background: `linear-gradient(135deg, ${C.goldAccent}30, ${C.accent1}18)`,
-                                color: C.goldAccent, letterSpacing: 1.5, textTransform: 'uppercase',
-                                border: `1px solid ${C.goldAccent}30`,
-                                boxShadow: `0 2px 8px ${C.goldAccent}15`,
+                                fontSize: 7, fontWeight: 800, padding: '2px 8px', borderRadius: 6,
+                                background: `linear-gradient(135deg, ${D.gold}25, ${D.neon1}12)`,
+                                color: D.gold, letterSpacing: 1.5, textTransform: 'uppercase',
+                                border: `1px solid ${D.gold}25`,
                               }}>
                                 PREMIUM
                               </span>
                             )}
                           </div>
-                          <div style={{fontSize: 11.5, color: C.textTertiary, marginBottom: 10, fontStyle: 'italic'}}>
+                          <div style={{fontSize: 11, color: D.textMuted, marginBottom: 8, fontStyle: 'italic'}}>
                             {tier.tagline}
                           </div>
-                          <div style={{display: 'flex', flexWrap: 'wrap', gap: 5}}>
+                          <div style={{display: 'flex', flexWrap: 'wrap', gap: 4}}>
                             {tier.features.map((feat, fi) => (
                               <span key={fi} style={{
-                                fontSize: 10, fontWeight: 600, padding: '4px 10px', borderRadius: 8,
-                                background: isDark ? `${tier.color}14` : `${tier.color}10`,
+                                fontSize: 9.5, fontWeight: 600, padding: '3px 9px', borderRadius: 7,
+                                background: `${tier.color}0C`,
                                 color: tier.color,
-                                border: `1px solid ${tier.color}18`,
+                                border: `1px solid ${tier.color}14`,
                                 letterSpacing: 0.1,
                               }}>
                                 {feat}
@@ -522,59 +507,56 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               </div>
             </div>
 
-            {/* ── Freedom / Sponsor — Deep Glass Panel ── */}
+            {/* ── Freedom panel — Deep glass ── */}
             <div style={{
-              width: '100%', padding: '18px 20px', borderRadius: 20, marginBottom: 24,
-              background: isDark
-                ? `linear-gradient(135deg, ${C.accent1}06, ${C.accent2}04, rgba(10,10,25,0.7))`
-                : `linear-gradient(135deg, ${C.accent1}06, ${C.accent2}04, rgba(255,255,255,0.85))`,
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.45)'}`,
-              backdropFilter: 'blur(40px) saturate(200%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-              boxShadow: `0 8px 32px rgba(0,0,0,${isDark ? '0.4' : '0.05'}), inset 0 1px 0 rgba(255,255,255,${isDark ? '0.03' : '0.5'})`,
+              width: '100%', padding: '16px 18px', borderRadius: 18, marginBottom: 24,
+              background: `linear-gradient(135deg, ${D.neon1}04, ${D.neon2}03, rgba(8,10,22,0.7))`,
+              border: `1px solid ${D.glassBorder}`,
+              backdropFilter: 'blur(48px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(48px) saturate(180%)',
+              boxShadow: `0 8px 28px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.025)`,
               ...stagger(0, 0.8),
             }}>
-              <div style={{display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10}}>
                 <div style={{
-                  width: 36, height: 36, borderRadius: 12,
-                  background: `linear-gradient(135deg, ${C.accent2}22, ${C.accent4}15)`,
+                  width: 34, height: 34, borderRadius: 11,
+                  background: `linear-gradient(135deg, ${D.neon2}18, ${D.neon4}0C)`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, fontSize: 20,
-                  boxShadow: `0 4px 12px ${C.accent2}15`,
+                  flexShrink: 0, fontSize: 18,
+                  boxShadow: `0 4px 10px ${D.neon2}12`,
                 }}>
                   {'\uD83D\uDD13'}
                 </div>
-                <div style={{fontSize: 14, fontWeight: 700, color: C.textPrimary}}>
+                <div style={{fontSize: 13.5, fontWeight: 700, color: D.text}}>
                   {Lf('freedomTitle', 'La tua libertà, le tue regole')}
                 </div>
               </div>
-              <div style={{fontSize: 12, color: C.textSecondary, lineHeight: 1.65, marginBottom: 10}}>
+              <div style={{fontSize: 11.5, color: D.textSoft, lineHeight: 1.65, marginBottom: 8}}>
                 {Lf('freedomDesc', 'Con PRO puoi usare le tue API keys personali (OpenAI, ElevenLabs) o pagare solo per quello che usi. Noi ti facilitiamo la vita.')}
               </div>
-              <div style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                <span style={{fontSize: 16}}>{'✅'}</span>
-                <span style={{fontSize: 11.5, color: C.accent4, fontWeight: 700}}>
+              <div style={{display: 'flex', alignItems: 'center', gap: 7}}>
+                <span style={{fontSize: 15}}>{'✅'}</span>
+                <span style={{fontSize: 11, color: D.neon4, fontWeight: 700}}>
                   {Lf('freeSponsored', 'Uso FREE sponsorizzato — inizia subito senza costi')}
                 </span>
               </div>
             </div>
 
-            {/* ── CTA Buttons — Deep glow with neon accent ── */}
+            {/* ── CTA Buttons — Neon glow ── */}
             <div style={{width: '100%', ...stagger(1, 0.9)}}>
               <button style={{
-                width: '100%', padding: '18px', borderRadius: 16, border: 'none', cursor: 'pointer',
-                background: `linear-gradient(135deg, ${C.accent1}, ${C.accent2})`,
+                width: '100%', padding: '17px', borderRadius: 16, border: 'none', cursor: 'pointer',
+                background: `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
                 color: '#fff', fontFamily: FONT, fontSize: 17, fontWeight: 800,
                 letterSpacing: -0.3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-                boxShadow: `0 8px 32px ${C.accent1}40, 0 4px 16px ${C.accent2}25, 0 0 60px ${C.accent1}15, inset 0 1px 0 rgba(255,255,255,0.20)`,
+                boxShadow: `0 8px 28px ${D.neon1}38, 0 4px 14px ${D.neon2}20, 0 0 50px ${D.neon1}10, inset 0 1px 0 rgba(255,255,255,0.18)`,
                 WebkitTapHighlightColor: 'transparent',
                 transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
                 position: 'relative', overflow: 'hidden',
               }} onClick={next}>
-                {/* Button shimmer */}
                 <div style={{
                   position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)',
+                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.13) 50%, transparent 60%)',
                   backgroundSize: '200% 100%',
                   animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
                   pointerEvents: 'none',
@@ -585,16 +567,16 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
               {!userToken && (
                 <button style={{
-                  width: '100%', padding: '15px', borderRadius: 14, cursor: 'pointer', marginTop: 10,
-                  background: isDark ? `rgba(255,255,255,0.03)` : `rgba(255,255,255,0.65)`,
-                  border: `1px solid ${isDark ? C.accent1 + '22' : C.accent1 + '30'}`,
+                  width: '100%', padding: '14px', borderRadius: 14, cursor: 'pointer', marginTop: 10,
+                  background: 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${D.neon1}18`,
                   backdropFilter: 'blur(30px)',
                   WebkitBackdropFilter: 'blur(30px)',
-                  color: C.accent1, fontFamily: FONT, fontSize: 14, fontWeight: 700,
+                  color: D.neon1, fontFamily: FONT, fontSize: 14, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                   WebkitTapHighlightColor: 'transparent',
                   transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-                  boxShadow: `0 4px 16px rgba(0,0,0,${isDark ? '0.25' : '0.04'}), inset 0 1px 0 rgba(255,255,255,${isDark ? '0.03' : '0.4'})`,
+                  boxShadow: `0 4px 14px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.02)`,
                 }} onClick={() => { savePrefs(prefs); setAuthStep('email'); setView('account'); }}>
                   <span style={{fontSize: 16}}>{'\u2B50'}</span>
                   {Lf('heroSignIn', 'Accedi a PRO')}
@@ -605,30 +587,27 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
         )}
 
         {/* ═══════════════════════════════════════
-            STEPS 1-4: Setup wizard
+            STEPS 1-4: Setup wizard — Dark Glass
            ═══════════════════════════════════════ */}
         {step > 0 && (
           <>
             {dots}
 
             <div style={{
-              ...S.card, padding: '24px 20px', position: 'relative', overflow: 'hidden',
-              width: '100%', maxWidth: 400,
-              borderRadius: 22,
-              background: isDark
-                ? `linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))`
-                : undefined,
-              backdropFilter: 'blur(40px) saturate(200%)',
-              WebkitBackdropFilter: 'blur(40px) saturate(200%)',
-              boxShadow: `0 16px 48px rgba(0,0,0,${isDark ? '0.5' : '0.08'}), 0 0 0 1px rgba(255,255,255,${isDark ? '0.04' : '0.3'}), inset 0 1px 0 rgba(255,255,255,${isDark ? '0.05' : '0.7'})`,
-              border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.45)'}`,
+              width: '100%', maxWidth: 400, padding: '24px 20px',
+              borderRadius: 22, position: 'relative', overflow: 'hidden',
+              background: `linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.008))`,
+              backdropFilter: 'blur(48px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(48px) saturate(180%)',
+              boxShadow: `0 16px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.04)`,
+              border: `1px solid ${D.glassBorder}`,
               ...stagger(0),
             }}>
               {/* Step counter */}
               <div style={{
-                fontSize: 10, color: C.textMuted, fontWeight: 700, textAlign: 'center',
+                fontSize: 10, fontWeight: 700, textAlign: 'center',
                 marginBottom: 14, letterSpacing: 1.5,
-                background: `linear-gradient(135deg, ${C.textMuted}, ${C.accent1})`,
+                background: `linear-gradient(135deg, ${D.textDim}, ${D.neon1})`,
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}>
                 {step} / {STEPS.length - 1}
@@ -639,23 +618,30 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div style={stagger(1)}>
                   <div style={{textAlign: 'center', marginBottom: 18}}>
                     <div style={{fontSize: 22, marginBottom: 6}}>{'\uD83D\uDC4B'}</div>
-                    <div style={{fontSize: 17, fontWeight: 700, color: C.textPrimary, letterSpacing: -0.3}}>
+                    <div style={{fontSize: 17, fontWeight: 700, color: D.text, letterSpacing: -0.3}}>
                       {Lf('welcomeNameTitle', 'Come ti chiami?')}
                     </div>
-                    <div style={{fontSize: 12, color: C.textSecondary, marginTop: 5}}>
+                    <div style={{fontSize: 12, color: D.textSoft, marginTop: 5}}>
                       {Lf('welcomeNameSub', 'Il tuo nome sarà visibile al partner nella stanza')}
                     </div>
                   </div>
                   <input style={{
-                    ...S.input, fontSize: 20, textAlign: 'center', padding: '16px 18px',
+                    width:'100%', fontSize: 20, textAlign: 'center', padding: '16px 18px',
                     fontWeight: 600, letterSpacing: -0.3, borderRadius: 16,
-                    boxShadow: `0 4px 16px rgba(0,0,0,${isDark ? '0.2' : '0.04'}), inset 0 1px 0 rgba(255,255,255,${isDark ? '0.06' : '0.5'})`,
+                    background: 'rgba(255,255,255,0.05)',
+                    border: `1px solid rgba(255,255,255,0.08)`,
+                    color: D.text, fontFamily: FONT, outline: 'none', boxSizing: 'border-box',
+                    boxShadow: `0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)`,
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
                   }}
                     placeholder={L('namePlaceholder')} value={prefs.name}
                     onChange={e => setPrefs({...prefs, name: e.target.value})} maxLength={20}
-                    autoFocus />
+                    autoFocus
+                    onFocus={e => { e.target.style.borderColor = D.neon1 + '40'; e.target.style.boxShadow = `0 4px 16px rgba(0,0,0,0.2), 0 0 20px ${D.neon1}15`; }}
+                    onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04)'; }}
+                  />
                   {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 && (
-                    <div style={{fontSize: 11, color: C.accent3, textAlign: 'center', marginTop: 10}}>
+                    <div style={{fontSize: 11, color: D.neon3, textAlign: 'center', marginTop: 10}}>
                       {Lf('nameMinChars', 'Almeno 2 caratteri')}
                     </div>
                   )}
@@ -666,25 +652,25 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               {step === 2 && (
                 <div style={stagger(1)}>
                   <div style={{textAlign: 'center', marginBottom: 18}}>
-                    <div style={{fontSize: 17, fontWeight: 700, color: C.textPrimary}}>
+                    <div style={{fontSize: 17, fontWeight: 700, color: D.text}}>
                       {Lf('welcomeAvatarTitle', 'Scegli il tuo avatar')}
                     </div>
-                    <div style={{fontSize: 12, color: C.textSecondary, marginTop: 5}}>
+                    <div style={{fontSize: 12, color: D.textSoft, marginTop: 5}}>
                       {Lf('welcomeAvatarSub', 'Il tuo personaggio nella conversazione')}
                     </div>
                   </div>
                   <div style={{display: 'flex', justifyContent: 'center', marginBottom: 14}}>
                     <div style={{
                       width: 120, height: 120, borderRadius: 32, overflow: 'hidden',
-                      border: `3px solid ${C.accent1}`,
-                      boxShadow: `0 0 30px ${C.accent1}30, 0 8px 24px rgba(0,0,0,0.1)`,
+                      border: `3px solid ${D.neon1}`,
+                      boxShadow: `0 0 30px ${D.neon1}25, 0 8px 24px rgba(0,0,0,0.3)`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      background: `linear-gradient(135deg, ${C.accent1}15, ${C.accent2}08)`,
+                      background: `linear-gradient(135deg, ${D.neon1}10, ${D.neon2}06)`,
                     }}>
                       <img src={prefs.avatar} alt="" style={{width: 108, height: 108, objectFit: 'contain'}} />
                     </div>
                   </div>
-                  <div style={{textAlign: 'center', fontSize: 15, fontWeight: 700, color: C.accent1, marginBottom: 14}}>
+                  <div style={{textAlign: 'center', fontSize: 15, fontWeight: 700, color: D.neon1, marginBottom: 14}}>
                     {AVATAR_NAMES[selectedAvatarIdx >= 0 ? selectedAvatarIdx : 0]}
                   </div>
                   <Carousel items={AVATARS}
@@ -695,16 +681,16 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                         <div style={{
                           width: 80, height: 80, borderRadius: 22, overflow: 'hidden',
-                          border: isSelected ? `2.5px solid ${C.accent1}` : '2.5px solid transparent',
-                          background: isSelected ? `linear-gradient(135deg, ${C.accent1}15, ${C.accent2}08)` : 'none',
+                          border: isSelected ? `2.5px solid ${D.neon1}` : '2.5px solid transparent',
+                          background: isSelected ? `linear-gradient(135deg, ${D.neon1}12, ${D.neon2}06)` : 'none',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                           transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                          boxShadow: isSelected ? `0 4px 16px ${C.accent1}25` : 'none',
+                          boxShadow: isSelected ? `0 4px 16px ${D.neon1}20` : 'none',
                         }}>
                           <img src={avatar} alt={AVATAR_NAMES[i]} style={{width: 70, height: 70, objectFit: 'contain'}} />
                         </div>
-                        <span style={{fontSize: 9, marginTop: 4, color: isSelected ? C.accent1 : C.textSecondary,
+                        <span style={{fontSize: 9, marginTop: 4, color: isSelected ? D.neon1 : D.textSoft,
                           fontWeight: isSelected ? 700 : 400, fontFamily: FONT}}>{AVATAR_NAMES[i]}</span>
                       </div>
                     )}
@@ -716,23 +702,23 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               {step === 3 && (
                 <div style={stagger(1)}>
                   <div style={{textAlign: 'center', marginBottom: 18}}>
-                    <div style={{fontSize: 17, fontWeight: 700, color: C.textPrimary}}>
+                    <div style={{fontSize: 17, fontWeight: 700, color: D.text}}>
                       {Lf('welcomeLangTitle', 'Quale lingua parli?')}
                     </div>
-                    <div style={{fontSize: 12, color: C.textSecondary, marginTop: 5}}>
+                    <div style={{fontSize: 12, color: D.textSoft, marginTop: 5}}>
                       {Lf('welcomeLangSub', 'Puoi cambiarla in qualsiasi momento')}
                     </div>
                   </div>
                   <div style={{display: 'flex', justifyContent: 'center', marginBottom: 10}}>
                     <div style={{
                       fontSize: 54,
-                      filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.15))',
+                      filter: 'drop-shadow(0 4px 12px rgba(0,0,0,0.3))',
                       animation: 'vtLogoFloat 3s ease-in-out infinite',
                     }}>
                       {LANGS[selectedLangIdx >= 0 ? selectedLangIdx : 0]?.flag}
                     </div>
                   </div>
-                  <div style={{textAlign: 'center', fontSize: 15, fontWeight: 700, color: C.accent1, marginBottom: 14}}>
+                  <div style={{textAlign: 'center', fontSize: 15, fontWeight: 700, color: D.neon1, marginBottom: 14}}>
                     {LANGS[selectedLangIdx >= 0 ? selectedLangIdx : 0]?.name}
                   </div>
                   <Carousel items={LANGS}
@@ -743,20 +729,18 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center'}}>
                         <div style={{
                           width: 54, height: 54, borderRadius: 27,
-                          border: isSelected ? `2.5px solid ${C.accent1}` : '2.5px solid transparent',
-                          background: isSelected
-                            ? `linear-gradient(135deg, ${C.accent1}15, ${C.accent2}08)`
-                            : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                          border: isSelected ? `2.5px solid ${D.neon1}` : '2.5px solid transparent',
+                          background: isSelected ? `linear-gradient(135deg, ${D.neon1}12, ${D.neon2}06)` : 'rgba(255,255,255,0.04)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)', fontSize: 28,
                           transform: isSelected ? 'scale(1.08)' : 'scale(1)',
-                          boxShadow: isSelected ? `0 4px 14px ${C.accent1}20` : 'none',
+                          boxShadow: isSelected ? `0 4px 14px ${D.neon1}18` : 'none',
                         }}>
                           {lang.flag}
                         </div>
                         <span style={{fontSize: 9, marginTop: 4, maxWidth: 68, overflow: 'hidden',
                           textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center',
-                          color: isSelected ? C.accent1 : C.textSecondary,
+                          color: isSelected ? D.neon1 : D.textSoft,
                           fontWeight: isSelected ? 700 : 400, fontFamily: FONT}}>{lang.name}</span>
                       </div>
                     )}
@@ -769,10 +753,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 <div style={stagger(1)}>
                   <div style={{textAlign: 'center', marginBottom: 18}}>
                     <div style={{fontSize: 22, marginBottom: 6}}>{'\uD83C\uDFA7'}</div>
-                    <div style={{fontSize: 17, fontWeight: 700, color: C.textPrimary}}>
+                    <div style={{fontSize: 17, fontWeight: 700, color: D.text}}>
                       {Lf('welcomeVoiceTitle', 'Scegli la voce AI')}
                     </div>
-                    <div style={{fontSize: 12, color: C.textSecondary, marginTop: 5}}>
+                    <div style={{fontSize: 12, color: D.textSoft, marginTop: 5}}>
                       {Lf('welcomeVoiceSub', 'La voce che leggerà le traduzioni')}
                     </div>
                   </div>
@@ -784,22 +768,20 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                           style={{
                             padding: '12px 18px', borderRadius: 14, cursor: 'pointer',
                             fontFamily: FONT, fontSize: 14, fontWeight: sel ? 700 : 500,
-                            background: sel
-                              ? `linear-gradient(135deg, ${C.accent1}20, ${C.accent2}12)`
-                              : isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-                            border: sel ? `1.5px solid ${C.accent1}40` : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
-                            color: sel ? C.accent1 : C.textSecondary,
+                            background: sel ? `linear-gradient(135deg, ${D.neon1}18, ${D.neon2}0A)` : 'rgba(255,255,255,0.03)',
+                            border: sel ? `1.5px solid ${D.neon1}35` : '1px solid rgba(255,255,255,0.06)',
+                            color: sel ? D.neon1 : D.textSoft,
                             transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                             WebkitTapHighlightColor: 'transparent',
                             transform: sel ? 'scale(1.05)' : 'scale(1)',
-                            boxShadow: sel ? `0 4px 16px ${C.accent1}20` : 'none',
+                            boxShadow: sel ? `0 4px 16px ${D.neon1}18` : 'none',
                           }}>
                           {v.charAt(0).toUpperCase() + v.slice(1)}
                         </button>
                       );
                     })}
                   </div>
-                  <div style={{fontSize: 11, color: C.textTertiary, textAlign: 'center', marginBottom: 14, lineHeight: 1.5}}>
+                  <div style={{fontSize: 11, color: D.textMuted, textAlign: 'center', marginBottom: 14, lineHeight: 1.5}}>
                     {Lf('welcomeVoiceHint', 'Le voci AI PRO sono molto più naturali della voce browser.')}
                   </div>
                 </div>
@@ -809,9 +791,9 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               <div style={{display: 'flex', gap: 10, marginTop: 18, ...stagger(2)}}>
                 <button onClick={prev} style={{
                   flex: '0 0 52px', height: 52, borderRadius: 16, cursor: 'pointer',
-                  background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)'}`,
-                  color: C.textSecondary, fontSize: 20, display: 'flex', alignItems: 'center',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: D.textSoft, fontSize: 20, display: 'flex', alignItems: 'center',
                   justifyContent: 'center', WebkitTapHighlightColor: 'transparent',
                   transition: 'all 0.3s',
                   backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
@@ -822,20 +804,20 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <button onClick={next} disabled={!canNext}
                     style={{
                       flex: 1, height: 52, borderRadius: 16, cursor: canNext ? 'pointer' : 'default',
-                      background: canNext ? `linear-gradient(135deg, ${C.accent1}, ${C.accent2})` : isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                      border: 'none', color: canNext ? '#fff' : C.textTertiary,
+                      background: canNext ? `linear-gradient(135deg, ${D.neon1}, ${D.neon2})` : 'rgba(255,255,255,0.04)',
+                      border: 'none', color: canNext ? '#fff' : D.textMuted,
                       fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       opacity: canNext ? 1 : 0.5,
                       transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                       WebkitTapHighlightColor: 'transparent',
-                      boxShadow: canNext ? `0 6px 24px ${C.accent1}35, inset 0 1px 0 rgba(255,255,255,0.2)` : 'none',
+                      boxShadow: canNext ? `0 6px 22px ${D.neon1}30, inset 0 1px 0 rgba(255,255,255,0.18)` : 'none',
                       position: 'relative', overflow: 'hidden',
                     }}>
                     {canNext && (
                       <div style={{
                         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                        background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+                        background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.10) 50%, transparent 60%)',
                         backgroundSize: '200% 100%',
                         animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
                         pointerEvents: 'none',
@@ -847,19 +829,19 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                 ) : (
                   <button style={{
                     flex: 1, height: 52, borderRadius: 16, cursor: 'pointer',
-                    background: `linear-gradient(135deg, ${C.accent1}, ${C.accent2})`,
+                    background: `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
                     border: 'none', color: '#fff',
                     fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
                     transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
                     WebkitTapHighlightColor: 'transparent',
-                    boxShadow: `0 6px 24px ${C.accent1}35, inset 0 1px 0 rgba(255,255,255,0.2)`,
+                    boxShadow: `0 6px 22px ${D.neon1}30, inset 0 1px 0 rgba(255,255,255,0.18)`,
                     position: 'relative', overflow: 'hidden',
                   }}
                     onClick={() => { try { savePrefs(prefs); if (joinCode) setView('join'); else setView('home'); } catch(e) { console.error('[Welcome] Error completing:', e); setView('home'); } }}>
                     <div style={{
                       position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)',
+                      background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.10) 50%, transparent 60%)',
                       backgroundSize: '200% 100%',
                       animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
                       pointerEvents: 'none',

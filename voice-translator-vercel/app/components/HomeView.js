@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, useEffect, useRef } from 'react';
 import { LANGS, CONTEXTS, FONT, APP_URL, getLang, vibrate, formatCredits } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import TutorialOverlay from './TutorialOverlay.js';
@@ -226,6 +226,32 @@ function getHomeColors(theme) {
     },
   };
   return palettes[theme] || palettes.dark;
+}
+
+// ── Client-side QR code generator ──
+function HomeQR({ url }) {
+  const canvasRef = useRef(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (!canvasRef.current || !url) return;
+    let cancelled = false;
+    import('qrcode').then(QRCode => {
+      if (cancelled) return;
+      QRCode.toCanvas(canvasRef.current, url, {
+        width: 140, margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
+      }, (err) => { if (!err && !cancelled) setReady(true); });
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [url]);
+  return (
+    <div style={{textAlign:'center', marginBottom:8}}>
+      <canvas ref={canvasRef}
+        style={{borderRadius:14, background:'#fff', padding:6, display:'block', margin:'0 auto',
+          maxWidth:140, maxHeight:140}} />
+    </div>
+  );
 }
 
 const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, selectedMode, setSelectedMode, selectedContext,
@@ -711,10 +737,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
               </select>
             </div>
-            <div style={{textAlign:'center', marginBottom:8}}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${APP_URL}?lang=${shareAppLang}`)}`}
-                alt="QR" style={{width:120, height:120, borderRadius:14, background:'#fff', padding:6}} />
-            </div>
+            <HomeQR url={`${APP_URL}?lang=${shareAppLang}`} />
             <button style={{...S.btn, width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:6,
               background:C.shareBtnBg, border:`1px solid ${C.shareBtnBorder}`, color:C.accent2, fontSize:13}}
               onClick={() => shareApp()}>

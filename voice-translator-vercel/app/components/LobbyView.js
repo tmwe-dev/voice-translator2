@@ -1,10 +1,36 @@
 'use client';
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { LANGS, APP_URL } from '../lib/constants.js';
 
 const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
   shareRoom, leaveRoom, unlockAudio, setView, theme, setTheme }) {
-  const qrUrl = roomId ? `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(`${APP_URL}?room=${roomId}&lang=${inviteLang}`)}` : '';
+
+  const canvasRef = useRef(null);
+  const [qrReady, setQrReady] = useState(false);
+
+  // Generate QR code client-side using canvas
+  useEffect(() => {
+    if (!roomId || !canvasRef.current) return;
+    const url = `${APP_URL}?room=${roomId}&lang=${inviteLang}`;
+    let cancelled = false;
+
+    import('qrcode').then(QRCode => {
+      if (cancelled) return;
+      QRCode.toCanvas(canvasRef.current, url, {
+        width: 180,
+        margin: 2,
+        color: { dark: '#000000', light: '#ffffff' },
+        errorCorrectionLevel: 'M',
+      }, (err) => {
+        if (!err && !cancelled) setQrReady(true);
+      });
+    }).catch(() => {
+      // Fallback: if qrcode lib fails, show the invite URL text
+      if (!cancelled) setQrReady(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [roomId, inviteLang]);
 
   return (
     <div style={S.page}>
@@ -19,7 +45,14 @@ const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConne
             <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:S.colors.accent3}}>{roomId}</div>
           </div>
           <div style={{textAlign:'center', marginBottom:14}}>
-            <img src={qrUrl} alt="QR" style={{width:150, height:150, borderRadius:14, background:'#fff', padding:8}} />
+            <canvas ref={canvasRef}
+              style={{borderRadius:14, background:'#fff', padding:8, display:'block', margin:'0 auto',
+                maxWidth:180, maxHeight:180}} />
+            {!qrReady && (
+              <div style={{fontSize:11, color:S.colors.textMuted, marginTop:6}}>
+                {`${APP_URL}?room=${roomId}`}
+              </div>
+            )}
           </div>
           <div style={{marginBottom:12}}>
             <div style={S.label}>{L('inviteLangLabel')}</div>
