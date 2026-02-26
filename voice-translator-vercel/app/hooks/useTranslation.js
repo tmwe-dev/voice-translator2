@@ -431,54 +431,44 @@ export default function useTranslation({
     const { myL, otherL } = getTargetLangInfo();
     let finalTranslation = translatedChunksRef.current.join(' ');
 
-    // FASE 8: Skip redundant final re-translation for short messages.
-    // If we have ≤2 chunks, the chunk translations are already good enough.
-    // Only do a full re-translation review for longer messages (3+ chunks)
-    // where coherence across chunks matters. This saves 800-2000ms.
-    const needsReview = translatedChunksRef.current.length >= 3;
-
-    if (needsReview) {
-      try {
-        if (isTrialRef.current) {
-          const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name);
-          if (data.translated) finalTranslation = data.translated;
-        } else {
-          const res = await fetch('/api/translate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: allOriginal,
-              sourceLang: myL.code,
-              targetLang: otherL.code,
-              sourceLangName: myL.name,
-              targetLangName: otherL.name,
-              roomId,
-              isReview: true,
-              aiModel: prefsRef.current?.aiModel || undefined,
-              domainContext: roomContextRef.current.contextPrompt || undefined,
-              description: roomContextRef.current.description || undefined,
-              userToken: getEffectiveToken()
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.translated) finalTranslation = data.translated;
-          }
-        }
-      } catch (e) {
-        console.error('[Final] Translation error:', e);
-      }
-    } else if (!finalTranslation && !isTrialRef.current) {
-      // Short message with no chunks yet — do a single quick translation
-      try {
+    // FASE 9: ALWAYS do a final full-text re-translation for quality.
+    // Even short messages (1-2 chunks) benefit from full-sentence context.
+    // Chunk translations are fragments that may miss nuance, idioms, or context.
+    // The final re-translation ensures coherent, accurate output. Fire-and-forget
+    // sendMessage below keeps the UI fast despite this extra API call.
+    try {
+      if (isTrialRef.current) {
         const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name, {
           domainContext: roomContextRef.current.contextPrompt || undefined,
           description: roomContextRef.current.description || undefined
         });
         if (data.translated) finalTranslation = data.translated;
-      } catch (e) {
-        console.error('[Final quick] Translation error:', e);
+      } else {
+        const res = await fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: allOriginal,
+            sourceLang: myL.code,
+            targetLang: otherL.code,
+            sourceLangName: myL.name,
+            targetLangName: otherL.name,
+            roomId,
+            isReview: true,
+            aiModel: prefsRef.current?.aiModel || undefined,
+            domainContext: roomContextRef.current.contextPrompt || undefined,
+            description: roomContextRef.current.description || undefined,
+            userToken: getEffectiveToken()
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.translated) finalTranslation = data.translated;
+        }
       }
+    } catch (e) {
+      console.error('[Final] Translation error:', e);
+      // On error, fall back to chunk-joined translation (already in finalTranslation)
     }
 
     if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
@@ -737,23 +727,19 @@ export default function useTranslation({
                   freeTalkSendingRef.current = true;
                   const { myL, otherL } = getTargetLangInfo();
 
-                  // FASE 8: Skip re-translation for short messages (≤2 chunks)
+                  // FASE 9: ALWAYS do final full-text re-translation for quality
                   let finalTranslation = translatedChunksRef.current.join(' ');
-                  const needsReview = translatedChunksRef.current.length >= 3;
-
-                  if (needsReview && !isTrialRef.current) {
-                    try {
-                      const data = await translateUniversal(
-                        allOriginal, myL.code, otherL.code, myL.name, otherL.name,
-                        {
-                          domainContext: roomContextRef.current.contextPrompt || undefined,
-                          description: roomContextRef.current.description || undefined
-                        }
-                      );
-                      if (data.translated) finalTranslation = data.translated;
-                    } catch (e) {
-                      console.error('[FreeTalk final] Translation error:', e);
-                    }
+                  try {
+                    const data = await translateUniversal(
+                      allOriginal, myL.code, otherL.code, myL.name, otherL.name,
+                      {
+                        domainContext: roomContextRef.current.contextPrompt || undefined,
+                        description: roomContextRef.current.description || undefined
+                      }
+                    );
+                    if (data.translated) finalTranslation = data.translated;
+                  } catch (e) {
+                    console.error('[FreeTalk final] Translation error:', e);
                   }
 
                   // FASE 1B: Clear streamingMsg BEFORE posting (use null, not empty object)

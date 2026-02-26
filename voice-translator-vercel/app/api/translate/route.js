@@ -9,6 +9,37 @@ import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, round
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
 
+// ═══════════════════════════════════════════════
+// FASE 9: Output validation — detect garbage/wrong-script LLM output
+// ═══════════════════════════════════════════════
+const SCRIPT_RANGES = {
+  'th': /[\u0E00-\u0E7F]/,      // Thai
+  'zh': /[\u4E00-\u9FFF]/,      // CJK Unified
+  'ja': /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/, // Hiragana + Katakana + CJK
+  'ko': /[\uAC00-\uD7AF\u1100-\u11FF]/, // Hangul
+  'ar': /[\u0600-\u06FF]/,      // Arabic
+  'hi': /[\u0900-\u097F]/,      // Devanagari
+  'ru': /[\u0400-\u04FF]/,      // Cyrillic
+  'el': /[\u0370-\u03FF]/,      // Greek
+};
+const LATIN_LANGS = new Set(['en','es','fr','de','it','pt','nl','pl','sv','tr','vi','id','ms','cs','ro','hu','fi']);
+
+function validateOutput(original, translated, targetLang) {
+  if (!translated || !translated.trim()) return { valid: false, reason: 'empty' };
+  const t = translated.trim();
+  // Check for LLM meta-text leaking through (common failure mode)
+  if (t.startsWith('Translation:') || t.startsWith('Here is') || t.startsWith('Note:'))
+    return { valid: false, reason: 'meta_text' };
+  // Length ratio sanity (allow wider for CJK)
+  const ratio = t.length / Math.max(original.trim().length, 1);
+  if (ratio > 8 || ratio < 0.05) return { valid: false, reason: 'length_ratio' };
+  // Script validation for non-Latin targets
+  if (!LATIN_LANGS.has(targetLang) && SCRIPT_RANGES[targetLang]) {
+    if (!SCRIPT_RANGES[targetLang].test(t)) return { valid: false, reason: 'wrong_script' };
+  }
+  return { valid: true };
+}
+
 // Model mapping: our model IDs → actual API model strings + provider
 const MODEL_MAP = {
   'gpt-4o-mini':    { actual: 'gpt-4o-mini', provider: 'openai' },
@@ -111,9 +142,11 @@ RULES:
     // Build messages array — context goes as a prior assistant turn, NOT in system prompt
     const messages = [{ role: 'system', content: systemPrompt }];
     if (context) {
-      // Provide previous translation as context via conversation history format
+      // FASE 9: Improved chunk context — give both the original fragment info
+      // and the previous translation to help the LLM maintain coherence.
+      // The "Continue translating" prefix tells the LLM this is a fragment.
       messages.push({ role: 'assistant', content: context });
-      messages.push({ role: 'user', content: `Continue translating: ${text}` });
+      messages.push({ role: 'user', content: `[This is a continuation fragment from ongoing speech] ${text}` });
     } else {
       messages.push({ role: 'user', content: text });
     }
@@ -162,6 +195,26 @@ RULES:
       });
       translated = completion.choices[0].message.content.trim();
       usage = completion.usage;
+    }
+
+    // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
+    const validation = validateOutput(text, translated, targetLang);
+    if (!validation.valid) {
+      console.warn(`[Translate] Output validation failed: reason=${validation.reason}, target=${targetLang}, output="${translated?.substring(0, 60)}"`);
+      // Strip common LLM meta-text prefixes and retry validation
+      if (validation.reason === 'meta_text') {
+        translated = translated.replace(/^(Translation:|Here is|Note:)\s*/i, '').trim();
+      }
+      // If still invalid after cleanup, return original text as fallback
+      const recheck = validateOutput(text, translated, targetLang);
+      if (!recheck.valid) {
+        return NextResponse.json({
+          translated: text, // Return original — better than garbage
+          cost: roundCost(calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 })),
+          costEurCents: 0,
+          validationFailed: true
+        });
+      }
     }
 
     // Cache simple translations in Redis with 24h TTL
