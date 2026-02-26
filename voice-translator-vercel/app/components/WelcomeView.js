@@ -33,16 +33,10 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   // Helper: L() returns the key itself when not found in i18n — this helper uses the fallback instead
   const Lf = (key, fallback) => { const v = L(key); return (v && v !== key) ? v : fallback; };
 
-  // Trigger entrance animation
-  useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 50);
-    return () => clearTimeout(t);
-  }, [step]);
-
-  // Reset entered on step change for stagger
+  // Trigger entrance animation on mount and step change
   useEffect(() => {
     setEntered(false);
-    const t = setTimeout(() => setEntered(true), 50);
+    const t = setTimeout(() => setEntered(true), 60);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -153,7 +147,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   ) : null;
 
   return (
-    <div style={{...S.page, position:'relative', overflow:'hidden'}}>
+    <div style={{...S.page}}>
 
       {/* ═══ BACKGROUND ORB EFFECTS — Always visible ═══ */}
       <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, pointerEvents:'none', zIndex:0, overflow:'hidden'}}>
