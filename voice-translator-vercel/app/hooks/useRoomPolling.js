@@ -220,7 +220,10 @@ export default function useRoomPolling({
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);
+    setPartnerConnected(false);
     setPartnerSpeaking(false);
+    setPartnerLiveText('');
+    setPartnerTyping(false);
   }
 
   return {

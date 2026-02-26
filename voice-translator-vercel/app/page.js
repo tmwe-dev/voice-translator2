@@ -643,7 +643,7 @@ export default function Home() {
   if (view === 'lobby') return (
     <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={roomPolling.leaveRoom} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
+      leaveRoom={() => { roomPolling.leaveRoom(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
   );
 
   if (view === 'room') return (

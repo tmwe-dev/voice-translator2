@@ -79,9 +79,10 @@ export async function updateHeartbeat(roomId, memberName) {
   const data = await redis('GET', key);
   if (!data) return null;
   const room = JSON.parse(data);
-  const member = room.members.find(m => m.name === memberName);
-  if (member) member.lastSeen = Date.now();
-  await redis('SET', key, JSON.stringify(room), 'EX', 7200);
+  // READ-ONLY heartbeat: just refresh TTL without writing room data back.
+  // This prevents race conditions where heartbeat overwrites a concurrent
+  // joinRoom operation, effectively removing the guest from the room.
+  await redis('EXPIRE', key, 7200);
   return room;
 }
 
