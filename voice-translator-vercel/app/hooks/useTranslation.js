@@ -1,30 +1,23 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, REVIEW_INTERVAL, CHUNK_MIN_WORDS, CHUNK_MAX_WORDS, LIVE_TEXT_THROTTLE, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
+import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, BROWSER_SPEAK_MIN_DURATION, BROWSER_SPEAK_CHAR_RATE } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
 
-// Languages that don't use spaces between words - need Intl.Segmenter or char-based counting
-const NO_SPACE_LANGS = new Set(['th', 'zh', 'ja', 'km', 'lo', 'my']);
-
-// FASE 8: Cached Segmenter instances for performance (avoid re-creating on every call)
-const segmenterCache = {};
-
-function countWords(text, langCode) {
-  if (!text || !text.trim()) return 0;
-  if (NO_SPACE_LANGS.has(langCode)) {
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) {
-      try {
-        if (!segmenterCache[langCode]) {
-          segmenterCache[langCode] = new Intl.Segmenter(langCode, { granularity: 'word' });
-        }
-        return [...segmenterCache[langCode].segment(text)].filter(s => s.isWordLike).length;
-      } catch {}
-    }
-    // Fallback: Thai/CJK average ~3 chars per word (was 2 — too aggressive)
-    return Math.ceil(text.trim().length / 3);
-  }
-  return text.split(/\s+/).filter(w => w).length;
-}
+// ═══════════════════════════════════════════════════════════════
+// FASE 10: Simplified Translation Pipeline
+//
+// OLD: Speech → chunks → translate each → review → re-translate → send
+//      (5-7 API calls per message, live text visible to partner)
+//
+// NEW: Speech → accumulate → ONE translate at end → send
+//      (1 API call per message, text private until sent)
+//
+// Benefits:
+// - 5-7x fewer API calls = much lower latency
+// - Partner doesn't see incomplete/wrong text (privacy)
+// - No chunk context errors, no review overhead
+// - Simpler, more reliable code
+// ═══════════════════════════════════════════════════════════════
 
 export default function useTranslation({
   myLangRef,
@@ -38,13 +31,13 @@ export default function useTranslation({
   useOwnKeys,
   getMicStream,
   unlockAudio,
-  broadcastLiveText,
+  broadcastLiveText,  // kept in signature but NOT called (privacy)
   setSpeakingState,
   getEffectiveToken,
   refreshBalance,
   trackFreeChars,
   userEmail,
-  sentByMeRef  // FASE 1A: receive from useRoomPolling for dedup
+  sentByMeRef
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -52,32 +45,38 @@ export default function useTranslation({
   const [textInput, setTextInput] = useState('');
   const [isListening, setIsListening] = useState(false);
 
-  // Streaming refs
+  // Refs
   const speechRecRef = useRef(null);
-  const wordBufferRef = useRef('');
   const allWordsRef = useRef('');
-  const translatedChunksRef = useRef([]);
-  const reviewTimerRef = useRef(null);
-  const streamingModeRef = useRef(false);
-  const chunkingActiveRef = useRef(false);
-  const reviewActiveRef = useRef(false);  // FASE 3: serialize postHocReview/emitChunk
   const lastInterimRef = useRef('');
+  const streamingModeRef = useRef(false);
+  const stoppingRef = useRef(false);
+  const freeTalkSendingRef = useRef(false);
+
+  // Backup recording refs (for audio fallback when speech recognition fails)
   const backupRecRef = useRef(null);
   const backupChunksRef = useRef([]);
   const backupStreamRef = useRef(null);
+
+  // Classic recording refs
   const recRef = useRef(null);
   const chunksRef = useRef([]);
+
+  // FreeTalk VAD refs
   const vadStreamRef = useRef(null);
   const vadRecRef = useRef(null);
   const vadTimerRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const vadAnalyserRef = useRef(null);
   const vadAudioCtxRef = useRef(null);
-  const stoppingRef = useRef(false);
-  const freeTalkSendingRef = useRef(false);  // FASE 2B: coordinate silence/stopFreeTalk
+
+  // Legacy refs kept for export compatibility
+  const wordBufferRef = useRef('');
+  const translatedChunksRef = useRef([]);
+  const reviewTimerRef = useRef(null);
 
   // =============================================
-  // FASE 4C: Unified sendMessage helper
+  // Send Message
   // =============================================
   async function sendMessage(original, translated, sourceLang, targetLang) {
     if (!roomId) return null;
@@ -96,7 +95,6 @@ export default function useTranslation({
       });
       if (res.ok) {
         const data = await res.json();
-        // FASE 1A: Track sent message ID for polling dedup
         if (data.message?.id && sentByMeRef) {
           sentByMeRef.current.add(data.message.id);
         }
@@ -109,7 +107,7 @@ export default function useTranslation({
   }
 
   // =============================================
-  // Translation API
+  // Translation API — single call
   // =============================================
   async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
     if (isTrialRef.current) {
@@ -150,7 +148,7 @@ export default function useTranslation({
   }
 
   // =============================================
-  // FASE 4A: Single getTargetLangInfo (used everywhere)
+  // Get target language info
   // =============================================
   function getTargetLangInfo() {
     const currentMyLang = myLangRef.current;
@@ -167,7 +165,8 @@ export default function useTranslation({
   }
 
   // =============================================
-  // FASE 4B: Unified speech result handler
+  // FASE 10: Simplified speech handler
+  // Just accumulates text — no chunks, no live broadcast
   // =============================================
   function handleSpeechResult(event, processedFinals) {
     let interimTranscript = '';
@@ -179,25 +178,12 @@ export default function useTranslation({
           processedFinals.add(key);
           const existing = allWordsRef.current.trim();
 
-          // FASE 7+: Robust guard against cross-restart duplication.
-          // Chrome SpeechRecognition in continuous mode can re-deliver text
-          // in multiple ways after auto-restart:
-          // (a) Exact same text → endsWith catches it
-          // (b) Accumulated text including old + new → startsWith catches it
-          // (c) Word-level overlap at boundary → overlap detection catches it
-
-          // (a) Exact duplicate at end
+          // Dedup guards (same as before)
           if (existing.endsWith(text)) continue;
-
-          // (b) Accumulated re-delivery: new text starts with existing content.
-          // Only keep the genuinely new portion.
           if (existing.length > 5 && text.length > existing.length && text.startsWith(existing)) {
             text = text.slice(existing.length).trim();
             if (!text) continue;
           }
-
-          // (c) Word-level overlap: last N words of existing match first N words of text.
-          // This catches partial re-delivery after restart.
           if (existing.length > 0) {
             const existingWords = existing.split(/\s+/);
             const textWords = text.split(/\s+/);
@@ -215,12 +201,9 @@ export default function useTranslation({
           }
 
           lastInterimRef.current = '';
-          wordBufferRef.current = (wordBufferRef.current + ' ' + text).trim();
           allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
+          // Show only to sender — NO broadcastLiveText (privacy)
           setStreamingMsg(prev => (prev ? { ...prev, original: allWordsRef.current } : null));
-          broadcastLiveText(allWordsRef.current);
-          const bufferWords = countWords(wordBufferRef.current, myLangRef.current);
-          if (bufferWords >= CHUNK_MIN_WORDS) emitChunk();
         }
       } else {
         interimTranscript += event.results[i][0].transcript;
@@ -229,16 +212,13 @@ export default function useTranslation({
     if (interimTranscript) {
       lastInterimRef.current = interimTranscript.trim();
       const preview = allWordsRef.current + ' ' + interimTranscript.trim();
+      // Show only to sender — NO broadcastLiveText
       setStreamingMsg(prev => (prev ? { ...prev, original: preview } : null));
-      broadcastLiveText(preview);
-      const totalPending = (wordBufferRef.current + ' ' + interimTranscript.trim()).trim();
-      if (countWords(totalPending, myLangRef.current) >= CHUNK_MAX_WORDS && wordBufferRef.current.trim())
-        emitChunk();
     }
   }
 
   // =============================================
-  // Streaming Translation
+  // FASE 10: Start streaming — simplified
   // =============================================
   async function startStreamingTranslation() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -251,16 +231,14 @@ export default function useTranslation({
     setRecording(true);
     if (roomId) setSpeakingState(roomId, true);
 
-    wordBufferRef.current = '';
     allWordsRef.current = '';
     lastInterimRef.current = '';
-    translatedChunksRef.current = [];
-    chunkingActiveRef.current = false;
-    reviewActiveRef.current = false;
     streamingModeRef.current = true;
     backupChunksRef.current = [];
-    setStreamingMsg({ original: '', translated: '', isStreaming: true });
+    // Only show original (what user is saying) — no translation preview
+    setStreamingMsg({ original: '', translated: null, isStreaming: true });
 
+    // Backup audio recording (fallback if speech recognition captures nothing)
     if (!isTrialRef.current) {
       try {
         const stream = await getMicStream();
@@ -292,126 +270,35 @@ export default function useTranslation({
     speechRecRef.current = recognition;
 
     let processedFinals = new Set();
-    // FASE 4B: Use unified handler
     recognition.onresult = (event) => handleSpeechResult(event, processedFinals);
     recognition.onerror = () => {};
     recognition.onend = () => {
       if (streamingModeRef.current) {
         processedFinals = new Set();
-        try {
-          recognition.start();
-        } catch {}
+        try { recognition.start(); } catch {}
       }
     };
-    try {
-      recognition.start();
-    } catch {}
-    reviewTimerRef.current = setInterval(() => postHocReview(), REVIEW_INTERVAL);
+    try { recognition.start(); } catch {}
+    // NO reviewTimer — no periodic reviews needed
   }
 
-  async function emitChunk() {
-    const chunk = wordBufferRef.current.trim();
-    if (!chunk || chunkingActiveRef.current) return;
-    // FASE 3: Wait if review is active
-    if (reviewActiveRef.current) return;
-    wordBufferRef.current = '';
-    chunkingActiveRef.current = true;
-    const { myL, otherL } = getTargetLangInfo();
-    try {
-      const lastChunk = translatedChunksRef.current.length > 0
-        ? translatedChunksRef.current[translatedChunksRef.current.length - 1]
-        : '';
-      const prevContext = lastChunk;
-      const data = await translateUniversal(chunk, myL.code, otherL.code, myL.name, otherL.name, {
-        context: prevContext || undefined,
-        domainContext: roomContextRef.current.contextPrompt || undefined,
-        description: roomContextRef.current.description || undefined
-      });
-      if (data.translated) {
-        translatedChunksRef.current.push(data.translated);
-        const fullTranslation = translatedChunksRef.current.join(' ');
-        setStreamingMsg(prev => (prev ? { ...prev, translated: fullTranslation } : null));
-      }
-    } catch (e) {
-      console.error('[Chunk] Translation error:', e);
-    }
-    chunkingActiveRef.current = false;
-    if (wordBufferRef.current.trim()) {
-      const bufferWords = countWords(wordBufferRef.current, myLangRef.current);
-      if (bufferWords >= CHUNK_MIN_WORDS) emitChunk();
-    }
-  }
-
-  async function postHocReview() {
-    const allOriginal = allWordsRef.current.trim();
-    if (!allOriginal) return;
-    // FASE 3: Don't review while chunking is active
-    if (chunkingActiveRef.current) return;
-    const lang = myLangRef.current;
-    const wordCount = countWords(allOriginal, lang);
-    // FASE 8: Only review longer messages (3+ chunks) — short ones don't benefit
-    if (wordCount < 12 || translatedChunksRef.current.length < 3) return;
-    reviewActiveRef.current = true;
-    let reviewText;
-    if (NO_SPACE_LANGS.has(lang)) {
-      // FASE 8: Increased from 50 to 80 chars for better Thai/CJK context
-      reviewText = allOriginal.slice(-80);
-    } else {
-      const words = allOriginal.split(/\s+/).filter(w => w);
-      reviewText = words.slice(-15).join(' ');
-    }
-    const { myL, otherL } = getTargetLangInfo();
-    try {
-      if (isTrialRef.current) { reviewActiveRef.current = false; return; }
-      const res = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: reviewText,
-          sourceLang: myL.code,
-          targetLang: otherL.code,
-          sourceLangName: myL.name,
-          targetLangName: otherL.name,
-          roomId,
-          isReview: true,
-          aiModel: prefsRef.current?.aiModel || undefined,
-          userToken: getEffectiveToken()
-        })
-      });
-      if (res.ok) {
-        const { translated } = await res.json();
-        if (translated && translatedChunksRef.current.length > 0) {
-          const chunksToReplace = Math.min(2, translatedChunksRef.current.length - 1);
-          if (chunksToReplace > 0) {
-            const keptChunks = translatedChunksRef.current.slice(0, -chunksToReplace);
-            translatedChunksRef.current = [...keptChunks, translated];
-            const fullTranslation = translatedChunksRef.current.join(' ');
-            setStreamingMsg(prev => (prev ? { ...prev, translated: fullTranslation } : null));
-          }
-        }
-      }
-    } catch (e) {
-      console.error('[Review] Error:', e);
-    }
-    reviewActiveRef.current = false;
-  }
-
+  // =============================================
+  // FASE 10: Stop streaming — ONE translate call
+  // =============================================
   async function stopStreamingTranslation() {
-    // Guard against double-call (double tap, race conditions)
     if (stoppingRef.current) return;
     stoppingRef.current = true;
     streamingModeRef.current = false;
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
+
+    // Stop speech recognition
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
       speechRecRef.current = null;
     }
-    if (reviewTimerRef.current) {
-      clearInterval(reviewTimerRef.current);
-      reviewTimerRef.current = null;
-    }
 
+    // Stop backup audio recording
     let backupBlob = null;
     if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
       await new Promise(resolve => {
@@ -424,110 +311,68 @@ export default function useTranslation({
     backupRecRef.current = null;
     backupStreamRef.current = null;
 
+    // Capture any pending interim text
     if (lastInterimRef.current) {
       const pending = lastInterimRef.current.trim();
       const existing = allWordsRef.current.trim();
       if (pending && !existing.endsWith(pending) && !existing.includes(pending)) {
-        wordBufferRef.current = (wordBufferRef.current + ' ' + pending).trim();
         allWordsRef.current = (existing + ' ' + pending).trim();
       }
       lastInterimRef.current = '';
     }
 
-    if (wordBufferRef.current.trim()) await emitChunk();
-
     const allOriginal = allWordsRef.current.trim();
 
+    // If no text captured, try audio fallback
     if (!allOriginal && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
-      // FASE 1B: Clear streamingMsg BEFORE sending
       setStreamingMsg(null);
-      clearBuffers();
+      allWordsRef.current = '';
       stoppingRef.current = false;
-      try {
-        await processAndSendAudio(backupBlob);
-      } catch (err) {}
+      try { await processAndSendAudio(backupBlob); } catch {}
       return;
     }
 
     if (!allOriginal) {
       setStreamingMsg(null);
-      clearBuffers();
+      allWordsRef.current = '';
       stoppingRef.current = false;
       return;
     }
 
+    // ── ONE single translation call ──
     const { myL, otherL } = getTargetLangInfo();
-    let finalTranslation = translatedChunksRef.current.join(' ');
+    let finalTranslation = '';
 
-    // FASE 9: ALWAYS do a final full-text re-translation for quality.
-    // Even short messages (1-2 chunks) benefit from full-sentence context.
-    // Chunk translations are fragments that may miss nuance, idioms, or context.
-    // The final re-translation ensures coherent, accurate output. Fire-and-forget
-    // sendMessage below keeps the UI fast despite this extra API call.
     try {
-      if (isTrialRef.current) {
-        const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name, {
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined
-        });
-        if (data.translated) finalTranslation = data.translated;
-      } else {
-        const res = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: allOriginal,
-            sourceLang: myL.code,
-            targetLang: otherL.code,
-            sourceLangName: myL.name,
-            targetLangName: otherL.name,
-            roomId,
-            isReview: true,
-            aiModel: prefsRef.current?.aiModel || undefined,
-            domainContext: roomContextRef.current.contextPrompt || undefined,
-            description: roomContextRef.current.description || undefined,
-            userToken: getEffectiveToken()
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.translated) finalTranslation = data.translated;
-        }
-      }
+      const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name, {
+        domainContext: roomContextRef.current.contextPrompt || undefined,
+        description: roomContextRef.current.description || undefined
+      });
+      if (data.translated) finalTranslation = data.translated;
     } catch (e) {
-      console.error('[Final] Translation error:', e);
-      // On error, fall back to chunk-joined translation (already in finalTranslation)
+      console.error('[Translate] Error:', e);
     }
 
+    // If translation failed entirely, try audio fallback
     if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       setStreamingMsg(null);
-      clearBuffers();
+      allWordsRef.current = '';
       stoppingRef.current = false;
-      try {
-        await processAndSendAudio(backupBlob);
-      } catch {}
+      try { await processAndSendAudio(backupBlob); } catch {}
       return;
     }
 
-    // FASE 1B: Clear streamingMsg BEFORE posting message
+    // Clear streaming bubble BEFORE sending
     setStreamingMsg(null);
 
+    // Send message (fire-and-forget for speed)
     if (finalTranslation && roomId) {
-      // FASE 8: Fire-and-forget sendMessage — don't block UI on network
       sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
     }
 
-    clearBuffers();
+    allWordsRef.current = '';
     if (!isTrialRef.current && !useOwnKeys) refreshBalance();
     stoppingRef.current = false;
-  }
-
-  // Helper to clear all streaming buffers
-  function clearBuffers() {
-    wordBufferRef.current = '';
-    allWordsRef.current = '';
-    translatedChunksRef.current = [];
-    lastInterimRef.current = '';
   }
 
   // =============================================
@@ -551,13 +396,8 @@ export default function useTranslation({
       };
       recRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
-        if (blob.size < 1000) {
-          setRecording(false);
-          return;
-        }
-        try {
-          await processAndSendAudio(blob);
-        } catch (err) {}
+        if (blob.size < 1000) { setRecording(false); return; }
+        try { await processAndSendAudio(blob); } catch {}
         setRecording(false);
         if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       };
@@ -576,11 +416,10 @@ export default function useTranslation({
   }
 
   // =============================================
-  // FASE 4A: processAndSendAudio uses getTargetLangInfo()
+  // Process audio blob (Whisper STT + translate)
   // =============================================
   async function processAndSendAudio(blob) {
     const { myL, otherL } = getTargetLangInfo();
-
     const form = new FormData();
     form.append('audio', blob, 'audio.webm');
     form.append('sourceLang', myL.code);
@@ -596,7 +435,7 @@ export default function useTranslation({
 
     const res = await fetch('/api/process', { method: 'POST', body: form });
     if (!res.ok) throw new Error('Server error');
-    const { original, translated, cost } = await res.json();
+    const { original, translated } = await res.json();
     if (original && roomId) {
       await sendMessage(original, translated, myL.code, otherL.code);
     }
@@ -607,11 +446,8 @@ export default function useTranslation({
   // =============================================
   async function toggleRecording() {
     if (recording) {
-      if (streamingModeRef.current) {
-        stopStreamingTranslation();
-      } else {
-        stopClassicRecording();
-      }
+      if (streamingModeRef.current) stopStreamingTranslation();
+      else stopClassicRecording();
     } else {
       startStreamingTranslation();
     }
@@ -626,11 +462,7 @@ export default function useTranslation({
     try {
       const { myL, otherL } = getTargetLangInfo();
       const data = await translateUniversal(
-        textInput.trim(),
-        myL.code,
-        otherL.code,
-        myL.name,
-        otherL.name,
+        textInput.trim(), myL.code, otherL.code, myL.name, otherL.name,
         {
           domainContext: roomContextRef.current.contextPrompt || undefined,
           description: roomContextRef.current.description || undefined
@@ -641,12 +473,12 @@ export default function useTranslation({
         setTextInput('');
         if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       }
-    } catch (err) {}
+    } catch {}
     setSendingText(false);
   }
 
   // =============================================
-  // Free Talk Mode
+  // FASE 10: Free Talk Mode — simplified
   // =============================================
   async function startFreeTalk() {
     if (isListening) return;
@@ -655,7 +487,6 @@ export default function useTranslation({
     try {
       const stream = await getMicStream();
       vadStreamRef.current = stream;
-      // Close previous AudioContext if any to prevent accumulation
       if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
         try { vadAudioCtxRef.current.close(); } catch {}
       }
@@ -671,16 +502,12 @@ export default function useTranslation({
       freeTalkSendingRef.current = false;
 
       let isRec = false;
-      const threshold = VAD_THRESHOLD,
-        silenceDelay = SILENCE_DELAY;
+      const threshold = VAD_THRESHOLD;
+      const silenceDelay = SILENCE_DELAY;
 
       if (SpeechRecognition) {
-        wordBufferRef.current = '';
         allWordsRef.current = '';
-        translatedChunksRef.current = [];
         streamingModeRef.current = true;
-        chunkingActiveRef.current = false;
-        reviewActiveRef.current = false;
 
         const recognition = new SpeechRecognition();
         recognition.lang = getLang(myLangRef.current).speech;
@@ -690,19 +517,16 @@ export default function useTranslation({
         speechRecRef.current = recognition;
 
         let ftProcessedFinals = new Set();
-        // FASE 4B: Use unified handler
         recognition.onresult = (event) => handleSpeechResult(event, ftProcessedFinals);
         recognition.onerror = () => {};
         recognition.onend = () => {
           if (streamingModeRef.current && isListening) {
             ftProcessedFinals = new Set();
-            try {
-              recognition.start();
-            } catch {}
+            try { recognition.start(); } catch {}
           }
         };
         recognition.start();
-        reviewTimerRef.current = setInterval(() => postHocReview(), REVIEW_INTERVAL);
+        // NO reviewTimer
       }
 
       function check() {
@@ -718,7 +542,7 @@ export default function useTranslation({
             silenceTimerRef.current = null;
           }
           if (SpeechRecognition) {
-            if (!streamingMsg) setStreamingMsg({ original: '', translated: '', isStreaming: true });
+            if (!streamingMsg) setStreamingMsg({ original: '', translated: null, isStreaming: true });
             setRecording(true);
             if (roomId) setSpeakingState(roomId, true);
           } else {
@@ -729,9 +553,7 @@ export default function useTranslation({
                 : 'audio/mp4';
             const ch = [];
             const r = new MediaRecorder(stream, { mimeType: mime });
-            r.ondataavailable = e => {
-              if (e.data.size > 0) ch.push(e.data);
-            };
+            r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
             r.onstop = async () => {
               const blob = new Blob(ch, { type: r.mimeType });
               if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
@@ -748,15 +570,14 @@ export default function useTranslation({
                 isRec = false;
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
-                if (wordBufferRef.current.trim()) await emitChunk();
+
                 const allOriginal = allWordsRef.current.trim();
-                if (allOriginal && translatedChunksRef.current.length > 0) {
-                  // FASE 2B: Mark as sending to prevent stopFreeTalk double-send
+                if (allOriginal) {
                   freeTalkSendingRef.current = true;
                   const { myL, otherL } = getTargetLangInfo();
 
-                  // FASE 9: ALWAYS do final full-text re-translation for quality
-                  let finalTranslation = translatedChunksRef.current.join(' ');
+                  // ONE single translation call
+                  let finalTranslation = '';
                   try {
                     const data = await translateUniversal(
                       allOriginal, myL.code, otherL.code, myL.name, otherL.name,
@@ -767,19 +588,14 @@ export default function useTranslation({
                     );
                     if (data.translated) finalTranslation = data.translated;
                   } catch (e) {
-                    console.error('[FreeTalk final] Translation error:', e);
+                    console.error('[FreeTalk] Translation error:', e);
                   }
 
-                  // FASE 1B: Clear streamingMsg BEFORE posting (use null, not empty object)
                   setStreamingMsg(null);
-
-                  // FASE 8: Fire-and-forget sendMessage — don't block on network
-                  sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
-
-                  // Clear buffers for next utterance
-                  wordBufferRef.current = '';
+                  if (finalTranslation) {
+                    sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
+                  }
                   allWordsRef.current = '';
-                  translatedChunksRef.current = [];
                   freeTalkSendingRef.current = false;
                 }
               } else {
@@ -798,24 +614,17 @@ export default function useTranslation({
         vadTimerRef.current = requestAnimationFrame(check);
       }
       check();
-    } catch (err) {}
+    } catch {}
   }
 
   function stopFreeTalk() {
     setIsListening(false);
     setRecording(false);
-    if (vadTimerRef.current) {
-      cancelAnimationFrame(vadTimerRef.current);
-      vadTimerRef.current = null;
-    }
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
+    if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
+    if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
     vadStreamRef.current = null;
     vadAnalyserRef.current = null;
-    // Close AudioContext to prevent accumulation (browser limit ~6)
     if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
       try { vadAudioCtxRef.current.close(); } catch {}
       vadAudioCtxRef.current = null;
@@ -826,14 +635,7 @@ export default function useTranslation({
         try { speechRecRef.current.stop(); } catch {}
         speechRecRef.current = null;
       }
-      if (reviewTimerRef.current) {
-        clearInterval(reviewTimerRef.current);
-        reviewTimerRef.current = null;
-      }
-      // FASE 2B: Only clear streamingMsg if silence callback isn't actively sending
-      if (!freeTalkSendingRef.current) {
-        setStreamingMsg(null);
-      }
+      if (!freeTalkSendingRef.current) setStreamingMsg(null);
     }
   }
 
@@ -848,10 +650,6 @@ export default function useTranslation({
         try { speechRecRef.current.stop(); } catch {}
         speechRecRef.current = null;
       }
-      if (reviewTimerRef.current) {
-        clearInterval(reviewTimerRef.current);
-        reviewTimerRef.current = null;
-      }
       if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
         try { backupRecRef.current.stop(); } catch {}
         backupRecRef.current = null;
@@ -864,22 +662,15 @@ export default function useTranslation({
       }
       chunksRef.current = [];
       vadStreamRef.current = null;
-      if (vadTimerRef.current) {
-        cancelAnimationFrame(vadTimerRef.current);
-        vadTimerRef.current = null;
-      }
-      if (silenceTimerRef.current) {
-        clearTimeout(silenceTimerRef.current);
-        silenceTimerRef.current = null;
-      }
+      if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
       vadAnalyserRef.current = null;
       if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
         try { vadAudioCtxRef.current.close(); } catch {}
         vadAudioCtxRef.current = null;
       }
-      clearBuffers();
-      chunkingActiveRef.current = false;
-      reviewActiveRef.current = false;
+      allWordsRef.current = '';
+      lastInterimRef.current = '';
     };
   }, []);
 
