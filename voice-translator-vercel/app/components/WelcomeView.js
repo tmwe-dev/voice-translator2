@@ -304,7 +304,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   onMouseLeave={() => setHoveredCard(null)}
                   onTouchStart={() => setHoveredCard(i)}
                   onTouchEnd={() => setTimeout(() => setHoveredCard(null), 300)}
-                  style={glassCard(hoveredCard === i, f.color, i)}>
+                  onClick={next}
+                  style={{...glassCard(hoveredCard === i, f.color, i), cursor: 'pointer'}}>
                   {/* Hover glow effect */}
                   {hoveredCard === i && (
                     <div style={{
@@ -389,7 +390,17 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                     <div key={tier.key}
                       onMouseEnter={() => setHoveredTier(i)}
                       onMouseLeave={() => setHoveredTier(null)}
+                      onClick={() => {
+                        // Tap tier → auto-advance to setup wizard
+                        if (tier.isPro && !userToken) {
+                          // PRO without login → go to auth
+                          savePrefs(prefs); setAuthStep('email'); setView('account');
+                        } else {
+                          next();
+                        }
+                      }}
                       style={{
+                        cursor: 'pointer',
                         padding: isPro ? '22px 20px' : '16px 18px',
                         borderRadius: isPro ? 24 : 20,
                         background: isDark
@@ -826,7 +837,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                       boxShadow: `0 6px 24px ${C.accent4}35, inset 0 1px 0 rgba(255,255,255,0.3)`,
                       position: 'relative', overflow: 'hidden',
                     }}
-                      onClick={() => { savePrefs(prefs); if (joinCode) setView('join'); else setView('home'); }}>
+                      onClick={() => { try { savePrefs(prefs); if (joinCode) setView('join'); else setView('home'); } catch(e) { console.error('[Welcome] Error completing:', e); setView('home'); } }}>
                       <span style={{fontSize: 20, position: 'relative', zIndex: 1}}>{'\u26A1'}</span>
                       <div style={{flex: 1, textAlign: 'left', position: 'relative', zIndex: 1}}>
                         <div style={{fontWeight: 800, fontSize: 15}}>{Lf('startFreeMode', 'Inizia Gratis')}</div>
@@ -848,7 +859,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         transition: 'all 0.3s',
                         boxShadow: `0 4px 16px rgba(0,0,0,${isDark ? '0.2' : '0.04'})`,
                       }}
-                        onClick={() => { savePrefs(prefs); setAuthStep('email'); setView('account'); }}>
+                        onClick={() => { try { savePrefs(prefs); setAuthStep('email'); setView('account'); } catch(e) { console.error('[Welcome] PRO error:', e); } }}>
                         <span style={{fontSize: 18}}>{'\u2B50'}</span>
                         <div style={{flex: 1, textAlign: 'left'}}>
                           <div style={{fontWeight: 700, fontSize: 14}}>{Lf('signInPro', 'Accedi a PRO')}</div>
@@ -870,7 +881,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         WebkitTapHighlightColor: 'transparent',
                         boxShadow: `0 4px 16px ${C.accent1}15`,
                       }}
-                        onClick={() => { savePrefs(prefs); setView('home'); }}>
+                        onClick={() => { try { savePrefs(prefs); setView('home'); } catch(e) { console.error('[Welcome] PRO start error:', e); setView('home'); } }}>
                         {Lf('letsStart', 'Iniziamo')} (PRO)
                       </button>
                     )}
