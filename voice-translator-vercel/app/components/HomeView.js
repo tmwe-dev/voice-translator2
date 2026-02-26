@@ -195,65 +195,128 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         )}
 
         {/* ═══════════════════════════════════════
-            CREA STANZA — standalone icon + text (no card)
+            CREA STANZA — elegant 3D door, no background
            ═══════════════════════════════════════ */}
-        <button style={{
-          width:'100%', maxWidth:400, padding:0, cursor:'pointer',
-          background:'transparent', border:'none',
-          display:'flex', alignItems:'center', gap:16,
-          fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-          color:'#FFFFFF', marginBottom:16, marginTop:8,
-        }}
-          onClick={() => {
-            vibrate();
-            if (isGuest) { setAuthStep('email'); setView('account'); return; }
-            setShowCreatePopup(true);
-          }}>
-          {/* 3D Door Icon */}
-          <div style={{
-            width:72, height:72, borderRadius:22, flexShrink:0,
-            background:'linear-gradient(145deg, #7B73FF 0%, #5A4FFF 40%, #3D35CC 100%)',
-            boxShadow:'0 8px 32px rgba(108,99,255,0.35), 0 2px 8px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.2)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            position:'relative', overflow:'hidden',
-          }}>
-            {/* Shine effect */}
-            <div style={{position:'absolute', top:-10, right:-10, width:40, height:40,
-              background:'radial-gradient(circle, rgba(255,255,255,0.25) 0%, transparent 70%)',
-              borderRadius:'50%'}} />
-            {/* Door shape */}
-            <div style={{
-              width:32, height:42, borderRadius:'6px 6px 0 0',
-              background:'linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(230,230,255,0.85) 100%)',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.2)',
-              position:'relative',
+        <div style={{
+          width:'100%', maxWidth:400, display:'flex', flexDirection:'column',
+          alignItems:'center', marginTop:12, marginBottom:20,
+        }}>
+          {/* 3D Door — pure icon, no box */}
+          <button style={{
+            background:'transparent', border:'none', cursor:'pointer',
+            padding:0, WebkitTapHighlightColor:'transparent',
+            display:'flex', flexDirection:'column', alignItems:'center',
+            transition:'transform 0.2s ease',
+          }}
+            onClick={() => {
+              vibrate();
+              if (isGuest) { setAuthStep('email'); setView('account'); return; }
+              setShowCreatePopup(true);
             }}>
-              {/* Door handle */}
-              <div style={{width:4, height:4, borderRadius:'50%',
-                background:'#FFD700', boxShadow:'0 0 6px rgba(255,215,0,0.6)',
-                position:'absolute', right:5, top:'50%', transform:'translateY(-50%)'}} />
-              {/* Door panel top line */}
-              <div style={{width:18, height:2, borderRadius:1,
-                background:'rgba(108,99,255,0.15)', position:'absolute', top:8, left:'50%', transform:'translateX(-50%)'}} />
-              {/* Door panel rectangle */}
-              <div style={{width:18, height:14, borderRadius:3,
-                border:'1.5px solid rgba(108,99,255,0.12)',
-                position:'absolute', bottom:6, left:'50%', transform:'translateX(-50%)'}} />
+            {/* Door SVG 3D */}
+            <div style={{
+              width:140, height:180, position:'relative',
+              animation:'vtDoorGlow 3s ease-in-out infinite',
+            }}>
+              <svg viewBox="0 0 140 180" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width:'100%', height:'100%'}}>
+                {/* Glow underneath */}
+                <defs>
+                  <linearGradient id="doorBody" x1="30" y1="8" x2="110" y2="172">
+                    <stop offset="0%" stopColor="#9B93FF"/>
+                    <stop offset="35%" stopColor="#7B73FF"/>
+                    <stop offset="100%" stopColor="#4A40E0"/>
+                  </linearGradient>
+                  <linearGradient id="doorFace" x1="38" y1="14" x2="102" y2="168">
+                    <stop offset="0%" stopColor="#B8B3FF"/>
+                    <stop offset="40%" stopColor="#8B83FF"/>
+                    <stop offset="100%" stopColor="#5A50F0"/>
+                  </linearGradient>
+                  <linearGradient id="panelGrad" x1="48" y1="28" x2="92" y2="90">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.18)"/>
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.04)"/>
+                  </linearGradient>
+                  <linearGradient id="panelGrad2" x1="48" y1="100" x2="92" y2="155">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.12)"/>
+                    <stop offset="100%" stopColor="rgba(255,255,255,0.02)"/>
+                  </linearGradient>
+                  <linearGradient id="handleGrad" x1="95" y1="88" x2="102" y2="100">
+                    <stop offset="0%" stopColor="#FFE066"/>
+                    <stop offset="100%" stopColor="#FFB800"/>
+                  </linearGradient>
+                  <radialGradient id="handleGlow" cx="98" cy="94" r="12" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="rgba(255,215,0,0.35)"/>
+                    <stop offset="100%" stopColor="rgba(255,215,0,0)"/>
+                  </radialGradient>
+                  <linearGradient id="archGrad" x1="34" y1="6" x2="106" y2="6">
+                    <stop offset="0%" stopColor="#C4BFFF"/>
+                    <stop offset="50%" stopColor="#D4D0FF"/>
+                    <stop offset="100%" stopColor="#A8A0FF"/>
+                  </linearGradient>
+                  <linearGradient id="shineGrad" x1="42" y1="14" x2="60" y2="60">
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.30)"/>
+                    <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+                  </linearGradient>
+                  <linearGradient id="floorGlow" x1="30" y1="172" x2="110" y2="180">
+                    <stop offset="0%" stopColor="rgba(108,99,255,0)"/>
+                    <stop offset="50%" stopColor="rgba(108,99,255,0.15)"/>
+                    <stop offset="100%" stopColor="rgba(108,99,255,0)"/>
+                  </linearGradient>
+                </defs>
+
+                {/* Floor glow */}
+                <ellipse cx="70" cy="175" rx="50" ry="5" fill="url(#floorGlow)"/>
+
+                {/* Door frame / body - 3D perspective */}
+                <rect x="30" y="8" width="80" height="164" rx="8" fill="url(#doorBody)"/>
+
+                {/* Door face (slightly inset for 3D depth) */}
+                <rect x="34" y="12" width="72" height="156" rx="6" fill="url(#doorFace)"/>
+
+                {/* Arch detail at top */}
+                <path d="M38 18 Q70 4 102 18" stroke="url(#archGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+
+                {/* Top panel (recessed) */}
+                <rect x="48" y="28" width="44" height="58" rx="5" fill="url(#panelGrad)" stroke="rgba(255,255,255,0.12)" strokeWidth="1"/>
+
+                {/* Bottom panel (recessed) */}
+                <rect x="48" y="100" width="44" height="54" rx="5" fill="url(#panelGrad2)" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>
+
+                {/* Handle glow */}
+                <circle cx="98" cy="94" r="12" fill="url(#handleGlow)"/>
+
+                {/* Door handle - elegant round */}
+                <circle cx="98" cy="94" r="5" fill="url(#handleGrad)" stroke="rgba(255,200,0,0.3)" strokeWidth="0.5"/>
+
+                {/* Handle highlight */}
+                <circle cx="96.5" cy="92.5" r="2" fill="rgba(255,255,255,0.45)"/>
+
+                {/* Keyhole */}
+                <ellipse cx="98" cy="102" rx="1.5" ry="2" fill="rgba(0,0,0,0.25)"/>
+
+                {/* Light shine on door (top-left) */}
+                <path d="M38 14 L58 14 Q42 50 38 70 Z" fill="url(#shineGrad)" opacity="0.7"/>
+
+                {/* Side shadow for depth */}
+                <rect x="30" y="8" width="6" height="164" rx="4" fill="rgba(0,0,0,0.12)"/>
+              </svg>
             </div>
-          </div>
-          <div style={{flex:1, textAlign:'left'}}>
-            <div style={{fontWeight:900, fontSize:20, letterSpacing:-0.5,
-              background:'linear-gradient(135deg, #7B73FF, #00D2FF)',
-              WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-              backgroundClip:'text'}}>
-              {L('createRoom')}
+
+            {/* Text under door */}
+            <div style={{marginTop:16, textAlign:'center'}}>
+              <div style={{
+                fontWeight:900, fontSize:24, letterSpacing:-0.8,
+                background:'linear-gradient(135deg, #B8B3FF 0%, #7B73FF 40%, #00D2FF 100%)',
+                WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+                backgroundClip:'text', fontFamily:FONT,
+              }}>
+                {L('createRoom')}
+              </div>
+              <div style={{fontSize:12, color:'rgba(255,255,255,0.40)', marginTop:4, fontFamily:FONT, letterSpacing:0.5}}>
+                {L('tapToStart') || 'Tocca per iniziare'}
+              </div>
             </div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.58)', marginTop:3, display:'flex', alignItems:'center', gap:4}}>
-              <span style={{fontSize:14}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
-              <span>{L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}</span>
-            </div>
-          </div>
-        </button>
+          </button>
+        </div>
 
         {/* ═══════════════════════════════════════
             CREATE ROOM POPUP — modal overlay
@@ -453,6 +516,10 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         @keyframes vtSlideUp {
           from { opacity: 0; transform: translate(-50%, -45%); }
           to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+        @keyframes vtDoorGlow {
+          0%, 100% { filter: drop-shadow(0 16px 40px rgba(108,99,255,0.30)) drop-shadow(0 4px 12px rgba(0,0,0,0.25)); }
+          50% { filter: drop-shadow(0 16px 48px rgba(108,99,255,0.45)) drop-shadow(0 6px 16px rgba(0,0,0,0.30)); }
         }
       `}</style>
     </div>
