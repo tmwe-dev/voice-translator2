@@ -176,36 +176,43 @@ export default function useTranslation({
     for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
         let text = event.results[i][0].transcript.trim();
+        // Chrome sends duplicates at the same index — skip those
         const key = i + ':' + text;
         if (text && !processedFinals.has(key)) {
           processedFinals.add(key);
           const existing = allWordsRef.current.trim();
 
-          // Dedup guards (same as before)
-          if (existing.endsWith(text)) continue;
-          if (existing.length > 5 && text.length > existing.length && text.startsWith(existing)) {
+          // MINIMAL dedup: only catch Chrome's re-send of the FULL accumulated
+          // text (Chrome sometimes sends the entire transcript as a new final).
+          // Do NOT remove intentional repetitions like "Come state? Come state?"
+          if (existing.length > 10 && text.length > existing.length * 0.8 && text.startsWith(existing)) {
+            // Chrome re-sent the full accumulated text + new content
             text = text.slice(existing.length).trim();
             if (!text) continue;
           }
+
+          // Only dedup overlaps of 4+ words (Chrome restart re-sends last few words)
           if (existing.length > 0) {
             const existingWords = existing.split(/\s+/);
             const textWords = text.split(/\s+/);
-            const maxOverlap = Math.min(existingWords.length, textWords.length, 8);
-            let overlapFound = 0;
-            for (let ol = maxOverlap; ol >= 2; ol--) {
-              const suffix = existingWords.slice(-ol).join(' ').toLowerCase();
-              const prefix = textWords.slice(0, ol).join(' ').toLowerCase();
-              if (suffix === prefix) { overlapFound = ol; break; }
-            }
-            if (overlapFound > 0) {
-              text = textWords.slice(overlapFound).join(' ').trim();
-              if (!text) continue;
+            // Only check overlap if there are enough words to be meaningful
+            if (existingWords.length >= 4 && textWords.length >= 4) {
+              const maxOverlap = Math.min(existingWords.length, textWords.length, 6);
+              let overlapFound = 0;
+              for (let ol = maxOverlap; ol >= 4; ol--) {
+                const suffix = existingWords.slice(-ol).join(' ').toLowerCase();
+                const prefix = textWords.slice(0, ol).join(' ').toLowerCase();
+                if (suffix === prefix) { overlapFound = ol; break; }
+              }
+              if (overlapFound > 0) {
+                text = textWords.slice(overlapFound).join(' ').trim();
+                if (!text) continue;
+              }
             }
           }
 
           lastInterimRef.current = '';
           allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
-          // Show only to sender — NO broadcastLiveText (privacy)
           setStreamingMsg(prev => (prev ? { ...prev, original: allWordsRef.current } : null));
         }
       } else {
@@ -215,7 +222,6 @@ export default function useTranslation({
     if (interimTranscript) {
       lastInterimRef.current = interimTranscript.trim();
       const preview = allWordsRef.current + ' ' + interimTranscript.trim();
-      // Show only to sender — NO broadcastLiveText
       setStreamingMsg(prev => (prev ? { ...prev, original: preview } : null));
     }
   }

@@ -53,13 +53,16 @@ export async function POST(req) {
     if (!original.trim()) return NextResponse.json({ original: '', translated: '', cost: 0 });
 
     // Build system prompt with domain context — strict output rules
-    let sysPrompt = `You are a real-time voice translator. Translate from ${sourceLangName} to ${targetLangName}.
+    let sysPrompt = `You are a real-time voice interpreter translating live speech from ${sourceLangName} to ${targetLangName}.
 
 RULES:
-- Output ONLY the translated text in ${targetLangName}
-- Do NOT add notes, explanations, labels, or commentary
-- Clean up filler words (um, uh, etc.) but keep the meaning
-- Keep the translation natural and conversational`;
+- Output ONLY the translated text — nothing else
+- NO notes, NO explanations, NO labels, NO commentary
+- This is SPOKEN language: keep the same register, tone, and emotion
+- Clean up filler words (um, uh, etc.) but preserve the meaning and style
+- Preserve casual/informal style — do NOT formalize slang
+- Translate idioms to equivalent idioms, NOT literally
+- NEVER output the original language — always translate to ${targetLangName}`;
     if (domainContext) sysPrompt += `\n\nDomain: ${domainContext}`;
     if (description) sysPrompt += `\nTopic: ${description}`;
 
@@ -73,8 +76,8 @@ RULES:
         { role: 'system', content: sysPrompt },
         { role: 'user', content: original }
       ],
-      temperature: 0.2,
-      max_tokens: 400
+      temperature: 0.3,
+      max_tokens: 500
     });
 
     const translated = completion.choices[0].message.content.trim();
