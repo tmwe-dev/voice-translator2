@@ -108,13 +108,13 @@ export const REFERRAL_BONUS_NEW = 50;
 export const REFERRAL_BONUS_REFERRER = 100;
 
 // Timing constants
-export const POLLING_INTERVAL = 1200;       // ms between room polls
-export const SILENCE_DELAY = 2000;          // ms of silence before auto-stop
+export const POLLING_INTERVAL = 1000;       // ms between room polls (was 1200)
+export const SILENCE_DELAY = 1300;          // ms of silence before auto-stop (was 2000)
 export const VAD_THRESHOLD = 25;            // Voice Activity Detection volume threshold
-export const REVIEW_INTERVAL = 12000;       // ms between translation reviews
-export const CHUNK_MIN_WORDS = 4;           // words before emitting translation chunk
-export const CHUNK_MAX_WORDS = 12;          // interim words before force-emit
-export const LIVE_TEXT_THROTTLE = 800;      // ms throttle for live text broadcast
+export const REVIEW_INTERVAL = 8000;        // ms between translation reviews (was 12000)
+export const CHUNK_MIN_WORDS = 3;           // words before emitting translation chunk (was 4)
+export const CHUNK_MAX_WORDS = 10;          // interim words before force-emit (was 12)
+export const LIVE_TEXT_THROTTLE = 600;      // ms throttle for live text broadcast (was 800)
 export const TYPING_TIMEOUT = 5000;         // ms before typing indicator expires
 export const SPEAKING_TIMEOUT = 30000;      // ms before speaking indicator expires
 export const STATUS_DISPLAY_TIME = 2000;    // ms to show status messages

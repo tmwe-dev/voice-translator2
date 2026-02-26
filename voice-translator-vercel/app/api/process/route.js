@@ -73,8 +73,8 @@ RULES:
         { role: 'system', content: sysPrompt },
         { role: 'user', content: original }
       ],
-      temperature: 0.3,
-      max_tokens: 500
+      temperature: 0.2,
+      max_tokens: 400
     });
 
     const translated = completion.choices[0].message.content.trim();

@@ -6,16 +6,22 @@ import { t } from '../lib/i18n.js';
 // Languages that don't use spaces between words - need Intl.Segmenter or char-based counting
 const NO_SPACE_LANGS = new Set(['th', 'zh', 'ja', 'km', 'lo', 'my']);
 
+// FASE 8: Cached Segmenter instances for performance (avoid re-creating on every call)
+const segmenterCache = {};
+
 function countWords(text, langCode) {
   if (!text || !text.trim()) return 0;
   if (NO_SPACE_LANGS.has(langCode)) {
     if (typeof Intl !== 'undefined' && Intl.Segmenter) {
       try {
-        const segmenter = new Intl.Segmenter(langCode, { granularity: 'word' });
-        return [...segmenter.segment(text)].filter(s => s.isWordLike).length;
+        if (!segmenterCache[langCode]) {
+          segmenterCache[langCode] = new Intl.Segmenter(langCode, { granularity: 'word' });
+        }
+        return [...segmenterCache[langCode].segment(text)].filter(s => s.isWordLike).length;
       } catch {}
     }
-    return Math.ceil(text.trim().length / 2);
+    // Fallback: Thai/CJK average ~3 chars per word (was 2 — too aggressive)
+    return Math.ceil(text.trim().length / 3);
   }
   return text.split(/\s+/).filter(w => w).length;
 }
@@ -315,11 +321,13 @@ export default function useTranslation({
     if (chunkingActiveRef.current) return;
     const lang = myLangRef.current;
     const wordCount = countWords(allOriginal, lang);
-    if (wordCount < 15 || translatedChunksRef.current.length < 3) return;
+    // FASE 8: Only review longer messages (3+ chunks) — short ones don't benefit
+    if (wordCount < 12 || translatedChunksRef.current.length < 3) return;
     reviewActiveRef.current = true;
     let reviewText;
     if (NO_SPACE_LANGS.has(lang)) {
-      reviewText = allOriginal.slice(-50);
+      // FASE 8: Increased from 50 to 80 chars for better Thai/CJK context
+      reviewText = allOriginal.slice(-80);
     } else {
       const words = allOriginal.split(/\s+/).filter(w => w);
       reviewText = words.slice(-15).join(' ');
@@ -422,35 +430,55 @@ export default function useTranslation({
 
     const { myL, otherL } = getTargetLangInfo();
     let finalTranslation = translatedChunksRef.current.join(' ');
-    try {
-      if (isTrialRef.current) {
-        const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name);
-        if (data.translated) finalTranslation = data.translated;
-      } else {
-        const res = await fetch('/api/translate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: allOriginal,
-            sourceLang: myL.code,
-            targetLang: otherL.code,
-            sourceLangName: myL.name,
-            targetLangName: otherL.name,
-            roomId,
-            isReview: true,
-            aiModel: prefsRef.current?.aiModel || undefined,
-            domainContext: roomContextRef.current.contextPrompt || undefined,
-            description: roomContextRef.current.description || undefined,
-            userToken: getEffectiveToken()
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
+
+    // FASE 8: Skip redundant final re-translation for short messages.
+    // If we have ≤2 chunks, the chunk translations are already good enough.
+    // Only do a full re-translation review for longer messages (3+ chunks)
+    // where coherence across chunks matters. This saves 800-2000ms.
+    const needsReview = translatedChunksRef.current.length >= 3;
+
+    if (needsReview) {
+      try {
+        if (isTrialRef.current) {
+          const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name);
           if (data.translated) finalTranslation = data.translated;
+        } else {
+          const res = await fetch('/api/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              text: allOriginal,
+              sourceLang: myL.code,
+              targetLang: otherL.code,
+              sourceLangName: myL.name,
+              targetLangName: otherL.name,
+              roomId,
+              isReview: true,
+              aiModel: prefsRef.current?.aiModel || undefined,
+              domainContext: roomContextRef.current.contextPrompt || undefined,
+              description: roomContextRef.current.description || undefined,
+              userToken: getEffectiveToken()
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.translated) finalTranslation = data.translated;
+          }
         }
+      } catch (e) {
+        console.error('[Final] Translation error:', e);
       }
-    } catch (e) {
-      console.error('[Final] Translation error:', e);
+    } else if (!finalTranslation && !isTrialRef.current) {
+      // Short message with no chunks yet — do a single quick translation
+      try {
+        const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name, {
+          domainContext: roomContextRef.current.contextPrompt || undefined,
+          description: roomContextRef.current.description || undefined
+        });
+        if (data.translated) finalTranslation = data.translated;
+      } catch (e) {
+        console.error('[Final quick] Translation error:', e);
+      }
     }
 
     if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
@@ -467,7 +495,8 @@ export default function useTranslation({
     setStreamingMsg(null);
 
     if (finalTranslation && roomId) {
-      await sendMessage(allOriginal, finalTranslation, myL.code, otherL.code);
+      // FASE 8: Fire-and-forget sendMessage — don't block UI on network
+      sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
     }
 
     clearBuffers();
@@ -708,9 +737,11 @@ export default function useTranslation({
                   freeTalkSendingRef.current = true;
                   const { myL, otherL } = getTargetLangInfo();
 
-                  // FASE 2A: Do final translation review (not just chunk join)
+                  // FASE 8: Skip re-translation for short messages (≤2 chunks)
                   let finalTranslation = translatedChunksRef.current.join(' ');
-                  if (!isTrialRef.current) {
+                  const needsReview = translatedChunksRef.current.length >= 3;
+
+                  if (needsReview && !isTrialRef.current) {
                     try {
                       const data = await translateUniversal(
                         allOriginal, myL.code, otherL.code, myL.name, otherL.name,
@@ -728,9 +759,8 @@ export default function useTranslation({
                   // FASE 1B: Clear streamingMsg BEFORE posting (use null, not empty object)
                   setStreamingMsg(null);
 
-                  try {
-                    await sendMessage(allOriginal, finalTranslation, myL.code, otherL.code);
-                  } catch {}
+                  // FASE 8: Fire-and-forget sendMessage — don't block on network
+                  sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
 
                   // Clear buffers for next utterance
                   wordBufferRef.current = '';

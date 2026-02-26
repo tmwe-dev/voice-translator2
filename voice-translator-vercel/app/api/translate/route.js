@@ -82,11 +82,17 @@ export async function POST(req) {
     });
 
     // Build system prompt — strict: output ONLY the translation, nothing else
-    const TONAL_LANGS = { 'th': 'Thai (tonal, no spaces between words)', 'zh': 'Chinese', 'ja': 'Japanese', 'vi': 'Vietnamese (tonal, diacritics critical)', 'ko': 'Korean' };
+    const TONAL_LANGS = {
+      'th': 'Thai (tonal, no spaces between words, use Thai script ภาษาไทย)',
+      'zh': 'Chinese (Simplified, use 简体中文)',
+      'ja': 'Japanese (use appropriate kanji/hiragana/katakana)',
+      'vi': 'Vietnamese (tonal, ALL diacritics critical — never omit dấu)',
+      'ko': 'Korean (use Hangul 한국어)'
+    };
     const srcTonal = TONAL_LANGS[sourceLang];
     const tgtTonal = TONAL_LANGS[targetLang];
     let toneNote = '';
-    if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing.`;
+    if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing — NOT transliteration.`;
     else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
 
     let systemPrompt = `You are a real-time voice translator. Translate from ${sourceLangName} to ${targetLangName}.${toneNote}
@@ -95,6 +101,7 @@ RULES:
 - Output ONLY the translated text in ${targetLangName}
 - Do NOT add notes, explanations, labels, context, or commentary
 - Do NOT repeat or reference any previous translations
+- Do NOT include transliterations or romanizations
 - Keep the translation natural and conversational
 - If the text is unclear, translate it as best you can — never explain`;
     if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
@@ -121,7 +128,7 @@ RULES:
       const anthropicMsgs = messages.filter(m => m.role !== 'system');
       const msg = await anthropic.messages.create({
         model: modelInfo.actual,
-        max_tokens: 500,
+        max_tokens: 400,
         system: systemPrompt,
         messages: anthropicMsgs,
       });
@@ -138,7 +145,7 @@ RULES:
         : `${systemPrompt}\n\nTranslate:\n${text}`;
       const result = await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: userText }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
+        generationConfig: { temperature: 0.2, maxOutputTokens: 400 },
       });
       translated = result.response.text()?.trim() || '';
       const gUsage = result.response.usageMetadata;
@@ -150,8 +157,8 @@ RULES:
       const completion = await openai.chat.completions.create({
         model: modelInfo.actual,
         messages,
-        temperature: 0.3,
-        max_tokens: 500
+        temperature: 0.2,
+        max_tokens: 400
       });
       translated = completion.choices[0].message.content.trim();
       usage = completion.usage;
