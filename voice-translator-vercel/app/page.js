@@ -111,7 +111,8 @@ export default function Home() {
     getEffectiveToken: auth.getEffectiveToken,
     refreshBalance: auth.refreshBalance,
     trackFreeChars,
-    userEmail: auth.userAccount?.email || auth.authEmail || ''
+    userEmail: auth.userAccount?.email || auth.authEmail || '',
+    sentByMeRef: roomPolling.sentByMeRef  // FASE 1A: for message dedup
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 

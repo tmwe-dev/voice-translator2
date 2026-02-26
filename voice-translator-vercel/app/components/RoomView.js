@@ -286,8 +286,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             </div>
           );
         })}
-        {/* Streaming live bubble */}
-        {streamingMsg && streamingMsg.original && (
+        {/* Streaming live bubble — FASE 1C: dedup with last polled message */}
+        {streamingMsg && streamingMsg.original && !(messages.length > 0 && messages[messages.length - 1].sender === prefs.name && messages[messages.length - 1].original === streamingMsg.original.trim()) && (
           <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
             <AvatarImg src={prefs.avatar} size={36} style={{marginBottom:2}} />
             <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>

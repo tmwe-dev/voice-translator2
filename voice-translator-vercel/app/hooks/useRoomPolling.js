@@ -22,10 +22,14 @@ export default function useRoomPolling({
   const liveTextTimerRef = useRef(null);
   const lastLiveTextRef = useRef('');
   const sentByMeRef = useRef(new Set());
+  const pollErrorCountRef = useRef(0);  // FASE 6B: track consecutive errors
+  const [pollError, setPollError] = useState(false);
 
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
     lastMsgRef.current = Date.now();
+    pollErrorCountRef.current = 0;
+    setPollError(false);
     pollRef.current = setInterval(async () => {
       try {
         const mRes = await fetch(`/api/messages?room=${rid}&after=${lastMsgRef.current}`);
@@ -37,6 +41,7 @@ export default function useRoomPolling({
               const fresh = newMsgs.filter(m => !ids.has(m.id));
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
+            // FASE 6A: Use timestamp as-is; dedup by ID handles duplicates
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
               if (sentByMeRef.current.has(msg.id)) continue;
@@ -61,8 +66,18 @@ export default function useRoomPolling({
           setPartnerLiveText(partner && partner.speaking && partner.liveText ? partner.liveText : '');
           setPartnerTyping(!!(partner && partner.typing && Date.now() - (partner.typingAt || 0) < TYPING_TIMEOUT));
         }
+        // FASE 6B: Reset error count on success
+        if (pollErrorCountRef.current > 0) {
+          pollErrorCountRef.current = 0;
+          setPollError(false);
+        }
       } catch (e) {
         console.error('[Poll] error:', e);
+        // FASE 6B: Track consecutive failures
+        pollErrorCountRef.current++;
+        if (pollErrorCountRef.current >= 3) {
+          setPollError(true);
+        }
       }
     }, POLLING_INTERVAL);
   }, []);
@@ -219,6 +234,7 @@ export default function useRoomPolling({
     partnerSpeaking,
     partnerLiveText,
     partnerTyping,
+    pollError,
     startPolling,
     stopPolling,
     setSpeakingState,

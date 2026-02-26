@@ -145,12 +145,13 @@ export default function useAudioSystem({
       const url = URL.createObjectURL(blob);
       activeBlobUrlsRef.current.add(url);
       return new Promise((resolve) => {
-        // Safety timeout: resolve after 30s max to prevent stuck queue
+        // Dynamic safety timeout based on text length (~100ms per char, min 5s, max 30s)
+        const timeoutMs = Math.min(30000, Math.max(5000, text.length * 100));
         const safetyTimer = setTimeout(() => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
           resolve();
-        }, 30000);
+        }, timeoutMs);
         const done = () => {
           clearTimeout(safetyTimer);
           resolve();
@@ -249,12 +250,13 @@ export default function useAudioSystem({
       const url = URL.createObjectURL(blob);
       activeBlobUrlsRef.current.add(url);
       return new Promise((resolve) => {
-        // Safety timeout: resolve after 30s max to prevent stuck queue
+        // Dynamic safety timeout based on text length (~100ms per char, min 5s, max 30s)
+        const timeoutMs = Math.min(30000, Math.max(5000, text.length * 100));
         const safetyTimer = setTimeout(() => {
           activeBlobUrlsRef.current.delete(url);
           URL.revokeObjectURL(url);
           resolve();
-        }, 30000);
+        }, timeoutMs);
         const done = () => {
           clearTimeout(safetyTimer);
           resolve();

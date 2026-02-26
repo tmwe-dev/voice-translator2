@@ -132,9 +132,11 @@ export async function getMessages(roomId, after = 0) {
   const key = `msgs:${roomId.toUpperCase()}`;
   const allMsgs = await redis('LRANGE', key, 0, -1);
   if (!allMsgs || !Array.isArray(allMsgs)) return [];
+  // FASE 6A: Use >= to avoid missing messages at exact timestamp boundary
+  // Client-side dedup by message ID handles duplicates
   return allMsgs
     .map(m => JSON.parse(m))
-    .filter(m => m.timestamp > after);
+    .filter(m => m.timestamp >= after);
 }
 
 export async function getAllMessages(roomId) {
