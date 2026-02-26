@@ -88,8 +88,8 @@ export async function POST(req) {
         model_id: modelId,
         language_code: elLangCode,
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
+          stability: 0.65,
+          similarity_boost: 0.80,
           style: 0.0,
           use_speaker_boost: true
         }
@@ -109,7 +109,7 @@ export async function POST(req) {
           body: JSON.stringify({
             text: text.trim(), model_id: 'eleven_multilingual_v2',
             language_code: elLangCode,
-            voice_settings: { stability: 0.5, similarity_boost: 0.75, style: 0.0, use_speaker_boost: true }
+            voice_settings: { stability: 0.65, similarity_boost: 0.80, style: 0.0, use_speaker_boost: true }
           })
         });
         if (fallback.ok) {

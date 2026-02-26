@@ -21,10 +21,11 @@ export async function POST(req) {
     const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'nova';
 
     const response = await openai.audio.speech.create({
-      model: 'tts-1',
+      model: 'tts-1-hd',
       voice: selectedVoice,
       input: text,
-      response_format: 'mp3'
+      response_format: 'mp3',
+      speed: 1.0
     });
 
     // Calculate and deduct cost

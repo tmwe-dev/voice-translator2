@@ -29,6 +29,15 @@ export default function useAudioSystem({
     audioEnabledRef.current = audioEnabled;
   }, [audioEnabled]);
 
+  // Preload browser voices (Chrome loads them asynchronously)
+  useEffect(() => {
+    if (typeof speechSynthesis === 'undefined') return;
+    speechSynthesis.getVoices(); // trigger initial load
+    const handler = () => { voiceCacheRef.current = {}; }; // clear cache when voices change
+    speechSynthesis.addEventListener('voiceschanged', handler);
+    return () => speechSynthesis.removeEventListener('voiceschanged', handler);
+  }, []);
+
   function getPersistentAudio() {
     if (!persistentAudioRef.current) {
       persistentAudioRef.current = new Audio();
@@ -215,11 +224,52 @@ export default function useAudioSystem({
       });
   }
 
+  // Cache of best voice per language
+  const voiceCacheRef = useRef({});
+
+  function findBestVoice(lang) {
+    if (typeof speechSynthesis === 'undefined') return null;
+    // Return cached voice if available
+    if (voiceCacheRef.current[lang]) return voiceCacheRef.current[lang];
+
+    const voices = speechSynthesis.getVoices();
+    if (!voices.length) return null;
+
+    const langBase = lang.split('-')[0].toLowerCase(); // 'it-IT' → 'it'
+
+    // Priority 1: exact match (e.g. 'it-IT' matches 'it-IT')
+    let best = voices.find(v => v.lang.toLowerCase() === lang.toLowerCase());
+
+    // Priority 2: base language match (e.g. 'it' matches 'it-IT')
+    if (!best) best = voices.find(v => v.lang.toLowerCase().startsWith(langBase));
+
+    // Priority 3: any voice whose lang starts with the base
+    if (!best) best = voices.find(v => v.lang.toLowerCase().split('-')[0] === langBase);
+
+    // Prefer non-default/Google/Microsoft voices (they tend to be better quality)
+    if (best) {
+      const betterVoices = voices.filter(v => {
+        const vBase = v.lang.toLowerCase().split('-')[0];
+        return vBase === langBase && (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural') || v.name.includes('Neural'));
+      });
+      if (betterVoices.length > 0) best = betterVoices[0];
+    }
+
+    if (best) voiceCacheRef.current[lang] = best;
+    return best;
+  }
+
   function browserSpeak(text, lang) {
     if (typeof speechSynthesis === 'undefined') return;
+    // Cancel any ongoing speech first
+    speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = lang;
-    u.rate = 0.9;
+    u.rate = 1.0;
+    u.pitch = 1.0;
+    // Select the best voice for this language
+    const voice = findBestVoice(lang);
+    if (voice) u.voice = voice;
     speechSynthesis.speak(u);
   }
 
