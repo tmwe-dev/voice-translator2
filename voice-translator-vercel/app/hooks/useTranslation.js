@@ -173,19 +173,47 @@ export default function useTranslation({
     let interimTranscript = '';
     for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        const text = event.results[i][0].transcript.trim();
+        let text = event.results[i][0].transcript.trim();
         const key = i + ':' + text;
         if (text && !processedFinals.has(key)) {
           processedFinals.add(key);
-          // FASE 7: Guard against cross-restart duplication.
-          // When SpeechRecognition auto-restarts (continuous mode), Chrome can
-          // re-deliver the last recognized text. Check if allWordsRef already
-          // ends with this exact text to prevent doubling.
           const existing = allWordsRef.current.trim();
-          if (existing.endsWith(text)) {
-            // Already captured — skip to prevent doubling
-            continue;
+
+          // FASE 7+: Robust guard against cross-restart duplication.
+          // Chrome SpeechRecognition in continuous mode can re-deliver text
+          // in multiple ways after auto-restart:
+          // (a) Exact same text → endsWith catches it
+          // (b) Accumulated text including old + new → startsWith catches it
+          // (c) Word-level overlap at boundary → overlap detection catches it
+
+          // (a) Exact duplicate at end
+          if (existing.endsWith(text)) continue;
+
+          // (b) Accumulated re-delivery: new text starts with existing content.
+          // Only keep the genuinely new portion.
+          if (existing.length > 5 && text.length > existing.length && text.startsWith(existing)) {
+            text = text.slice(existing.length).trim();
+            if (!text) continue;
           }
+
+          // (c) Word-level overlap: last N words of existing match first N words of text.
+          // This catches partial re-delivery after restart.
+          if (existing.length > 0) {
+            const existingWords = existing.split(/\s+/);
+            const textWords = text.split(/\s+/);
+            const maxOverlap = Math.min(existingWords.length, textWords.length, 8);
+            let overlapFound = 0;
+            for (let ol = maxOverlap; ol >= 2; ol--) {
+              const suffix = existingWords.slice(-ol).join(' ').toLowerCase();
+              const prefix = textWords.slice(0, ol).join(' ').toLowerCase();
+              if (suffix === prefix) { overlapFound = ol; break; }
+            }
+            if (overlapFound > 0) {
+              text = textWords.slice(overlapFound).join(' ').trim();
+              if (!text) continue;
+            }
+          }
+
           lastInterimRef.current = '';
           wordBufferRef.current = (wordBufferRef.current + ' ' + text).trim();
           allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
