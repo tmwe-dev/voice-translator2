@@ -517,54 +517,94 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         {/* ═══════════════════════════════════════
             CREATE ROOM POPUP
            ═══════════════════════════════════════ */}
-        {showCreatePopup && (
+        {showCreatePopup && (() => {
+          /* SVG icon paths for context types — modern line style */
+          const ctxIcons = {
+            general: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z',
+            tourism: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4',
+            medical: 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z',
+            education: 'M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12 12 0 01.84 4.172C19 18.09 15.866 21 12 21s-7-2.91-7-6.25a12 12 0 01.84-4.172L12 14z',
+            business: 'M21 13.255A23.2 23.2 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m8 0H8m8 0h2a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h2',
+            restaurant: 'M12 8c-2.21 0-4 1.79-4 4h8c0-2.21-1.79-4-4-4zM5 16h14M7 20h10M8 12V4m4 0v8m4-8v8',
+            personal: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
+            legal: 'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2',
+            shopping: 'M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z',
+            realestate: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5h4v5',
+            tech: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066zM15 12a3 3 0 11-6 0 3 3 0 016 0z',
+            emergency: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+          };
+          const CtxIcon = ({ id, size = 20, color }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+              stroke={color} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <path d={ctxIcons[id] || ctxIcons.general} />
+            </svg>
+          );
+          return (
           <>
             <div onClick={() => { setShowCreatePopup(false); setShowContextDropdown(false); }}
               style={{position:'fixed', inset:0, zIndex:200,
-                background:'rgba(0,0,0,0.6)', backdropFilter:'blur(6px)',
+                background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)',
                 animation:'vtFadeIn 0.2s ease-out'}} />
             <div style={{position:'fixed', left:'50%', top:'50%', transform:'translate(-50%, -50%)',
               zIndex:201, width:'calc(100% - 40px)', maxWidth:380,
-              padding:'22px 18px', borderRadius:24,
+              padding:'28px 22px 24px', borderRadius:28,
               background:C.popupBg,
-              border:`1.5px solid ${C.popupBorder}`,
-              boxShadow:`0 20px 60px rgba(0,0,0,0.5), 0 0 40px ${C.popupShadow}`,
+              border:`1px solid ${C.popupBorder}`,
+              boxShadow:`0 24px 80px rgba(0,0,0,0.45), 0 0 50px ${C.popupShadow}`,
               animation:'vtSlideUp 0.25s ease-out'}}>
-              {/* Header */}
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:18}}>
-                <div style={{display:'flex', alignItems:'center', gap:10}}>
-                  <span style={{fontSize:22}}>{'\u{1F6AA}'}</span>
-                  <div style={{fontWeight:800, fontSize:17, letterSpacing:-0.3, color:C.textPrimary}}>
-                    {L('createRoom')}
+              {/* Header — elegant mini door SVG + title */}
+              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22}}>
+                <div style={{display:'flex', alignItems:'center', gap:12}}>
+                  <div style={{width:40, height:40, borderRadius:14,
+                    background:`linear-gradient(135deg, ${C.accent}22, ${C.accent}08)`,
+                    border:`1px solid ${C.accent}25`,
+                    display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                      stroke={C.accent} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="2" width="14" height="20" rx="2" />
+                      <circle cx="14" cy="12" r="1" fill={C.accent} stroke="none" />
+                      <path d="M7 6h4v12H7z" strokeWidth={0.8} opacity={0.4} />
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{fontWeight:800, fontSize:18, letterSpacing:-0.5, color:C.textPrimary}}>
+                      {L('createRoom')}
+                    </div>
+                    <div style={{fontSize:10, color:C.textMuted, fontWeight:500, marginTop:1}}>
+                      {L('context') || 'Seleziona contesto'}
+                    </div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreatePopup(false); setShowContextDropdown(false); }}
-                  style={{width:32, height:32, borderRadius:10, cursor:'pointer',
+                  style={{width:34, height:34, borderRadius:12, cursor:'pointer',
                     background:C.popupCloseBg, border:`1px solid ${C.popupCloseBorder}`,
                     display:'flex', alignItems:'center', justifyContent:'center',
-                    WebkitTapHighlightColor:'transparent', color:C.popupCloseColor,
-                    fontSize:16, fontWeight:400}}>
-                  {'\u2715'}
+                    WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke={C.popupCloseColor} strokeWidth={2} strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
 
-              {/* Context selector */}
-              <div style={{marginBottom:14, position:'relative'}}>
-                <div style={{fontSize:10, fontWeight:700, color:C.textTertiary,
-                  textTransform:'uppercase', letterSpacing:1, marginBottom:6}}>
-                  {L('context')}
-                </div>
+              {/* Context selector — modern card style */}
+              <div style={{marginBottom:16, position:'relative'}}>
                 <button onClick={() => setShowContextDropdown(!showContextDropdown)}
-                  style={{width:'100%', padding:'12px 14px', borderRadius:14, cursor:'pointer',
-                    background:C.ctxBtnBg, border:`1.5px solid ${C.ctxBtnBorder}`,
-                    display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                  style={{width:'100%', padding:'14px 16px', borderRadius:16, cursor:'pointer',
+                    background:C.ctxBtnBg, border:`1px solid ${C.ctxBtnBorder}`,
+                    display:'flex', alignItems:'center', gap:12, fontFamily:FONT,
                     WebkitTapHighlightColor:'transparent', color:C.textPrimary, transition:'all 0.15s'}}>
-                  <span style={{fontSize:22}}>{CONTEXTS.find(c => c.id === selectedContext)?.icon}</span>
+                  <div style={{width:36, height:36, borderRadius:12, flexShrink:0,
+                    background:`linear-gradient(135deg, ${C.accent}18, ${C.accent}08)`,
+                    border:`1px solid ${C.accent}20`,
+                    display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    <CtxIcon id={selectedContext} size={18} color={C.accent} />
+                  </div>
                   <div style={{flex:1, textAlign:'left'}}>
                     <span style={{fontSize:14, fontWeight:700, color:C.accent}}>
                       {L(CONTEXTS.find(c => c.id === selectedContext)?.nameKey)}
                     </span>
-                    <div style={{fontSize:10, color:C.textMuted, marginTop:2}}>
+                    <div style={{fontSize:10, color:C.textMuted, marginTop:2, lineHeight:1.3}}>
                       {L(CONTEXTS.find(c => c.id === selectedContext)?.descKey) || ''}
                     </div>
                   </div>
@@ -572,26 +612,35 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 </button>
                 {showContextDropdown && (
                   <div style={{position:'absolute', top:'100%', left:0, right:0, zIndex:50,
-                    marginTop:4, borderRadius:16, overflow:'hidden',
-                    background:C.ctxDropBg, border:`1.5px solid ${C.ctxDropBorder}`,
-                    backdropFilter:'blur(20px)', boxShadow:'0 8px 32px rgba(0,0,0,0.5)',
-                    maxHeight:240, overflowY:'auto'}}>
+                    marginTop:6, borderRadius:18, overflow:'hidden',
+                    background:C.ctxDropBg, border:`1px solid ${C.ctxDropBorder}`,
+                    backdropFilter:'blur(24px)', boxShadow:'0 12px 40px rgba(0,0,0,0.4)',
+                    maxHeight:260, overflowY:'auto'}}>
                     {CONTEXTS.map(c => {
                       const isSel = selectedContext === c.id;
                       return (
                         <button key={c.id} onClick={() => { setSelectedContext(c.id); setShowContextDropdown(false); }}
-                          style={{width:'100%', padding:'10px 14px', cursor:'pointer',
-                            display:'flex', alignItems:'center', gap:10, fontFamily:FONT,
+                          style={{width:'100%', padding:'11px 14px', cursor:'pointer',
+                            display:'flex', alignItems:'center', gap:11, fontFamily:FONT,
                             WebkitTapHighlightColor:'transparent', transition:'all 0.1s',
                             background: isSel ? C.ctxSelBg : 'transparent',
                             border:'none', borderBottom:`1px solid ${C.btnBorder}`,
                             color:C.textPrimary}}>
-                          <span style={{fontSize:18, width:28, textAlign:'center'}}>{c.icon}</span>
+                          <div style={{width:30, height:30, borderRadius:10, flexShrink:0,
+                            background: isSel ? `${C.accent}18` : 'transparent',
+                            display:'flex', alignItems:'center', justifyContent:'center'}}>
+                            <CtxIcon id={c.id} size={16} color={isSel ? C.accent : C.textTertiary} />
+                          </div>
                           <span style={{flex:1, textAlign:'left', fontSize:13, fontWeight: isSel ? 700 : 500,
                             color: isSel ? C.accent : C.textSecondary}}>
                             {L(c.nameKey)}
                           </span>
-                          {isSel && <span style={{fontSize:12, color:C.accent}}>{'\u2713'}</span>}
+                          {isSel && (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                              stroke={C.accent} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                          )}
                         </button>
                       );
                     })}
@@ -599,34 +648,38 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 )}
               </div>
 
-              {/* Description */}
-              <div style={{marginBottom:18}}>
+              {/* Description — soft input */}
+              <div style={{marginBottom:20}}>
                 <div style={{fontSize:10, fontWeight:700, color:C.textTertiary,
-                  textTransform:'uppercase', letterSpacing:1, marginBottom:6}}>
+                  textTransform:'uppercase', letterSpacing:1.2, marginBottom:7}}>
                   {L('descriptionOptional')}
                 </div>
-                <input style={{...S.input, fontSize:13, padding:'11px 14px', borderRadius:14}} value={roomDescription}
+                <input style={{...S.input, fontSize:13, padding:'12px 16px', borderRadius:14}} value={roomDescription}
                   onChange={e => setRoomDescription(e.target.value)}
                   placeholder={L('descriptionPlaceholder') || 'Es. lezione di italiano...'}
                   maxLength={150} />
               </div>
 
-              {/* Create button */}
+              {/* Create button — elegant gradient with sparkle icon */}
               <button style={{
-                width:'100%', padding:'16px 0', borderRadius:16, cursor:'pointer', border:'none',
+                width:'100%', padding:'17px 0', borderRadius:16, cursor:'pointer', border:'none',
                 background:C.createBtnGrad,
                 boxShadow:C.createBtnShadow,
-                color:'#FFFFFF', fontFamily:FONT, fontSize:16, fontWeight:900,
-                letterSpacing:-0.3, display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                color:'#FFFFFF', fontFamily:FONT, fontSize:16, fontWeight:800,
+                letterSpacing:-0.2, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
               }}
                 onClick={() => { vibrate(); setShowCreatePopup(false); handleCreateRoom(); }}>
-                <span style={{fontSize:20}}>{'\u{1F680}'}</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2l2.4 7.2H22l-6 4.8 2.4 7.2L12 16.8 5.6 21.2 8 14 2 9.2h7.6L12 2z" />
+                </svg>
                 {L('createRoom')}
               </button>
             </div>
           </>
-        )}
+          );
+        })()}
 
         {/* ═══════════════════════════════════════
             INVITE CARD
