@@ -218,7 +218,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 </span>
               </div>
               <div style={{fontSize:9, color:S.colors.textMuted, marginTop:6, lineHeight:1.4}}>
-                {L('freePrivacyNote') || 'Il piano gratuito utilizza MyMemory by Translated. La tua email viene condivisa con il servizio per gestire la quota personale.'}
+                {L('freePrivacyNote') || 'Il piano gratuito utilizza Microsoft Translator e Google Translate.'}
               </div>
             </div>
           ) : (
@@ -560,30 +560,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               FREE TRANSLATION SERVICES
              ══════════════════════════════════════════════════ */}
           {(() => {
-            const PROVIDER_INFO = {
-              google:    { name: 'Google Translate', icon: '🔵', quality: 4, latency: '~400ms' },
-              microsoft: { name: 'Microsoft',        icon: '🟢', quality: 4, latency: '~500ms' },
-              mymemory:  { name: 'MyMemory',         icon: '🟠', quality: 3, latency: '~700ms' },
-            };
-            const CHAIN_DEFAULTS = {
-              zh: ['google','microsoft','mymemory'], ja: ['google','microsoft','mymemory'],
-              ko: ['google','microsoft','mymemory'], th: ['google','microsoft','mymemory'],
-              ar: ['microsoft','google','mymemory'], hi: ['microsoft','google','mymemory'],
-              ru: ['microsoft','google','mymemory'], tr: ['microsoft','google','mymemory'],
-            };
-            const DEFAULT_CHAIN = ['google','microsoft','mymemory'];
-            const lang2 = prefs.lang;
-            const chain = CHAIN_DEFAULTS[lang2] || DEFAULT_CHAIN;
-            const tp = prefs.translationProviders || { primary: 'auto', secondary: 'auto', tertiary: 'auto' };
             const tm = prefs.translationMode || 'standard';
-            const allProviders = Object.keys(PROVIDER_INFO);
-            const stars = (n) => '★'.repeat(n) + '☆'.repeat(5-n);
 
-            const updateTP = (key, val) => {
-              const newTP = { ...tp, [key]: val };
-              setPrefs({ ...prefs, translationProviders: newTP });
-              savePrefs({ ...prefs, translationProviders: newTP });
-            };
             const updateMode = (mode) => {
               setPrefs({ ...prefs, translationMode: mode });
               savePrefs({ ...prefs, translationMode: mode });
@@ -597,48 +575,32 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={S.field}>
                 <div style={S.label}>{'🌐'} {L('translationServices') || 'Servizi di Traduzione (Free)'}</div>
                 <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:10}}>
-                  {L('translationServicesHint') || `Default ottimizzato per ${getLang(lang2).name}. Personalizza l'ordine dei provider.`}
+                  {L('translationServicesHint') || 'Traduzione automatica gestita dal sistema: Microsoft Translator (primario) + Google Translate (fallback).'}
                 </div>
 
-                {/* Provider chain for current language */}
-                <div style={{fontSize:11, color:S.colors.textSecondary, marginBottom:8, fontWeight:600}}>
-                  Provider per {getLang(lang2).flag} {getLang(lang2).name}:
-                </div>
+                {/* Provider info (read-only) */}
                 <div style={{display:'flex', flexDirection:'column', gap:4, marginBottom:12}}>
-                  {chain.map((pid, i) => {
-                    const p = PROVIDER_INFO[pid];
-                    return (
-                      <div key={pid} style={{
-                        display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
-                        background: i === 0 ? S.colors.accent1Bg : 'transparent',
-                        borderRadius:8, fontSize:12,
-                      }}>
-                        <span style={{width:18, textAlign:'center'}}>{i+1}.</span>
-                        <span>{p.icon}</span>
-                        <span style={{flex:1, fontWeight: i===0 ? 600 : 400}}>{p.name}</span>
-                        <span style={{color:'#eab308', fontSize:10}}>{stars(p.quality)}</span>
-                        <span style={{color:S.colors.textTertiary, fontSize:10}}>{p.latency}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Override dropdowns */}
-                {['primary','secondary','tertiary'].map((slot, i) => (
-                  <div key={slot} style={{display:'flex', alignItems:'center', gap:8, marginBottom:6}}>
-                    <span style={{fontSize:11, color:S.colors.textTertiary, width:70}}>
-                      {i===0 ? 'Primario:' : i===1 ? 'Secondario:' : 'Terziario:'}
-                    </span>
-                    <select value={tp[slot] || 'auto'} onChange={e => updateTP(slot, e.target.value)}
-                      style={{flex:1, background:S.colors.cardBg, color:S.colors.text, border:'1px solid ' + S.colors.border,
-                        borderRadius:8, padding:'6px 8px', fontSize:12}}>
-                      <option value="auto">🤖 Auto (consigliato)</option>
-                      {allProviders.map(pid => (
-                        <option key={pid} value={pid}>{PROVIDER_INFO[pid].icon} {PROVIDER_INFO[pid].name}</option>
-                      ))}
-                    </select>
+                  <div style={{
+                    display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
+                    background: S.colors.accent1Bg, borderRadius:8, fontSize:12,
+                  }}>
+                    <span style={{width:18, textAlign:'center'}}>1.</span>
+                    <span>🟢</span>
+                    <span style={{flex:1, fontWeight:600}}>Microsoft Translator</span>
+                    <span style={{color:'#eab308', fontSize:10}}>★★★★★</span>
+                    <span style={{color:S.colors.textTertiary, fontSize:10}}>~75ms</span>
                   </div>
-                ))}
+                  <div style={{
+                    display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
+                    background: 'transparent', borderRadius:8, fontSize:12,
+                  }}>
+                    <span style={{width:18, textAlign:'center'}}>2.</span>
+                    <span>🔵</span>
+                    <span style={{flex:1, fontWeight:400}}>Google Translate</span>
+                    <span style={{color:'#eab308', fontSize:10}}>★★★★☆</span>
+                    <span style={{color:S.colors.textTertiary, fontSize:10}}>~200ms</span>
+                  </div>
+                </div>
 
                 {/* Translation mode toggle */}
                 <div style={{marginTop:12, marginBottom:8}}>
@@ -648,7 +610,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
                     {[
                       { id: 'standard', label: '⚡ Standard', desc: '1 provider, veloce' },
-                      { id: 'guaranteed', label: '✅ Garantita', desc: '3 provider, consenso' },
+                      { id: 'guaranteed', label: '✅ Garantita', desc: '2 provider, consenso' },
                       { id: 'superfast', label: '🏎️ Superfast', desc: '1 velocissimo' },
                     ].map(m => (
                       <button key={m.id} onClick={() => updateMode(m.id)}
