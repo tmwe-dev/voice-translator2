@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
 import { runProviderChain, validateTranslation } from '../../lib/providers.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 // ═══════════════════════════════════════════════
 // FREE Translation — Multi-provider with dynamic routing
 //
 // Uses providers.js registry for language-optimized provider chains:
-// - CJK/Thai/Vietnamese → Google → Microsoft → MyMemory
-// - Arabic/Hindi/Russian/Turkish → Microsoft → Google → MyMemory
-// - European → Google → Microsoft → MyMemory
+// - ALL languages → Microsoft → Google (quality-tested)
+//
+// Security:
+// - Rate limited: 30 req/min per IP (Redis-backed)
+// - Daily char limit: 50K chars/day per IP (Redis-enforced)
+// - CORS restricted to our domain
 //
 // Modes:
 // - standard: try providers in chain order until one succeeds
@@ -23,23 +27,65 @@ function getSimpleHash(text) {
   return encoded.substring(0, 32);
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://voice-translator2.vercel.app';
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+function getCorsHeaders(req) {
+  const origin = req?.headers?.get?.('origin') || '';
+  // Allow our domain + localhost for dev
+  const allowed = origin === ALLOWED_ORIGIN
+    || origin.startsWith('http://localhost')
+    || origin.startsWith('https://localhost');
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGIN,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(req) });
 }
 
 export async function POST(req) {
+  const cors = getCorsHeaders(req);
+
   try {
+    // ── Rate limit: 30 req/min per IP ──
+    const rlKey = getRateLimitKey(req, 'free-translate');
+    const rl = await checkRateLimit(rlKey, 30, 60000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfterMs: rl.retryAfterMs },
+        { status: 429, headers: { ...cors, 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } }
+      );
+    }
+
     const { text, sourceLang, targetLang, userEmail, superfast, userProviderPrefs } = await req.json();
-    if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 }, { headers: CORS_HEADERS });
+    if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 }, { headers: cors });
 
     const trimmed = text.trim();
     const charsUsed = trimmed.length;
+
+    // ── Enforce daily character limit per IP (Redis-backed) ──
+    const ipKey = getRateLimitKey(req, 'free-chars');
+    let dailyUsed = 0;
+    try {
+      const todayKey = `daily:${ipKey}:${new Date().toISOString().split('T')[0]}`;
+      const current = await redis('GET', todayKey);
+      dailyUsed = parseInt(current || '0');
+      if (dailyUsed + charsUsed > FREE_DAILY_LIMIT) {
+        return NextResponse.json(
+          { error: 'Daily character limit exceeded', dailyUsed, dailyLimit: FREE_DAILY_LIMIT },
+          { status: 429, headers: cors }
+        );
+      }
+      // Increment and set TTL to end of day (max 24h)
+      await redis('INCRBY', todayKey, charsUsed);
+      if (!current) await redis('EXPIRE', todayKey, 86400);
+    } catch (e) {
+      console.error('Daily limit check error:', e);
+      // Fail-open: if Redis fails, allow the request
+    }
 
     // ── Check Redis cache first ──
     const textHash = getSimpleHash(trimmed);
@@ -56,11 +102,11 @@ export async function POST(req) {
       if (parsed.translated && !parsed.fallback) {
         const validation = validateTranslation(trimmed, parsed.translated, sourceLang, targetLang);
         if (validation.valid) {
-          return NextResponse.json({ ...parsed, cached: true }, { headers: CORS_HEADERS });
+          return NextResponse.json({ ...parsed, cached: true, dailyUsed: dailyUsed + charsUsed, dailyLimit: FREE_DAILY_LIMIT }, { headers: cors });
         }
         try { await redis('DEL', cacheKey); } catch {}
       } else if (!parsed.fallback) {
-        return NextResponse.json({ ...parsed, cached: true }, { headers: CORS_HEADERS });
+        return NextResponse.json({ ...parsed, cached: true, dailyUsed: dailyUsed + charsUsed, dailyLimit: FREE_DAILY_LIMIT }, { headers: cors });
       }
       // Fallback cached results → retry fresh
     }
@@ -79,15 +125,15 @@ export async function POST(req) {
       match: result.match,
       fallback: result.fallback,
       charsUsed,
+      dailyUsed: dailyUsed + charsUsed,
       dailyLimit: FREE_DAILY_LIMIT,
       elapsed: result.elapsed,
     };
 
     // ── Cache successful results ──
     if (!result.fallback) {
-      const cacheTtl = result.provider === 'mymemory' ? 3600 : 86400;
       try {
-        await redis('SET', cacheKey, JSON.stringify(response), 'EX', cacheTtl);
+        await redis('SET', cacheKey, JSON.stringify(response), 'EX', 86400);
       } catch (e) {
         console.error('Cache store error:', e);
       }
@@ -98,12 +144,12 @@ export async function POST(req) {
       } catch {}
     }
 
-    return NextResponse.json(response, { headers: CORS_HEADERS });
+    return NextResponse.json(response, { headers: cors });
   } catch (e) {
     console.error('Free translate error:', e);
     return NextResponse.json(
       { translated: '', fallback: true, error: e.message, charsUsed: 0 },
-      { headers: CORS_HEADERS }
+      { headers: cors }
     );
   }
 }

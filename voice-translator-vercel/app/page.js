@@ -206,6 +206,44 @@ export default function Home() {
   }
 
   // =============================================
+  // AUTO-LOAD ELEVENLABS VOICES
+  // =============================================
+  // When a PRO user has ElevenLabs access and voices aren't loaded yet,
+  // auto-fetch so the voice picker in RoomView works immediately
+  useEffect(() => {
+    if (auth.canUseElevenLabs && auth.elevenLabsVoices.length === 0) {
+      const token = auth.userTokenRef.current || '';
+      fetch(`/api/tts-elevenlabs?action=voices&token=${token}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.voices) auth.setElevenLabsVoices(data.voices);
+        })
+        .catch(() => {});
+    }
+  }, [auth.canUseElevenLabs]);
+
+  // Persist selected ElevenLabs voice to localStorage
+  useEffect(() => {
+    try {
+      const savedVoice = localStorage.getItem('vt-elvoice');
+      if (savedVoice) auth.setSelectedELVoice(savedVoice);
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (auth.selectedELVoice) {
+      try { localStorage.setItem('vt-elvoice', auth.selectedELVoice); } catch {}
+    }
+  }, [auth.selectedELVoice]);
+
+  // Auto-select cloned voice as default when available and no voice selected
+  useEffect(() => {
+    if (auth.clonedVoiceId && !auth.selectedELVoice && auth.canUseElevenLabs) {
+      auth.setSelectedELVoice(auth.clonedVoiceId);
+    }
+  }, [auth.clonedVoiceId, auth.canUseElevenLabs]);
+
+  // =============================================
   // PREFS & INIT
   // =============================================
   useEffect(() => {

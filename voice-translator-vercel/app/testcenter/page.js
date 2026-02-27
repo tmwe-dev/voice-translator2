@@ -8,7 +8,7 @@ import { PROVIDERS, LLM_MODELS, TTS_ENGINES, AVATAR_NAMES } from '../lib/provide
 // Translation Test Center v2
 //
 // Tabs:
-// 1. Free — test free providers (Google, Microsoft, MyMemory)
+// 1. Free — test free providers (Microsoft, Google)
 // 2. LLM — test paid AI models (OpenAI, Anthropic, Gemini)
 // 3. Voice TTS — test ElevenLabs, OpenAI TTS, Edge TTS
 // 4. Config — system status and configuration
@@ -29,9 +29,8 @@ const SCENARIO_LABELS = {
 };
 
 const PROVIDER_COLORS = {
-  google: '#4285F4',
   microsoft: '#00A4EF',
-  mymemory: '#FF6B35',
+  google: '#4285F4',
 };
 
 // ═══════════════════════════════════════════════
@@ -778,24 +777,16 @@ function ConfigTab() {
         status[r.provider] = { ok: r.valid, detail: r.valid ? `${r.elapsed}ms` : (r.validationReason || 'errore') };
       }
     } catch (e) {
-      status.google = status.microsoft = status.mymemory = { ok: false, detail: e.message };
+      status.microsoft = status.google = { ok: false, detail: e.message };
     }
 
     setApiStatus(status);
     setLoading(false);
   }
 
-  // Provider chain info
+  // Provider chain info — Microsoft primary for ALL languages (tested 10/10)
   const CHAIN_INFO = {
-    'th': ['google', 'microsoft', 'mymemory'],
-    'zh': ['google', 'microsoft', 'mymemory'],
-    'ja': ['google', 'microsoft', 'mymemory'],
-    'ko': ['google', 'microsoft', 'mymemory'],
-    'ar': ['microsoft', 'google', 'mymemory'],
-    'hi': ['microsoft', 'google', 'mymemory'],
-    'ru': ['microsoft', 'google', 'mymemory'],
-    'tr': ['microsoft', 'google', 'mymemory'],
-    '*': ['google', 'microsoft', 'mymemory'],
+    '*': ['microsoft', 'google'],
   };
 
   return (
@@ -812,9 +803,8 @@ function ConfigTab() {
         {apiStatus && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 8 }}>
             {[
+              { key: 'microsoft', name: 'Microsoft (Primary)', type: 'free' },
               { key: 'google', name: 'Google Translate', type: 'free' },
-              { key: 'microsoft', name: 'Microsoft', type: 'free' },
-              { key: 'mymemory', name: 'MyMemory', type: 'free' },
               { key: 'openai', name: 'OpenAI', type: 'paid' },
               { key: 'anthropic', name: 'Anthropic', type: 'paid' },
               { key: 'gemini', name: 'Gemini', type: 'paid' },

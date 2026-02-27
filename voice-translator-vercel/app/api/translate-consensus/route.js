@@ -2,13 +2,16 @@ import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
 import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 // ═══════════════════════════════════════════════
 // Consensus Translation — "Guaranteed" mode
 //
-// Calls top 3 providers for the target language in parallel,
+// Calls top providers for the target language in parallel,
 // compares results using Levenshtein similarity.
-// If 2 of 3 agree → "guaranteed" translation
+// If 2 agree → "guaranteed" translation
+//
+// Security: rate limited 20 req/min, CORS restricted
 // ═══════════════════════════════════════════════
 
 function getSimpleHash(text) {
@@ -16,21 +19,41 @@ function getSimpleHash(text) {
   return encoded.substring(0, 32);
 }
 
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'https://voice-translator2.vercel.app';
 
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+function getCorsHeaders(req) {
+  const origin = req?.headers?.get?.('origin') || '';
+  const allowed = origin === ALLOWED_ORIGIN
+    || origin.startsWith('http://localhost')
+    || origin.startsWith('https://localhost');
+  return {
+    'Access-Control-Allow-Origin': allowed ? origin : ALLOWED_ORIGIN,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
+
+export async function OPTIONS(req) {
+  return new NextResponse(null, { status: 204, headers: getCorsHeaders(req) });
 }
 
 export async function POST(req) {
+  const cors = getCorsHeaders(req);
+
   try {
+    // ── Rate limit: 20 req/min per IP ──
+    const rlKey = getRateLimitKey(req, 'consensus');
+    const rl = await checkRateLimit(rlKey, 20, 60000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded', retryAfterMs: rl.retryAfterMs },
+        { status: 429, headers: { ...cors, 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } }
+      );
+    }
+
     const { text, sourceLang, targetLang, userEmail, threshold } = await req.json();
     if (!text?.trim()) {
-      return NextResponse.json({ translated: '', guaranteed: false }, { headers: CORS_HEADERS });
+      return NextResponse.json({ translated: '', guaranteed: false }, { headers: cors });
     }
 
     const trimmed = text.trim();
@@ -44,7 +67,7 @@ export async function POST(req) {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (parsed.translated && parsed.guaranteed) {
-          return NextResponse.json({ ...parsed, cached: true }, { headers: CORS_HEADERS });
+          return NextResponse.json({ ...parsed, cached: true }, { headers: cors });
         }
       }
     } catch {}
@@ -98,12 +121,12 @@ export async function POST(req) {
       } catch {}
     }
 
-    return NextResponse.json(response, { headers: CORS_HEADERS });
+    return NextResponse.json(response, { headers: cors });
   } catch (e) {
     console.error('Consensus translate error:', e);
     return NextResponse.json(
       { translated: '', guaranteed: false, error: e.message },
-      { headers: CORS_HEADERS }
+      { headers: cors }
     );
   }
 }

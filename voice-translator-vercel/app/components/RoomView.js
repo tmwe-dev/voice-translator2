@@ -463,28 +463,47 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                     </div>
                     {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
                   </button>
-                  {/* ElevenLabs voice list */}
-                  {(elevenLabsVoices || []).slice(0, 20).map(v => (
-                    <button key={v.id} onClick={() => {
-                      if (setSelectedELVoice) setSelectedELVoice(v.id);
-                      setShowVoicePicker(false);
-                    }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
-                      width:'100%', padding:'6px 12px',
-                      background: selectedELVoice === v.id ? S.colors.accent4Bg : 'transparent',
-                      border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
-                      color:S.colors.textPrimary, transition:'background 0.1s'}}>
-                      <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:0}}>
-                        <span style={{fontWeight:500}}>{v.name}</span>
-                        <span style={{fontSize:8, color:S.colors.textMuted}}>
-                          {[v.gender, v.accent, v.useCase].filter(Boolean).join(' \u2022 ')}
-                        </span>
+                  {/* ElevenLabs voice list — grouped by gender */}
+                  {(elevenLabsVoices || []).length > 0 && (() => {
+                    const females = elevenLabsVoices.filter(v => v.gender === 'female');
+                    const males = elevenLabsVoices.filter(v => v.gender === 'male');
+                    const other = elevenLabsVoices.filter(v => v.gender !== 'female' && v.gender !== 'male');
+                    const groups = [
+                      { label: '\u2640 Femminile', voices: females },
+                      { label: '\u2642 Maschile', voices: males },
+                      ...(other.length > 0 ? [{ label: 'Altro', voices: other }] : []),
+                    ];
+                    return groups.map(g => g.voices.length > 0 && (
+                      <div key={g.label}>
+                        <div style={{padding:'4px 12px', fontSize:8, fontWeight:700, color:S.colors.textMuted,
+                          textTransform:'uppercase', letterSpacing:0.5, background:S.colors.overlayBg,
+                          borderTop:`1px solid ${S.colors.overlayBorder}`}}>
+                          {g.label} ({g.voices.length})
+                        </div>
+                        {g.voices.map(v => (
+                          <button key={v.id} onClick={() => {
+                            if (setSelectedELVoice) setSelectedELVoice(v.id);
+                            setShowVoicePicker(false);
+                          }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                            width:'100%', padding:'6px 12px',
+                            background: selectedELVoice === v.id ? S.colors.accent4Bg : 'transparent',
+                            border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
+                            color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                            <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:0}}>
+                              <span style={{fontWeight:500}}>{v.name}</span>
+                              <span style={{fontSize:8, color:S.colors.textMuted}}>
+                                {[v.accent, v.useCase].filter(Boolean).join(' \u2022 ')}
+                              </span>
+                            </div>
+                            {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                          </button>
+                        ))}
                       </div>
-                      {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
-                    </button>
-                  ))}
+                    ));
+                  })()}
                   {(!elevenLabsVoices || elevenLabsVoices.length === 0) && (
                     <div style={{padding:'10px 12px', fontSize:10, color:S.colors.textMuted, textAlign:'center'}}>
-                      Carica le voci dal Settings {'\u2192'} ElevenLabs
+                      Caricamento voci...
                     </div>
                   )}
                 </>

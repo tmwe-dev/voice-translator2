@@ -27,38 +27,28 @@ const LATIN_LANGS = new Set([
 ]);
 
 // ── Provider metadata ──
+// Quality tested via Test Center: Microsoft 10/10 avg 75ms, Google 8-9/10 variable, MyMemory 7-8/10 avg 660ms
 export const PROVIDERS = {
+  microsoft: { name: 'Microsoft',        quality: 5, latency: 75,   free: true },
   google:    { name: 'Google Translate', quality: 4, latency: 400,  free: true },
-  microsoft: { name: 'Microsoft',        quality: 4, latency: 500,  free: true },
   mymemory:  { name: 'MyMemory',         quality: 3, latency: 700,  free: true },
 };
 
-// Languages each provider supports well
-const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja']);
+// Microsoft scored 10/10 across ALL tested languages — it's the best provider
+const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja', 'en', 'es', 'fr', 'de', 'it', 'pt']);
 
 // ── Default provider chains per language target ──
-// Order = priority (first tried first)
+// Based on Test Center results: Microsoft is primary for ALL languages
+// Google is a reliable secondary. MyMemory only as emergency fallback.
 const PROVIDER_CHAINS = {
-  // CJK + Thai + Vietnamese → Google fastest, Microsoft high quality
-  'zh': ['google', 'microsoft', 'mymemory'],
-  'ja': ['google', 'microsoft', 'mymemory'],
-  'ko': ['google', 'microsoft', 'mymemory'],
-  'th': ['google', 'microsoft', 'mymemory'],
-  'vi': ['google', 'microsoft', 'mymemory'],
-  // Arabic/Hindi/Russian/Turkish → Microsoft excels
-  'ar': ['microsoft', 'google', 'mymemory'],
-  'hi': ['microsoft', 'google', 'mymemory'],
-  'ru': ['microsoft', 'google', 'mymemory'],
-  'tr': ['microsoft', 'google', 'mymemory'],
-  // European languages → Google is usually best
-  '*': ['google', 'microsoft', 'mymemory'],
+  // ALL languages: Microsoft first (10/10 quality, 75ms avg), Google fallback
+  '*': ['microsoft', 'google'],
 };
 
 // Fastest provider per target language (for superfast mode)
+// Microsoft is now fastest AND highest quality
 export const FASTEST_PROVIDER = {
-  'zh': 'google', 'ja': 'google', 'ko': 'google', 'th': 'google',
-  'ar': 'microsoft', 'hi': 'microsoft', 'ru': 'microsoft', 'tr': 'microsoft',
-  '*': 'google',
+  '*': 'microsoft',
 };
 
 /**
@@ -150,9 +140,9 @@ export function scoreTranslation(original, translated, sourceLang, targetLang, p
   // +1: no meta-text
   if (!t.startsWith('Translation:') && !t.startsWith('Here is') && !t.startsWith('Note:')) score += 1;
 
-  // +2: specialized provider for this language
-  if (MICROSOFT_BEST.has(targetLang) && provider === 'microsoft') score += 2;
-  else if (provider === 'google') score += 1; // Google is generally good
+  // +2: quality bonus per provider (Microsoft tested 10/10, Google 8-9/10)
+  if (provider === 'microsoft') score += 2;
+  else if (provider === 'google') score += 1;
 
   return { score: Math.min(score, 10), reason: 'scored' };
 }
@@ -339,7 +329,7 @@ export async function runProviderChain(text, sourceLang, targetLang, opts = {}) 
 
   // Filter out unavailable providers
   chain = chain.filter(isProviderAvailable);
-  if (chain.length === 0) chain = ['google']; // Always have at least one
+  if (chain.length === 0) chain = ['microsoft', 'google']; // Always have fallbacks
 
   for (const providerId of chain) {
     const result = await tryProvider(providerId, text, sourceLang, targetLang, userEmail);
@@ -385,7 +375,7 @@ export async function runProviderChain(text, sourceLang, targetLang, opts = {}) 
  * Returns array of results
  */
 export async function runAllProviders(text, sourceLang, targetLang, userEmail) {
-  const providerIds = ['google', 'microsoft', 'mymemory'];
+  const providerIds = ['microsoft', 'google'];
 
   const results = await Promise.allSettled(
     providerIds.map(id => tryProvider(id, text, sourceLang, targetLang, userEmail))
