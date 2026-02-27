@@ -94,7 +94,8 @@ export async function POST(req) {
       // Get referral code for this user
       const userReferralCode = await getReferralCode(email);
 
-      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode });
+      const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
+      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode, platformHasElevenLabs });
     }
 
     // === CHECK SESSION (me) ===

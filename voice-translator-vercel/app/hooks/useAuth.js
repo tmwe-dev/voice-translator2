@@ -26,6 +26,7 @@ export default function useAuth() {
   // Tier state
   const [isTrial, setIsTrial] = useState(true);
   const [isTopPro, setIsTopPro] = useState(false);
+  const [canUseElevenLabs, setCanUseElevenLabs] = useState(false);
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState('');
   const [platformHasEL, setPlatformHasEL] = useState(false);
@@ -34,6 +35,7 @@ export default function useAuth() {
   const userTokenRef = useRef(null);
   const isTrialRef = useRef(true);
   const isTopProRef = useRef(false);
+  const canUseElevenLabsRef = useRef(false);
   const roomTierOverrideRef = useRef(null);
 
   // Sync refs
@@ -49,6 +51,10 @@ export default function useAuth() {
     isTopProRef.current = isTopPro;
   }, [isTopPro]);
 
+  useEffect(() => {
+    canUseElevenLabsRef.current = canUseElevenLabs;
+  }, [canUseElevenLabs]);
+
   // Update tier based on account status
   useEffect(() => {
     if (roomTierOverrideRef.current) return;
@@ -61,6 +67,16 @@ export default function useAuth() {
       }
     }
   }, [userToken, creditBalance, useOwnKeys, apiKeyInputs.elevenlabs]);
+
+  // Derive canUseElevenLabs: TOP PRO (own key) OR PRO with platform ElevenLabs key
+  useEffect(() => {
+    if (roomTierOverrideRef.current) {
+      // Guest in room — use host's tier
+      setCanUseElevenLabs(roomTierOverrideRef.current === 'TOP PRO');
+    } else {
+      setCanUseElevenLabs(isTopPro || (platformHasEL && !isTrial));
+    }
+  }, [isTopPro, platformHasEL, isTrial]);
 
   function getEffectiveToken() {
     if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') return undefined;
@@ -115,6 +131,7 @@ export default function useAuth() {
         setCreditBalance(data.user.credits || 0);
         setUseOwnKeys(data.user.useOwnKeys || false);
         if (data.referralCode) setReferralCode(data.referralCode);
+        if (data.platformHasElevenLabs) setPlatformHasEL(true);
         if (data.referralInfo?.applied) {
           // referral bonus applied
         }
@@ -318,6 +335,8 @@ export default function useAuth() {
     setIsTrial,
     isTopPro,
     setIsTopPro,
+    canUseElevenLabs,
+    setCanUseElevenLabs,
     elevenLabsVoices,
     setElevenLabsVoices,
     selectedELVoice,
@@ -328,6 +347,7 @@ export default function useAuth() {
     userTokenRef,
     isTrialRef,
     isTopProRef,
+    canUseElevenLabsRef,
     roomTierOverrideRef,
     // Functions
     getEffectiveToken,

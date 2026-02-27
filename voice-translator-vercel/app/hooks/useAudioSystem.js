@@ -7,6 +7,7 @@ export default function useAudioSystem({
   myLangRef,
   isTrialRef,
   isTopProRef,
+  canUseElevenLabsRef,
   selectedELVoice,
   roomIdRef,
   getEffectiveToken
@@ -282,27 +283,58 @@ export default function useAudioSystem({
   // =============================================
 
   async function fetchEdgeTTSBlob(text, langCode, gender) {
-    const res = await fetch('/api/tts-edge', {
+    // Race with timeout for faster fallback
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    try {
+      const res = await fetch('/api/tts-edge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          langCode: langCode || 'en',
+          gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
+      return await res.blob();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
+  }
+
+  // Pre-warm Edge TTS connection when audio is ready
+  const edgePrewarmedRef = useRef(false);
+  useEffect(() => {
+    if (!audioReady || edgePrewarmedRef.current) return;
+    edgePrewarmedRef.current = true;
+    // Silent pre-warm request to reduce first-speech latency
+    fetch('/api/tts-edge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        langCode: langCode || 'en',
-        gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
-      })
-    });
-    if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
-    return await res.blob();
-  }
+      body: JSON.stringify({ text: '.', langCode: 'en', gender: 'female' })
+    }).catch(() => {});
+  }, [audioReady]);
 
   async function playEdgeTTS(text, langCode) {
     let blob;
     try {
       blob = await fetchEdgeTTSBlob(text, langCode);
     } catch {
-      // Edge TTS failed — fallback to browser speech
-      await browserSpeak(text, langCode);
-      return;
+      // Edge TTS failed or timed out — try opposite gender as retry
+      try {
+        const currentGender = prefsRef.current?.edgeTtsVoiceGender || 'female';
+        const altGender = currentGender === 'female' ? 'male' : 'female';
+        blob = await fetchEdgeTTSBlob(text, langCode, altGender);
+      } catch {
+        // All Edge TTS failed — fallback to browser speech
+        await browserSpeak(text, langCode);
+        return;
+      }
     }
 
     const url = URL.createObjectURL(blob);
@@ -518,12 +550,22 @@ export default function useAudioSystem({
     isPlayingRef.current = true;
     const { text, lang } = audioQueueRef.current.shift();
     try {
-      if (isTrialRef.current) {
-        await playEdgeTTS(text, lang);  // Edge TTS: FREE neural voices for all languages
-      } else if (isTopProRef.current) {
+      const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
+      if (voiceEngine === 'edge') {
+        await playEdgeTTS(text, lang);
+      } else if (voiceEngine === 'elevenlabs') {
         await playTTSElevenLabs(text, lang);
-      } else {
+      } else if (voiceEngine === 'openai') {
         await playTTS(text, lang);
+      } else {
+        // Auto mode: select based on tier
+        if (isTrialRef.current) {
+          await playEdgeTTS(text, lang);
+        } else if (canUseElevenLabsRef?.current) {
+          await playTTSElevenLabs(text, lang);
+        } else {
+          await playTTS(text, lang);
+        }
       }
     } catch (e) {
       console.error('[Audio] playback error:', e);
@@ -549,12 +591,22 @@ export default function useAudioSystem({
         speechLang = getLang(msg.targetLang).speech;
       }
       if (text && speechLang) {
-        if (isTrialRef.current) {
-          await playEdgeTTS(text, speechLang);  // Edge TTS: FREE neural voices
-        } else if (isTopProRef.current) {
+        const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
+        if (voiceEngine === 'edge') {
+          await playEdgeTTS(text, speechLang);
+        } else if (voiceEngine === 'elevenlabs') {
           await playTTSElevenLabs(text, speechLang);
-        } else {
+        } else if (voiceEngine === 'openai') {
           await playTTS(text, speechLang);
+        } else {
+          // Auto mode
+          if (isTrialRef.current) {
+            await playEdgeTTS(text, speechLang);
+          } else if (canUseElevenLabsRef?.current) {
+            await playTTSElevenLabs(text, speechLang);
+          } else {
+            await playTTS(text, speechLang);
+          }
         }
       }
     } catch (e) {

@@ -70,13 +70,13 @@ export async function POST(req) {
     const { text, voiceId, langCode, userToken, roomId, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // 3-tier auth: userToken → roomId → reject (TOP PRO only for guests)
+    // 3-tier auth: userToken → roomId → reject
+    // Any PRO user with credits can use ElevenLabs (platform key), not just TOP PRO
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
       roomId,
       provider: 'elevenlabs',
       minCredits: MIN_CREDITS.TTS_ELEVENLABS,
-      requiredHostTier: 'TOP PRO',
     });
 
     // Voice selection priority: explicit voiceId → avatar mapping → default

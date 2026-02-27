@@ -1,11 +1,13 @@
 'use client';
 import { memo, useState } from 'react';
-import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS } from '../lib/constants.js';
+import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS, AI_MODELS } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
-  playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, showModeSelector,
+  playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, canUseElevenLabs,
+  useOwnKeys, apiKeyInputs,
+  showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
@@ -13,6 +15,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   syncLangChange, theme, setTheme }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
+  const [showAiPicker, setShowAiPicker] = useState(false);
 
   const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
@@ -236,26 +239,58 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
       )}
 
-      {/* Voice engine + AI info bar */}
+      {/* Voice engine + AI info bar — interactive */}
       <div style={{padding:'3px 12px', background:S.colors.accent1Bg,
         borderBottom:`1px solid ${S.colors.overlayBorder}`, display:'flex', alignItems:'center',
-        justifyContent:'space-between', flexShrink:0, gap:6}}>
+        justifyContent:'space-between', flexShrink:0, gap:6, position:'relative'}}>
         <div style={{display:'flex', alignItems:'center', gap:6, minWidth:0}}>
-          <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600, whiteSpace:'nowrap'}}>
-            {isTrial ? '\u{1F50A} Browser Voice' : isTopPro ? '\u{1F3A4} ElevenLabs' : `\u{1F3A4} OpenAI`}
-          </span>
+          {/* Voice engine — tappable to cycle */}
+          <button onClick={() => {
+            if (isTrial) return; // FREE users can't switch
+            const voiceEngine = prefs.voiceEngine || 'auto';
+            const engines = canUseElevenLabs
+              ? ['auto', 'elevenlabs', 'openai', 'edge']
+              : ['auto', 'openai', 'edge'];
+            const nextIdx = (engines.indexOf(voiceEngine) + 1) % engines.length;
+            savePrefs({...prefs, voiceEngine: engines[nextIdx]});
+          }} style={{background:'none', border:'none', padding:'1px 4px', cursor: isTrial ? 'default' : 'pointer',
+            display:'flex', alignItems:'center', gap:4, borderRadius:4,
+            transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
+            {(() => {
+              const ve = prefs.voiceEngine || 'auto';
+              const engineLabel = ve === 'auto'
+                ? (isTrial ? '\u{1F50A} Edge TTS' : canUseElevenLabs ? '\u{1F3A4} ElevenLabs' : '\u{1F3A4} OpenAI')
+                : ve === 'elevenlabs' ? '\u{1F3A4} ElevenLabs'
+                : ve === 'openai' ? '\u{1F3A4} OpenAI'
+                : '\u{1F50A} Edge TTS';
+              return (
+                <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600, whiteSpace:'nowrap'}}>
+                  {engineLabel}
+                  {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted, marginLeft:2}}>{'\u25BC'}</span>}
+                </span>
+              );
+            })()}
+          </button>
           {!isTrial && (
-            <span style={{fontSize:9, color:S.colors.textMuted, fontWeight:500,
+            <span style={{fontSize:8, color:S.colors.textMuted, fontWeight:500,
               padding:'1px 5px', borderRadius:4, background:S.colors.overlayBg,
               border:`1px solid ${S.colors.overlayBorder}`, whiteSpace:'nowrap'}}>
-              {isTopPro ? 'Multilingual v2' : (prefs.voice || 'nova')}
+              {(prefs.voiceEngine || 'auto') === 'auto' ? 'AUTO' : (prefs.voiceEngine || '').toUpperCase()}
             </span>
           )}
         </div>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
-          <span style={{fontSize:9, color:S.colors.textMuted, whiteSpace:'nowrap'}}>
-            {isTrial ? 'AI: Free API' : `AI: ${(prefs?.aiModel || 'gpt-4o-mini').toUpperCase()}`}
-          </span>
+          {/* AI model — tappable to open picker */}
+          <button onClick={() => { if (!isTrial) setShowAiPicker(!showAiPicker); }}
+            style={{background:'none', border:'none', padding:'1px 4px', cursor: isTrial ? 'default' : 'pointer',
+              display:'flex', alignItems:'center', gap:3, borderRadius:4,
+              outline: showAiPicker ? `1px solid ${S.colors.accent4Border}` : 'none',
+              transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
+            <span style={{fontSize:9, color:S.colors.textMuted, whiteSpace:'nowrap'}}>
+              {isTrial ? 'AI: Free' : `AI: ${(AI_MODELS.find(m => m.id === (prefs?.aiModel || 'gpt-4o-mini'))?.name || 'GPT-4o Mini')}`}
+            </span>
+            {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted}}>{'\u25BC'}</span>}
+          </button>
           {!audioEnabled && (
             <span style={{fontSize:8, fontWeight:700, padding:'1px 4px', borderRadius:3,
               background:S.colors.accent3Bg, color:S.colors.statusError, border:`1px solid ${S.colors.accent3Border}`}}>
@@ -264,6 +299,45 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
       </div>
+
+      {/* AI model picker dropdown */}
+      {showAiPicker && (
+        <>
+          <div onClick={() => setShowAiPicker(false)}
+            style={{position:'fixed', inset:0, zIndex:98, background:'transparent'}} />
+          <div style={{position:'absolute', top:120, right:12, zIndex:100,
+            background:S.colors.glassCard,
+            border:`1px solid ${S.colors.cardBorder}`,
+            borderRadius:12, padding:'4px 0', width:220, maxHeight:260, overflowY:'auto',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
+            <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+              textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+              AI Translation Model
+            </div>
+            {AI_MODELS.filter(m => !m.ownKeyOnly || (useOwnKeys && apiKeyInputs?.[m.provider]?.trim())).map(m => (
+              <button key={m.id} onClick={() => {
+                savePrefs({...prefs, aiModel: m.id});
+                setShowAiPicker(false);
+              }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                width:'100%', padding:'8px 12px', background: m.id === (prefs?.aiModel || 'gpt-4o-mini') ? S.colors.accent4Bg : 'transparent',
+                border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
+                color:S.colors.textPrimary, transition:'background 0.1s',
+                gap:6}}>
+                <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1}}>
+                  <span style={{fontWeight:600}}>{m.name}</span>
+                  <span style={{fontSize:9, color:S.colors.textMuted}}>{m.desc}</span>
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:4, flexShrink:0}}>
+                  <span style={{fontSize:8, color:S.colors.textTertiary}}>{m.cost}</span>
+                  {m.id === (prefs?.aiModel || 'gpt-4o-mini') && (
+                    <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Battery pulse animation */}
       <style>{`

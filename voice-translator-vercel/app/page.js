@@ -84,6 +84,7 @@ export default function Home() {
     myLangRef,
     isTrialRef: auth.isTrialRef,
     isTopProRef: auth.isTopProRef,
+    canUseElevenLabsRef: auth.canUseElevenLabsRef,
     selectedELVoice: auth.selectedELVoice,
     roomIdRef,
     getEffectiveToken: auth.getEffectiveToken
@@ -654,7 +655,9 @@ export default function Home() {
       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
       partnerTyping={roomPolling.partnerTyping} playingMsgId={audio.playingMsgId}
       audioEnabled={audio.audioEnabled} setAudioEnabled={audio.setAudioEnabled}
-      isTrial={auth.isTrial} isTopPro={auth.isTopPro} showModeSelector={showModeSelector}
+      isTrial={auth.isTrial} isTopPro={auth.isTopPro} canUseElevenLabs={auth.canUseElevenLabs}
+      useOwnKeys={auth.useOwnKeys} apiKeyInputs={auth.apiKeyInputs}
+      showModeSelector={showModeSelector}
       setShowModeSelector={setShowModeSelector} textInput={translation.textInput} setTextInput={translation.setTextInput}
       sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}
       toggleRecording={translation.toggleRecording} cancelRecording={translation.cancelRecording}
