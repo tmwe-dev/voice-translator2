@@ -31,6 +31,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   const [hoveredCard, setHoveredCard] = useState(null);
   const [hoveredTier, setHoveredTier] = useState(null);
   const [entered, setEntered] = useState(false);
+  const [authError, setAuthError] = useState('');
   const C = S.colors;
 
   // Force dark palette for welcome — premium dark experience
@@ -81,12 +82,20 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     return () => clearInterval(checkInterval);
   }, [step, initGoogleSignIn]);
 
-  // Auto-advance when auth completes
+  // Reset authStep when entering auth step, auto-advance when auth completes
   useEffect(() => {
-    if (authStep === 'choose' && step === 1) {
-      setStep(2); // advance to name step
+    if (step === 1 && authStep === 'choose') {
+      // Auth already completed — advance to name
+      setStep(2);
     }
   }, [authStep, step]);
+
+  // When entering auth step, ensure authStep is 'email' (fresh state)
+  useEffect(() => {
+    if (step === 1 && authStep !== 'code' && authStep !== 'email') {
+      setAuthStep('email');
+    }
+  }, [step]);
 
   useEffect(() => {
     setEntered(false);
@@ -663,7 +672,15 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                           }} />
                       </div>
-                      <button onClick={sendAuthCode} disabled={authLoading}
+                      <button onClick={async () => {
+                        setAuthError('');
+                        if (!authEmail || !authEmail.trim() || !authEmail.includes('@')) {
+                          setAuthError(Lf('invalidEmail', 'Inserisci un indirizzo email valido'));
+                          return;
+                        }
+                        const ok = await sendAuthCode();
+                        if (!ok) setAuthError(Lf('sendCodeError', 'Errore nell\'invio del codice. Riprova.'));
+                      }} disabled={authLoading}
                         style={{
                           width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: authLoading ? 'default' : 'pointer',
                           background: `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
@@ -673,6 +690,11 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         }}>
                         {authLoading ? (Lf('sending', 'Invio...')) : (Lf('sendCode', 'Invia codice'))}
                       </button>
+                      {authError && (
+                        <div style={{fontSize: 11, color: D.neon3, textAlign: 'center', marginTop: 8}}>
+                          {authError}
+                        </div>
+                      )}
 
                       {/* Divider */}
                       <div style={{display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0'}}>
@@ -683,8 +705,12 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
                       {/* Google Sign-In */}
                       <button onClick={() => {
+                        setAuthError('');
                         const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
-                        if (!clientId) return;
+                        if (!clientId) {
+                          setAuthError(Lf('googleNotConfigured', 'Google Sign-In non ancora configurato'));
+                          return;
+                        }
                         initGoogleSignIn();
                         if (window.google?.accounts?.id) window.google.accounts.id.prompt();
                       }} disabled={authLoading}
@@ -707,12 +733,16 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
                       {/* Apple Sign-In */}
                       <button onClick={async () => {
+                        setAuthError('');
                         if (typeof window !== 'undefined' && window.AppleID?.auth) {
                           try {
                             const response = await window.AppleID.auth.signIn();
                             if (response) await loginWithApple(response, pendingReferralCode);
                           } catch (e) {
-                            if (e.error !== 'popup_closed_by_user') console.error('Apple Sign-In error:', e);
+                            if (e.error !== 'popup_closed_by_user') {
+                              console.error('Apple Sign-In error:', e);
+                              setAuthError(Lf('appleError', 'Errore Apple Sign-In. Riprova.'));
+                            }
                           }
                         } else {
                           const script = document.createElement('script');
@@ -720,13 +750,19 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                           script.async = true;
                           script.onload = async () => {
                             const clientId = window.__VT_APPLE_CLIENT_ID;
-                            if (!clientId) return;
+                            if (!clientId) {
+                              setAuthError(Lf('appleNotConfigured', 'Apple Sign-In non ancora configurato'));
+                              return;
+                            }
                             window.AppleID.auth.init({ clientId, scope: 'name email', redirectURI: window.location.origin, usePopup: true });
                             try {
                               const response = await window.AppleID.auth.signIn();
                               if (response) await loginWithApple(response, pendingReferralCode);
                             } catch (e) {
-                              if (e.error !== 'popup_closed_by_user') console.error('Apple Sign-In error:', e);
+                              if (e.error !== 'popup_closed_by_user') {
+                                console.error('Apple Sign-In error:', e);
+                                setAuthError(Lf('appleError', 'Errore Apple Sign-In. Riprova.'));
+                              }
                             }
                           };
                           document.head.appendChild(script);
@@ -767,7 +803,11 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                           outline: 'none', boxSizing: 'border-box', textAlign: 'center', letterSpacing: 8,
                           marginBottom: 12,
                         }} />
-                      <button onClick={verifyAuthCodeFn} disabled={authLoading}
+                      <button onClick={async () => {
+                        setAuthError('');
+                        const ok = await verifyAuthCodeFn();
+                        if (!ok) setAuthError(Lf('verifyError', 'Codice non valido o scaduto. Riprova.'));
+                      }} disabled={authLoading}
                         style={{
                           width: '100%', padding: '14px', borderRadius: 14, border: 'none', cursor: authLoading ? 'default' : 'pointer',
                           background: `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
@@ -777,6 +817,11 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                         }}>
                         {authLoading ? (Lf('verifying', 'Verifico...')) : (Lf('verify', 'Verifica'))}
                       </button>
+                      {authError && (
+                        <div style={{fontSize: 11, color: D.neon3, textAlign: 'center', marginTop: 8}}>
+                          {authError}
+                        </div>
+                      )}
                       <button onClick={() => { setAuthStep('email'); setAuthCode(''); }}
                         style={{
                           marginTop: 8, background: 'none', border: 'none', color: D.textMuted,
