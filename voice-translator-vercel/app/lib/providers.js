@@ -205,53 +205,49 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
  * Best for: zh, ja, ko, th, vi
  */
 export async function tryBaiduTranslate(text, sourceLang, targetLang) {
-  try {
-    const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
-    const to = BAIDU_LANG_MAP[targetLang] || targetLang;
+  const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
+  const to = BAIDU_LANG_MAP[targetLang] || targetLang;
 
-    // Try multiple Baidu endpoints — transapi requires browser cookies,
-    // so we also try the v2transapi and sug endpoints
-    const endpoints = [
-      {
-        url: 'https://fanyi.baidu.com/transapi',
-        body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}`,
-      },
-      {
-        url: `https://fanyi.baidu.com/v2transapi?from=${from}&to=${to}`,
-        body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}&simple_means_flag=3&sign=&token=&domain=common`,
-      }
-    ];
-
-    for (const ep of endpoints) {
-      try {
-        const res = await fetch(ep.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-          },
-          body: ep.body,
-          signal: AbortSignal.timeout(5000)
-        });
-        if (!res.ok) continue;
-        const data = await res.json();
-        // Response format: { data: [{ dst: "translated text" }] }
-        if (data?.data && Array.isArray(data.data)) {
-          const translated = data.data.map(seg => seg.dst).join('');
-          if (translated?.trim()) return translated.trim();
-        }
-        // Alternative format: { trans_result: { data: [{ dst }] } }
-        if (data?.trans_result?.data && Array.isArray(data.trans_result.data)) {
-          const translated = data.trans_result.data.map(seg => seg.dst).join('');
-          if (translated?.trim()) return translated.trim();
-        }
-      } catch { continue; }
+  // Try multiple Baidu endpoints — transapi requires browser cookies,
+  // so we also try the v2transapi endpoint
+  const errors = [];
+  const endpoints = [
+    {
+      url: 'https://fanyi.baidu.com/transapi',
+      body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}`,
+    },
+    {
+      url: `https://fanyi.baidu.com/v2transapi?from=${from}&to=${to}`,
+      body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}&simple_means_flag=3&sign=&token=&domain=common`,
     }
-    return null;
-  } catch (e) {
-    console.error('[Baidu] Error:', e.message);
-    return null;
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      const res = await fetch(ep.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+        },
+        body: ep.body,
+        signal: AbortSignal.timeout(5000)
+      });
+      if (!res.ok) { errors.push(`${res.status} ${res.statusText}`); continue; }
+      const data = await res.json();
+      if (data?.data && Array.isArray(data.data)) {
+        const translated = data.data.map(seg => seg.dst).join('');
+        if (translated?.trim()) return translated.trim();
+      }
+      if (data?.trans_result?.data && Array.isArray(data.trans_result.data)) {
+        const translated = data.trans_result.data.map(seg => seg.dst).join('');
+        if (translated?.trim()) return translated.trim();
+      }
+      errors.push('empty response');
+    } catch (e) { errors.push(e.message); continue; }
   }
+  // Throw with combined errors so test center shows them
+  throw new Error(`Baidu: ${errors.join('; ')}`);
 }
 
 /**
@@ -259,19 +255,14 @@ export async function tryBaiduTranslate(text, sourceLang, targetLang) {
  * Best for: ar, hi, ru, tr, and generally good for all
  */
 export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
-  try {
-    // Dynamic import to avoid bundling issues if package missing
-    const { translate } = await import('microsoft-translate-api');
-    // API signature: translate(text, from, to, options)
-    const result = await Promise.race([
-      translate(text, sourceLang, targetLang),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-    ]);
-    return result?.translation?.trim() || null;
-  } catch (e) {
-    console.error('[Microsoft] Error:', e.message);
-    return null;
-  }
+  // Don't catch errors here — let them bubble up to tryProvider for error reporting
+  const { translate } = await import('microsoft-translate-api');
+  // API signature: translate(text, from, to, options)
+  const result = await Promise.race([
+    translate(text, sourceLang, targetLang),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 5s')), 5000))
+  ]);
+  return result?.translation?.trim() || null;
 }
 
 /**
@@ -315,6 +306,7 @@ export async function tryLibreTranslate(text, sourceLang, targetLang) {
     'https://lt.vern.cc/translate',
   ];
 
+  const errors = [];
   for (const baseUrl of LIBRE_URLS) {
     try {
       const res = await fetch(baseUrl, {
@@ -326,10 +318,13 @@ export async function tryLibreTranslate(text, sourceLang, targetLang) {
       if (res.ok) {
         const data = await res.json();
         if (data.translatedText?.trim()) return data.translatedText.trim();
+        errors.push(`${baseUrl}: empty`);
+      } else {
+        errors.push(`${baseUrl}: ${res.status}`);
       }
-    } catch { continue; }
+    } catch (e) { errors.push(`${baseUrl}: ${e.message}`); continue; }
   }
-  return null;
+  throw new Error(`Libre: ${errors.join('; ')}`);
 }
 
 // ═══════════════════════════════════════════════
@@ -374,30 +369,36 @@ export async function tryProvider(providerId, text, sourceLang, targetLang, user
   const start = Date.now();
   let result = null;
   let match = 0;
+  let errorDetail = null;
 
-  switch (providerId) {
-    case 'google':
-      result = await tryGoogleTranslate(text, sourceLang, targetLang);
-      break;
-    case 'baidu':
-      result = await tryBaiduTranslate(text, sourceLang, targetLang);
-      break;
-    case 'microsoft':
-      result = await tryMicrosoftTranslate(text, sourceLang, targetLang);
-      break;
-    case 'mymemory': {
-      const mm = await tryMyMemoryTranslate(text, sourceLang, targetLang, userEmail);
-      result = mm.text;
-      match = mm.match;
-      break;
+  try {
+    switch (providerId) {
+      case 'google':
+        result = await tryGoogleTranslate(text, sourceLang, targetLang);
+        break;
+      case 'baidu':
+        result = await tryBaiduTranslate(text, sourceLang, targetLang);
+        break;
+      case 'microsoft':
+        result = await tryMicrosoftTranslate(text, sourceLang, targetLang);
+        break;
+      case 'mymemory': {
+        const mm = await tryMyMemoryTranslate(text, sourceLang, targetLang, userEmail);
+        result = mm.text;
+        match = mm.match;
+        break;
+      }
+      case 'libretranslate':
+        result = await tryLibreTranslate(text, sourceLang, targetLang);
+        break;
     }
-    case 'libretranslate':
-      result = await tryLibreTranslate(text, sourceLang, targetLang);
-      break;
+  } catch (e) {
+    errorDetail = e.message || 'Unknown error';
+    console.error(`[${providerId}] tryProvider error:`, e.message);
   }
 
   const elapsed = Date.now() - start;
-  return { provider: providerId, text: result, match, elapsed };
+  return { provider: providerId, text: result, match, elapsed, errorDetail };
 }
 
 /**
@@ -482,13 +483,16 @@ export async function runAllProviders(text, sourceLang, targetLang, userEmail) {
         score: scoring.score,
       };
     }
+    const errorMsg = r.status === 'rejected'
+      ? r.reason?.message
+      : (r.value?.errorDetail || 'no_result');
     return {
       provider: providerIds[i],
       text: null,
       match: 0,
-      elapsed: 0,
+      elapsed: r.status === 'fulfilled' ? r.value?.elapsed || 0 : 0,
       valid: false,
-      validationReason: r.status === 'rejected' ? r.reason?.message : 'no_result',
+      validationReason: errorMsg,
       score: 0,
     };
   });
