@@ -78,6 +78,12 @@ export async function POST(req) {
       }
     }
 
+    if (action === 'check') {
+      if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+      const room = await getRoom(roomId);
+      return NextResponse.json({ exists: !!room, ended: room?.ended || false });
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('Room error:', e);

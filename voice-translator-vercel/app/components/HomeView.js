@@ -261,17 +261,44 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   showTutorial, setShowTutorial, tutorialStep, setTutorialStep, status,
   isTrial, platformHasEL, referralCode, theme, setTheme, logout,
   showInstallBanner, handleInstallApp, dismissInstallBanner,
-  notifPermission, requestNotifPermission, deferredInstallPrompt }) {
+  notifPermission, requestNotifPermission, deferredInstallPrompt, rejoinRoom }) {
 
   const langInfo = getLang(prefs.lang);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [showContextDropdown, setShowContextDropdown] = useState(false);
+  const [activeRooms, setActiveRooms] = useState([]);
 
   const isGuest = !userToken;
+  const isIT = L('createRoom') === 'Crea Stanza';
   const lowCredits = !isGuest && !useOwnKeys && !isTrial && creditBalance < 30;
 
   // Theme-aware colors
   const C = useMemo(() => getHomeColors(theme), [theme]);
+
+  // Load and validate active rooms on mount
+  useEffect(() => {
+    async function checkActiveRooms() {
+      try {
+        const saved = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        if (saved.length === 0) { setActiveRooms([]); return; }
+        const checked = [];
+        for (const room of saved) {
+          try {
+            const res = await fetch('/api/room', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'check', roomId: room.roomId })
+            });
+            const data = await res.json();
+            if (data.exists && !data.ended) checked.push(room);
+          } catch {}
+        }
+        localStorage.setItem('vt-active-rooms', JSON.stringify(checked));
+        setActiveRooms(checked);
+      } catch {}
+    }
+    checkActiveRooms();
+  }, []);
 
   return (
     <div style={S.page}>
@@ -441,6 +468,136 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               background:C.proBadgeBg, color:C.proBadgeColor}}>PRO</span>
           </button>
         )}
+
+        {/* ═══════════════════════════════════════
+            ACTIVE ROOMS
+           ═══════════════════════════════════════ */}
+        {activeRooms.length > 0 && (
+          <div style={{width:'100%', maxWidth:400, marginBottom:16}}>
+            <div style={{fontSize:11, fontWeight:700, color:C.textTertiary, marginBottom:8, letterSpacing:0.5, textTransform:'uppercase'}}>
+              {L('activeChats') || 'Chat Attive'}
+            </div>
+            {activeRooms.map((room) => {
+              const timeAgo = Math.floor((Date.now() - room.leftAt) / 60000);
+              const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo} min fa` : `${Math.floor(timeAgo / 60)}h fa`;
+              return (
+                <div key={room.roomId} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
+                  marginBottom:6, borderRadius:14, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
+                  cursor:'pointer', transition:'background 0.15s'}}
+                  onClick={() => { vibrate(); if (rejoinRoom) rejoinRoom(room.roomId); }}>
+                  <div style={{display:'flex', gap:2, fontSize:18}}>
+                    {[...new Set(room.members?.map(m => getLang(m.lang).flag) || [])].map((flag, i) => (
+                      <span key={i}>{flag}</span>
+                    ))}
+                  </div>
+                  <div style={{flex:1, minWidth:0}}>
+                    <div style={{fontSize:13, fontWeight:700, color:C.textPrimary, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                      {room.members?.map(m => m.name).join(', ') || room.roomId}
+                    </div>
+                    <div style={{fontSize:10, color:C.textMuted}}>
+                      {room.mode === 'conversation' ? '\u{1F4AC}' : room.mode === 'classroom' ? '\u{1F3EB}' : '\u{1F399}'} {timeStr}
+                    </div>
+                  </div>
+                  <button onClick={(e) => {
+                    e.stopPropagation();
+                    const updated = activeRooms.filter(r => r.roomId !== room.roomId);
+                    setActiveRooms(updated);
+                    localStorage.setItem('vt-active-rooms', JSON.stringify(updated));
+                  }} style={{width:28, height:28, borderRadius:8, background:'none', border:`1px solid ${C.btnBorder}`,
+                    color:C.textMuted, cursor:'pointer', fontSize:12, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                    {'\u2716'}
+                  </button>
+                  <div style={{padding:'4px 12px', borderRadius:8, fontSize:11, fontWeight:700,
+                    background:C.accent + '18', color:C.accent, cursor:'pointer'}}>
+                    {L('rejoin') || 'Rientra'}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════
+            IL TUO PIANO — Tier info card
+           ═══════════════════════════════════════ */}
+        {!isGuest && (() => {
+          const tierName = useOwnKeys ? 'TOP PRO' : (isTrial ? 'FREE' : 'PRO');
+          const tierIcon = useOwnKeys ? '\u{1F451}' : (isTrial ? '\u{1F193}' : '\u2B50');
+          const tierColor = useOwnKeys ? C.apiBadgeColor : (isTrial ? C.freeBadgeColor : C.proBadgeColor);
+          const tierBg = useOwnKeys ? C.apiBadgeBg : (isTrial ? C.freeBadgeBg : C.proBadgeBg);
+          return (
+            <button style={{width:'100%', maxWidth:400, marginBottom:14, padding:'14px 16px', borderRadius:16,
+              background:C.topBarBg, border:`1px solid ${C.topBarBorder}`, cursor:'pointer', fontFamily:FONT,
+              textAlign:'left', WebkitTapHighlightColor:'transparent', color:C.textPrimary}}
+              onClick={() => { if (isTrial) { setAuthStep('email'); setView('credits'); } else setView('credits'); }}>
+              <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10}}>
+                <span style={{fontSize:18}}>{tierIcon}</span>
+                <span style={{fontSize:14, fontWeight:800, color:tierColor}}>
+                  {isIT ? `Piano ${tierName}` : `${tierName} Plan`}
+                </span>
+                <span style={{fontSize:9, fontWeight:800, padding:'2px 8px', borderRadius:6,
+                  background:tierBg, color:tierColor, marginLeft:'auto'}}>
+                  {tierName}
+                </span>
+              </div>
+              <div style={{display:'flex', flexDirection:'column', gap:5}}>
+                {isTrial ? (<>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Traduzione vocale base' : 'Basic voice translation'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? '25 lingue supportate' : '25 supported languages'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Voci Microsoft Neural (Edge)' : 'Microsoft Neural Voices (Edge)'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textMuted, display:'flex', alignItems:'center', gap:6}}>
+                    <span>{'\u26A1'}</span> {isIT ? 'Limite: 50K caratteri/giorno' : 'Limit: 50K chars/day'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textMuted, display:'flex', alignItems:'center', gap:6}}>
+                    <span>{'\u{1F9E0}'}</span> AI: GPT-4o Mini
+                  </div>
+                  <div style={{marginTop:6, padding:'6px 12px', borderRadius:8, fontSize:11, fontWeight:700,
+                    background:C.proBadgeBg, color:C.proBadgeColor, textAlign:'center'}}>
+                    {isIT ? 'Passa a PRO \u2728' : 'Upgrade to PRO \u2728'}
+                  </div>
+                </>) : useOwnKeys ? (<>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Tutto di PRO incluso' : 'Everything in PRO'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Proprie chiavi API' : 'Your own API keys'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Scegli AI: Claude/GPT/Gemini' : 'Choose AI: Claude/GPT/Gemini'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'ElevenLabs con voce custom' : 'ElevenLabs with custom voice'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Costo zero piattaforma' : 'Zero platform cost'}
+                  </div>
+                </>) : (<>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Traduzione vocale illimitata' : 'Unlimited voice translation'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? 'Voci ElevenLabs HD' : 'ElevenLabs HD Voices'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:6}}>
+                    <span style={{color:C.freeBadgeColor}}>{'\u2705'}</span> {isIT ? '25 lingue, tutte le modalit\u00E0' : '25 languages, all modes'}
+                  </div>
+                  <div style={{fontSize:11, color:C.textMuted, display:'flex', alignItems:'center', gap:6}}>
+                    <span>{'\u{1F4B0}'}</span> {isIT ? `Credito: ${formatCredits(creditBalance)}` : `Credit: ${formatCredits(creditBalance)}`}
+                  </div>
+                  <div style={{fontSize:11, color:C.textMuted, display:'flex', alignItems:'center', gap:6}}>
+                    <span>{'\u{1F9E0}'}</span> AI: GPT-4o Mini ({isIT ? 'default' : 'default'})
+                  </div>
+                </>)}
+              </div>
+            </button>
+          );
+        })()}
 
         {/* ═══════════════════════════════════════
             CREA STANZA — elegant 3D door, no background

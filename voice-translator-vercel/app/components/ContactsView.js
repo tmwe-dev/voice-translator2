@@ -6,7 +6,8 @@ import Icon from './Icon.js';
 export default function ContactsView({
   L, S, prefs, contacts, contactsLoading, inviteCode, creditBalance = 0,
   fetchContacts, addContact, removeContact, createInvite, shareInvite,
-  acceptInvite, startPolling, handleStartChat, setView, status, theme
+  acceptInvite, startPolling, handleStartChat, setView, status, theme,
+  pickDeviceContacts, hasDeviceContacts
 }) {
   const isIT = L('createRoom') === 'Crea Stanza';
   const [addEmail, setAddEmail] = useState('');
@@ -19,6 +20,8 @@ export default function ContactsView({
   const [giftAmount, setGiftAmount] = useState(0);
   const [giftError, setGiftError] = useState('');
   const [inviteGiftAmount, setInviteGiftAmount] = useState(0); // amount attached to current invite
+  const [deviceImporting, setDeviceImporting] = useState(false);
+  const [deviceImportResult, setDeviceImportResult] = useState(null);
   const maxGift = Math.floor(creditBalance * 0.5);
 
   // Start polling contacts when view mounts
@@ -70,6 +73,58 @@ export default function ContactsView({
     if (result?.copied) {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2000);
+    }
+  }
+
+  async function handleImportDeviceContacts() {
+    if (!pickDeviceContacts) return;
+    setDeviceImporting(true);
+    setDeviceImportResult(null);
+    try {
+      const result = await pickDeviceContacts();
+      if (!result.supported) {
+        setDeviceImportResult({ error: isIT ? 'Rubrica non supportata su questo browser' : 'Address book not supported on this browser' });
+        return;
+      }
+      if (result.cancelled || !result.contacts?.length) {
+        setDeviceImporting(false);
+        return;
+      }
+      let added = 0, invited = 0, failed = 0;
+      for (const c of result.contacts) {
+        const email = c.email?.[0];
+        const phone = c.tel?.[0];
+        const name = c.name?.[0] || '';
+        if (email) {
+          const res = await addContact(email);
+          if (res.ok) { added++; }
+          else if (res.notRegistered) {
+            // Create invite and share via email
+            const inv = await createInvite(0);
+            if (inv?.ok) {
+              await shareInvite('email', inv.inviteCode, prefs.lang);
+              invited++;
+            }
+          } else { failed++; }
+        } else if (phone) {
+          // No email — share via SMS
+          const inv = await createInvite(0);
+          if (inv?.ok) {
+            await shareInvite('sms', inv.inviteCode, prefs.lang);
+            invited++;
+          }
+        }
+      }
+      setDeviceImportResult({
+        success: true,
+        added,
+        invited,
+        total: result.contacts.length
+      });
+    } catch (e) {
+      setDeviceImportResult({ error: e.message });
+    } finally {
+      setDeviceImporting(false);
     }
   }
 
@@ -137,6 +192,56 @@ export default function ContactsView({
           {addSuccess && (
             <div style={{fontSize:11, color:S.colors.onlineColor, marginTop:6}}>{addSuccess}</div>
           )}
+
+          {/* Import from device address book */}
+          <div style={{marginTop:12}}>
+            {hasDeviceContacts ? (
+              <button style={{
+                width:'100%', padding:'10px 14px', borderRadius:12,
+                background:`linear-gradient(135deg, ${S.colors.accent2Bg || S.colors.accent1Bg}, ${S.colors.accent4Bg || S.colors.accent1Bg})`,
+                border:`1px solid ${S.colors.accent2Border || S.colors.accent1Border}`,
+                color:S.colors.textPrimary, fontSize:13,
+                fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center',
+                justifyContent:'center', gap:8, opacity: deviceImporting ? 0.6 : 1
+              }}
+                onClick={handleImportDeviceContacts}
+                disabled={deviceImporting}>
+                <span style={{fontSize:16}}>{'📖'}</span>
+                {deviceImporting
+                  ? (isIT ? 'Importazione...' : 'Importing...')
+                  : (isIT ? 'Importa dalla Rubrica' : 'Import from Contacts')}
+              </button>
+            ) : (
+              <button style={{
+                width:'100%', padding:'10px 14px', borderRadius:12,
+                background:S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                color:S.colors.textPrimary, fontSize:13,
+                fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center',
+                justifyContent:'center', gap:8
+              }}
+                onClick={async () => {
+                  const inv = await createInvite(0);
+                  if (inv?.ok) {
+                    setCurrentInviteCode(inv.inviteCode);
+                    setShowInvite(true);
+                  }
+                }}>
+                <span style={{fontSize:16}}>{'🔗'}</span>
+                {isIT ? 'Condividi Link di Invito' : 'Share Invite Link'}
+              </button>
+            )}
+            {deviceImportResult && (
+              <div style={{fontSize:11, marginTop:6, padding:'6px 10px', borderRadius:8,
+                background: deviceImportResult.error ? S.colors.accent3Bg : S.colors.accent4Bg,
+                color: deviceImportResult.error ? S.colors.accent3 : S.colors.onlineColor}}>
+                {deviceImportResult.error
+                  ? deviceImportResult.error
+                  : (isIT
+                    ? `${deviceImportResult.added} aggiunti, ${deviceImportResult.invited} invitati su ${deviceImportResult.total} contatti`
+                    : `${deviceImportResult.added} added, ${deviceImportResult.invited} invited out of ${deviceImportResult.total} contacts`)}
+              </div>
+            )}
+          </div>
 
           {/* Gift credits section (only if user has credits) */}
           {creditBalance >= 100 && (

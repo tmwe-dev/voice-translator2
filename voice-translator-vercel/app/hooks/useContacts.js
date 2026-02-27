@@ -212,6 +212,26 @@ export default function useContacts({ userTokenRef }) {
     return contacts.find(c => c.email === contactEmail)?.online || false;
   }, [contacts]);
 
+  // Pick contacts from device address book (navigator.contacts API)
+  const pickDeviceContacts = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !('contacts' in navigator) || !('ContactsManager' in window)) {
+      return { supported: false };
+    }
+    try {
+      const picked = await navigator.contacts.select(
+        ['name', 'email', 'tel'],
+        { multiple: true }
+      );
+      return { supported: true, contacts: picked };
+    } catch (e) {
+      if (e.name === 'TypeError') return { supported: false };
+      return { supported: true, contacts: [], cancelled: true };
+    }
+  }, []);
+
+  // Check if device contacts API is available
+  const hasDeviceContacts = typeof navigator !== 'undefined' && 'contacts' in navigator && 'ContactsManager' in (typeof window !== 'undefined' ? window : {});
+
   return {
     contacts,
     contactsLoading,
@@ -224,5 +244,7 @@ export default function useContacts({ userTokenRef }) {
     acceptInvite,
     shareInvite,
     isContactOnline,
+    pickDeviceContacts,
+    hasDeviceContacts,
   };
 }

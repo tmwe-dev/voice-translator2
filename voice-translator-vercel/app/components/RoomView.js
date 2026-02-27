@@ -10,7 +10,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   elevenLabsVoices, selectedELVoice, setSelectedELVoice,
   showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
-  toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
+  toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, leaveRoomTemporary, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
   syncLangChange, theme, setTheme }) {
@@ -18,6 +18,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [showExitMenu, setShowExitMenu] = useState(false);
 
   const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
@@ -59,7 +60,28 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     <div style={S.roomPage}>
       {/* Header */}
       <div style={{...S.roomHeader, position:'relative'}}>
-        <button style={S.backBtnSmall} onClick={endChatAndSave} title={L('endChat')}>{'\u2716'}</button>
+        <div style={{position:'relative'}}>
+          <button style={S.backBtnSmall} onClick={() => setShowExitMenu(!showExitMenu)} title={L('endChat')}>{'\u2716'}</button>
+          {showExitMenu && (
+            <div style={{position:'absolute', top:'100%', left:0, zIndex:100, marginTop:4,
+              background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+              borderRadius:12, padding:4, minWidth:180, backdropFilter:'blur(12px)',
+              boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
+              <button onClick={() => { setShowExitMenu(false); if (leaveRoomTemporary) leaveRoomTemporary(); }}
+                style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 14px',
+                  background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
+                  fontSize:13, fontWeight:600, textAlign:'left'}}>
+                <span>{'\u{1F6AA}'}</span> {L('leaveTemp') || 'Esci temporaneamente'}
+              </button>
+              <button onClick={() => { setShowExitMenu(false); endChatAndSave(); }}
+                style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 14px',
+                  background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.statusError || '#FF6B6B',
+                  fontSize:13, fontWeight:600, textAlign:'left'}}>
+                <span>{'\u{1F4BE}'}</span> {L('closeArchive') || 'Chiudi e archivia'}
+              </button>
+            </div>
+          )}
+        </div>
         <div style={{position:'absolute', left:'50%', transform:'translateX(-50%)', display:'flex', alignItems:'center', gap:8}}>
           <button onClick={() => setShowLangPicker(!showLangPicker)}
             style={{fontSize:18, background:'none', border:'none', cursor:'pointer', padding:'2px 6px',

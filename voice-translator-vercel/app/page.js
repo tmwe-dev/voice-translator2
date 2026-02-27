@@ -491,6 +491,59 @@ export default function Home() {
     setView('home');
   }
 
+  function leaveRoomTemporary() {
+    if (!roomPolling.roomId) return;
+    // Save room to active rooms list in localStorage
+    try {
+      let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+      const roomData = {
+        roomId: roomPolling.roomId,
+        host: roomPolling.roomInfo?.host,
+        members: roomPolling.roomInfo?.members?.map(m => ({name: m.name, lang: m.lang, avatar: m.avatar})) || [],
+        mode: roomPolling.roomInfo?.mode || 'conversation',
+        leftAt: Date.now()
+      };
+      activeRooms = activeRooms.filter(r => r.roomId !== roomData.roomId);
+      activeRooms.unshift(roomData);
+      localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms.slice(0, 10)));
+    } catch {}
+    roomPolling.stopPolling();
+    roomPolling.leaveRoom();
+    setView('home');
+  }
+
+  async function rejoinRoom(rid) {
+    audio.unlockAudio();
+    try {
+      setStatus('...');
+      const room = await roomPolling.handleJoinRoom(rid, prefs.name, myLang, prefs.avatar);
+      roomInfoRef.current = room;
+      roomContextRef.current = { contextId: room.context || 'general', contextPrompt: room.contextPrompt || '', description: room.description || '' };
+      const hostTier = room.hostTier || 'FREE';
+      auth.roomTierOverrideRef.current = hostTier;
+      if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
+      else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
+      else { auth.setIsTrial(false); auth.setIsTopPro(false); }
+      // Remove from active rooms list since we're back in
+      try {
+        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        activeRooms = activeRooms.filter(r => r.roomId !== rid);
+        localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
+      } catch {}
+      setView('room');
+      setStatus('');
+    } catch (e) {
+      // Room expired or gone — remove from active rooms
+      try {
+        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        activeRooms = activeRooms.filter(r => r.roomId !== rid);
+        localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
+      } catch {}
+      setStatus('Chat terminata');
+      setTimeout(() => setStatus(''), 2000);
+    }
+  }
+
   async function viewConversation(convId) {
     setStatus('...');
     try {
@@ -631,7 +684,7 @@ export default function Home() {
       referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} logout={auth.logout}
       showInstallBanner={showInstallBanner} handleInstallApp={handleInstallApp} dismissInstallBanner={dismissInstallBanner}
       notifPermission={notifPermission} requestNotifPermission={requestNotifPermission}
-      deferredInstallPrompt={deferredInstallPrompt} />
+      deferredInstallPrompt={deferredInstallPrompt} rejoinRoom={rejoinRoom} />
   );
 
   if (view === 'join') return (
@@ -664,7 +717,7 @@ export default function Home() {
       sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}
       toggleRecording={translation.toggleRecording} cancelRecording={translation.cancelRecording}
       startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
-      endChatAndSave={endChatAndSave} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
+      endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
       freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
@@ -699,6 +752,8 @@ export default function Home() {
       shareInvite={contactsHook.shareInvite} acceptInvite={contactsHook.acceptInvite}
       startPolling={contactsHook.startPolling}
       handleStartChat={handleStartChatWithContact}
+      pickDeviceContacts={contactsHook.pickDeviceContacts}
+      hasDeviceContacts={contactsHook.hasDeviceContacts}
       setView={setView} status={status} theme={theme} />
   );
 
