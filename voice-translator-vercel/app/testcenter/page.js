@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { LANGS, FONT } from '../lib/constants.js';
 import { TEST_STRINGS, PRIORITY_PAIRS, SCENARIOS } from '../lib/testStrings.js';
 import { PROVIDERS } from '../lib/providers.js';
@@ -92,11 +92,22 @@ export default function TestCenterPage() {
     a.click(); URL.revokeObjectURL(url);
   }
 
+  // Override body overflow:hidden from layout.js so this page can scroll
+  useEffect(() => {
+    document.body.style.overflow = 'auto';
+    document.body.style.overflowY = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    return () => {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = '';
+    };
+  }, []);
+
   const sourceLangObj = LANGS.find(l => l.code === sourceLang) || LANGS[0];
   const targetLangObj = LANGS.find(l => l.code === targetLang) || LANGS[0];
 
   return (
-    <div style={{ fontFamily: FONT, background: '#0a0a0a', color: '#e4e4e7', minHeight: '100vh', padding: '20px' }}>
+    <div style={{ fontFamily: FONT, background: '#0a0a0a', color: '#e4e4e7', minHeight: '100vh', padding: '20px', overflowY: 'auto', WebkitOverflowScrolling: 'touch', position: 'relative' }}>
       {/* Header */}
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
