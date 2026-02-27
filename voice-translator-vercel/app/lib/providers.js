@@ -258,11 +258,19 @@ export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
   // Don't catch errors here — let them bubble up to tryProvider for error reporting
   const { translate } = await import('microsoft-translate-api');
   // API signature: translate(text, from, to, options)
+  // Returns: [{ translations: [{ text: "...", to: "xx" }] }]
   const result = await Promise.race([
     translate(text, sourceLang, targetLang),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 5s')), 5000))
   ]);
-  return result?.translation?.trim() || null;
+  // Extract translated text from Microsoft's response format
+  if (Array.isArray(result) && result[0]?.translations?.[0]?.text) {
+    return result[0].translations[0].text.trim();
+  }
+  // Fallback: try other possible response shapes
+  if (result?.translation) return result.translation.trim();
+  if (result?.text) return result.text.trim();
+  throw new Error('MS: unexpected response: ' + JSON.stringify(result).slice(0, 200));
 }
 
 /**
