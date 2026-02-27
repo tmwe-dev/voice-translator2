@@ -9,13 +9,31 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
-  freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs, theme, setTheme }) {
+  freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
+  syncLangChange, theme, setTheme }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
 
-  const partner = roomInfo?.members?.find(m => m.name !== prefs.name);
+  const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
+  const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
+
+  // Helper: get the best translation for the viewer's language from a message
+  function getTranslationForMe(msg) {
+    // Multi-lang: check translations object first
+    if (msg.translations && msg.translations[myLang]) {
+      return msg.translations[myLang];
+    }
+    // Backward compat: use single translated field
+    return msg.translated || '';
+  }
+
+  // Helper: find avatar for a specific sender
+  function getSenderAvatar(senderName) {
+    const member = roomInfo?.members?.find(m => m.name === senderName);
+    return member?.avatar || AVATARS[0];
+  }
   const roomMode = roomInfo?.mode || 'conversation';
   const isHost = roomInfo?.host === prefs.name;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
@@ -27,6 +45,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   function handleLangChange(langCode) {
     if (setMyLang) setMyLang(langCode);
     if (savePrefs) savePrefs({...prefs, lang: langCode});
+    // Sync language change to room so all participants see it via polling
+    if (syncLangChange) syncLangChange(langCode);
     setShowLangPicker(false);
   }
 
@@ -43,7 +63,15 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {myL.flag}
           </button>
           <span style={{color:S.colors.textTertiary, fontSize:16}}>{'\u21C4'}</span>
-          <span style={{fontSize:18}}>{otherL.flag}</span>
+          {otherMembers.length > 0 ? (
+            <span style={{fontSize:18, display:'flex', gap:2}}>
+              {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
+                <span key={i}>{flag}</span>
+              ))}
+            </span>
+          ) : (
+            <span style={{fontSize:18}}>{otherL.flag}</span>
+          )}
         </div>
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
@@ -259,10 +287,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         )}
         {messages.map((m, i) => {
           const isMine = m.sender === prefs.name;
+          const translationForMe = getTranslationForMe(m);
           return (
             <div key={m.id || i} style={{display:'flex', gap:8,
               flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end'}}>
-              <AvatarImg src={isMine ? prefs.avatar : (partner?.avatar || AVATARS[0])} size={56} style={{marginBottom:2}} />
+              <AvatarImg src={isMine ? prefs.avatar : getSenderAvatar(m.sender)} size={56} style={{marginBottom:2}} />
               <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
                 alignItems:isMine ? 'flex-end' : 'flex-start'}}>
                 <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:3}}>
@@ -270,10 +299,10 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 </div>
                 <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
                   <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
-                    {isMine ? m.original : m.translated}
+                    {isMine ? m.original : translationForMe}
                   </div>
                   <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
-                    {isMine ? m.translated : m.original}
+                    {isMine ? translationForMe : m.original}
                   </div>
                 </div>
                 <button onClick={() => playMessage(m)}

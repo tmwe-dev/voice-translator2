@@ -46,8 +46,21 @@ export default function useRoomPolling({
             for (const msg of newMsgs) {
               if (sentByMeRef.current.has(msg.id)) continue;
               if (msg.sender === prefsRef.current.name) continue;
-              if (msg.translated && prefsRef.current.autoPlay) {
-                queueAudio(msg.translated, getLang(msg.targetLang).speech, msg.id);
+              // Multi-language: pick translation for MY language
+              const myLang = myLangRef.current;
+              let textToPlay = '';
+              let speechLang = '';
+              if (msg.translations && msg.translations[myLang]) {
+                // Multi-lang message: use MY language translation
+                textToPlay = msg.translations[myLang];
+                speechLang = getLang(myLang).speech;
+              } else if (msg.translated) {
+                // Backward compat: use single translation
+                textToPlay = msg.translated;
+                speechLang = getLang(msg.targetLang).speech;
+              }
+              if (textToPlay && prefsRef.current.autoPlay) {
+                queueAudio(textToPlay, speechLang, msg.id);
               }
             }
           }
@@ -61,10 +74,13 @@ export default function useRoomPolling({
           const { room } = await rRes.json();
           setRoomInfo(room);
           setPartnerConnected(room.members.length >= 2);
-          const partner = room.members.find(m => m.name !== prefsRef.current.name);
-          setPartnerSpeaking(!!(partner && partner.speaking && Date.now() - partner.speakingAt < SPEAKING_TIMEOUT));
-          setPartnerLiveText(partner && partner.speaking && partner.liveText ? partner.liveText : '');
-          setPartnerTyping(!!(partner && partner.typing && Date.now() - (partner.typingAt || 0) < TYPING_TIMEOUT));
+          // Multi-member: check if ANY partner is speaking/typing
+          const others = room.members.filter(m => m.name !== prefsRef.current.name);
+          const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
+          const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
+          setPartnerSpeaking(anyoneSpeaking);
+          setPartnerLiveText(speakingPartner?.liveText || '');
+          setPartnerTyping(others.some(p => p.typing && Date.now() - (p.typingAt || 0) < TYPING_TIMEOUT));
         }
         // FASE 6B: Reset error count on success
         if (pollErrorCountRef.current > 0) {
@@ -124,6 +140,25 @@ export default function useRoomPolling({
       liveTextTimerRef.current = null;
       setSpeakingState(roomId, true, lastLiveTextRef.current);
     }, LIVE_TEXT_THROTTLE);
+  }
+
+  // Sync language change to room — all participants see the update via polling
+  async function syncLangChange(newLang) {
+    if (!roomId) return;
+    try {
+      await fetch('/api/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'changeLang',
+          roomId,
+          name: prefsRef.current.name,
+          lang: newLang,
+        })
+      });
+    } catch (e) {
+      console.error('[SyncLang] Error:', e);
+    }
   }
 
   function sendTypingState(isTyping) {
@@ -243,6 +278,7 @@ export default function useRoomPolling({
     setSpeakingState,
     broadcastLiveText,
     sendTypingState,
+    syncLangChange,
     handleCreateRoom,
     handleJoinRoom,
     leaveRoom,

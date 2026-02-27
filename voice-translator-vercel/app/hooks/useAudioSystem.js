@@ -4,6 +4,7 @@ import { getLang, AVATAR_NAMES, AVATARS } from '../lib/constants.js';
 
 export default function useAudioSystem({
   prefsRef,
+  myLangRef,
   isTrialRef,
   isTopProRef,
   selectedELVoice,
@@ -535,14 +536,26 @@ export default function useAudioSystem({
     unlockAudio();
     setPlayingMsgId(msg.id);
     try {
-      const text = msg.translated;
-      const lang = getLang(msg.targetLang).speech;
-      if (isTrialRef.current) {
-        await playEdgeTTS(text, lang);  // Edge TTS: FREE neural voices
-      } else if (isTopProRef.current) {
-        await playTTSElevenLabs(text, lang);
-      } else {
-        await playTTS(text, lang);
+      // Multi-lang: pick translation for MY language from translations object
+      const myLang = myLangRef?.current;
+      let text = '';
+      let speechLang = '';
+      if (myLang && msg.translations && msg.translations[myLang]) {
+        text = msg.translations[myLang];
+        speechLang = getLang(myLang).speech;
+      } else if (msg.translated) {
+        // Backward compat: single translation
+        text = msg.translated;
+        speechLang = getLang(msg.targetLang).speech;
+      }
+      if (text && speechLang) {
+        if (isTrialRef.current) {
+          await playEdgeTTS(text, speechLang);  // Edge TTS: FREE neural voices
+        } else if (isTopProRef.current) {
+          await playTTSElevenLabs(text, speechLang);
+        } else {
+          await playTTS(text, speechLang);
+        }
       }
     } catch (e) {
       console.error('[Audio] playMessage error:', e);

@@ -81,6 +81,7 @@ export default function Home() {
   const auth = useAuth();
   const audio = useAudioSystem({
     prefsRef,
+    myLangRef,
     isTrialRef: auth.isTrialRef,
     isTopProRef: auth.isTopProRef,
     selectedELVoice: auth.selectedELVoice,
@@ -661,7 +662,8 @@ export default function Home() {
       endChatAndSave={endChatAndSave} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
-      freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs} theme={theme} setTheme={setTheme} />
+      freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
+      syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme} />
   );
 
   if (view === 'history') return (

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode } from '../../lib/store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang } from '../../lib/store.js';
 import { redis } from '../../lib/redis.js';
 
 // POST /api/room - Create or join a room
@@ -37,6 +37,14 @@ export async function POST(req) {
     if (action === 'changeMode') {
       if (!roomId || !mode) return NextResponse.json({ error: 'roomId, mode required' }, { status: 400 });
       const room = await updateRoomMode(roomId, mode);
+      if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      return NextResponse.json({ room });
+    }
+
+    // ── Change member language (synced to all participants) ──
+    if (action === 'changeLang') {
+      if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
+      const room = await changeMemberLang(roomId, name, lang);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }

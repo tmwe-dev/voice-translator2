@@ -46,10 +46,17 @@ export async function joinRoom(id, name, lang, avatar = null) {
     room.members[existing].lang = lang;
     room.members[existing].joined = Date.now();
     room.members[existing].avatar = avatar;
-  } else if (room.members.length < 2) {
-    room.members.push({ name, lang, joined: Date.now(), role: 'guest', avatar });
   } else {
-    room.members[1] = { name, lang, joined: Date.now(), role: 'guest', avatar };
+    // Allow up to 10 members for multi-language group chat
+    if (room.members.length < 10) {
+      room.members.push({ name, lang, joined: Date.now(), role: 'guest', avatar });
+    } else {
+      // Room full — replace oldest non-host member
+      const oldestGuest = room.members.findIndex(m => m.role !== 'host');
+      if (oldestGuest >= 0) {
+        room.members[oldestGuest] = { name, lang, joined: Date.now(), role: 'guest', avatar };
+      }
+    }
   }
 
   await redis('SET', key, JSON.stringify(room), 'EX', 7200);
@@ -103,6 +110,20 @@ export async function updateRoomMode(roomId, newMode) {
   if (!data) return null;
   const room = JSON.parse(data);
   room.mode = newMode;
+  await redis('SET', key, JSON.stringify(room), 'EX', 7200);
+  return room;
+}
+
+export async function changeMemberLang(roomId, memberName, newLang) {
+  const key = `room:${roomId.toUpperCase()}`;
+  const data = await redis('GET', key);
+  if (!data) return null;
+  const room = JSON.parse(data);
+  const member = room.members.find(m => m.name === memberName);
+  if (member) {
+    member.lang = newLang;
+    member.langChangedAt = Date.now(); // timestamp for sync detection
+  }
   await redis('SET', key, JSON.stringify(room), 'EX', 7200);
   return room;
 }

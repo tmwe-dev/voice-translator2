@@ -86,7 +86,7 @@ export default function useTranslation({
   // =============================================
   // Send Message
   // =============================================
-  async function sendMessage(original, translated, sourceLang, targetLang) {
+  async function sendMessage(original, translated, sourceLang, targetLang, translations) {
     if (!roomId) return null;
     try {
       const res = await fetch('/api/messages', {
@@ -98,7 +98,8 @@ export default function useTranslation({
           original,
           translated,
           sourceLang,
-          targetLang
+          targetLang,
+          translations: translations || null, // Multi-language: { "en": "Hello", "th": "สวัสดี" }
         })
       });
       if (res.ok) {
@@ -193,6 +194,71 @@ export default function useTranslation({
     }
     if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
     return { myL, otherL: getLang(otherLangCode) };
+  }
+
+  /**
+   * Get ALL unique target languages from room members (excluding sender's lang).
+   * For multi-language group chat: translate once per unique target language.
+   */
+  function getAllTargetLangs() {
+    const currentMyLang = myLangRef.current;
+    const currentRoomInfo = roomInfoRef.current;
+    const currentPrefs = prefsRef.current;
+    const myL = getLang(currentMyLang);
+
+    if (!currentRoomInfo?.members) {
+      // Fallback for no room info
+      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
+      return { myL, targetLangs: [getLang(fallbackCode)] };
+    }
+
+    // Collect all unique languages from other members
+    const uniqueLangCodes = new Set();
+    for (const m of currentRoomInfo.members) {
+      if (m.name !== currentPrefs.name && m.lang && m.lang !== currentMyLang) {
+        uniqueLangCodes.add(m.lang);
+      }
+    }
+
+    // If no other languages found (maybe same lang or alone), fallback
+    if (uniqueLangCodes.size === 0) {
+      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
+      return { myL, targetLangs: [getLang(fallbackCode)] };
+    }
+
+    const targetLangs = [...uniqueLangCodes].map(code => getLang(code));
+    return { myL, targetLangs };
+  }
+
+  /**
+   * Translate text to ALL target languages in parallel.
+   * Returns { translations: { "en": "Hello", "th": "สวัสดี" }, primaryTranslated, primaryTargetLang }
+   */
+  async function translateToAllTargets(text, myL, targetLangs, options = {}) {
+    // Translate to all target languages in parallel
+    const results = await Promise.allSettled(
+      targetLangs.map(tL =>
+        translateUniversal(text, myL.code, tL.code, myL.name, tL.name, options)
+          .then(data => ({ langCode: tL.code, translated: data.translated || '' }))
+          .catch(() => ({ langCode: tL.code, translated: '' }))
+      )
+    );
+
+    const translations = {};
+    let primaryTranslated = '';
+    let primaryTargetLang = targetLangs[0]?.code || 'en';
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.translated) {
+        translations[r.value.langCode] = r.value.translated;
+        if (!primaryTranslated) {
+          primaryTranslated = r.value.translated;
+          primaryTargetLang = r.value.langCode;
+        }
+      }
+    }
+
+    return { translations, primaryTranslated, primaryTargetLang };
   }
 
   // =============================================
@@ -433,22 +499,39 @@ export default function useTranslation({
       return;
     }
 
-    // ── ONE single translation call ──
-    const { myL, otherL } = getTargetLangInfo();
-    let finalTranslation = '';
+    // ── Multi-language translation — translate to ALL target languages ──
+    const { myL, targetLangs } = getAllTargetLangs();
+    const translateOpts = {
+      domainContext: roomContextRef.current.contextPrompt || undefined,
+      description: roomContextRef.current.description || undefined,
+    };
+
+    let translations = {};
+    let primaryTranslated = '';
+    let primaryTargetLang = targetLangs[0]?.code || 'en';
 
     try {
-      const data = await translateUniversal(allOriginal, myL.code, otherL.code, myL.name, otherL.name, {
-        domainContext: roomContextRef.current.contextPrompt || undefined,
-        description: roomContextRef.current.description || undefined
-      });
-      if (data.translated) finalTranslation = data.translated;
+      if (targetLangs.length === 1) {
+        // Single target — faster path (no parallel overhead)
+        const data = await translateUniversal(allOriginal, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
+        if (data.translated) {
+          primaryTranslated = data.translated;
+          primaryTargetLang = targetLangs[0].code;
+          translations[targetLangs[0].code] = data.translated;
+        }
+      } else {
+        // Multiple targets — translate in parallel
+        const result = await translateToAllTargets(allOriginal, myL, targetLangs, translateOpts);
+        translations = result.translations;
+        primaryTranslated = result.primaryTranslated;
+        primaryTargetLang = result.primaryTargetLang;
+      }
     } catch (e) {
       console.error('[Translate] Error:', e);
     }
 
     // If translation failed entirely, try audio fallback
-    if (!finalTranslation && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
+    if (!primaryTranslated && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       setStreamingMsg(null);
       allWordsRef.current = '';
       stoppingRef.current = false;
@@ -459,9 +542,9 @@ export default function useTranslation({
     // Clear streaming bubble BEFORE sending
     setStreamingMsg(null);
 
-    // Send message (fire-and-forget for speed)
-    if (finalTranslation && roomId) {
-      sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
+    // Send message with all translations
+    if (primaryTranslated && roomId) {
+      sendMessage(allOriginal, primaryTranslated, myL.code, primaryTargetLang, translations).catch(() => {});
     }
 
     allWordsRef.current = '';
@@ -513,13 +596,14 @@ export default function useTranslation({
   // Process audio blob (Whisper STT + translate)
   // =============================================
   async function processAndSendAudio(blob) {
-    const { myL, otherL } = getTargetLangInfo();
+    const { myL, targetLangs } = getAllTargetLangs();
+    const primaryTarget = targetLangs[0];
     const form = new FormData();
     form.append('audio', blob, 'audio.webm');
     form.append('sourceLang', myL.code);
-    form.append('targetLang', otherL.code);
+    form.append('targetLang', primaryTarget.code);
     form.append('sourceLangName', myL.name);
-    form.append('targetLangName', otherL.name);
+    form.append('targetLangName', primaryTarget.name);
     if (roomId) form.append('roomId', roomId);
     if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
@@ -531,7 +615,25 @@ export default function useTranslation({
     if (!res.ok) throw new Error('Server error');
     const { original, translated } = await res.json();
     if (original && roomId) {
-      await sendMessage(original, translated, myL.code, otherL.code);
+      // Multi-lang: translate to remaining target languages if needed
+      let translations = { [primaryTarget.code]: translated || '' };
+      if (targetLangs.length > 1 && original) {
+        const otherTargets = targetLangs.slice(1);
+        const otherResults = await Promise.allSettled(
+          otherTargets.map(tL =>
+            translateUniversal(original, myL.code, tL.code, myL.name, tL.name, {
+              domainContext: roomContextRef.current.contextPrompt || undefined,
+            }).then(d => ({ langCode: tL.code, translated: d.translated || '' }))
+              .catch(() => ({ langCode: tL.code, translated: '' }))
+          )
+        );
+        for (const r of otherResults) {
+          if (r.status === 'fulfilled' && r.value.translated) {
+            translations[r.value.langCode] = r.value.translated;
+          }
+        }
+      }
+      await sendMessage(original, translated, myL.code, primaryTarget.code, translations);
     }
   }
 
@@ -590,16 +692,32 @@ export default function useTranslation({
     if (!textInput.trim() || sendingText || !roomId) return;
     setSendingText(true);
     try {
-      const { myL, otherL } = getTargetLangInfo();
-      const data = await translateUniversal(
-        textInput.trim(), myL.code, otherL.code, myL.name, otherL.name,
-        {
-          domainContext: roomContextRef.current.contextPrompt || undefined,
-          description: roomContextRef.current.description || undefined
+      const { myL, targetLangs } = getAllTargetLangs();
+      const translateOpts = {
+        domainContext: roomContextRef.current.contextPrompt || undefined,
+        description: roomContextRef.current.description || undefined,
+      };
+      const trimText = textInput.trim();
+      let translations = {};
+      let primaryTranslated = '';
+      let primaryTargetLang = targetLangs[0]?.code || 'en';
+
+      if (targetLangs.length === 1) {
+        const data = await translateUniversal(trimText, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
+        if (data.translated) {
+          primaryTranslated = data.translated;
+          primaryTargetLang = targetLangs[0].code;
+          translations[targetLangs[0].code] = data.translated;
         }
-      );
-      if (data.translated) {
-        await sendMessage(textInput.trim(), data.translated, myL.code, otherL.code);
+      } else {
+        const result = await translateToAllTargets(trimText, myL, targetLangs, translateOpts);
+        translations = result.translations;
+        primaryTranslated = result.primaryTranslated;
+        primaryTargetLang = result.primaryTargetLang;
+      }
+
+      if (primaryTranslated) {
+        await sendMessage(trimText, primaryTranslated, myL.code, primaryTargetLang, translations);
         setTextInput('');
         if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       }
@@ -729,26 +847,37 @@ export default function useTranslation({
                 const allOriginal = allWordsRef.current.trim();
                 if (allOriginal) {
                   freeTalkSendingRef.current = true;
-                  const { myL, otherL } = getTargetLangInfo();
+                  const { myL, targetLangs } = getAllTargetLangs();
+                  const ftOpts = {
+                    domainContext: roomContextRef.current.contextPrompt || undefined,
+                    description: roomContextRef.current.description || undefined,
+                  };
 
-                  // ONE single translation call
-                  let finalTranslation = '';
+                  // Multi-language translation
+                  let translations = {};
+                  let primaryTranslated = '';
+                  let primaryTargetLang = targetLangs[0]?.code || 'en';
                   try {
-                    const data = await translateUniversal(
-                      allOriginal, myL.code, otherL.code, myL.name, otherL.name,
-                      {
-                        domainContext: roomContextRef.current.contextPrompt || undefined,
-                        description: roomContextRef.current.description || undefined
+                    if (targetLangs.length === 1) {
+                      const data = await translateUniversal(allOriginal, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, ftOpts);
+                      if (data.translated) {
+                        primaryTranslated = data.translated;
+                        primaryTargetLang = targetLangs[0].code;
+                        translations[targetLangs[0].code] = data.translated;
                       }
-                    );
-                    if (data.translated) finalTranslation = data.translated;
+                    } else {
+                      const result = await translateToAllTargets(allOriginal, myL, targetLangs, ftOpts);
+                      translations = result.translations;
+                      primaryTranslated = result.primaryTranslated;
+                      primaryTargetLang = result.primaryTargetLang;
+                    }
                   } catch (e) {
                     console.error('[FreeTalk] Translation error:', e);
                   }
 
                   setStreamingMsg(null);
-                  if (finalTranslation) {
-                    sendMessage(allOriginal, finalTranslation, myL.code, otherL.code).catch(() => {});
+                  if (primaryTranslated) {
+                    sendMessage(allOriginal, primaryTranslated, myL.code, primaryTargetLang, translations).catch(() => {});
                   }
                   allWordsRef.current = '';
                   freeTalkSendingRef.current = false;
