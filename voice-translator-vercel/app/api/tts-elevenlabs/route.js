@@ -4,8 +4,23 @@ import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 
-// Languages NOT supported by eleven_multilingual_v2 (need v3 or flash_v2_5)
+// ═══════════════════════════════════════════════
+// FASE 4: ElevenLabs Flash v2.5 + adaptive stability
+//
+// Model hierarchy (by latency):
+// 1. eleven_flash_v2_5 — 75ms latency, great quality, DEFAULT
+// 2. eleven_multilingual_v2 — ~300ms latency, broader language support
+// 3. eleven_v3 — latest, best for uncommon languages
+//
+// Languages NOT supported by flash_v2_5 (need v3 or multilingual_v2)
+// ═══════════════════════════════════════════════
 const V3_ONLY_LANGS = new Set(['th', 'vi', 'hu']);
+// Languages where Flash v2.5 works well (Latin + common Asian)
+const FLASH_SUPPORTED_LANGS = new Set([
+  'en', 'es', 'fr', 'de', 'it', 'pt', 'nl', 'pl', 'sv', 'tr',
+  'id', 'ms', 'cs', 'ro', 'fi', 'el', 'ru',
+  'zh', 'ja', 'ko', 'ar', 'hi'
+]);
 
 // ElevenLabs language_code mapping (ISO 639-1 → ElevenLabs code)
 const LANG_CODES = {
@@ -69,12 +84,25 @@ export async function POST(req) {
       || (avatarName && AVATAR_VOICE_MAP[avatarName])
       || FEMALE_VOICES.default;
 
-    // Choose model: v3 for Thai/Vietnamese/Hungarian, multilingual_v2 for others
+    // ── FASE 4: Model selection with Flash v2.5 as default ──
     const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
-    const modelId = V3_ONLY_LANGS.has(lang2) ? 'eleven_v3' : 'eleven_multilingual_v2';
+    let modelId;
+    if (V3_ONLY_LANGS.has(lang2)) {
+      modelId = 'eleven_v3';
+    } else if (FLASH_SUPPORTED_LANGS.has(lang2)) {
+      modelId = 'eleven_flash_v2_5'; // 75ms latency — 4x faster than multilingual_v2
+    } else {
+      modelId = 'eleven_multilingual_v2'; // fallback for any unlisted language
+    }
 
     // Map language code for pronunciation
     const elLangCode = LANG_CODES[lang2] || undefined;
+
+    // ── Adaptive voice settings for tonal languages ──
+    // Tonal languages need higher stability to preserve tone accuracy
+    const TONAL_LANGS = new Set(['th', 'zh', 'vi', 'ja']);
+    const stability = TONAL_LANGS.has(lang2) ? 0.75 : 0.65;
+    const similarityBoost = TONAL_LANGS.has(lang2) ? 0.85 : 0.80;
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
       method: 'POST',
@@ -88,8 +116,8 @@ export async function POST(req) {
         model_id: modelId,
         language_code: elLangCode,
         voice_settings: {
-          stability: 0.65,
-          similarity_boost: 0.80,
+          stability,
+          similarity_boost: similarityBoost,
           style: 0.0,
           use_speaker_boost: true
         }
@@ -100,21 +128,24 @@ export async function POST(req) {
       const errText = await response.text().catch(() => 'Unknown error');
       console.error('ElevenLabs TTS error:', response.status, errText);
 
-      // If v3 fails, fallback to multilingual_v2
-      if (modelId === 'eleven_v3') {
-        console.log('v3 failed, trying multilingual_v2 fallback');
+      // Fallback chain: flash_v2_5 → multilingual_v2 → v3, or v3 → multilingual_v2
+      const fallbackModel = modelId === 'eleven_v3' ? 'eleven_multilingual_v2'
+        : modelId === 'eleven_flash_v2_5' ? 'eleven_multilingual_v2'
+        : null;
+
+      if (fallbackModel) {
+        console.log(`${modelId} failed, trying ${fallbackModel} fallback`);
         const fallback = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
           method: 'POST',
           headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
           body: JSON.stringify({
-            text: text.trim(), model_id: 'eleven_multilingual_v2',
+            text: text.trim(), model_id: fallbackModel,
             language_code: elLangCode,
-            voice_settings: { stability: 0.65, similarity_boost: 0.80, style: 0.0, use_speaker_boost: true }
+            voice_settings: { stability, similarity_boost: similarityBoost, style: 0.0, use_speaker_boost: true }
           })
         });
         if (fallback.ok) {
           const buf = Buffer.from(await fallback.arrayBuffer());
-          // Deduct cost
           if (billingEmail && !isOwnKey) {
             const cost = usdToEurCents(calcElevenLabsCost(text.trim().length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);

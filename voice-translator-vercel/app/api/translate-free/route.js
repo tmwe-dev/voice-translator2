@@ -6,9 +6,9 @@ import { redis } from '../../lib/redis.js';
 //
 // Strategy (in order of preference):
 // 1. Redis cache → instant, best latency
-// 2. MyMemory API → good for common language pairs
-// 3. LibreTranslate fallback → better for uncommon pairs
-// 4. Google Translate scrape → last resort fallback
+// 2. Google Translate → best quality, especially for Asian languages
+// 3. MyMemory API → good for European language pairs
+// 4. LibreTranslate → fallback for when both above fail
 //
 // Quality gates:
 // - Script validation (e.g., Thai output must contain Thai chars)
@@ -79,6 +79,34 @@ function validateTranslation(original, translated, sourceLang, targetLang) {
   }
 
   return { valid: true, reason: 'ok' };
+}
+
+// ═══════════════════════════════════════════════
+// FASE 9: Google Translate (free, unofficial API)
+// Much better quality than MyMemory for Asian languages
+// ═══════════════════════════════════════════════
+async function tryGoogleTranslate(text, sourceLang, targetLang) {
+  try {
+    // Google Translate unofficial API — no key needed, rate limited
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+      signal: AbortSignal.timeout(4000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Response format: [[["translated text","original text",null,null,10]],null,"en"]
+    if (Array.isArray(data) && Array.isArray(data[0])) {
+      const translated = data[0].map(seg => seg[0]).join('');
+      return translated?.trim() || null;
+    }
+    return null;
+  } catch (e) {
+    console.error('[GoogleTranslate] Error:', e.message);
+    return null;
+  }
 }
 
 // Try LibreTranslate as fallback
@@ -165,61 +193,69 @@ export async function POST(req) {
       }
     }
 
-    // ── Try MyMemory first ──
-    let myMemoryResult = null;
-    let myMemoryMatch = 0;
-    try {
-      const langpair = `${sourceLang}|${targetLang}`;
-      const url = `${MYMEMORY_URL}?q=${encodeURIComponent(trimmed)}&langpair=${langpair}&de=${encodeURIComponent(myMemoryEmail)}`;
-
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'VoiceTranslator/2.0' },
-        signal: AbortSignal.timeout(4000) // 4s timeout
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-
-        // Check for limit exceeded
-        if (data.responseStatus === 429 ||
-            (data.responseData?.translatedText || '').includes('MYMEMORY WARNING')) {
-          return NextResponse.json({
-            translated: trimmed,
-            fallback: true,
-            limitExceeded: true,
-            charsUsed: 0,
-            dailyLimit: FREE_DAILY_LIMIT
-          }, { headers: CORS_HEADERS });
-        }
-
-        myMemoryResult = data.responseData?.translatedText || '';
-        myMemoryMatch = data.responseData?.match || 0;
-      }
-    } catch (e) {
-      console.error('[MyMemory] Error:', e.message);
-    }
-
-    // ── Validate MyMemory result ──
+    // ═══════════════════════════════════════════════
+    // FASE 9: Provider chain (in priority order):
+    // 1. Google Translate — best quality, especially for Asian languages
+    // 2. MyMemory API — good for European pairs with high match score
+    // 3. LibreTranslate — fallback for when both above fail
+    // ═══════════════════════════════════════════════
     let finalTranslated = null;
     let provider = 'unknown';
+    let myMemoryMatch = 0;
 
-    if (myMemoryResult) {
-      const validation = validateTranslation(trimmed, myMemoryResult, sourceLang, targetLang);
-
-      if (validation.valid && myMemoryMatch >= 0.5) {
-        // Good quality from MyMemory
-        finalTranslated = myMemoryResult.trim();
-        provider = 'mymemory';
-      } else if (validation.valid && myMemoryMatch >= 0.3) {
-        // Acceptable quality — use but don't cache long
-        finalTranslated = myMemoryResult.trim();
-        provider = 'mymemory-low';
+    // ── 1. Try Google Translate first (best quality for free) ──
+    const googleResult = await tryGoogleTranslate(trimmed, sourceLang, targetLang);
+    if (googleResult) {
+      const validation = validateTranslation(trimmed, googleResult, sourceLang, targetLang);
+      if (validation.valid) {
+        finalTranslated = googleResult;
+        provider = 'google';
       } else {
-        console.log(`[MyMemory] Rejected: match=${myMemoryMatch}, reason=${validation.reason}, text="${trimmed.substring(0, 50)}"`);
+        console.log(`[GoogleTranslate] Rejected: reason=${validation.reason}, text="${trimmed.substring(0, 50)}"`);
       }
     }
 
-    // ── Fallback to LibreTranslate if MyMemory failed ──
+    // ── 2. Try MyMemory if Google failed ──
+    if (!finalTranslated) {
+      try {
+        const langpair = `${sourceLang}|${targetLang}`;
+        const url = `${MYMEMORY_URL}?q=${encodeURIComponent(trimmed)}&langpair=${langpair}&de=${encodeURIComponent(myMemoryEmail)}`;
+
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'VoiceTranslator/2.0' },
+          signal: AbortSignal.timeout(4000)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+
+          if (data.responseStatus === 429 ||
+              (data.responseData?.translatedText || '').includes('MYMEMORY WARNING')) {
+            // MyMemory rate limited — not a global limit, continue to LibreTranslate
+          } else {
+            const myMemoryResult = data.responseData?.translatedText || '';
+            myMemoryMatch = data.responseData?.match || 0;
+
+            if (myMemoryResult) {
+              const validation = validateTranslation(trimmed, myMemoryResult, sourceLang, targetLang);
+              if (validation.valid && myMemoryMatch >= 0.5) {
+                finalTranslated = myMemoryResult.trim();
+                provider = 'mymemory';
+              } else if (validation.valid && myMemoryMatch >= 0.3) {
+                finalTranslated = myMemoryResult.trim();
+                provider = 'mymemory-low';
+              } else {
+                console.log(`[MyMemory] Rejected: match=${myMemoryMatch}, reason=${validation.reason}`);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[MyMemory] Error:', e.message);
+      }
+    }
+
+    // ── 3. Fallback to LibreTranslate ──
     if (!finalTranslated) {
       const libreResult = await tryLibreTranslate(trimmed, sourceLang, targetLang);
       if (libreResult) {

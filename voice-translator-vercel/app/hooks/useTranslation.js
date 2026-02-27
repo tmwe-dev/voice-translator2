@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD } from '../lib/constants.js';
+import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, isWhisperPrimaryLang, STT_CONFIDENCE_THRESHOLD, STT_LOW_CONFIDENCE_COUNT } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -52,6 +52,11 @@ export default function useTranslation({
   const streamingModeRef = useRef(false);
   const stoppingRef = useRef(false);
   const freeTalkSendingRef = useRef(false);
+
+  // Whisper-only mode ref (for languages where browser STT is unreliable)
+  const whisperOnlyRef = useRef(false);
+  // Confidence monitoring refs (auto-switch to Whisper if STT quality drops)
+  const lowConfidenceCountRef = useRef(0);
 
   // Backup recording refs (for audio fallback when speech recognition fails)
   const backupRecRef = useRef(null);
@@ -176,6 +181,25 @@ export default function useTranslation({
     for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
         let text = event.results[i][0].transcript.trim();
+        const confidence = event.results[i][0].confidence;
+
+        // ── FASE 7: Confidence monitoring ──
+        // Track low-confidence results — if too many consecutive, the session
+        // will auto-fallback to Whisper on next recording via whisperOnlyRef
+        if (typeof confidence === 'number' && confidence > 0) {
+          if (confidence < STT_CONFIDENCE_THRESHOLD) {
+            lowConfidenceCountRef.current++;
+            console.log(`[STT] Low confidence: ${confidence.toFixed(2)} (${lowConfidenceCountRef.current}/${STT_LOW_CONFIDENCE_COUNT})`);
+            if (lowConfidenceCountRef.current >= STT_LOW_CONFIDENCE_COUNT) {
+              console.warn(`[STT] Auto-switching to Whisper-only mode — ${STT_LOW_CONFIDENCE_COUNT} consecutive low-confidence results`);
+              whisperOnlyRef.current = true;
+            }
+          } else {
+            // Reset counter on good confidence
+            lowConfidenceCountRef.current = 0;
+          }
+        }
+
         // Chrome sends duplicates at the same index — skip those
         const key = i + ':' + text;
         if (text && !processedFinals.has(key)) {
@@ -231,7 +255,18 @@ export default function useTranslation({
   // =============================================
   async function startStreamingTranslation() {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
+    const currentLang = myLangRef.current;
+
+    // ── FASE 1b: Hybrid STT routing ──
+    // For Asian/tonal languages where browser SpeechRecognition is unreliable,
+    // OR if auto-switched to Whisper due to low confidence,
+    // skip SpeechRecognition entirely — use only MediaRecorder → Whisper
+    const useWhisperOnly = isWhisperPrimaryLang(currentLang) || whisperOnlyRef.current;
+
+    if (!SpeechRecognition || useWhisperOnly) {
+      if (useWhisperOnly && !isTrialRef.current) {
+        console.log(`[STT] Whisper-only mode for lang=${currentLang} (whisperPrimary=${isWhisperPrimaryLang(currentLang)}, autoSwitch=${whisperOnlyRef.current})`);
+      }
       startClassicRecording();
       return;
     }
@@ -244,6 +279,7 @@ export default function useTranslation({
     lastInterimRef.current = '';
     streamingModeRef.current = true;
     backupChunksRef.current = [];
+    lowConfidenceCountRef.current = 0;
     // Only show original (what user is saying) — no translation preview
     setStreamingMsg({ original: '', translated: null, isStreaming: true });
 
@@ -272,15 +308,36 @@ export default function useTranslation({
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = getLang(myLangRef.current).speech;
+    recognition.lang = getLang(currentLang).speech;
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
     speechRecRef.current = recognition;
 
     let processedFinals = new Set();
+    let errorCount = 0;
     recognition.onresult = (event) => handleSpeechResult(event, processedFinals);
-    recognition.onerror = () => {};
+
+    // ── FASE 7: Error handling ──
+    recognition.onerror = (event) => {
+      const err = event.error;
+      // 'no-speech' is normal (user paused) — don't count
+      if (err === 'no-speech') return;
+      errorCount++;
+      console.warn(`[STT] SpeechRecognition error: ${err} (count=${errorCount})`);
+
+      // After 3 non-trivial errors, auto-switch to Whisper for this session
+      if (errorCount >= 3 && !whisperOnlyRef.current) {
+        console.warn('[STT] Too many errors — enabling Whisper-only mode for this session');
+        whisperOnlyRef.current = true;
+      }
+
+      // 'not-allowed' or 'service-not-available' are fatal — stop trying
+      if (err === 'not-allowed' || err === 'service-not-available') {
+        streamingModeRef.current = false;
+      }
+    };
+
     recognition.onend = () => {
       if (streamingModeRef.current) {
         processedFinals = new Set();
@@ -534,6 +591,12 @@ export default function useTranslation({
     if (isListening) return;
     unlockAudio();
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const currentLang = myLangRef.current;
+
+    // ── FASE 1b: Hybrid STT for FreeTalk ──
+    const useWhisperOnly = isWhisperPrimaryLang(currentLang) || whisperOnlyRef.current;
+    const canUseBrowserSTT = SpeechRecognition && !useWhisperOnly;
+
     try {
       const stream = await getMicStream();
       vadStreamRef.current = stream;
@@ -555,20 +618,33 @@ export default function useTranslation({
       const threshold = VAD_THRESHOLD;
       const silenceDelay = SILENCE_DELAY;
 
-      if (SpeechRecognition) {
+      if (canUseBrowserSTT) {
         allWordsRef.current = '';
         streamingModeRef.current = true;
+        lowConfidenceCountRef.current = 0;
 
         const recognition = new SpeechRecognition();
-        recognition.lang = getLang(myLangRef.current).speech;
+        recognition.lang = getLang(currentLang).speech;
         recognition.interimResults = true;
         recognition.continuous = true;
         recognition.maxAlternatives = 1;
         speechRecRef.current = recognition;
 
         let ftProcessedFinals = new Set();
+        let ftErrorCount = 0;
         recognition.onresult = (event) => handleSpeechResult(event, ftProcessedFinals);
-        recognition.onerror = () => {};
+
+        // ── FASE 7: Error handling for FreeTalk ──
+        recognition.onerror = (event) => {
+          if (event.error === 'no-speech') return;
+          ftErrorCount++;
+          console.warn(`[STT-FreeTalk] Error: ${event.error} (count=${ftErrorCount})`);
+          if (ftErrorCount >= 3 && !whisperOnlyRef.current) {
+            console.warn('[STT-FreeTalk] Too many errors — enabling Whisper-only mode');
+            whisperOnlyRef.current = true;
+          }
+        };
+
         recognition.onend = () => {
           if (streamingModeRef.current && isListening) {
             ftProcessedFinals = new Set();
@@ -576,7 +652,10 @@ export default function useTranslation({
           }
         };
         recognition.start();
-        // NO reviewTimer
+      } else if (useWhisperOnly) {
+        console.log(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
+        // In Whisper-only mode, FreeTalk still uses VAD but records with MediaRecorder
+        // and sends chunks to Whisper on silence detection (handled in the check() loop below)
       }
 
       function check() {
@@ -591,11 +670,13 @@ export default function useTranslation({
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
-          if (SpeechRecognition) {
+          if (canUseBrowserSTT) {
+            // Browser STT mode: SpeechRecognition is already running
             if (!streamingMsg) setStreamingMsg({ original: '', translated: null, isStreaming: true });
             setRecording(true);
             if (roomId) setSpeakingState(roomId, true);
           } else {
+            // Whisper-only / no-SpeechRecognition mode: record with MediaRecorder
             const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
               ? 'audio/webm;codecs=opus'
               : MediaRecorder.isTypeSupported('audio/webm')
@@ -616,7 +697,8 @@ export default function useTranslation({
         } else if (avg <= threshold && isRec) {
           if (!silenceTimerRef.current) {
             silenceTimerRef.current = setTimeout(async () => {
-              if (SpeechRecognition) {
+              if (canUseBrowserSTT) {
+                // Browser STT mode: translate accumulated text
                 isRec = false;
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
@@ -649,6 +731,7 @@ export default function useTranslation({
                   freeTalkSendingRef.current = false;
                 }
               } else {
+                // Whisper-only mode: stop recording, blob goes to processAndSendAudio via onstop
                 if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
                 isRec = false;
                 setRecording(false);

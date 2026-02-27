@@ -257,10 +257,30 @@ export default function useAudioSystem({
   }
 
   // =============================================
+  // FASE 5: Voice availability check
+  // Returns quality info about browser TTS for a given language
+  // =============================================
+  function checkVoiceAvailability(lang) {
+    if (typeof speechSynthesis === 'undefined') return { available: false, quality: 'none' };
+    const voice = findBestVoice(lang);
+    if (!voice) return { available: false, quality: 'none' };
+    const name = voice.name.toLowerCase();
+    let quality = 'basic';
+    if (name.includes('google') || name.includes('microsoft') || name.includes('neural') || name.includes('natural')) {
+      quality = 'premium';
+    } else if (name.includes('enhanced') || name.includes('wavenet')) {
+      quality = 'good';
+    } else if (name.includes('compact') || name.includes('espeak')) {
+      quality = 'low';
+    }
+    return { available: true, quality, voiceName: voice.name };
+  }
+
+  // =============================================
   // OPENAI TTS (PRO tier) — with retry
   // =============================================
 
-  async function fetchTTSBlob(text, retries = 1) {
+  async function fetchTTSBlob(text, langCode, retries = 1) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch('/api/tts', {
@@ -269,6 +289,7 @@ export default function useAudioSystem({
           body: JSON.stringify({
             text,
             voice: prefsRef.current.voice || 'nova',
+            langCode: langCode || undefined,
             userToken: getEffectiveToken(),
             roomId: roomIdRef.current || undefined
           })
@@ -328,7 +349,7 @@ export default function useAudioSystem({
   async function playTTS(text, lang) {
     let blob;
     try {
-      blob = await fetchTTSBlob(text);
+      blob = await fetchTTSBlob(text, lang);
     } catch {
       // API failed after retry — fall back to browser
       await browserSpeak(text, lang);
@@ -497,6 +518,7 @@ export default function useAudioSystem({
     requestMicEarly,
     getPersistentAudio,
     persistentMicRef,
-    audioEnabledRef
+    audioEnabledRef,
+    checkVoiceAvailability
   };
 }

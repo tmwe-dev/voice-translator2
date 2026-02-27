@@ -121,8 +121,26 @@ export const STATUS_DISPLAY_TIME = 2000;    // ms to show status messages
 export const BROWSER_SPEAK_MIN_DURATION = 1500;
 export const BROWSER_SPEAK_CHAR_RATE = 80;
 
+// STT Engine Selection — languages where browser SpeechRecognition is unreliable
+// These languages use Whisper/gpt-4o-mini-transcribe as PRIMARY STT engine
+export const WHISPER_PRIMARY_LANGS = new Set([
+  'th',  // Thai — tonal, no spaces, browser STT very poor
+  'zh',  // Chinese — character-based, browser STT mediocre
+  'ja',  // Japanese — mixed scripts, browser STT inconsistent
+  'ko',  // Korean — browser STT acceptable but Whisper is much better
+  'ar',  // Arabic — RTL + diacritics, browser STT often fails
+  'hi',  // Hindi — Devanagari script, limited browser support
+  'vi',  // Vietnamese — tonal + diacritics, browser STT poor
+]);
+
+// Minimum confidence threshold for browser SpeechRecognition
+// Below this, auto-switch to Whisper fallback for the rest of the session
+export const STT_CONFIDENCE_THRESHOLD = 0.55;
+export const STT_LOW_CONFIDENCE_COUNT = 3; // consecutive low-confidence results before switching
+
 // Helpers
 export function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }
+export function isWhisperPrimaryLang(code) { return WHISPER_PRIMARY_LANGS.has(code); }
 
 export function vibrate(ms = 15) {
   try { if (navigator.vibrate) navigator.vibrate(ms); } catch {}

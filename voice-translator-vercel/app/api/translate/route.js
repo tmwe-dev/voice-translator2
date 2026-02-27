@@ -50,6 +50,21 @@ const MODEL_MAP = {
   'gemini-pro':     { actual: 'gemini-2.5-pro-preview-05-06', provider: 'gemini' },
 };
 
+// Language pair notes for problematic combinations — aligned with process/route.js
+const PAIR_NOTES = {
+  'it->th': 'Italian→Thai: very different structures. Thai is SVO with topic-comment. Rearrange naturally.',
+  'it->zh': 'Italian→Chinese: use measure words (量词) and topic-prominent structure. Sound native, not translated.',
+  'it->ja': 'Italian→Japanese: SOV order, use です/ます form unless very casual.',
+  'en->th': 'English→Thai: no verb conjugation/articles in Thai. Use particles (ค่ะ/ครับ) appropriately.',
+  'th->en': 'Thai→English: Thai is pro-drop. Infer and add appropriate pronouns.',
+  'zh->en': 'Chinese→English: restructure topic-comment to natural SVO.',
+  'th->it': 'Thai→Italian: add articles and conjugations that Thai lacks.',
+  'zh->it': 'Chinese→Italian: add articles, conjugations, restructure from topic-comment to SVO.',
+  'ja->en': 'Japanese→English: restructure SOV to SVO. Expand implied subjects.',
+  'ja->it': 'Japanese→Italian: restructure SOV, add articles and conjugations.',
+  'ko->en': 'Korean→English: restructure SOV to SVO, expand honorifics contextually.',
+};
+
 // Simple hash for cache key (first 32 chars of base64-encoded text)
 function getSimpleHash(text) {
   const encoded = Buffer.from(text).toString('base64');
@@ -141,6 +156,10 @@ RULES:
     if (description) systemPrompt += `\nTopic: ${description}`;
     if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;
 
+    // Add language pair notes for problematic combinations
+    const pairKey = `${sourceLang}->${targetLang}`;
+    if (PAIR_NOTES[pairKey]) systemPrompt += `\n\nLanguage pair note: ${PAIR_NOTES[pairKey]}`;
+
     // Build messages array — context goes as a prior assistant turn, NOT in system prompt
     const messages = [{ role: 'system', content: systemPrompt }];
     if (context) {
@@ -163,7 +182,7 @@ RULES:
       const anthropicMsgs = messages.filter(m => m.role !== 'system');
       const msg = await anthropic.messages.create({
         model: modelInfo.actual,
-        max_tokens: 400,
+        max_tokens: 500,
         system: systemPrompt,
         messages: anthropicMsgs,
       });
@@ -207,15 +226,50 @@ RULES:
       if (validation.reason === 'meta_text') {
         translated = translated.replace(/^(Translation:|Here is|Note:)\s*/i, '').trim();
       }
-      // If still invalid after cleanup, return original text as fallback
+      // If still invalid after cleanup, retry with gpt-4o (better for Asian languages)
       const recheck = validateOutput(text, translated, targetLang);
       if (!recheck.valid) {
-        return NextResponse.json({
-          translated: text, // Return original — better than garbage
-          cost: roundCost(calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 })),
-          costEurCents: 0,
-          validationFailed: true
-        });
+        if (modelInfo.actual !== 'gpt-4o') {
+          try {
+            console.log(`[Translate] Retrying with gpt-4o for ${targetLang}`);
+            // Need OpenAI key for retry — resolve if using different provider
+            let retryKey = apiKey;
+            if (modelInfo.provider !== 'openai') {
+              try {
+                const retryAuth = await resolveAuth({
+                  userToken, roomId, provider: 'openai',
+                  minCredits: 0, skipCreditCheck: true,
+                });
+                retryKey = retryAuth.apiKey;
+              } catch { /* use existing key */ }
+            }
+            const retryOpenai = new OpenAI({ apiKey: retryKey });
+            const retryCompletion = await retryOpenai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: text }],
+              temperature: 0.3,
+              max_tokens: 500
+            });
+            const retryTranslated = retryCompletion.choices[0].message.content.trim();
+            const retryValidation = validateOutput(text, retryTranslated, targetLang);
+            if (retryValidation.valid) {
+              translated = retryTranslated;
+              usage = retryCompletion.usage;
+            }
+          } catch (retryErr) {
+            console.error('[Translate] Retry with gpt-4o failed:', retryErr.message);
+          }
+        }
+        // Final check — if still invalid, return original
+        const finalCheck = validateOutput(text, translated, targetLang);
+        if (!finalCheck.valid) {
+          return NextResponse.json({
+            translated: text,
+            cost: roundCost(calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 })),
+            costEurCents: 0,
+            validationFailed: true
+          });
+        }
       }
     }
 
