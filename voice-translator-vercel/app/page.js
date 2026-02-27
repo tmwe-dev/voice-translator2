@@ -643,7 +643,12 @@ export default function Home() {
 
   if (view === 'welcome') return (
     <WelcomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs}
-      joinCode={joinCode} userToken={auth.userToken} setView={setView} setAuthStep={auth.setAuthStep} theme={theme} setTheme={setTheme} />
+      joinCode={joinCode} userToken={auth.userToken} setView={setView} setAuthStep={auth.setAuthStep} theme={theme} setTheme={setTheme}
+      sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
+      loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
+      authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
+      authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
+      authTestCode={auth.authTestCode} pendingReferralCode={auth.pendingReferralCode} />
   );
 
   if (view === 'account') return (

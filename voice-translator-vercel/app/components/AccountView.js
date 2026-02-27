@@ -7,6 +7,13 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
   authLoading, authTestCode, sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
   pendingReferralCode, setAuthStep, setView, status, theme, setTheme }) {
 
+  // Auto-redirect to home after successful auth (skip tier choose page)
+  useEffect(() => {
+    if (authStep === 'choose') {
+      setView('home');
+    }
+  }, [authStep, setView]);
+
   // Language detection
   const isIT = L('createRoom') === 'Crea Stanza';
   const googleInitRef = useRef(false);
