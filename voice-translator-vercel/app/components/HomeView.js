@@ -68,7 +68,8 @@ function getHomeColors(theme) {
       createBtnGrad: 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)',
       createBtnShadow: '0 6px 24px rgba(108,99,255,0.4), 0 2px 8px rgba(0,0,0,0.2)',
       // Invite
-      inviteBg: 'rgba(0,210,255,0.04)', inviteBorder: 'rgba(0,210,255,0.1)',
+      inviteBg: 'rgba(0,210,255,0.10)', inviteBorder: 'rgba(0,210,255,0.25)',
+      inviteText: '#FFFFFF', inviteDesc: 'rgba(255,255,255,0.70)',
       shareBtnBg: 'rgba(0,210,255,0.12)', shareBtnBorder: 'rgba(0,210,255,0.25)',
       // Referral
       refBg: 'rgba(255,107,157,0.04)', refBorder: 'rgba(255,107,157,0.1)',
@@ -119,7 +120,8 @@ function getHomeColors(theme) {
       ctxSelBg: 'rgba(90,82,224,0.08)',
       createBtnGrad: 'linear-gradient(135deg, #6C63FF 0%, #00A3C4 100%)',
       createBtnShadow: '0 6px 24px rgba(90,82,224,0.25), 0 2px 8px rgba(0,0,0,0.08)',
-      inviteBg: 'rgba(0,163,196,0.04)', inviteBorder: 'rgba(0,163,196,0.12)',
+      inviteBg: 'rgba(0,163,196,0.10)', inviteBorder: 'rgba(0,163,196,0.25)',
+      inviteText: '#1A1D3A', inviteDesc: 'rgba(26,29,58,0.65)',
       shareBtnBg: 'rgba(0,163,196,0.08)', shareBtnBorder: 'rgba(0,163,196,0.18)',
       refBg: 'rgba(224,82,122,0.04)', refBorder: 'rgba(224,82,122,0.10)',
       refBtnBg: 'rgba(224,82,122,0.08)', refBtnBorder: 'rgba(224,82,122,0.15)',
@@ -169,7 +171,8 @@ function getHomeColors(theme) {
       ctxSelBg: 'rgba(212,160,106,0.12)',
       createBtnGrad: 'linear-gradient(135deg, #D4A06A 0%, #E8B87A 100%)',
       createBtnShadow: '0 6px 24px rgba(212,160,106,0.35), 0 2px 8px rgba(0,0,0,0.2)',
-      inviteBg: 'rgba(232,184,122,0.04)', inviteBorder: 'rgba(232,184,122,0.1)',
+      inviteBg: 'rgba(232,184,122,0.10)', inviteBorder: 'rgba(232,184,122,0.25)',
+      inviteText: '#FFF5E8', inviteDesc: 'rgba(255,245,232,0.70)',
       shareBtnBg: 'rgba(232,184,122,0.12)', shareBtnBorder: 'rgba(232,184,122,0.25)',
       refBg: 'rgba(255,138,101,0.04)', refBorder: 'rgba(255,138,101,0.1)',
       refBtnBg: 'rgba(255,138,101,0.1)', refBtnBorder: 'rgba(255,138,101,0.2)',
@@ -219,7 +222,8 @@ function getHomeColors(theme) {
       ctxSelBg: 'rgba(255,140,0,0.12)',
       createBtnGrad: 'linear-gradient(135deg, #FF8C00 0%, #FFB347 100%)',
       createBtnShadow: '0 6px 24px rgba(255,140,0,0.4), 0 2px 8px rgba(0,0,0,0.2)',
-      inviteBg: 'rgba(255,179,71,0.04)', inviteBorder: 'rgba(255,179,71,0.1)',
+      inviteBg: 'rgba(255,179,71,0.10)', inviteBorder: 'rgba(255,179,71,0.25)',
+      inviteText: '#FFF8F0', inviteDesc: 'rgba(255,248,240,0.70)',
       shareBtnBg: 'rgba(255,179,71,0.12)', shareBtnBorder: 'rgba(255,179,71,0.25)',
       refBg: 'rgba(255,99,71,0.04)', refBorder: 'rgba(255,99,71,0.1)',
       refBtnBg: 'rgba(255,99,71,0.1)', refBtnBorder: 'rgba(255,99,71,0.2)',
@@ -870,14 +874,14 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         <button style={{width:'100%', maxWidth:400, marginBottom:8, padding:'12px 14px', borderRadius:16,
           background:C.inviteBg, border:`1px solid ${C.inviteBorder}`,
           display:'flex', alignItems:'center', gap:12, cursor:'pointer', fontFamily:FONT,
-          WebkitTapHighlightColor:'transparent', color:C.textPrimary}}
+          WebkitTapHighlightColor:'transparent', color:C.inviteText}}
           onClick={() => setShowShareApp(!showShareApp)}>
           <img src="/avatars/2.png" alt="" style={{width:42, height:42, objectFit:'contain', borderRadius:12}} />
           <div style={{flex:1, textAlign:'left'}}>
-            <div style={{fontWeight:700, fontSize:13, color:C.textPrimary}}>
+            <div style={{fontWeight:700, fontSize:13, color:C.inviteText}}>
               {L('inviteFriend') || 'Invita un amico'}
             </div>
-            <div style={{fontSize:10, color:C.textTertiary, marginTop:1}}>
+            <div style={{fontSize:10, color:C.inviteDesc, marginTop:1}}>
               {L('inviteFriendDesc') || 'Condividi VoiceTranslate con QR o link'}
             </div>
           </div>
