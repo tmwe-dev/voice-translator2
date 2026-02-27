@@ -6,7 +6,7 @@ import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
 import { addCost } from '../../lib/store.js';
-import { deductCredits } from '../../lib/users.js';
+import { deductCredits, deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, calcWhisperCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 
@@ -86,6 +86,7 @@ export async function POST(req) {
     const description = formData.get('description') || '';
     const userToken = formData.get('userToken') || '';
     const aiModel = formData.get('aiModel') || '';
+    const lendingCode = formData.get('lendingCode') || '';
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
@@ -95,9 +96,10 @@ export async function POST(req) {
       : modelInfo.provider === 'gemini' ? 'gemini' : 'openai';
 
     // 3-tier auth — always need OpenAI for STT, but translation may use different provider
-    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+    const { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
       userToken: userToken || undefined,
       roomId: roomId || undefined,
+      lendingCode: lendingCode || undefined,
       provider: 'openai',  // STT always uses OpenAI
       minCredits: MIN_CREDITS.PROCESS,
     });
@@ -275,6 +277,14 @@ RULES:
         if (updatedUser) remainingCredits = updatedUser.credits;
         await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Credit deduct error:', e); }
+    }
+
+    // Track lending token usage
+    if (isLending && lendingCodeUsed) {
+      try {
+        const tokenEstimate = Math.ceil(((original?.length || 0) + (translated?.length || 0)) / 4) + 200; // +200 for STT
+        await deductLendingTokens(lendingCodeUsed, tokenEstimate);
+      } catch (e) { console.error('Lending token tracking error:', e); }
     }
 
     return NextResponse.json({

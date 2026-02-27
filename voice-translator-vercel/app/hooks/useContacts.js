@@ -112,26 +112,31 @@ export default function useContacts({ userTokenRef }) {
     return false;
   }, [userTokenRef]);
 
-  // Generate invite link
-  const createInvite = useCallback(async () => {
+  // Generate invite link (with optional gift)
+  const createInvite = useCallback(async (giftAmount = 0) => {
     const token = userTokenRef?.current;
     if (!token) return null;
     try {
+      const body = { action: 'create-invite', token };
+      if (giftAmount > 0) body.giftAmount = giftAmount;
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create-invite', token })
+        body: JSON.stringify(body)
       });
       const data = await res.json();
+      if (data.error) return { ok: false, error: data.error };
       if (data.inviteCode) {
         setInviteCode(data.inviteCode);
-        return data.inviteCode;
+        return { ok: true, inviteCode: data.inviteCode, giftApplied: data.giftApplied, newBalance: data.newBalance };
       }
-    } catch {}
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
     return null;
   }, [userTokenRef]);
 
-  // Accept invite
+  // Accept invite (may include gift credits)
   const acceptInvite = useCallback(async (code) => {
     const token = userTokenRef?.current;
     if (!token) return { ok: false };
@@ -144,7 +149,12 @@ export default function useContacts({ userTokenRef }) {
       const data = await res.json();
       if (data.ok) {
         await fetchContacts();
-        return { ok: true, inviter: data.inviter };
+        return {
+          ok: true,
+          inviter: data.inviter,
+          giftReceived: data.giftReceived || 0,
+          giftFromName: data.giftFromName || ''
+        };
       }
       return { ok: false, error: data.error };
     } catch (e) {
@@ -153,12 +163,15 @@ export default function useContacts({ userTokenRef }) {
   }, [userTokenRef, fetchContacts]);
 
   // Share invite via different channels
-  const shareInvite = useCallback(async (channel, code, lang = 'it') => {
+  const shareInvite = useCallback(async (channel, code, lang = 'it', giftAmount = 0) => {
     const inviteUrl = `${APP_URL}?invite=${code}`;
     const isIT = lang === 'it';
+    const giftText = giftAmount > 0
+      ? (isIT ? ` Ti regalo ${(giftAmount / 100).toFixed(2)}€ di crediti!` : ` I'm gifting you €${(giftAmount / 100).toFixed(2)} in credits!`)
+      : '';
     const text = isIT
-      ? `Ciao! Ti invito a usare VoiceTranslate, il traduttore vocale in tempo reale. Unisciti qui: ${inviteUrl}`
-      : `Hi! I invite you to use VoiceTranslate, the real-time voice translator. Join here: ${inviteUrl}`;
+      ? `Ciao! Ti invito a usare VoiceTranslate, il traduttore vocale in tempo reale.${giftText} Unisciti qui: ${inviteUrl}`
+      : `Hi! I invite you to use VoiceTranslate, the real-time voice translator.${giftText} Join here: ${inviteUrl}`;
 
     switch (channel) {
       case 'whatsapp':

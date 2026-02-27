@@ -688,7 +688,7 @@ export default function Home() {
   if (view === 'contacts') return (
     <ContactsView L={L} S={S} prefs={prefs}
       contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
-      inviteCode={contactsHook.inviteCode}
+      inviteCode={contactsHook.inviteCode} creditBalance={auth.creditBalance}
       fetchContacts={contactsHook.fetchContacts} addContact={contactsHook.addContact}
       removeContact={contactsHook.removeContact} createInvite={contactsHook.createInvite}
       shareInvite={contactsHook.shareInvite} acceptInvite={contactsHook.acceptInvite}

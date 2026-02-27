@@ -360,3 +360,401 @@ export async function getReferralStats(email) {
   const count = await redis('GET', statsKey);
   return parseInt(count || '0');
 }
+
+// =============================================
+// CREDIT GIFTING
+// =============================================
+
+const GIFT_MIN = 50;        // min 50 credits (€0.50)
+const GIFT_INVITE_TTL = 604800; // 7 days
+
+function generateGiftCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let code = 'VT-GIFT-';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/**
+ * Create a gift invite — deducts credits from sender IMMEDIATELY (escrow)
+ * @param {string} senderEmail
+ * @param {string} senderName
+ * @param {number} giftAmount - credits to gift (euro-cents)
+ * @returns {{ inviteCode: string, newBalance: number }}
+ */
+export async function createGiftInvite(senderEmail, senderName, giftAmount) {
+  const lowerEmail = senderEmail.toLowerCase();
+  const user = await getUser(lowerEmail);
+  if (!user) throw new Error('User not found');
+
+  // Validate gift
+  if (giftAmount < GIFT_MIN) throw new Error(`Minimum gift is ${GIFT_MIN} credits`);
+  const maxGift = Math.floor(user.credits * 0.5);
+  if (giftAmount > maxGift) throw new Error(`Maximum gift is 50% of your balance (${maxGift})`);
+  if (giftAmount > user.credits) throw new Error('Insufficient credits');
+
+  // Deduct immediately (escrow)
+  const updated = await deductCredits(lowerEmail, giftAmount);
+  if (!updated) throw new Error('Insufficient credits');
+
+  // Generate unique code
+  const code = generateGiftCode();
+  const now = Date.now();
+  const expires = now + GIFT_INVITE_TTL * 1000;
+
+  // Store invite with gift info
+  const inviteKey = `invite:${code}`;
+  await redis('SET', inviteKey, JSON.stringify({
+    from: lowerEmail,
+    fromName: senderName || user.name || '',
+    giftAmount,
+    giftStatus: 'pending', // pending → accepted | refunded
+    created: now,
+    expires
+  }), 'EX', GIFT_INVITE_TTL);
+
+  // Store escrow record (separate for tracking)
+  const escrowKey = `gift-escrow:${code}`;
+  await redis('SET', escrowKey, JSON.stringify({
+    senderEmail: lowerEmail,
+    amount: giftAmount,
+    status: 'pending',
+    createdAt: now
+  }), 'EX', GIFT_INVITE_TTL + 86400); // +1 day for cleanup window
+
+  // Add to expiring gifts SET for refund cleanup
+  await redis('SADD', 'expiring-gifts', code);
+
+  return { inviteCode: code, newBalance: updated.credits };
+}
+
+/**
+ * Accept a gift invite — transfer credits to recipient
+ * @param {string} recipientEmail
+ * @param {string} inviteCode
+ * @returns {{ giftAmount: number, senderName: string }} or null
+ */
+export async function acceptGiftInvite(recipientEmail, inviteCode) {
+  const inviteKey = `invite:${inviteCode}`;
+  const data = await redis('GET', inviteKey);
+  if (!data) return null;
+
+  const invite = JSON.parse(data);
+  if (!invite.giftAmount || invite.giftAmount <= 0) return null;
+  if (invite.giftStatus !== 'pending') return null;
+
+  // Check not expired
+  if (invite.expires && Date.now() > invite.expires) {
+    // Auto-refund
+    await refundGift(inviteCode, invite);
+    return null;
+  }
+
+  // Transfer credits to recipient
+  await addCredits(recipientEmail.toLowerCase(), invite.giftAmount);
+
+  // Mark as accepted
+  invite.giftStatus = 'accepted';
+  invite.acceptedBy = recipientEmail.toLowerCase();
+  invite.acceptedAt = Date.now();
+  const ttlRemaining = Math.max(60, Math.floor((invite.expires - Date.now()) / 1000));
+  await redis('SET', inviteKey, JSON.stringify(invite), 'EX', ttlRemaining);
+
+  // Update escrow
+  const escrowKey = `gift-escrow:${inviteCode}`;
+  const escrowData = await redis('GET', escrowKey);
+  if (escrowData) {
+    const escrow = JSON.parse(escrowData);
+    escrow.status = 'accepted';
+    escrow.acceptedBy = recipientEmail.toLowerCase();
+    escrow.acceptedAt = Date.now();
+    await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+  }
+
+  // Remove from expiring set
+  await redis('SREM', 'expiring-gifts', inviteCode);
+
+  return { giftAmount: invite.giftAmount, senderName: invite.fromName || '' };
+}
+
+/**
+ * Get gift info for display before acceptance
+ */
+export async function getGiftInfo(inviteCode) {
+  const inviteKey = `invite:${inviteCode}`;
+  const data = await redis('GET', inviteKey);
+  if (!data) return null;
+
+  const invite = JSON.parse(data);
+  if (!invite.giftAmount || invite.giftStatus !== 'pending') return null;
+
+  const sender = await getUser(invite.from);
+  return {
+    senderName: sender?.name || invite.fromName || '',
+    senderAvatar: sender?.avatar || '/avatars/1.png',
+    giftAmount: invite.giftAmount,
+    expiresAt: invite.expires
+  };
+}
+
+/**
+ * Refund a single expired gift
+ */
+async function refundGift(code, invite) {
+  if (!invite || invite.giftStatus !== 'pending') return false;
+  await addCredits(invite.from, invite.giftAmount);
+
+  // Update invite status
+  invite.giftStatus = 'refunded';
+  invite.refundedAt = Date.now();
+  const inviteKey = `invite:${code}`;
+  await redis('SET', inviteKey, JSON.stringify(invite), 'EX', 86400); // keep 1 day for reference
+
+  // Update escrow
+  const escrowKey = `gift-escrow:${code}`;
+  const escrowData = await redis('GET', escrowKey);
+  if (escrowData) {
+    const escrow = JSON.parse(escrowData);
+    escrow.status = 'refunded';
+    escrow.refundedAt = Date.now();
+    await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+  }
+
+  await redis('SREM', 'expiring-gifts', code);
+  return true;
+}
+
+/**
+ * Refund all expired gifts (run periodically)
+ */
+export async function refundExpiredGifts() {
+  const codes = await redis('SMEMBERS', 'expiring-gifts');
+  if (!codes || !Array.isArray(codes) || codes.length === 0) return { refunded: 0, totalAmount: 0 };
+
+  let refunded = 0;
+  let totalAmount = 0;
+
+  for (const code of codes) {
+    const inviteKey = `invite:${code}`;
+    const data = await redis('GET', inviteKey);
+
+    if (!data) {
+      // Invite expired from Redis (TTL), refund from escrow
+      const escrowKey = `gift-escrow:${code}`;
+      const escrowData = await redis('GET', escrowKey);
+      if (escrowData) {
+        const escrow = JSON.parse(escrowData);
+        if (escrow.status === 'pending') {
+          await addCredits(escrow.senderEmail, escrow.amount);
+          escrow.status = 'refunded';
+          escrow.refundedAt = Date.now();
+          await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+          refunded++;
+          totalAmount += escrow.amount;
+        }
+      }
+      await redis('SREM', 'expiring-gifts', code);
+      continue;
+    }
+
+    const invite = JSON.parse(data);
+    if (invite.giftStatus === 'pending' && invite.expires && Date.now() > invite.expires) {
+      await refundGift(code, invite);
+      refunded++;
+      totalAmount += invite.giftAmount;
+    }
+  }
+
+  return { refunded, totalAmount };
+}
+
+// =============================================
+// API KEY LENDING (Temporary TOP PRO Access)
+// =============================================
+
+const LENDING_MIN_DURATION = 3600000;        // 1 hour
+const LENDING_MAX_DURATION = 30 * 86400000;  // 30 days
+
+function generateLendingCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let code = 'VT-LEND-';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+/**
+ * Create a lending token — allows borrower to use lender's TOP PRO tier temporarily
+ * @param {string} lenderEmail
+ * @param {Object} opts - { type: "time"|"tokens"|"combined", duration?, tokenBudget? }
+ * @returns {{ lendingCode: string }}
+ */
+export async function createLendingToken(lenderEmail, opts = {}) {
+  const lowerEmail = lenderEmail.toLowerCase();
+  const user = await getUser(lowerEmail);
+  if (!user) throw new Error('User not found');
+  if (!user.useOwnKeys || !user.apiKeys?.elevenlabs) {
+    throw new Error('Only TOP PRO users (with ElevenLabs key) can create lending tokens');
+  }
+
+  const { type = 'time', duration = 86400000, tokenBudget = null } = opts;
+
+  // Validate type
+  if (!['time', 'tokens', 'combined'].includes(type)) {
+    throw new Error('Invalid lending type. Use: time, tokens, or combined');
+  }
+
+  // Validate duration
+  const effectiveDuration = (type === 'tokens') ? LENDING_MAX_DURATION : duration;
+  if (effectiveDuration < LENDING_MIN_DURATION) throw new Error('Minimum duration is 1 hour');
+  if (effectiveDuration > LENDING_MAX_DURATION) throw new Error('Maximum duration is 30 days');
+
+  // Validate token budget
+  if ((type === 'tokens' || type === 'combined') && (!tokenBudget || tokenBudget <= 0)) {
+    throw new Error('Token budget must be positive for token-based lending');
+  }
+
+  const code = generateLendingCode();
+  const now = Date.now();
+  const expiresAt = now + effectiveDuration;
+  const ttlSeconds = Math.ceil(effectiveDuration / 1000) + 86400; // +1 day buffer
+
+  const lending = {
+    lenderEmail: lowerEmail,
+    lenderName: user.name || '',
+    type,
+    duration: effectiveDuration,
+    tokenBudget: tokenBudget || null,
+    tokensUsed: 0,
+    expiresAt,
+    status: 'active', // active | exhausted | revoked | expired
+    sessionsCreated: 0,
+    lastUsed: null,
+    revokedAt: null,
+    created: now
+  };
+
+  const lendingKey = `lending:${code}`;
+  await redis('SET', lendingKey, JSON.stringify(lending), 'EX', ttlSeconds);
+
+  // Track lender's active tokens
+  await redis('SADD', `lender:active:${lowerEmail}`, code);
+
+  return { lendingCode: code };
+}
+
+/**
+ * Validate a lending code — returns details if valid, null if not
+ */
+export async function validateLending(lendingCode) {
+  const lendingKey = `lending:${lendingCode}`;
+  const data = await redis('GET', lendingKey);
+  if (!data) return null;
+
+  const lending = JSON.parse(data);
+
+  // Check status
+  if (lending.status === 'revoked') return null;
+  if (lending.status === 'exhausted') return null;
+
+  // Check expiry
+  if (Date.now() > lending.expiresAt) {
+    lending.status = 'expired';
+    await redis('SET', lendingKey, JSON.stringify(lending), 'EX', 86400);
+    await redis('SREM', `lender:active:${lending.lenderEmail}`, lendingCode);
+    return null;
+  }
+
+  // Check token budget
+  const tokensRemaining = lending.tokenBudget ? Math.max(0, lending.tokenBudget - lending.tokensUsed) : null;
+  if (tokensRemaining !== null && tokensRemaining <= 0) {
+    lending.status = 'exhausted';
+    await redis('SET', lendingKey, JSON.stringify(lending), 'EX', 86400);
+    await redis('SREM', `lender:active:${lending.lenderEmail}`, lendingCode);
+    return null;
+  }
+
+  return {
+    lenderEmail: lending.lenderEmail,
+    lenderName: lending.lenderName,
+    type: lending.type,
+    tokensRemaining,
+    expiresAt: lending.expiresAt,
+    status: lending.status,
+    tokensUsed: lending.tokensUsed
+  };
+}
+
+/**
+ * Track token usage during a lending session
+ */
+export async function deductLendingTokens(lendingCode, tokensUsed) {
+  const lendingKey = `lending:${lendingCode}`;
+  const data = await redis('GET', lendingKey);
+  if (!data) return null;
+
+  const lending = JSON.parse(data);
+  lending.tokensUsed = (lending.tokensUsed || 0) + tokensUsed;
+  lending.sessionsCreated = (lending.sessionsCreated || 0) + 1;
+  lending.lastUsed = Date.now();
+
+  // Check if exhausted
+  if (lending.tokenBudget && lending.tokensUsed >= lending.tokenBudget) {
+    lending.status = 'exhausted';
+    await redis('SREM', `lender:active:${lending.lenderEmail}`, lendingCode);
+  }
+
+  const ttl = await redis('TTL', lendingKey);
+  await redis('SET', lendingKey, JSON.stringify(lending), 'EX', Math.max(ttl, 86400));
+
+  return {
+    tokensRemaining: lending.tokenBudget ? Math.max(0, lending.tokenBudget - lending.tokensUsed) : null
+  };
+}
+
+/**
+ * Revoke a lending token
+ */
+export async function revokeLending(lendingCode, lenderEmail) {
+  const lendingKey = `lending:${lendingCode}`;
+  const data = await redis('GET', lendingKey);
+  if (!data) throw new Error('Lending token not found');
+
+  const lending = JSON.parse(data);
+  if (lending.lenderEmail !== lenderEmail.toLowerCase()) {
+    throw new Error('Not authorized to revoke this token');
+  }
+
+  lending.status = 'revoked';
+  lending.revokedAt = Date.now();
+  await redis('SET', lendingKey, JSON.stringify(lending), 'EX', 86400); // keep 1 day
+  await redis('SREM', `lender:active:${lending.lenderEmail}`, lendingCode);
+
+  return { ok: true };
+}
+
+/**
+ * Get all lending tokens for a lender
+ */
+export async function getLendingTokens(lenderEmail) {
+  const lowerEmail = lenderEmail.toLowerCase();
+  const codes = await redis('SMEMBERS', `lender:active:${lowerEmail}`);
+  if (!codes || !Array.isArray(codes)) return [];
+
+  const tokens = [];
+  for (const code of codes) {
+    const lendingKey = `lending:${code}`;
+    const data = await redis('GET', lendingKey);
+    if (!data) {
+      await redis('SREM', `lender:active:${lowerEmail}`, code);
+      continue;
+    }
+    const lending = JSON.parse(data);
+    tokens.push({ code, ...lending });
+  }
+
+  return tokens;
+}

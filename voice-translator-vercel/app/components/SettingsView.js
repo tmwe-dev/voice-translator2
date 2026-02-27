@@ -18,6 +18,15 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
   const [avatarVoiceMap, setAvatarVoiceMap] = useState({});
   const audioRef = useRef(null);
 
+  // Lending state
+  const [showLending, setShowLending] = useState(false);
+  const [lendingTokens, setLendingTokens] = useState([]);
+  const [lendingLoading, setLendingLoading] = useState(false);
+  const [lendingType, setLendingType] = useState('time');
+  const [lendingDuration, setLendingDuration] = useState(24);
+  const [lendingBudget, setLendingBudget] = useState(5000);
+  const [lendingResult, setLendingResult] = useState(null);
+
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
 
@@ -679,6 +688,176 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     color:S.colors.accent2 || '#60a5fa', fontSize:12, fontWeight:600, textAlign:'center'}}>
                   🧪 Apri Test Center
                 </a>
+              </div>
+            );
+          })()}
+
+          {/* ══════════════════════════════════════════════════
+              API KEY LENDING — TOP PRO
+             ══════════════════════════════════════════════════ */}
+          {useOwnKeys && apiKeyInputs?.elevenlabs && (() => {
+            const isIT = L('createRoom') === 'Crea Stanza';
+
+            async function fetchLendingTokens() {
+              const token = userTokenRef?.current;
+              if (!token) return;
+              setLendingLoading(true);
+              try {
+                const res = await fetch('/api/lending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'list', token })
+                });
+                const data = await res.json();
+                if (data.tokens) setLendingTokens(data.tokens);
+              } catch {}
+              setLendingLoading(false);
+            }
+
+            async function handleCreateLending() {
+              const token = userTokenRef?.current;
+              if (!token) return;
+              try {
+                const res = await fetch('/api/lending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'create',
+                    token,
+                    type: lendingType,
+                    duration: lendingDuration * 3600000,
+                    tokenBudget: lendingType !== 'time' ? lendingBudget : undefined
+                  })
+                });
+                const data = await res.json();
+                if (data.lendingCode) {
+                  setLendingResult(data.lendingCode);
+                  fetchLendingTokens();
+                }
+              } catch {}
+            }
+
+            async function handleRevoke(code) {
+              const token = userTokenRef?.current;
+              if (!token) return;
+              try {
+                await fetch('/api/lending', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'revoke', token, code })
+                });
+                fetchLendingTokens();
+              } catch {}
+            }
+
+            return (
+              <div style={{...S.card, marginTop:16}}>
+                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer'}}
+                  onClick={() => { setShowLending(!showLending); if (!showLending) fetchLendingTokens(); }}>
+                  <div style={S.label}>{'🔑'} {isIT ? 'Presta Accesso TOP PRO' : 'Lend TOP PRO Access'}</div>
+                  <Icon name="chevDown" size={16} color={S.colors.textMuted}
+                    style={{transform: showLending ? 'rotate(180deg)' : 'none', transition:'transform 0.2s'}} />
+                </div>
+
+                {showLending && (
+                  <div style={{marginTop:12}}>
+                    <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:12}}>
+                      {isIT
+                        ? 'Crea un token temporaneo che permette ad altri di usare il tuo accesso TOP PRO (le tue chiavi API).'
+                        : 'Create a temporary token that lets others use your TOP PRO access (your API keys).'}
+                    </div>
+
+                    {/* Create form */}
+                    <div style={{display:'flex', gap:8, marginBottom:8, flexWrap:'wrap'}}>
+                      {['time', 'tokens', 'combined'].map(t => (
+                        <button key={t} onClick={() => setLendingType(t)}
+                          style={{padding:'6px 12px', borderRadius:8, fontSize:11, fontFamily:FONT, cursor:'pointer',
+                            background: lendingType === t ? S.colors.accent2Bg : S.colors.overlayBg,
+                            border: `1px solid ${lendingType === t ? S.colors.accent2Border : S.colors.overlayBorder}`,
+                            color: lendingType === t ? S.colors.accent2 : S.colors.textMuted}}>
+                          {t === 'time' ? (isIT ? 'Tempo' : 'Time')
+                            : t === 'tokens' ? 'Token'
+                            : (isIT ? 'Combinato' : 'Combined')}
+                        </button>
+                      ))}
+                    </div>
+
+                    {(lendingType === 'time' || lendingType === 'combined') && (
+                      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
+                        <span style={{fontSize:11, color:S.colors.textMuted}}>{isIT ? 'Durata:' : 'Duration:'}</span>
+                        <select value={lendingDuration} onChange={e => setLendingDuration(parseInt(e.target.value))}
+                          style={{...S.input, padding:'4px 8px', fontSize:12, width:'auto'}}>
+                          <option value={1}>1h</option>
+                          <option value={6}>6h</option>
+                          <option value={24}>24h</option>
+                          <option value={72}>3 {isIT ? 'giorni' : 'days'}</option>
+                          <option value={168}>7 {isIT ? 'giorni' : 'days'}</option>
+                          <option value={720}>30 {isIT ? 'giorni' : 'days'}</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {(lendingType === 'tokens' || lendingType === 'combined') && (
+                      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
+                        <span style={{fontSize:11, color:S.colors.textMuted}}>Token budget:</span>
+                        <input type="number" value={lendingBudget} onChange={e => setLendingBudget(parseInt(e.target.value) || 0)}
+                          style={{...S.input, padding:'4px 8px', fontSize:12, width:80}} min={100} step={1000} />
+                      </div>
+                    )}
+
+                    <button onClick={handleCreateLending}
+                      style={{...S.btn, width:'100%', marginBottom:8, fontSize:12}}>
+                      {'🔑'} {isIT ? 'Crea Token' : 'Create Token'}
+                    </button>
+
+                    {lendingResult && (
+                      <div style={{padding:'8px 12px', borderRadius:8, background:S.colors.accent4Bg,
+                        border:`1px solid ${S.colors.accent4Border}`, marginBottom:12}}>
+                        <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:4}}>
+                          {isIT ? 'Token creato! Condividilo:' : 'Token created! Share it:'}
+                        </div>
+                        <div style={{fontSize:13, fontWeight:700, fontFamily:'monospace', color:S.colors.textPrimary,
+                          cursor:'pointer', userSelect:'all'}}
+                          onClick={() => { navigator.clipboard?.writeText(lendingResult); }}>
+                          {lendingResult}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Active tokens list */}
+                    {lendingTokens.length > 0 && (
+                      <div style={{marginTop:8}}>
+                        <div style={{fontSize:11, fontWeight:700, color:S.colors.textSecondary, marginBottom:6}}>
+                          {isIT ? 'Token attivi' : 'Active tokens'}
+                        </div>
+                        {lendingTokens.map(t => (
+                          <div key={t.code} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                            padding:'6px 10px', borderRadius:8, background:S.colors.overlayBg,
+                            border:`1px solid ${S.colors.overlayBorder}`, marginBottom:4, fontSize:11}}>
+                            <div>
+                              <span style={{fontFamily:'monospace', color:S.colors.textPrimary}}>{t.code}</span>
+                              <span style={{color:S.colors.textMuted, marginLeft:6}}>
+                                {t.tokensUsed > 0 ? `${t.tokensUsed} tok` : ''} · {t.status}
+                              </span>
+                            </div>
+                            {t.status === 'active' && (
+                              <button onClick={() => handleRevoke(t.code)}
+                                style={{background:'none', border:'none', color:S.colors.accent3,
+                                  cursor:'pointer', fontSize:10, fontFamily:FONT}}>
+                                {isIT ? 'Revoca' : 'Revoke'}
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {lendingLoading && (
+                      <div style={{fontSize:11, color:S.colors.textMuted, textAlign:'center', padding:8}}>
+                        {isIT ? 'Caricamento...' : 'Loading...'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })()}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession, getUser } from '../../lib/users.js';
+import { getSession, getUser, createGiftInvite, acceptGiftInvite, getGiftInfo } from '../../lib/users.js';
 import { redis } from '../../lib/redis.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
@@ -14,7 +14,7 @@ const INVITE_TTL = 604800; // 7 days
 
 export async function POST(req) {
   try {
-    const { action, token, contactEmail, inviteCode } = await req.json();
+    const { action, token, contactEmail, inviteCode, giftAmount } = await req.json();
 
     // Rate limit
     const rl = await checkRateLimit(getRateLimitKey(req, 'contacts'), 30);
@@ -134,9 +134,26 @@ export async function POST(req) {
       return NextResponse.json({ contacts });
     }
 
-    // === GENERATE INVITE LINK ===
+    // === GENERATE INVITE LINK (with optional gift) ===
     if (action === 'create-invite') {
-      // Generate a unique invite code that links back to this user
+      // If gift amount specified, create a gift invite (escrow model)
+      if (giftAmount && giftAmount > 0) {
+        try {
+          const user = await getUser(email);
+          const result = await createGiftInvite(email, user?.name || '', giftAmount);
+          return NextResponse.json({
+            ok: true,
+            inviteCode: result.inviteCode,
+            giftApplied: true,
+            giftAmount,
+            newBalance: result.newBalance
+          });
+        } catch (e) {
+          return NextResponse.json({ error: e.message }, { status: 400 });
+        }
+      }
+
+      // Standard invite (no gift)
       const code = generateInviteCode();
       const inviteKey = `invite:${code}`;
       await redis('SET', inviteKey, JSON.stringify({
@@ -168,16 +185,39 @@ export async function POST(req) {
       await redis('SADD', `contacts:${email}`, invite.from);
       await redis('SADD', `contacts:${invite.from}`, email);
 
-      // Don't delete invite — allow multiple people to use it
+      // Don't delete invite — allow multiple people to use it (unless it's a gift)
       const inviterUser = await getUser(invite.from);
-      return NextResponse.json({
+      const response = {
         ok: true,
         inviter: {
           email: invite.from,
           name: inviterUser?.name || invite.fromName || '',
           avatar: inviterUser?.avatar || '/avatars/1.png',
         }
-      });
+      };
+
+      // If invite has a gift, try to apply it
+      if (invite.giftAmount && invite.giftAmount > 0 && invite.giftStatus === 'pending') {
+        const giftResult = await acceptGiftInvite(email, inviteCode);
+        if (giftResult) {
+          response.giftReceived = giftResult.giftAmount;
+          response.giftFromName = giftResult.senderName;
+        }
+      }
+
+      return NextResponse.json(response);
+    }
+
+    // === GET GIFT INFO (public, for display before acceptance) ===
+    if (action === 'get-gift-info') {
+      if (!inviteCode) {
+        return NextResponse.json({ error: 'inviteCode required' }, { status: 400 });
+      }
+      const info = await getGiftInfo(inviteCode);
+      if (!info) {
+        return NextResponse.json({ error: 'No gift found or already claimed' }, { status: 404 });
+      }
+      return NextResponse.json({ ok: true, gift: info });
     }
 
     // === START DIRECT CHAT with contact ===

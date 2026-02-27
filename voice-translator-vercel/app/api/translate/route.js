@@ -3,7 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { addCost } from '../../lib/store.js';
-import { deductCredits } from '../../lib/users.js';
+import { deductCredits, deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
@@ -81,7 +81,7 @@ export async function POST(req) {
     }
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
-            roomId, context, isReview, domainContext, description, userToken, aiModel } = await req.json();
+            roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
@@ -118,10 +118,11 @@ export async function POST(req) {
       : modelInfo.provider === 'anthropic' ? 'anthropic'
       : modelInfo.provider === 'gemini' ? 'gemini' : 'openai';
 
-    // 3-tier auth: userToken → roomId → reject
-    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+    // 3-tier auth: userToken → lendingCode → roomId → reject
+    const { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
       userToken,
       roomId,
+      lendingCode: lendingCode || undefined,
       provider: authProvider,
       minCredits: MIN_CREDITS.TRANSLATE,
       skipCreditCheck: !!isReview,
@@ -302,6 +303,14 @@ RULES:
         if (updatedUser) remainingCredits = updatedUser.credits;
         await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Credit deduct error:', e); }
+    }
+
+    // Track lending token usage
+    if (isLending && lendingCodeUsed) {
+      try {
+        const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);
+        await deductLendingTokens(lendingCodeUsed, tokenEstimate);
+      } catch (e) { console.error('Lending token tracking error:', e); }
     }
 
     return NextResponse.json({

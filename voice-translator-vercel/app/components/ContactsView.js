@@ -4,7 +4,7 @@ import { FONT, LANGS } from '../lib/constants.js';
 import Icon from './Icon.js';
 
 export default function ContactsView({
-  L, S, prefs, contacts, contactsLoading, inviteCode,
+  L, S, prefs, contacts, contactsLoading, inviteCode, creditBalance = 0,
   fetchContacts, addContact, removeContact, createInvite, shareInvite,
   acceptInvite, startPolling, handleStartChat, setView, status, theme
 }) {
@@ -16,6 +16,10 @@ export default function ContactsView({
   const [currentInviteCode, setCurrentInviteCode] = useState(inviteCode);
   const [confirmRemove, setConfirmRemove] = useState(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [giftAmount, setGiftAmount] = useState(0);
+  const [giftError, setGiftError] = useState('');
+  const [inviteGiftAmount, setInviteGiftAmount] = useState(0); // amount attached to current invite
+  const maxGift = Math.floor(creditBalance * 0.5);
 
   // Start polling contacts when view mounts
   useEffect(() => {
@@ -43,9 +47,18 @@ export default function ContactsView({
   }
 
   async function handleCreateInvite() {
-    const code = await createInvite();
-    if (code) {
-      setCurrentInviteCode(code);
+    setGiftError('');
+    const result = await createInvite(giftAmount > 0 ? giftAmount : 0);
+    if (result?.ok) {
+      setCurrentInviteCode(result.inviteCode);
+      setInviteGiftAmount(giftAmount);
+      setShowInvite(true);
+      setGiftAmount(0);
+    } else if (result?.error) {
+      setGiftError(result.error);
+    } else if (typeof result === 'string') {
+      // backward compat: old createInvite returned string
+      setCurrentInviteCode(result);
       setShowInvite(true);
     }
   }
@@ -125,17 +138,54 @@ export default function ContactsView({
             <div style={{fontSize:11, color:S.colors.onlineColor, marginTop:6}}>{addSuccess}</div>
           )}
 
+          {/* Gift credits section (only if user has credits) */}
+          {creditBalance >= 100 && (
+            <div style={{marginTop:12, padding:'10px 12px', borderRadius:10,
+              background:S.colors.accent4Bg, border:`1px solid ${S.colors.accent4Border}`}}>
+              <div style={{fontSize:12, fontWeight:700, color:S.colors.accent4, marginBottom:6, display:'flex', alignItems:'center', gap:4}}>
+                {'🎁'} {isIT ? 'Regala crediti con l\'invito' : 'Gift credits with invite'}
+              </div>
+              <div style={{display:'flex', alignItems:'center', gap:8}}>
+                <input
+                  type="range"
+                  min={0} max={maxGift} step={50}
+                  value={giftAmount}
+                  onChange={e => setGiftAmount(parseInt(e.target.value))}
+                  style={{flex:1, accentColor:S.colors.accent4}}
+                />
+                <span style={{fontSize:13, fontWeight:700, color:S.colors.textPrimary, minWidth:50, textAlign:'right'}}>
+                  {giftAmount > 0 ? `€${(giftAmount / 100).toFixed(2)}` : '—'}
+                </span>
+              </div>
+              {giftAmount > 0 && (
+                <div style={{fontSize:10, color:S.colors.textMuted, marginTop:4}}>
+                  {isIT
+                    ? `Regali ${giftAmount} crediti. Il tuo saldo dopo: ${creditBalance - giftAmount}`
+                    : `Gifting ${giftAmount} credits. Your balance after: ${creditBalance - giftAmount}`}
+                </div>
+              )}
+              {giftError && (
+                <div style={{fontSize:11, color:S.colors.accent3, marginTop:4}}>{giftError}</div>
+              )}
+            </div>
+          )}
+
           {/* Invite button */}
           <button style={{
             width:'100%', marginTop:12, padding:'10px 14px', borderRadius:12,
-            background:`linear-gradient(135deg, ${S.colors.accent1Bg}, ${S.colors.accent2Bg}33)`,
-            border:`1px solid ${S.colors.accent1Border}`, color:S.colors.textPrimary, fontSize:13,
+            background: giftAmount > 0
+              ? `linear-gradient(135deg, ${S.colors.accent4Bg}, ${S.colors.accent1Bg})`
+              : `linear-gradient(135deg, ${S.colors.accent1Bg}, ${S.colors.accent2Bg}33)`,
+            border:`1px solid ${giftAmount > 0 ? S.colors.accent4Border : S.colors.accent1Border}`,
+            color:S.colors.textPrimary, fontSize:13,
             fontFamily:FONT, cursor:'pointer', display:'flex', alignItems:'center',
             justifyContent:'center', gap:8
           }}
             onClick={handleCreateInvite}>
-            <span style={{fontSize:16}}>{'📨'}</span>
-            {isIT ? 'Invita un amico' : 'Invite a friend'}
+            <span style={{fontSize:16}}>{giftAmount > 0 ? '🎁' : '📨'}</span>
+            {giftAmount > 0
+              ? (isIT ? `Invita con regalo (€${(giftAmount/100).toFixed(2)})` : `Invite with gift (€${(giftAmount/100).toFixed(2)})`)
+              : (isIT ? 'Invita un amico' : 'Invite a friend')}
           </button>
         </div>
 
@@ -146,9 +196,13 @@ export default function ContactsView({
               {isIT ? 'Condividi invito' : 'Share invite'}
             </div>
             <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:12}}>
-              {isIT
-                ? 'Chi riceve il link diventerà automaticamente tuo contatto'
-                : 'Anyone who clicks this link will become your contact'}
+              {inviteGiftAmount > 0
+                ? (isIT
+                    ? `Chi accetta riceverà €${(inviteGiftAmount/100).toFixed(2)} di crediti in regalo!`
+                    : `Recipient will receive €${(inviteGiftAmount/100).toFixed(2)} in gift credits!`)
+                : (isIT
+                    ? 'Chi riceve il link diventerà automaticamente tuo contatto'
+                    : 'Anyone who clicks this link will become your contact')}
             </div>
 
             {/* Share buttons grid */}

@@ -4,7 +4,7 @@
 // Returns: { apiKey, isOwnKey, billingEmail } or throws a Response
 
 import { NextResponse } from 'next/server';
-import { getSession, getUser } from './users.js';
+import { getSession, getUser, validateLending } from './users.js';
 import { getRoom } from './store.js';
 import { ERRORS, DAILY_LIMITS } from './config.js';
 import { redis } from './redis.js';
@@ -26,6 +26,7 @@ import { redis } from './redis.js';
 export async function resolveAuth({
   userToken,
   roomId,
+  lendingCode = null,
   provider = 'openai',
   minCredits = 0.1,
   skipCreditCheck = false,
@@ -42,6 +43,8 @@ export async function resolveAuth({
   let apiKey = defaultKey;
   let isOwnKey = false;
   let billingEmail = null;
+  let isLending = false;
+  let lendingCodeUsed = null;
 
   if (userToken) {
     // Path 1: Authenticated user (host or user with own account)
@@ -59,8 +62,27 @@ export async function resolveAuth({
         }
       }
     }
+  } else if (lendingCode) {
+    // Path 2: Lending token — bill to lender, use their keys
+    const lending = await validateLending(lendingCode);
+    if (!lending) {
+      throw NextResponse.json({ error: 'Invalid or expired lending token' }, { status: 401 });
+    }
+    billingEmail = lending.lenderEmail;
+    isLending = true;
+    lendingCodeUsed = lendingCode;
+    const lenderUser = await getUser(lending.lenderEmail);
+    if (lenderUser) {
+      const ownKey = lenderUser.useOwnKeys && lenderUser.apiKeys?.[provider];
+      if (ownKey) {
+        apiKey = ownKey;
+        isOwnKey = true;
+      } else if (!lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
+        throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
+      }
+    }
   } else if (roomId) {
-    // Path 2: Guest in a room - bill to host
+    // Path 3: Guest in a room - bill to host
     const room = await getRoom(roomId);
     if (!room) {
       throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
@@ -125,7 +147,7 @@ export async function resolveAuth({
     }
   }
 
-  return { apiKey, isOwnKey, billingEmail };
+  return { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed };
 }
 
 /**
