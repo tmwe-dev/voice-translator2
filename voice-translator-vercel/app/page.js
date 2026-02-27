@@ -26,6 +26,7 @@ import HistoryView from './components/HistoryView.js';
 import SummaryView from './components/SummaryView.js';
 import VoiceTestView from './components/VoiceTestView.js';
 import ContactsView from './components/ContactsView.js';
+import VoiceCloneView from './components/VoiceCloneView.js';
 
 
 export default function Home() {
@@ -280,6 +281,11 @@ export default function Home() {
                 elevenlabs: data.user.apiKeys.elevenlabs || ''
               });
               if (data.user.apiKeys.elevenlabs) auth.setIsTopPro(true);
+            }
+            // Restore cloned voice if exists
+            if (data.user.clonedVoiceId) {
+              auth.setClonedVoiceId(data.user.clonedVoiceId);
+              auth.setClonedVoiceName(data.user.clonedVoiceName || 'My Voice');
             }
             setView(pickView(!!saved));
           } else {
@@ -667,7 +673,9 @@ export default function Home() {
       selectedELVoice={auth.selectedELVoice} setSelectedELVoice={auth.setSelectedELVoice}
       setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken} userTokenRef={auth.userTokenRef}
       userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme}
-      creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed} />
+      creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed}
+      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
+      setClonedVoiceId={auth.setClonedVoiceId} setClonedVoiceName={auth.setClonedVoiceName} />
   );
 
   if (view === 'home') return (
@@ -721,7 +729,8 @@ export default function Home() {
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
       freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
-      syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme} />
+      syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme}
+      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName} />
   );
 
   if (view === 'history') return (
@@ -755,6 +764,17 @@ export default function Home() {
       pickDeviceContacts={contactsHook.pickDeviceContacts}
       hasDeviceContacts={contactsHook.hasDeviceContacts}
       setView={setView} status={status} theme={theme} />
+  );
+
+  if (view === 'voice-clone') return (
+    <VoiceCloneView L={L} S={S} prefs={prefs}
+      userToken={auth.userToken} userTokenRef={auth.userTokenRef}
+      setView={setView} creditBalance={auth.creditBalance} theme={theme}
+      onVoiceCloned={(voiceId, name) => {
+        auth.setClonedVoiceId(voiceId);
+        auth.setClonedVoiceName(name);
+        auth.refreshBalance();
+      }} />
   );
 
   return null;

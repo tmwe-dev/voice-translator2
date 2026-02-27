@@ -13,7 +13,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, leaveRoomTemporary, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
-  syncLangChange, theme, setTheme }) {
+  syncLangChange, theme, setTheme,
+  clonedVoiceId, clonedVoiceName }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -308,6 +309,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
                 : ve;
               if (activeEngine === 'elevenlabs') {
+                if (selectedELVoice && clonedVoiceId && selectedELVoice === clonedVoiceId) {
+                  return '\uD83C\uDFA4 ' + (clonedVoiceName || 'My Voice');
+                }
                 const elVoice = elevenLabsVoices?.find(v => v.id === selectedELVoice);
                 return elVoice ? elVoice.name : 'Auto';
               }
@@ -426,6 +430,24 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                     textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
                     Voce ElevenLabs
                   </div>
+                  {/* Cloned voice option */}
+                  {clonedVoiceId && (
+                    <button onClick={() => {
+                      if (setSelectedELVoice) setSelectedELVoice(clonedVoiceId);
+                      setShowVoicePicker(false);
+                    }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                      width:'100%', padding:'8px 12px',
+                      background: selectedELVoice === clonedVoiceId ? S.colors.accent4Bg : 'transparent',
+                      border:'none', cursor:'pointer', fontFamily:FONT, fontSize:12,
+                      color:S.colors.textPrimary, transition:'background 0.1s',
+                      borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+                      <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1}}>
+                        <span style={{fontWeight:600}}>{'\uD83C\uDFA4'} {clonedVoiceName || 'La mia voce'}</span>
+                        <span style={{fontSize:9, color:S.colors.accent4Border}}>Voce clonata</span>
+                      </div>
+                      {selectedELVoice === clonedVoiceId && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                    </button>
+                  )}
                   {/* Auto (avatar-based) option */}
                   <button onClick={() => {
                     if (setSelectedELVoice) setSelectedELVoice('');

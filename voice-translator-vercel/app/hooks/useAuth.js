@@ -30,6 +30,8 @@ export default function useAuth() {
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState('');
   const [platformHasEL, setPlatformHasEL] = useState(false);
+  const [clonedVoiceId, setClonedVoiceId] = useState(null);
+  const [clonedVoiceName, setClonedVoiceName] = useState('');
 
   // Refs
   const userTokenRef = useRef(null);
@@ -343,6 +345,10 @@ export default function useAuth() {
     setSelectedELVoice,
     platformHasEL,
     setPlatformHasEL,
+    clonedVoiceId,
+    setClonedVoiceId,
+    clonedVoiceName,
+    setClonedVoiceName,
     // Refs
     userTokenRef,
     isTrialRef,

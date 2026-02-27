@@ -7,7 +7,8 @@ import Icon from './Icon.js';
 const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
   setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout, status,
-  theme, setTheme, creditBalance, refreshBalance, freeCharsUsed }) {
+  theme, setTheme, creditBalance, refreshBalance, freeCharsUsed,
+  clonedVoiceId, clonedVoiceName, setClonedVoiceId, setClonedVoiceName }) {
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
@@ -17,6 +18,10 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
   const [elGenderFilter, setElGenderFilter] = useState('all');
   const [avatarVoiceMap, setAvatarVoiceMap] = useState({});
   const audioRef = useRef(null);
+
+  // Voice clone state
+  const [deletingVoice, setDeletingVoice] = useState(false);
+  const [previewingClone, setPreviewingClone] = useState(false);
 
   // Lending state
   const [showLending, setShowLending] = useState(false);
@@ -857,6 +862,119 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       </div>
                     )}
                   </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* ══════════════════════════════════════════════════
+              LA TUA VOCE — Voice Clone
+             ══════════════════════════════════════════════════ */}
+          {!isGuest && (() => {
+            const isIT = L('createRoom') === 'Crea Stanza';
+
+            async function handleDeleteClone() {
+              if (!confirm(isIT ? 'Eliminare la voce clonata?' : 'Delete cloned voice?')) return;
+              setDeletingVoice(true);
+              try {
+                const fd = new FormData();
+                fd.append('userToken', userTokenRef?.current || '');
+                fd.append('action', 'delete');
+                const res = await fetch('/api/voice-clone', { method: 'POST', body: fd });
+                const data = await res.json();
+                if (data.ok) {
+                  if (setClonedVoiceId) setClonedVoiceId(null);
+                  if (setClonedVoiceName) setClonedVoiceName('');
+                }
+              } catch {} finally { setDeletingVoice(false); }
+            }
+
+            async function handlePreviewClone() {
+              stopAudio();
+              if (previewingClone) return;
+              setPreviewingClone(true);
+              try {
+                const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
+                const res = await fetch('/api/tts-elevenlabs', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ text: sampleText, voiceId: clonedVoiceId, userToken: userTokenRef?.current })
+                });
+                if (res.ok) {
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const audio = new Audio(url);
+                  audioRef.current = audio;
+                  audio.onended = () => { setPreviewingClone(false); URL.revokeObjectURL(url); };
+                  audio.onerror = () => { setPreviewingClone(false); URL.revokeObjectURL(url); };
+                  await audio.play();
+                  return;
+                }
+              } catch {} finally { if (!audioRef.current) setPreviewingClone(false); }
+            }
+
+            return (
+              <div style={{background:S.colors.glassCard, borderRadius:16,
+                border:`1px solid ${S.colors.cardBorder}`, padding:16, marginBottom:12}}>
+                <div style={{fontSize:13, fontWeight:700, color:S.colors.textPrimary, marginBottom:10, display:'flex', alignItems:'center', gap:6}}>
+                  {'\uD83C\uDFA4'} {isIT ? 'La tua Voce' : 'Your Voice'}
+                </div>
+
+                {clonedVoiceId ? (
+                  <>
+                    <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10}}>
+                      <div style={{width:36, height:36, borderRadius:'50%', background:S.colors.accent4Bg,
+                        display:'flex', alignItems:'center', justifyContent:'center', fontSize:18}}>
+                        {'\uD83C\uDFA4'}
+                      </div>
+                      <div>
+                        <div style={{fontSize:13, fontWeight:600, color:S.colors.textPrimary}}>{clonedVoiceName || 'My Voice'}</div>
+                        <div style={{fontSize:10, color:S.colors.statusOk}}>{'\u2713'} {isIT ? 'Voce clonata attiva' : 'Cloned voice active'}</div>
+                      </div>
+                    </div>
+                    <div style={{display:'flex', gap:8}}>
+                      <button onClick={handlePreviewClone} disabled={previewingClone || isTrial}
+                        style={{flex:1, padding:'8px 0', borderRadius:10,
+                          background:S.colors.accent4Bg, border:`1px solid ${S.colors.accent4Border}`,
+                          color:S.colors.textPrimary, fontFamily:'inherit', fontSize:11, fontWeight:600,
+                          cursor: previewingClone || isTrial ? 'default' : 'pointer', opacity: previewingClone ? 0.6 : 1}}>
+                        {previewingClone ? (isIT ? 'Riproduzione...' : 'Playing...') : (isIT ? 'Anteprima' : 'Preview')}
+                      </button>
+                      <button onClick={() => setView('voice-clone')}
+                        style={{flex:1, padding:'8px 0', borderRadius:10,
+                          background:'transparent', border:`1px solid ${S.colors.overlayBorder}`,
+                          color:S.colors.textPrimary, fontFamily:'inherit', fontSize:11, fontWeight:600, cursor:'pointer'}}>
+                        {isIT ? 'Ricampiona' : 'Re-record'}
+                      </button>
+                      <button onClick={handleDeleteClone} disabled={deletingVoice}
+                        style={{padding:'8px 12px', borderRadius:10,
+                          background:'transparent', border:`1px solid ${S.colors.statusError}33`,
+                          color:S.colors.statusError, fontFamily:'inherit', fontSize:11, fontWeight:600,
+                          cursor: deletingVoice ? 'default' : 'pointer', opacity: deletingVoice ? 0.6 : 1}}>
+                        {deletingVoice ? '...' : (isIT ? 'Elimina' : 'Delete')}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:10, lineHeight:1.4}}>
+                      {isIT
+                        ? 'Registra la tua voce per creare un clone vocale. Potrai usarla nelle chat per farti sentire con la tua voce in qualsiasi lingua.'
+                        : 'Record your voice to create a voice clone. You can use it in chats to be heard in your own voice in any language.'}
+                    </div>
+                    <button onClick={() => setView('voice-clone')}
+                      style={{width:'100%', padding:'10px 0', borderRadius:12,
+                        background:`linear-gradient(135deg, ${S.colors.accent4Bg}, ${S.colors.accent2Bg || S.colors.accent4Bg})`,
+                        border:`1px solid ${S.colors.accent4Border}`,
+                        color:S.colors.textPrimary, fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer'}}>
+                      {'\uD83C\uDFA4'} {isIT ? 'Campiona la tua voce' : 'Record your voice'}
+                    </button>
+                    {isTrial && (
+                      <div style={{fontSize:9, color:S.colors.textMuted, textAlign:'center', marginTop:6}}>
+                        {isIT ? 'Richiede piano PRO' : 'Requires PRO plan'}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             );
