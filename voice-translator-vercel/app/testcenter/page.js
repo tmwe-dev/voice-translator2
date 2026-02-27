@@ -20,10 +20,8 @@ const SCENARIO_LABELS = {
 
 const PROVIDER_COLORS = {
   google: '#4285F4',
-  baidu: '#2932E1',
   microsoft: '#00A4EF',
   mymemory: '#FF6B35',
-  libretranslate: '#16A34A',
 };
 
 export default function TestCenterPage() {

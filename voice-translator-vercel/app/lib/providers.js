@@ -1,12 +1,10 @@
 // ═══════════════════════════════════════════════
 // Provider Registry — centralized translation provider management
 //
-// All free translation providers in one place:
+// Active free translation providers:
 // - Google Translate (unofficial gtx API)
-// - Baidu Translate (unofficial transapi)
 // - Microsoft Translate (unofficial via npm)
-// - MyMemory API
-// - LibreTranslate (community instances)
+// - MyMemory API (per-user email quota)
 //
 // Per-language routing: each target language gets an optimized
 // provider chain based on quality testing results.
@@ -30,42 +28,30 @@ const LATIN_LANGS = new Set([
 
 // ── Provider metadata ──
 export const PROVIDERS = {
-  google:        { name: 'Google Translate', quality: 4, latency: 400,  free: true },
-  baidu:         { name: 'Baidu Translate',  quality: 5, latency: 600,  free: true },
-  microsoft:     { name: 'Microsoft',        quality: 4, latency: 500,  free: true },
-  mymemory:      { name: 'MyMemory',         quality: 3, latency: 700,  free: true },
-  libretranslate:{ name: 'LibreTranslate',   quality: 2, latency: 1000, free: true },
-};
-
-// Baidu language code mapping (Baidu uses its own codes)
-const BAIDU_LANG_MAP = {
-  'zh': 'zh', 'en': 'en', 'ja': 'jp', 'ko': 'kor', 'th': 'th',
-  'fr': 'fra', 'es': 'spa', 'de': 'de', 'it': 'it', 'pt': 'pt',
-  'ru': 'ru', 'ar': 'ara', 'hi': 'hi', 'vi': 'vie', 'nl': 'nl',
-  'pl': 'pl', 'sv': 'swe', 'tr': 'tr', 'id': 'id', 'ms': 'may',
-  'el': 'el', 'cs': 'cs', 'ro': 'rom', 'hu': 'hu', 'fi': 'fin',
+  google:    { name: 'Google Translate', quality: 4, latency: 400,  free: true },
+  microsoft: { name: 'Microsoft',        quality: 4, latency: 500,  free: true },
+  mymemory:  { name: 'MyMemory',         quality: 3, latency: 700,  free: true },
 };
 
 // Languages each provider supports well
-const BAIDU_BEST = new Set(['zh', 'ja', 'ko', 'th', 'vi']);
 const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja']);
 
 // ── Default provider chains per language target ──
 // Order = priority (first tried first)
 const PROVIDER_CHAINS = {
-  // CJK + Thai + Vietnamese → Baidu excels
-  'zh': ['baidu', 'google', 'microsoft', 'mymemory', 'libretranslate'],
-  'ja': ['baidu', 'google', 'microsoft', 'mymemory', 'libretranslate'],
-  'ko': ['baidu', 'google', 'microsoft', 'mymemory', 'libretranslate'],
-  'th': ['baidu', 'google', 'microsoft', 'mymemory', 'libretranslate'],
-  'vi': ['google', 'baidu', 'microsoft', 'mymemory', 'libretranslate'],
+  // CJK + Thai + Vietnamese → Google fastest, Microsoft high quality
+  'zh': ['google', 'microsoft', 'mymemory'],
+  'ja': ['google', 'microsoft', 'mymemory'],
+  'ko': ['google', 'microsoft', 'mymemory'],
+  'th': ['google', 'microsoft', 'mymemory'],
+  'vi': ['google', 'microsoft', 'mymemory'],
   // Arabic/Hindi/Russian/Turkish → Microsoft excels
-  'ar': ['microsoft', 'google', 'baidu', 'mymemory', 'libretranslate'],
-  'hi': ['microsoft', 'google', 'mymemory', 'libretranslate'],
-  'ru': ['microsoft', 'google', 'mymemory', 'libretranslate'],
-  'tr': ['microsoft', 'google', 'mymemory', 'libretranslate'],
+  'ar': ['microsoft', 'google', 'mymemory'],
+  'hi': ['microsoft', 'google', 'mymemory'],
+  'ru': ['microsoft', 'google', 'mymemory'],
+  'tr': ['microsoft', 'google', 'mymemory'],
   // European languages → Google is usually best
-  '*': ['google', 'microsoft', 'mymemory', 'libretranslate'],
+  '*': ['google', 'microsoft', 'mymemory'],
 };
 
 // Fastest provider per target language (for superfast mode)
@@ -106,8 +92,7 @@ export function getAvailableProviders(targetLang) {
     id,
     ...PROVIDERS[id],
     recommended: chain.indexOf(id) === 0,
-    specializedFor: BAIDU_BEST.has(targetLang) && id === 'baidu' ? true
-      : MICROSOFT_BEST.has(targetLang) && id === 'microsoft' ? true : false,
+    specializedFor: MICROSOFT_BEST.has(targetLang) && id === 'microsoft',
   }));
 }
 
@@ -166,8 +151,7 @@ export function scoreTranslation(original, translated, sourceLang, targetLang, p
   if (!t.startsWith('Translation:') && !t.startsWith('Here is') && !t.startsWith('Note:')) score += 1;
 
   // +2: specialized provider for this language
-  if (BAIDU_BEST.has(targetLang) && provider === 'baidu') score += 2;
-  else if (MICROSOFT_BEST.has(targetLang) && provider === 'microsoft') score += 2;
+  if (MICROSOFT_BEST.has(targetLang) && provider === 'microsoft') score += 2;
   else if (provider === 'google') score += 1; // Google is generally good
 
   return { score: Math.min(score, 10), reason: 'scored' };
@@ -198,104 +182,6 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
     console.error('[Google] Error:', e.message);
     return null;
   }
-}
-
-/**
- * Baidu Translate (unofficial transapi)
- * Best for: zh, ja, ko, th, vi
- */
-// ── Baidu sign algorithm (from fanyi.bdstatic.com) ──
-function baiduSign(text, gtk) {
-  const d = gtk.split('.');
-  let m = Number(d[0]) || 0;
-  const s = Number(d[1]) || 0;
-  const S = [];
-  let c = 0;
-  for (let v = 0; v < text.length; v++) {
-    let A = text.charCodeAt(v);
-    if (A < 128) { S[c++] = A; }
-    else if (A < 2048) { S[c++] = (A >> 6) | 192; S[c++] = (A & 63) | 128; }
-    else if (0xD800 === (0xFC00 & A) && v + 1 < text.length && 0xDC00 === (0xFC00 & text.charCodeAt(v + 1))) {
-      A = 0x10000 + ((0x3FF & A) << 10) + (0x3FF & text.charCodeAt(++v));
-      S[c++] = (A >> 18) | 240; S[c++] = ((A >> 12) & 63) | 128; S[c++] = ((A >> 6) & 63) | 128; S[c++] = (A & 63) | 128;
-    } else { S[c++] = (A >> 12) | 224; S[c++] = ((A >> 6) & 63) | 128; S[c++] = (A & 63) | 128; }
-  }
-  function n(r, o) { for (let t = 0; t < o.length - 2; t += 3) { let a = o.charAt(t + 2); a = a >= 'a' ? a.charCodeAt(0) - 87 : Number(a); a = '+' === o.charAt(t + 1) ? r >>> a : r << a; r = '+' === o.charAt(t) ? (r + a) & 0xFFFFFFFF : r ^ a; } return r; }
-  let p = m;
-  for (let b = 0; b < S.length; b++) { p += S[b]; p = n(p, '+-a^+6'); }
-  p = n(p, '+-3^+b+-f');
-  p ^= s;
-  if (p < 0) p = (0x7FFFFFFF & p) + 0x80000000;
-  p %= 1e6;
-  return p.toString() + '.' + (p ^ m);
-}
-
-// In-memory cache for Baidu session (cookie + token + gtk)
-let baiduSession = { cookie: null, token: null, gtk: null, expires: 0 };
-
-async function ensureBaiduSession() {
-  if (baiduSession.cookie && baiduSession.expires > Date.now()) return baiduSession;
-
-  // Step 1: fetch fanyi.baidu.com to get cookies
-  const pageRes = await fetch('https://fanyi.baidu.com/', {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(5000),
-  });
-
-  const cookies = pageRes.headers.getSetCookie?.() || [];
-  const cookieStr = cookies.map(c => c.split(';')[0]).join('; ');
-  const html = await pageRes.text();
-
-  // Step 2: extract token and gtk from page HTML
-  const tokenMatch = html.match(/token:\s*'([^']+)'/);
-  const gtkMatch = html.match(/gtk\s*=\s*'([^']+)'/);
-  const token = tokenMatch?.[1] || '';
-  const gtk = gtkMatch?.[1] || '320305.131321201';
-
-  baiduSession = { cookie: cookieStr, token, gtk, expires: Date.now() + 3600000 }; // 1 hour
-  return baiduSession;
-}
-
-export async function tryBaiduTranslate(text, sourceLang, targetLang) {
-  const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
-  const to = BAIDU_LANG_MAP[targetLang] || targetLang;
-
-  const session = await ensureBaiduSession();
-  const sign = baiduSign(text, session.gtk);
-
-  const body = new URLSearchParams({
-    from, to, query: text, sign, token: session.token,
-    transtype: 'realtime', simple_means_flag: '3', domain: 'common',
-  });
-
-  const res = await fetch('https://fanyi.baidu.com/v2transapi', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'Cookie': session.cookie,
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Referer': 'https://fanyi.baidu.com/',
-    },
-    body: body.toString(),
-    signal: AbortSignal.timeout(5000),
-  });
-
-  if (!res.ok) {
-    baiduSession.expires = 0; // invalidate session
-    throw new Error(`Baidu: HTTP ${res.status}`);
-  }
-
-  const data = await res.json();
-
-  if (data?.trans_result?.data?.[0]?.dst) {
-    return data.trans_result.data[0].dst.trim();
-  }
-  if (data?.error) {
-    baiduSession.expires = 0; // invalidate session on error
-    throw new Error(`Baidu: error ${data.error} — ${data.errmsg || ''}`);
-  }
-  throw new Error('Baidu: empty — ' + JSON.stringify(data).slice(0, 200));
 }
 
 // Microsoft uses different language codes for some languages
@@ -332,6 +218,7 @@ export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
 
 /**
  * MyMemory Translation Memory API
+ * Uses per-user email for quota (10k words/day per email)
  */
 export async function tryMyMemoryTranslate(text, sourceLang, targetLang, userEmail) {
   try {
@@ -363,38 +250,6 @@ export async function tryMyMemoryTranslate(text, sourceLang, targetLang, userEma
     console.error('[MyMemory] Error:', e.message);
     return { text: null, match: 0 };
   }
-}
-
-/**
- * LibreTranslate (community instances)
- */
-export async function tryLibreTranslate(text, sourceLang, targetLang) {
-  const LIBRE_URLS = [
-    'https://libretranslate.com/translate',
-    'https://translate.terraprint.co/translate',
-    'https://libretranslate.de/translate',
-    'https://lt.vern.cc/translate',
-  ];
-
-  const errors = [];
-  for (const baseUrl of LIBRE_URLS) {
-    try {
-      const res = await fetch(baseUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: text, source: sourceLang, target: targetLang, format: 'text' }),
-        signal: AbortSignal.timeout(5000)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.translatedText?.trim()) return data.translatedText.trim();
-        errors.push(`${baseUrl}: empty`);
-      } else {
-        errors.push(`${baseUrl}: ${res.status}`);
-      }
-    } catch (e) { errors.push(`${baseUrl}: ${e.message}`); continue; }
-  }
-  throw new Error(`Libre: ${errors.join('; ')}`);
 }
 
 // ═══════════════════════════════════════════════
@@ -446,9 +301,6 @@ export async function tryProvider(providerId, text, sourceLang, targetLang, user
       case 'google':
         result = await tryGoogleTranslate(text, sourceLang, targetLang);
         break;
-      case 'baidu':
-        result = await tryBaiduTranslate(text, sourceLang, targetLang);
-        break;
       case 'microsoft':
         result = await tryMicrosoftTranslate(text, sourceLang, targetLang);
         break;
@@ -458,9 +310,6 @@ export async function tryProvider(providerId, text, sourceLang, targetLang, user
         match = mm.match;
         break;
       }
-      case 'libretranslate':
-        result = await tryLibreTranslate(text, sourceLang, targetLang);
-        break;
     }
   } catch (e) {
     errorDetail = e.message || 'Unknown error';
@@ -536,7 +385,7 @@ export async function runProviderChain(text, sourceLang, targetLang, opts = {}) 
  * Returns array of results
  */
 export async function runAllProviders(text, sourceLang, targetLang, userEmail) {
-  const providerIds = ['google', 'baidu', 'microsoft', 'mymemory', 'libretranslate'];
+  const providerIds = ['google', 'microsoft', 'mymemory'];
 
   const results = await Promise.allSettled(
     providerIds.map(id => tryProvider(id, text, sourceLang, targetLang, userEmail))

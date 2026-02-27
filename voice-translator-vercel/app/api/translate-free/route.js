@@ -6,9 +6,9 @@ import { runProviderChain, validateTranslation } from '../../lib/providers.js';
 // FREE Translation — Multi-provider with dynamic routing
 //
 // Uses providers.js registry for language-optimized provider chains:
-// - CJK/Thai → Baidu → Google → Microsoft → MyMemory → LibreTranslate
-// - Arabic/Hindi/Russian → Microsoft → Google → MyMemory → LibreTranslate
-// - European → Google → Microsoft → MyMemory → LibreTranslate
+// - CJK/Thai/Vietnamese → Google → Microsoft → MyMemory
+// - Arabic/Hindi/Russian/Turkish → Microsoft → Google → MyMemory
+// - European → Google → Microsoft → MyMemory
 //
 // Modes:
 // - standard: try providers in chain order until one succeeds

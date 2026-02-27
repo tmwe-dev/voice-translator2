@@ -562,15 +562,13 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {(() => {
             const PROVIDER_INFO = {
               google:    { name: 'Google Translate', icon: '🔵', quality: 4, latency: '~400ms' },
-              baidu:     { name: 'Baidu Translate',  icon: '🔴', quality: 5, latency: '~600ms' },
               microsoft: { name: 'Microsoft',        icon: '🟢', quality: 4, latency: '~500ms' },
               mymemory:  { name: 'MyMemory',         icon: '🟠', quality: 3, latency: '~700ms' },
-              libretranslate: { name: 'LibreTranslate', icon: '🟣', quality: 2, latency: '~1s' },
             };
             const CHAIN_DEFAULTS = {
-              zh: ['baidu','google','microsoft'], ja: ['baidu','google','microsoft'],
-              ko: ['baidu','google','microsoft'], th: ['baidu','google','microsoft'],
-              ar: ['microsoft','google','baidu'], hi: ['microsoft','google','mymemory'],
+              zh: ['google','microsoft','mymemory'], ja: ['google','microsoft','mymemory'],
+              ko: ['google','microsoft','mymemory'], th: ['google','microsoft','mymemory'],
+              ar: ['microsoft','google','mymemory'], hi: ['microsoft','google','mymemory'],
               ru: ['microsoft','google','mymemory'], tr: ['microsoft','google','mymemory'],
             };
             const DEFAULT_CHAIN = ['google','microsoft','mymemory'];
