@@ -204,9 +204,18 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
  * Baidu Translate (unofficial transapi)
  * Best for: zh, ja, ko, th, vi
  */
+let baiduConfigured = false;
 export async function tryBaiduTranslate(text, sourceLang, targetLang) {
   // Use baidu-translate-api package — handles cookies/tokens/sessions automatically
-  const translate = (await import('baidu-translate-api')).default || (await import('baidu-translate-api'));
+  const baiduModule = (await import('baidu-translate-api'));
+  const translate = baiduModule.default || baiduModule;
+
+  // Use in-memory store instead of disk (Vercel has read-only filesystem)
+  if (!baiduConfigured && translate.setGlobalConfig) {
+    translate.setGlobalConfig({ useLocalStore: true });
+    baiduConfigured = true;
+  }
+
   const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
   const to = BAIDU_LANG_MAP[targetLang] || targetLang;
 
@@ -248,7 +257,12 @@ export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
  */
 export async function tryMyMemoryTranslate(text, sourceLang, targetLang, userEmail) {
   try {
-    const email = (userEmail && userEmail.includes('@')) ? userEmail : 'voicetranslator@app.com';
+    // Use the actual user's email for per-user quota (10k words/day per email)
+    // No fallback to shared email — protects other users from hitting shared limits
+    if (!userEmail || !userEmail.includes('@')) {
+      return { text: null, match: 0 };
+    }
+    const email = userEmail;
     const langpair = `${sourceLang}|${targetLang}`;
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}&de=${encodeURIComponent(email)}`;
 
