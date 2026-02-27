@@ -198,19 +198,22 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    if (!userToken) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-
-    // Resolve API key
+    // Resolve API key — allow test center access without token (uses platform key)
+    const source = searchParams.get('source');
     let apiKey = process.env.ELEVENLABS_API_KEY || null;
 
-    const session = await getSession(userToken);
-    if (session) {
-      const user = await getUser(session.email);
-      if (user?.useOwnKeys && user.apiKeys?.elevenlabs) {
-        apiKey = user.apiKeys.elevenlabs;
+    if (userToken) {
+      // Authenticated user — check for own key
+      const session = await getSession(userToken);
+      if (session) {
+        const user = await getUser(session.email);
+        if (user?.useOwnKeys && user.apiKeys?.elevenlabs) {
+          apiKey = user.apiKeys.elevenlabs;
+        }
       }
+    } else if (source !== 'testcenter') {
+      // No token and not test center — reject
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
     if (!apiKey) {
