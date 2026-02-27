@@ -209,26 +209,43 @@ export async function tryBaiduTranslate(text, sourceLang, targetLang) {
     const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
     const to = BAIDU_LANG_MAP[targetLang] || targetLang;
 
-    const res = await fetch('https://fanyi.baidu.com/transapi', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    // Try multiple Baidu endpoints — transapi requires browser cookies,
+    // so we also try the v2transapi and sug endpoints
+    const endpoints = [
+      {
+        url: 'https://fanyi.baidu.com/transapi',
+        body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}`,
       },
-      body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}`,
-      signal: AbortSignal.timeout(5000)
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    // Baidu response format: { data: [{ dst: "translated text" }] }
-    if (data?.data && Array.isArray(data.data)) {
-      const translated = data.data.map(seg => seg.dst).join('');
-      return translated?.trim() || null;
-    }
-    // Alternative format: { trans_result: { data: [{ dst }] } }
-    if (data?.trans_result?.data && Array.isArray(data.trans_result.data)) {
-      const translated = data.trans_result.data.map(seg => seg.dst).join('');
-      return translated?.trim() || null;
+      {
+        url: `https://fanyi.baidu.com/v2transapi?from=${from}&to=${to}`,
+        body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}&simple_means_flag=3&sign=&token=&domain=common`,
+      }
+    ];
+
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep.url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+          },
+          body: ep.body,
+          signal: AbortSignal.timeout(5000)
+        });
+        if (!res.ok) continue;
+        const data = await res.json();
+        // Response format: { data: [{ dst: "translated text" }] }
+        if (data?.data && Array.isArray(data.data)) {
+          const translated = data.data.map(seg => seg.dst).join('');
+          if (translated?.trim()) return translated.trim();
+        }
+        // Alternative format: { trans_result: { data: [{ dst }] } }
+        if (data?.trans_result?.data && Array.isArray(data.trans_result.data)) {
+          const translated = data.trans_result.data.map(seg => seg.dst).join('');
+          if (translated?.trim()) return translated.trim();
+        }
+      } catch { continue; }
     }
     return null;
   } catch (e) {
@@ -245,8 +262,9 @@ export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
   try {
     // Dynamic import to avoid bundling issues if package missing
     const { translate } = await import('microsoft-translate-api');
+    // API signature: translate(text, from, to, options)
     const result = await Promise.race([
-      translate(text, { from: sourceLang, to: targetLang }),
+      translate(text, sourceLang, targetLang),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
     ]);
     return result?.translation?.trim() || null;
@@ -293,6 +311,8 @@ export async function tryLibreTranslate(text, sourceLang, targetLang) {
   const LIBRE_URLS = [
     'https://libretranslate.com/translate',
     'https://translate.terraprint.co/translate',
+    'https://libretranslate.de/translate',
+    'https://lt.vern.cc/translate',
   ];
 
   for (const baseUrl of LIBRE_URLS) {
