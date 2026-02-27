@@ -657,6 +657,8 @@ export default function Home() {
       audioEnabled={audio.audioEnabled} setAudioEnabled={audio.setAudioEnabled}
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} canUseElevenLabs={auth.canUseElevenLabs}
       useOwnKeys={auth.useOwnKeys} apiKeyInputs={auth.apiKeyInputs}
+      elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
+      setSelectedELVoice={auth.setSelectedELVoice}
       showModeSelector={showModeSelector}
       setShowModeSelector={setShowModeSelector} textInput={translation.textInput} setTextInput={translation.setTextInput}
       sendingText={translation.sendingText} sendTextMessage={translation.sendTextMessage} sendTypingState={roomPolling.sendTypingState}

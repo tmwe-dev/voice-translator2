@@ -1,12 +1,13 @@
 'use client';
 import { memo, useState } from 'react';
-import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS, AI_MODELS } from '../lib/constants.js';
+import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS, AI_MODELS, VOICES } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
   playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, canUseElevenLabs,
   useOwnKeys, apiKeyInputs,
+  elevenLabsVoices, selectedELVoice, setSelectedELVoice,
   showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, changeRoomMode, playMessage,
@@ -16,6 +17,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
+  const [showVoicePicker, setShowVoicePicker] = useState(false);
 
   const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
@@ -271,13 +273,28 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               );
             })()}
           </button>
-          {!isTrial && (
-            <span style={{fontSize:8, color:S.colors.textMuted, fontWeight:500,
+          {/* Voice name badge — tappable to open voice picker */}
+          <button onClick={() => { if (!isTrial) setShowVoicePicker(!showVoicePicker); }}
+            style={{fontSize:8, color:S.colors.textMuted, fontWeight:500,
               padding:'1px 5px', borderRadius:4, background:S.colors.overlayBg,
-              border:`1px solid ${S.colors.overlayBorder}`, whiteSpace:'nowrap'}}>
-              {(prefs.voiceEngine || 'auto') === 'auto' ? 'AUTO' : (prefs.voiceEngine || '').toUpperCase()}
-            </span>
-          )}
+              border: showVoicePicker ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`,
+              whiteSpace:'nowrap', cursor: isTrial ? 'default' : 'pointer',
+              fontFamily:FONT, transition:'border 0.15s', WebkitTapHighlightColor:'transparent'}}>
+            {(() => {
+              const ve = prefs.voiceEngine || 'auto';
+              const activeEngine = ve === 'auto'
+                ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
+                : ve;
+              if (activeEngine === 'elevenlabs') {
+                const elVoice = elevenLabsVoices?.find(v => v.id === selectedELVoice);
+                return elVoice ? elVoice.name : 'Auto';
+              }
+              if (activeEngine === 'openai') return (prefs.voice || 'nova');
+              if (activeEngine === 'edge') return (prefs.edgeTtsVoiceGender || 'female') === 'female' ? '\u2640 Female' : '\u2642 Male';
+              return 'AUTO';
+            })()}
+            {!isTrial && <span style={{fontSize:6, marginLeft:2}}>{'\u25BC'}</span>}
+          </button>
         </div>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
           {/* AI model — tappable to open picker */}
@@ -335,6 +352,125 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 </div>
               </button>
             ))}
+          </div>
+        </>
+      )}
+
+      {/* Voice picker dropdown */}
+      {showVoicePicker && (
+        <>
+          <div onClick={() => setShowVoicePicker(false)}
+            style={{position:'fixed', inset:0, zIndex:98, background:'transparent'}} />
+          <div style={{position:'absolute', top:120, left:12, zIndex:100,
+            background:S.colors.glassCard,
+            border:`1px solid ${S.colors.cardBorder}`,
+            borderRadius:12, padding:'4px 0', width:220, maxHeight:320, overflowY:'auto',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
+            {(() => {
+              const ve = prefs.voiceEngine || 'auto';
+              const activeEngine = ve === 'auto'
+                ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
+                : ve;
+
+              // OpenAI voices section
+              if (activeEngine === 'openai') return (
+                <>
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                    textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+                    Voce OpenAI
+                  </div>
+                  {VOICES.map(v => (
+                    <button key={v} onClick={() => {
+                      savePrefs({...prefs, voice: v});
+                      setShowVoicePicker(false);
+                    }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                      width:'100%', padding:'8px 12px',
+                      background: v === (prefs.voice || 'nova') ? S.colors.accent4Bg : 'transparent',
+                      border:'none', cursor:'pointer', fontFamily:FONT, fontSize:12,
+                      color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                      <span style={{fontWeight:500, textTransform:'capitalize'}}>{v}</span>
+                      {v === (prefs.voice || 'nova') && (
+                        <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                      )}
+                    </button>
+                  ))}
+                </>
+              );
+
+              // ElevenLabs voices section
+              if (activeEngine === 'elevenlabs') return (
+                <>
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                    textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+                    Voce ElevenLabs
+                  </div>
+                  {/* Auto (avatar-based) option */}
+                  <button onClick={() => {
+                    if (setSelectedELVoice) setSelectedELVoice('');
+                    setShowVoicePicker(false);
+                  }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                    width:'100%', padding:'8px 12px',
+                    background: !selectedELVoice ? S.colors.accent4Bg : 'transparent',
+                    border:'none', cursor:'pointer', fontFamily:FONT, fontSize:12,
+                    color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                    <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1}}>
+                      <span style={{fontWeight:500}}>Auto (Avatar)</span>
+                      <span style={{fontSize:9, color:S.colors.textMuted}}>Voce basata sull'avatar</span>
+                    </div>
+                    {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                  </button>
+                  {/* ElevenLabs voice list */}
+                  {(elevenLabsVoices || []).slice(0, 20).map(v => (
+                    <button key={v.id} onClick={() => {
+                      if (setSelectedELVoice) setSelectedELVoice(v.id);
+                      setShowVoicePicker(false);
+                    }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                      width:'100%', padding:'6px 12px',
+                      background: selectedELVoice === v.id ? S.colors.accent4Bg : 'transparent',
+                      border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
+                      color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                      <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:0}}>
+                        <span style={{fontWeight:500}}>{v.name}</span>
+                        <span style={{fontSize:8, color:S.colors.textMuted}}>
+                          {[v.gender, v.accent, v.useCase].filter(Boolean).join(' \u2022 ')}
+                        </span>
+                      </div>
+                      {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                    </button>
+                  ))}
+                  {(!elevenLabsVoices || elevenLabsVoices.length === 0) && (
+                    <div style={{padding:'10px 12px', fontSize:10, color:S.colors.textMuted, textAlign:'center'}}>
+                      Carica le voci dal Settings {'\u2192'} ElevenLabs
+                    </div>
+                  )}
+                </>
+              );
+
+              // Edge TTS voices section (male/female)
+              return (
+                <>
+                  <div style={{padding:'6px 12px', fontSize:9, fontWeight:700, color:S.colors.textMuted,
+                    textTransform:'uppercase', letterSpacing:0.5, borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+                    Voce Edge TTS
+                  </div>
+                  {[{id:'female', label:'Femminile', icon:'\u2640'}, {id:'male', label:'Maschile', icon:'\u2642'}].map(g => (
+                    <button key={g.id} onClick={() => {
+                      savePrefs({...prefs, edgeTtsVoiceGender: g.id});
+                      setShowVoicePicker(false);
+                    }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
+                      width:'100%', padding:'10px 12px',
+                      background: (prefs.edgeTtsVoiceGender || 'female') === g.id ? S.colors.accent4Bg : 'transparent',
+                      border:'none', cursor:'pointer', fontFamily:FONT, fontSize:13,
+                      color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                      <span style={{fontWeight:500}}>{g.icon} {g.label}</span>
+                      {(prefs.edgeTtsVoiceGender || 'female') === g.id && (
+                        <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                      )}
+                    </button>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         </>
       )}
