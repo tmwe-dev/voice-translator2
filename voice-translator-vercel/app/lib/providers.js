@@ -205,49 +205,19 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
  * Best for: zh, ja, ko, th, vi
  */
 export async function tryBaiduTranslate(text, sourceLang, targetLang) {
+  // Use baidu-translate-api package — handles cookies/tokens/sessions automatically
+  const translate = (await import('baidu-translate-api')).default || (await import('baidu-translate-api'));
   const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
   const to = BAIDU_LANG_MAP[targetLang] || targetLang;
 
-  // Try multiple Baidu endpoints — transapi requires browser cookies,
-  // so we also try the v2transapi endpoint
-  const errors = [];
-  const endpoints = [
-    {
-      url: 'https://fanyi.baidu.com/transapi',
-      body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}`,
-    },
-    {
-      url: `https://fanyi.baidu.com/v2transapi?from=${from}&to=${to}`,
-      body: `from=${from}&to=${to}&query=${encodeURIComponent(text)}&simple_means_flag=3&sign=&token=&domain=common`,
-    }
-  ];
+  const result = await Promise.race([
+    translate(text, { from, to }),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Baidu timeout 6s')), 6000))
+  ]);
 
-  for (const ep of endpoints) {
-    try {
-      const res = await fetch(ep.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-        },
-        body: ep.body,
-        signal: AbortSignal.timeout(5000)
-      });
-      if (!res.ok) { errors.push(`${res.status} ${res.statusText}`); continue; }
-      const data = await res.json();
-      if (data?.data && Array.isArray(data.data)) {
-        const translated = data.data.map(seg => seg.dst).join('');
-        if (translated?.trim()) return translated.trim();
-      }
-      if (data?.trans_result?.data && Array.isArray(data.trans_result.data)) {
-        const translated = data.trans_result.data.map(seg => seg.dst).join('');
-        if (translated?.trim()) return translated.trim();
-      }
-      errors.push('empty response');
-    } catch (e) { errors.push(e.message); continue; }
-  }
-  // Throw with combined errors so test center shows them
-  throw new Error(`Baidu: ${errors.join('; ')}`);
+  const translated = result?.trans_result?.dst;
+  if (translated?.trim()) return translated.trim();
+  throw new Error('Baidu: empty result — ' + JSON.stringify(result).slice(0, 200));
 }
 
 /**

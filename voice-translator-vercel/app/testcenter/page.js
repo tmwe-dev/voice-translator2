@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { LANGS, FONT } from '../lib/constants.js';
 import { TEST_STRINGS, PRIORITY_PAIRS, SCENARIOS } from '../lib/testStrings.js';
-import { PROVIDERS } from '../lib/providers.js';
+import { PROVIDERS } from '../lib/provider-meta.js';
 
 // ═══════════════════════════════════════════════
 // Translation Test Center
