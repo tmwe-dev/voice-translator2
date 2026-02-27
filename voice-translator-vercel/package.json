@@ -10,7 +10,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@google/generative-ai": "^0.24.1",
-    "baidu-translate-api": "^0.4.3",
     "edge-tts-universal": "^1.4.0",
     "microsoft-translate-api": "^1.1.0",
     "next": "14.2.3",

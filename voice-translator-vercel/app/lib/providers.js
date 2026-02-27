@@ -204,30 +204,105 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
  * Baidu Translate (unofficial transapi)
  * Best for: zh, ja, ko, th, vi
  */
-let baiduConfigured = false;
-export async function tryBaiduTranslate(text, sourceLang, targetLang) {
-  // Use baidu-translate-api package — handles cookies/tokens/sessions automatically
-  const baiduModule = (await import('baidu-translate-api'));
-  const translate = baiduModule.default || baiduModule;
-
-  // Use in-memory store instead of disk (Vercel has read-only filesystem)
-  if (!baiduConfigured && translate.setGlobalConfig) {
-    translate.setGlobalConfig({ useLocalStore: true });
-    baiduConfigured = true;
+// ── Baidu sign algorithm (from fanyi.bdstatic.com) ──
+function baiduSign(text, gtk) {
+  const d = gtk.split('.');
+  let m = Number(d[0]) || 0;
+  const s = Number(d[1]) || 0;
+  const S = [];
+  let c = 0;
+  for (let v = 0; v < text.length; v++) {
+    let A = text.charCodeAt(v);
+    if (A < 128) { S[c++] = A; }
+    else if (A < 2048) { S[c++] = (A >> 6) | 192; S[c++] = (A & 63) | 128; }
+    else if (0xD800 === (0xFC00 & A) && v + 1 < text.length && 0xDC00 === (0xFC00 & text.charCodeAt(v + 1))) {
+      A = 0x10000 + ((0x3FF & A) << 10) + (0x3FF & text.charCodeAt(++v));
+      S[c++] = (A >> 18) | 240; S[c++] = ((A >> 12) & 63) | 128; S[c++] = ((A >> 6) & 63) | 128; S[c++] = (A & 63) | 128;
+    } else { S[c++] = (A >> 12) | 224; S[c++] = ((A >> 6) & 63) | 128; S[c++] = (A & 63) | 128; }
   }
+  function n(r, o) { for (let t = 0; t < o.length - 2; t += 3) { let a = o.charAt(t + 2); a = a >= 'a' ? a.charCodeAt(0) - 87 : Number(a); a = '+' === o.charAt(t + 1) ? r >>> a : r << a; r = '+' === o.charAt(t) ? (r + a) & 0xFFFFFFFF : r ^ a; } return r; }
+  let p = m;
+  for (let b = 0; b < S.length; b++) { p += S[b]; p = n(p, '+-a^+6'); }
+  p = n(p, '+-3^+b+-f');
+  p ^= s;
+  if (p < 0) p = (0x7FFFFFFF & p) + 0x80000000;
+  p %= 1e6;
+  return p.toString() + '.' + (p ^ m);
+}
 
+// In-memory cache for Baidu session (cookie + token + gtk)
+let baiduSession = { cookie: null, token: null, gtk: null, expires: 0 };
+
+async function ensureBaiduSession() {
+  if (baiduSession.cookie && baiduSession.expires > Date.now()) return baiduSession;
+
+  // Step 1: fetch fanyi.baidu.com to get cookies
+  const pageRes = await fetch('https://fanyi.baidu.com/', {
+    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+    redirect: 'follow',
+    signal: AbortSignal.timeout(5000),
+  });
+
+  const cookies = pageRes.headers.getSetCookie?.() || [];
+  const cookieStr = cookies.map(c => c.split(';')[0]).join('; ');
+  const html = await pageRes.text();
+
+  // Step 2: extract token and gtk from page HTML
+  const tokenMatch = html.match(/token:\s*'([^']+)'/);
+  const gtkMatch = html.match(/gtk\s*=\s*'([^']+)'/);
+  const token = tokenMatch?.[1] || '';
+  const gtk = gtkMatch?.[1] || '320305.131321201';
+
+  baiduSession = { cookie: cookieStr, token, gtk, expires: Date.now() + 3600000 }; // 1 hour
+  return baiduSession;
+}
+
+export async function tryBaiduTranslate(text, sourceLang, targetLang) {
   const from = BAIDU_LANG_MAP[sourceLang] || sourceLang;
   const to = BAIDU_LANG_MAP[targetLang] || targetLang;
 
-  const result = await Promise.race([
-    translate(text, { from, to }),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('Baidu timeout 6s')), 6000))
-  ]);
+  const session = await ensureBaiduSession();
+  const sign = baiduSign(text, session.gtk);
 
-  const translated = result?.trans_result?.dst;
-  if (translated?.trim()) return translated.trim();
-  throw new Error('Baidu: empty result — ' + JSON.stringify(result).slice(0, 200));
+  const body = new URLSearchParams({
+    from, to, query: text, sign, token: session.token,
+    transtype: 'realtime', simple_means_flag: '3', domain: 'common',
+  });
+
+  const res = await fetch('https://fanyi.baidu.com/v2transapi', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': session.cookie,
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      'Referer': 'https://fanyi.baidu.com/',
+    },
+    body: body.toString(),
+    signal: AbortSignal.timeout(5000),
+  });
+
+  if (!res.ok) {
+    baiduSession.expires = 0; // invalidate session
+    throw new Error(`Baidu: HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+
+  if (data?.trans_result?.data?.[0]?.dst) {
+    return data.trans_result.data[0].dst.trim();
+  }
+  if (data?.error) {
+    baiduSession.expires = 0; // invalidate session on error
+    throw new Error(`Baidu: error ${data.error} — ${data.errmsg || ''}`);
+  }
+  throw new Error('Baidu: empty — ' + JSON.stringify(data).slice(0, 200));
 }
+
+// Microsoft uses different language codes for some languages
+const MS_LANG_MAP = {
+  'zh': 'zh-Hans',  // Chinese simplified (Microsoft doesn't support bare 'zh')
+  'pt': 'pt-pt',    // Portuguese (Portugal) — use 'pt-br' for Brazilian
+};
 
 /**
  * Microsoft Translate (unofficial via npm)
@@ -236,10 +311,13 @@ export async function tryBaiduTranslate(text, sourceLang, targetLang) {
 export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
   // Don't catch errors here — let them bubble up to tryProvider for error reporting
   const { translate } = await import('microsoft-translate-api');
+  // Map our language codes to Microsoft's codes
+  const msFrom = MS_LANG_MAP[sourceLang] || sourceLang;
+  const msTo = MS_LANG_MAP[targetLang] || targetLang;
   // API signature: translate(text, from, to, options)
   // Returns: [{ translations: [{ text: "...", to: "xx" }] }]
   const result = await Promise.race([
-    translate(text, sourceLang, targetLang),
+    translate(text, msFrom, msTo),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout 5s')), 5000))
   ]);
   // Extract translated text from Microsoft's response format

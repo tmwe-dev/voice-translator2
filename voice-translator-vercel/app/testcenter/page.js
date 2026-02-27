@@ -48,7 +48,7 @@ export default function TestCenterPage() {
       const res = await fetch('/api/translate-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: sourceText, sourceLang, targetLang }),
+        body: JSON.stringify({ text: sourceText, sourceLang, targetLang, userEmail: 'testcenter@voicetranslate.app' }),
         signal: abortRef.current.signal,
       });
       const data = await res.json();
