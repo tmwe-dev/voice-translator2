@@ -301,6 +301,10 @@ export default function Home() {
       if (savedToken) {
         auth.setUserToken(savedToken);
         auth.userTokenRef.current = savedToken;
+        // FAST PATH: show view immediately for returning users (don't wait for /api/auth)
+        // Auth validates in background — user sees home/join instantly
+        setView(pickView(!!saved));
+        // Background validation — updates account data without blocking UI
         fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
           body:JSON.stringify({ action:'me', token:savedToken })
         }).then(r => r.json()).then(data => {
@@ -325,13 +329,12 @@ export default function Home() {
               auth.setClonedVoiceId(data.user.clonedVoiceId);
               auth.setClonedVoiceName(data.user.clonedVoiceName || 'My Voice');
             }
-            setView(pickView(!!saved));
           } else {
+            // Token invalid — clear it but DON'T redirect (user is already on a page)
             localStorage.removeItem('vt-token');
             auth.setUserToken(null);
-            setView(pickView(!!saved));
           }
-        }).catch(() => { setView(pickView(!!saved)); });
+        }).catch(() => { /* Network error — stay on current view, token might still be valid */ });
       } else {
         setView(pickView(!!saved));
       }
