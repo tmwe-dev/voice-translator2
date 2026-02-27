@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode } from '../../lib/store.js';
+import { redis } from '../../lib/redis.js';
 
 // POST /api/room - Create or join a room
 export async function POST(req) {
   try {
-    const { action, roomId, name, lang, speaking, mode, avatar, context, contextPrompt, description, liveText, typing, hostTier, hostEmail } = await req.json();
+    const { action, roomId, name, lang, speaking, mode, avatar, context, contextPrompt, description, liveText, typing, hostTier, hostEmail, signal } = await req.json();
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
@@ -38,6 +39,35 @@ export async function POST(req) {
       const room = await updateRoomMode(roomId, mode);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
+    }
+
+    // ── WebRTC Signaling ──
+    if (action === 'webrtc-signal') {
+      if (!roomId || !signal) return NextResponse.json({ error: 'roomId and signal required' }, { status: 400 });
+      const key = `rtc:${roomId}`;
+      try {
+        // Store signal in Redis list (FIFO, max 50 signals, 5min TTL)
+        await redis('RPUSH', key, JSON.stringify(signal));
+        await redis('LTRIM', key, -50, -1);
+        await redis('EXPIRE', key, 300);
+      } catch (e) {
+        console.error('[WebRTC] Signal store error:', e);
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === 'webrtc-poll') {
+      if (!roomId || !name) return NextResponse.json({ error: 'roomId and name required' }, { status: 400 });
+      const key = `rtc:${roomId}`;
+      try {
+        const raw = await redis('LRANGE', key, 0, -1);
+        const signals = (raw || [])
+          .map(s => { try { return JSON.parse(s); } catch { return null; } })
+          .filter(s => s && s.from !== name); // Don't return own signals
+        return NextResponse.json({ signals });
+      } catch {
+        return NextResponse.json({ signals: [] });
+      }
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

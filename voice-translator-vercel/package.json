@@ -10,6 +10,8 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@google/generative-ai": "^0.24.1",
+    "edge-tts-universal": "^1.4.0",
+    "microsoft-translate-api": "^1.1.0",
     "next": "14.2.3",
     "openai": "^4.50.0",
     "qrcode": "^1.5.4",

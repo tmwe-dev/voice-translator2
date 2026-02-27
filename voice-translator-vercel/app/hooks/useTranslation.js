@@ -122,10 +122,33 @@ export default function useTranslation({
       if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
         return { translated: text, fallback: true, limitExceeded: true };
       }
+      // Check translation mode from prefs
+      const translationMode = prefsRef.current?.translationMode || 'standard';
+      const translationProviders = prefsRef.current?.translationProviders;
+
+      // Guaranteed mode → use consensus endpoint (3 providers in parallel)
+      if (translationMode === 'guaranteed') {
+        const res = await fetch('/api/translate-consensus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
+        });
+        if (!res.ok) return { translated: text };
+        const data = await res.json();
+        if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+        return data;
+      }
+
+      // Standard or Superfast → use translate-free with mode flags
       const res = await fetch('/api/translate-free', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
+        body: JSON.stringify({
+          text, sourceLang, targetLang,
+          userEmail: userEmail || undefined,
+          superfast: translationMode === 'superfast' ? true : undefined,
+          userProviderPrefs: translationProviders,
+        })
       });
       if (!res.ok) return { translated: text };
       const data = await res.json();

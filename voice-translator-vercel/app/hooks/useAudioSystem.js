@@ -277,6 +277,51 @@ export default function useAudioSystem({
   }
 
   // =============================================
+  // EDGE TTS (FREE tier) — Neural voices, no cost
+  // =============================================
+
+  async function fetchEdgeTTSBlob(text, langCode, gender) {
+    const res = await fetch('/api/tts-edge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        langCode: langCode || 'en',
+        gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
+      })
+    });
+    if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
+    return await res.blob();
+  }
+
+  async function playEdgeTTS(text, langCode) {
+    let blob;
+    try {
+      blob = await fetchEdgeTTSBlob(text, langCode);
+    } catch {
+      // Edge TTS failed — fallback to browser speech
+      await browserSpeak(text, langCode);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    activeBlobUrlsRef.current.add(url);
+
+    let played = await playBlobAudio(url);
+    if (!played) played = await playBlobNewAudio(url);
+    if (!played) {
+      // Audio playback failed — browser TTS as last resort
+      activeBlobUrlsRef.current.delete(url);
+      URL.revokeObjectURL(url);
+      await browserSpeak(text, langCode);
+      return;
+    }
+
+    activeBlobUrlsRef.current.delete(url);
+    URL.revokeObjectURL(url);
+  }
+
+  // =============================================
   // OPENAI TTS (PRO tier) — with retry
   // =============================================
 
@@ -473,7 +518,7 @@ export default function useAudioSystem({
     const { text, lang } = audioQueueRef.current.shift();
     try {
       if (isTrialRef.current) {
-        await browserSpeak(text, lang);
+        await playEdgeTTS(text, lang);  // Edge TTS: FREE neural voices for all languages
       } else if (isTopProRef.current) {
         await playTTSElevenLabs(text, lang);
       } else {
@@ -493,7 +538,7 @@ export default function useAudioSystem({
       const text = msg.translated;
       const lang = getLang(msg.targetLang).speech;
       if (isTrialRef.current) {
-        await browserSpeak(text, lang);
+        await playEdgeTTS(text, lang);  // Edge TTS: FREE neural voices
       } else if (isTopProRef.current) {
         await playTTSElevenLabs(text, lang);
       } else {
