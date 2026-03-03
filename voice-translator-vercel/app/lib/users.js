@@ -571,6 +571,72 @@ export async function refundExpiredGifts() {
 }
 
 // =============================================
+// GDPR — DELETE ALL USER DATA
+// =============================================
+
+/**
+ * Delete all user data from Redis (GDPR Art. 17 — Right to Erasure)
+ * Removes: profile, sessions, payments, referrals, lending tokens, gift escrows
+ * @param {string} email
+ * @param {string} sessionToken - current session token to invalidate
+ * @returns {{ deleted: string[] }} list of deleted key types
+ */
+export async function deleteUserData(email, sessionToken) {
+  const lowerEmail = email.toLowerCase();
+  const deleted = [];
+
+  // 1. Delete user profile
+  const userKey = `user:${lowerEmail}`;
+  await redis('DEL', userKey);
+  deleted.push('profile');
+
+  // 2. Delete current session
+  if (sessionToken) {
+    await redis('DEL', `session:${sessionToken}`);
+    deleted.push('session');
+  }
+
+  // 3. Delete payment history
+  const paymentsKey = `payments:${lowerEmail}`;
+  await redis('DEL', paymentsKey);
+  deleted.push('payments');
+
+  // 4. Delete auth codes
+  await redis('DEL', `authcode:${lowerEmail}`);
+  deleted.push('authcodes');
+
+  // 5. Delete referral data
+  const refEmailKey = `ref:email:${lowerEmail}`;
+  const refCode = await redis('GET', refEmailKey);
+  if (refCode) {
+    await redis('DEL', `ref:code:${refCode}`);
+    await redis('DEL', refEmailKey);
+  }
+  await redis('DEL', `ref:used:${lowerEmail}`);
+  await redis('DEL', `ref:stats:${lowerEmail}`);
+  deleted.push('referrals');
+
+  // 6. Revoke all active lending tokens
+  const lendingCodes = await redis('SMEMBERS', `lender:active:${lowerEmail}`);
+  if (lendingCodes && Array.isArray(lendingCodes)) {
+    for (const code of lendingCodes) {
+      const lendingKey = `lending:${code}`;
+      const data = await redis('GET', lendingKey);
+      if (data) {
+        const lending = JSON.parse(data);
+        lending.status = 'revoked';
+        lending.revokedAt = Date.now();
+        await redis('SET', lendingKey, JSON.stringify(lending), 'EX', 86400);
+      }
+    }
+    await redis('DEL', `lender:active:${lowerEmail}`);
+    deleted.push('lending-tokens');
+  }
+
+  return { deleted };
+}
+
+// =============================================
 // API KEY LENDING (Temporary TOP PRO Access)
 // =============================================
 

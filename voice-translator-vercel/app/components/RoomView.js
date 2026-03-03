@@ -2,6 +2,7 @@
 import { memo, useState, useRef, useEffect } from 'react';
 import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS, AI_MODELS, VOICES } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
+import ConnectionQuality from './ConnectionQuality.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -124,6 +125,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
+          {/* Connection quality indicator */}
+          <ConnectionQuality
+            webrtcState={webrtc?.webrtcState || 'idle'}
+            partnerConnected={partnerConnected}
+          />
           {/* Video call button */}
           {webrtc && (
             <button onClick={() => {

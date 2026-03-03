@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory } from '../../lib/users.js';
+import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
 
 // POST /api/user - User profile actions
 export async function POST(req) {
@@ -56,6 +56,16 @@ export async function POST(req) {
     if (action === 'payments') {
       const payments = await getPaymentHistory(email);
       return NextResponse.json({ payments });
+    }
+
+    // === GDPR: DELETE ALL DATA ===
+    if (action === 'delete-data') {
+      const result = await deleteUserData(email, token);
+      return NextResponse.json({
+        ok: true,
+        message: 'All your data has been deleted (GDPR Art. 17)',
+        deleted: result.deleted,
+      });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

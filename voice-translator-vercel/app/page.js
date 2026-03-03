@@ -28,9 +28,19 @@ import SummaryView from './components/SummaryView.js';
 import VoiceTestView from './components/VoiceTestView.js';
 import ContactsView from './components/ContactsView.js';
 import VoiceCloneView from './components/VoiceCloneView.js';
+import ErrorBoundary from './components/ErrorBoundary.js';
+import ConnectionQuality from './components/ConnectionQuality.js';
 
 
 export default function Home() {
+  return (
+    <ErrorBoundary>
+      <HomeInner />
+    </ErrorBoundary>
+  );
+}
+
+function HomeInner() {
   // =============================================
   // LOCAL STATE
   // =============================================

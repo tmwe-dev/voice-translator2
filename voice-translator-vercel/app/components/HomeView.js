@@ -379,6 +379,58 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         </div>
 
         {/* ═══════════════════════════════════════
+            QUICK STATS BAR (PRO users)
+           ═══════════════════════════════════════ */}
+        {!isGuest && (
+          <div style={{width:'100%', maxWidth:400, marginBottom:10, display:'flex', gap:8}}>
+            {/* Credits */}
+            <button onClick={() => { refreshBalance(); setView('credits'); }}
+              style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
+                background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
+                display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                WebkitTapHighlightColor:'transparent'}}>
+              <span style={{fontSize:16}}>{'\u{1F4B3}'}</span>
+              <span style={{fontSize:14, fontWeight:800, color:C.textPrimary}}>{formatCredits(creditBalance)}</span>
+              <span style={{fontSize:9, color:C.textSecondary}}>{isIT ? 'Crediti' : 'Credits'}</span>
+            </button>
+            {/* Account */}
+            <button onClick={() => setView('account')}
+              style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
+                background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
+                display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                WebkitTapHighlightColor:'transparent'}}>
+              <span style={{fontSize:16}}>{'\u{1F464}'}</span>
+              <span style={{fontSize:11, fontWeight:700, color:C.textPrimary}}>
+                {useOwnKeys ? 'TOP PRO' : isTrial ? 'FREE' : 'PRO'}
+              </span>
+              <span style={{fontSize:9, color:C.textSecondary}}>{isIT ? 'Account' : 'Account'}</span>
+            </button>
+            {/* Voice Clone */}
+            <button onClick={() => setView('voice-clone')}
+              style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
+                background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
+                display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                WebkitTapHighlightColor:'transparent'}}>
+              <span style={{fontSize:16}}>{'\u{1F3A4}'}</span>
+              <span style={{fontSize:11, fontWeight:700, color:C.textPrimary}}>{isIT ? 'Voce' : 'Voice'}</span>
+              <span style={{fontSize:9, color:C.textSecondary}}>{isIT ? 'Clona' : 'Clone'}</span>
+            </button>
+            {/* API Keys */}
+            <button onClick={() => setView('apikeys')}
+              style={{flex:1, padding:'10px 12px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
+                background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
+                display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                WebkitTapHighlightColor:'transparent'}}>
+              <span style={{fontSize:16}}>{'\u{1F511}'}</span>
+              <span style={{fontSize:11, fontWeight:700, color: useOwnKeys ? C.accent4 : C.textPrimary}}>
+                {useOwnKeys ? 'ON' : 'OFF'}
+              </span>
+              <span style={{fontSize:9, color:C.textSecondary}}>API Keys</span>
+            </button>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════
             LOW CREDITS WARNING
            ═══════════════════════════════════════ */}
         {lowCredits && (
