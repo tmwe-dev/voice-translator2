@@ -1,22 +1,22 @@
 // ═══════════════════════════════════════════════
 // WebRTC Helper — Direct phone-to-phone connection
 //
-// Uses WebRTC DataChannel for direct message exchange
-// between two phones on the same WiFi network.
-// Bypasses Redis polling entirely → ~50ms latency.
-//
-// Signaling goes through existing /api/room endpoint.
+// Supports:
+// - DataChannel for direct message exchange (~50ms latency)
+// - Audio/Video tracks for video calls
+// - Signaling via existing /api/room endpoint
 // ═══════════════════════════════════════════════
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun2.l.google.com:19302' },
 ];
 
 /**
- * Create a new RTCPeerConnection with DataChannel support
+ * Create a new RTCPeerConnection with DataChannel + media support
  */
-export function createPeerConnection(onMessage, onStateChange) {
+export function createPeerConnection(onMessage, onStateChange, onRemoteTrack) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
   pc.oniceconnectionstatechange = () => {
@@ -26,6 +26,13 @@ export function createPeerConnection(onMessage, onStateChange) {
   pc.onconnectionstatechange = () => {
     onStateChange?.(pc.connectionState);
   };
+
+  // Handle incoming remote tracks (audio/video from partner)
+  if (onRemoteTrack) {
+    pc.ontrack = (event) => {
+      onRemoteTrack(event.track, event.streams[0]);
+    };
+  }
 
   return pc;
 }
@@ -39,6 +46,54 @@ export function createDataChannel(pc, label = 'messages') {
     maxRetransmits: 3,
   });
   return dc;
+}
+
+/**
+ * Add local media tracks to peer connection
+ * @param {RTCPeerConnection} pc
+ * @param {MediaStream} stream - local camera/mic stream
+ * @returns {RTCRtpSender[]} senders for later removal
+ */
+export function addMediaTracks(pc, stream) {
+  const senders = [];
+  for (const track of stream.getTracks()) {
+    const sender = pc.addTrack(track, stream);
+    senders.push(sender);
+  }
+  return senders;
+}
+
+/**
+ * Remove media tracks from peer connection
+ * @param {RTCPeerConnection} pc
+ * @param {RTCRtpSender[]} senders
+ */
+export function removeMediaTracks(pc, senders) {
+  for (const sender of senders) {
+    try { pc.removeTrack(sender); } catch {}
+  }
+}
+
+/**
+ * Get local camera + mic stream
+ * @param {object} opts - { video: bool, audio: bool }
+ * @returns {Promise<MediaStream>}
+ */
+export async function getLocalMediaStream(opts = { video: true, audio: false }) {
+  const constraints = {
+    video: opts.video ? {
+      width: { ideal: 640, max: 1280 },
+      height: { ideal: 480, max: 720 },
+      frameRate: { ideal: 24, max: 30 },
+      facingMode: 'user',
+    } : false,
+    audio: opts.audio ? {
+      echoCancellation: true,
+      noiseSuppression: true,
+      autoGainControl: true,
+    } : false,
+  };
+  return await navigator.mediaDevices.getUserMedia(constraints);
 }
 
 /**
@@ -101,4 +156,48 @@ export function collectIceCandidates(pc, callback) {
       callback(JSON.stringify(event.candidate));
     }
   };
+}
+
+/**
+ * Toggle video track on/off without renegotiation
+ * @param {MediaStream} stream
+ * @param {boolean} enabled
+ */
+export function setVideoEnabled(stream, enabled) {
+  if (!stream) return;
+  for (const track of stream.getVideoTracks()) {
+    track.enabled = enabled;
+  }
+}
+
+/**
+ * Switch camera (front/back) on mobile
+ * @param {MediaStream} currentStream
+ * @param {RTCRtpSender[]} senders
+ * @returns {Promise<MediaStream>} new stream
+ */
+export async function switchCamera(currentStream, senders) {
+  // Stop current video tracks
+  for (const track of currentStream.getVideoTracks()) {
+    track.stop();
+  }
+  // Get current facing mode
+  const currentTrack = currentStream.getVideoTracks()[0];
+  const currentFacing = currentTrack?.getSettings?.()?.facingMode || 'user';
+  const newFacing = currentFacing === 'user' ? 'environment' : 'user';
+
+  const newStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: newFacing, width: { ideal: 640 }, height: { ideal: 480 } },
+  });
+
+  // Replace track in senders
+  const newVideoTrack = newStream.getVideoTracks()[0];
+  if (newVideoTrack && senders.length > 0) {
+    for (const sender of senders) {
+      if (sender.track?.kind === 'video') {
+        await sender.replaceTrack(newVideoTrack);
+      }
+    }
+  }
+  return newStream;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState } from 'react';
+import { memo, useState, useRef, useEffect } from 'react';
 import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATARS, AI_MODELS, VOICES } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
@@ -15,7 +15,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
   syncLangChange, theme, setTheme,
   clonedVoiceId, clonedVoiceName,
-  duckingLevel, setDuckingLevel }) {
+  duckingLevel, setDuckingLevel,
+  webrtc }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -23,6 +24,24 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showExitMenu, setShowExitMenu] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
   const [showDuckingPanel, setShowDuckingPanel] = useState(false);
+  const [showVideoCall, setShowVideoCall] = useState(false);
+
+  // Video refs
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
+
+  // Attach video streams to DOM elements
+  useEffect(() => {
+    if (localVideoRef.current && webrtc?.localStream) {
+      localVideoRef.current.srcObject = webrtc.localStream;
+    }
+  }, [webrtc?.localStream]);
+
+  useEffect(() => {
+    if (remoteVideoRef.current && webrtc?.remoteStream) {
+      remoteVideoRef.current.srcObject = webrtc.remoteStream;
+    }
+  }, [webrtc?.remoteStream]);
 
   const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
@@ -105,6 +124,22 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
         <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
+          {/* Video call button */}
+          {webrtc && (
+            <button onClick={() => {
+              if (!showVideoCall) {
+                setShowVideoCall(true);
+                if (webrtc.webrtcState === 'idle') webrtc.initiateConnection(true);
+              } else {
+                setShowVideoCall(false);
+              }
+            }}
+              style={{...S.iconBtn, width:32, fontSize:13,
+                background: showVideoCall ? S.colors.accent4Bg : S.colors.overlayBg,
+                border: showVideoCall ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
+              {showVideoCall ? '\u{1F4F9}' : '\u{1F4F7}'}
+            </button>
+          )}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
             style={{...S.iconBtn, display:'flex', alignItems:'center', gap:3, width:'auto', padding:'0 8px',
               color: audioEnabled ? S.colors.statusOk : S.colors.statusError,
@@ -591,6 +626,73 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           50% { opacity: 0.8; }
         }
       `}</style>
+
+      {/* Video Call Panel */}
+      {showVideoCall && webrtc && (
+        <div style={{position:'relative', flexShrink:0, background:'#000',
+          borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+          {/* Remote video (full width) */}
+          <div style={{position:'relative', width:'100%', height:240, background:'#111'}}>
+            {webrtc.remoteVideoActive && webrtc.remoteStream ? (
+              <video ref={remoteVideoRef} autoPlay playsInline
+                style={{width:'100%', height:'100%', objectFit:'cover'}} />
+            ) : (
+              <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column',
+                alignItems:'center', justifyContent:'center', gap:8}}>
+                <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={64} />
+                <span style={{color:S.colors.textMuted, fontSize:12}}>
+                  {webrtc.webrtcState === 'connecting' ? 'Connessione...'
+                    : webrtc.webrtcConnected ? (partner?.name || 'Partner') + ' - Camera off'
+                    : 'In attesa di connessione...'}
+                </span>
+              </div>
+            )}
+            {/* Local video (picture-in-picture) */}
+            {webrtc.localStream && webrtc.videoEnabled && (
+              <div style={{position:'absolute', bottom:8, right:8, width:100, height:75,
+                borderRadius:10, overflow:'hidden', border:`2px solid ${S.colors.accent4Border}`,
+                boxShadow:'0 4px 12px rgba(0,0,0,0.5)'}}>
+                <video ref={localVideoRef} autoPlay playsInline muted
+                  style={{width:'100%', height:'100%', objectFit:'cover', transform:'scaleX(-1)'}} />
+              </div>
+            )}
+            {/* WebRTC state badge */}
+            <div style={{position:'absolute', top:8, left:8, display:'flex', alignItems:'center', gap:6,
+              padding:'4px 10px', borderRadius:20, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)'}}>
+              <div style={{width:8, height:8, borderRadius:4,
+                background: webrtc.webrtcConnected ? S.colors.statusOk
+                  : webrtc.webrtcState === 'connecting' ? S.colors.statusWarning
+                  : S.colors.statusError}} />
+              <span style={{fontSize:10, color:'#fff', fontWeight:600}}>
+                {webrtc.webrtcConnected ? 'P2P' : webrtc.webrtcState === 'connecting' ? '...' : 'OFF'}
+              </span>
+            </div>
+          </div>
+          {/* Video controls */}
+          <div style={{display:'flex', justifyContent:'center', gap:12, padding:'8px 0',
+            background:'rgba(0,0,0,0.85)'}}>
+            <button onClick={() => webrtc.toggleVideo()}
+              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                background: webrtc.videoEnabled ? S.colors.accent4Bg : 'rgba(255,255,255,0.12)',
+                color: webrtc.videoEnabled ? S.colors.statusOk : S.colors.textMuted,
+                fontSize:16, display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {webrtc.videoEnabled ? '\u{1F4F7}' : '\u{1F6AB}'}
+            </button>
+            <button onClick={() => webrtc.flipCamera()}
+              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{1F504}'}
+            </button>
+            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); }}
+              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:S.colors.statusError, color:'#fff', fontSize:16,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{1F4F5}'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div style={S.chatArea}>

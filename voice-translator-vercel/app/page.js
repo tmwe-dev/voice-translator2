@@ -11,6 +11,7 @@ import useTranslation from './hooks/useTranslation.js';
 import useRoomPolling from './hooks/useRoomPolling.js';
 import useAuth from './hooks/useAuth.js';
 import useContacts from './hooks/useContacts.js';
+import useWebRTC from './hooks/useWebRTC.js';
 
 // View components
 import WelcomeView from './components/WelcomeView.js';
@@ -118,6 +119,11 @@ export default function Home() {
     sentByMeRef: roomPolling.sentByMeRef  // FASE 1A: for message dedup
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
+  const webrtc = useWebRTC({
+    roomId: roomPolling.roomId,
+    myName: prefs.name,
+    onDirectMessage: null, // DataChannel messages handled separately if needed
+  });
 
   // =============================================
   // STYLES & THEME
@@ -776,7 +782,9 @@ export default function Home() {
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
       freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
       syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme}
-      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName} />
+      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
+      duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
+      webrtc={webrtc} />
   );
 
   if (view === 'history') return (
