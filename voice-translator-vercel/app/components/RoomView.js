@@ -609,7 +609,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           const translationForMe = getTranslationForMe(m);
           return (
             <div key={m.id || i} style={{display:'flex', gap:8,
-              flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end'}}>
+              flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end',
+              animation:'vtSlideIn 0.25s ease-out'}}>
               <AvatarImg src={isMine ? prefs.avatar : getSenderAvatar(m.sender)} size={56} style={{marginBottom:2}} />
               <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
                 alignItems:isMine ? 'flex-end' : 'flex-start'}}>
@@ -696,7 +697,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           padding:'8px 14px', borderRadius:12,
           background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)',
           border:`1px solid ${S.colors.accent3Border}`,
-          boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
+          boxShadow:'0 4px 16px rgba(0,0,0,0.3)',
+          animation:'vtCaptionFade 0.2s ease-out'}}>
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4}}>
             <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={20} />
             <span style={{fontSize:10, color:S.colors.accent3, fontWeight:600}}>
@@ -760,7 +762,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               </button>
             )}
             <button onClick={() => { vibrate(25); toggleRecording(); }}
-              style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {})}}>
+              style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {}),
+                ...(recording ? {animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
               {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
             </button>
           </div>
@@ -809,6 +812,18 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         @keyframes vtPulse {
           0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
           40% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes vtSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes vtRecordPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(255,107,157,0.5); }
+          50% { box-shadow: 0 0 0 12px rgba(255,107,157,0); }
+        }
+        @keyframes vtCaptionFade {
+          from { opacity: 0; transform: translateY(4px); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>
