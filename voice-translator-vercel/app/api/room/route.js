@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang } from '../../lib/store.js';
 import { redis } from '../../lib/redis.js';
+import { sanitizeRoomId, sanitizeName, sanitize, rateLimit, getClientIP } from '../../lib/validate.js';
 
 // POST /api/room - Create or join a room
 export async function POST(req) {
   try {
-    const { action, roomId, name, lang, speaking, mode, avatar, context, contextPrompt, description, liveText, typing, hostTier, hostEmail, signal } = await req.json();
+    const ip = getClientIP(req);
+    const rl = rateLimit(ip, { maxRequests: 60, windowMs: 60000 });
+    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+
+    const body = await req.json();
+    const action = typeof body.action === 'string' ? body.action : '';
+    const roomId = sanitizeRoomId(body.roomId || '');
+    const name = sanitizeName(body.name || '');
+    const lang = typeof body.lang === 'string' ? body.lang.slice(0, 10) : '';
+    const { speaking, mode, avatar, context, contextPrompt, description, liveText, typing, hostTier, hostEmail, signal } = body;
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
@@ -29,7 +39,8 @@ export async function POST(req) {
 
     if (action === 'speaking') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
-      const room = await setSpeaking(roomId, name, !!speaking, liveText || null, !!typing);
+      const safeLiveText = liveText ? sanitize(liveText, 500) : null;
+      const room = await setSpeaking(roomId, name, !!speaking, safeLiveText, !!typing);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }

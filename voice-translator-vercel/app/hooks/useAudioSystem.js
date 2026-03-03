@@ -27,10 +27,14 @@ export default function useAudioSystem({
   const activeBlobUrlsRef = useRef(new Set());
   const voiceCacheRef = useRef({});
 
-  // Sync audioEnabled ref
-  useEffect(() => {
-    audioEnabledRef.current = audioEnabled;
-  }, [audioEnabled]);
+  // ── DUCKING: reduce remote/other audio while TTS plays ──
+  const duckingGainRef = useRef(null);
+  const [duckingLevel, setDuckingLevel] = useState(0.2); // 0.0=mute, 1.0=full
+  const duckingLevelRef = useRef(0.2);
+
+  // Sync refs
+  useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
+  useEffect(() => { duckingLevelRef.current = duckingLevel; }, [duckingLevel]);
 
   // Preload browser voices (Chrome loads them asynchronously)
   useEffect(() => {
@@ -66,8 +70,46 @@ export default function useAudioSystem({
       const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
       a.volume = 0.01;
       a.play().catch(() => {});
+      // Create ducking GainNode for controlling remote audio volume during TTS
+      if (!duckingGainRef.current) {
+        const duckGain = ctx.createGain();
+        duckGain.gain.value = 1.0;
+        duckGain.connect(ctx.destination);
+        duckingGainRef.current = duckGain;
+      }
       setAudioReady(true);
     } catch (e) {}
+  }
+
+  // ── DUCKING CONTROLS ──
+  function startDucking() {
+    const gain = duckingGainRef.current;
+    const ctx = audioContextRef.current;
+    if (!gain || !ctx) return;
+    try {
+      gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03);
+    } catch {}
+  }
+
+  function stopDucking() {
+    const gain = duckingGainRef.current;
+    const ctx = audioContextRef.current;
+    if (!gain || !ctx) return;
+    try {
+      gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06);
+    } catch {}
+  }
+
+  // Connect any audio element to ducking chain (for remote WebRTC audio)
+  function connectToDucking(audioElement) {
+    const ctx = audioContextRef.current;
+    const gain = duckingGainRef.current;
+    if (!ctx || !gain || !audioElement) return null;
+    try {
+      const source = ctx.createMediaElementSource(audioElement);
+      source.connect(gain);
+      return source;
+    } catch { return null; }
   }
 
   useEffect(() => {
@@ -314,17 +356,25 @@ export default function useAudioSystem({
     }
   }
 
-  // Pre-warm Edge TTS connection when audio is ready
-  const edgePrewarmedRef = useRef(false);
+  // Pre-warm TTS connections when audio is ready (all engines)
+  const ttsPrewarmedRef = useRef(false);
   useEffect(() => {
-    if (!audioReady || edgePrewarmedRef.current) return;
-    edgePrewarmedRef.current = true;
-    // Silent pre-warm request to reduce first-speech latency
+    if (!audioReady || ttsPrewarmedRef.current) return;
+    ttsPrewarmedRef.current = true;
+    // Silent pre-warm requests to reduce first-speech latency
     fetch('/api/tts-edge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: '.', langCode: 'en', gender: 'female' })
     }).catch(() => {});
+    // Pre-warm OpenAI TTS connection (TCP handshake + TLS)
+    if (!isTrialRef.current) {
+      fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: '.', voice: 'nova', langCode: 'en', userToken: getEffectiveToken() })
+      }).catch(() => {});
+    }
   }, [audioReady]);
 
   async function playEdgeTTS(text, langCode) {
@@ -563,6 +613,8 @@ export default function useAudioSystem({
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
     const { text, lang } = audioQueueRef.current.shift();
+    // ── DUCKING: reduce other audio while TTS plays ──
+    startDucking();
     try {
       const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
       if (voiceEngine === 'edge') {
@@ -584,6 +636,8 @@ export default function useAudioSystem({
     } catch (e) {
       console.error('[Audio] playback error:', e);
     }
+    // ── UNDUCK: restore audio after TTS finishes ──
+    stopDucking();
     isPlayingRef.current = false;
     processAudioQueue();
   }
@@ -643,6 +697,13 @@ export default function useAudioSystem({
     getPersistentAudio,
     persistentMicRef,
     audioEnabledRef,
-    checkVoiceAvailability
+    checkVoiceAvailability,
+    // Ducking
+    duckingLevel,
+    setDuckingLevel,
+    startDucking,
+    stopDucking,
+    connectToDucking,
+    audioContextRef,
   };
 }

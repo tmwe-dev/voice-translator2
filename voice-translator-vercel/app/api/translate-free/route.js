@@ -60,10 +60,14 @@ export async function POST(req) {
       );
     }
 
-    const { text, sourceLang, targetLang, userEmail, superfast, userProviderPrefs } = await req.json();
+    const body = await req.json();
+    const text = typeof body.text === 'string' ? body.text : '';
+    const sourceLang = typeof body.sourceLang === 'string' ? body.sourceLang.slice(0, 10) : '';
+    const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
+    const { userEmail, superfast, userProviderPrefs } = body;
     if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 }, { headers: cors });
 
-    const trimmed = text.trim();
+    const trimmed = text.trim().slice(0, 10000); // Cap at 10K chars
     const charsUsed = trimmed.length;
 
     // ── Enforce daily character limit per IP (Redis-backed) ──

@@ -84,6 +84,10 @@ export default function useTranslation({
   const translatedChunksRef = useRef([]);
   const reviewTimerRef = useRef(null);
 
+  // ── Translation cache: avoid re-translating identical text ──
+  // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
+  const translationCacheRef = useRef(new Map());
+
   // Cached mime type detection — avoid recalculating on every recording
   function getRecorderMime() {
     if (cachedMimeRef.current) return cachedMimeRef.current;
@@ -132,6 +136,13 @@ export default function useTranslation({
   // Translation API — single call
   // =============================================
   async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
+    // ── Cache lookup: exact match avoids redundant API calls ──
+    const cacheKey = `${text}|${sourceLang}|${targetLang}`;
+    const cached = translationCacheRef.current.get(cacheKey);
+    if (cached && (Date.now() - cached.ts) < 300000) { // 5 min TTL
+      return { translated: cached.translated, cached: true };
+    }
+
     if (isTrialRef.current) {
       if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
         return { translated: text, fallback: true, limitExceeded: true };
@@ -189,7 +200,20 @@ export default function useTranslation({
       if (res.status === 402) throw new Error(errData.error || 'No credits');
       throw new Error('Translation error');
     }
-    return await res.json();
+    const result = await res.json();
+
+    // ── Cache the result ──
+    if (result.translated) {
+      const cache = translationCacheRef.current;
+      cache.set(cacheKey, { translated: result.translated, ts: Date.now() });
+      // LRU cap: keep max 200 entries
+      if (cache.size > 200) {
+        const oldest = cache.keys().next().value;
+        cache.delete(oldest);
+      }
+    }
+
+    return result;
   }
 
   // =============================================
