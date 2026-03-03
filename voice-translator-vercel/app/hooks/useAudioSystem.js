@@ -109,9 +109,15 @@ export default function useAudioSystem({
   }, []);
 
   async function getMicStream() {
+    // Resume suspended AudioContext before requesting mic
+    if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+      try { await audioContextRef.current.resume(); } catch {}
+    }
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getTracks();
       if (tracks.length > 0 && tracks[0].readyState === 'live') return persistentMicRef.current;
+      // Dead tracks — clean up
+      persistentMicRef.current = null;
     }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     persistentMicRef.current = stream;
@@ -240,8 +246,9 @@ export default function useAudioSystem({
         if (speechSynthesis.speaking && !speechSynthesis.paused) return;
         if (speechSynthesis.paused) speechSynthesis.resume();
       }, 5000);
-      u.onend = () => { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); };
-      u.onerror = () => { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); };
+      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); }
+      u.onend = done;
+      u.onerror = done;
     });
   }
 
@@ -536,7 +543,14 @@ export default function useAudioSystem({
 
   async function queueAudio(text, lang, msgId) {
     if (msgId && playedMsgIdsRef.current.has(msgId)) return;
-    if (msgId) playedMsgIdsRef.current.add(msgId);
+    if (msgId) {
+      playedMsgIdsRef.current.add(msgId);
+      // LRU cap: prevent unbounded growth after many messages
+      if (playedMsgIdsRef.current.size > 500) {
+        const first = playedMsgIdsRef.current.values().next().value;
+        playedMsgIdsRef.current.delete(first);
+      }
+    }
     if (!audioEnabledRef.current) {
       playNotifSound();
       return;

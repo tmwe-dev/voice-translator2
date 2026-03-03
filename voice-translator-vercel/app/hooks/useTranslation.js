@@ -62,6 +62,7 @@ export default function useTranslation({
   const backupRecRef = useRef(null);
   const backupChunksRef = useRef([]);
   const backupStreamRef = useRef(null);
+  const cachedMimeRef = useRef(null);
 
   // Classic recording refs
   const recRef = useRef(null);
@@ -82,6 +83,18 @@ export default function useTranslation({
   const wordBufferRef = useRef('');
   const translatedChunksRef = useRef([]);
   const reviewTimerRef = useRef(null);
+
+  // Cached mime type detection — avoid recalculating on every recording
+  function getRecorderMime() {
+    if (cachedMimeRef.current) return cachedMimeRef.current;
+    const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+    cachedMimeRef.current = mime;
+    return mime;
+  }
 
   // =============================================
   // Send Message
@@ -377,12 +390,7 @@ export default function useTranslation({
       try {
         const stream = await getMicStream();
         backupStreamRef.current = stream;
-        const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-          ? 'audio/webm;codecs=opus'
-          : MediaRecorder.isTypeSupported('audio/webm')
-            ? 'audio/webm'
-            : 'audio/mp4';
-        const backup = new MediaRecorder(stream, { mimeType: mime });
+        const backup = new MediaRecorder(stream, { mimeType: getRecorderMime() });
         backup.ondataavailable = e => {
           if (e.data.size > 0) backupChunksRef.current.push(e.data);
         };
@@ -407,18 +415,21 @@ export default function useTranslation({
     let errorCount = 0;
     recognition.onresult = (event) => handleSpeechResult(event, processedFinals);
 
-    // ── FASE 7: Error handling ──
+    // ── FASE 7: Error handling with backoff ──
+    let restartBackoff = 0;
     recognition.onerror = (event) => {
       const err = event.error;
       // 'no-speech' is normal (user paused) — don't count
       if (err === 'no-speech') return;
       errorCount++;
+      restartBackoff = Math.min(restartBackoff + 1, 5);
       console.warn(`[STT] SpeechRecognition error: ${err} (count=${errorCount})`);
 
       // After 3 non-trivial errors, auto-switch to Whisper for this session
       if (errorCount >= 3 && !whisperOnlyRef.current) {
         console.warn('[STT] Too many errors — enabling Whisper-only mode for this session');
         whisperOnlyRef.current = true;
+        streamingModeRef.current = false;
       }
 
       // 'not-allowed' or 'service-not-available' are fatal — stop trying
@@ -428,9 +439,20 @@ export default function useTranslation({
     };
 
     recognition.onend = () => {
-      if (streamingModeRef.current) {
+      // Only restart if still in streaming mode AND this is still our active recognition
+      if (streamingModeRef.current && speechRecRef.current === recognition) {
         processedFinals = new Set();
-        try { recognition.start(); } catch {}
+        // Backoff delay to prevent rapid restart loops
+        const delay = restartBackoff * 200;
+        if (delay > 0) {
+          setTimeout(() => {
+            if (streamingModeRef.current && speechRecRef.current === recognition) {
+              try { recognition.start(); } catch {}
+            }
+          }, delay);
+        } else {
+          try { recognition.start(); } catch {}
+        }
       }
     };
     try { recognition.start(); } catch {}
@@ -458,18 +480,21 @@ export default function useTranslation({
       speechRecRef.current = null;
     }
 
-    // Stop backup audio recording
+    // Stop backup audio recording — setup onstop BEFORE calling stop()
     let backupBlob = null;
     if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      const recorder = backupRecRef.current;
       await new Promise(resolve => {
-        backupRecRef.current.onstop = () => resolve();
-        backupRecRef.current.stop();
+        recorder.onstop = () => resolve();
+        try { recorder.stop(); } catch { resolve(); }
       });
-      if (backupChunksRef.current.length > 0)
-        backupBlob = new Blob(backupChunksRef.current, { type: backupRecRef.current.mimeType });
+      if (backupChunksRef.current.length > 0) {
+        try { backupBlob = new Blob(backupChunksRef.current, { type: recorder.mimeType }); } catch {}
+      }
     }
     backupRecRef.current = null;
     backupStreamRef.current = null;
+    backupChunksRef.current = [];
 
     // Capture any pending interim text
     if (lastInterimRef.current) {
@@ -562,12 +587,7 @@ export default function useTranslation({
     chunksRef.current = [];
     try {
       const stream = await getMicStream();
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/webm')
-          ? 'audio/webm'
-          : 'audio/mp4';
-      recRef.current = new MediaRecorder(stream, { mimeType: mime });
+      recRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
       recRef.current.ondataavailable = e => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
@@ -818,13 +838,8 @@ export default function useTranslation({
             if (roomId) setSpeakingState(roomId, true);
           } else {
             // Whisper-only / no-SpeechRecognition mode: record with MediaRecorder
-            const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-              ? 'audio/webm;codecs=opus'
-              : MediaRecorder.isTypeSupported('audio/webm')
-                ? 'audio/webm'
-                : 'audio/mp4';
             const ch = [];
-            const r = new MediaRecorder(stream, { mimeType: mime });
+            const r = new MediaRecorder(stream, { mimeType: getRecorderMime() });
             r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
             r.onstop = async () => {
               const blob = new Blob(ch, { type: r.mimeType });
