@@ -14,12 +14,15 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   unlockAudio, exportConversation, status, msgsEndRef,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
   syncLangChange, theme, setTheme,
-  clonedVoiceId, clonedVoiceName }) {
+  clonedVoiceId, clonedVoiceName,
+  duckingLevel, setDuckingLevel }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
   const [showExitMenu, setShowExitMenu] = useState(false);
+  const [showCaptions, setShowCaptions] = useState(true);
+  const [showDuckingPanel, setShowDuckingPanel] = useState(false);
 
   const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
@@ -109,6 +112,49 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               border: audioEnabled ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.accent3Border}`}}>
             <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
             <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
+          </button>
+          {/* Ducking toggle */}
+          <div style={{position:'relative'}}>
+            <button onClick={() => setShowDuckingPanel(!showDuckingPanel)}
+              title="Audio Ducking"
+              style={{...S.iconBtn, width:32, fontSize:13,
+                background: showDuckingPanel ? S.colors.accent4Bg : S.colors.overlayBg,
+                border: showDuckingPanel ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
+              {'\u{1F3B5}'}
+            </button>
+            {showDuckingPanel && (
+              <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:4,
+                background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+                borderRadius:12, padding:12, minWidth:200, backdropFilter:'blur(12px)',
+                boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
+                <div style={{fontSize:11, fontWeight:700, color:S.colors.textPrimary, marginBottom:8}}>
+                  {'\u{1F3B5}'} Audio Ducking
+                </div>
+                <div style={{fontSize:10, color:S.colors.textMuted, marginBottom:10, lineHeight:1.4}}>
+                  Abbassa il volume dell'altro quando parla la traduzione
+                </div>
+                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
+                  <span style={{fontSize:10, color:S.colors.textSecondary, minWidth:24}}>
+                    {Math.round((duckingLevel || 0.2) * 100)}%
+                  </span>
+                  <input type="range" min="5" max="80" step="5"
+                    value={Math.round((duckingLevel || 0.2) * 100)}
+                    onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
+                    style={{flex:1, accentColor:S.colors.accent4Border, height:4}} />
+                </div>
+                <div style={{fontSize:9, color:S.colors.textMuted}}>
+                  Basso = volume partner molto ridotto durante TTS
+                </div>
+              </div>
+            )}
+          </div>
+          {/* Captions toggle */}
+          <button onClick={() => setShowCaptions(!showCaptions)}
+            title={showCaptions ? 'Nascondi sottotitoli' : 'Mostra sottotitoli'}
+            style={{...S.iconBtn, width:32, fontSize:13,
+              background: showCaptions ? S.colors.accent4Bg : S.colors.overlayBg,
+              border: showCaptions ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
+            {showCaptions ? 'CC' : 'cc'}
           </button>
           <button onClick={exportConversation} title={L('exportConversation')}
             style={{...S.iconBtn, width:32, fontSize:13, background:S.colors.overlayBg,
@@ -643,6 +689,28 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         )}
         <div ref={msgsEndRef} />
       </div>
+
+      {/* Captions Overlay — floating subtitle for partner live speech */}
+      {showCaptions && partnerLiveText && (partnerSpeaking || partnerTyping) && (
+        <div style={{position:'relative', zIndex:10, margin:'0 10px 4px',
+          padding:'8px 14px', borderRadius:12,
+          background:'rgba(0,0,0,0.75)', backdropFilter:'blur(8px)',
+          border:`1px solid ${S.colors.accent3Border}`,
+          boxShadow:'0 4px 16px rgba(0,0,0,0.3)'}}>
+          <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4}}>
+            <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={20} />
+            <span style={{fontSize:10, color:S.colors.accent3, fontWeight:600}}>
+              {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}
+            </span>
+            <span style={{display:'inline-block', width:5, height:5, borderRadius:'50%',
+              background:S.colors.accent3, animation:'vtPulse 1.2s infinite ease-in-out'}} />
+          </div>
+          <div style={{fontSize:15, color:'#FFFFFF', lineHeight:1.5, fontWeight:500,
+            textShadow:'0 1px 3px rgba(0,0,0,0.5)'}}>
+            {partnerLiveText}
+          </div>
+        </div>
+      )}
 
       {/* Text input bar */}
       <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
