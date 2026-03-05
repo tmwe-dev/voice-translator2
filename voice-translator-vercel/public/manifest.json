@@ -1,65 +1,101 @@
 {
-  "name": "VoiceTranslate - Traduttore Vocale",
+  "name": "VoiceTranslate - Real-time Voice Translator",
   "short_name": "VoiceTranslate",
-  "description": "Real-time voice translator - Traduttore vocale in tempo reale",
+  "description": "Translate voice conversations in real-time across 100+ languages with AI-powered accuracy",
   "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#0f0c29",
   "theme_color": "#0B0D1A",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "/",
   "id": "/",
+  "dir": "ltr",
+  "lang": "en",
   "icons": [
     {
       "src": "/icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-96x96.png",
       "sizes": "96x96",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-128x128.png",
       "sizes": "128x128",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-144x144.png",
       "sizes": "144x144",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-152x152.png",
       "sizes": "152x152",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["productivity", "utilities", "communication"],
-  "lang": "it",
-  "prefer_related_applications": false
+  "shortcuts": [
+    {
+      "name": "New Room",
+      "short_name": "New Room",
+      "description": "Create a new translation room",
+      "url": "/?action=new-room&source=shortcut",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Join Room",
+      "short_name": "Join",
+      "description": "Join an existing room by code",
+      "url": "/?action=join&source=shortcut",
+      "icons": [{ "src": "/icons/icon-96x96.png", "sizes": "96x96" }]
+    }
+  ],
+  "categories": ["productivity", "utilities", "communication", "business"],
+  "prefer_related_applications": false,
+  "handle_links": "preferred",
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }

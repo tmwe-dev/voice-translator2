@@ -8,6 +8,9 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
+import { buildTTSKnowledgeBase } from '../../lib/ttsPreprocessor.js';
+import { getSupabaseAdmin } from '../../lib/supabase.js';
+import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
 
 // ═══════════════════════════════════════════════
 // FASE 9: Output validation — detect garbage/wrong-script LLM output
@@ -161,6 +164,22 @@ RULES:
     const pairKey = `${sourceLang}->${targetLang}`;
     if (PAIR_NOTES[pairKey]) systemPrompt += `\n\nLanguage pair note: ${PAIR_NOTES[pairKey]}`;
 
+    // TTS optimization instructions (output will be spoken aloud)
+    systemPrompt += buildTTSKnowledgeBase(targetLang);
+
+    // Glossary injection — if user has active glossaries for this language pair
+    if (userToken) {
+      try {
+        const glossaryRes = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/glossary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'inject', token: userToken, data: { source_lang: sourceLang, target_lang: targetLang } }),
+        });
+        const glossaryData = await glossaryRes.json();
+        if (glossaryData.prompt) systemPrompt += glossaryData.prompt;
+      } catch (e) { /* glossary injection is optional */ }
+    }
+
     // Build messages array — context goes as a prior assistant turn, NOT in system prompt
     const messages = [{ role: 'system', content: systemPrompt }];
     if (context) {
@@ -312,6 +331,40 @@ RULES:
         await deductLendingTokens(lendingCodeUsed, tokenEstimate);
       } catch (e) { console.error('Lending token tracking error:', e); }
     }
+
+    // Track in Supabase (non-blocking)
+    try {
+      const sb = getSupabaseAdmin();
+      if (sb && billingEmail) {
+        const { data: profile } = await sb.from('profiles').select('id').eq('email', billingEmail).single().catch(() => ({ data: null }));
+        if (profile) {
+          // Save translation record
+          saveTranslationDB({
+            user_id: profile.id,
+            room_id: roomId || null,
+            source_lang: sourceLang,
+            target_lang: targetLang,
+            source_text: text.substring(0, 500),
+            translated_text: (translated || '').substring(0, 500),
+            provider: modelInfo.provider,
+            ai_model: modelInfo.actual,
+            tokens_in: usage?.prompt_tokens || 0,
+            tokens_out: usage?.completion_tokens || 0,
+            duration_ms: Date.now() - (Date.now() - (usage?.prompt_tokens || 0)), // approx
+            cost_usd: roundCost(msgCostUsd),
+            cost_eur_cents: roundEurCents(msgCostEurCents),
+            is_cached: false,
+            context_type: domainContext || 'general',
+          }).catch(() => {});
+          // Track daily usage
+          trackUsage(profile.id, {
+            translations: 1,
+            costCents: Math.round(msgCostEurCents),
+            tokens: (usage?.prompt_tokens || 0) + (usage?.completion_tokens || 0),
+          }).catch(() => {});
+        }
+      }
+    } catch (e) { /* Supabase tracking is non-blocking */ }
 
     return NextResponse.json({
       translated,

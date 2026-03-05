@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { getSupabaseAdmin } from '../../lib/supabase.js';
 
 // POST /api/auth - Handle auth actions
 export async function POST(req) {
@@ -91,11 +92,41 @@ export async function POST(req) {
       // Create session
       const sessionToken = await createSession(email);
 
+      // Sync profile to Supabase (non-blocking)
+      let supabaseUserId = null;
+      try {
+        const sb = getSupabaseAdmin();
+        if (sb) {
+          const { data: existing } = await sb.from('profiles').select('id').eq('email', email).single();
+          if (existing) {
+            supabaseUserId = existing.id;
+            await sb.from('profiles').update({
+              name: user.name || name || '',
+              avatar_url: user.avatar || avatar || '/avatars/1.png',
+              last_login: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            }).eq('id', existing.id);
+          } else {
+            // Create Supabase profile for this user
+            const { data: newProfile } = await sb.from('profiles').insert({
+              email,
+              name: user.name || name || '',
+              avatar_url: user.avatar || avatar || '/avatars/1.png',
+              preferred_lang: user.lang || lang || 'it',
+              tier: user.tier || 'free',
+              credits: user.credits || 0,
+              last_login: new Date().toISOString(),
+            }).select('id').single();
+            supabaseUserId = newProfile?.id;
+          }
+        }
+      } catch (e) { console.error('Supabase profile sync error:', e.message); }
+
       // Get referral code for this user
       const userReferralCode = await getReferralCode(email);
 
       const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
-      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode, platformHasElevenLabs });
+      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode, platformHasElevenLabs, supabaseUserId });
     }
 
     // === CHECK SESSION (me) ===
@@ -109,7 +140,29 @@ export async function POST(req) {
       const userReferralCode = await getReferralCode(session.email);
       // Tell frontend if platform has ElevenLabs key configured
       const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
-      return NextResponse.json({ user, referralCode: userReferralCode, platformHasElevenLabs });
+
+      // Enrich with Supabase subscription data
+      let subscription = null;
+      try {
+        const sb = getSupabaseAdmin();
+        if (sb) {
+          const { data: profile } = await sb.from('profiles')
+            .select('id, tier, subscription_plan, subscription_status, subscription_period_end, credits')
+            .eq('email', session.email).single();
+          if (profile) {
+            subscription = {
+              id: profile.id,
+              tier: profile.tier,
+              plan: profile.subscription_plan,
+              status: profile.subscription_status,
+              periodEnd: profile.subscription_period_end,
+              credits: profile.credits,
+            };
+          }
+        }
+      } catch (e) { /* Supabase not configured, no problem */ }
+
+      return NextResponse.json({ user, referralCode: userReferralCode, platformHasElevenLabs, subscription });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
