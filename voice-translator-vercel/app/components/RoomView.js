@@ -14,7 +14,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, leaveRoomTemporary, changeRoomMode, playMessage,
   unlockAudio, exportConversation, status, msgsEndRef,
   freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
-  syncLangChange, theme, setTheme,
+  syncLangChange, retranslateForNewLang, theme, setTheme,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
@@ -65,8 +65,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     if (msg.translations && msg.translations[myLang]) {
       return msg.translations[myLang];
     }
-    // Backward compat: use single translated field
-    return msg.translated || '';
+    // If the message was originally in MY language, show the original text
+    if (msg.sourceLang === myLang && msg.original) {
+      return msg.original;
+    }
+    // Backward compat: use single translated field only if targetLang matches myLang
+    if (msg.targetLang === myLang && msg.translated) {
+      return msg.translated;
+    }
+    // Last resort: show translated (may be wrong lang) or original
+    return msg.translated || msg.original || '';
   }
 
   // Helper: find avatar for a specific sender
@@ -87,6 +95,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     if (savePrefs) savePrefs({...prefs, lang: langCode});
     // Sync language change to room so all participants see it via polling
     if (syncLangChange) syncLangChange(langCode);
+    // Re-translate existing messages to the new language (async, non-blocking)
+    if (retranslateForNewLang) retranslateForNewLang(langCode);
     setShowLangPicker(false);
   }
 

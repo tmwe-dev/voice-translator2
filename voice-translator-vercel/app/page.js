@@ -494,6 +494,67 @@ function HomeInner() {
     localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
   }
 
+  /**
+   * Re-translate recent partner messages when user changes language.
+   * Translates the last N messages that don't have a translation for the new lang.
+   */
+  async function retranslateForNewLang(newLangCode) {
+    const msgs = roomPolling.messages;
+    const myName = roomPolling.verifiedNameRef?.current || prefs.name;
+    if (!msgs || msgs.length === 0 || !translation.translateUniversal) return;
+
+    // Collect partner messages missing translation for newLangCode (last 15)
+    const toRetranslate = msgs
+      .filter(m => m.sender !== myName && m.original && (!m.translations || !m.translations[newLangCode]))
+      .slice(-15);
+
+    if (toRetranslate.length === 0) return;
+
+    const newLang = getLang(newLangCode);
+
+    // Translate in parallel (max 5 at a time)
+    const batches = [];
+    for (let i = 0; i < toRetranslate.length; i += 5) {
+      batches.push(toRetranslate.slice(i, i + 5));
+    }
+
+    for (const batch of batches) {
+      const results = await Promise.allSettled(
+        batch.map(async (msg) => {
+          const srcLang = getLang(msg.sourceLang || 'en');
+          try {
+            const data = await translation.translateUniversal(
+              msg.original, srcLang.code, newLang.code, srcLang.name, newLang.name, {}
+            );
+            return { msgId: msg.id, translated: data.translated || '' };
+          } catch {
+            return { msgId: msg.id, translated: '' };
+          }
+        })
+      );
+
+      // Update messages state with new translations
+      const translationMap = {};
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.translated) {
+          translationMap[r.value.msgId] = r.value.translated;
+        }
+      }
+
+      if (Object.keys(translationMap).length > 0) {
+        roomPolling.setMessages(prev => prev.map(m => {
+          if (translationMap[m.id]) {
+            return {
+              ...m,
+              translations: { ...(m.translations || {}), [newLangCode]: translationMap[m.id] }
+            };
+          }
+          return m;
+        }));
+      }
+    }
+  }
+
   // Process pending invite after auth
   useEffect(() => {
     if (!auth.userToken) return;
@@ -847,7 +908,7 @@ function HomeInner() {
       unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
       freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
-      syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme}
+      syncLangChange={roomPolling.syncLangChange} retranslateForNewLang={retranslateForNewLang} theme={theme} setTheme={setTheme}
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
       vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}

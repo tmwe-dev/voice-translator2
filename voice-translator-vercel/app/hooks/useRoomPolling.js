@@ -51,12 +51,19 @@ export default function useRoomPolling({
     let textToPlay = '';
     let speechLang = '';
     if (msg.translations && msg.translations[myLang]) {
+      // Best case: we have a translation for my exact language
       textToPlay = msg.translations[myLang];
       speechLang = getLang(myLang).speech;
-    } else if (msg.translated) {
+    } else if (msg.sourceLang === myLang && msg.original) {
+      // Message was spoken in my language — play the original
+      textToPlay = msg.original;
+      speechLang = getLang(myLang).speech;
+    } else if (msg.targetLang === myLang && msg.translated) {
+      // Backward compat: single translated field matches my language
       textToPlay = msg.translated;
-      speechLang = getLang(msg.targetLang).speech;
+      speechLang = getLang(myLang).speech;
     }
+    // If none of the above matched, don't play audio in the wrong language
     if (textToPlay && prefsRef.current.autoPlay) {
       queueAudio(textToPlay, speechLang, msg.id);
     }

@@ -654,10 +654,14 @@ export default function useAudioSystem({
       if (myLang && msg.translations && msg.translations[myLang]) {
         text = msg.translations[myLang];
         speechLang = getLang(myLang).speech;
-      } else if (msg.translated) {
-        // Backward compat: single translation
+      } else if (myLang && msg.sourceLang === myLang && msg.original) {
+        // Message was spoken in my language — play the original
+        text = msg.original;
+        speechLang = getLang(myLang).speech;
+      } else if (myLang && msg.targetLang === myLang && msg.translated) {
+        // Backward compat: single translated field matches my language
         text = msg.translated;
-        speechLang = getLang(msg.targetLang).speech;
+        speechLang = getLang(myLang).speech;
       }
       if (text && speechLang) {
         const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
