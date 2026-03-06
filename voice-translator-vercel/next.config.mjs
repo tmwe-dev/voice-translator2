@@ -1,3 +1,5 @@
+import { withSentryConfig } from '@sentry/nextjs';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async headers() {
@@ -10,11 +12,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com wss: ws:",
+              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io wss: ws:",
               "media-src 'self' blob: data:",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "worker-src 'self' blob:",
@@ -40,4 +42,21 @@ const nextConfig = {
     ];
   },
 };
-export default nextConfig;
+
+export default withSentryConfig(nextConfig, {
+  // Sentry webpack plugin options
+  org: process.env.SENTRY_ORG || 'voicetranslate',
+  project: process.env.SENTRY_PROJECT || 'voicetranslate',
+
+  // Silently skip source map upload in dev
+  silent: !process.env.SENTRY_AUTH_TOKEN,
+
+  // Don't widen the upload scope
+  widenClientFileUpload: true,
+
+  // Automatically tree-shake Sentry logger
+  disableLogger: true,
+
+  // Hide source maps from browser
+  hideSourceMaps: true,
+});

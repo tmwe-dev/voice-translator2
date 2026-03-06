@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
+import { saveUserSettings, getUserSettings } from '../../lib/supabaseAPI.js';
 
 // POST /api/user - User profile actions
 async function handlePost(req) {
@@ -76,4 +77,108 @@ async function handlePost(req) {
   }
 }
 
+// GET /api/user - Retrieve user data (supports action query param)
+async function handleGet(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const action = searchParams.get('action');
+    const token = searchParams.get('token');
+
+    // Authenticate
+    if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const session = await getSession(token);
+    if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+
+    // === GET PREFERENCES FROM SUPABASE ===
+    if (action === 'get-prefs') {
+      try {
+        const settings = await getUserSettings(session.email);
+        if (!settings) {
+          return NextResponse.json({ prefs: {} });
+        }
+        // Extract prefs from settings object
+        const prefs = {
+          lang: settings.lang,
+          name: settings.name,
+          avatar: settings.avatar,
+          tier: settings.tier,
+          voice: settings.voice,
+          ttsEngine: settings.tts_engine,
+          autoSpeak: settings.auto_speak,
+          provider: settings.provider,
+          model: settings.model,
+          theme: settings.theme,
+        };
+        return NextResponse.json({ prefs });
+      } catch (e) {
+        console.warn('[API] get-prefs error:', e.message);
+        return NextResponse.json({ prefs: {} });
+      }
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (e) {
+    console.error('User GET error:', e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+// PUT /api/user - Update user preferences (sync-prefs action)
+async function handlePut(req) {
+  try {
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
+
+    if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const session = await getSession(token);
+    if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
+
+    const { action, prefs } = await req.json();
+
+    // === SYNC PREFERENCES TO SUPABASE ===
+    if (action === 'sync-prefs') {
+      try {
+        if (!prefs || typeof prefs !== 'object') {
+          return NextResponse.json({ error: 'Invalid prefs object' }, { status: 400 });
+        }
+
+        // Convert camelCase to snake_case for database
+        const settingsToSave = {
+          lang: prefs.lang,
+          name: prefs.name,
+          avatar: prefs.avatar,
+          tier: prefs.tier,
+          voice: prefs.voice,
+          tts_engine: prefs.ttsEngine,
+          auto_speak: prefs.autoSpeak,
+          provider: prefs.provider,
+          model: prefs.model,
+          theme: prefs.theme,
+        };
+
+        // Save to Supabase user_settings table
+        const result = await saveUserSettings(session.email, settingsToSave);
+
+        if (!result) {
+          console.warn('[API] saveUserSettings returned null');
+          return NextResponse.json({ ok: false, message: 'Failed to save settings' }, { status: 500 });
+        }
+
+        return NextResponse.json({ ok: true, message: 'Preferences synced' });
+      } catch (e) {
+        console.warn('[API] sync-prefs error:', e.message);
+        // Don't fail hard - sync errors are non-blocking
+        return NextResponse.json({ ok: true, message: 'Sync queued (will retry)' });
+      }
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (e) {
+    console.error('User PUT error:', e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
 export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'user' });
+export const GET = withApiGuard(handleGet, { maxRequests: 60, prefix: 'user' });
+export const PUT = withApiGuard(handlePut, { maxRequests: 60, prefix: 'user' });

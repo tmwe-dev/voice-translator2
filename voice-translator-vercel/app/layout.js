@@ -50,6 +50,14 @@ export default function RootLayout({ children }) {
         <meta name="appleid-signin-scope" content="name email" />
         <meta name="appleid-signin-redirect-uri" content="https://voice-translator2.vercel.app" />
         <meta name="appleid-signin-use-popup" content="true" />
+        {/* Plausible Analytics — privacy-first, no cookies, GDPR compliant */}
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
+          <script
+            defer
+            data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
+            src="https://plausible.io/js/script.js"
+          />
+        )}
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
         {children}
