@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useCallback } from 'react';
-import { getLang, SILENCE_DELAY, VAD_THRESHOLD, isWhisperPrimaryLang } from '../lib/constants.js';
+import { getLang, SILENCE_DELAY, VAD_THRESHOLD, VAD_PRESETS, isWhisperPrimaryLang } from '../lib/constants.js';
 
 /**
  * FreeTalk VAD (Voice Activity Detection) hook.
@@ -9,12 +9,17 @@ import { getLang, SILENCE_DELAY, VAD_THRESHOLD, isWhisperPrimaryLang } from '../
  * analyser. When voice is detected above the VAD threshold, recording starts.
  * After silence exceeds SILENCE_DELAY, the captured speech is finalized.
  *
+ * Features:
+ * - Noise gate: requires minVoiceDuration ms of continuous voice to trigger
+ * - Adjustable sensitivity presets: quiet / normal / noisy / street
+ * - Pending text is always sent (never discarded) when stopping FreeTalk
+ *
  * Supports two STT backends:
  * - Browser SpeechRecognition (for supported languages)
  * - MediaRecorder + Whisper (fallback for unsupported/unreliable languages)
  *
- * Returns: { isListening, vadAudioLevel, vadSilenceCountdown,
- *            startFreeTalk, stopFreeTalk }
+ * Returns: { isListening, vadAudioLevel, vadSilenceCountdown, vadSensitivity,
+ *            setVadSensitivity, startFreeTalk, stopFreeTalk, cleanupVAD }
  */
 export default function useFreeTalkVAD({
   myLangRef,
@@ -39,6 +44,12 @@ export default function useFreeTalkVAD({
   const [isListening, setIsListening] = useState(false);
   const [vadAudioLevel, setVadAudioLevel] = useState(0);
   const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null);
+  const [vadSensitivity, setVadSensitivity] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('vt-vad-sensitivity') || 'normal';
+    }
+    return 'normal';
+  });
   const vadCountdownRef = useRef(null);
 
   // VAD resources
@@ -49,6 +60,14 @@ export default function useFreeTalkVAD({
   const vadAnalyserRef = useRef(null);
   const vadAudioCtxRef = useRef(null);
   const freeTalkSendingRef = useRef(false);
+
+  // Persist sensitivity preference
+  const updateSensitivity = useCallback((val) => {
+    setVadSensitivity(val);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vt-vad-sensitivity', val);
+    }
+  }, []);
 
   /**
    * Start FreeTalk mode: open mic, run VAD loop, auto-record on voice detection.
@@ -80,8 +99,16 @@ export default function useFreeTalkVAD({
       freeTalkSendingRef.current = false;
 
       let isRec = false;
-      const threshold = VAD_THRESHOLD;
-      const silenceDelay = SILENCE_DELAY;
+
+      // Get threshold settings from sensitivity preset
+      const preset = VAD_PRESETS[vadSensitivity] || VAD_PRESETS.normal;
+      const threshold = preset.threshold;
+      const silenceDelay = preset.silenceDelay;
+      const minVoiceDuration = preset.minVoiceDuration;
+
+      // Noise gate: track how long voice has been continuous above threshold
+      let voiceStartTime = 0;
+      let voiceDetected = false; // true once minVoiceDuration passed
 
       if (canUseBrowserSTT) {
         allWordsRef.current = '';
@@ -129,34 +156,50 @@ export default function useFreeTalkVAD({
         const normalizedLevel = Math.min(avg / 128, 1);
         setVadAudioLevel(normalizedLevel);
 
-        if (avg > threshold && !isRec) {
-          // ── Voice detected: start recording ──
-          isRec = true;
-          if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = null;
+        const aboveThreshold = avg > threshold;
+
+        // ── Noise gate logic ──
+        if (aboveThreshold && !isRec) {
+          if (!voiceStartTime) {
+            voiceStartTime = Date.now();
           }
-          if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
-          setVadSilenceCountdown(null);
-          if (canUseBrowserSTT) {
-            setStreamingMsg({ original: '', translated: null, isStreaming: true });
-            setRecording(true);
-            if (roomId) setSpeakingState(roomId, true);
-          } else {
-            const ch = [];
-            const r = new MediaRecorder(stream, { mimeType: getRecorderMime() });
-            r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
-            r.onstop = async () => {
-              const blob = new Blob(ch, { type: r.mimeType });
-              if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
-            };
-            vadRecRef.current = r;
-            r.start(100);
-            setRecording(true);
-            if (roomId) setSpeakingState(roomId, true);
+          // Check if voice has been continuous for minVoiceDuration
+          if (!voiceDetected && (Date.now() - voiceStartTime) >= minVoiceDuration) {
+            voiceDetected = true;
+            // ── Voice confirmed: start recording ──
+            isRec = true;
+            if (silenceTimerRef.current) {
+              clearTimeout(silenceTimerRef.current);
+              silenceTimerRef.current = null;
+            }
+            if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
+            setVadSilenceCountdown(null);
+            if (canUseBrowserSTT) {
+              setStreamingMsg({ original: '', translated: null, isStreaming: true });
+              setRecording(true);
+              if (roomId) setSpeakingState(roomId, true);
+            } else {
+              const ch = [];
+              const r = new MediaRecorder(stream, { mimeType: getRecorderMime() });
+              r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
+              r.onstop = async () => {
+                const blob = new Blob(ch, { type: r.mimeType });
+                if (blob.size > 1000) await processAndSendAudio(blob).catch(console.error);
+              };
+              vadRecRef.current = r;
+              r.start(100);
+              setRecording(true);
+              if (roomId) setSpeakingState(roomId, true);
+            }
           }
-        } else if (avg <= threshold && isRec) {
-          // ── Silence detected: start countdown to finalize ──
+        } else if (!aboveThreshold && !isRec) {
+          // Reset noise gate if sound dropped before minVoiceDuration
+          voiceStartTime = 0;
+          voiceDetected = false;
+        } else if (!aboveThreshold && isRec) {
+          // ── Silence detected while recording: start countdown to finalize ──
+          voiceStartTime = 0;
+          voiceDetected = false;
           if (!silenceTimerRef.current) {
             const countdownStart = Date.now();
             vadCountdownRef.current = setInterval(() => {
@@ -184,6 +227,9 @@ export default function useFreeTalkVAD({
                   setStreamingMsg(null);
                   allWordsRef.current = '';
                   freeTalkSendingRef.current = false;
+                } else {
+                  // No text accumulated — just clear streaming msg (noise trigger)
+                  setStreamingMsg(null);
                 }
               } else {
                 if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
@@ -194,10 +240,12 @@ export default function useFreeTalkVAD({
               silenceTimerRef.current = null;
             }, silenceDelay);
           }
-        } else if (avg > threshold && isRec && silenceTimerRef.current) {
+        } else if (aboveThreshold && isRec && silenceTimerRef.current) {
           // ── Voice resumed during countdown: cancel silence timer ──
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = null;
+          if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
+          setVadSilenceCountdown(null);
         }
         vadTimerRef.current = requestAnimationFrame(check);
       }
@@ -206,12 +254,13 @@ export default function useFreeTalkVAD({
   }, [isListening, myLangRef, roomId, getMicStream, unlockAudio, setSpeakingState,
       getRecorderMime, speechRecRef, allWordsRef, streamingModeRef, whisperOnlyRef,
       lowConfidenceCountRef, handleSpeechResult, setStreamingMsg, setRecording,
-      translateAndSend, processAndSendAudio]);
+      translateAndSend, processAndSendAudio, vadSensitivity]);
 
   /**
    * Stop FreeTalk mode: clean up all VAD resources.
+   * IMPORTANT: any pending accumulated text is sent, never discarded.
    */
-  const stopFreeTalk = useCallback(() => {
+  const stopFreeTalk = useCallback(async () => {
     setIsListening(false);
     setRecording(false);
     setVadAudioLevel(0);
@@ -232,9 +281,24 @@ export default function useFreeTalkVAD({
         try { speechRecRef.current.stop(); } catch {}
         speechRecRef.current = null;
       }
-      if (!freeTalkSendingRef.current) setStreamingMsg(null);
+
+      // ── Send any pending accumulated text before stopping ──
+      const pendingText = allWordsRef.current?.trim();
+      if (pendingText && !freeTalkSendingRef.current) {
+        freeTalkSendingRef.current = true;
+        try {
+          await translateAndSend(pendingText, { clearStreamingMsg: true });
+        } catch (e) {
+          console.error('[FreeTalk] Error sending pending text on stop:', e);
+        }
+        allWordsRef.current = '';
+        freeTalkSendingRef.current = false;
+      }
+      setStreamingMsg(null);
     }
-  }, [setRecording, setStreamingMsg, streamingModeRef, speechRecRef]);
+    if (roomId) setSpeakingState(roomId, false);
+  }, [setRecording, setStreamingMsg, streamingModeRef, speechRecRef,
+      allWordsRef, translateAndSend, roomId, setSpeakingState]);
 
   /**
    * Cleanup function for use in parent's useEffect unmount.
@@ -254,6 +318,8 @@ export default function useFreeTalkVAD({
     isListening,
     vadAudioLevel,
     vadSilenceCountdown,
+    vadSensitivity,
+    setVadSensitivity: updateSensitivity,
     startFreeTalk,
     stopFreeTalk,
     cleanupVAD,

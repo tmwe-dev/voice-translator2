@@ -109,8 +109,19 @@ export const REFERRAL_BONUS_REFERRER = 100;
 
 // Timing constants
 export const POLLING_INTERVAL = 1000;       // ms between room polls (was 1200)
-export const SILENCE_DELAY = 1300;          // ms of silence before auto-stop (was 2000)
-export const VAD_THRESHOLD = 25;            // Voice Activity Detection volume threshold
+export const SILENCE_DELAY = 2000;          // ms of silence before auto-stop in FreeTalk
+export const VAD_THRESHOLD = 40;            // Voice Activity Detection volume threshold (default)
+
+// VAD sensitivity presets: { threshold, silenceDelay, minVoiceDuration }
+// threshold: higher = less sensitive to noise (0-128 scale)
+// silenceDelay: ms of silence before auto-send
+// minVoiceDuration: ms of continuous voice needed to trigger recording (noise gate)
+export const VAD_PRESETS = {
+  quiet:  { threshold: 25, silenceDelay: 1500, minVoiceDuration: 80 },   // Quiet room
+  normal: { threshold: 40, silenceDelay: 2000, minVoiceDuration: 150 },  // Default
+  noisy:  { threshold: 60, silenceDelay: 2500, minVoiceDuration: 250 },  // Noisy environment
+  street: { threshold: 80, silenceDelay: 3000, minVoiceDuration: 400 },  // Street / crowd
+};
 export const REVIEW_INTERVAL = 8000;        // ms between translation reviews (was 12000)
 export const CHUNK_MIN_WORDS = 3;           // words before emitting translation chunk (was 4)
 export const CHUNK_MAX_WORDS = 10;          // interim words before force-emit (was 12)

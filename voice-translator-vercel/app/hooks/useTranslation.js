@@ -277,6 +277,8 @@ export default function useTranslation({
     isListening,
     vadAudioLevel,
     vadSilenceCountdown,
+    vadSensitivity,
+    setVadSensitivity,
     startFreeTalk,
     stopFreeTalk,
     cleanupVAD,
@@ -618,6 +620,8 @@ export default function useTranslation({
     // VAD enhanced feedback (TMWEngine patterns)
     vadAudioLevel,          // 0-1 normalized mic level
     vadSilenceCountdown,    // seconds remaining before auto-send, or null
+    vadSensitivity,         // 'quiet' | 'normal' | 'noisy' | 'street'
+    setVadSensitivity,      // change sensitivity preset
     streamingModeRef,
     speechRecRef,
     reviewTimerRef,

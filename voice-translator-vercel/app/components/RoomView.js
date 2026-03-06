@@ -17,7 +17,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   syncLangChange, theme, setTheme,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
-  vadAudioLevel, vadSilenceCountdown,
+  vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -932,6 +932,28 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
               {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
             </button>
+          </div>
+        )}
+        {/* VAD Sensitivity selector — shown in FreeTalk/Simultaneous modes */}
+        {(roomMode === 'freetalk' || roomMode === 'simultaneous') && !isListening && (
+          <div style={{display:'flex', alignItems:'center', gap:4, marginTop:4}}>
+            <span style={{fontSize:8, color:S.colors.textMuted, marginRight:2}}>{'\u{1F399}'} Sensibilit\u00E0:</span>
+            {[
+              { id: 'quiet', label: '\u{1F910} Silenzio', short: 'Silenzio' },
+              { id: 'normal', label: '\u{1F3E0} Normale', short: 'Normale' },
+              { id: 'noisy', label: '\u{1F4E2} Rumore', short: 'Rumore' },
+              { id: 'street', label: '\u{1F6A6} Strada', short: 'Strada' },
+            ].map(p => (
+              <button key={p.id} onClick={() => setVadSensitivity(p.id)}
+                style={{padding:'2px 6px', borderRadius:6, fontSize:8, fontWeight:600,
+                  border: vadSensitivity === p.id ? `1px solid ${S.colors.accent3Border}` : `1px solid ${S.colors.overlayBorder}`,
+                  background: vadSensitivity === p.id ? S.colors.accent3Bg : 'transparent',
+                  color: vadSensitivity === p.id ? S.colors.accent3 : S.colors.textMuted,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                  fontFamily:FONT}}>
+                {p.short}
+              </button>
+            ))}
           </div>
         )}
 
