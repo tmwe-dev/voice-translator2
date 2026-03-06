@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { t, mapLang } from './lib/i18n.js';
+import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
   FREE_DAILY_LIMIT, THEMES, getLang, vibrate, formatCredits } from './lib/constants.js';
 import getStyles from './lib/styles.js';
@@ -689,8 +689,9 @@ function HomeInner() {
 
 
   // =============================================
-  // i18n shorthand
+  // i18n — preload language pack when user switches language
   // =============================================
+  useEffect(() => { if (prefs.lang) preloadLang(prefs.lang); }, [prefs.lang]);
   const L = (key) => t(prefs.lang, key);
 
   // =============================================

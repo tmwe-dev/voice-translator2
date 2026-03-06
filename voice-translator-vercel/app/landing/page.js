@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
-import { t, mapLang } from '../lib/i18n.js';
+import { t, mapLang, preloadLang } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════
 // VoiceTranslate Landing Page — Fully i18n
@@ -41,12 +41,17 @@ export default function LandingPage() {
   const [showLangPicker, setShowLangPicker] = useState(false);
 
   useEffect(() => {
-    setLang(detectLang());
+    const detected = detectLang();
+    setLang(detected);
+    preloadLang(detected);
     document.body.style.overflow = 'auto';
     document.body.style.overflowY = 'auto';
     document.documentElement.style.overflow = 'auto';
     return () => { document.body.style.overflow = 'hidden'; document.documentElement.style.overflow = ''; };
   }, []);
+
+  // Preload when user switches language via picker
+  useEffect(() => { preloadLang(lang); }, [lang]);
 
   const L = (key) => t(lang, key);
   const currentFlag = LANGS.find(l => l.code === lang)?.flag || '\u{1F30D}';

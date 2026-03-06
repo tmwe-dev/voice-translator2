@@ -66,6 +66,10 @@ export async function GET(req) {
     const msgs = await getMessages(roomId, after);
     return NextResponse.json({ messages: msgs });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('Messages GET error:', e.message);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'messages', action: 'get' } });
+    }).catch(() => {});
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

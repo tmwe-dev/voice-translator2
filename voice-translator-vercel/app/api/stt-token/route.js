@@ -35,30 +35,31 @@ async function handler(req) {
     });
 
     if (!res.ok) {
-      // Fallback: return the main key directly (less secure but works)
-      // Some Deepgram plans don't support temporary keys
-      console.warn('[STT-Token] Temporary key creation failed, using direct key');
-      return NextResponse.json({
-        key: deepgramKey,
-        temporary: false,
-        expiresIn: null,
-      });
+      console.warn('[STT-Token] Temporary key creation failed:', res.status);
+      return NextResponse.json(
+        { error: 'Temporary STT key creation failed. Streaming STT unavailable.' },
+        { status: 503 }
+      );
     }
 
     const data = await res.json();
+    if (!data.key) {
+      return NextResponse.json(
+        { error: 'No temporary key returned from Deepgram.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json({
-      key: data.key || deepgramKey,
-      temporary: !!data.key,
+      key: data.key,
+      temporary: true,
       expiresIn: 60,
     });
   } catch (e) {
-    console.error('[STT-Token] Error:', e);
-    // Fallback: return main key
-    return NextResponse.json({
-      key: deepgramKey,
-      temporary: false,
-      expiresIn: null,
-    });
+    console.error('[STT-Token] Error:', e.message);
+    return NextResponse.json(
+      { error: 'STT token generation failed.' },
+      { status: 503 }
+    );
   }
 }
 

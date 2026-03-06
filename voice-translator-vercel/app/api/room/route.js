@@ -34,11 +34,18 @@ export async function POST(req) {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
       const room = await updateHeartbeat(roomId, name);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      // heartbeat only updates if name matches existing member (store.js handles this)
       return NextResponse.json({ room });
     }
 
     if (action === 'speaking') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
+      // Verify membership before allowing speaking status update
+      const speakRoom = await getRoom(roomId);
+      if (!speakRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      if (!speakRoom.members.some(m => m.name === name)) {
+        return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+      }
       const safeLiveText = liveText ? sanitize(liveText, 500) : null;
       const room = await setSpeaking(roomId, name, !!speaking, safeLiveText, !!typing);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
@@ -61,6 +68,12 @@ export async function POST(req) {
     // ── Change member language (synced to all participants) ──
     if (action === 'changeLang') {
       if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
+      // Verify requester is actually a room member
+      const langRoom = await getRoom(roomId);
+      if (!langRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      if (!langRoom.members.some(m => m.name === name)) {
+        return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+      }
       const room = await changeMemberLang(roomId, name, lang);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
@@ -91,6 +104,12 @@ export async function POST(req) {
 
     if (action === 'webrtc-poll') {
       if (!roomId || !name) return NextResponse.json({ error: 'roomId and name required' }, { status: 400 });
+      // Verify requester is a room member before returning signals
+      const pollRoom = await getRoom(roomId);
+      if (!pollRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      if (!pollRoom.members.some(m => m.name === name)) {
+        return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+      }
       const key = `rtc:${roomId}`;
       try {
         const raw = await redis('LRANGE', key, 0, -1);
@@ -115,7 +134,7 @@ export async function POST(req) {
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'room', source: 'api' } });
     }).catch(() => {});
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -129,6 +148,10 @@ export async function GET(req) {
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ room });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('Room GET error:', e.message);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'room', action: 'get' } });
+    }).catch(() => {});
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -35,8 +35,11 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('Conversation error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('Conversation error:', e.message);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'conversation', action: 'post' } });
+    }).catch(() => {});
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
@@ -60,7 +63,11 @@ async function handleGet(req) {
 
     return NextResponse.json({ conversation: conv });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('Conversation GET error:', e.message);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'conversation', action: 'get' } });
+    }).catch(() => {});
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 

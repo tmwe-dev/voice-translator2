@@ -101,10 +101,17 @@ describe('POST /api/room', () => {
   });
 
   describe('speaking', () => {
-    it('sets speaking state', async () => {
+    it('sets speaking state for room member', async () => {
+      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
       mockSetSpeaking.mockResolvedValue({ id: 'ABC' });
       const res = await POST(makeReq({ action: 'speaking', roomId: 'ABC', name: 'Luca', speaking: true }));
       expect(res.status).toBe(200);
+    });
+
+    it('rejects speaking from non-member', async () => {
+      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
+      const res = await POST(makeReq({ action: 'speaking', roomId: 'ABC', name: 'Hacker', speaking: true }));
+      expect(res.status).toBe(403);
     });
   });
 
