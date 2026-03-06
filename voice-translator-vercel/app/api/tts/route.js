@@ -4,6 +4,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { deductCredits } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
+import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
 // ═══════════════════════════════════════════════
 // FASE 3 + FASE 10: TTS with gpt-4o-mini-tts
@@ -64,10 +65,13 @@ async function handlePost(req) {
     const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
     const instructions = TTS_INSTRUCTIONS[lang2] || TTS_INSTRUCTIONS['en'];
 
+    // Preprocess text for TTS quality
+    const cleanText = preprocessForTTS(text, lang2);
+
     const response = await openai.audio.speech.create({
       model: 'gpt-4o-mini-tts',
       voice: selectedVoice,
-      input: text,
+      input: cleanText,
       instructions,
       response_format: 'mp3',
       speed: 1.0

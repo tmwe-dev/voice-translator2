@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
+import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
 // ═══════════════════════════════════════════════
 // Edge TTS — FREE Neural Text-to-Speech
@@ -52,8 +53,12 @@ export async function POST(req) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
     }
 
+    // Preprocess text for TTS quality
+    const lang2 = (langCode || '').replace(/-.*/, ''); // 'en-US' → 'en'
+    const cleanText = preprocessForTTS(text, lang2);
+
     // Limit text length (Edge TTS handles up to ~5000 chars well)
-    const trimmed = text.trim().substring(0, 5000);
+    const trimmed = cleanText.substring(0, 5000);
 
     // Get voice for language + gender preference
     const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');

@@ -4,6 +4,7 @@ import { deductCredits } from '../../lib/users.js';
 import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
+import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
 // ═══════════════════════════════════════════════
 // FASE 4: ElevenLabs Flash v2.5 + adaptive stability
@@ -99,6 +100,9 @@ async function handlePost(req) {
     // Map language code for pronunciation
     const elLangCode = LANG_CODES[lang2] || undefined;
 
+    // Preprocess text for TTS quality
+    const cleanText = preprocessForTTS(text, lang2);
+
     // ── Adaptive voice settings for tonal languages ──
     // Tonal languages need higher stability to preserve tone accuracy
     const TONAL_LANGS = new Set(['th', 'zh', 'vi', 'ja']);
@@ -113,7 +117,7 @@ async function handlePost(req) {
         'Accept': 'audio/mpeg'
       },
       body: JSON.stringify({
-        text: text.trim(),
+        text: cleanText,
         model_id: modelId,
         language_code: elLangCode,
         voice_settings: {
@@ -140,7 +144,7 @@ async function handlePost(req) {
           method: 'POST',
           headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
           body: JSON.stringify({
-            text: text.trim(), model_id: fallbackModel,
+            text: cleanText, model_id: fallbackModel,
             language_code: elLangCode,
             voice_settings: { stability, similarity_boost: similarityBoost, style: 0.0, use_speaker_boost: true }
           })
@@ -148,7 +152,7 @@ async function handlePost(req) {
         if (fallback.ok) {
           const buf = Buffer.from(await fallback.arrayBuffer());
           if (billingEmail && !isOwnKey) {
-            const cost = usdToEurCents(calcElevenLabsCost(text.trim().length));
+            const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
             try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch {}
           }
@@ -163,7 +167,7 @@ async function handlePost(req) {
     }
 
     // Calculate and deduct cost
-    const elCostUsd = calcElevenLabsCost(text.trim().length);
+    const elCostUsd = calcElevenLabsCost(cleanText.length);
     const elCostEurCents = usdToEurCents(elCostUsd);
 
     if (billingEmail && !isOwnKey) {
