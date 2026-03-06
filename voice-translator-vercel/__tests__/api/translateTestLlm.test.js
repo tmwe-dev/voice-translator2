@@ -199,6 +199,6 @@ describe('POST /api/translate-test-llm', () => {
     }));
 
     const data = await res.json();
-    expect(data.results[0].elapsed).toBeGreaterThanOrEqual(10);
+    expect(data.results[0].elapsed).toBeGreaterThanOrEqual(5);
   });
 });

@@ -50,7 +50,10 @@ export function sanitizeName(name) {
  */
 export function isValidEmail(email) {
   if (typeof email !== 'string') return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254;
+  if (email.length > 254) return false;
+  // Reject dangerous characters (HTML injection, null bytes, control chars)
+  if (/[<>"'`\\;\x00-\x1f]/.test(email)) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 /**
