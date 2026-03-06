@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
+import { getSession } from '../../lib/users.js';
 
 // ═══════════════════════════════════════════════
 // Admin Dashboard API
@@ -13,6 +14,8 @@ import { getSupabaseAdmin } from '../../lib/supabase.js';
 //   top-languages — most used language pairs
 //   revenue       — revenue breakdown by day
 //   errors        — recent translation failures
+//
+// Auth: Requires valid session token + email in ADMIN_EMAILS
 // ═══════════════════════════════════════════════
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
@@ -23,10 +26,14 @@ function isAdmin(email) {
 
 async function handlePost(req) {
   try {
-    const { action, adminEmail, page, limit, search, userId, days } = await req.json();
+    const { action, token, adminEmail, page, limit, search, userId, days } = await req.json();
 
-    if (!isAdmin(adminEmail)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    // Session-based auth: verify token, then check admin whitelist
+    const session = token ? await getSession(token) : null;
+    const verifiedEmail = session?.email;
+
+    if (!verifiedEmail || !isAdmin(verifiedEmail)) {
+      return NextResponse.json({ error: 'Unauthorized — valid admin session required' }, { status: 403 });
     }
 
     const sb = getSupabaseAdmin();

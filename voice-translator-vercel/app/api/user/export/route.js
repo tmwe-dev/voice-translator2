@@ -85,67 +85,97 @@ export async function GET(req) {
     try {
       const supabase = getSupabaseAdmin();
       if (supabase) {
-        // Fetch subscription data if table exists
-        const { data: subscriptions, error: subError } = await supabase
-          .from('subscriptions')
-          .select('*')
+        // Resolve user_id from profiles table
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, tier, subscription_plan, subscription_status, subscription_period_end, credits, total_spent, total_messages, created_at')
           .eq('email', userEmail)
-          .limit(10);
+          .single();
 
-        // Fetch usage logs if table exists
-        const { data: usageLogs, error: usageError } = await supabase
-          .from('usage_logs')
-          .select('*')
-          .eq('email', userEmail)
-          .order('created_at', { ascending: false })
-          .limit(1000);
+        const supabaseUserId = profile?.id;
 
-        // Fetch translation history if table exists
-        const { data: translations, error: translationError } = await supabase
-          .from('translations')
-          .select('*')
-          .eq('email', userEmail)
-          .order('created_at', { ascending: false })
-          .limit(500);
+        // Fetch daily usage stats (using correct table: usage_daily)
+        let usageData = [];
+        if (supabaseUserId) {
+          const { data: usage, error: usageError } = await supabase
+            .from('usage_daily')
+            .select('date, translations, tts_chars, stt_seconds, cost_eur_cents, tokens_used, providers_used, languages_used')
+            .eq('user_id', supabaseUserId)
+            .order('date', { ascending: false })
+            .limit(365);
+          if (!usageError && usage) usageData = usage;
+        }
+
+        // Fetch translation history (using correct column: user_id not email)
+        let translationData = [];
+        if (supabaseUserId) {
+          const { data: translations, error: translationError } = await supabase
+            .from('translations')
+            .select('id, source_lang, target_lang, provider, ai_model, duration_ms, cost_eur_cents, created_at')
+            .eq('user_id', supabaseUserId)
+            .order('created_at', { ascending: false })
+            .limit(500);
+          if (!translationError && translations) translationData = translations;
+        }
+
+        // Fetch payment history
+        let paymentData = [];
+        if (supabaseUserId) {
+          const { data: payments, error: payError } = await supabase
+            .from('payments')
+            .select('id, type, plan, amount_eur_cents, credits_added, status, created_at')
+            .eq('user_id', supabaseUserId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+          if (!payError && payments) paymentData = payments;
+        }
 
         exportData.supabase_data = {
-          subscriptions: subscriptions && !subError ? subscriptions.map(s => ({
-            id: s.id,
-            email: s.email,
-            tier: s.tier,
-            status: s.status,
-            created_at: s.created_at,
-            expires_at: s.expires_at,
-          })) : [],
+          profile: profile && !profileError ? {
+            tier: profile.tier,
+            subscription_plan: profile.subscription_plan,
+            subscription_status: profile.subscription_status,
+            subscription_period_end: profile.subscription_period_end,
+            credits: profile.credits,
+            total_spent: profile.total_spent,
+            total_messages: profile.total_messages,
+            created_at: profile.created_at,
+          } : null,
 
-          usage_logs: usageLogs && !usageError ? usageLogs.map(u => ({
-            id: u.id,
-            date: u.created_at,
-            type: u.type,
-            provider: u.provider,
-            source_language: u.source_language,
-            target_language: u.target_language,
-            characters_processed: u.characters_processed,
-            cost_cents: u.cost_cents,
-          })) : [],
+          usage_daily: usageData.map(u => ({
+            date: u.date,
+            translations: u.translations,
+            tts_chars: u.tts_chars,
+            stt_seconds: u.stt_seconds,
+            cost_eur_cents: u.cost_eur_cents,
+            tokens_used: u.tokens_used,
+          })),
 
-          translation_history: translations && !translationError ? translations.map(t => ({
+          translation_history: translationData.map(t => ({
             id: t.id,
             created_at: t.created_at,
-            source_language: t.source_language,
-            target_language: t.target_language,
-            // Note: actual translation text is not included for privacy
-            status: t.status,
-          })) : [],
+            source_lang: t.source_lang,
+            target_lang: t.target_lang,
+            provider: t.provider,
+            ai_model: t.ai_model,
+            // Note: actual translation text excluded for privacy
+          })),
+
+          payments: paymentData.map(p => ({
+            id: p.id,
+            type: p.type,
+            plan: p.plan,
+            amount_eur_cents: p.amount_eur_cents,
+            credits_added: p.credits_added,
+            status: p.status,
+            created_at: p.created_at,
+          })),
         };
 
         // Update summary with actual counts
-        if (usageLogs && !usageError) {
-          exportData.summary.usage_log_count = usageLogs.length;
-        }
-        if (translations && !translationError) {
-          exportData.summary.translation_history_count = translations.length;
-        }
+        exportData.summary.usage_days_count = usageData.length;
+        exportData.summary.translation_history_count = translationData.length;
+        exportData.summary.payments_count = paymentData.length;
       }
     } catch (supabaseError) {
       // Supabase might not be configured or accessible
@@ -153,9 +183,6 @@ export async function GET(req) {
       console.warn('Supabase fetch failed during export:', supabaseError.message);
       exportData.supabase_data = {
         error: 'Supabase data unavailable',
-        subscriptions: [],
-        usage_logs: [],
-        translation_history: [],
       };
     }
 
@@ -248,39 +275,46 @@ export async function POST(req) {
     try {
       const supabase = getSupabaseAdmin();
       if (supabase) {
-        const { data: subscriptions } = await supabase
-          .from('subscriptions')
-          .select('*')
+        // Resolve user_id from profiles
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id, tier, subscription_plan, subscription_status, credits, total_spent')
           .eq('email', userEmail)
-          .limit(10);
+          .single();
 
-        const { data: usageLogs } = await supabase
-          .from('usage_logs')
-          .select('*')
-          .eq('email', userEmail)
-          .order('created_at', { ascending: false })
-          .limit(1000);
+        const supabaseUserId = profile?.id;
 
-        const { data: translations } = await supabase
-          .from('translations')
-          .select('*')
-          .eq('email', userEmail)
-          .order('created_at', { ascending: false })
-          .limit(500);
+        let usageData = [], translationData = [];
+        if (supabaseUserId) {
+          const { data: usage } = await supabase
+            .from('usage_daily')
+            .select('date, translations, tts_chars, stt_seconds, cost_eur_cents')
+            .eq('user_id', supabaseUserId)
+            .order('date', { ascending: false })
+            .limit(365);
+          usageData = usage || [];
+
+          const { data: translations } = await supabase
+            .from('translations')
+            .select('source_lang, target_lang, provider, created_at')
+            .eq('user_id', supabaseUserId)
+            .order('created_at', { ascending: false })
+            .limit(500);
+          translationData = translations || [];
+        }
 
         exportData.supabase_data = {
-          subscriptions: subscriptions || [],
-          usage_logs: usageLogs ? usageLogs.map(u => ({
-            date: u.created_at,
-            type: u.type,
-            provider: u.provider,
-            cost_cents: u.cost_cents,
-          })) : [],
-          translation_history: translations ? translations.map(t => ({
+          profile: profile ? { tier: profile.tier, subscription_plan: profile.subscription_plan, credits: profile.credits } : null,
+          usage_daily: usageData.map(u => ({
+            date: u.date,
+            translations: u.translations,
+            cost_eur_cents: u.cost_eur_cents,
+          })),
+          translation_history: translationData.map(t => ({
             created_at: t.created_at,
-            source_language: t.source_language,
-            target_language: t.target_language,
-          })) : [],
+            source_lang: t.source_lang,
+            target_lang: t.target_lang,
+          })),
         };
       }
     } catch (supabaseError) {

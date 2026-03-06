@@ -2,16 +2,19 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import Stripe from 'stripe';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
+import { getSession } from '../../lib/users.js';
 
 // ═══════════════════════════════════════════════
 // Subscription Management API
 //
 // Actions:
-//   plans       — list available plans
-//   subscribe   — create Stripe checkout for subscription
-//   portal      — create Stripe customer portal session
-//   status      — get current subscription status
-//   cancel      — cancel subscription (end of period)
+//   plans       — list available plans (public)
+//   subscribe   — create Stripe checkout (auth required)
+//   portal      — create Stripe customer portal (auth required)
+//   status      — get current subscription status (auth required)
+//   cancel      — cancel subscription (auth required)
+//
+// Auth: Session token required for all actions except 'plans'
 // ═══════════════════════════════════════════════
 
 // Lazy init — avoid build-time crash when STRIPE_SECRET_KEY is not set
@@ -58,13 +61,13 @@ const PLANS = {
 
 async function handlePost(req) {
   try {
-    const { action, userEmail, userId, plan, period, returnUrl } = await req.json();
+    const { action, token, userEmail, userId, plan, period, returnUrl } = await req.json();
 
     if (!action) return NextResponse.json({ error: 'No action' }, { status: 400 });
 
     const sb = getSupabaseAdmin();
 
-    // ── List plans ──
+    // ── List plans (public — no auth required) ──
     if (action === 'plans') {
       return NextResponse.json({
         plans: [
@@ -77,51 +80,64 @@ async function handlePost(req) {
       });
     }
 
+    // ── Session verification for all other actions ──
+    const session = token ? await getSession(token) : null;
+    if (!session?.email) {
+      return NextResponse.json({ error: 'Unauthorized — valid session required' }, { status: 401 });
+    }
+    const verifiedEmail = session.email;
+
+    // Resolve userId from Supabase profile (ignore userId from body for security)
+    let verifiedUserId = null;
+    if (sb) {
+      const { data: profile } = await sb.from('profiles').select('id').eq('email', verifiedEmail).single();
+      verifiedUserId = profile?.id || null;
+    }
+
     // ── Subscribe ──
     if (action === 'subscribe') {
       if (!plan || !PLANS[plan]) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-      if (!userEmail) return NextResponse.json({ error: 'Email required' }, { status: 400 });
 
       const selectedPlan = PLANS[plan];
       const billingPeriod = period === 'yearly' ? 'yearly' : 'monthly';
       const priceId = selectedPlan[billingPeriod];
 
-      // Get or create Stripe customer
+      // Get or create Stripe customer (using verified identity)
       let customerId;
-      if (sb && userId) {
-        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', userId).single();
+      if (sb && verifiedUserId) {
+        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', verifiedUserId).single();
         customerId = profile?.stripe_customer_id;
       }
       if (!customerId) {
-        const customer = await getStripe().customers.create({ email: userEmail, metadata: { userId: userId || '', plan } });
+        const customer = await getStripe().customers.create({ email: verifiedEmail, metadata: { userId: verifiedUserId || '', plan } });
         customerId = customer.id;
-        if (sb && userId) {
-          await sb.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
+        if (sb && verifiedUserId) {
+          await sb.from('profiles').update({ stripe_customer_id: customerId }).eq('id', verifiedUserId);
         }
       }
 
-      const session = await getStripe().checkout.sessions.create({
+      const checkoutSession = await getStripe().checkout.sessions.create({
         customer: customerId,
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app'}/?subscription=success`,
         cancel_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app'}/?subscription=cancel`,
-        metadata: { userId: userId || '', plan, period: billingPeriod },
+        metadata: { userId: verifiedUserId || '', plan, period: billingPeriod },
         subscription_data: {
-          metadata: { userId: userId || '', plan },
+          metadata: { userId: verifiedUserId || '', plan },
         },
       });
 
-      return NextResponse.json({ url: session.url, sessionId: session.id });
+      return NextResponse.json({ url: checkoutSession.url, sessionId: checkoutSession.id });
     }
 
     // ── Customer Portal ──
     if (action === 'portal') {
-      if (!userId) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+      if (!verifiedUserId) return NextResponse.json({ error: 'No Supabase profile found' }, { status: 400 });
       let customerId;
       if (sb) {
-        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', userId).single();
+        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', verifiedUserId).single();
         customerId = profile?.stripe_customer_id;
       }
       if (!customerId) return NextResponse.json({ error: 'No billing account' }, { status: 400 });
@@ -135,11 +151,10 @@ async function handlePost(req) {
 
     // ── Subscription Status ──
     if (action === 'status') {
-      if (!userId && !userEmail) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
       if (sb) {
-        const query = userId
-          ? sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('id', userId)
-          : sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('email', userEmail);
+        const query = verifiedUserId
+          ? sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('id', verifiedUserId)
+          : sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('email', verifiedEmail);
         const { data } = await query.single();
         if (data) return NextResponse.json(data);
       }
@@ -148,12 +163,12 @@ async function handlePost(req) {
 
     // ── Cancel ──
     if (action === 'cancel') {
-      if (!userId) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
+      if (!verifiedUserId) return NextResponse.json({ error: 'No Supabase profile found' }, { status: 400 });
       if (sb) {
-        const { data: profile } = await sb.from('profiles').select('stripe_subscription_id').eq('id', userId).single();
+        const { data: profile } = await sb.from('profiles').select('stripe_subscription_id').eq('id', verifiedUserId).single();
         if (profile?.stripe_subscription_id) {
           await getStripe().subscriptions.update(profile.stripe_subscription_id, { cancel_at_period_end: true });
-          await sb.from('profiles').update({ subscription_status: 'canceled' }).eq('id', userId);
+          await sb.from('profiles').update({ subscription_status: 'canceled' }).eq('id', verifiedUserId);
           return NextResponse.json({ ok: true, message: 'Subscription will end at period end' });
         }
       }

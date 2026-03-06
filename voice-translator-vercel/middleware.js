@@ -21,8 +21,8 @@ const ALLOWED_ORIGINS = new Set([
 function isOriginAllowed(origin) {
   if (!origin) return true; // Same-origin requests (no Origin header)
   if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Allow Vercel preview deployments
-  if (origin.endsWith('.vercel.app')) return true;
+  // Allow only our own Vercel preview deployments (project-specific pattern)
+  if (/^https:\/\/voice-translator[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
   return false;
 }
 

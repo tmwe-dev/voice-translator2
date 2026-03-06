@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════
 // API Key Vault — AES-256-GCM server-side encryption
+// Uses Supabase `api_keys_vault` table (row-per-provider)
 // Keys are encrypted before storage and decrypted only server-side
 // Keys NEVER return to the client after initial save
 // ═══════════════════════════════════════════════
@@ -21,6 +22,21 @@ function getEncryptionKey() {
     throw new Error('KEY_VAULT_SECRET must be a 64-character hex string');
   }
   return Buffer.from(key, 'hex');
+}
+
+/**
+ * Resolve email → Supabase profiles.id (UUID)
+ * Cached per-request via closure (no global cache to avoid stale data)
+ */
+async function resolveUserId(supabase, email) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (error || !data?.id) return null;
+  return data.id;
 }
 
 /**
@@ -79,30 +95,39 @@ export function decryptKey(encryptedBase64) {
 
 /**
  * Save encrypted API keys for a user
- * Keys are encrypted before storage
+ * Uses UPSERT on api_keys_vault (one row per provider)
  * @param {string} email - user email
  * @param {Object} keys - { openai: 'sk-...', elevenlabs: '...', anthropic: '...', gemini: '...' }
  */
 export async function saveApiKeys(email, keys) {
   if (!email || !keys) return false;
 
-  const encryptedKeys = {};
+  const supabase = getSupabaseAdmin();
+  const userId = await resolveUserId(supabase, email);
+  if (!userId) {
+    console.error('[KeyVault] No profile found for email:', email);
+    return false;
+  }
+
   for (const [provider, plainKey] of Object.entries(keys)) {
     if (plainKey && typeof plainKey === 'string' && plainKey.trim()) {
-      encryptedKeys[provider] = encryptKey(plainKey.trim());
+      const encrypted = encryptKey(plainKey.trim());
+      const { error } = await supabase
+        .from('api_keys_vault')
+        .upsert({
+          user_id: userId,
+          provider,
+          encrypted_key: encrypted,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id,provider' });
+
+      if (error) {
+        console.error(`[KeyVault] Save error for ${provider}:`, error);
+        return false;
+      }
     }
   }
 
-  const supabase = getSupabaseAdmin();
-  const { error } = await supabase
-    .from('users')
-    .update({ api_keys_encrypted: encryptedKeys })
-    .eq('email', email);
-
-  if (error) {
-    console.error('[KeyVault] Save error:', error);
-    return false;
-  }
   return true;
 }
 
@@ -116,16 +141,20 @@ export async function getDecryptedKey(email, provider) {
   if (!email || !provider) return null;
 
   const supabase = getSupabaseAdmin();
+  const userId = await resolveUserId(supabase, email);
+  if (!userId) return null;
+
   const { data, error } = await supabase
-    .from('users')
-    .select('api_keys_encrypted')
-    .eq('email', email)
+    .from('api_keys_vault')
+    .select('encrypted_key')
+    .eq('user_id', userId)
+    .eq('provider', provider)
     .single();
 
-  if (error || !data?.api_keys_encrypted?.[provider]) return null;
+  if (error || !data?.encrypted_key) return null;
 
   try {
-    return decryptKey(data.api_keys_encrypted[provider]);
+    return decryptKey(data.encrypted_key);
   } catch (e) {
     console.error('[KeyVault] Decrypt error:', e);
     return null;
@@ -142,17 +171,20 @@ export async function getKeyStatus(email) {
   if (!email) return {};
 
   const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase
-    .from('users')
-    .select('api_keys_encrypted')
-    .eq('email', email)
-    .single();
+  const userId = await resolveUserId(supabase, email);
+  if (!userId) return {};
 
-  if (error || !data?.api_keys_encrypted) return {};
+  const { data, error } = await supabase
+    .from('api_keys_vault')
+    .select('provider')
+    .eq('user_id', userId);
+
+  if (error || !data) return {};
 
   const status = {};
-  for (const [provider, val] of Object.entries(data.api_keys_encrypted)) {
-    status[provider] = !!val;
+  const allProviders = ['openai', 'anthropic', 'gemini', 'elevenlabs'];
+  for (const p of allProviders) {
+    status[p] = data.some(row => row.provider === p);
   }
   return status;
 }
@@ -164,23 +196,14 @@ export async function deleteApiKey(email, provider) {
   if (!email || !provider) return false;
 
   const supabase = getSupabaseAdmin();
-
-  // Get current keys
-  const { data } = await supabase
-    .from('users')
-    .select('api_keys_encrypted')
-    .eq('email', email)
-    .single();
-
-  if (!data?.api_keys_encrypted) return true;
-
-  const updated = { ...data.api_keys_encrypted };
-  delete updated[provider];
+  const userId = await resolveUserId(supabase, email);
+  if (!userId) return false;
 
   const { error } = await supabase
-    .from('users')
-    .update({ api_keys_encrypted: updated })
-    .eq('email', email);
+    .from('api_keys_vault')
+    .delete()
+    .eq('user_id', userId)
+    .eq('provider', provider);
 
   return !error;
 }

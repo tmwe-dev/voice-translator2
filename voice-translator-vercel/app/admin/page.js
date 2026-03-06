@@ -35,6 +35,11 @@ export default function AdminPage() {
   const [topLanguages, setTopLanguages] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Get session token from localStorage (set by auth flow)
+  const getToken = () => {
+    try { return localStorage.getItem('vt-token') || ''; } catch { return ''; }
+  };
+
   useEffect(() => {
     document.body.style.overflow = 'auto';
     document.documentElement.style.overflow = 'auto';
@@ -45,7 +50,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, adminEmail, ...extra }),
+      body: JSON.stringify({ action, adminEmail, token: getToken(), ...extra }),
     });
     return res.json();
   }, [adminEmail]);

@@ -103,7 +103,7 @@ export async function POST(req) {
             supabaseUserId = existing.id;
             await sb.from('profiles').update({
               name: user.name || name || '',
-              avatar_url: user.avatar || avatar || '/avatars/1.png',
+              avatar: user.avatar || avatar || '/avatars/1.png',
               last_login: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }).eq('id', existing.id);
@@ -112,8 +112,8 @@ export async function POST(req) {
             const { data: newProfile } = await sb.from('profiles').insert({
               email,
               name: user.name || name || '',
-              avatar_url: user.avatar || avatar || '/avatars/1.png',
-              preferred_lang: user.lang || lang || 'it',
+              avatar: user.avatar || avatar || '/avatars/1.png',
+              lang: user.lang || lang || 'it',
               tier: user.tier || 'free',
               credits: user.credits || 0,
               last_login: new Date().toISOString(),
