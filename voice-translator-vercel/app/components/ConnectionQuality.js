@@ -3,13 +3,14 @@ import { memo } from 'react';
 
 /**
  * ConnectionQuality — compact signal bars indicator
- * Shows connection status: offline, polling, webrtc states
+ * Shows connection status: offline, realtime, webrtc states
  *
  * @param {string} webrtcState - 'idle' | 'connecting' | 'connected' | 'failed'
  * @param {boolean} partnerConnected - whether partner is in the room
+ * @param {boolean} realtimeConnected - whether Supabase Realtime WebSocket is active
  * @param {object} [style] - optional style overrides
  */
-const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partnerConnected, style }) {
+const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partnerConnected, realtimeConnected, style }) {
   // Determine quality level (0-3)
   let level = 0; // offline
   let label = 'Offline';
@@ -27,15 +28,16 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
     level = 1;
     label = 'Connessione...';
     color = '#FBBF24';
-  } else if (webrtcState === 'failed') {
+  } else if (realtimeConnected) {
+    // Supabase Realtime WebSocket active — fast push-based messaging
     level = 2;
+    label = 'Realtime';
+    color = '#38BDF8';
+  } else if (partnerConnected) {
+    // Fallback: connected via HTTP polling only
+    level = 1;
     label = 'Polling';
     color = '#FB923C';
-  } else if (partnerConnected) {
-    // Connected via polling (no WebRTC attempted or idle)
-    level = 2;
-    label = 'Server';
-    color = '#38BDF8';
   }
 
   const barHeight = [6, 10, 14, 18];

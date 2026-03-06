@@ -656,8 +656,14 @@ function HomeInner() {
   async function changeRoomMode(newMode) {
     if (!roomPolling.roomId) return;
     try {
+      const body = { action:'changeMode', roomId: roomPolling.roomId, mode:newMode };
+      if (roomPolling.roomSessionTokenRef?.current) {
+        body.roomSessionToken = roomPolling.roomSessionTokenRef.current;
+      } else {
+        body.name = prefs.name;
+      }
       await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'changeMode', roomId: roomPolling.roomId, mode:newMode }) });
+        body: JSON.stringify(body) });
       setShowModeSelector(false);
     } catch (e) { console.error('Mode change error:', e); }
   }
@@ -819,6 +825,7 @@ function HomeInner() {
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
       vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}
+      realtimeConnected={roomPolling.realtimeConnected}
       webrtc={webrtc}
       isHostVerified={roomPolling.isHostRef?.current || false}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />

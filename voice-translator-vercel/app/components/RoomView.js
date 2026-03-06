@@ -18,7 +18,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown,
-  webrtc, isHostVerified, verifiedName }) {
+  realtimeConnected, webrtc, isHostVerified, verifiedName }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -131,6 +131,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           <ConnectionQuality
             webrtcState={webrtc?.webrtcState || 'idle'}
             partnerConnected={partnerConnected}
+            realtimeConnected={realtimeConnected}
           />
           {/* Video call button */}
           {webrtc && (
