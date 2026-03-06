@@ -17,6 +17,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   syncLangChange, theme, setTheme,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
+  vadAudioLevel, vadSilenceCountdown,
   webrtc }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -81,9 +82,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   }
 
   return (
-    <div style={S.roomPage}>
+    <div style={S.roomPage} role="main" aria-label="Translation room">
       {/* Header */}
-      <div style={{...S.roomHeader, position:'relative'}}>
+      <div style={{...S.roomHeader, position:'relative'}} role="banner">
         <div style={{position:'relative'}}>
           <button style={S.backBtnSmall} onClick={() => setShowExitMenu(!showExitMenu)} title={L('endChat')}>{'\u2716'}</button>
           {showExitMenu && (
@@ -826,6 +827,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
         background:'rgba(0,0,0,0.15)', borderTop:`1px solid ${S.colors.overlayBorder}`}}>
         <input
+          aria-label={L('typePlaceholder') || 'Type a message'}
           style={{flex:1, padding:'8px 12px', borderRadius:20, background:S.colors.inputBg,
             border:`1px solid ${S.colors.inputBorder}`, color:S.colors.textPrimary, fontSize:14, outline:'none',
             fontFamily:FONT, boxSizing:'border-box'}}
@@ -837,6 +839,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           disabled={sendingText}
         />
         <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
+          aria-label={L('send') || 'Send message'}
           style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
             background: textInput.trim() ? S.colors.btnGradient : S.colors.overlayBg,
             color: textInput.trim() ? S.colors.textPrimary : S.colors.textMuted,
@@ -847,7 +850,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       </div>
 
       {/* Talk bar */}
-      <div style={S.talkBar}>
+      <div style={S.talkBar} role="toolbar" aria-label="Voice controls">
         {status && <div style={{fontSize:11, color:S.colors.accent3, marginBottom:4}}>{status}</div>}
         <div style={{fontSize:9, color:S.colors.textTertiary, marginBottom:4, textTransform:'uppercase', letterSpacing:1}}>
           {modeInfo.icon} {L(modeInfo.nameKey)}
@@ -861,6 +864,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {recording && (
               <button onClick={() => { vibrate(15); cancelRecording(); }}
                 title="Annulla"
+                aria-label={L('cancel') || 'Cancel recording'}
                 style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
                   background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
                   cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
@@ -870,6 +874,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               </button>
             )}
             <button onClick={() => { vibrate(25); toggleRecording(); }}
+              aria-label={recording ? (L('stopRecording') || 'Stop recording') : (L('startRecording') || 'Start recording')}
               style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {}),
                 ...(recording ? {animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
               {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
@@ -888,6 +893,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {recording && (
               <button onClick={() => { vibrate(15); cancelRecording(); }}
                 title="Annulla"
+                aria-label={L('cancel') || 'Cancel recording'}
                 style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
                   background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
                   cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
@@ -896,7 +902,28 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 {'\u2716'}
               </button>
             )}
+            {/* VAD Audio Level Bar */}
+            {isListening && typeof vadAudioLevel === 'number' && (
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40}}
+                role="meter" aria-label="Microphone level" aria-valuenow={Math.round(vadAudioLevel * 100)} aria-valuemin={0} aria-valuemax={100}>
+                <div style={{width:6, height:36, borderRadius:3, background:S.colors.overlayBg || 'rgba(255,255,255,0.1)',
+                  overflow:'hidden', position:'relative'}}>
+                  <div style={{
+                    position:'absolute', bottom:0, width:'100%', borderRadius:3,
+                    height:`${Math.round(vadAudioLevel * 100)}%`,
+                    background: vadAudioLevel > 0.5 ? '#4ade80' : vadAudioLevel > 0.15 ? '#667eea' : 'rgba(255,255,255,0.2)',
+                    transition:'height 0.08s linear',
+                  }} />
+                </div>
+                {vadSilenceCountdown !== null && vadSilenceCountdown > 0 && (
+                  <span style={{fontSize:9, color:S.colors.accent3, fontWeight:700, fontVariantNumeric:'tabular-nums'}}>
+                    {vadSilenceCountdown}s
+                  </span>
+                )}
+              </div>
+            )}
             <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
+              aria-label={isListening ? (L('stopFreeTalk') || 'Stop free talk') : (L('startFreeTalk') || 'Start free talk')}
               style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
                 ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
                 ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,

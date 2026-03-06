@@ -794,6 +794,7 @@ function HomeInner() {
       syncLangChange={roomPolling.syncLangChange} theme={theme} setTheme={setTheme}
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
+      vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}
       webrtc={webrtc} />
   );
 
