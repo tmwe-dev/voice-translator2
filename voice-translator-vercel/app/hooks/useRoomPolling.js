@@ -293,10 +293,28 @@ export default function useRoomPolling({
 
   async function syncLangChange(newLang) {
     if (!roomId) return;
-    // Broadcast lang change via Realtime
+    const myName = verifiedNameRef.current || prefsRef.current.name;
+
+    // ── Immediately update local roomInfoRef so translation targets are correct ──
+    // Don't wait for Realtime broadcast round-trip or next poll
+    if (roomInfoRef.current?.members) {
+      const updatedMembers = roomInfoRef.current.members.map(m =>
+        m.name === myName ? { ...m, lang: newLang } : m
+      );
+      roomInfoRef.current = { ...roomInfoRef.current, members: updatedMembers };
+      // Also update React state so UI re-renders
+      setRoomInfo(prev => {
+        if (!prev?.members) return prev;
+        return { ...prev, members: prev.members.map(m =>
+          m.name === myName ? { ...m, lang: newLang } : m
+        )};
+      });
+    }
+
+    // Broadcast lang change via Realtime (so partner updates too)
     broadcastMemberUpdate({
       action: 'langChange',
-      name: verifiedNameRef.current || prefsRef.current.name,
+      name: myName,
       lang: newLang,
     }).catch(() => {});
     try {

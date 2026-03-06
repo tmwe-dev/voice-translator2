@@ -31,6 +31,7 @@ export default function useTranslationAPI({
   roomSessionTokenRef,
   broadcastMessage,
   sendDirectMessage,  // WebRTC DataChannel: P2P instant delivery
+  verifiedNameRef,
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -200,16 +201,16 @@ export default function useTranslationAPI({
   const getTargetLangInfo = useCallback(() => {
     const currentMyLang = myLangRef.current;
     const currentRoomInfo = roomInfoRef.current;
-    const currentPrefs = prefsRef.current;
+    const myName = verifiedNameRef?.current || prefsRef.current.name;
     const myL = getLang(currentMyLang);
     let otherLangCode = null;
     if (currentRoomInfo && currentRoomInfo.members) {
-      const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
+      const other = currentRoomInfo.members.find(m => m.name !== myName);
       if (other) otherLangCode = other.lang;
     }
     if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
     return { myL, otherL: getLang(otherLangCode) };
-  }, [myLangRef, roomInfoRef, prefsRef]);
+  }, [myLangRef, roomInfoRef, prefsRef, verifiedNameRef]);
 
   /**
    * Get ALL unique target languages from room members (excluding sender's lang).
@@ -218,7 +219,7 @@ export default function useTranslationAPI({
   const getAllTargetLangs = useCallback(() => {
     const currentMyLang = myLangRef.current;
     const currentRoomInfo = roomInfoRef.current;
-    const currentPrefs = prefsRef.current;
+    const myName = verifiedNameRef?.current || prefsRef.current.name;
     const myL = getLang(currentMyLang);
 
     if (!currentRoomInfo?.members) {
@@ -228,7 +229,7 @@ export default function useTranslationAPI({
 
     const uniqueLangCodes = new Set();
     for (const m of currentRoomInfo.members) {
-      if (m.name !== currentPrefs.name && m.lang && m.lang !== currentMyLang) {
+      if (m.name !== myName && m.lang && m.lang !== currentMyLang) {
         uniqueLangCodes.add(m.lang);
       }
     }
@@ -240,7 +241,7 @@ export default function useTranslationAPI({
 
     const targetLangs = [...uniqueLangCodes].map(code => getLang(code));
     return { myL, targetLangs };
-  }, [myLangRef, roomInfoRef, prefsRef]);
+  }, [myLangRef, roomInfoRef, prefsRef, verifiedNameRef]);
 
   /**
    * Translate text to ALL target languages in parallel.

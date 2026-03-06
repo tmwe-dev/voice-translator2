@@ -50,6 +50,7 @@ export default function useTranslation({
   roomSessionTokenRef,
   broadcastMessage,
   sendDirectMessage,  // WebRTC DataChannel for P2P instant delivery
+  verifiedNameRef,
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -122,6 +123,7 @@ export default function useTranslation({
     roomSessionTokenRef,
     broadcastMessage,
     sendDirectMessage,
+    verifiedNameRef,
   });
 
   // ── Shared helpers ──
@@ -147,7 +149,7 @@ export default function useTranslation({
       domainContext: roomContextRef.current.contextPrompt || undefined,
       description: roomContextRef.current.description || undefined,
       roomMode: roomInfoRef.current?.mode || undefined,
-      nativeLang: myLangRef.current?.code || undefined,
+      nativeLang: myLangRef.current || undefined,
     };
   }
 
@@ -258,7 +260,7 @@ export default function useTranslation({
             translateUniversal(original, myL.code, tL.code, myL.name, tL.name, {
               domainContext: roomContextRef.current.contextPrompt || undefined,
               roomMode: roomInfoRef.current?.mode || undefined,
-              nativeLang: myLangRef.current?.code || undefined,
+              nativeLang: myLangRef.current || undefined,
             }).then(d => ({ langCode: tL.code, translated: d.translated || '' }))
               .catch(() => ({ langCode: tL.code, translated: '' }))
           )

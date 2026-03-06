@@ -137,6 +137,7 @@ function HomeInner() {
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
     broadcastMessage: roomPolling.broadcastMessage,
     sendDirectMessage: sendDirectMessageStable,
+    verifiedNameRef: roomPolling.verifiedNameRef,
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 
