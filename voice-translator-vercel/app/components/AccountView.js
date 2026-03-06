@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 
@@ -17,6 +17,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
   // Language detection
   const isIT = L('createRoom') === 'Crea Stanza';
   const googleInitRef = useRef(false);
+  const [authError, setAuthError] = useState('');
 
   // Initialize Google Identity Services when SDK is available
   const initGoogleSignIn = useCallback(() => {
@@ -34,11 +35,22 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
     });
   }, [loginWithGoogle, pendingReferralCode]);
 
+  // Fallback: open Google OAuth in popup when One Tap SDK fails
+  const googleOAuthPopup = useCallback(() => {
+    const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
+    if (!clientId) return false;
+    const redirectUri = `${window.location.origin}/api/auth/google-callback`;
+    const scope = 'email profile openid';
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`;
+    const w = 500, h = 600;
+    const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
+    window.open(url, 'googleOAuth', `width=${w},height=${h},left=${left},top=${top}`);
+    return true;
+  }, []);
+
   useEffect(() => {
     if (authStep !== 'email') return;
-    // Try init immediately if SDK already loaded
     initGoogleSignIn();
-    // Also listen for load event
     const checkInterval = setInterval(() => {
       if (window.google?.accounts?.id) {
         initGoogleSignIn();
@@ -80,14 +92,25 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               opacity: authLoading ? 0.5 : 1}}
               disabled={authLoading}
               onClick={() => {
+                setAuthError('');
                 const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
                 if (!clientId) {
-                  alert(isIT ? 'Google Sign-In non ancora configurato. Contatta l\'amministratore.' : 'Google Sign-In not yet configured. Contact administrator.');
+                  setAuthError(isIT ? 'Google Sign-In non ancora configurato. Usa il login con email.' : 'Google Sign-In not yet configured. Use email login.');
                   return;
                 }
                 initGoogleSignIn();
                 if (window.google?.accounts?.id) {
-                  window.google.accounts.id.prompt();
+                  window.google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                      console.log('[Auth] One Tap unavailable, using OAuth popup');
+                      googleOAuthPopup();
+                    }
+                  });
+                } else {
+                  console.log('[Auth] Google SDK not loaded, using OAuth popup');
+                  if (!googleOAuthPopup()) {
+                    setAuthError(isIT ? 'Google Sign-In non disponibile. Usa il login con email.' : 'Google Sign-In unavailable. Use email login.');
+                  }
                 }
               }}>
               <svg width="18" height="18" viewBox="0 0 24 24">
@@ -98,6 +121,14 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               </svg>
               <span>{L('loginGoogle')}</span>
             </button>
+            {authError && (
+              <div style={{color:S.colors.statusError || '#FF6B6B', fontSize:12, textAlign:'center',
+                padding:'6px 12px', marginBottom:8, borderRadius:8,
+                background:S.colors.accent3Bg || 'rgba(255,107,107,0.1)',
+                border:`1px solid ${S.colors.accent3Border || 'rgba(255,107,107,0.2)'}`}}>
+                {authError}
+              </div>
+            )}
             {/* Apple Sign-In — hidden until app is published on App Store */}
             {typeof window !== 'undefined' && window.__VT_APPLE_CLIENT_ID ? (
             <button style={{width:'100%', padding:'12px 16px', borderRadius:14, border:`1px solid ${S.colors.inputBorder}`,

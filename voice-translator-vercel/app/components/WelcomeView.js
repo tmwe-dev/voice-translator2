@@ -61,6 +61,19 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     });
   }, [loginWithGoogle, pendingReferralCode]);
 
+  // Fallback: open Google OAuth in popup when One Tap SDK fails
+  const googleOAuthPopup = useCallback(() => {
+    const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
+    if (!clientId) return false;
+    const redirectUri = `${window.location.origin}/api/auth/google-callback`;
+    const scope = 'email profile openid';
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`;
+    const w = 500, h = 600;
+    const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
+    window.open(url, 'googleOAuth', `width=${w},height=${h},left=${left},top=${top}`);
+    return true;
+  }, []);
+
   // Initialize Google Sign-In when auth modal is shown
   useEffect(() => {
     if (!showAuthModal) return;
@@ -692,17 +705,31 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
                 </div>
 
-                {/* Google Sign-In Button */}
                 {/* Google Sign-In */}
                 <button onClick={() => {
                   setAuthError('');
                   const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
                   if (!clientId) {
-                    setAuthError(Lf('googleNotConfigured', 'Google Sign-In non ancora configurato'));
+                    setAuthError(Lf('googleNotConfigured', 'Google Sign-In non ancora configurato. Usa il login con email.'));
                     return;
                   }
+                  // Try One Tap SDK first
                   initGoogleSignIn();
-                  if (window.google?.accounts?.id) window.google.accounts.id.prompt();
+                  if (window.google?.accounts?.id) {
+                    window.google.accounts.id.prompt((notification) => {
+                      // If One Tap is dismissed or not displayed, use popup fallback
+                      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        console.log('[Auth] One Tap unavailable, using OAuth popup');
+                        googleOAuthPopup();
+                      }
+                    });
+                  } else {
+                    // SDK not loaded — use popup OAuth redirect
+                    console.log('[Auth] Google SDK not loaded, using OAuth popup');
+                    if (!googleOAuthPopup()) {
+                      setAuthError(Lf('googleNotConfigured', 'Google Sign-In non disponibile. Usa il login con email.'));
+                    }
+                  }
                 }} disabled={authLoading}
                   style={{
                     width: '100%', padding: '12px 16px', borderRadius: 14, cursor: 'pointer', marginBottom: 8,

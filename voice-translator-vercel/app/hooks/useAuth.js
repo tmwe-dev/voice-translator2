@@ -269,6 +269,17 @@ export default function useAuth() {
     }
   }
 
+  // Listen for Google OAuth popup callback
+  useEffect(() => {
+    function handleOAuthMessage(event) {
+      if (event.data?.type === 'google-oauth-result' && event.data?.data) {
+        handleOAuthLogin(event.data.data, 'google');
+      }
+    }
+    window.addEventListener('message', handleOAuthMessage);
+    return () => window.removeEventListener('message', handleOAuthMessage);
+  }, []);
+
   async function loginWithApple(authResponse, pendingRef) {
     setAuthLoading(true);
     try {
