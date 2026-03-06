@@ -27,6 +27,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showCaptions, setShowCaptions] = useState(true);
   const [showDuckingPanel, setShowDuckingPanel] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Video refs
   const localVideoRef = useRef(null);
@@ -91,9 +92,10 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
   return (
     <div style={S.roomPage} role="main" aria-label="Translation room">
-      {/* Header */}
-      <div style={{...S.roomHeader, position:'relative'}} role="banner">
-        <div style={{position:'relative'}}>
+      {/* ═══ Header ═══ */}
+      <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:4, padding:'6px 8px'}} role="banner">
+        {/* ── Left: Close button ── */}
+        <div style={{position:'relative', flexShrink:0}}>
           <button style={S.backBtnSmall} onClick={() => setShowExitMenu(!showExitMenu)} title={L('endChat')}>{'\u2716'}</button>
           {showExitMenu && (
             <div style={{position:'absolute', top:'100%', left:0, zIndex:100, marginTop:4,
@@ -115,26 +117,30 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             </div>
           )}
         </div>
-        <div style={{position:'absolute', left:'50%', transform:'translateX(-50%)', display:'flex', alignItems:'center', gap:8}}>
+
+        {/* ── Center: Language flags (flex:1 centered, no absolute) ── */}
+        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, minWidth:0}}>
           <button onClick={() => setShowLangPicker(!showLangPicker)}
             style={{fontSize:18, background:'none', border:'none', cursor:'pointer', padding:'2px 6px',
-              borderRadius:8, transition:'background 0.15s',
+              borderRadius:8, transition:'background 0.15s', flexShrink:0,
               outline: showLangPicker ? `2px solid ${S.colors.accent4Border}` : 'none'}}>
             {myL.flag}
           </button>
-          <span style={{color:S.colors.textTertiary, fontSize:16}}>{'\u21C4'}</span>
+          <span style={{color:S.colors.textTertiary, fontSize:14, flexShrink:0}}>{'\u21C4'}</span>
           {otherMembers.length > 0 ? (
-            <span style={{fontSize:18, display:'flex', gap:2}}>
+            <span style={{fontSize:18, display:'flex', gap:2, flexShrink:0}}>
               {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
                 <span key={i}>{flag}</span>
               ))}
             </span>
           ) : (
-            <span style={{fontSize:18}}>{otherL.flag}</span>
+            <span style={{fontSize:18, flexShrink:0}}>{otherL.flag}</span>
           )}
         </div>
-        <div style={{marginLeft:'auto', display:'flex', alignItems:'center', gap:6}}>
-          {/* Connection quality indicator */}
+
+        {/* ── Right: Primary actions (always visible) ── */}
+        <div style={{display:'flex', alignItems:'center', gap:4, flexShrink:0}}>
+          {/* Connection quality */}
           <ConnectionQuality
             webrtcState={webrtc?.webrtcState || 'idle'}
             partnerConnected={partnerConnected}
@@ -150,131 +156,114 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 setShowVideoCall(false);
               }
             }}
-              style={{...S.iconBtn, width:32, fontSize:13,
+              style={{...S.iconBtn, width:30, height:30, fontSize:13,
                 background: showVideoCall ? S.colors.accent4Bg : S.colors.overlayBg,
                 border: showVideoCall ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
               {showVideoCall ? '\u{1F4F9}' : '\u{1F4F7}'}
             </button>
           )}
+          {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            style={{...S.iconBtn, display:'flex', alignItems:'center', gap:3, width:'auto', padding:'0 8px',
+            style={{...S.iconBtn, display:'flex', alignItems:'center', gap:2, width:'auto', height:30,
+              padding:'0 6px', fontSize:12,
               color: audioEnabled ? S.colors.statusOk : S.colors.statusError,
               background: audioEnabled ? S.colors.accent4Bg : S.colors.accent3Bg,
               border: audioEnabled ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.accent3Border}`}}>
             <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
-            <span style={{fontSize:9, fontWeight:600}}>{audioEnabled ? 'AUTO' : 'PRIVACY'}</span>
           </button>
-          {/* Ducking toggle */}
-          <div style={{position:'relative'}}>
-            <button onClick={() => setShowDuckingPanel(!showDuckingPanel)}
-              title="Audio Ducking"
-              style={{...S.iconBtn, width:32, fontSize:13,
-                background: showDuckingPanel ? S.colors.accent4Bg : S.colors.overlayBg,
-                border: showDuckingPanel ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
-              {'\u{1F3B5}'}
+          {/* Partner connected dot */}
+          <div style={{width:8, height:8, borderRadius:4, flexShrink:0,
+            background:partnerConnected ? S.colors.statusOk : S.colors.statusError}} />
+          {/* More menu button ("...") */}
+          <div style={{position:'relative', flexShrink:0}}>
+            <button onClick={() => setShowMoreMenu(!showMoreMenu)}
+              style={{...S.iconBtn, width:30, height:30, fontSize:16, fontWeight:700, letterSpacing:1,
+                background: showMoreMenu ? S.colors.accent4Bg : S.colors.overlayBg,
+                border: showMoreMenu ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
+              {'\u22EF'}
             </button>
-            {showDuckingPanel && (
+            {/* ── Overflow menu dropdown ── */}
+            {showMoreMenu && (
               <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:4,
                 background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
-                borderRadius:12, padding:12, minWidth:200, backdropFilter:'blur(12px)',
+                borderRadius:12, padding:6, minWidth:220, backdropFilter:'blur(12px)',
                 boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
-                <div style={{fontSize:11, fontWeight:700, color:S.colors.textPrimary, marginBottom:8}}>
-                  {'\u{1F3B5}'} Audio Ducking
-                </div>
-                <div style={{fontSize:10, color:S.colors.textMuted, marginBottom:10, lineHeight:1.4}}>
-                  Abbassa il volume dell'altro quando parla la traduzione
-                </div>
-                <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
-                  <span style={{fontSize:10, color:S.colors.textSecondary, minWidth:24}}>
-                    {Math.round((duckingLevel || 0.2) * 100)}%
-                  </span>
+                {/* Captions toggle */}
+                <button onClick={() => { setShowCaptions(!showCaptions); setShowMoreMenu(false); }}
+                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
+                    background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
+                    fontSize:13, fontWeight:500, textAlign:'left'}}>
+                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{showCaptions ? 'CC' : 'cc'}</span>
+                  <span>{showCaptions ? 'Nascondi sottotitoli' : 'Mostra sottotitoli'}</span>
+                  {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}>{'\u2713'}</span>}
+                </button>
+                {/* Export */}
+                <button onClick={() => { exportConversation(); setShowMoreMenu(false); }}
+                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
+                    background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
+                    fontSize:13, fontWeight:500, textAlign:'left'}}>
+                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F4CB}'}</span>
+                  <span>{L('exportConversation') || 'Esporta conversazione'}</span>
+                </button>
+                {/* Audio Ducking */}
+                <div style={{padding:'8px 12px'}}>
+                  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
+                    <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F3B5}'}</span>
+                    <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>Audio Ducking</span>
+                    <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
+                      {Math.round((duckingLevel || 0.2) * 100)}%
+                    </span>
+                  </div>
                   <input type="range" min="5" max="80" step="5"
                     value={Math.round((duckingLevel || 0.2) * 100)}
                     onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
-                    style={{flex:1, accentColor:S.colors.accent4Border, height:4}} />
+                    style={{width:'100%', accentColor:S.colors.accent4Border, height:4}} />
+                  <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
+                    Volume partner durante la traduzione
+                  </div>
                 </div>
-                <div style={{fontSize:9, color:S.colors.textMuted}}>
-                  Basso = volume partner molto ridotto durante TTS
-                </div>
+                {/* FREE tier battery */}
+                {isTrial && (() => {
+                  const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
+                  const remaining = 100 - pct;
+                  const battColor = freeLimitExceeded ? S.colors.statusError
+                    : remaining <= 20 ? S.colors.statusError
+                    : remaining <= 50 ? S.colors.statusWarning
+                    : S.colors.statusOk;
+                  return (
+                    <div style={{padding:'8px 12px', borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4}}>
+                      <div style={{display:'flex', alignItems:'center', gap:10}}>
+                        <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F50B}'}</span>
+                        <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
+                          {freeLimitExceeded ? 'Limite raggiunto' : 'Piano FREE'}
+                        </span>
+                        <span style={{marginLeft:'auto', fontSize:12, fontWeight:700, color:battColor, fontFamily:'monospace'}}>
+                          {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
+                        </span>
+                      </div>
+                      {/* Progress bar */}
+                      <div style={{marginTop:6, height:4, borderRadius:2, background:`${S.colors.overlayBorder}`,
+                        overflow:'hidden'}}>
+                        <div style={{height:'100%', borderRadius:2, width:`${remaining}%`,
+                          background:battColor, transition:'width 0.5s ease'}} />
+                      </div>
+                      <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
+                        {Math.round(freeCharsUsed/1000)}K / {FREE_DAILY_LIMIT/1000}K caratteri
+                        {freeResetTime && ` \u2022 Reset: ${freeResetTime}`}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
-          {/* Captions toggle */}
-          <button onClick={() => setShowCaptions(!showCaptions)}
-            title={showCaptions ? 'Nascondi sottotitoli' : 'Mostra sottotitoli'}
-            style={{...S.iconBtn, width:32, fontSize:13,
-              background: showCaptions ? S.colors.accent4Bg : S.colors.overlayBg,
-              border: showCaptions ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
-            {showCaptions ? 'CC' : 'cc'}
-          </button>
-          <button onClick={exportConversation} title={L('exportConversation')}
-            style={{...S.iconBtn, width:32, fontSize:13, background:S.colors.overlayBg,
-              border:`1px solid ${S.colors.overlayBorder}`}}>
-            {'\u{1F4CB}'}
-          </button>
-          {/* FREE tier battery indicator */}
-          {isTrial && (() => {
-            const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
-            const remaining = 100 - pct;
-            const battColor = freeLimitExceeded ? S.colors.statusError
-              : remaining <= 20 ? S.colors.statusError
-              : remaining <= 50 ? S.colors.statusWarning
-              : S.colors.statusOk;
-            const battGlow = freeLimitExceeded ? `0 0 6px ${S.colors.statusError}80`
-              : remaining <= 20 ? `0 0 6px ${S.colors.statusError}66`
-              : remaining <= 50 ? `0 0 4px ${S.colors.statusWarning}4d`
-              : `0 0 4px ${S.colors.statusOk}4d`;
-            return (
-              <div title={freeLimitExceeded
-                ? `${L('freeLimitReached') || 'Limite raggiunto'} — ${L('freeResetsIn') || 'Reset tra'} ${freeResetTime}`
-                : `FREE: ${Math.round(freeCharsUsed/1000)}K / ${FREE_DAILY_LIMIT/1000}K`}
-                style={{position:'relative', display:'flex', alignItems:'center', cursor:'default'}}>
-                {/* Battery body */}
-                <div style={{
-                  width:26, height:14, borderRadius:3,
-                  border:`1.5px solid ${battColor}`,
-                  padding:1.5, display:'flex', alignItems:'stretch',
-                  boxShadow: battGlow, transition:'all 0.4s ease',
-                  position:'relative', overflow:'hidden', backgroundClip:'padding-box'
-                }}>
-                  {/* Fill level (inverted: full = green = lots remaining) */}
-                  <div style={{
-                    width: `${remaining}%`, height:'100%', borderRadius:1.5,
-                    background: `linear-gradient(90deg, ${battColor}, ${battColor}ff)`,
-                    transition:'width 0.5s ease, background 0.4s ease',
-                    minWidth: remaining > 0 ? 2 : 0
-                  }} />
-                  {/* Animated pulse when low */}
-                  {remaining <= 20 && remaining > 0 && (
-                    <div style={{
-                      position:'absolute', inset:0, borderRadius:1.5,
-                      background: `${battColor}33`,
-                      animation:'vtBattPulse 1.2s ease-in-out infinite'
-                    }} />
-                  )}
-                </div>
-                {/* Battery tip */}
-                <div style={{
-                  width:3, height:6, borderRadius:'0 2px 2px 0',
-                  background: battColor, marginLeft:0.5,
-                  opacity:0.7, transition:'background 0.4s ease'
-                }} />
-                {/* Percentage label below */}
-                <span style={{
-                  position:'absolute', top:16, left:'50%', transform:'translateX(-50%)',
-                  fontSize:7, fontWeight:700, color: battColor,
-                  whiteSpace:'nowrap', opacity:0.85, transition:'color 0.4s ease',
-                  fontFamily:'monospace', letterSpacing:'-0.5px'
-                }}>
-                  {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
-                </span>
-              </div>
-            );
-          })()}
-          <div style={{width:8, height:8, borderRadius:4,
-            background:partnerConnected ? S.colors.statusOk : S.colors.statusError}} />
         </div>
       </div>
+      {/* Backdrop to close menus */}
+      {(showMoreMenu || showExitMenu) && (
+        <div onClick={() => { setShowMoreMenu(false); setShowExitMenu(false); }}
+          style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
+      )}
 
       {/* Language picker dropdown */}
       {showLangPicker && (
