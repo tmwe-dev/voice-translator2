@@ -48,7 +48,8 @@ export default function useTranslation({
   userEmail,
   sentByMeRef,
   roomSessionTokenRef,
-  broadcastMessage
+  broadcastMessage,
+  sendDirectMessage,  // WebRTC DataChannel for P2P instant delivery
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -120,6 +121,7 @@ export default function useTranslation({
     sentByMeRef,
     roomSessionTokenRef,
     broadcastMessage,
+    sendDirectMessage,
   });
 
   // ── Shared helpers ──

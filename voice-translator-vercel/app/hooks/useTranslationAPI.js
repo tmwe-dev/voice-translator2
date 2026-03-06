@@ -30,6 +30,7 @@ export default function useTranslationAPI({
   sentByMeRef,
   roomSessionTokenRef,
   broadcastMessage,
+  sendDirectMessage,  // WebRTC DataChannel: P2P instant delivery
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -37,16 +38,50 @@ export default function useTranslationAPI({
 
   /**
    * Send a translated message to the room.
+   *
+   * Priority order for instant delivery:
+   * 1. WebRTC DataChannel (P2P, ~50ms) — if connected
+   * 2. Supabase Realtime broadcast (~100ms) — if connected
+   * 3. HTTP polling fallback (2-10s) — always works
+   *
+   * Server save always happens in parallel for persistence.
    */
   const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return null;
+
+    const senderName = prefsRef.current.name;
+    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+
+    // Build a message object for instant P2P delivery
+    const instantMsg = {
+      id: tempId,
+      roomId,
+      sender: senderName,
+      original,
+      translated,
+      sourceLang,
+      targetLang,
+      translations: translations || null,
+      timestamp: Date.now(),
+    };
+
+    // ── Priority 1: Send via WebRTC DataChannel (P2P, instant) ──
+    let sentViaDC = false;
+    if (sendDirectMessage) {
+      try {
+        sentViaDC = sendDirectMessage({ type: 'chat-message', message: instantMsg });
+        if (sentViaDC) console.log('[sendMessage] Sent via P2P DataChannel');
+      } catch {}
+    }
+
+    // ── Always save to server (persistence + non-P2P clients) ──
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomId,
-          sender: roomSessionTokenRef?.current ? undefined : prefsRef.current.name,
+          sender: roomSessionTokenRef?.current ? undefined : senderName,
           roomSessionToken: roomSessionTokenRef?.current || null,
           original,
           translated,
@@ -59,18 +94,20 @@ export default function useTranslationAPI({
         const data = await res.json();
         if (data.message?.id && sentByMeRef) {
           sentByMeRef.current.add(data.message.id);
+          // Also mark the temp ID so we don't duplicate from DC echo
+          sentByMeRef.current.add(tempId);
         }
-        // Broadcast via Supabase Realtime so other clients receive instantly
-        if (data.message && broadcastMessage) {
+        // ── Priority 2: Broadcast via Supabase Realtime (for non-P2P clients) ──
+        if (data.message && broadcastMessage && !sentViaDC) {
           broadcastMessage(data.message);
         }
         return data;
       }
     } catch (e) {
-      console.error('[sendMessage] Error:', e);
+      console.error('[sendMessage] Server save error:', e);
     }
     return null;
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage]);
 
   /**
    * Translate text using the appropriate endpoint (free/paid/consensus).

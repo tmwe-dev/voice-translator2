@@ -87,6 +87,13 @@ function HomeInner() {
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
   const roomIdRef = useRef(null);
 
+  // ── Stable ref for P2P DataChannel message sending ──
+  // Declared before hooks so useTranslation can reference it via callback wrapper
+  const sendDirectMessageRef = useRef(null);
+  const sendDirectMessageStable = useCallback((msg) => {
+    return sendDirectMessageRef.current ? sendDirectMessageRef.current(msg) : false;
+  }, []);
+
   // =============================================
   // HOOKS — now use the SAME refs that get synced below
   // =============================================
@@ -128,15 +135,33 @@ function HomeInner() {
     userEmail: auth.userAccount?.email || auth.authEmail || '',
     sentByMeRef: roomPolling.sentByMeRef,  // FASE 1A: for message dedup
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
-    broadcastMessage: roomPolling.broadcastMessage
+    broadcastMessage: roomPolling.broadcastMessage,
+    sendDirectMessage: sendDirectMessageStable,
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
+
+  // Handle incoming P2P messages via DataChannel
+  const handleDirectMessage = useCallback((msg) => {
+    if (msg?.type === 'chat-message' && msg.message) {
+      const message = msg.message;
+      // Dedup: skip if we sent it ourselves
+      if (roomPolling.sentByMeRef?.current?.has(message.id)) return;
+      // Add to messages list via the same handler used by Realtime
+      roomPolling.addIncomingMessage(message);
+    }
+  }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage]);
+
   const webrtc = useWebRTC({
     roomId: roomPolling.roomId,
     myName: prefs.name,
-    onDirectMessage: null, // DataChannel messages handled separately if needed
+    onDirectMessage: handleDirectMessage,
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
   });
+
+  // Sync sendDirectMessageRef when WebRTC connects/disconnects
+  useEffect(() => {
+    sendDirectMessageRef.current = webrtc.webrtcConnected ? webrtc.sendDirectMessage : null;
+  }, [webrtc.webrtcConnected, webrtc.sendDirectMessage]);
 
   // =============================================
   // STYLES & THEME

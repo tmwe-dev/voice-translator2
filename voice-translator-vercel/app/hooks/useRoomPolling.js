@@ -433,5 +433,7 @@ export default function useRoomPolling({
     // Realtime broadcast functions (for use in useTranslationAPI)
     broadcastMessage,
     broadcastMemberUpdate,
+    // P2P DataChannel: add incoming message (same logic as Realtime)
+    addIncomingMessage: handleRealtimeMessage,
   };
 }
