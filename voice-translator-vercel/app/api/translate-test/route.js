@@ -10,6 +10,14 @@ import { findConsensus } from '../../lib/consensus.js';
 
 async function handlePost(req) {
   try {
+    // Require admin pass in production to prevent abuse of platform API keys
+    if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
+      const { searchParams } = new URL(req.url);
+      const pass = searchParams.get('key') || req.headers.get('x-admin-key');
+      if (pass !== process.env.ADMIN_PASS) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
     const { text, sourceLang, targetLang, userEmail } = await req.json();
     if (!text?.trim()) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });

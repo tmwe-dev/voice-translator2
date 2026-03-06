@@ -15,11 +15,13 @@ export const metadata = {
     description: 'Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages.',
     type: 'website',
     url: 'https://voicetranslate.app',
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'VoiceTranslate — Real-time AI Voice Translation' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'VoiceTranslate — Real-time Voice Translation',
     description: 'AI-powered voice translation for 15+ languages. Free to start.',
+    images: ['/api/og'],
   },
 };
 export const viewport = {
@@ -45,9 +47,13 @@ export default function RootLayout({ children }) {
         <meta property="og:description" content="Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://voicetranslate.app" />
+        <meta property="og:image" content="/api/og" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="VoiceTranslate — Real-time Voice Translation" />
         <meta name="twitter:description" content="AI-powered voice translation for 15+ languages. Free to start." />
+        <meta name="twitter:image" content="/api/og" />
         {/* OAuth: inject client IDs from env vars + preload SDKs */}
         <script dangerouslySetInnerHTML={{__html: `
           window.__VT_GOOGLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}";
@@ -58,7 +64,7 @@ export default function RootLayout({ children }) {
         )}
         <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''} />
         <meta name="appleid-signin-scope" content="name email" />
-        <meta name="appleid-signin-redirect-uri" content="https://voice-translator2.vercel.app" />
+        <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app'} />
         <meta name="appleid-signin-use-popup" content="true" />
         {/* Plausible Analytics — privacy-first, no cookies, GDPR compliant */}
         {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (

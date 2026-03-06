@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { addCredits, addPaymentRecord } from '../../../lib/users.js';
 import { getSupabaseAdmin } from '../../../lib/supabase.js';
 import { addCreditsDB, savePayment as savePaymentDB, logAudit } from '../../../lib/supabaseAPI.js';
+import { redis } from '../../../lib/redis.js';
 
 // ═══════════════════════════════════════════════
 // Stripe Webhook Handler
@@ -43,6 +44,20 @@ export async function POST(req) {
       }
     } else {
       event = JSON.parse(body);
+    }
+
+    // ── Idempotency: skip already-processed events (Stripe can retry) ──
+    const idempotencyKey = `stripe_evt:${event.id}`;
+    try {
+      const already = await redis('GET', idempotencyKey);
+      if (already) {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      // Mark as processing (TTL 48h — Stripe retries for up to 72h)
+      await redis('SET', idempotencyKey, '1', 'EX', 172800);
+    } catch (e) {
+      // If Redis is down, proceed anyway (better to double-process than miss)
+      console.warn('[Webhook] Idempotency check failed:', e.message);
     }
 
     const sb = getSupabaseAdmin();
@@ -240,7 +255,10 @@ export async function POST(req) {
 
     return NextResponse.json({ received: true });
   } catch (e) {
-    console.error('Webhook error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('Webhook error:', e.message);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'stripe-webhook' } });
+    }).catch(() => {});
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

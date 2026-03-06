@@ -1,6 +1,6 @@
 // Shared constants for VoiceTranslate app
 
-export const APP_URL = 'https://voice-translator2.vercel.app';
+export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app';
 
 export const LANGS = [
   { code:'it', name:'Italiano', flag:'\u{1F1EE}\u{1F1F9}', speech:'it-IT' },

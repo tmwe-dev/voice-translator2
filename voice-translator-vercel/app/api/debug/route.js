@@ -29,6 +29,14 @@ function buildSystemPrompt(sourceLangName, targetLangName, domainContext, descri
 
 async function handlePost(req) {
   try {
+    // Require admin pass in production
+    if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
+      const { searchParams } = new URL(req.url);
+      const pass = searchParams.get('key') || req.headers.get('x-admin-key');
+      if (pass !== process.env.ADMIN_PASS) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
     const { action, userToken, text, sourceLang, targetLang,
             sourceLangName, targetLangName, domainContext, description,
             audioSeconds } = await req.json();

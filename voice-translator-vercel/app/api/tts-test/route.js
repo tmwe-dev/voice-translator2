@@ -63,6 +63,14 @@ const TTS_INSTRUCTIONS = {
 
 export async function POST(req) {
   try {
+    // Require admin pass in production to prevent abuse of platform API keys
+    if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
+      const { searchParams } = new URL(req.url);
+      const pass = searchParams.get('key') || req.headers.get('x-admin-key');
+      if (pass !== process.env.ADMIN_PASS) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    }
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
     if (!checkRateLimit(ip)) {
       return NextResponse.json({ error: 'Rate limit: max 10 test/min' }, { status: 429 });
