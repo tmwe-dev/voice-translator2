@@ -1,5 +1,5 @@
 export default function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app';
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app';
 
   return [
     {

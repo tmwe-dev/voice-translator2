@@ -10,4 +10,4 @@ Disallow: /debug
 Disallow: /testcenter
 Disallow: /startrek
 
-Sitemap: https://voicetranslate.app/sitemap.xml
+Sitemap: https://www.voicetranslate.app/sitemap.xml
