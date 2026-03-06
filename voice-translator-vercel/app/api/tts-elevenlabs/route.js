@@ -89,7 +89,14 @@ async function handlePost(req) {
     // ── FASE 4: Model selection with Flash v2.5 as default ──
     const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
     let modelId;
-    if (V3_ONLY_LANGS.has(lang2)) {
+
+    // If using a cloned voice, use multilingual model for best quality
+    const isClonedVoice = voiceId && !Object.values(MALE_VOICES).includes(voiceId)
+      && !Object.values(FEMALE_VOICES).includes(voiceId);
+
+    if (isClonedVoice) {
+      modelId = 'eleven_multilingual_v2'; // Best quality for cloned voices
+    } else if (V3_ONLY_LANGS.has(lang2)) {
       modelId = 'eleven_v3';
     } else if (FLASH_SUPPORTED_LANGS.has(lang2)) {
       modelId = 'eleven_flash_v2_5'; // 75ms latency — 4x faster than multilingual_v2

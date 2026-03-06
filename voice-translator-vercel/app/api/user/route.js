@@ -89,6 +89,22 @@ async function handleGet(req) {
     const session = await getSession(token);
     if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
 
+    // === GET PROFILE ===
+    if (action === 'profile') {
+      const user = await getUser(session.email);
+      if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({
+        email: session.email,
+        name: user.name || null,
+        tier: user.tier || 'free',
+        credits: user.credits || 0,
+        clonedVoiceId: user.clonedVoiceId || null,
+        clonedVoiceName: user.clonedVoiceName || null,
+        useOwnKeys: user.useOwnKeys || false,
+        createdAt: user.createdAt || null,
+      });
+    }
+
     // === GET PREFERENCES FROM SUPABASE ===
     if (action === 'get-prefs') {
       try {

@@ -9,6 +9,7 @@ export default function useAudioSystem({
   isTopProRef,
   canUseElevenLabsRef,
   selectedELVoice,
+  clonedVoiceIdRef,
   roomIdRef,
   getEffectiveToken
 }) {
@@ -528,7 +529,7 @@ export default function useAudioSystem({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
-        voiceId: selectedELVoice || undefined,
+        voiceId: clonedVoiceIdRef?.current || selectedELVoice || undefined,
         langCode: langCode || undefined,
         avatarName: getAvatarName(),
         userToken: getEffectiveToken(),

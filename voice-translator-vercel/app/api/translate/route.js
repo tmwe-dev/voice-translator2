@@ -74,6 +74,28 @@ function getSimpleHash(text) {
   return encoded.substring(0, 32);
 }
 
+// Calculate confidence score for translation
+function calcConfidence(sourceText, translatedText, sourceLang, targetLang) {
+  let score = 0.85; // Base confidence for AI translation
+
+  // Well-supported language pairs get a boost
+  const wellSupported = new Set(['en','es','fr','de','it','pt','zh','ja','ko','ru']);
+  if (wellSupported.has(sourceLang)) score += 0.05;
+  if (wellSupported.has(targetLang)) score += 0.05;
+
+  // Very short text has lower confidence
+  if (sourceText.length < 5) score -= 0.15;
+  else if (sourceText.length < 15) score -= 0.05;
+
+  // If translation is identical to source, something's wrong
+  if (translatedText.trim() === sourceText.trim()) score -= 0.3;
+
+  // If translation is empty or too short compared to source
+  if (!translatedText || translatedText.length < sourceText.length * 0.1) score -= 0.4;
+
+  return Math.max(0, Math.min(1, Math.round(score * 100) / 100));
+}
+
 export async function POST(req) {
   try {
     // Rate limit: 30 requests/minute per IP
@@ -108,8 +130,10 @@ export async function POST(req) {
 
     // If we have a cached translation, return it immediately
     if (cachedTranslation) {
+      const cachedConfidence = calcConfidence(text, cachedTranslation, sourceLang, targetLang);
       return NextResponse.json({
         translated: cachedTranslation,
+        confidence: cachedConfidence,
         cost: 0,
         costEurCents: 0,
         cached: true
@@ -320,8 +344,10 @@ RULES:
         // Final check — if still invalid, return original
         const finalCheck = validateOutput(text, translated, targetLang);
         if (!finalCheck.valid) {
+          const failureConfidence = calcConfidence(text, text, sourceLang, targetLang);
           return NextResponse.json({
             translated: text,
+            confidence: failureConfidence,
             cost: roundCost(calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 })),
             costEurCents: 0,
             validationFailed: true
@@ -403,8 +429,12 @@ RULES:
       }
     } catch (e) { /* Supabase tracking is non-blocking */ }
 
+    // Calculate confidence score
+    const confidence = calcConfidence(text, translated, sourceLang, targetLang);
+
     return NextResponse.json({
       translated,
+      confidence,
       cost: roundCost(msgCostUsd),
       costEurCents: roundEurCents(msgCostEurCents),
       ...(remainingCredits !== undefined ? { remainingCredits } : {})
