@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /terms
+Allow: /privacy
+
+Disallow: /api/
+Disallow: /admin
+Disallow: /debug
+Disallow: /testcenter
+Disallow: /startrek
+
+Sitemap: https://voicetranslate.app/sitemap.xml

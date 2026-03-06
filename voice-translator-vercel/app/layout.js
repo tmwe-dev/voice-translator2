@@ -1,8 +1,9 @@
 import CookieConsent from './components/CookieConsent.js';
+import SkipToContent from './components/SkipToContent.js';
 
 export const metadata = {
   title: 'VoiceTranslate — Real-time AI Voice Translation',
-  description: 'Speak your language, be understood everywhere. Real-time AI voice translation for 31+ languages with under 500ms latency.',
+  description: 'Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -10,15 +11,15 @@ export const metadata = {
     title: 'VoiceTranslate',
   },
   openGraph: {
-    title: 'VoiceTranslate — Real-time AI Voice Translation',
-    description: 'Speak your language, be understood everywhere. 31+ languages, AI-powered, under 500ms.',
+    title: 'VoiceTranslate — Real-time Voice Translation',
+    description: 'Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages.',
     type: 'website',
-    url: 'https://voice-translator2.vercel.app',
+    url: 'https://voicetranslate.app',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'VoiceTranslate',
-    description: 'Real-time AI voice translation for 31+ languages',
+    title: 'VoiceTranslate — Real-time Voice Translation',
+    description: 'AI-powered voice translation for 15+ languages. Free to start.',
   },
 };
 export const viewport = {
@@ -38,6 +39,15 @@ export default function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96x96.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
+        {/* Enhanced SEO Meta Tags */}
+        <meta name="description" content="Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start." />
+        <meta property="og:title" content="VoiceTranslate — Real-time Voice Translation" />
+        <meta property="og:description" content="Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://voicetranslate.app" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="VoiceTranslate — Real-time Voice Translation" />
+        <meta name="twitter:description" content="AI-powered voice translation for 15+ languages. Free to start." />
         {/* OAuth: inject client IDs from env vars + preload SDKs */}
         <script dangerouslySetInnerHTML={{__html: `
           window.__VT_GOOGLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}";
@@ -58,9 +68,41 @@ export default function RootLayout({ children }) {
             src="https://plausible.io/js/script.js"
           />
         )}
+        {/* JSON-LD Structured Data for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebApplication',
+              name: 'VoiceTranslate',
+              description: 'Real-time voice translation app with AI-powered speech recognition and synthesis in 15+ languages',
+              url: 'https://voicetranslate.app',
+              applicationCategory: 'CommunicationApplication',
+              operatingSystem: 'Any',
+              offers: {
+                '@type': 'Offer',
+                price: '0',
+                priceCurrency: 'EUR',
+                description: 'Free tier with basic translation features',
+              },
+              featureList: [
+                'Real-time voice translation',
+                'Support for 15+ languages',
+                'AI-powered speech synthesis',
+                'Voice cloning',
+                'Classroom mode',
+                'P2P video calls',
+              ],
+            }),
+          }}
+        />
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
-        {children}
+        <SkipToContent />
+        <main id="main-content">
+          {children}
+        </main>
         <CookieConsent />
       </body>
     </html>
