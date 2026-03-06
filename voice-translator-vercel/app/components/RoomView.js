@@ -32,6 +32,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
+  // Auto-open video panel when receiving an incoming call
+  useEffect(() => {
+    if (webrtc?.webrtcState === 'connecting' && !showVideoCall) {
+      setShowVideoCall(true);
+    }
+  }, [webrtc?.webrtcState]);
+
   // Attach video streams to DOM elements
   useEffect(() => {
     if (localVideoRef.current && webrtc?.localStream) {

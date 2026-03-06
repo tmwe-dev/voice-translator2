@@ -88,13 +88,19 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   }, [myName]);
 
   // ── Handle incoming remote tracks ──
-  const handleRemoteTrack = useCallback((track) => {
-    console.log('[WebRTC] Remote track received:', track.kind);
-    if (!remoteStreamRef.current) {
-      remoteStreamRef.current = new MediaStream();
+  const handleRemoteTrack = useCallback((track, stream) => {
+    console.log('[WebRTC] Remote track received:', track.kind, 'stream:', !!stream);
+    // Use the provided stream if available (keeps audio+video in sync)
+    if (stream) {
+      remoteStreamRef.current = stream;
+      setRemoteStream(stream);
+    } else {
+      if (!remoteStreamRef.current) {
+        remoteStreamRef.current = new MediaStream();
+      }
+      remoteStreamRef.current.addTrack(track);
+      setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
     }
-    remoteStreamRef.current.addTrack(track);
-    setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
     if (track.kind === 'video') setRemoteVideoActive(true);
 
     track.onended = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
@@ -197,7 +203,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         pcRef.current = newPc;
         newPc.ondatachannel = (event) => setupDC(event.channel);
 
-        const stream = await getMediaWithFallback(false);
+        // Match caller's media: if the offer contains video, we send video too
+        const offerSdp = JSON.parse(data);
+        const callerHasVideo = offerSdp.sdp?.includes('m=video');
+        const stream = await getMediaWithFallback(callerHasVideo);
         if (stream) sendersRef.current = addMediaTracks(newPc, stream);
 
         collectIceCandidates(newPc, (candidateStr) => {
@@ -267,6 +276,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
   }, [myName, cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal]);
 
+  // Keep a stable ref to the signal handler (prevents channel re-subscription on every render)
+  const handleIncomingSignalRef = useRef(handleIncomingSignal);
+  useEffect(() => { handleIncomingSignalRef.current = handleIncomingSignal; }, [handleIncomingSignal]);
+
   // ── Subscribe to Realtime signaling channel when in a room ──
   useEffect(() => {
     if (!roomId) return;
@@ -279,7 +292,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     });
 
     channel.on('broadcast', { event: 'webrtc-signal' }, (event) => {
-      handleIncomingSignal(event.payload);
+      handleIncomingSignalRef.current(event.payload);
     });
 
     channel.subscribe((status) => {
@@ -294,7 +307,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       try { channel.unsubscribe(); } catch {}
       channelRef.current = null;
     };
-  }, [roomId, handleIncomingSignal]);
+  }, [roomId]); // Only re-subscribe when roomId changes
 
   // ── Initiate connection (caller side) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
