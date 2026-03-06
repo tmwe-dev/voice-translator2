@@ -35,6 +35,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const pcRef = useRef(null);
   const dcRef = useRef(null);
   const timeoutRef = useRef(null);
+  const disconnectTimerRef = useRef(null); // grace period for transient 'disconnected' state
   const sendersRef = useRef([]);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
@@ -50,6 +51,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Cleanup ──
   const cleanup = useCallback(() => {
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     if (dcRef.current) {
       try { dcRef.current.close(); } catch {}
       dcRef.current = null;
@@ -145,13 +147,50 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     } catch {}
   }, [onDirectMessage]);
 
-  const handleStateChange = useCallback((state) => {
-    console.log('[WebRTC] Connection state:', state);
-    if (state === 'connected') {
+  // ── Connection state handler ──
+  // CRITICAL: 'disconnected' is TRANSIENT (network hiccup, Wi-Fi switch, etc.)
+  // Only 'failed' and 'closed' are terminal. We use a 10s grace period for disconnected.
+  const handleStateChange = useCallback((info) => {
+    // info = { source: 'ice'|'connection', state: string }
+    const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
+    console.log(`[WebRTC] State change: ${source}=${state}`);
+
+    if (state === 'connected' || state === 'completed') {
+      // Connection established or ICE completed — clear any disconnect timer
+      if (disconnectTimerRef.current) {
+        clearTimeout(disconnectTimerRef.current);
+        disconnectTimerRef.current = null;
+        console.log('[WebRTC] Recovered from transient disconnect');
+      }
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-    } else if (state === 'disconnected' || state === 'failed' || state === 'closed') {
+
+    } else if (state === 'disconnected') {
+      // TRANSIENT state — give it 10 seconds to recover before cleanup
+      // Common causes: Wi-Fi switch, brief network hiccup, mobile backgrounding
+      if (!disconnectTimerRef.current && stateRef.current === 'connected') {
+        console.log('[WebRTC] Transient disconnect — waiting 10s for recovery...');
+        disconnectTimerRef.current = setTimeout(() => {
+          disconnectTimerRef.current = null;
+          // Check ACTUAL state after grace period (might have recovered)
+          const pc = pcRef.current;
+          if (pc && (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' ||
+                     pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
+            console.log('[WebRTC] Disconnect persisted after grace period — cleaning up');
+            setWebrtcState('failed');
+            stateRef.current = 'failed';
+            cleanup();
+          }
+        }, 10000);
+      }
+
+    } else if (state === 'failed' || state === 'closed') {
+      // Terminal states — cleanup immediately
+      if (disconnectTimerRef.current) {
+        clearTimeout(disconnectTimerRef.current);
+        disconnectTimerRef.current = null;
+      }
       setWebrtcState('failed');
       stateRef.current = 'failed';
       cleanup();
@@ -161,14 +200,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   function setupDC(dc) {
     dcRef.current = dc;
     dc.onopen = () => {
+      console.log('[WebRTC] DataChannel opened');
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     };
     dc.onmessage = handleDCMessage;
     dc.onclose = () => {
-      setWebrtcState('failed');
-      stateRef.current = 'failed';
+      console.log('[WebRTC] DataChannel closed');
+      // Don't set to 'failed' immediately — the PeerConnection handles terminal states
+      // DataChannel can briefly close during renegotiation
+      dcRef.current = null;
     };
   }
 

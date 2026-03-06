@@ -4,19 +4,38 @@
 // Supports:
 // - DataChannel for direct message exchange (~50ms latency)
 // - Audio/Video tracks for video calls
-// - Signaling via existing /api/room endpoint
+// - Signaling via Supabase Realtime broadcast
 // ═══════════════════════════════════════════════
 
-// ICE servers: STUN for NAT traversal + optional TURN for relay fallback
-// Configure TURN via env vars: NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USER, NEXT_PUBLIC_TURN_PASS
-// Recommended: Cloudflare TURN (free 1TB/month) or Twilio TURN
+// ICE servers: STUN for NAT traversal + TURN for relay fallback
+// Custom TURN via env vars: NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USER, NEXT_PUBLIC_TURN_PASS
 const ICE_SERVERS = [
+  // Google STUN servers (fast, reliable)
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
+  // Open Relay STUN
+  { urls: 'stun:openrelay.metered.ca:80' },
+  // ── TURN servers (relay for ~15-20% of users behind symmetric NAT) ──
+  // Metered.ca Open Relay Project — free public TURN (20GB/month)
+  {
+    urls: 'turn:openrelay.metered.ca:80',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+  {
+    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
 ];
 
-// Add TURN server if configured (needed for ~15% of users behind symmetric NAT)
+// Add custom TURN server if configured via env vars (supplements free TURN)
 if (typeof window !== 'undefined') {
   const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
   const turnUser = process.env.NEXT_PUBLIC_TURN_USER;
@@ -27,7 +46,6 @@ if (typeof window !== 'undefined') {
       username: turnUser || '',
       credential: turnPass || '',
     });
-    // Also add TURNS (TLS) variant if it's a turn: URL
     if (turnUrl.startsWith('turn:')) {
       ICE_SERVERS.push({
         urls: turnUrl.replace('turn:', 'turns:'),
@@ -40,16 +58,22 @@ if (typeof window !== 'undefined') {
 
 /**
  * Create a new RTCPeerConnection with DataChannel + media support
+ *
+ * onStateChange receives: { source: 'ice'|'connection', state: string }
+ * Important: 'disconnected' is TRANSIENT and should NOT trigger cleanup.
+ * Only 'failed' and 'closed' are terminal states.
  */
 export function createPeerConnection(onMessage, onStateChange, onRemoteTrack) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
   pc.oniceconnectionstatechange = () => {
-    onStateChange?.(pc.iceConnectionState);
+    console.log('[WebRTC] ICE state:', pc.iceConnectionState);
+    onStateChange?.({ source: 'ice', state: pc.iceConnectionState });
   };
 
   pc.onconnectionstatechange = () => {
-    onStateChange?.(pc.connectionState);
+    console.log('[WebRTC] Connection state:', pc.connectionState);
+    onStateChange?.({ source: 'connection', state: pc.connectionState });
   };
 
   // Handle incoming remote tracks (audio/video from partner)
