@@ -379,7 +379,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       // Wait for signaling channel to be ready before sending offer
       const signalingReady = await waitForSignalingReady();
       if (!signalingReady) {
-        throw new Error('Signaling channel not ready');
+        console.warn('[WebRTC] Signaling not ready — will retry when channel connects');
+        // Don't cleanup — keep local stream visible, just mark as failed
+        setWebrtcState('failed');
+        stateRef.current = 'failed';
+        return;
       }
 
       // Create and send offer via Realtime (instant delivery!)
@@ -399,7 +403,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       console.error('[WebRTC] Init error:', e);
       setWebrtcState('failed');
       stateRef.current = 'failed';
-      cleanup();
+      // Don't cleanup local stream on signaling errors — camera should stay visible
     }
   }, [cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal, waitForSignalingReady]);
 

@@ -27,6 +27,7 @@ export default function useRoomPolling({
   const [partnerTyping, setPartnerTyping] = useState(false);
 
   const pollRef = useRef(null);
+  const pollFnRef = useRef(null);  // store pollFn so interval changes can reuse it
   const lastMsgRef = useRef(0);
   const liveTextTimerRef = useRef(null);
   const lastLiveTextRef = useRef('');
@@ -139,13 +140,17 @@ export default function useRoomPolling({
 
   // ── Polling: safety-net when Realtime is active, primary when not ──
 
+  // Use a ref to read realtimeConnected inside pollFn without causing re-creation
+  const realtimeConnectedRef = useRef(false);
+  useEffect(() => { realtimeConnectedRef.current = realtimeConnected; }, [realtimeConnected]);
+
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
     lastMsgRef.current = Date.now();
     pollErrorCountRef.current = 0;
     setPollError(false);
 
-    // Subscribe to Supabase Realtime channel
+    // Subscribe to Supabase Realtime channel (only once on room join)
     realtimeSubscribe(rid);
 
     const pollFn = async () => {
@@ -185,8 +190,7 @@ export default function useRoomPolling({
           const myName = verifiedNameRef.current || prefsRef.current.name;
           const others = room.members.filter(m => m.name !== myName);
           // Only update speaking/typing from polling if Realtime is NOT connected
-          // (Realtime delivers these in real-time, polling is just backup)
-          if (!realtimeConnected) {
+          if (!realtimeConnectedRef.current) {
             const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
             const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
             setPartnerSpeaking(anyoneSpeaking);
@@ -211,28 +215,25 @@ export default function useRoomPolling({
       }
     };
 
+    // Save pollFn so the interval-adjustment effect can reuse it
+    pollFnRef.current = pollFn;
+
     // Immediate first poll (don't wait for interval)
     pollFn();
 
-    // Choose poll interval based on Realtime connection
-    const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
-    pollRef.current = setInterval(pollFn, interval);
-  }, [realtimeSubscribe, realtimeConnected, broadcastHeartbeat, processIncomingMessage]);
+    // Start with legacy interval; the effect below will adjust when Realtime connects
+    pollRef.current = setInterval(pollFn, LEGACY_POLL_INTERVAL);
+  }, [realtimeSubscribe, broadcastHeartbeat, processIncomingMessage]);
 
   // ── Adjust poll interval when realtime connects/disconnects ──
-  const prevRealtimeRef = useRef(false);
+  // IMPORTANT: This does NOT re-subscribe — only changes the timer interval
   useEffect(() => {
-    if (prevRealtimeRef.current !== realtimeConnected && roomId && pollRef.current) {
-      // Re-start polling with new interval
-      clearInterval(pollRef.current);
-      const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
-      const pollFn = pollRef.current?.__fn;
-      // Simple approach: restart polling
-      startPolling(roomId);
-      console.log(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
-    }
-    prevRealtimeRef.current = realtimeConnected;
-  }, [realtimeConnected, roomId, startPolling]);
+    if (!roomId || !pollFnRef.current) return;
+    if (pollRef.current) clearInterval(pollRef.current);
+    const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
+    pollRef.current = setInterval(pollFnRef.current, interval);
+    console.log(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
+  }, [realtimeConnected, roomId]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
