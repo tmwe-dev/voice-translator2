@@ -39,6 +39,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const channelRef = useRef(null);
+  const signalingReadyRef = useRef(false);
+  const signalingSubscribePromiseRef = useRef(null);
   const stateRef = useRef('idle'); // mirrors webrtcState for use in async callbacks
   const iceCandidateQueueRef = useRef([]); // queue ICE candidates until remote desc is set
 
@@ -75,17 +77,45 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Supabase Realtime signaling ──
 
-  const sendSignal = useCallback((type, data) => {
-    if (!channelRef.current) {
-      console.warn('[WebRTC] No signaling channel');
-      return;
+  const waitForSignalingReady = useCallback(async (timeoutMs = 5000) => {
+    if (signalingReadyRef.current && channelRef.current) return true;
+
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      if (signalingReadyRef.current && channelRef.current) return true;
+      if (signalingSubscribePromiseRef.current) {
+        try {
+          await Promise.race([
+            signalingSubscribePromiseRef.current,
+            new Promise((resolve) => setTimeout(resolve, 250)),
+          ]);
+        } catch {}
+      } else {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
     }
-    channelRef.current.send({
+
+    return signalingReadyRef.current && !!channelRef.current;
+  }, []);
+
+  const sendSignal = useCallback(async (type, data) => {
+    const ready = await waitForSignalingReady();
+    if (!ready || !channelRef.current) {
+      console.warn('[WebRTC] Signaling channel not ready, cannot send:', type);
+      throw new Error(`Signaling channel not ready for ${type}`);
+    }
+
+    const result = await channelRef.current.send({
       type: 'broadcast',
       event: 'webrtc-signal',
       payload: { type, data, from: myName, timestamp: Date.now() },
     });
-  }, [myName]);
+
+    if (result !== 'ok') {
+      console.warn('[WebRTC] Failed to send signal:', type, result);
+      throw new Error(`Failed to send ${type}: ${String(result)}`);
+    }
+  }, [myName, waitForSignalingReady]);
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
@@ -210,11 +240,13 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         if (stream) sendersRef.current = addMediaTracks(newPc, stream);
 
         collectIceCandidates(newPc, (candidateStr) => {
-          sendSignal('ice-candidate', candidateStr);
+          sendSignal('ice-candidate', candidateStr).catch((e) => {
+            console.warn('[WebRTC] Failed to send ICE candidate:', e.message);
+          });
         });
 
         const answerStr = await createAnswer(newPc, data);
-        sendSignal('answer', answerStr);
+        await sendSignal('answer', answerStr);
 
         // Flush any ICE candidates that arrived before remote description was set
         await flushIceCandidates(newPc);
@@ -269,7 +301,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data)));
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
-        sendSignal('answer', JSON.stringify(pc.localDescription));
+        await sendSignal('answer', JSON.stringify(pc.localDescription));
       } catch (e) {
         console.error('[WebRTC] Renegotiate error:', e);
       }
@@ -282,6 +314,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Subscribe to Realtime signaling channel when in a room ──
   useEffect(() => {
+    signalingReadyRef.current = false;
+    signalingSubscribePromiseRef.current = null;
+
     if (!roomId) return;
 
     const supabase = getSupabaseClient();
@@ -295,19 +330,27 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       handleIncomingSignalRef.current(event.payload);
     });
 
-    channel.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`[WebRTC] Signaling channel ready for room:${roomId}`);
-      }
-    });
-
     channelRef.current = channel;
 
+    signalingSubscribePromiseRef.current = new Promise((resolve) => {
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          signalingReadyRef.current = true;
+          console.log(`[WebRTC] Signaling channel ready for room:${roomId}`);
+          resolve(true);
+        } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
+          signalingReadyRef.current = false;
+        }
+      });
+    });
+
     return () => {
+      signalingReadyRef.current = false;
+      signalingSubscribePromiseRef.current = null;
       try { channel.unsubscribe(); } catch {}
-      channelRef.current = null;
+      if (channelRef.current === channel) channelRef.current = null;
     };
-  }, [roomId]); // Only re-subscribe when roomId changes
+  }, [roomId]);
 
   // ── Initiate connection (caller side) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
@@ -328,12 +371,20 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (stream) sendersRef.current = addMediaTracks(pc, stream);
 
       collectIceCandidates(pc, (candidateStr) => {
-        sendSignal('ice-candidate', candidateStr);
+        sendSignal('ice-candidate', candidateStr).catch((e) => {
+          console.warn('[WebRTC] Failed to send ICE candidate:', e.message);
+        });
       });
+
+      // Wait for signaling channel to be ready before sending offer
+      const signalingReady = await waitForSignalingReady();
+      if (!signalingReady) {
+        throw new Error('Signaling channel not ready');
+      }
 
       // Create and send offer via Realtime (instant delivery!)
       const offerStr = await createOffer(pc);
-      sendSignal('offer', offerStr);
+      await sendSignal('offer', offerStr);
 
       timeoutRef.current = setTimeout(() => {
         if (stateRef.current !== 'connected') {
@@ -350,7 +401,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       stateRef.current = 'failed';
       cleanup();
     }
-  }, [cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal]);
+  }, [cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal, waitForSignalingReady]);
 
   // ── Toggle video on/off during call ──
   const toggleVideo = useCallback(async () => {
@@ -380,7 +431,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
             setVideoEnabledState(true);
             const offerStr = await createOffer(pc);
-            sendSignal('renegotiate', offerStr);
+            sendSignal('renegotiate', offerStr).catch((e) => {
+              console.warn('[WebRTC] Failed to send renegotiate:', e.message);
+            });
           }
         }
         sendDirectMessage({ type: 'video-toggle', enabled: true });

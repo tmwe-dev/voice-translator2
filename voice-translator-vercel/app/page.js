@@ -153,7 +153,7 @@ function HomeInner() {
 
   const webrtc = useWebRTC({
     roomId: roomPolling.roomId,
-    myName: prefs.name,
+    myName: roomPolling.verifiedNameRef?.current || prefs.name,
     onDirectMessage: handleDirectMessage,
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
   });

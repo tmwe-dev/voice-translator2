@@ -92,9 +92,25 @@ export default function useRoomPolling({
     if (data.room) {
       setRoomInfo(data.room);
       setPartnerConnected(data.room.members.length >= 2);
-    } else if (data.members) {
+      return;
+    }
+
+    if (data.members) {
       setRoomInfo(prev => prev ? { ...prev, members: data.members } : prev);
       setPartnerConnected(data.members.length >= 2);
+      return;
+    }
+
+    // Handle langChange broadcast (payload: { action, name, lang })
+    if (data.action === 'langChange' && data.name && data.lang) {
+      setRoomInfo(prev => {
+        if (!prev?.members) return prev;
+        const members = prev.members.map((m) =>
+          m.name === data.name ? { ...m, lang: data.lang } : m
+        );
+        setPartnerConnected(members.length >= 2);
+        return { ...prev, members };
+      });
     }
   }, []);
 
@@ -180,7 +196,7 @@ export default function useRoomPolling({
         }
 
         // Also broadcast heartbeat via Realtime
-        broadcastHeartbeat(verifiedNameRef.current || prefsRef.current.name);
+        broadcastHeartbeat(verifiedNameRef.current || prefsRef.current.name).catch(() => {});
 
         if (pollErrorCountRef.current > 0) {
           pollErrorCountRef.current = 0;
@@ -194,6 +210,9 @@ export default function useRoomPolling({
         }
       }
     };
+
+    // Immediate first poll (don't wait for interval)
+    pollFn();
 
     // Choose poll interval based on Realtime connection
     const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
@@ -278,7 +297,7 @@ export default function useRoomPolling({
       action: 'langChange',
       name: verifiedNameRef.current || prefsRef.current.name,
       lang: newLang,
-    });
+    }).catch(() => {});
     try {
       const body = {
         action: 'changeLang',

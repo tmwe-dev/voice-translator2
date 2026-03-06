@@ -28,25 +28,22 @@ export default function useRealtimeRoom({
 }) {
   const channelRef = useRef(null);
   const [connected, setConnected] = useState(false);
-  const supabaseRef = useRef(null);
-
-  // Initialize Supabase client once
-  useEffect(() => {
-    supabaseRef.current = getSupabaseClient();
-  }, []);
+  const readyRef = useRef(false);
 
   /**
    * Subscribe to a room channel
    */
   const subscribe = useCallback((rid) => {
     // Unsubscribe from previous channel if any
+    readyRef.current = false;
     if (channelRef.current) {
       try { channelRef.current.unsubscribe(); } catch {}
       channelRef.current = null;
       setConnected(false);
     }
 
-    const supabase = supabaseRef.current;
+    // Get Supabase client directly (no lazy useEffect init — eliminates race condition)
+    const supabase = getSupabaseClient();
     if (!supabase || !rid) return;
 
     const channel = supabase.channel(`room:${rid}`, {
@@ -83,9 +80,11 @@ export default function useRealtimeRoom({
 
     channel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
+        readyRef.current = true;
         setConnected(true);
         console.log(`[Realtime] Connected to room:${rid}`);
-      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+      } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        readyRef.current = false;
         setConnected(false);
         console.warn(`[Realtime] Channel ${status} for room:${rid}`);
       }
@@ -98,6 +97,7 @@ export default function useRealtimeRoom({
    * Unsubscribe from current room
    */
   const unsubscribe = useCallback(() => {
+    readyRef.current = false;
     if (channelRef.current) {
       try { channelRef.current.unsubscribe(); } catch {}
       channelRef.current = null;
@@ -106,53 +106,53 @@ export default function useRealtimeRoom({
   }, []);
 
   /**
+   * Safe broadcast helper — checks channel readiness and validates result.
+   */
+  const safeBroadcast = useCallback(async (event, payload) => {
+    if (!channelRef.current || !readyRef.current) return false;
+
+    const result = await channelRef.current.send({
+      type: 'broadcast',
+      event,
+      payload,
+    });
+
+    if (result !== 'ok') {
+      console.warn(`[Realtime] Broadcast failed for ${event}:`, result);
+      return false;
+    }
+
+    return true;
+  }, []);
+
+  /**
    * Broadcast a new message to all room participants.
    * Called AFTER the message is saved to Redis (in sendMessage).
    */
   const broadcastMessage = useCallback((message) => {
-    if (!channelRef.current) return;
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'new-message',
-      payload: { message },
-    });
-  }, []);
+    return safeBroadcast('new-message', { message });
+  }, [safeBroadcast]);
 
   /**
    * Broadcast speaking/typing state change
    */
   const broadcastSpeaking = useCallback((data) => {
-    if (!channelRef.current) return;
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'speaking',
-      payload: data,
-    });
-  }, []);
+    return safeBroadcast('speaking', data);
+  }, [safeBroadcast]);
 
   /**
    * Broadcast member update (join/leave/lang change)
    */
   const broadcastMemberUpdate = useCallback((data) => {
-    if (!channelRef.current) return;
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'member-update',
-      payload: data,
-    });
-  }, []);
+    return safeBroadcast('member-update', data);
+  }, [safeBroadcast]);
 
   /**
    * Broadcast heartbeat (presence keepalive)
    */
   const broadcastHeartbeat = useCallback((name) => {
-    if (!channelRef.current) return;
-    channelRef.current.send({
-      type: 'broadcast',
-      event: 'heartbeat',
-      payload: { name, ts: Date.now() },
-    });
-  }, []);
+    return safeBroadcast('heartbeat', { name, ts: Date.now() });
+  }, [safeBroadcast]);
 
   // Cleanup on unmount
   useEffect(() => {
