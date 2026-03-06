@@ -1,6 +1,6 @@
 export const metadata = {
-  title: 'VoiceTranslate - Traduttore Vocale',
-  description: 'Real-time voice translator for two people',
+  title: 'VoiceTranslate — Real-time AI Voice Translation',
+  description: 'Speak your language, be understood everywhere. Real-time AI voice translation for 31+ languages with under 500ms latency.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -8,10 +8,15 @@ export const metadata = {
     title: 'VoiceTranslate',
   },
   openGraph: {
-    title: 'VoiceTranslate',
-    description: 'Real-time voice translator - Traduttore vocale in tempo reale',
+    title: 'VoiceTranslate — Real-time AI Voice Translation',
+    description: 'Speak your language, be understood everywhere. 31+ languages, AI-powered, under 500ms.',
     type: 'website',
     url: 'https://voice-translator2.vercel.app',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VoiceTranslate',
+    description: 'Real-time AI voice translation for 31+ languages',
   },
 };
 export const viewport = {

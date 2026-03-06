@@ -1,23 +1,32 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
+import { t, mapLang } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════
-// Admin Dashboard
-// Real-time platform stats, user management, revenue
+// Admin Dashboard — i18n
 // ═══════════════════════════════════════════════
 
-const TABS = [
-  { id: 'overview', label: 'Overview', icon: '📊' },
-  { id: 'users', label: 'Utenti', icon: '👥' },
-  { id: 'revenue', label: 'Revenue', icon: '💰' },
-  { id: 'languages', label: 'Lingue', icon: '🌍' },
+function detectLang() {
+  if (typeof window === 'undefined') return 'en';
+  try { const p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); if (p.lang) return mapLang(p.lang); } catch {}
+  return mapLang((typeof navigator !== 'undefined' ? navigator.language : 'en').split('-')[0]);
+}
+
+const TAB_KEYS = [
+  { id: 'overview', labelKey: 'adminOverview', icon: '\u{1F4CA}' },
+  { id: 'users', labelKey: 'adminUsers', icon: '\u{1F465}' },
+  { id: 'revenue', labelKey: 'adminRevenue', icon: '\u{1F4B0}' },
+  { id: 'languages', labelKey: 'adminLanguages', icon: '\u{1F30D}' },
 ];
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [adminEmail, setAdminEmail] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
+  const [lang, setLang] = useState('en');
+  useEffect(() => { setLang(detectLang()); }, []);
+  const L = (key) => t(lang, key);
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
@@ -70,12 +79,12 @@ export default function AdminPage() {
     return (
       <div style={{ fontFamily: FONT, background: '#0a0a0a', color: '#e4e4e7', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ background: '#18181b', borderRadius: 16, padding: 32, width: 360 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px' }}>🔐 Admin Dashboard</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px' }}>{'\u{1F510}'} {L('adminTitle')}</h1>
           <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
             placeholder="Admin email" onKeyDown={e => e.key === 'Enter' && login()}
             style={{ width: '100%', background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: '10px 12px', color: '#e4e4e7', fontSize: 14, marginBottom: 12, fontFamily: FONT, boxSizing: 'border-box' }} />
           <button onClick={login} disabled={loading} style={{ width: '100%', background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: FONT }}>
-            {loading ? '⏳ Verificando...' : 'Accedi'}
+            {loading ? `\u23F3 ${L('adminVerifying')}` : L('adminLogin')}
           </button>
         </div>
       </div>
@@ -91,20 +100,20 @@ export default function AdminPage() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
           <a href="/" style={{ color: '#71717a', textDecoration: 'none', fontSize: 14 }}>← App</a>
-          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, flex: 1 }}>📊 Admin Dashboard</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, flex: 1 }}>{'\u{1F4CA}'} {L('adminTitle')}</h1>
           <span style={{ fontSize: 13, color: '#71717a' }}>{adminEmail}</span>
         </div>
 
         {/* Tab Bar */}
         <div style={{ display: 'flex', gap: 4, marginBottom: 24, background: '#18181b', borderRadius: 12, padding: 4 }}>
-          {TABS.map(tab => (
+          {TAB_KEYS.map(tab => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{
               flex: 1, padding: '10px 16px', border: 'none', borderRadius: 8,
               background: activeTab === tab.id ? '#f97316' : 'transparent',
               color: activeTab === tab.id ? '#000' : '#a1a1aa',
               fontWeight: activeTab === tab.id ? 700 : 500, fontSize: 14, cursor: 'pointer', fontFamily: FONT,
             }}>
-              {tab.icon} {tab.label}
+              {tab.icon} {L(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -115,14 +124,14 @@ export default function AdminPage() {
             {/* KPI Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
               {[
-                { label: 'Utenti Totali', value: fmt(stats.totalUsers), color: '#3b82f6' },
+                { label: L('adminTotalUsers'), value: fmt(stats.totalUsers), color: '#3b82f6' },
                 { label: 'Pro', value: fmt(stats.proUsers), color: '#f97316' },
                 { label: 'Business', value: fmt(stats.businessUsers), color: '#a855f7' },
-                { label: 'Stanze Attive', value: fmt(stats.activeRooms), color: '#22c55e' },
-                { label: 'Traduzioni Oggi', value: fmt(stats.today?.translations), color: '#06b6d4' },
-                { label: 'Costi Oggi', value: fmtEur(stats.today?.costCents), color: '#ef4444' },
-                { label: 'Revenue Oggi', value: fmtEur(stats.today?.revenue), color: '#22c55e' },
-                { label: 'Revenue 30gg', value: fmtEur(stats.monthlyRevenue), color: '#f59e0b' },
+                { label: L('adminActiveToday'), value: fmt(stats.activeRooms), color: '#22c55e' },
+                { label: L('adminTranslations30d'), value: fmt(stats.today?.translations), color: '#06b6d4' },
+                { label: 'Cost Today', value: fmtEur(stats.today?.costCents), color: '#ef4444' },
+                { label: 'Revenue Today', value: fmtEur(stats.today?.revenue), color: '#22c55e' },
+                { label: L('adminRevenue30d'), value: fmtEur(stats.monthlyRevenue), color: '#f59e0b' },
               ].map(kpi => (
                 <div key={kpi.label} style={{ background: '#18181b', borderRadius: 12, padding: 16, borderLeft: `3px solid ${kpi.color}` }}>
                   <div style={{ fontSize: 12, color: '#71717a', marginBottom: 4 }}>{kpi.label}</div>
@@ -133,7 +142,7 @@ export default function AdminPage() {
 
             {/* Usage Chart (text-based sparkline) */}
             <div style={{ background: '#18181b', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>📈 Traduzioni (30 giorni)</h3>
+              <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>{'\u{1F4C8}'} {L('adminTranslations30d')}</h3>
               <div style={{ display: 'flex', gap: 2, alignItems: 'end', height: 80 }}>
                 {usageChart.slice(-30).map((d, i) => {
                   const max = Math.max(...usageChart.map(x => x.translations || 1));
@@ -153,17 +162,17 @@ export default function AdminPage() {
           <div style={{ background: '#18181b', borderRadius: 12, padding: 20 }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                placeholder="Cerca per email o nome..." onKeyDown={e => e.key === 'Enter' && searchUsers()}
+                placeholder={L('adminSearch') + '...'} onKeyDown={e => e.key === 'Enter' && searchUsers()}
                 style={{ flex: 1, background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: '8px 12px', color: '#e4e4e7', fontSize: 14, fontFamily: FONT }} />
               <button onClick={searchUsers} style={{ background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
-                🔍 Cerca
+                {'\u{1F50D}'} {L('adminSearch')}
               </button>
             </div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #27272a' }}>
-                    {['Email', 'Nome', 'Piano', 'Crediti', 'Speso', 'Messaggi', 'Registrato'].map(h => (
+                    {[L('adminEmail'), L('adminName'), L('adminPlan'), L('adminCredits'), 'Spent', 'Messages', L('adminLastLogin')].map(h => (
                       <th key={h} style={{ padding: 8, textAlign: 'left', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
                     ))}
                   </tr>
@@ -194,7 +203,7 @@ export default function AdminPage() {
         {/* ── Revenue Tab ── */}
         {activeTab === 'revenue' && (
           <div style={{ background: '#18181b', borderRadius: 12, padding: 20 }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>💰 Revenue (30 giorni)</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>{'\u{1F4B0}'} {L('adminRevenueLast30')}</h3>
             {revenueChart.length === 0 ? (
               <div style={{ color: '#71717a', fontSize: 14 }}>Nessun pagamento nel periodo</div>
             ) : (
@@ -233,7 +242,7 @@ export default function AdminPage() {
         {/* ── Languages Tab ── */}
         {activeTab === 'languages' && (
           <div style={{ background: '#18181b', borderRadius: 12, padding: 20 }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>🌍 Coppie Linguistiche Più Usate (30 giorni)</h3>
+            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>{'\u{1F30D}'} {L('adminTopLangPairs')}</h3>
             {topLanguages.map((lp, i) => {
               const maxCount = topLanguages[0]?.count || 1;
               return (

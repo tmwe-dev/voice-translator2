@@ -84,7 +84,8 @@ export async function POST(req) {
     }
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
-            roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode } = await req.json();
+            roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
+            roomMode, nativeLang } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
@@ -145,7 +146,41 @@ export async function POST(req) {
     if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing — NOT transliteration.`;
     else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
 
-    let systemPrompt = `You are a real-time voice interpreter translating live speech from ${sourceLangName} to ${targetLangName}.${toneNote}
+    // ── Build system prompt based on room mode ──
+    let systemPrompt;
+
+    if (roomMode === 'classroom') {
+      // CLASSROOM MODE: teacher explains the target language using the student's native language
+      // The student's native language is nativeLang (their myLang), targetLang is what they're learning
+      const LANG_NAMES = { th: 'Thai', en: 'English', it: 'Italian', es: 'Spanish', fr: 'French', de: 'German',
+        pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', ru: 'Russian',
+        tr: 'Turkish', vi: 'Vietnamese', id: 'Indonesian', ms: 'Malay', nl: 'Dutch', pl: 'Polish', sv: 'Swedish',
+        el: 'Greek', cs: 'Czech', ro: 'Romanian', hu: 'Hungarian', fi: 'Finnish' };
+      const studentNativeName = LANG_NAMES[nativeLang] || targetLangName;
+      const teachingLangName = sourceLangName; // the language spoken by the teacher = the language being taught
+
+      systemPrompt = `You are a language teaching assistant. The teacher is speaking in ${teachingLangName} (the language being taught). The student's native language is ${studentNativeName}.${toneNote}
+
+YOUR TASK:
+1. First, provide the translation of what the teacher said in ${studentNativeName} (the student's native language)
+2. Then, add a brief educational note in ${studentNativeName} explaining key vocabulary, grammar patterns, or pronunciation tips from the teacher's ${teachingLangName} speech
+
+FORMAT your output exactly like this:
+[Translation in ${studentNativeName}]
+
+📝 [Brief educational note in ${studentNativeName} — vocabulary, grammar, or pronunciation tip]
+
+RULES:
+- The translation MUST be in ${studentNativeName} — the student's native language
+- The educational note MUST also be in ${studentNativeName}
+- Keep educational notes concise (1-2 sentences max)
+- Focus on the most useful learning points from the teacher's speech
+- If the teacher's speech is very simple, you may omit the educational note
+- Use natural, friendly teaching tone
+- NEVER respond in ${teachingLangName} only — always include ${studentNativeName}`;
+    } else {
+      // STANDARD MODES: conversation, freetalk, simultaneous — pure interpreter
+      systemPrompt = `You are a real-time voice interpreter translating live speech from ${sourceLangName} to ${targetLangName}.${toneNote}
 
 RULES:
 - Output ONLY the translated text — nothing else
@@ -156,6 +191,8 @@ RULES:
 - Translate idioms to equivalent idioms, NOT literally
 - If speech is fragmented or unclear, reconstruct the most likely meaning naturally
 - NEVER output the original language — always translate to ${targetLangName}`;
+    }
+
     if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
     if (description) systemPrompt += `\nTopic: ${description}`;
     if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;

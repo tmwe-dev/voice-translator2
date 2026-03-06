@@ -553,6 +553,8 @@ export default function useTranslation({
     const translateOpts = {
       domainContext: roomContextRef.current.contextPrompt || undefined,
       description: roomContextRef.current.description || undefined,
+      roomMode: roomInfoRef.current?.mode || undefined,
+      nativeLang: myLangRef.current?.code || undefined,
     };
 
     let translations = {};
@@ -667,6 +669,8 @@ export default function useTranslation({
           otherTargets.map(tL =>
             translateUniversal(original, myL.code, tL.code, myL.name, tL.name, {
               domainContext: roomContextRef.current.contextPrompt || undefined,
+              roomMode: roomInfoRef.current?.mode || undefined,
+              nativeLang: myLangRef.current?.code || undefined,
             }).then(d => ({ langCode: tL.code, translated: d.translated || '' }))
               .catch(() => ({ langCode: tL.code, translated: '' }))
           )
@@ -740,6 +744,8 @@ export default function useTranslation({
       const translateOpts = {
         domainContext: roomContextRef.current.contextPrompt || undefined,
         description: roomContextRef.current.description || undefined,
+        roomMode: roomInfoRef.current?.mode || undefined,
+        nativeLang: myLangRef.current?.code || undefined,
       };
       const trimText = textInput.trim();
       let translations = {};
@@ -890,6 +896,8 @@ export default function useTranslation({
                   const ftOpts = {
                     domainContext: roomContextRef.current.contextPrompt || undefined,
                     description: roomContextRef.current.description || undefined,
+                    roomMode: roomInfoRef.current?.mode || undefined,
+                    nativeLang: myLangRef.current?.code || undefined,
                   };
 
                   // Multi-language translation

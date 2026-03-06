@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
+import { t } from '../../lib/i18n.js';
 
 // POST /api/auth - Handle auth actions
 export async function POST(req) {
@@ -34,15 +35,15 @@ export async function POST(req) {
             body: JSON.stringify({
               from: process.env.RESEND_FROM || 'VoiceTranslator <noreply@resend.dev>',
               to: [email],
-              subject: `${authCode} - Codice di accesso VoiceTranslator`,
+              subject: `${authCode} - VoiceTranslate ${t(lang || 'en', 'emailSubject')}`,
               html: `
                 <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
-                  <h2 style="color:#333;">VoiceTranslator</h2>
-                  <p>Il tuo codice di accesso:</p>
+                  <h2 style="color:#333;">VoiceTranslate</h2>
+                  <p>${t(lang || 'en', 'emailYourCode')}</p>
                   <div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:20px;background:#f5f5f5;border-radius:8px;text-align:center;color:#333;">
                     ${authCode}
                   </div>
-                  <p style="color:#888;font-size:13px;margin-top:16px;">Il codice scade tra 10 minuti.</p>
+                  <p style="color:#888;font-size:13px;margin-top:16px;">${t(lang || 'en', 'emailCodeExpires')}</p>
                 </div>
               `
             })
