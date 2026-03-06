@@ -149,7 +149,7 @@ export default function useTranslation({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           roomId,
-          sender: prefsRef.current.name,
+          sender: roomSessionTokenRef?.current ? undefined : prefsRef.current.name,
           roomSessionToken: roomSessionTokenRef?.current || null,
           original,
           translated,

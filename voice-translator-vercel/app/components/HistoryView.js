@@ -1,7 +1,7 @@
 'use client';
 import { FONT } from '../lib/constants.js';
 
-export default function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, status, theme, setTheme }) {
+export default function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, status, theme, setTheme, verifiedName }) {
   return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
@@ -31,7 +31,7 @@ export default function HistoryView({ L, S, prefs, convHistory, viewConversation
                   {c.created ? new Date(c.created).toLocaleDateString('it-IT', {
                     day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'
                   }) : ''}
-                  {c.host === prefs.name && <span style={{color:S.colors.accent3, marginLeft:6}}>Host</span>}
+                  {c.host === (verifiedName || prefs.name) && <span style={{color:S.colors.accent3, marginLeft:6}}>Host</span>}
                 </div>
               </button>
             ))}

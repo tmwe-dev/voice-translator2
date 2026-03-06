@@ -1,10 +1,10 @@
 'use client';
 
 export default function SummaryView({ L, S, prefs, currentConv, summaryLoading, shareSummary,
-  setCurrentConv, setView, status, theme, setTheme }) {
+  setCurrentConv, setView, status, theme, setTheme, verifiedName }) {
   if (!currentConv) return null;
   const s = currentConv.summary;
-  const isHost = currentConv.host === prefs.name;
+  const isHost = currentConv.host === (verifiedName || prefs.name);
   const colors = S.colors;
 
   return (

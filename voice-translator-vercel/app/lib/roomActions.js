@@ -43,7 +43,11 @@ export async function handleHeartbeat({ roomId, identity }) {
   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const room = await updateHeartbeat(roomId, identity.name);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-  return NextResponse.json({ room });
+  // Attach verified identity info so client doesn't need name-based guessing
+  const isHost = identity.verified
+    ? identity.role === 'host'
+    : room.host === identity.name;
+  return NextResponse.json({ room, verifiedName: identity.name, isHost });
 }
 
 // ── Action: speaking ──

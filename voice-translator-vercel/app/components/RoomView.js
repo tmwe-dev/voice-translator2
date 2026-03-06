@@ -18,7 +18,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown,
-  webrtc }) {
+  webrtc, isHostVerified, verifiedName }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -45,7 +45,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     }
   }, [webrtc?.remoteStream]);
 
-  const otherMembers = roomInfo?.members?.filter(m => m.name !== prefs.name) || [];
+  const myName = verifiedName || prefs.name;
+  const otherMembers = roomInfo?.members?.filter(m => m.name !== myName) || [];
   const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
@@ -66,7 +67,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     return member?.avatar || AVATARS[0];
   }
   const roomMode = roomInfo?.mode || 'conversation';
-  const isHost = roomInfo?.host === prefs.name;
+  const isHost = isHostVerified !== undefined ? isHostVerified : roomInfo?.host === myName;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
   const canTalk = roomMode === 'classroom' ? isHost : true;
   const totalCost = roomInfo?.totalCost || 0;
@@ -714,7 +715,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           </div>
         )}
         {messages.map((m, i) => {
-          const isMine = m.sender === prefs.name;
+          const isMine = m.sender === myName;
           const translationForMe = getTranslationForMe(m);
           return (
             <div key={m.id || i} style={{display:'flex', gap:8,

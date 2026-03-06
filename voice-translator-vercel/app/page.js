@@ -537,8 +537,10 @@ function HomeInner() {
   async function loadHistory() {
     if (!prefs.name) return;
     try {
+      const listBody = { action:'list', userToken: auth.userTokenRef?.current || null };
+      if (!auth.userTokenRef?.current) listBody.userName = prefs.name;
       const res = await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'list', userName:prefs.name, userToken: auth.userTokenRef?.current || null }) });
+        body: JSON.stringify(listBody) });
       if (res.ok) { const { conversations } = await res.json(); setConvHistory(conversations || []); }
     } catch (e) { console.error('History error:', e); }
   }
@@ -548,9 +550,11 @@ function HomeInner() {
     roomPolling.stopPolling();
     setStatus('...');
     try {
+      const endBody = { action:'end', roomId: roomPolling.roomId,
+        roomSessionToken: roomPolling.roomSessionTokenRef?.current || null };
+      if (!roomPolling.roomSessionTokenRef?.current) endBody.userName = prefs.name;
       await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'end', roomId: roomPolling.roomId, userName: prefs.name,
-          roomSessionToken: roomPolling.roomSessionTokenRef?.current || null }) });
+        body: JSON.stringify(endBody) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
     setStatus('');
@@ -615,11 +619,13 @@ function HomeInner() {
     try {
       const rstParam = roomPolling.roomSessionTokenRef?.current ? `&rst=${encodeURIComponent(roomPolling.roomSessionTokenRef.current)}` : '';
       const utParam = auth.userTokenRef?.current ? `&userToken=${encodeURIComponent(auth.userTokenRef.current)}` : '';
-      const res = await fetch(`/api/conversation?id=${convId}&name=${encodeURIComponent(prefs.name)}${rstParam}${utParam}`);
+      const nameParam = (!rstParam && !utParam) ? `&name=${encodeURIComponent(prefs.name)}` : '';
+      const res = await fetch(`/api/conversation?id=${convId}${nameParam}${rstParam}${utParam}`);
       if (res.ok) {
         const { conversation } = await res.json();
         if (conversation) {
-          if (conversation.host === prefs.name && !conversation.summary) {
+          const verifiedName = roomPolling.verifiedNameRef?.current || prefs.name;
+          if (conversation.host === verifiedName && !conversation.summary) {
             setSummaryLoading(true);
             try {
               const sumRes = await fetch('/api/summary', { method:'POST', headers:{'Content-Type':'application/json'},
@@ -812,17 +818,21 @@ function HomeInner() {
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
       vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}
-      webrtc={webrtc} />
+      webrtc={webrtc}
+      isHostVerified={roomPolling.isHostRef?.current || false}
+      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
   );
 
   if (view === 'history') return (
     <HistoryView L={L} S={S} prefs={prefs} convHistory={convHistory}
-      viewConversation={viewConversation} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      viewConversation={viewConversation} setView={setView} status={status} theme={theme} setTheme={setTheme}
+      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
   );
 
   if (view === 'summary') return (
     <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
-      shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status} theme={theme} setTheme={setTheme}
+      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
   );
 
   if (view === 'voicetest') return (

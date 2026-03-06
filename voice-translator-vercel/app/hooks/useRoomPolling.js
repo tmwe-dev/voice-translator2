@@ -25,6 +25,8 @@ export default function useRoomPolling({
   const pollErrorCountRef = useRef(0);  // FASE 6B: track consecutive errors
   const [pollError, setPollError] = useState(false);
   const roomSessionTokenRef = useRef(null); // Server-verified identity token
+  const verifiedNameRef = useRef(null); // Server-confirmed identity name
+  const isHostRef = useRef(false); // Server-confirmed host status
 
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -34,7 +36,8 @@ export default function useRoomPolling({
     pollRef.current = setInterval(async () => {
       try {
         const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
-        const mRes = await fetch(`/api/messages?room=${rid}&name=${encodeURIComponent(prefsRef.current.name)}&after=${lastMsgRef.current}${rstParam}`);
+        const nameParam = !roomSessionTokenRef.current ? `&name=${encodeURIComponent(prefsRef.current.name)}` : '';
+        const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}${rstParam}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
           if (newMsgs && newMsgs.length > 0) {
@@ -47,7 +50,8 @@ export default function useRoomPolling({
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
               if (sentByMeRef.current.has(msg.id)) continue;
-              if (msg.sender === prefsRef.current.name) continue;
+              const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
+              if (msg.sender === myVerifiedName) continue;
               // Multi-language: pick translation for MY language
               const myLang = myLangRef.current;
               let textToPlay = '';
@@ -67,17 +71,23 @@ export default function useRoomPolling({
             }
           }
         }
+        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current };
+        if (!roomSessionTokenRef.current) heartbeatBody.name = prefsRef.current.name;
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat', roomId: rid, name: prefsRef.current.name, roomSessionToken: roomSessionTokenRef.current })
+          body: JSON.stringify(heartbeatBody)
         });
         if (rRes.ok) {
-          const { room } = await rRes.json();
+          const { room, verifiedName, isHost: hostFlag } = await rRes.json();
+          // Update server-verified identity refs
+          if (verifiedName) verifiedNameRef.current = verifiedName;
+          if (hostFlag !== undefined) isHostRef.current = hostFlag;
           setRoomInfo(room);
           setPartnerConnected(room.members.length >= 2);
-          // Multi-member: check if ANY partner is speaking/typing
-          const others = room.members.filter(m => m.name !== prefsRef.current.name);
+          // Multi-member: use verified name for filtering
+          const myName = verifiedNameRef.current || prefsRef.current.name;
+          const others = room.members.filter(m => m.name !== myName);
           const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
           const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
           setPartnerSpeaking(anyoneSpeaking);
@@ -119,18 +129,17 @@ export default function useRoomPolling({
 
   async function setSpeakingState(rid, speaking, liveText = null, typing = false) {
     try {
+      const body = {
+        action: 'speaking',
+        roomId: rid,
+        roomSessionToken: roomSessionTokenRef.current,
+        speaking, liveText, typing
+      };
+      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'speaking',
-          roomId: rid,
-          name: prefsRef.current.name,
-          roomSessionToken: roomSessionTokenRef.current,
-          speaking,
-          liveText,
-          typing
-        })
+        body: JSON.stringify(body)
       });
     } catch {}
   }
@@ -149,16 +158,17 @@ export default function useRoomPolling({
   async function syncLangChange(newLang) {
     if (!roomId) return;
     try {
+      const body = {
+        action: 'changeLang',
+        roomId,
+        roomSessionToken: roomSessionTokenRef.current,
+        lang: newLang,
+      };
+      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'changeLang',
-          roomId,
-          name: prefsRef.current.name,
-          roomSessionToken: roomSessionTokenRef.current,
-          lang: newLang,
-        })
+        body: JSON.stringify(body)
       });
     } catch (e) {
       console.error('[SyncLang] Error:', e);
@@ -167,17 +177,18 @@ export default function useRoomPolling({
 
   function sendTypingState(isTyping) {
     if (!roomId) return;
+    const body = {
+      action: 'speaking',
+      roomId,
+      roomSessionToken: roomSessionTokenRef.current,
+      speaking: false,
+      typing: isTyping
+    };
+    if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
     fetch('/api/room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'speaking',
-        roomId,
-        name: prefsRef.current.name,
-        roomSessionToken: roomSessionTokenRef.current,
-        speaking: false,
-        typing: isTyping
-      })
+      body: JSON.stringify(body)
     }).catch(() => {});
   }
 
@@ -262,6 +273,8 @@ export default function useRoomPolling({
   function leaveRoom() {
     stopPolling();
     roomSessionTokenRef.current = null;
+    verifiedNameRef.current = null;
+    isHostRef.current = false;
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);
@@ -293,6 +306,8 @@ export default function useRoomPolling({
     handleJoinRoom,
     leaveRoom,
     sentByMeRef,
-    roomSessionTokenRef
+    roomSessionTokenRef,
+    verifiedNameRef,
+    isHostRef
   };
 }

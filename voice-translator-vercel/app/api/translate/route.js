@@ -1,6 +1,4 @@
 import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
 import { addCost } from '../../lib/store.js';
 import { deductCredits, deductLendingTokens } from '../../lib/users.js';
@@ -8,10 +6,11 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
-import { buildTTSKnowledgeBase } from '../../lib/ttsPreprocessor.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
-import { validateOutput, MODEL_MAP, PAIR_NOTES, calcConfidence, getSimpleHash } from '../../lib/translateValidation.js';
+import { validateOutput, MODEL_MAP, calcConfidence, getSimpleHash } from '../../lib/translateValidation.js';
+import { buildSystemPrompt, buildMessages } from '../../lib/translatePrompt.js';
+import { callLLM } from '../../lib/llmCaller.js';
 
 export async function POST(req) {
   try {
@@ -73,77 +72,11 @@ export async function POST(req) {
       skipCreditCheck: !!isReview,
     });
 
-    // Build system prompt — strict: output ONLY the translation, nothing else
-    const TONAL_LANGS = {
-      'th': 'Thai (tonal, no spaces between words, use Thai script ภาษาไทย)',
-      'zh': 'Chinese (Simplified, use 简体中文)',
-      'ja': 'Japanese (use appropriate kanji/hiragana/katakana)',
-      'vi': 'Vietnamese (tonal, ALL diacritics critical — never omit dấu)',
-      'ko': 'Korean (use Hangul 한국어)'
-    };
-    const srcTonal = TONAL_LANGS[sourceLang];
-    const tgtTonal = TONAL_LANGS[targetLang];
-    let toneNote = '';
-    if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing — NOT transliteration.`;
-    else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
-
-    // ── Build system prompt based on room mode ──
-    let systemPrompt;
-
-    if (roomMode === 'classroom') {
-      // CLASSROOM MODE: teacher explains the target language using the student's native language
-      // The student's native language is nativeLang (their myLang), targetLang is what they're learning
-      const LANG_NAMES = { th: 'Thai', en: 'English', it: 'Italian', es: 'Spanish', fr: 'French', de: 'German',
-        pt: 'Portuguese', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', ar: 'Arabic', hi: 'Hindi', ru: 'Russian',
-        tr: 'Turkish', vi: 'Vietnamese', id: 'Indonesian', ms: 'Malay', nl: 'Dutch', pl: 'Polish', sv: 'Swedish',
-        el: 'Greek', cs: 'Czech', ro: 'Romanian', hu: 'Hungarian', fi: 'Finnish' };
-      const studentNativeName = LANG_NAMES[nativeLang] || targetLangName;
-      const teachingLangName = sourceLangName; // the language spoken by the teacher = the language being taught
-
-      systemPrompt = `You are a language teaching assistant. The teacher is speaking in ${teachingLangName} (the language being taught). The student's native language is ${studentNativeName}.${toneNote}
-
-YOUR TASK:
-1. First, provide the translation of what the teacher said in ${studentNativeName} (the student's native language)
-2. Then, add a brief educational note in ${studentNativeName} explaining key vocabulary, grammar patterns, or pronunciation tips from the teacher's ${teachingLangName} speech
-
-FORMAT your output exactly like this:
-[Translation in ${studentNativeName}]
-
-📝 [Brief educational note in ${studentNativeName} — vocabulary, grammar, or pronunciation tip]
-
-RULES:
-- The translation MUST be in ${studentNativeName} — the student's native language
-- The educational note MUST also be in ${studentNativeName}
-- Keep educational notes concise (1-2 sentences max)
-- Focus on the most useful learning points from the teacher's speech
-- If the teacher's speech is very simple, you may omit the educational note
-- Use natural, friendly teaching tone
-- NEVER respond in ${teachingLangName} only — always include ${studentNativeName}`;
-    } else {
-      // STANDARD MODES: conversation, freetalk, simultaneous — pure interpreter
-      systemPrompt = `You are a real-time voice interpreter translating live speech from ${sourceLangName} to ${targetLangName}.${toneNote}
-
-RULES:
-- Output ONLY the translated text — nothing else
-- NO notes, NO explanations, NO labels, NO commentary, NO transliterations
-- This is SPOKEN language: keep the same register, tone, and emotion
-- Preserve casual/informal style — do NOT formalize slang or colloquialisms
-- Keep exclamations, questions, hesitations natural in the target language
-- Translate idioms to equivalent idioms, NOT literally
-- If speech is fragmented or unclear, reconstruct the most likely meaning naturally
-- NEVER output the original language — always translate to ${targetLangName}`;
-    }
-
-    if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
-    if (description) systemPrompt += `\nTopic: ${description}`;
-    if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;
-
-    // Add language pair notes for problematic combinations
-    const pairKey = `${sourceLang}->${targetLang}`;
-    if (PAIR_NOTES[pairKey]) systemPrompt += `\n\nLanguage pair note: ${PAIR_NOTES[pairKey]}`;
-
-    // TTS optimization instructions (output will be spoken aloud)
-    systemPrompt += buildTTSKnowledgeBase(targetLang);
+    // Build system prompt using extracted module
+    let systemPrompt = buildSystemPrompt({
+      sourceLang, targetLang, sourceLangName, targetLangName,
+      roomMode, nativeLang, domainContext, description, isReview
+    });
 
     // Glossary injection — if user has active glossaries for this language pair
     if (userToken) {
@@ -158,63 +91,19 @@ RULES:
       } catch (e) { /* glossary injection is optional */ }
     }
 
-    // Build messages array — context goes as a prior assistant turn, NOT in system prompt
-    const messages = [{ role: 'system', content: systemPrompt }];
-    if (context) {
-      // FASE 9: Improved chunk context — give both the original fragment info
-      // and the previous translation to help the LLM maintain coherence.
-      // The "Continue translating" prefix tells the LLM this is a fragment.
-      messages.push({ role: 'assistant', content: context });
-      messages.push({ role: 'user', content: `[This is a continuation fragment from ongoing speech] ${text}` });
-    } else {
-      messages.push({ role: 'user', content: text });
-    }
+    // Build messages array
+    const messages = buildMessages(systemPrompt, text, context);
 
-    let translated;
-    let usage = null;
-
-    if (modelInfo.provider === 'anthropic') {
-      // ── Anthropic Claude ──
-      const anthropic = new Anthropic({ apiKey });
-      // Convert messages to Anthropic format (system separate, user/assistant messages)
-      const anthropicMsgs = messages.filter(m => m.role !== 'system');
-      const msg = await anthropic.messages.create({
-        model: modelInfo.actual,
-        max_tokens: 500,
-        system: systemPrompt,
-        messages: anthropicMsgs,
-      });
-      translated = msg.content[0]?.text?.trim() || '';
-      usage = { prompt_tokens: msg.usage?.input_tokens || 0, completion_tokens: msg.usage?.output_tokens || 0,
-        total_tokens: (msg.usage?.input_tokens || 0) + (msg.usage?.output_tokens || 0) };
-    } else if (modelInfo.provider === 'gemini') {
-      // ── Google Gemini ──
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: modelInfo.actual });
-      // Gemini: flatten system + context + text into a single user prompt
-      const userText = context
-        ? `${systemPrompt}\n\nPrevious translation for reference:\n${context}\n\nContinue translating:\n${text}`
-        : `${systemPrompt}\n\nTranslate:\n${text}`;
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: userText }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
-      });
-      translated = result.response.text()?.trim() || '';
-      const gUsage = result.response.usageMetadata;
-      usage = { prompt_tokens: gUsage?.promptTokenCount || 0, completion_tokens: gUsage?.candidatesTokenCount || 0,
-        total_tokens: gUsage?.totalTokenCount || 0 };
-    } else {
-      // ── OpenAI (default) ──
-      const openai = new OpenAI({ apiKey });
-      const completion = await openai.chat.completions.create({
-        model: modelInfo.actual,
-        messages,
-        temperature: 0.3,
-        max_tokens: 500
-      });
-      translated = completion.choices[0].message.content.trim();
-      usage = completion.usage;
-    }
+    // Call LLM using extracted multi-provider caller
+    let { translated, usage } = await callLLM({
+      provider: modelInfo.provider,
+      model: modelInfo.actual,
+      apiKey,
+      messages,
+      systemPrompt,
+      text,
+      context,
+    });
 
     // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
     const validation = validateOutput(text, translated, targetLang);
