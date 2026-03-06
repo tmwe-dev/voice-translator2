@@ -1,23 +1,31 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { saveConversation, getConversation, getUserConversations, getRoom } from '../../lib/store.js';
+import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity } from '../../lib/store.js';
+import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 
 // POST /api/conversation - End room and save conversation
 async function handlePost(req) {
   try {
-    const { action, roomId, userName } = await req.json();
+    const { action, roomId, userName, roomSessionToken, userToken } = await req.json();
 
     if (action === 'end') {
       const rid = sanitizeRoomId(roomId);
-      const name = sanitizeName(userName);
       if (!rid) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
-      if (!name) return NextResponse.json({ error: 'userName required' }, { status: 400 });
+
+      // Resolve identity via session token first, fallback to name
+      const identity = await resolveRoomIdentity(roomSessionToken, sanitizeName(userName), rid);
+      if (!identity) return NextResponse.json({ error: 'Identity required' }, { status: 401 });
 
       // Verify requester is the host (only host can end a room)
       const room = await getRoom(rid);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (room.host !== name) {
+
+      // Token-verified: check role directly; unverified: check name match
+      const isHost = identity.verified
+        ? identity.role === 'host'
+        : room.host === identity.name;
+      if (!isHost) {
         return NextResponse.json({ error: 'Only the host can end the room' }, { status: 403 });
       }
 
@@ -27,9 +35,16 @@ async function handlePost(req) {
     }
 
     if (action === 'list') {
-      const name = sanitizeName(userName);
-      if (!name) return NextResponse.json({ error: 'userName required' }, { status: 400 });
-      const convs = await getUserConversations(name);
+      // Prefer userToken (account-level identity) for listing conversations
+      let resolvedName = null;
+      if (userToken) {
+        const session = await getSession(userToken);
+        if (session) resolvedName = session.name || session.email;
+      }
+      if (!resolvedName) resolvedName = sanitizeName(userName);
+      if (!resolvedName) return NextResponse.json({ error: 'Identity required' }, { status: 401 });
+
+      const convs = await getUserConversations(resolvedName);
       return NextResponse.json({ conversations: convs });
     }
 
@@ -43,20 +58,36 @@ async function handlePost(req) {
   }
 }
 
-// GET /api/conversation?id=XXX&name=YYY - Get full conversation with messages
-// Requires name param to verify the requester was a participant
+// GET /api/conversation?id=XXX - Get full conversation with messages
+// Accepts rst (room session token) or userToken query param, fallback to name
 async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    const name = sanitizeName(searchParams.get('name') || '');
+    const rst = searchParams.get('rst') || '';
+    const ut = searchParams.get('userToken') || '';
+    const nameParam = sanitizeName(searchParams.get('name') || '');
+
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-    if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
+
+    // Resolve identity: prefer userToken, then room session token, then name
+    let resolvedName = null;
+    if (ut) {
+      const session = await getSession(ut);
+      if (session) resolvedName = session.name || session.email;
+    }
+    if (!resolvedName && rst) {
+      const identity = await resolveRoomIdentity(rst, null, '');
+      if (identity) resolvedName = identity.name;
+    }
+    if (!resolvedName) resolvedName = nameParam;
+    if (!resolvedName) return NextResponse.json({ error: 'Identity required' }, { status: 401 });
+
     const conv = await getConversation(id);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
 
     // Verify requester was a participant in this conversation
-    const wasParticipant = conv.members?.some(m => m.name === name);
+    const wasParticipant = conv.members?.some(m => m.name === resolvedName);
     if (!wasParticipant) {
       return NextResponse.json({ error: 'Not a participant of this conversation' }, { status: 403 });
     }

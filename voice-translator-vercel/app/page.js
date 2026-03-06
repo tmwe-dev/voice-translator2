@@ -134,6 +134,7 @@ function HomeInner() {
     roomId: roomPolling.roomId,
     myName: prefs.name,
     onDirectMessage: null, // DataChannel messages handled separately if needed
+    roomSessionTokenRef: roomPolling.roomSessionTokenRef,
   });
 
   // =============================================
@@ -537,7 +538,7 @@ function HomeInner() {
     if (!prefs.name) return;
     try {
       const res = await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'list', userName:prefs.name }) });
+        body: JSON.stringify({ action:'list', userName:prefs.name, userToken: auth.userTokenRef?.current || null }) });
       if (res.ok) { const { conversations } = await res.json(); setConvHistory(conversations || []); }
     } catch (e) { console.error('History error:', e); }
   }
@@ -548,7 +549,8 @@ function HomeInner() {
     setStatus('...');
     try {
       await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'end', roomId: roomPolling.roomId, userName: prefs.name }) });
+        body: JSON.stringify({ action:'end', roomId: roomPolling.roomId, userName: prefs.name,
+          roomSessionToken: roomPolling.roomSessionTokenRef?.current || null }) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
     setStatus('');
@@ -611,7 +613,9 @@ function HomeInner() {
   async function viewConversation(convId) {
     setStatus('...');
     try {
-      const res = await fetch(`/api/conversation?id=${convId}&name=${encodeURIComponent(prefs.name)}`);
+      const rstParam = roomPolling.roomSessionTokenRef?.current ? `&rst=${encodeURIComponent(roomPolling.roomSessionTokenRef.current)}` : '';
+      const utParam = auth.userTokenRef?.current ? `&userToken=${encodeURIComponent(auth.userTokenRef.current)}` : '';
+      const res = await fetch(`/api/conversation?id=${convId}&name=${encodeURIComponent(prefs.name)}${rstParam}${utParam}`);
       if (res.ok) {
         const { conversation } = await res.json();
         if (conversation) {
@@ -619,7 +623,7 @@ function HomeInner() {
             setSummaryLoading(true);
             try {
               const sumRes = await fetch('/api/summary', { method:'POST', headers:{'Content-Type':'application/json'},
-                body: JSON.stringify({ convId }) });
+                body: JSON.stringify({ convId, userToken: auth.userTokenRef?.current || null }) });
               if (sumRes.ok) { const { summary } = await sumRes.json(); conversation.summary = summary; }
             } catch {}
             setSummaryLoading(false);

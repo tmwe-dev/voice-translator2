@@ -26,7 +26,7 @@ import {
 const SIGNAL_POLL_INTERVAL = 1000;
 const CONNECTION_TIMEOUT = 15000;
 
-export default function useWebRTC({ roomId, myName, onDirectMessage }) {
+export default function useWebRTC({ roomId, myName, onDirectMessage, roomSessionTokenRef }) {
   const [webrtcState, setWebrtcState] = useState('idle');
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -83,20 +83,27 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
         body: JSON.stringify({
           action: 'webrtc-signal',
           roomId,
+          name: myName,
+          roomSessionToken: roomSessionTokenRef?.current || null,
           signal: { type, data, from: myName, timestamp: Date.now() },
         }),
       });
     } catch (e) {
       console.error('[WebRTC] Signal send error:', e);
     }
-  }, [roomId, myName]);
+  }, [roomId, myName, roomSessionTokenRef]);
 
   const pollSignals = useCallback(async () => {
     try {
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'webrtc-poll', roomId, name: myName }),
+        body: JSON.stringify({
+          action: 'webrtc-poll',
+          roomId,
+          name: myName,
+          roomSessionToken: roomSessionTokenRef?.current || null,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -116,7 +123,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
       }
     } catch {}
     return [];
-  }, [roomId, myName]);
+  }, [roomId, myName, roomSessionTokenRef]);
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
