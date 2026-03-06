@@ -44,7 +44,11 @@ export default function useRealtimeRoom({
 
     // Get Supabase client directly (no lazy useEffect init — eliminates race condition)
     const supabase = getSupabaseClient();
-    if (!supabase || !rid) return;
+    console.log('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
+    if (!supabase || !rid) {
+      console.warn('[Realtime] Cannot subscribe — supabase:', !!supabase, 'rid:', rid);
+      return;
+    }
 
     const channel = supabase.channel(`room:${rid}`, {
       config: { broadcast: { self: false } }, // Don't receive own broadcasts

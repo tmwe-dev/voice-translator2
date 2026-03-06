@@ -15,7 +15,11 @@ let _clientInstance = null;
 export function getSupabaseClient() {
   if (typeof window === 'undefined') return null;
   if (_clientInstance) return _clientInstance;
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn('[Supabase] Client NOT created — URL:', !!SUPABASE_URL, 'ANON_KEY:', !!SUPABASE_ANON_KEY);
+    return null;
+  }
+  console.log('[Supabase] Creating client for:', SUPABASE_URL);
   _clientInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
