@@ -112,6 +112,9 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('Room error:', e);
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'room', source: 'api' } });
+    }).catch(() => {});
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

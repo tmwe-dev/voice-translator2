@@ -1,9 +1,11 @@
 'use client';
 import { Component } from 'react';
+import { t, mapLang } from '../lib/i18n.js';
 
 /**
  * ErrorBoundary — catches React render errors gracefully
  * Shows a friendly fallback UI instead of a white screen
+ * i18n: Detects user language for error messages
  */
 export default class ErrorBoundary extends Component {
   constructor(props) {
@@ -37,6 +39,29 @@ export default class ErrorBoundary extends Component {
     window.location.reload();
   };
 
+  /** Detect browser language and return localized error strings */
+  getErrorText(key) {
+    const TEXTS = {
+      en: { title: 'Something went wrong', desc: 'An unexpected error occurred. Try again or reload the page.', retry: 'Try Again', reload: 'Reload Page' },
+      it: { title: 'Qualcosa è andato storto', desc: 'Si è verificato un errore imprevisto. Riprova o ricarica la pagina.', retry: 'Riprova', reload: 'Ricarica' },
+      es: { title: 'Algo salió mal', desc: 'Ocurrió un error inesperado. Inténtalo de nuevo o recarga la página.', retry: 'Reintentar', reload: 'Recargar' },
+      fr: { title: 'Une erreur est survenue', desc: 'Une erreur inattendue s\'est produite. Réessayez ou rechargez la page.', retry: 'Réessayer', reload: 'Recharger' },
+      de: { title: 'Etwas ist schiefgelaufen', desc: 'Ein unerwarteter Fehler ist aufgetreten. Versuchen Sie es erneut oder laden Sie die Seite neu.', retry: 'Erneut versuchen', reload: 'Neu laden' },
+      pt: { title: 'Algo deu errado', desc: 'Ocorreu um erro inesperado. Tente novamente ou recarregue a página.', retry: 'Tentar novamente', reload: 'Recarregar' },
+      ja: { title: 'エラーが発生しました', desc: '予期しないエラーが発生しました。もう一度お試しいただくか、ページを再読み込みしてください。', retry: '再試行', reload: '再読み込み' },
+      zh: { title: '出现错误', desc: '发生了意外错误。请重试或刷新页面。', retry: '重试', reload: '刷新页面' },
+      ko: { title: '오류가 발생했습니다', desc: '예기치 않은 오류가 발생했습니다. 다시 시도하거나 페이지를 새로고침하세요.', retry: '다시 시도', reload: '새로고침' },
+      ar: { title: 'حدث خطأ', desc: 'حدث خطأ غير متوقع. حاول مرة أخرى أو أعد تحميل الصفحة.', retry: 'إعادة المحاولة', reload: 'إعادة التحميل' },
+    };
+    let lang = 'en';
+    try {
+      const nav = typeof navigator !== 'undefined' ? (navigator.language || '').slice(0, 2).toLowerCase() : 'en';
+      lang = TEXTS[nav] ? nav : mapLang(nav);
+    } catch {}
+    const strings = TEXTS[lang] || TEXTS.en;
+    return strings[key] || TEXTS.en[key] || key;
+  }
+
   render() {
     if (this.state.hasError) {
       const { fallback } = this.props;
@@ -51,10 +76,10 @@ export default class ErrorBoundary extends Component {
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>
-            Oops! Qualcosa non ha funzionato
+            {this.getErrorText('title')}
           </h2>
           <p style={{ fontSize: 14, color: '#aaa', maxWidth: 400, lineHeight: 1.5, margin: '0 0 24px' }}>
-            Si è verificato un errore imprevisto. Puoi provare a ripristinare la vista o ricaricare la pagina.
+            {this.getErrorText('desc')}
           </p>
           {this.state.error && (
             <pre style={{
@@ -71,14 +96,14 @@ export default class ErrorBoundary extends Component {
               background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14,
               fontWeight: 600, cursor: 'pointer',
             }}>
-              Riprova
+              {this.getErrorText('retry')}
             </button>
             <button onClick={this.handleReload} style={{
               padding: '10px 24px', borderRadius: 12, border: 'none',
               background: 'linear-gradient(135deg, #6C63FF, #8B5CF6)', color: '#fff',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
             }}>
-              Ricarica pagina
+              {this.getErrorText('reload')}
             </button>
           </div>
         </div>

@@ -443,6 +443,10 @@ RULES:
     // resolveAuth throws NextResponse objects on auth failure
     if (e instanceof NextResponse) return e;
     console.error('Translate error:', e);
+    // Report to Sentry
+    import('@sentry/nextjs').then(S => {
+      S.captureException(e, { tags: { endpoint: 'translate', source: 'api' } });
+    }).catch(() => {});
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

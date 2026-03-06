@@ -32,7 +32,7 @@ export default function useRoomPolling({
     setPollError(false);
     pollRef.current = setInterval(async () => {
       try {
-        const mRes = await fetch(`/api/messages?room=${rid}&after=${lastMsgRef.current}`);
+        const mRes = await fetch(`/api/messages?room=${rid}&name=${encodeURIComponent(prefsRef.current.name)}&after=${lastMsgRef.current}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
           if (newMsgs && newMsgs.length > 0) {

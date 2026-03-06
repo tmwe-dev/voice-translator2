@@ -547,7 +547,7 @@ function HomeInner() {
     setStatus('...');
     try {
       await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'end', roomId: roomPolling.roomId }) });
+        body: JSON.stringify({ action:'end', roomId: roomPolling.roomId, userName: prefs.name }) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
     setStatus('');
@@ -610,7 +610,7 @@ function HomeInner() {
   async function viewConversation(convId) {
     setStatus('...');
     try {
-      const res = await fetch(`/api/conversation?id=${convId}`);
+      const res = await fetch(`/api/conversation?id=${convId}&name=${encodeURIComponent(prefs.name)}`);
       if (res.ok) {
         const { conversation } = await res.json();
         if (conversation) {
@@ -696,7 +696,18 @@ function HomeInner() {
   // =============================================
   // RENDER
   // =============================================
-  if (view === 'loading') return <div style={S.page}><div style={S.center}><div style={{fontSize:40, opacity:0.5}}>...</div></div></div>;
+  if (view === 'loading') return (
+    <div style={S.page}>
+      <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
+      <div style={S.center}>
+        <div style={{
+          width: 40, height: 40, borderRadius: '50%',
+          border: '3px solid rgba(108,99,255,0.2)', borderTopColor: '#6C63FF',
+          animation: 'vtSpin 0.8s linear infinite',
+        }} />
+      </div>
+    </div>
+  );
 
   if (view === 'welcome') return (
     <WelcomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs}

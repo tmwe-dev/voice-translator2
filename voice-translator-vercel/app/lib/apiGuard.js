@@ -100,10 +100,24 @@ export function withApiGuard(handler, opts = {}) {
       }
     }
 
-    // 4. Call the actual handler
-    const response = await handler(req);
+    // 4. Call the actual handler with error tracking
+    const startTime = Date.now();
+    let response;
+    try {
+      response = await handler(req);
+    } catch (e) {
+      // Track unhandled errors via Sentry
+      trackError(prefix, e, req);
+      return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    }
 
-    // 5. Add rate limit headers to response (use the more restrictive remaining count)
+    // 5. Track slow responses (>3s) and server errors (5xx)
+    const duration = Date.now() - startTime;
+    if (duration > 3000 || (response?.status >= 500)) {
+      trackSlow(prefix, duration, response?.status, req);
+    }
+
+    // 6. Add rate limit headers to response (use the more restrictive remaining count)
     if (response?.headers) {
       const effectiveRemaining = Math.min(ipRl.remaining, userRl.remaining);
       response.headers.set('X-RateLimit-Limit', String(maxRequests));
@@ -112,4 +126,34 @@ export function withApiGuard(handler, opts = {}) {
 
     return response;
   };
+}
+
+// ── Monitoring helpers (lazy-load Sentry to avoid import overhead) ──
+let _sentry = null;
+async function getSentry() {
+  if (_sentry) return _sentry;
+  try { _sentry = await import('@sentry/nextjs'); return _sentry; } catch { return null; }
+}
+
+function trackError(endpoint, error, req) {
+  console.error(`[apiGuard] Unhandled error in ${endpoint}:`, error);
+  getSentry().then(S => {
+    if (!S) return;
+    S.captureException(error, {
+      tags: { endpoint, source: 'apiGuard', runtime: 'server' },
+      extra: { method: req.method, url: req.url },
+    });
+  }).catch(() => {});
+}
+
+function trackSlow(endpoint, durationMs, status, req) {
+  getSentry().then(S => {
+    if (!S) return;
+    S.addBreadcrumb({
+      category: 'performance',
+      message: `Slow API: ${endpoint} ${durationMs}ms (${status})`,
+      level: durationMs > 5000 ? 'warning' : 'info',
+      data: { endpoint, durationMs, status, method: req.method },
+    });
+  }).catch(() => {});
 }

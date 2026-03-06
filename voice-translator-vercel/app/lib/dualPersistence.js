@@ -62,16 +62,21 @@ async function syncToCloud(prefs, userToken) {
       body: JSON.stringify({
         action: 'sync-prefs',
         prefs: {
-          lang: prefs.lang,
-          name: prefs.name,
-          avatar: prefs.avatar,
-          tier: prefs.tier,
-          voice: prefs.voice,
+          // Map localStorage field names → camelCase names matching Supabase user_settings
+          sourceLang: prefs.lang || prefs.sourceLang,
+          targetLang: prefs.targetLang,
+          ttsEnabled: prefs.ttsEnabled,
           ttsEngine: prefs.ttsEngine,
-          autoSpeak: prefs.autoSpeak,
-          provider: prefs.provider,
-          model: prefs.model,
+          ttsVoice: prefs.voice || prefs.ttsVoice,
+          ttsAutoPlay: prefs.autoSpeak !== undefined ? prefs.autoSpeak : prefs.ttsAutoPlay,
+          sttEngine: prefs.sttEngine,
+          aiModel: prefs.model || prefs.aiModel,
           theme: prefs.theme,
+          contextType: prefs.contextType,
+          voiceSpeed: prefs.voiceSpeed,
+          autoTranslate: prefs.autoTranslate,
+          showOriginal: prefs.showOriginal,
+          notificationSound: prefs.notificationSound,
         },
       }),
     });
@@ -97,11 +102,7 @@ export async function mergeOnLogin(userToken) {
   const localPrefs = loadPrefs() || {};
 
   try {
-    const response = await fetch('/api/user?action=get-prefs', {
-      headers: {
-        'Authorization': `Bearer ${userToken}`,
-      },
-    });
+    const response = await fetch(`/api/user?action=get-prefs&token=${encodeURIComponent(userToken)}`);
 
     if (!response.ok) return localPrefs;
 

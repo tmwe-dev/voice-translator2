@@ -103,33 +103,48 @@ describe('POST /api/messages', () => {
 describe('GET /api/messages', () => {
   it('returns messages after timestamp', async () => {
     const now = Date.now();
+    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
     mockGetMessages.mockResolvedValue([
       { id: 'msg1', original: 'Ciao', timestamp: now }
     ]);
-    const res = await GET(makeGetReq({ room: 'ABC', after: String(now - 1000) }));
+    const res = await GET(makeGetReq({ room: 'ABC', name: 'Luca', after: String(now - 1000) }));
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data.messages).toHaveLength(1);
   });
 
   it('returns 400 without room id', async () => {
-    const res = await GET(makeGetReq({ after: '0' }));
+    const res = await GET(makeGetReq({ name: 'Luca', after: '0' }));
     expect(res.status).toBe(400);
   });
 
+  it('returns 400 without name', async () => {
+    const res = await GET(makeGetReq({ room: 'ABC', after: '0' }));
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 403 for non-member', async () => {
+    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
+    const res = await GET(makeGetReq({ room: 'ABC', name: 'Hacker', after: '0' }));
+    expect(res.status).toBe(403);
+  });
+
   it('returns 400 for invalid after param', async () => {
-    const res = await GET(makeGetReq({ room: 'ABC', after: 'notanumber' }));
+    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
+    const res = await GET(makeGetReq({ room: 'ABC', name: 'Luca', after: 'notanumber' }));
     expect(res.status).toBe(400);
   });
 
   it('returns 400 for negative after', async () => {
-    const res = await GET(makeGetReq({ room: 'ABC', after: '-5' }));
+    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
+    const res = await GET(makeGetReq({ room: 'ABC', name: 'Luca', after: '-5' }));
     expect(res.status).toBe(400);
   });
 
   it('defaults after to 0', async () => {
+    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
     mockGetMessages.mockResolvedValue([]);
-    const res = await GET(makeGetReq({ room: 'ABC' }));
+    const res = await GET(makeGetReq({ room: 'ABC', name: 'Luca' }));
     expect(res.status).toBe(200);
     expect(mockGetMessages).toHaveBeenCalledWith('ABC', 0);
   });

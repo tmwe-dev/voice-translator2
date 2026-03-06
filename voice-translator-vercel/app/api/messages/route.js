@@ -45,15 +45,25 @@ export async function POST(req) {
   }
 }
 
-// GET /api/messages?room=XXX&after=TIMESTAMP - Poll for new messages
+// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP - Poll for new messages
+// Requires `name` param to verify membership (prevents unauthorized message reading)
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const room = sanitizeRoomId(searchParams.get('room') || '');
+    const roomId = sanitizeRoomId(searchParams.get('room') || '');
+    const name = sanitizeName(searchParams.get('name') || '');
     const after = parseInt(searchParams.get('after') || '0', 10);
-    if (!room) return NextResponse.json({ error: 'room required' }, { status: 400 });
+    if (!roomId) return NextResponse.json({ error: 'room required' }, { status: 400 });
+    if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
     if (isNaN(after) || after < 0) return NextResponse.json({ error: 'invalid after' }, { status: 400 });
-    const msgs = await getMessages(room, after);
+
+    // Verify requester is a member of this room
+    const room = await getRoom(roomId);
+    if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    const isMember = room.members.some(m => m.name === name);
+    if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+
+    const msgs = await getMessages(roomId, after);
     return NextResponse.json({ messages: msgs });
   } catch (e) {
     return NextResponse.json({ error: e.message }, { status: 500 });

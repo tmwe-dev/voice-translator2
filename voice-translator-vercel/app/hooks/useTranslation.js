@@ -89,6 +89,38 @@ export default function useTranslation({
   const translatedChunksRef = useRef([]);
   const reviewTimerRef = useRef(null);
 
+  // Deepgram Streaming STT refs
+  const deepgramAvailableRef = useRef(null); // null = checking, true/false
+  const deepgramWsRef = useRef(null);
+  const deepgramStreamRef = useRef(null);
+  const deepgramProcessorRef = useRef(null);
+  const deepgramAudioCtxRef = useRef(null);
+  const deepgramKeyRef = useRef(null);
+
+  // Check Deepgram availability on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function checkDeepgram() {
+      try {
+        const res = await fetch('/api/stt-token', { method: 'POST' });
+        if (!cancelled) {
+          if (res.ok) {
+            const data = await res.json();
+            deepgramKeyRef.current = data.key;
+            deepgramAvailableRef.current = true;
+            console.log('[STT] Deepgram streaming available');
+          } else {
+            deepgramAvailableRef.current = false;
+          }
+        }
+      } catch {
+        if (!cancelled) deepgramAvailableRef.current = false;
+      }
+    }
+    checkDeepgram();
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
   const translationCacheRef = useRef(new Map());
@@ -388,6 +420,17 @@ export default function useTranslation({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const currentLang = myLangRef.current;
 
+    // ── Deepgram streaming: highest priority when available ──
+    // Real-time WebSocket STT with server-grade accuracy for all languages
+    if (deepgramAvailableRef.current && deepgramKeyRef.current) {
+      try {
+        const started = await startDeepgramStreaming(currentLang);
+        if (started) return; // Deepgram took over
+      } catch (e) {
+        console.warn('[STT] Deepgram start failed, falling back:', e.message);
+      }
+    }
+
     // ── FASE 1b: Hybrid STT routing ──
     // For Asian/tonal languages where browser SpeechRecognition is unreliable,
     // OR if auto-switched to Whisper due to low confidence,
@@ -503,6 +546,9 @@ export default function useTranslation({
     if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
     if (roomId) setSpeakingState(roomId, false);
 
+    // Stop Deepgram streaming (if active)
+    stopDeepgramStreaming();
+
     // Stop speech recognition
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
@@ -606,6 +652,128 @@ export default function useTranslation({
     allWordsRef.current = '';
     if (!isTrialRef.current && !useOwnKeys) refreshBalance();
     stoppingRef.current = false;
+  }
+
+  // =============================================
+  // Deepgram Streaming STT (highest quality, server-grade)
+  // =============================================
+  async function startDeepgramStreaming(langObj) {
+    const speechLang = getLang(langObj)?.speech || 'en-US';
+    const dgLang = speechLang.split('-')[0]; // 'it-IT' → 'it'
+
+    unlockAudio();
+    setRecording(true);
+    if (roomId) setSpeakingState(roomId, true);
+    allWordsRef.current = '';
+    streamingModeRef.current = true;
+    setStreamingMsg({ original: '', translated: null, isStreaming: true });
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
+    });
+    deepgramStreamRef.current = stream;
+
+    const params = new URLSearchParams({
+      model: 'nova-2', language: dgLang, smart_format: 'true',
+      interim_results: 'true', utterance_end_ms: '1500',
+      encoding: 'linear16', sample_rate: '16000', channels: '1',
+    });
+
+    const ws = new WebSocket(
+      `wss://api.deepgram.com/v1/listen?${params.toString()}`,
+      ['token', deepgramKeyRef.current]
+    );
+    deepgramWsRef.current = ws;
+
+    return new Promise((resolve) => {
+      ws.onopen = () => {
+        console.log('[STT-Deepgram] WebSocket connected');
+        // Start audio capture
+        try {
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+          deepgramAudioCtxRef.current = audioCtx;
+          const source = audioCtx.createMediaStreamSource(stream);
+          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+          deepgramProcessorRef.current = processor;
+
+          processor.onaudioprocess = (e) => {
+            if (ws.readyState !== WebSocket.OPEN) return;
+            const input = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(input.length);
+            for (let i = 0; i < input.length; i++) {
+              const s = Math.max(-1, Math.min(1, input[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            ws.send(pcm16.buffer);
+          };
+          source.connect(processor);
+          processor.connect(audioCtx.destination);
+        } catch (e) {
+          console.error('[STT-Deepgram] Audio capture error:', e);
+        }
+
+        // Keepalive
+        if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
+        speakingKeepAliveRef.current = setInterval(() => {
+          if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
+        }, 15000);
+
+        resolve(true);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'Results') {
+            const transcript = data.channel?.alternatives?.[0]?.transcript || '';
+            if (!transcript) return;
+            if (data.is_final) {
+              allWordsRef.current += (allWordsRef.current ? ' ' : '') + transcript;
+              setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
+            } else {
+              const preview = allWordsRef.current + (allWordsRef.current ? ' ' : '') + transcript;
+              setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+            }
+          }
+        } catch {}
+      };
+
+      ws.onerror = () => {
+        console.warn('[STT-Deepgram] WebSocket error');
+        resolve(false);
+      };
+
+      ws.onclose = () => {
+        console.log('[STT-Deepgram] WebSocket closed');
+      };
+
+      // Timeout: if WebSocket doesn't connect in 3s, fall back
+      setTimeout(() => resolve(false), 3000);
+    });
+  }
+
+  function stopDeepgramStreaming() {
+    if (deepgramProcessorRef.current) {
+      try { deepgramProcessorRef.current.disconnect(); } catch {}
+      deepgramProcessorRef.current = null;
+    }
+    if (deepgramAudioCtxRef.current && deepgramAudioCtxRef.current.state !== 'closed') {
+      try { deepgramAudioCtxRef.current.close(); } catch {}
+      deepgramAudioCtxRef.current = null;
+    }
+    if (deepgramStreamRef.current) {
+      deepgramStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      deepgramStreamRef.current = null;
+    }
+    if (deepgramWsRef.current) {
+      try {
+        if (deepgramWsRef.current.readyState === WebSocket.OPEN) {
+          deepgramWsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
+        }
+        deepgramWsRef.current.close();
+      } catch {}
+      deepgramWsRef.current = null;
+    }
   }
 
   // =============================================
@@ -1002,6 +1170,7 @@ export default function useTranslation({
   useEffect(() => {
     return () => {
       stopFreeTalk();
+      stopDeepgramStreaming();
       streamingModeRef.current = false;
       if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
       if (speechRecRef.current) {
