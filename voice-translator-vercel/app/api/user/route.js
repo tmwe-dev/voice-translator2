@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
 
 // POST /api/user - User profile actions
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, token, name, lang, avatar, apiKeys, useOwnKeys } = await req.json();
 
@@ -74,3 +75,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'user' });

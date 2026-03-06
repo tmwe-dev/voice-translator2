@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser } from '../../lib/users.js';
 
 // OpenAI pricing (USD) - SAME AS translate/process endpoints
@@ -26,7 +27,7 @@ function buildSystemPrompt(sourceLangName, targetLangName, domainContext, descri
   return p;
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, userToken, text, sourceLang, targetLang,
             sourceLangName, targetLangName, domainContext, description,
@@ -162,6 +163,8 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'debug' });
 
 function generateScenarios(domainContext, description) {
   const scenarios = [

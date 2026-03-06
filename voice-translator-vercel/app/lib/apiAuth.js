@@ -57,7 +57,22 @@ export async function resolveAuth({
         if (ownKey) {
           apiKey = ownKey;
           isOwnKey = true;
-        } else if (!user.useOwnKeys && !skipCreditCheck && user.credits < minCredits) {
+        } else {
+          // Fallback: check encrypted key vault
+          if (!ownKey && user.useOwnKeys) {
+            try {
+              const { getDecryptedKey } = await import('./keyVault.js');
+              const vaultKey = await getDecryptedKey(billingEmail, provider);
+              if (vaultKey) {
+                apiKey = vaultKey;
+                isOwnKey = true;
+              }
+            } catch (e) {
+              console.error('[Auth] KeyVault fallback error:', e);
+            }
+          }
+        }
+        if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && user.credits < minCredits) {
           throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
         }
       }
@@ -77,7 +92,22 @@ export async function resolveAuth({
       if (ownKey) {
         apiKey = ownKey;
         isOwnKey = true;
-      } else if (!lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
+      } else {
+        // Fallback: check encrypted key vault
+        if (!ownKey && lenderUser.useOwnKeys) {
+          try {
+            const { getDecryptedKey } = await import('./keyVault.js');
+            const vaultKey = await getDecryptedKey(billingEmail, provider);
+            if (vaultKey) {
+              apiKey = vaultKey;
+              isOwnKey = true;
+            }
+          } catch (e) {
+            console.error('[Auth] KeyVault fallback error:', e);
+          }
+        }
+      }
+      if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
         throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
       }
     }
@@ -107,7 +137,22 @@ export async function resolveAuth({
         if (ownKey) {
           apiKey = ownKey;
           isOwnKey = true;
-        } else if (!hostUser.useOwnKeys && !skipCreditCheck && hostUser.credits < minCredits) {
+        } else {
+          // Fallback: check encrypted key vault
+          if (!ownKey && hostUser.useOwnKeys) {
+            try {
+              const { getDecryptedKey } = await import('./keyVault.js');
+              const vaultKey = await getDecryptedKey(billingEmail, provider);
+              if (vaultKey) {
+                apiKey = vaultKey;
+                isOwnKey = true;
+              }
+            } catch (e) {
+              console.error('[Auth] KeyVault fallback error:', e);
+            }
+          }
+        }
+        if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && hostUser.credits < minCredits) {
           throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
         }
       }

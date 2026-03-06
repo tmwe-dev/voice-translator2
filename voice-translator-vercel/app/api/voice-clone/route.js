@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, deductCredits } from '../../lib/users.js';
 
 const CLONE_COST_CREDITS = 500; // 500 cents = €5.00
@@ -6,7 +7,7 @@ const CLONE_COST_CREDITS = 500; // 500 cents = €5.00
 // ═══════════════════════════════════════
 // POST /api/voice-clone — Clone a voice
 // ═══════════════════════════════════════
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const formData = await req.formData();
     const userToken = formData.get('userToken');
@@ -129,7 +130,7 @@ export async function POST(req) {
 // ═══════════════════════════════════════
 // GET /api/voice-clone — Get cloned voice info
 // ═══════════════════════════════════════
-export async function GET(req) {
+async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get('token');
@@ -156,6 +157,9 @@ export async function GET(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'voice-clone' });
+export const GET = withApiGuard(handleGet, { maxRequests: 10, prefix: 'voice-clone', skipBodyCheck: true });
 
 // ═══════════════════════════════════════
 // DELETE handler (called from POST with action=delete)

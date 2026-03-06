@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { deductCredits } from '../../lib/users.js';
 import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
@@ -65,7 +66,7 @@ const AVATAR_VOICE_MAP = {
   'Leo':      MALE_VOICES.alt5,       // Drew - confident
 };
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { text, voiceId, langCode, userToken, roomId, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
@@ -188,7 +189,7 @@ export async function POST(req) {
 }
 
 // GET /api/tts-elevenlabs?action=voices - List available voices (requires auth)
-export async function GET(req) {
+async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
@@ -249,3 +250,6 @@ export async function GET(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'tts-elevenlabs' });
+export const GET = withApiGuard(handleGet, { maxRequests: 30, prefix: 'tts-elevenlabs', skipBodyCheck: true });

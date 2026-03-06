@@ -3,13 +3,28 @@ import { NextResponse } from 'next/server';
 // ═══════════════════════════════════════════════
 // Next.js Middleware
 //
-// - CORS headers for API routes
+// - CORS headers for API routes with whitelist
 // - Security headers for all responses
 // - Admin route protection (basic)
 // - Rate limit headers
 // ═══════════════════════════════════════════════
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || '*';
+const ALLOWED_ORIGINS = new Set([
+  process.env.NEXT_PUBLIC_APP_URL,
+  process.env.ALLOWED_ORIGIN,
+  'https://voicetranslate.app',
+  'https://www.voicetranslate.app',
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean));
+
+function isOriginAllowed(origin) {
+  if (!origin) return true; // Same-origin requests (no Origin header)
+  if (ALLOWED_ORIGINS.has(origin)) return true;
+  // Allow Vercel preview deployments
+  if (origin.endsWith('.vercel.app')) return true;
+  return false;
+}
 
 // Security headers applied to all responses
 const SECURITY_HEADERS = {
@@ -18,17 +33,27 @@ const SECURITY_HEADERS = {
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=self, microphone=self, geolocation=()',
+  'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://api.stripe.com https://*.upstash.io wss://*; frame-src https://js.stripe.com https://accounts.google.com; media-src 'self' blob:",
 };
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
+  const origin = request.headers.get('origin');
 
   // ── Handle CORS preflight ──
   if (request.method === 'OPTIONS') {
+    const allowedOrigin = isOriginAllowed(origin) ? (origin || '*') : null;
+
+    // If origin not allowed on API routes, deny
+    if (pathname.startsWith('/api/') && !allowedOrigin && origin) {
+      return new NextResponse(null, { status: 403 });
+    }
+
     return new NextResponse(null, {
       status: 204,
       headers: {
-        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        ...(allowedOrigin && { 'Access-Control-Allow-Origin': allowedOrigin }),
         'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
         'Access-Control-Max-Age': '86400',
@@ -45,8 +70,14 @@ export function middleware(request) {
 
   // ── CORS for API routes ──
   if (pathname.startsWith('/api/')) {
-    response.headers.set('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
-    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (isOriginAllowed(origin)) {
+      const allowedOrigin = origin || '*';
+      response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    } else if (origin) {
+      // Origin not allowed on API routes
+      return new NextResponse(null, { status: 403 });
+    }
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
 

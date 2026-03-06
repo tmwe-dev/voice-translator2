@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
@@ -73,7 +74,7 @@ const PAIR_NOTES = {
   'ko->en': 'Korean→English: restructure SOV to SVO, expand honorifics contextually.',
 };
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const formData = await req.formData();
     const audioFile = formData.get('audio');
@@ -300,3 +301,5 @@ RULES:
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'process' });

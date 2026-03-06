@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { deductCredits } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
@@ -43,7 +44,7 @@ const TTS_INSTRUCTIONS = {
   'fi': 'Speak in fluent Finnish with natural intonation and proper vowel/consonant length distinctions. Sound like a native Finnish speaker.',
 };
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { text, voice, userToken, roomId, langCode } = await req.json();
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
@@ -94,3 +95,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'tts' });

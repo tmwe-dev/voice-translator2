@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 
 // ═══════════════════════════════════════════════
@@ -20,7 +21,7 @@ function isAdmin(email) {
   return ADMIN_EMAILS.includes((email || '').toLowerCase());
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, adminEmail, page, limit, search, userId, days } = await req.json();
 
@@ -168,3 +169,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'admin' });

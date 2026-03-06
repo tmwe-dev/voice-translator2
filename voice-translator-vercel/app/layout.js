@@ -1,3 +1,5 @@
+import CookieConsent from './components/CookieConsent.js';
+
 export const metadata = {
   title: 'VoiceTranslate — Real-time AI Voice Translation',
   description: 'Speak your language, be understood everywhere. Real-time AI voice translation for 31+ languages with under 500ms latency.',
@@ -49,7 +51,10 @@ export default function RootLayout({ children }) {
         <meta name="appleid-signin-redirect-uri" content="https://voice-translator2.vercel.app" />
         <meta name="appleid-signin-use-popup" content="true" />
       </head>
-      <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>{children}</body>
+      <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
+        {children}
+        <CookieConsent />
+      </body>
     </html>
   );
 }

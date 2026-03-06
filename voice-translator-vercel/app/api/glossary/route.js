@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
 
@@ -14,7 +15,7 @@ import { getSession } from '../../lib/users.js';
 //   inject   — get active glossary entries for a language pair (for prompt injection)
 // ═══════════════════════════════════════════════
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, token, glossaryId, data: payload } = await req.json();
     if (!token) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
@@ -138,3 +139,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'glossary' });

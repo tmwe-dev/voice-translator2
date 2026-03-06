@@ -1,11 +1,12 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getConversation, updateConversationSummary } from '../../lib/store.js';
 import { getSession, getUser, deductCredits } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { convId, userToken } = await req.json();
 
@@ -126,3 +127,5 @@ Output ONLY valid JSON, no markdown, no code blocks.`
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'summary' });

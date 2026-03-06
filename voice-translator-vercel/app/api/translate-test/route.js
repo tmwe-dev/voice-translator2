@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { runAllProviders } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
 
@@ -7,7 +8,7 @@ import { findConsensus } from '../../lib/consensus.js';
 // Used by the Test Center page to compare translation quality
 // ═══════════════════════════════════════════════
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { text, sourceLang, targetLang, userEmail } = await req.json();
     if (!text?.trim()) {
@@ -43,3 +44,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'translate-test' });

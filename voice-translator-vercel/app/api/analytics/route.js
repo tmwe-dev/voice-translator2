@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
 
@@ -13,7 +14,7 @@ import { getSession } from '../../lib/users.js';
 //   glossaries  — glossary list + management
 // ═══════════════════════════════════════════════
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, token, days } = await req.json();
     if (!token) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
@@ -106,3 +107,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'analytics' });

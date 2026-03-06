@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { saveConversation, getConversation, getUserConversations } from '../../lib/store.js';
 
 // POST /api/conversation - End room and save conversation
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, roomId, userName } = await req.json();
 
@@ -27,7 +28,7 @@ export async function POST(req) {
 }
 
 // GET /api/conversation?id=XXX - Get full conversation with messages
-export async function GET(req) {
+async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -39,3 +40,6 @@ export async function GET(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'conversation' });
+export const GET = withApiGuard(handleGet, { maxRequests: 60, prefix: 'conversation', skipBodyCheck: true });
