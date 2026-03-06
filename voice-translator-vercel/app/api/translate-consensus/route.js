@@ -19,7 +19,7 @@ function getSimpleHash(text) {
   return encoded.substring(0, 32);
 }
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app';
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
 function getCorsHeaders(req) {
   const origin = req?.headers?.get?.('origin') || '';

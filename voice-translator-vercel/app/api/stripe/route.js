@@ -18,7 +18,7 @@ async function handlePost(req) {
       const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
       if (!pkg) return NextResponse.json({ error: 'Invalid package' }, { status: 400 });
 
-      const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app';
+      const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
       const checkoutSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],

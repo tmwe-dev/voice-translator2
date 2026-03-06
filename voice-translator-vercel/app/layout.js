@@ -14,7 +14,7 @@ export const metadata = {
     title: 'VoiceTranslate — Real-time Voice Translation',
     description: 'Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages.',
     type: 'website',
-    url: 'https://www.voicetranslate.app',
+    url: 'https://voice-translator2.vercel.app',
     images: [{ url: '/api/og', width: 1200, height: 630, alt: 'VoiceTranslate — Real-time AI Voice Translation' }],
   },
   twitter: {
@@ -46,7 +46,7 @@ export default function RootLayout({ children }) {
         <meta property="og:title" content="VoiceTranslate — Real-time Voice Translation" />
         <meta property="og:description" content="Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages." />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.voicetranslate.app" />
+        <meta property="og:url" content="https://voice-translator2.vercel.app" />
         <meta property="og:image" content="/api/og" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
@@ -67,7 +67,7 @@ export default function RootLayout({ children }) {
           <>
             <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID} />
             <meta name="appleid-signin-scope" content="name email" />
-            <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app'} />
+            <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'} />
             <meta name="appleid-signin-use-popup" content="true" />
           </>
         )}
@@ -88,7 +88,7 @@ export default function RootLayout({ children }) {
               '@type': 'WebApplication',
               name: 'VoiceTranslate',
               description: 'Real-time voice translation app with AI-powered speech recognition and synthesis in 15+ languages',
-              url: 'https://www.voicetranslate.app',
+              url: 'https://voice-translator2.vercel.app',
               applicationCategory: 'CommunicationApplication',
               operatingSystem: 'Any',
               offers: {

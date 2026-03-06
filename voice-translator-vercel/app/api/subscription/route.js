@@ -121,8 +121,8 @@ async function handlePost(req) {
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app'}/?subscription=success`,
-        cancel_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app'}/?subscription=cancel`,
+        success_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'}/?subscription=success`,
+        cancel_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'}/?subscription=cancel`,
         metadata: { userId: verifiedUserId || '', plan, period: billingPeriod },
         subscription_data: {
           metadata: { userId: verifiedUserId || '', plan },
@@ -144,7 +144,7 @@ async function handlePost(req) {
 
       const portalSession = await getStripe().billingPortal.sessions.create({
         customer: customerId,
-        return_url: returnUrl || process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app',
+        return_url: returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app',
       });
       return NextResponse.json({ url: portalSession.url });
     }

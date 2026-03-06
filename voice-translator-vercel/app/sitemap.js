@@ -1,5 +1,5 @@
 export default function sitemap() {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://www.voicetranslate.app';
+  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
   return [
     {

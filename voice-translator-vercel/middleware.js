@@ -14,6 +14,7 @@ const ALLOWED_ORIGINS = new Set([
   process.env.ALLOWED_ORIGIN,
   'https://voicetranslate.app',
   'https://www.voicetranslate.app',
+  'https://voice-translator2.vercel.app',
   'http://localhost:3000',
   'http://localhost:3001',
 ].filter(Boolean));
