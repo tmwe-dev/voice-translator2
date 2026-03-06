@@ -721,7 +721,8 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   <span>{Lf('loginGoogle', 'Continua con Google')}</span>
                 </button>
 
-                {/* Apple Sign-In */}
+                {/* Apple Sign-In — hidden until app is published on App Store */}
+                {typeof window !== 'undefined' && window.__VT_APPLE_CLIENT_ID ? (
                 <button onClick={async () => {
                   setAuthError('');
                   if (typeof window !== 'undefined' && window.AppleID?.auth) {
@@ -764,6 +765,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   </svg>
                   <span>{Lf('loginApple', 'Continua con Apple')}</span>
                 </button>
+                ) : null}
 
                 {/* Continue Free Link */}
                 <button onClick={() => {

@@ -62,10 +62,15 @@ export default function RootLayout({ children }) {
         {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
           <script src="https://accounts.google.com/gsi/client" async defer />
         )}
-        <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''} />
-        <meta name="appleid-signin-scope" content="name email" />
-        <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app'} />
-        <meta name="appleid-signin-use-popup" content="true" />
+        {/* Apple Sign-In meta tags — only rendered when Apple client ID is configured */}
+        {process.env.NEXT_PUBLIC_APPLE_CLIENT_ID && (
+          <>
+            <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID} />
+            <meta name="appleid-signin-scope" content="name email" />
+            <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://voicetranslate.app'} />
+            <meta name="appleid-signin-use-popup" content="true" />
+          </>
+        )}
         {/* Plausible Analytics — privacy-first, no cookies, GDPR compliant */}
         {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
           <script

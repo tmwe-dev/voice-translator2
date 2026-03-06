@@ -98,6 +98,8 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               </svg>
               <span>{L('loginGoogle')}</span>
             </button>
+            {/* Apple Sign-In — hidden until app is published on App Store */}
+            {typeof window !== 'undefined' && window.__VT_APPLE_CLIENT_ID ? (
             <button style={{width:'100%', padding:'12px 16px', borderRadius:14, border:`1px solid ${S.colors.inputBorder}`,
               background:S.colors.inputBg, color:S.colors.textPrimary, fontSize:14, cursor:'pointer',
               fontFamily:FONT, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
@@ -153,6 +155,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               </svg>
               <span>{L('loginApple')}</span>
             </button>
+            ) : null}
             <div style={{fontSize:10, color:S.colors.textMuted, textAlign:'center', marginTop:12}}>
               {L('noPasswordRequired')}
             </div>
