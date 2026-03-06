@@ -94,31 +94,46 @@ export async function POST(req) {
       const sessionToken = await createSession(email);
 
       // Sync profile to Supabase (non-blocking)
+      // Note: profiles.id is FK on auth.users(id) — cannot insert without a valid auth.users UUID.
+      // The trigger `on_auth_user_created` auto-creates profiles on Supabase Auth signup.
+      // Here we only UPDATE existing profiles or attempt insert with a resolved auth UUID.
       let supabaseUserId = null;
       try {
         const sb = getSupabaseAdmin();
         if (sb) {
           const { data: existing } = await sb.from('profiles').select('id').eq('email', email).single();
           if (existing) {
+            // Profile exists — update it
             supabaseUserId = existing.id;
             await sb.from('profiles').update({
               name: user.name || name || '',
               avatar: user.avatar || avatar || '/avatars/1.png',
+              lang: user.lang || lang || 'it',
               last_login: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             }).eq('id', existing.id);
           } else {
-            // Create Supabase profile for this user
-            const { data: newProfile } = await sb.from('profiles').insert({
-              email,
-              name: user.name || name || '',
-              avatar: user.avatar || avatar || '/avatars/1.png',
-              lang: user.lang || lang || 'it',
-              tier: user.tier || 'free',
-              credits: user.credits || 0,
-              last_login: new Date().toISOString(),
-            }).select('id').single();
-            supabaseUserId = newProfile?.id;
+            // Profile doesn't exist — try to find auth.users UUID first
+            // Without a valid auth.users UUID, we cannot insert (FK constraint)
+            const { data: authUser } = await sb.auth.admin.listUsers();
+            const matchedUser = authUser?.users?.find(u => u.email === email);
+
+            if (matchedUser?.id) {
+              // auth.users exists → safe to insert profile with their UUID
+              const { data: newProfile } = await sb.from('profiles').insert({
+                id: matchedUser.id,
+                email,
+                name: user.name || name || '',
+                avatar: user.avatar || avatar || '/avatars/1.png',
+                lang: user.lang || lang || 'it',
+                tier: user.tier || 'free',
+                credits: user.credits || 0,
+                last_login: new Date().toISOString(),
+              }).select('id').single();
+              supabaseUserId = newProfile?.id;
+            }
+            // If no auth.users match, skip Supabase profile creation
+            // User still works fully via Redis — Supabase sync happens later
           }
         }
       } catch (e) { console.error('Supabase profile sync error:', e.message); }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addMessage, getMessages } from '../../lib/store.js';
+import { addMessage, getMessages, getRoom } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, rateLimit, getClientIP } from '../../lib/validate.js';
 
 // POST /api/messages - Send a translation to the room
@@ -19,6 +19,12 @@ export async function POST(req) {
     if (!roomId || !sender || !original) {
       return NextResponse.json({ error: 'roomId, sender, original required' }, { status: 400 });
     }
+
+    // Verify sender is actually a member of this room
+    const room = await getRoom(roomId);
+    if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    const isMember = room.members.some(m => m.name === sender);
+    if (!isMember) return NextResponse.json({ error: 'Sender is not a room member' }, { status: 403 });
 
     const translated = sanitizeText(body.translated || '', 10000);
     const sourceLang = typeof body.sourceLang === 'string' ? body.sourceLang.slice(0, 10) : '';

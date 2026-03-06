@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   daily_spend     INT DEFAULT 0,                    -- euro-cents spent today
   daily_spend_date DATE DEFAULT CURRENT_DATE,
   onboarding_done BOOLEAN DEFAULT false,
+  last_login      TIMESTAMPTZ,
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
 );

@@ -45,6 +45,11 @@ export default function useTranslation({
   const [textInput, setTextInput] = useState('');
   const [isListening, setIsListening] = useState(false);
 
+  // VAD enhanced feedback (from TMWEngine patterns)
+  const [vadAudioLevel, setVadAudioLevel] = useState(0);       // 0-1 normalized
+  const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null); // seconds or null
+  const vadCountdownRef = useRef(null);
+
   // Refs
   const speechRecRef = useRef(null);
   const allWordsRef = useRef('');
@@ -855,12 +860,19 @@ export default function useTranslation({
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
 
+        // TMWEngine pattern: normalized level 0-1 for visual feedback
+        const normalizedLevel = Math.min(avg / 128, 1);
+        setVadAudioLevel(normalizedLevel);
+
         if (avg > threshold && !isRec) {
           isRec = true;
           if (silenceTimerRef.current) {
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
+          // Clear countdown (TMWEngine pattern)
+          if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
+          setVadSilenceCountdown(null);
           if (canUseBrowserSTT) {
             // Browser STT mode: SpeechRecognition is already running
             if (!streamingMsg) setStreamingMsg({ original: '', translated: null, isStreaming: true });
@@ -882,7 +894,17 @@ export default function useTranslation({
           }
         } else if (avg <= threshold && isRec) {
           if (!silenceTimerRef.current) {
+            // TMWEngine pattern: visual countdown during silence detection
+            const countdownStart = Date.now();
+            vadCountdownRef.current = setInterval(() => {
+              const elapsed = Date.now() - countdownStart;
+              const remaining = Math.max(0, Math.ceil((silenceDelay - elapsed) / 1000));
+              setVadSilenceCountdown(remaining > 0 ? remaining : null);
+            }, 100);
+
             silenceTimerRef.current = setTimeout(async () => {
+              if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
+              setVadSilenceCountdown(null);
               if (canUseBrowserSTT) {
                 // Browser STT mode: translate accumulated text
                 isRec = false;
@@ -952,6 +974,9 @@ export default function useTranslation({
   function stopFreeTalk() {
     setIsListening(false);
     setRecording(false);
+    setVadAudioLevel(0);
+    setVadSilenceCountdown(null);
+    if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
     if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
@@ -1025,6 +1050,9 @@ export default function useTranslation({
     stopClassicRecording,
     processAndSendAudio,
     isListening,
+    // VAD enhanced feedback (TMWEngine patterns)
+    vadAudioLevel,          // 0-1 normalized mic level
+    vadSilenceCountdown,    // seconds remaining before auto-send, or null
     streamingModeRef,
     speechRecRef,
     reviewTimerRef,

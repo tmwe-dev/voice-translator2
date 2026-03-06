@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
-import { saveUserSettings, getUserSettings } from '../../lib/supabaseAPI.js';
+import { saveUserSettings, getUserSettings, getProfileByEmail } from '../../lib/supabaseAPI.js';
 
 // POST /api/user - User profile actions
 async function handlePost(req) {
@@ -108,22 +108,31 @@ async function handleGet(req) {
     // === GET PREFERENCES FROM SUPABASE ===
     if (action === 'get-prefs') {
       try {
-        const settings = await getUserSettings(session.email);
+        // Resolve email → Supabase profile UUID
+        const profile = await getProfileByEmail(session.email);
+        if (!profile?.id) {
+          return NextResponse.json({ prefs: {} });
+        }
+        const settings = await getUserSettings(profile.id);
         if (!settings) {
           return NextResponse.json({ prefs: {} });
         }
-        // Extract prefs from settings object
+        // Map snake_case DB columns → camelCase client fields
         const prefs = {
-          lang: settings.lang,
-          name: settings.name,
-          avatar: settings.avatar,
-          tier: settings.tier,
-          voice: settings.voice,
+          sourceLang: settings.source_lang,
+          targetLang: settings.target_lang,
+          ttsEnabled: settings.tts_enabled,
           ttsEngine: settings.tts_engine,
-          autoSpeak: settings.auto_speak,
-          provider: settings.provider,
-          model: settings.model,
+          ttsVoice: settings.tts_voice,
+          ttsAutoPlay: settings.tts_auto_play,
+          sttEngine: settings.stt_engine,
+          aiModel: settings.ai_model,
           theme: settings.theme,
+          contextType: settings.context_type,
+          voiceSpeed: settings.voice_speed,
+          autoTranslate: settings.auto_translate,
+          showOriginal: settings.show_original,
+          notificationSound: settings.notification_sound,
         };
         return NextResponse.json({ prefs });
       } catch (e) {
@@ -158,22 +167,33 @@ async function handlePut(req) {
           return NextResponse.json({ error: 'Invalid prefs object' }, { status: 400 });
         }
 
-        // Convert camelCase to snake_case for database
-        const settingsToSave = {
-          lang: prefs.lang,
-          name: prefs.name,
-          avatar: prefs.avatar,
-          tier: prefs.tier,
-          voice: prefs.voice,
-          tts_engine: prefs.ttsEngine,
-          auto_speak: prefs.autoSpeak,
-          provider: prefs.provider,
-          model: prefs.model,
-          theme: prefs.theme,
-        };
+        // Resolve email → Supabase profile UUID
+        const profile = await getProfileByEmail(session.email);
+        if (!profile?.id) {
+          console.warn('[API] sync-prefs: no Supabase profile for', session.email);
+          return NextResponse.json({ ok: true, message: 'No Supabase profile yet — sync skipped' });
+        }
 
-        // Save to Supabase user_settings table
-        const result = await saveUserSettings(session.email, settingsToSave);
+        // Convert camelCase client fields → snake_case DB columns
+        // Only include fields that exist in user_settings table
+        const settingsToSave = {};
+        if (prefs.sourceLang !== undefined) settingsToSave.source_lang = prefs.sourceLang;
+        if (prefs.targetLang !== undefined) settingsToSave.target_lang = prefs.targetLang;
+        if (prefs.ttsEnabled !== undefined) settingsToSave.tts_enabled = prefs.ttsEnabled;
+        if (prefs.ttsEngine !== undefined) settingsToSave.tts_engine = prefs.ttsEngine;
+        if (prefs.ttsVoice !== undefined) settingsToSave.tts_voice = prefs.ttsVoice;
+        if (prefs.ttsAutoPlay !== undefined) settingsToSave.tts_auto_play = prefs.ttsAutoPlay;
+        if (prefs.sttEngine !== undefined) settingsToSave.stt_engine = prefs.sttEngine;
+        if (prefs.aiModel !== undefined) settingsToSave.ai_model = prefs.aiModel;
+        if (prefs.theme !== undefined) settingsToSave.theme = prefs.theme;
+        if (prefs.contextType !== undefined) settingsToSave.context_type = prefs.contextType;
+        if (prefs.voiceSpeed !== undefined) settingsToSave.voice_speed = prefs.voiceSpeed;
+        if (prefs.autoTranslate !== undefined) settingsToSave.auto_translate = prefs.autoTranslate;
+        if (prefs.showOriginal !== undefined) settingsToSave.show_original = prefs.showOriginal;
+        if (prefs.notificationSound !== undefined) settingsToSave.notification_sound = prefs.notificationSound;
+
+        // Save to Supabase user_settings table (with resolved UUID)
+        const result = await saveUserSettings(profile.id, settingsToSave);
 
         if (!result) {
           console.warn('[API] saveUserSettings returned null');

@@ -46,7 +46,13 @@ export async function POST(req) {
     }
 
     if (action === 'changeMode') {
-      if (!roomId || !mode) return NextResponse.json({ error: 'roomId, mode required' }, { status: 400 });
+      if (!roomId || !mode || !name) return NextResponse.json({ error: 'roomId, mode, name required' }, { status: 400 });
+      // Only host can change room mode
+      const currentRoom = await getRoom(roomId);
+      if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+      if (currentRoom.host !== name) {
+        return NextResponse.json({ error: 'Only the host can change room mode' }, { status: 403 });
+      }
       const room = await updateRoomMode(roomId, mode);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
@@ -63,6 +69,14 @@ export async function POST(req) {
     // ── WebRTC Signaling ──
     if (action === 'webrtc-signal') {
       if (!roomId || !signal) return NextResponse.json({ error: 'roomId and signal required' }, { status: 400 });
+      // Verify sender is a room member (signal.from must be a member name)
+      const senderName = signal?.from;
+      if (senderName) {
+        const sigRoom = await getRoom(roomId);
+        if (!sigRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+        const isMember = sigRoom.members.some(m => m.name === senderName);
+        if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+      }
       const key = `rtc:${roomId}`;
       try {
         // Store signal in Redis list (FIFO, max 50 signals, 5min TTL)
