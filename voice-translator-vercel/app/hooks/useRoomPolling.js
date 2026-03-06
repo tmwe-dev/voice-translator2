@@ -1,6 +1,15 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { CONTEXTS, getLang, POLLING_INTERVAL, LIVE_TEXT_THROTTLE, TYPING_TIMEOUT, SPEAKING_TIMEOUT } from '../lib/constants.js';
+import { CONTEXTS, getLang, LIVE_TEXT_THROTTLE, TYPING_TIMEOUT, SPEAKING_TIMEOUT } from '../lib/constants.js';
+import useRealtimeRoom from './useRealtimeRoom.js';
+
+// ═══════════════════════════════════════════════════════════════
+// POLLING_INTERVAL: With Supabase Realtime active, polling is just
+// a safety net. We poll every 10s to catch anything missed.
+// Without Realtime, we fall back to 2s polling (still better than 1s).
+// ═══════════════════════════════════════════════════════════════
+const REALTIME_FALLBACK_POLL = 10000;  // 10s when WebSocket is active
+const LEGACY_POLL_INTERVAL = 2000;     // 2s fallback when no WebSocket
 
 export default function useRoomPolling({
   prefsRef,
@@ -22,18 +31,108 @@ export default function useRoomPolling({
   const liveTextTimerRef = useRef(null);
   const lastLiveTextRef = useRef('');
   const sentByMeRef = useRef(new Set());
-  const pollErrorCountRef = useRef(0);  // FASE 6B: track consecutive errors
+  const pollErrorCountRef = useRef(0);
   const [pollError, setPollError] = useState(false);
-  const roomSessionTokenRef = useRef(null); // Server-verified identity token
-  const verifiedNameRef = useRef(null); // Server-confirmed identity name
-  const isHostRef = useRef(false); // Server-confirmed host status
+  const roomSessionTokenRef = useRef(null);
+  const verifiedNameRef = useRef(null);
+  const isHostRef = useRef(false);
+
+  // ── Helper: process incoming message (shared by realtime + polling) ──
+  const processIncomingMessage = useCallback((msg) => {
+    if (!msg || !msg.id) return;
+    // Skip messages sent by me
+    if (sentByMeRef.current.has(msg.id)) return;
+    const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
+    if (msg.sender === myVerifiedName) return;
+
+    // Queue audio for the translation in MY language
+    const myLang = myLangRef.current;
+    let textToPlay = '';
+    let speechLang = '';
+    if (msg.translations && msg.translations[myLang]) {
+      textToPlay = msg.translations[myLang];
+      speechLang = getLang(myLang).speech;
+    } else if (msg.translated) {
+      textToPlay = msg.translated;
+      speechLang = getLang(msg.targetLang).speech;
+    }
+    if (textToPlay && prefsRef.current.autoPlay) {
+      queueAudio(textToPlay, speechLang, msg.id);
+    }
+  }, [prefsRef, myLangRef, queueAudio]);
+
+  // ── Supabase Realtime handlers ──
+
+  const handleRealtimeMessage = useCallback((message) => {
+    setMessages(prev => {
+      const ids = new Set(prev.map(m => m.id));
+      if (ids.has(message.id)) return prev;
+      return [...prev, message];
+    });
+    if (message.timestamp) {
+      lastMsgRef.current = Math.max(lastMsgRef.current, message.timestamp);
+    }
+    processIncomingMessage(message);
+  }, [processIncomingMessage]);
+
+  const handleRealtimeSpeaking = useCallback((data) => {
+    const myName = verifiedNameRef.current || prefsRef.current.name;
+    if (data.name === myName) return;
+    if (data.speaking !== undefined) {
+      setPartnerSpeaking(data.speaking);
+      if (data.liveText !== undefined) setPartnerLiveText(data.liveText);
+      if (!data.speaking) setPartnerLiveText('');
+    }
+    if (data.typing !== undefined) {
+      setPartnerTyping(data.typing);
+    }
+  }, [prefsRef]);
+
+  const handleRealtimeMemberUpdate = useCallback((data) => {
+    if (data.room) {
+      setRoomInfo(data.room);
+      setPartnerConnected(data.room.members.length >= 2);
+    } else if (data.members) {
+      setRoomInfo(prev => prev ? { ...prev, members: data.members } : prev);
+      setPartnerConnected(data.members.length >= 2);
+    }
+  }, []);
+
+  const handleRealtimePresence = useCallback(() => {
+    // Heartbeats confirm partner is still connected
+    // The polling fallback handles full room state refresh
+  }, []);
+
+  // ── Supabase Realtime hook ──
+  const {
+    connected: realtimeConnected,
+    subscribe: realtimeSubscribe,
+    unsubscribe: realtimeUnsubscribe,
+    broadcastMessage,
+    broadcastSpeaking,
+    broadcastMemberUpdate,
+    broadcastHeartbeat,
+  } = useRealtimeRoom({
+    roomId,
+    myName: verifiedNameRef.current || prefsRef.current?.name,
+    onNewMessage: handleRealtimeMessage,
+    onSpeakingChange: handleRealtimeSpeaking,
+    onMemberUpdate: handleRealtimeMemberUpdate,
+    onPresenceChange: handleRealtimePresence,
+  });
+
+  // ── Polling: safety-net when Realtime is active, primary when not ──
 
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
     lastMsgRef.current = Date.now();
     pollErrorCountRef.current = 0;
     setPollError(false);
-    pollRef.current = setInterval(async () => {
+
+    // Subscribe to Supabase Realtime channel
+    realtimeSubscribe(rid);
+
+    const pollFn = async () => {
       try {
         const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
         const nameParam = !roomSessionTokenRef.current ? `&name=${encodeURIComponent(prefsRef.current.name)}` : '';
@@ -46,31 +145,14 @@ export default function useRoomPolling({
               const fresh = newMsgs.filter(m => !ids.has(m.id));
               return fresh.length > 0 ? [...prev, ...fresh] : prev;
             });
-            // FASE 6A: Use timestamp as-is; dedup by ID handles duplicates
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
-              if (sentByMeRef.current.has(msg.id)) continue;
-              const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
-              if (msg.sender === myVerifiedName) continue;
-              // Multi-language: pick translation for MY language
-              const myLang = myLangRef.current;
-              let textToPlay = '';
-              let speechLang = '';
-              if (msg.translations && msg.translations[myLang]) {
-                // Multi-lang message: use MY language translation
-                textToPlay = msg.translations[myLang];
-                speechLang = getLang(myLang).speech;
-              } else if (msg.translated) {
-                // Backward compat: use single translation
-                textToPlay = msg.translated;
-                speechLang = getLang(msg.targetLang).speech;
-              }
-              if (textToPlay && prefsRef.current.autoPlay) {
-                queueAudio(textToPlay, speechLang, msg.id);
-              }
+              processIncomingMessage(msg);
             }
           }
         }
+
+        // Heartbeat (always needed to keep room alive and detect members)
         const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current };
         if (!roomSessionTokenRef.current) heartbeatBody.name = prefsRef.current.name;
         const rRes = await fetch('/api/room', {
@@ -80,35 +162,58 @@ export default function useRoomPolling({
         });
         if (rRes.ok) {
           const { room, verifiedName, isHost: hostFlag } = await rRes.json();
-          // Update server-verified identity refs
           if (verifiedName) verifiedNameRef.current = verifiedName;
           if (hostFlag !== undefined) isHostRef.current = hostFlag;
           setRoomInfo(room);
           setPartnerConnected(room.members.length >= 2);
-          // Multi-member: use verified name for filtering
           const myName = verifiedNameRef.current || prefsRef.current.name;
           const others = room.members.filter(m => m.name !== myName);
-          const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
-          const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
-          setPartnerSpeaking(anyoneSpeaking);
-          setPartnerLiveText(speakingPartner?.liveText || '');
-          setPartnerTyping(others.some(p => p.typing && Date.now() - (p.typingAt || 0) < TYPING_TIMEOUT));
+          // Only update speaking/typing from polling if Realtime is NOT connected
+          // (Realtime delivers these in real-time, polling is just backup)
+          if (!realtimeConnected) {
+            const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
+            const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
+            setPartnerSpeaking(anyoneSpeaking);
+            setPartnerLiveText(speakingPartner?.liveText || '');
+            setPartnerTyping(others.some(p => p.typing && Date.now() - (p.typingAt || 0) < TYPING_TIMEOUT));
+          }
         }
-        // FASE 6B: Reset error count on success
+
+        // Also broadcast heartbeat via Realtime
+        broadcastHeartbeat(verifiedNameRef.current || prefsRef.current.name);
+
         if (pollErrorCountRef.current > 0) {
           pollErrorCountRef.current = 0;
           setPollError(false);
         }
       } catch (e) {
         console.error('[Poll] error:', e);
-        // FASE 6B: Track consecutive failures
         pollErrorCountRef.current++;
         if (pollErrorCountRef.current >= 3) {
           setPollError(true);
         }
       }
-    }, POLLING_INTERVAL);
-  }, []);
+    };
+
+    // Choose poll interval based on Realtime connection
+    const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
+    pollRef.current = setInterval(pollFn, interval);
+  }, [realtimeSubscribe, realtimeConnected, broadcastHeartbeat, processIncomingMessage]);
+
+  // ── Adjust poll interval when realtime connects/disconnects ──
+  const prevRealtimeRef = useRef(false);
+  useEffect(() => {
+    if (prevRealtimeRef.current !== realtimeConnected && roomId && pollRef.current) {
+      // Re-start polling with new interval
+      clearInterval(pollRef.current);
+      const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
+      const pollFn = pollRef.current?.__fn;
+      // Simple approach: restart polling
+      startPolling(roomId);
+      console.log(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
+    }
+    prevRealtimeRef.current = realtimeConnected;
+  }, [realtimeConnected, roomId, startPolling]);
 
   const stopPolling = useCallback(() => {
     if (pollRef.current) {
@@ -119,7 +224,8 @@ export default function useRoomPolling({
       clearTimeout(liveTextTimerRef.current);
       liveTextTimerRef.current = null;
     }
-  }, []);
+    realtimeUnsubscribe();
+  }, [realtimeUnsubscribe]);
 
   useEffect(() => {
     return () => {
@@ -127,7 +233,18 @@ export default function useRoomPolling({
     };
   }, [stopPolling]);
 
+  // ── Speaking state: now also broadcasts via Realtime ──
+
   async function setSpeakingState(rid, speaking, liveText = null, typing = false) {
+    // Broadcast instantly via Realtime (other clients see it immediately)
+    broadcastSpeaking({
+      name: verifiedNameRef.current || prefsRef.current.name,
+      speaking,
+      liveText,
+      typing,
+    });
+
+    // Also persist to Redis (for polling fallback / new joiners)
     try {
       const body = {
         action: 'speaking',
@@ -154,9 +271,14 @@ export default function useRoomPolling({
     }, LIVE_TEXT_THROTTLE);
   }
 
-  // Sync language change to room — all participants see the update via polling
   async function syncLangChange(newLang) {
     if (!roomId) return;
+    // Broadcast lang change via Realtime
+    broadcastMemberUpdate({
+      action: 'langChange',
+      name: verifiedNameRef.current || prefsRef.current.name,
+      lang: newLang,
+    });
     try {
       const body = {
         action: 'changeLang',
@@ -177,6 +299,13 @@ export default function useRoomPolling({
 
   function sendTypingState(isTyping) {
     if (!roomId) return;
+    // Broadcast instantly via Realtime
+    broadcastSpeaking({
+      name: verifiedNameRef.current || prefsRef.current.name,
+      speaking: false,
+      typing: isTyping,
+    });
+    // Also persist to Redis
     const body = {
       action: 'speaking',
       roomId,
@@ -193,16 +322,8 @@ export default function useRoomPolling({
   }
 
   async function handleCreateRoom(
-    name,
-    lang,
-    mode,
-    avatar,
-    selectedContext,
-    selectedMode,
-    roomDescription,
-    isTrial,
-    isTopPro,
-    userAccount
+    name, lang, mode, avatar, selectedContext, selectedMode,
+    roomDescription, isTrial, isTopPro, userAccount
   ) {
     try {
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
@@ -212,10 +333,7 @@ export default function useRoomPolling({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create',
-          name,
-          lang,
-          mode,
-          avatar,
+          name, lang, mode, avatar,
           context: selectedContext,
           contextPrompt: ctxObj.prompt,
           description: roomDescription,
@@ -247,9 +365,7 @@ export default function useRoomPolling({
         body: JSON.stringify({
           action: 'join',
           roomId: joinCode.trim().toUpperCase(),
-          name,
-          lang,
-          avatar
+          name, lang, avatar
         })
       });
       if (!res.ok) {
@@ -264,6 +380,10 @@ export default function useRoomPolling({
       setMessages([]);
       setPartnerConnected(room.members.length >= 2);
       startPolling(room.id);
+
+      // Broadcast member join via Realtime
+      broadcastMemberUpdate({ room, action: 'join', name });
+
       return room;
     } catch (e) {
       throw e;
@@ -296,6 +416,7 @@ export default function useRoomPolling({
     partnerLiveText,
     partnerTyping,
     pollError,
+    realtimeConnected,
     startPolling,
     stopPolling,
     setSpeakingState,
@@ -308,6 +429,9 @@ export default function useRoomPolling({
     sentByMeRef,
     roomSessionTokenRef,
     verifiedNameRef,
-    isHostRef
+    isHostRef,
+    // Realtime broadcast functions (for use in useTranslationAPI)
+    broadcastMessage,
+    broadcastMemberUpdate,
   };
 }

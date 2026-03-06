@@ -127,7 +127,8 @@ function HomeInner() {
     trackFreeChars,
     userEmail: auth.userAccount?.email || auth.authEmail || '',
     sentByMeRef: roomPolling.sentByMeRef,  // FASE 1A: for message dedup
-    roomSessionTokenRef: roomPolling.roomSessionTokenRef
+    roomSessionTokenRef: roomPolling.roomSessionTokenRef,
+    broadcastMessage: roomPolling.broadcastMessage
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
   const webrtc = useWebRTC({

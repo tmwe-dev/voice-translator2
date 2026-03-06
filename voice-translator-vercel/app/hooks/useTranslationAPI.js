@@ -29,6 +29,7 @@ export default function useTranslationAPI({
   userEmail,
   sentByMeRef,
   roomSessionTokenRef,
+  broadcastMessage,
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -59,13 +60,17 @@ export default function useTranslationAPI({
         if (data.message?.id && sentByMeRef) {
           sentByMeRef.current.add(data.message.id);
         }
+        // Broadcast via Supabase Realtime so other clients receive instantly
+        if (data.message && broadcastMessage) {
+          broadcastMessage(data.message);
+        }
         return data;
       }
     } catch (e) {
       console.error('[sendMessage] Error:', e);
     }
     return null;
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage]);
 
   /**
    * Translate text using the appropriate endpoint (free/paid/consensus).

@@ -47,7 +47,8 @@ export default function useTranslation({
   trackFreeChars,
   userEmail,
   sentByMeRef,
-  roomSessionTokenRef
+  roomSessionTokenRef,
+  broadcastMessage
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -118,6 +119,7 @@ export default function useTranslation({
     userEmail,
     sentByMeRef,
     roomSessionTokenRef,
+    broadcastMessage,
   });
 
   // ── Shared helpers ──
