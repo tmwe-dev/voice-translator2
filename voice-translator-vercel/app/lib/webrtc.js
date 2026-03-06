@@ -7,11 +7,36 @@
 // - Signaling via existing /api/room endpoint
 // ═══════════════════════════════════════════════
 
+// ICE servers: STUN for NAT traversal + optional TURN for relay fallback
+// Configure TURN via env vars: NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USER, NEXT_PUBLIC_TURN_PASS
+// Recommended: Cloudflare TURN (free 1TB/month) or Twilio TURN
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
   { urls: 'stun:stun2.l.google.com:19302' },
 ];
+
+// Add TURN server if configured (needed for ~15% of users behind symmetric NAT)
+if (typeof window !== 'undefined') {
+  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
+  const turnUser = process.env.NEXT_PUBLIC_TURN_USER;
+  const turnPass = process.env.NEXT_PUBLIC_TURN_PASS;
+  if (turnUrl) {
+    ICE_SERVERS.push({
+      urls: turnUrl,
+      username: turnUser || '',
+      credential: turnPass || '',
+    });
+    // Also add TURNS (TLS) variant if it's a turn: URL
+    if (turnUrl.startsWith('turn:')) {
+      ICE_SERVERS.push({
+        urls: turnUrl.replace('turn:', 'turns:'),
+        username: turnUser || '',
+        credential: turnPass || '',
+      });
+    }
+  }
+}
 
 /**
  * Create a new RTCPeerConnection with DataChannel + media support

@@ -32,6 +32,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
   const [remoteStream, setRemoteStream] = useState(null);
   const [videoEnabled, setVideoEnabledState] = useState(false);
   const [remoteVideoActive, setRemoteVideoActive] = useState(false);
+  const [audioEnabled, setAudioEnabledState] = useState(true);  // P2P audio (mute/unmute)
 
   const pcRef = useRef(null);
   const dcRef = useRef(null);
@@ -181,16 +182,26 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
       const dc = createDataChannel(pc);
       setupDC(dc);
 
-      // Add video if requested
-      if (withVideo) {
-        try {
-          const stream = await getLocalMediaStream({ video: true, audio: false });
-          localStreamRef.current = stream;
-          setLocalStream(stream);
-          setVideoEnabledState(true);
-          sendersRef.current = addMediaTracks(pc, stream);
-        } catch (e) {
-          console.warn('[WebRTC] Camera access failed:', e);
+      // Always add audio track for P2P voice (partner hears you directly)
+      // Video is optional (only if explicitly requested)
+      try {
+        const stream = await getLocalMediaStream({ video: withVideo, audio: true });
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        if (withVideo) setVideoEnabledState(true);
+        sendersRef.current = addMediaTracks(pc, stream);
+      } catch (e) {
+        console.warn('[WebRTC] Media access failed:', e);
+        // Fallback: try audio-only if video+audio failed
+        if (withVideo) {
+          try {
+            const stream = await getLocalMediaStream({ video: false, audio: true });
+            localStreamRef.current = stream;
+            setLocalStream(stream);
+            sendersRef.current = addMediaTracks(pc, stream);
+          } catch (e2) {
+            console.warn('[WebRTC] Audio-only also failed:', e2);
+          }
         }
       }
 
@@ -244,16 +255,24 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
       // Listen for data channel
       pc.ondatachannel = (event) => setupDC(event.channel);
 
-      // Add video if requested
-      if (withVideo) {
-        try {
-          const stream = await getLocalMediaStream({ video: true, audio: false });
-          localStreamRef.current = stream;
-          setLocalStream(stream);
-          setVideoEnabledState(true);
-          sendersRef.current = addMediaTracks(pc, stream);
-        } catch (e) {
-          console.warn('[WebRTC] Camera access failed:', e);
+      // Always add audio track for P2P voice
+      try {
+        const stream = await getLocalMediaStream({ video: withVideo, audio: true });
+        localStreamRef.current = stream;
+        setLocalStream(stream);
+        if (withVideo) setVideoEnabledState(true);
+        sendersRef.current = addMediaTracks(pc, stream);
+      } catch (e) {
+        console.warn('[WebRTC] Media access failed:', e);
+        if (withVideo) {
+          try {
+            const stream = await getLocalMediaStream({ video: false, audio: true });
+            localStreamRef.current = stream;
+            setLocalStream(stream);
+            sendersRef.current = addMediaTracks(pc, stream);
+          } catch (e2) {
+            console.warn('[WebRTC] Audio-only also failed:', e2);
+          }
         }
       }
 
@@ -340,6 +359,18 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
     }
   }, []);
 
+  // ── Toggle P2P audio (mute/unmute mic for partner) ──
+  const toggleAudio = useCallback(() => {
+    if (!localStreamRef.current) return;
+    const audioTracks = localStreamRef.current.getAudioTracks();
+    const newState = !audioEnabled;
+    for (const track of audioTracks) {
+      track.enabled = newState;
+    }
+    setAudioEnabledState(newState);
+    sendDirectMessage({ type: 'audio-toggle', enabled: newState });
+  }, [audioEnabled]);
+
   // ── Send via DataChannel ──
   const sendDirectMessage = useCallback((msg) => {
     if (!dcRef.current || dcRef.current.readyState !== 'open') return false;
@@ -380,10 +411,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage }) {
     localStream,
     remoteStream,
     videoEnabled,
+    audioEnabled,
     remoteVideoActive,
     initiateConnection,
     acceptConnection: acceptConnectionFromOffer,
     toggleVideo,
+    toggleAudio,
     flipCamera,
     sendDirectMessage,
     disconnect,

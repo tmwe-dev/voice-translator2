@@ -16,7 +16,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io wss: ws:",
+              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss: ws:",
               "media-src 'self' blob: data:",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "worker-src 'self' blob:",

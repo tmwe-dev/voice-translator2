@@ -18,6 +18,15 @@ export default class ErrorBoundary extends Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
     console.error('[ErrorBoundary]', error, errorInfo);
+    // Report to Sentry if available
+    if (typeof window !== 'undefined') {
+      import('@sentry/nextjs').then(Sentry => {
+        Sentry.captureException(error, {
+          contexts: { react: { componentStack: errorInfo?.componentStack } },
+          tags: { source: 'ErrorBoundary' },
+        });
+      }).catch(() => {});
+    }
   }
 
   handleReset = () => {
