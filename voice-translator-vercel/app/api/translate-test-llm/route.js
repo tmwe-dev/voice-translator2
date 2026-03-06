@@ -1,12 +1,16 @@
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
-import { validateOutput, MODEL_MAP, PAIR_NOTES } from '../../lib/translateValidation.js';
+import { validateOutput, MODEL_MAP } from '../../lib/translateValidation.js';
+import { buildSystemPrompt } from '../../lib/translatePrompt.js';
+import { callLLM } from '../../lib/llmCaller.js';
 
 // ═══════════════════════════════════════════════
 // LLM Translation Test Endpoint — runs ALL paid models in parallel
 // Used by the Test Center page to compare LLM translation quality
+//
+// Reuses shared modules:
+// - buildSystemPrompt from translatePrompt.js (identical prompts to production)
+// - callLLM from llmCaller.js (identical provider handling)
+// - validateOutput from translateValidation.js
 //
 // Uses platform API keys from env — no user auth, no credit deduction
 // Rate limited: 10 req/min per IP
@@ -37,7 +41,7 @@ setInterval(() => {
   }
 }, 120000);
 
-// Language names for system prompt
+// Language names for prompt building
 const LANG_NAMES = {
   'it': 'Italian', 'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
   'pt': 'Portuguese', 'zh': 'Chinese (Simplified)', 'ja': 'Japanese', 'ko': 'Korean',
@@ -46,94 +50,65 @@ const LANG_NAMES = {
   'id': 'Indonesian', 'ms': 'Malay', 'cs': 'Czech', 'ro': 'Romanian', 'hu': 'Hungarian', 'fi': 'Finnish',
 };
 
-const TONAL_LANGS = {
-  'th': 'Thai (tonal, no spaces between words, use Thai script ภาษาไทย)',
-  'zh': 'Chinese (Simplified, use 简体中文)',
-  'ja': 'Japanese (use appropriate kanji/hiragana/katakana)',
-  'vi': 'Vietnamese (tonal, ALL diacritics critical — never omit dấu)',
-  'ko': 'Korean (use Hangul 한국어)'
+// Provider API key mapping from environment
+const PROVIDER_KEYS = {
+  openai: () => process.env.OPENAI_API_KEY,
+  anthropic: () => process.env.ANTHROPIC_API_KEY,
+  gemini: () => process.env.GEMINI_API_KEY,
 };
 
-function buildSystemPrompt(sourceLang, targetLang) {
-  const sourceLangName = LANG_NAMES[sourceLang] || sourceLang;
-  const targetLangName = LANG_NAMES[targetLang] || targetLang;
-  const srcTonal = TONAL_LANGS[sourceLang];
-  const tgtTonal = TONAL_LANGS[targetLang];
-  let toneNote = '';
-  if (tgtTonal) toneNote = ` The target language is ${tgtTonal}. Preserve all diacritics, tone marks, and native script exactly. Use natural ${targetLangName} phrasing — NOT transliteration.`;
-  else if (srcTonal) toneNote = ` The source language is ${srcTonal}. Interpret tone marks and diacritics accurately.`;
-
-  let prompt = `You are a real-time voice interpreter translating live speech from ${sourceLangName} to ${targetLangName}.${toneNote}
-
-RULES:
-- Output ONLY the translated text — nothing else
-- NO notes, NO explanations, NO labels, NO commentary, NO transliterations
-- This is SPOKEN language: keep the same register, tone, and emotion
-- Preserve casual/informal style — do NOT formalize slang or colloquialisms
-- Keep exclamations, questions, hesitations natural in the target language
-- Translate idioms to equivalent idioms, NOT literally
-- If speech is fragmented or unclear, reconstruct the most likely meaning naturally
-- NEVER output the original language — always translate to ${targetLangName}`;
-
-  const pairKey = `${sourceLang}->${targetLang}`;
-  if (PAIR_NOTES[pairKey]) prompt += `\n\nLanguage pair note: ${PAIR_NOTES[pairKey]}`;
-
-  return prompt;
-}
-
 /**
- * Test a single LLM model
+ * Test a single LLM model — reuses the shared callLLM + buildSystemPrompt modules
  */
-async function testModel(modelId, text, sourceLang, targetLang, systemPrompt) {
+async function testModel(modelId, text, sourceLang, targetLang, systemPrompt, messages) {
   const modelInfo = MODEL_MAP[modelId];
   if (!modelInfo) return { model: modelId, text: null, elapsed: 0, valid: false, reason: 'unknown_model' };
 
+  const getKey = PROVIDER_KEYS[modelInfo.provider];
+  const apiKey = getKey ? getKey() : null;
+  if (!apiKey) {
+    return {
+      model: modelId, provider: modelInfo.provider,
+      text: null, elapsed: 0, valid: false,
+      reason: `${modelInfo.provider.toUpperCase()}_API_KEY not configured`, tokens: null,
+    };
+  }
+
   const start = Date.now();
-  let translated = null;
-  let usage = null;
 
   try {
-    if (modelInfo.provider === 'openai') {
-      const apiKey = process.env.OPENAI_API_KEY;
-      if (!apiKey) throw new Error('OPENAI_API_KEY not configured');
-      const openai = new OpenAI({ apiKey });
-      const completion = await openai.chat.completions.create({
-        model: modelInfo.actual,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: text },
-        ],
-        temperature: 0.3,
-        max_tokens: 500,
-      });
-      translated = completion.choices[0].message.content.trim();
-      usage = completion.usage;
-    } else if (modelInfo.provider === 'anthropic') {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) throw new Error('ANTHROPIC_API_KEY not configured');
-      const anthropic = new Anthropic({ apiKey });
-      const msg = await anthropic.messages.create({
-        model: modelInfo.actual,
-        max_tokens: 500,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: text }],
-      });
-      translated = msg.content[0]?.text?.trim() || '';
-      usage = { prompt_tokens: msg.usage?.input_tokens || 0, completion_tokens: msg.usage?.output_tokens || 0 };
-    } else if (modelInfo.provider === 'gemini') {
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error('GEMINI_API_KEY not configured');
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: modelInfo.actual });
-      const userText = `${systemPrompt}\n\nTranslate:\n${text}`;
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: userText }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 500 },
-      });
-      translated = result.response.text()?.trim() || '';
-      const gUsage = result.response.usageMetadata;
-      usage = { prompt_tokens: gUsage?.promptTokenCount || 0, completion_tokens: gUsage?.candidatesTokenCount || 0 };
+    // Reuse the shared callLLM module — same code path as production translation
+    let { translated, usage } = await callLLM({
+      provider: modelInfo.provider,
+      model: modelInfo.actual,
+      apiKey,
+      messages,
+      systemPrompt,
+      text,
+      context: null,
+      temperature: 0.3,
+      maxTokens: 500,
+    });
+
+    const elapsed = Date.now() - start;
+    const validation = validateOutput(text, translated, targetLang);
+
+    // Clean meta-text if needed
+    if (!validation.valid && validation.reason === 'meta_text' && translated) {
+      translated = translated.replace(/^(Translation:|Here is|Note:)\s*/i, '').trim();
     }
+
+    const finalValidation = validateOutput(text, translated, targetLang);
+
+    return {
+      model: modelId,
+      provider: modelInfo.provider,
+      text: translated,
+      elapsed,
+      valid: finalValidation.valid,
+      reason: finalValidation.valid ? 'ok' : finalValidation.reason,
+      tokens: usage ? (usage.prompt_tokens + usage.completion_tokens) : null,
+    };
   } catch (e) {
     return {
       model: modelId,
@@ -145,26 +120,6 @@ async function testModel(modelId, text, sourceLang, targetLang, systemPrompt) {
       tokens: null,
     };
   }
-
-  const elapsed = Date.now() - start;
-  const validation = validateOutput(text, translated, targetLang);
-
-  // Clean meta-text if needed
-  if (!validation.valid && validation.reason === 'meta_text' && translated) {
-    translated = translated.replace(/^(Translation:|Here is|Note:)\s*/i, '').trim();
-  }
-
-  const finalValidation = validateOutput(text, translated, targetLang);
-
-  return {
-    model: modelId,
-    provider: modelInfo.provider,
-    text: translated,
-    elapsed,
-    valid: finalValidation.valid,
-    reason: finalValidation.valid ? 'ok' : finalValidation.reason,
-    tokens: usage ? (usage.prompt_tokens + usage.completion_tokens) : null,
-  };
 }
 
 export async function POST(req) {
@@ -190,11 +145,25 @@ export async function POST(req) {
 
     const trimmed = text.trim();
     const selectedModels = models || Object.keys(MODEL_MAP);
-    const systemPrompt = buildSystemPrompt(sourceLang, targetLang);
+
+    const sourceLangName = LANG_NAMES[sourceLang] || sourceLang;
+    const targetLangName = LANG_NAMES[targetLang] || targetLang;
+
+    // Build system prompt using the shared module — identical to production
+    const systemPrompt = buildSystemPrompt({
+      sourceLang, targetLang, sourceLangName, targetLangName,
+      roomMode: 'conversation',
+    });
+
+    // Build messages array for OpenAI/Anthropic format
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: trimmed },
+    ];
 
     // Run all selected models in parallel
     const results = await Promise.allSettled(
-      selectedModels.map(modelId => testModel(modelId, trimmed, sourceLang, targetLang, systemPrompt))
+      selectedModels.map(modelId => testModel(modelId, trimmed, sourceLang, targetLang, systemPrompt, messages))
     );
 
     const output = results.map((r, i) => {

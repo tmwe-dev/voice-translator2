@@ -1,0 +1,240 @@
+'use client';
+import { useRef, useCallback } from 'react';
+import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
+
+/**
+ * Translation API hook — handles all translation calls with caching and multi-target support.
+ *
+ * Responsibilities:
+ * - Call appropriate translation endpoint (free/paid/consensus)
+ * - In-memory LRU translation cache (5 min TTL, max 200 entries)
+ * - Resolve target language(s) from room members
+ * - Parallel translation to all target languages
+ * - Send translated message to room
+ *
+ * Returns: { translateUniversal, sendMessage, getTargetLangInfo, getAllTargetLangs, translateToAllTargets }
+ */
+export default function useTranslationAPI({
+  myLangRef,
+  roomInfoRef,
+  prefsRef,
+  roomId,
+  roomContextRef,
+  isTrialRef,
+  freeCharsRef,
+  useOwnKeys,
+  getEffectiveToken,
+  refreshBalance,
+  trackFreeChars,
+  userEmail,
+  sentByMeRef,
+  roomSessionTokenRef,
+}) {
+  // ── Translation cache: avoid re-translating identical text ──
+  // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
+  const translationCacheRef = useRef(new Map());
+
+  /**
+   * Send a translated message to the room.
+   */
+  const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
+    if (!roomId) return null;
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId,
+          sender: roomSessionTokenRef?.current ? undefined : prefsRef.current.name,
+          roomSessionToken: roomSessionTokenRef?.current || null,
+          original,
+          translated,
+          sourceLang,
+          targetLang,
+          translations: translations || null,
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.message?.id && sentByMeRef) {
+          sentByMeRef.current.add(data.message.id);
+        }
+        return data;
+      }
+    } catch (e) {
+      console.error('[sendMessage] Error:', e);
+    }
+    return null;
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef]);
+
+  /**
+   * Translate text using the appropriate endpoint (free/paid/consensus).
+   * Includes in-memory cache with 5 min TTL and LRU eviction.
+   */
+  const translateUniversal = useCallback(async (text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) => {
+    // ── Cache lookup: exact match avoids redundant API calls ──
+    const cacheKey = `${text}|${sourceLang}|${targetLang}`;
+    const cached = translationCacheRef.current.get(cacheKey);
+    if (cached && (Date.now() - cached.ts) < 300000) { // 5 min TTL
+      return { translated: cached.translated, cached: true };
+    }
+
+    if (isTrialRef.current) {
+      if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
+        return { translated: text, fallback: true, limitExceeded: true };
+      }
+      const translationMode = prefsRef.current?.translationMode || 'standard';
+      const translationProviders = prefsRef.current?.translationProviders;
+
+      // Guaranteed mode → use consensus endpoint (3 providers in parallel)
+      if (translationMode === 'guaranteed') {
+        const res = await fetch('/api/translate-consensus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
+        });
+        if (!res.ok) return { translated: text };
+        const data = await res.json();
+        if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+        return data;
+      }
+
+      // Standard or Superfast → use translate-free
+      const res = await fetch('/api/translate-free', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text, sourceLang, targetLang,
+          userEmail: userEmail || undefined,
+          superfast: translationMode === 'superfast' ? true : undefined,
+          userProviderPrefs: translationProviders,
+        })
+      });
+      if (!res.ok) return { translated: text };
+      const data = await res.json();
+      if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+      return data;
+    }
+
+    const res = await fetch('/api/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text,
+        sourceLang,
+        targetLang,
+        sourceLangName,
+        targetLangName,
+        roomId,
+        aiModel: prefsRef.current?.aiModel || undefined,
+        ...options,
+        userToken: getEffectiveToken()
+      })
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      if (res.status === 402) throw new Error(errData.error || 'No credits');
+      throw new Error('Translation error');
+    }
+    const result = await res.json();
+
+    // ── Cache the result ──
+    if (result.translated) {
+      const cache = translationCacheRef.current;
+      cache.set(cacheKey, { translated: result.translated, ts: Date.now() });
+      // LRU cap: keep max 200 entries
+      if (cache.size > 200) {
+        const oldest = cache.keys().next().value;
+        cache.delete(oldest);
+      }
+    }
+
+    return result;
+  }, [roomId, isTrialRef, freeCharsRef, prefsRef, getEffectiveToken, trackFreeChars, userEmail]);
+
+  /**
+   * Get primary target language info (2-person chat shortcut).
+   */
+  const getTargetLangInfo = useCallback(() => {
+    const currentMyLang = myLangRef.current;
+    const currentRoomInfo = roomInfoRef.current;
+    const currentPrefs = prefsRef.current;
+    const myL = getLang(currentMyLang);
+    let otherLangCode = null;
+    if (currentRoomInfo && currentRoomInfo.members) {
+      const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
+      if (other) otherLangCode = other.lang;
+    }
+    if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
+    return { myL, otherL: getLang(otherLangCode) };
+  }, [myLangRef, roomInfoRef, prefsRef]);
+
+  /**
+   * Get ALL unique target languages from room members (excluding sender's lang).
+   * For multi-language group chat: translate once per unique target language.
+   */
+  const getAllTargetLangs = useCallback(() => {
+    const currentMyLang = myLangRef.current;
+    const currentRoomInfo = roomInfoRef.current;
+    const currentPrefs = prefsRef.current;
+    const myL = getLang(currentMyLang);
+
+    if (!currentRoomInfo?.members) {
+      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
+      return { myL, targetLangs: [getLang(fallbackCode)] };
+    }
+
+    const uniqueLangCodes = new Set();
+    for (const m of currentRoomInfo.members) {
+      if (m.name !== currentPrefs.name && m.lang && m.lang !== currentMyLang) {
+        uniqueLangCodes.add(m.lang);
+      }
+    }
+
+    if (uniqueLangCodes.size === 0) {
+      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
+      return { myL, targetLangs: [getLang(fallbackCode)] };
+    }
+
+    const targetLangs = [...uniqueLangCodes].map(code => getLang(code));
+    return { myL, targetLangs };
+  }, [myLangRef, roomInfoRef, prefsRef]);
+
+  /**
+   * Translate text to ALL target languages in parallel.
+   * Returns { translations: { "en": "Hello", "th": "สวัสดี" }, primaryTranslated, primaryTargetLang }
+   */
+  const translateToAllTargets = useCallback(async (text, myL, targetLangs, options = {}) => {
+    const results = await Promise.allSettled(
+      targetLangs.map(tL =>
+        translateUniversal(text, myL.code, tL.code, myL.name, tL.name, options)
+          .then(data => ({ langCode: tL.code, translated: data.translated || '' }))
+          .catch(() => ({ langCode: tL.code, translated: '' }))
+      )
+    );
+
+    const translations = {};
+    let primaryTranslated = '';
+    let primaryTargetLang = targetLangs[0]?.code || 'en';
+
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value.translated) {
+        translations[r.value.langCode] = r.value.translated;
+        if (!primaryTranslated) {
+          primaryTranslated = r.value.translated;
+          primaryTargetLang = r.value.langCode;
+        }
+      }
+    }
+
+    return { translations, primaryTranslated, primaryTargetLang };
+  }, [translateUniversal]);
+
+  return {
+    translateUniversal,
+    sendMessage,
+    getTargetLangInfo,
+    getAllTargetLangs,
+    translateToAllTargets,
+  };
+}

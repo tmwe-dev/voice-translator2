@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, isWhisperPrimaryLang, STT_CONFIDENCE_THRESHOLD, STT_LOW_CONFIDENCE_COUNT } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
+import useDeepgramSTT from './useDeepgramSTT.js';
+import useTranslationAPI from './useTranslationAPI.js';
 
 // ═══════════════════════════════════════════════════════════════
 // FASE 10: Simplified Translation Pipeline
@@ -17,6 +19,11 @@ import { t } from '../lib/i18n.js';
 // - Partner doesn't see incomplete/wrong text (privacy)
 // - No chunk context errors, no review overhead
 // - Simpler, more reliable code
+//
+// Architecture:
+// - useTranslationAPI: Translation calls, caching, multi-target
+// - useDeepgramSTT: Deepgram WebSocket streaming STT
+// - useTranslation: Orchestration, speech recognition, VAD
 // ═══════════════════════════════════════════════════════════════
 
 export default function useTranslation({
@@ -90,41 +97,41 @@ export default function useTranslation({
   const translatedChunksRef = useRef([]);
   const reviewTimerRef = useRef(null);
 
-  // Deepgram Streaming STT refs
-  const deepgramAvailableRef = useRef(null); // null = checking, true/false
-  const deepgramWsRef = useRef(null);
-  const deepgramStreamRef = useRef(null);
-  const deepgramProcessorRef = useRef(null);
-  const deepgramAudioCtxRef = useRef(null);
-  const deepgramKeyRef = useRef(null);
+  // ── Extracted hooks ──
 
-  // Check Deepgram availability on mount
-  useEffect(() => {
-    let cancelled = false;
-    async function checkDeepgram() {
-      try {
-        const res = await fetch('/api/stt-token', { method: 'POST' });
-        if (!cancelled) {
-          if (res.ok) {
-            const data = await res.json();
-            deepgramKeyRef.current = data.key;
-            deepgramAvailableRef.current = true;
-            console.log('[STT] Deepgram streaming available');
-          } else {
-            deepgramAvailableRef.current = false;
-          }
-        }
-      } catch {
-        if (!cancelled) deepgramAvailableRef.current = false;
-      }
-    }
-    checkDeepgram();
-    return () => { cancelled = true; };
-  }, []);
+  const { deepgramAvailableRef, startDeepgramStreaming, stopDeepgramStreaming } = useDeepgramSTT({
+    allWordsRef,
+    streamingModeRef,
+    setStreamingMsg,
+    setRecording,
+    setSpeakingState,
+    roomId,
+    unlockAudio,
+    speakingKeepAliveRef,
+  });
 
-  // ── Translation cache: avoid re-translating identical text ──
-  // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
-  const translationCacheRef = useRef(new Map());
+  const {
+    translateUniversal,
+    sendMessage,
+    getTargetLangInfo,
+    getAllTargetLangs,
+    translateToAllTargets,
+  } = useTranslationAPI({
+    myLangRef,
+    roomInfoRef,
+    prefsRef,
+    roomId,
+    roomContextRef,
+    isTrialRef,
+    freeCharsRef,
+    useOwnKeys,
+    getEffectiveToken,
+    refreshBalance,
+    trackFreeChars,
+    userEmail,
+    sentByMeRef,
+    roomSessionTokenRef,
+  });
 
   // Cached mime type detection — avoid recalculating on every recording
   function getRecorderMime() {
@@ -139,205 +146,6 @@ export default function useTranslation({
   }
 
   // =============================================
-  // Send Message
-  // =============================================
-  async function sendMessage(original, translated, sourceLang, targetLang, translations) {
-    if (!roomId) return null;
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          sender: roomSessionTokenRef?.current ? undefined : prefsRef.current.name,
-          roomSessionToken: roomSessionTokenRef?.current || null,
-          original,
-          translated,
-          sourceLang,
-          targetLang,
-          translations: translations || null, // Multi-language: { "en": "Hello", "th": "สวัสดี" }
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.message?.id && sentByMeRef) {
-          sentByMeRef.current.add(data.message.id);
-        }
-        return data;
-      }
-    } catch (e) {
-      console.error('[sendMessage] Error:', e);
-    }
-    return null;
-  }
-
-  // =============================================
-  // Translation API — single call
-  // =============================================
-  async function translateUniversal(text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) {
-    // ── Cache lookup: exact match avoids redundant API calls ──
-    const cacheKey = `${text}|${sourceLang}|${targetLang}`;
-    const cached = translationCacheRef.current.get(cacheKey);
-    if (cached && (Date.now() - cached.ts) < 300000) { // 5 min TTL
-      return { translated: cached.translated, cached: true };
-    }
-
-    if (isTrialRef.current) {
-      if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
-        return { translated: text, fallback: true, limitExceeded: true };
-      }
-      // Check translation mode from prefs
-      const translationMode = prefsRef.current?.translationMode || 'standard';
-      const translationProviders = prefsRef.current?.translationProviders;
-
-      // Guaranteed mode → use consensus endpoint (3 providers in parallel)
-      if (translationMode === 'guaranteed') {
-        const res = await fetch('/api/translate-consensus', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
-        });
-        if (!res.ok) return { translated: text };
-        const data = await res.json();
-        if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
-        return data;
-      }
-
-      // Standard or Superfast → use translate-free with mode flags
-      const res = await fetch('/api/translate-free', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text, sourceLang, targetLang,
-          userEmail: userEmail || undefined,
-          superfast: translationMode === 'superfast' ? true : undefined,
-          userProviderPrefs: translationProviders,
-        })
-      });
-      if (!res.ok) return { translated: text };
-      const data = await res.json();
-      if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
-      return data;
-    }
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        sourceLang,
-        targetLang,
-        sourceLangName,
-        targetLangName,
-        roomId,
-        aiModel: prefsRef.current?.aiModel || undefined,
-        ...options,
-        userToken: getEffectiveToken()
-      })
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      if (res.status === 402) throw new Error(errData.error || 'No credits');
-      throw new Error('Translation error');
-    }
-    const result = await res.json();
-
-    // ── Cache the result ──
-    if (result.translated) {
-      const cache = translationCacheRef.current;
-      cache.set(cacheKey, { translated: result.translated, ts: Date.now() });
-      // LRU cap: keep max 200 entries
-      if (cache.size > 200) {
-        const oldest = cache.keys().next().value;
-        cache.delete(oldest);
-      }
-    }
-
-    return result;
-  }
-
-  // =============================================
-  // Get target language info
-  // =============================================
-  function getTargetLangInfo() {
-    const currentMyLang = myLangRef.current;
-    const currentRoomInfo = roomInfoRef.current;
-    const currentPrefs = prefsRef.current;
-    const myL = getLang(currentMyLang);
-    let otherLangCode = null;
-    if (currentRoomInfo && currentRoomInfo.members) {
-      const other = currentRoomInfo.members.find(m => m.name !== currentPrefs.name);
-      if (other) otherLangCode = other.lang;
-    }
-    if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
-    return { myL, otherL: getLang(otherLangCode) };
-  }
-
-  /**
-   * Get ALL unique target languages from room members (excluding sender's lang).
-   * For multi-language group chat: translate once per unique target language.
-   */
-  function getAllTargetLangs() {
-    const currentMyLang = myLangRef.current;
-    const currentRoomInfo = roomInfoRef.current;
-    const currentPrefs = prefsRef.current;
-    const myL = getLang(currentMyLang);
-
-    if (!currentRoomInfo?.members) {
-      // Fallback for no room info
-      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
-      return { myL, targetLangs: [getLang(fallbackCode)] };
-    }
-
-    // Collect all unique languages from other members
-    const uniqueLangCodes = new Set();
-    for (const m of currentRoomInfo.members) {
-      if (m.name !== currentPrefs.name && m.lang && m.lang !== currentMyLang) {
-        uniqueLangCodes.add(m.lang);
-      }
-    }
-
-    // If no other languages found (maybe same lang or alone), fallback
-    if (uniqueLangCodes.size === 0) {
-      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
-      return { myL, targetLangs: [getLang(fallbackCode)] };
-    }
-
-    const targetLangs = [...uniqueLangCodes].map(code => getLang(code));
-    return { myL, targetLangs };
-  }
-
-  /**
-   * Translate text to ALL target languages in parallel.
-   * Returns { translations: { "en": "Hello", "th": "สวัสดี" }, primaryTranslated, primaryTargetLang }
-   */
-  async function translateToAllTargets(text, myL, targetLangs, options = {}) {
-    // Translate to all target languages in parallel
-    const results = await Promise.allSettled(
-      targetLangs.map(tL =>
-        translateUniversal(text, myL.code, tL.code, myL.name, tL.name, options)
-          .then(data => ({ langCode: tL.code, translated: data.translated || '' }))
-          .catch(() => ({ langCode: tL.code, translated: '' }))
-      )
-    );
-
-    const translations = {};
-    let primaryTranslated = '';
-    let primaryTargetLang = targetLangs[0]?.code || 'en';
-
-    for (const r of results) {
-      if (r.status === 'fulfilled' && r.value.translated) {
-        translations[r.value.langCode] = r.value.translated;
-        if (!primaryTranslated) {
-          primaryTranslated = r.value.translated;
-          primaryTargetLang = r.value.langCode;
-        }
-      }
-    }
-
-    return { translations, primaryTranslated, primaryTargetLang };
-  }
-
-  // =============================================
   // FASE 10: Simplified speech handler
   // Just accumulates text — no chunks, no live broadcast
   // =============================================
@@ -349,8 +157,6 @@ export default function useTranslation({
         const confidence = event.results[i][0].confidence;
 
         // ── FASE 7: Confidence monitoring ──
-        // Track low-confidence results — if too many consecutive, the session
-        // will auto-fallback to Whisper on next recording via whisperOnlyRef
         if (typeof confidence === 'number' && confidence > 0) {
           if (confidence < STT_CONFIDENCE_THRESHOLD) {
             lowConfidenceCountRef.current++;
@@ -360,89 +166,43 @@ export default function useTranslation({
               whisperOnlyRef.current = true;
             }
           } else {
-            // Reset counter on good confidence
             lowConfidenceCountRef.current = 0;
           }
         }
 
-        // Chrome sends duplicates at the same index — skip those
-        const key = i + ':' + text;
-        if (text && !processedFinals.has(key)) {
-          processedFinals.add(key);
-          const existing = allWordsRef.current.trim();
-
-          // MINIMAL dedup: only catch Chrome's re-send of the FULL accumulated
-          // text (Chrome sometimes sends the entire transcript as a new final).
-          // Do NOT remove intentional repetitions like "Come state? Come state?"
-          if (existing.length > 10 && text.length > existing.length * 0.8 && text.startsWith(existing)) {
-            // Chrome re-sent the full accumulated text + new content
-            text = text.slice(existing.length).trim();
-            if (!text) continue;
-          }
-
-          // Only dedup overlaps of 4+ words (Chrome restart re-sends last few words)
-          if (existing.length > 0) {
-            const existingWords = existing.split(/\s+/);
-            const textWords = text.split(/\s+/);
-            // Only check overlap if there are enough words to be meaningful
-            if (existingWords.length >= 4 && textWords.length >= 4) {
-              const maxOverlap = Math.min(existingWords.length, textWords.length, 6);
-              let overlapFound = 0;
-              for (let ol = maxOverlap; ol >= 4; ol--) {
-                const suffix = existingWords.slice(-ol).join(' ').toLowerCase();
-                const prefix = textWords.slice(0, ol).join(' ').toLowerCase();
-                if (suffix === prefix) { overlapFound = ol; break; }
-              }
-              if (overlapFound > 0) {
-                text = textWords.slice(overlapFound).join(' ').trim();
-                if (!text) continue;
-              }
-            }
-          }
-
-          lastInterimRef.current = '';
-          allWordsRef.current = (allWordsRef.current + ' ' + text).trim();
-          setStreamingMsg(prev => (prev ? { ...prev, original: allWordsRef.current } : null));
-        }
+        if (!text || processedFinals.has(i)) continue;
+        processedFinals.add(i);
+        allWordsRef.current += (allWordsRef.current ? ' ' : '') + text;
       } else {
         interimTranscript += event.results[i][0].transcript;
       }
     }
-    if (interimTranscript) {
-      lastInterimRef.current = interimTranscript.trim();
-      const preview = allWordsRef.current + ' ' + interimTranscript.trim();
-      setStreamingMsg(prev => (prev ? { ...prev, original: preview } : null));
-    }
+    // Show interim preview
+    const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript : '');
+    if (preview) setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+    lastInterimRef.current = interimTranscript;
   }
 
   // =============================================
   // FASE 10: Start streaming — simplified
   // =============================================
   async function startStreamingTranslation() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const currentLang = myLangRef.current;
 
     // ── Deepgram streaming: highest priority when available ──
-    // Real-time WebSocket STT with server-grade accuracy for all languages
-    if (deepgramAvailableRef.current && deepgramKeyRef.current) {
+    if (deepgramAvailableRef.current && !isTrialRef.current) {
       try {
         const started = await startDeepgramStreaming(currentLang);
         if (started) return; // Deepgram took over
-      } catch (e) {
-        console.warn('[STT] Deepgram start failed, falling back:', e.message);
-      }
+      } catch {}
     }
 
     // ── FASE 1b: Hybrid STT routing ──
-    // For Asian/tonal languages where browser SpeechRecognition is unreliable,
-    // OR if auto-switched to Whisper due to low confidence,
-    // skip SpeechRecognition entirely — use only MediaRecorder → Whisper
     const useWhisperOnly = isWhisperPrimaryLang(currentLang) || whisperOnlyRef.current;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 
     if (!SpeechRecognition || useWhisperOnly) {
-      if (useWhisperOnly && !isTrialRef.current) {
-        console.log(`[STT] Whisper-only mode for lang=${currentLang} (whisperPrimary=${isWhisperPrimaryLang(currentLang)}, autoSwitch=${whisperOnlyRef.current})`);
-      }
       startClassicRecording();
       return;
     }
@@ -454,83 +214,55 @@ export default function useTranslation({
     allWordsRef.current = '';
     lastInterimRef.current = '';
     streamingModeRef.current = true;
-    backupChunksRef.current = [];
     lowConfidenceCountRef.current = 0;
-    // Only show original (what user is saying) — no translation preview
     setStreamingMsg({ original: '', translated: null, isStreaming: true });
 
-    // Backup audio recording (fallback if speech recognition captures nothing)
-    if (!isTrialRef.current) {
-      try {
-        const stream = await getMicStream();
-        backupStreamRef.current = stream;
-        const backup = new MediaRecorder(stream, { mimeType: getRecorderMime() });
-        backup.ondataavailable = e => {
-          if (e.data.size > 0) backupChunksRef.current.push(e.data);
-        };
-        backupRecRef.current = backup;
-        backup.start(250);
-      } catch (e) {
-        setRecording(false);
-        streamingModeRef.current = false;
-        setStreamingMsg(null);
-        return;
-      }
-    }
-
     const recognition = new SpeechRecognition();
-    recognition.lang = getLang(currentLang).speech;
+    const langObj = getLang(currentLang);
+    recognition.lang = langObj?.speech || 'en-US';
     recognition.interimResults = true;
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
     speechRecRef.current = recognition;
 
+    // Backup recording — capture audio in parallel in case STT fails
+    try {
+      const stream = await getMicStream();
+      backupStreamRef.current = stream;
+      backupChunksRef.current = [];
+      backupRecRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
+      backupRecRef.current.ondataavailable = e => {
+        if (e.data.size > 0) backupChunksRef.current.push(e.data);
+      };
+      backupRecRef.current.start(100);
+    } catch {}
+
     let processedFinals = new Set();
     let errorCount = 0;
+
     recognition.onresult = (event) => handleSpeechResult(event, processedFinals);
 
     // ── FASE 7: Error handling with backoff ──
-    let restartBackoff = 0;
     recognition.onerror = (event) => {
-      const err = event.error;
-      // 'no-speech' is normal (user paused) — don't count
-      if (err === 'no-speech') return;
+      if (event.error === 'no-speech') return;
       errorCount++;
-      restartBackoff = Math.min(restartBackoff + 1, 5);
-      console.warn(`[STT] SpeechRecognition error: ${err} (count=${errorCount})`);
-
-      // After 3 non-trivial errors, auto-switch to Whisper for this session
+      console.warn(`[STT] Error: ${event.error} (count=${errorCount})`);
       if (errorCount >= 3 && !whisperOnlyRef.current) {
-        console.warn('[STT] Too many errors — enabling Whisper-only mode for this session');
+        console.warn('[STT] Too many errors — enabling Whisper-only for this session');
         whisperOnlyRef.current = true;
-        streamingModeRef.current = false;
-      }
-
-      // 'not-allowed' or 'service-not-available' are fatal — stop trying
-      if (err === 'not-allowed' || err === 'service-not-available') {
-        streamingModeRef.current = false;
       }
     };
 
     recognition.onend = () => {
-      // Only restart if still in streaming mode AND this is still our active recognition
-      if (streamingModeRef.current && speechRecRef.current === recognition) {
+      if (streamingModeRef.current && !stoppingRef.current) {
         processedFinals = new Set();
-        // Backoff delay to prevent rapid restart loops
-        const delay = restartBackoff * 200;
-        if (delay > 0) {
-          setTimeout(() => {
-            if (streamingModeRef.current && speechRecRef.current === recognition) {
-              try { recognition.start(); } catch {}
-            }
-          }, delay);
-        } else {
-          try { recognition.start(); } catch {}
-        }
+        try { recognition.start(); } catch {}
       }
     };
-    try { recognition.start(); } catch {}
-    // Keepalive: refresh speaking state every 15s so partner keeps seeing dots
+
+    recognition.start();
+
+    // Keepalive
     if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
     speakingKeepAliveRef.current = setInterval(() => {
       if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
@@ -543,239 +275,117 @@ export default function useTranslation({
   async function stopStreamingTranslation() {
     if (stoppingRef.current) return;
     stoppingRef.current = true;
-    streamingModeRef.current = false;
-    setRecording(false);
-    if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
-    if (roomId) setSpeakingState(roomId, false);
 
-    // Stop Deepgram streaming (if active)
-    stopDeepgramStreaming();
+    // Stop keepalive
+    if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
 
     // Stop speech recognition
+    streamingModeRef.current = false;
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
       speechRecRef.current = null;
     }
 
-    // Stop backup audio recording — setup onstop BEFORE calling stop()
-    let backupBlob = null;
-    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
-      const recorder = backupRecRef.current;
-      await new Promise(resolve => {
-        recorder.onstop = () => resolve();
-        try { recorder.stop(); } catch { resolve(); }
-      });
-      if (backupChunksRef.current.length > 0) {
-        try { backupBlob = new Blob(backupChunksRef.current, { type: recorder.mimeType }); } catch {}
-      }
-    }
-    backupRecRef.current = null;
-    backupStreamRef.current = null;
-    backupChunksRef.current = [];
+    // Stop Deepgram if active
+    stopDeepgramStreaming();
 
-    // Capture any pending interim text
-    if (lastInterimRef.current) {
-      const pending = lastInterimRef.current.trim();
-      const existing = allWordsRef.current.trim();
-      if (pending && !existing.endsWith(pending) && !existing.includes(pending)) {
-        allWordsRef.current = (existing + ' ' + pending).trim();
-      }
-      lastInterimRef.current = '';
-    }
-
+    // Collect accumulated text
     const allOriginal = allWordsRef.current.trim();
 
-    // If no text captured, try audio fallback
-    if (!allOriginal && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
-      setStreamingMsg(null);
-      allWordsRef.current = '';
-      stoppingRef.current = false;
-      try { await processAndSendAudio(backupBlob); } catch {}
-      return;
+    // If no text accumulated but backup recording exists → fallback to Whisper
+    if (!allOriginal && backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      const r = backupRecRef.current;
+      return new Promise(resolve => {
+        r.onstop = async () => {
+          const blob = new Blob(backupChunksRef.current, { type: r.mimeType });
+          backupRecRef.current = null;
+          backupChunksRef.current = [];
+          backupStreamRef.current = null;
+          setRecording(false);
+          stoppingRef.current = false;
+          if (roomId) setSpeakingState(roomId, false);
+          setStreamingMsg(null);
+          if (blob.size > 1000) {
+            try { await processAndSendAudio(blob); } catch {}
+          }
+          resolve();
+        };
+        try { r.stop(); } catch {
+          setRecording(false); stoppingRef.current = false;
+          if (roomId) setSpeakingState(roomId, false);
+          setStreamingMsg(null);
+          resolve();
+        }
+      });
     }
 
+    // Stop backup recording (discard — we have STT text)
+    if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+      backupRecRef.current.onstop = () => {};
+      try { backupRecRef.current.stop(); } catch {}
+    }
+    backupRecRef.current = null;
+    backupChunksRef.current = [];
+    backupStreamRef.current = null;
+
     if (!allOriginal) {
-      setStreamingMsg(null);
-      allWordsRef.current = '';
+      setRecording(false);
       stoppingRef.current = false;
+      if (roomId) setSpeakingState(roomId, false);
+      setStreamingMsg(null);
       return;
     }
 
     // ── Multi-language translation — translate to ALL target languages ──
-    const { myL, targetLangs } = getAllTargetLangs();
-    const translateOpts = {
-      domainContext: roomContextRef.current.contextPrompt || undefined,
-      description: roomContextRef.current.description || undefined,
-      roomMode: roomInfoRef.current?.mode || undefined,
-      nativeLang: myLangRef.current?.code || undefined,
-    };
-
-    let translations = {};
-    let primaryTranslated = '';
-    let primaryTargetLang = targetLangs[0]?.code || 'en';
+    setStreamingMsg({ original: allOriginal, translated: '...', isStreaming: false });
+    setRecording(false);
+    if (roomId) setSpeakingState(roomId, false);
 
     try {
+      const { myL, targetLangs } = getAllTargetLangs();
+      const translateOpts = {
+        domainContext: roomContextRef.current.contextPrompt || undefined,
+        description: roomContextRef.current.description || undefined,
+        roomMode: roomInfoRef.current?.mode || undefined,
+        nativeLang: myLangRef.current?.code || undefined,
+      };
+
+      let translations = {};
+      let primaryTranslated = '';
+      let primaryTargetLang = targetLangs[0]?.code || 'en';
+
       if (targetLangs.length === 1) {
-        // Single target — faster path (no parallel overhead)
         const data = await translateUniversal(allOriginal, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
         if (data.translated) {
           primaryTranslated = data.translated;
           primaryTargetLang = targetLangs[0].code;
           translations[targetLangs[0].code] = data.translated;
         }
+        if (data.limitExceeded) {
+          setStreamingMsg(null);
+          stoppingRef.current = false;
+          return;
+        }
       } else {
-        // Multiple targets — translate in parallel
         const result = await translateToAllTargets(allOriginal, myL, targetLangs, translateOpts);
         translations = result.translations;
         primaryTranslated = result.primaryTranslated;
         primaryTargetLang = result.primaryTargetLang;
       }
-    } catch (e) {
-      console.error('[Translate] Error:', e);
-    }
 
-    // If translation failed entirely, try audio fallback
-    if (!primaryTranslated && backupBlob && backupBlob.size > 1000 && !isTrialRef.current) {
       setStreamingMsg(null);
       allWordsRef.current = '';
-      stoppingRef.current = false;
-      try { await processAndSendAudio(backupBlob); } catch {}
-      return;
+
+      if (primaryTranslated && roomId) {
+        await sendMessage(allOriginal, primaryTranslated, myL.code, primaryTargetLang, translations);
+        if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+      }
+    } catch (e) {
+      console.error('[stopStreaming] Translation error:', e);
+      setStreamingMsg(null);
     }
 
-    // Clear streaming bubble BEFORE sending
-    setStreamingMsg(null);
-
-    // Send message with all translations
-    if (primaryTranslated && roomId) {
-      sendMessage(allOriginal, primaryTranslated, myL.code, primaryTargetLang, translations).catch(() => {});
-    }
-
-    allWordsRef.current = '';
-    if (!isTrialRef.current && !useOwnKeys) refreshBalance();
     stoppingRef.current = false;
-  }
-
-  // =============================================
-  // Deepgram Streaming STT (highest quality, server-grade)
-  // =============================================
-  async function startDeepgramStreaming(langObj) {
-    const speechLang = getLang(langObj)?.speech || 'en-US';
-    const dgLang = speechLang.split('-')[0]; // 'it-IT' → 'it'
-
-    unlockAudio();
-    setRecording(true);
-    if (roomId) setSpeakingState(roomId, true);
-    allWordsRef.current = '';
-    streamingModeRef.current = true;
-    setStreamingMsg({ original: '', translated: null, isStreaming: true });
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
-    });
-    deepgramStreamRef.current = stream;
-
-    const params = new URLSearchParams({
-      model: 'nova-2', language: dgLang, smart_format: 'true',
-      interim_results: 'true', utterance_end_ms: '1500',
-      encoding: 'linear16', sample_rate: '16000', channels: '1',
-    });
-
-    const ws = new WebSocket(
-      `wss://api.deepgram.com/v1/listen?${params.toString()}`,
-      ['token', deepgramKeyRef.current]
-    );
-    deepgramWsRef.current = ws;
-
-    return new Promise((resolve) => {
-      ws.onopen = () => {
-        console.log('[STT-Deepgram] WebSocket connected');
-        // Start audio capture
-        try {
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-          deepgramAudioCtxRef.current = audioCtx;
-          const source = audioCtx.createMediaStreamSource(stream);
-          const processor = audioCtx.createScriptProcessor(4096, 1, 1);
-          deepgramProcessorRef.current = processor;
-
-          processor.onaudioprocess = (e) => {
-            if (ws.readyState !== WebSocket.OPEN) return;
-            const input = e.inputBuffer.getChannelData(0);
-            const pcm16 = new Int16Array(input.length);
-            for (let i = 0; i < input.length; i++) {
-              const s = Math.max(-1, Math.min(1, input[i]));
-              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-            }
-            ws.send(pcm16.buffer);
-          };
-          source.connect(processor);
-          processor.connect(audioCtx.destination);
-        } catch (e) {
-          console.error('[STT-Deepgram] Audio capture error:', e);
-        }
-
-        // Keepalive
-        if (speakingKeepAliveRef.current) clearInterval(speakingKeepAliveRef.current);
-        speakingKeepAliveRef.current = setInterval(() => {
-          if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
-        }, 15000);
-
-        resolve(true);
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'Results') {
-            const transcript = data.channel?.alternatives?.[0]?.transcript || '';
-            if (!transcript) return;
-            if (data.is_final) {
-              allWordsRef.current += (allWordsRef.current ? ' ' : '') + transcript;
-              setStreamingMsg(prev => prev ? { ...prev, original: allWordsRef.current } : null);
-            } else {
-              const preview = allWordsRef.current + (allWordsRef.current ? ' ' : '') + transcript;
-              setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
-            }
-          }
-        } catch {}
-      };
-
-      ws.onerror = () => {
-        console.warn('[STT-Deepgram] WebSocket error');
-        resolve(false);
-      };
-
-      ws.onclose = () => {
-        console.log('[STT-Deepgram] WebSocket closed');
-      };
-
-      // Timeout: if WebSocket doesn't connect in 3s, fall back
-      setTimeout(() => resolve(false), 3000);
-    });
-  }
-
-  function stopDeepgramStreaming() {
-    if (deepgramProcessorRef.current) {
-      try { deepgramProcessorRef.current.disconnect(); } catch {}
-      deepgramProcessorRef.current = null;
-    }
-    if (deepgramAudioCtxRef.current && deepgramAudioCtxRef.current.state !== 'closed') {
-      try { deepgramAudioCtxRef.current.close(); } catch {}
-      deepgramAudioCtxRef.current = null;
-    }
-    if (deepgramStreamRef.current) {
-      deepgramStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
-      deepgramStreamRef.current = null;
-    }
-    if (deepgramWsRef.current) {
-      try {
-        if (deepgramWsRef.current.readyState === WebSocket.OPEN) {
-          deepgramWsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
-        }
-        deepgramWsRef.current.close();
-      } catch {}
-      deepgramWsRef.current = null;
-    }
   }
 
   // =============================================
@@ -836,7 +446,6 @@ export default function useTranslation({
     if (!res.ok) throw new Error('Server error');
     const { original, translated } = await res.json();
     if (original && roomId) {
-      // Multi-lang: translate to remaining target languages if needed
       let translations = { [primaryTarget.code]: translated || '' };
       if (targetLangs.length > 1 && original) {
         const otherTargets = targetLangs.slice(1);
@@ -864,30 +473,26 @@ export default function useTranslation({
   // Cancel Recording — discard without sending
   // =============================================
   function cancelRecording() {
-    // Stop keepalive
     if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
-    // Stop speech recognition
     streamingModeRef.current = false;
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
       speechRecRef.current = null;
     }
-    // Stop backup audio recording
+    stopDeepgramStreaming();
     if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
-      backupRecRef.current.onstop = () => {}; // prevent sending
+      backupRecRef.current.onstop = () => {};
       try { backupRecRef.current.stop(); } catch {}
     }
     backupRecRef.current = null;
     backupStreamRef.current = null;
     backupChunksRef.current = [];
-    // Stop classic recording
     if (recRef.current && recRef.current.state !== 'inactive') {
-      recRef.current.onstop = () => {}; // prevent sending
+      recRef.current.onstop = () => {};
       try { recRef.current.stop(); } catch {}
     }
     recRef.current = null;
     chunksRef.current = [];
-    // Clear all state
     allWordsRef.current = '';
     lastInterimRef.current = '';
     stoppingRef.current = false;
@@ -959,7 +564,6 @@ export default function useTranslation({
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const currentLang = myLangRef.current;
 
-    // ── FASE 1b: Hybrid STT for FreeTalk ──
     const useWhisperOnly = isWhisperPrimaryLang(currentLang) || whisperOnlyRef.current;
     const canUseBrowserSTT = SpeechRecognition && !useWhisperOnly;
 
@@ -1000,7 +604,6 @@ export default function useTranslation({
         let ftErrorCount = 0;
         recognition.onresult = (event) => handleSpeechResult(event, ftProcessedFinals);
 
-        // ── FASE 7: Error handling for FreeTalk ──
         recognition.onerror = (event) => {
           if (event.error === 'no-speech') return;
           ftErrorCount++;
@@ -1020,8 +623,6 @@ export default function useTranslation({
         recognition.start();
       } else if (useWhisperOnly) {
         console.log(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
-        // In Whisper-only mode, FreeTalk still uses VAD but records with MediaRecorder
-        // and sends chunks to Whisper on silence detection (handled in the check() loop below)
       }
 
       function check() {
@@ -1030,7 +631,6 @@ export default function useTranslation({
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
 
-        // TMWEngine pattern: normalized level 0-1 for visual feedback
         const normalizedLevel = Math.min(avg / 128, 1);
         setVadAudioLevel(normalizedLevel);
 
@@ -1040,16 +640,13 @@ export default function useTranslation({
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
           }
-          // Clear countdown (TMWEngine pattern)
           if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
           setVadSilenceCountdown(null);
           if (canUseBrowserSTT) {
-            // Browser STT mode: SpeechRecognition is already running
             if (!streamingMsg) setStreamingMsg({ original: '', translated: null, isStreaming: true });
             setRecording(true);
             if (roomId) setSpeakingState(roomId, true);
           } else {
-            // Whisper-only / no-SpeechRecognition mode: record with MediaRecorder
             const ch = [];
             const r = new MediaRecorder(stream, { mimeType: getRecorderMime() });
             r.ondataavailable = e => { if (e.data.size > 0) ch.push(e.data); };
@@ -1064,7 +661,6 @@ export default function useTranslation({
           }
         } else if (avg <= threshold && isRec) {
           if (!silenceTimerRef.current) {
-            // TMWEngine pattern: visual countdown during silence detection
             const countdownStart = Date.now();
             vadCountdownRef.current = setInterval(() => {
               const elapsed = Date.now() - countdownStart;
@@ -1076,7 +672,6 @@ export default function useTranslation({
               if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
               setVadSilenceCountdown(null);
               if (canUseBrowserSTT) {
-                // Browser STT mode: translate accumulated text
                 isRec = false;
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
@@ -1092,7 +687,6 @@ export default function useTranslation({
                     nativeLang: myLangRef.current?.code || undefined,
                   };
 
-                  // Multi-language translation
                   let translations = {};
                   let primaryTranslated = '';
                   let primaryTargetLang = targetLangs[0]?.code || 'en';
@@ -1122,7 +716,6 @@ export default function useTranslation({
                   freeTalkSendingRef.current = false;
                 }
               } else {
-                // Whisper-only mode: stop recording, blob goes to processAndSendAudio via onstop
                 if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
                 isRec = false;
                 setRecording(false);
