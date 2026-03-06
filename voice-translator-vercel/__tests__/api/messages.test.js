@@ -4,11 +4,18 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockAddMessage = vi.fn();
 const mockGetMessages = vi.fn();
 const mockGetRoom = vi.fn();
+// resolveRoomIdentity: with no token, falls back to name
+const mockResolveRoomIdentity = vi.fn(async (token, name, roomId) => {
+  if (token) return { name, role: 'host', verified: true };
+  if (name) return { name, role: 'unknown', verified: false };
+  return null;
+});
 
 vi.mock('../../app/lib/store.js', () => ({
   addMessage: (...args) => mockAddMessage(...args),
   getMessages: (...args) => mockGetMessages(...args),
   getRoom: (...args) => mockGetRoom(...args),
+  resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
 }));
 
 // Mock validate
@@ -74,9 +81,9 @@ describe('POST /api/messages', () => {
     expect(res.status).toBe(400);
   });
 
-  it('rejects without sender', async () => {
+  it('rejects without sender (no identity)', async () => {
     const res = await POST(makeReq({ roomId: 'ABC', original: 'Ciao' }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 
   it('rejects without original text', async () => {
@@ -118,9 +125,9 @@ describe('GET /api/messages', () => {
     expect(res.status).toBe(400);
   });
 
-  it('returns 400 without name', async () => {
+  it('returns 401 without name or token', async () => {
     const res = await GET(makeGetReq({ room: 'ABC', after: '0' }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(401);
   });
 
   it('returns 403 for non-member', async () => {

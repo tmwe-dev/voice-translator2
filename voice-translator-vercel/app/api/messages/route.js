@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addMessage, getMessages, getRoom } from '../../lib/store.js';
+import { addMessage, getMessages, getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, rateLimit, getClientIP } from '../../lib/validate.js';
 
 // POST /api/messages - Send a translation to the room
@@ -15,15 +15,20 @@ export async function POST(req) {
     const roomId = sanitizeRoomId(body.roomId);
     const sender = sanitizeName(body.sender);
     const original = sanitizeText(body.original, 10000);
+    const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
 
-    if (!roomId || !sender || !original) {
-      return NextResponse.json({ error: 'roomId, sender, original required' }, { status: 400 });
+    if (!roomId || !original) {
+      return NextResponse.json({ error: 'roomId and original required' }, { status: 400 });
     }
+
+    // Resolve identity: prefer session token, fall back to sender name
+    const identity = await resolveRoomIdentity(roomSessionToken, sender, roomId);
+    if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     // Verify sender is actually a member of this room
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    const isMember = room.members.some(m => m.name === sender);
+    const isMember = room.members.some(m => m.name === identity.name);
     if (!isMember) return NextResponse.json({ error: 'Sender is not a room member' }, { status: 403 });
 
     const translated = sanitizeText(body.translated || '', 10000);
@@ -32,7 +37,7 @@ export async function POST(req) {
     const translations = sanitizeTranslations(body.translations);
 
     const msg = await addMessage(roomId, {
-      sender, original, sourceLang,
+      sender: identity.name, original, sourceLang,
       translated,
       targetLang,
       translations,
@@ -41,26 +46,30 @@ export async function POST(req) {
     return NextResponse.json({ message: msg });
   } catch (e) {
     console.error('Messages error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP - Poll for new messages
-// Requires `name` param to verify membership (prevents unauthorized message reading)
+// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP&rst=TOKEN - Poll for new messages
+// Supports room session token (rst) for server-verified identity, falls back to name
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const roomId = sanitizeRoomId(searchParams.get('room') || '');
     const name = sanitizeName(searchParams.get('name') || '');
+    const roomSessionToken = searchParams.get('rst') || null;
     const after = parseInt(searchParams.get('after') || '0', 10);
     if (!roomId) return NextResponse.json({ error: 'room required' }, { status: 400 });
-    if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 });
     if (isNaN(after) || after < 0) return NextResponse.json({ error: 'invalid after' }, { status: 400 });
+
+    // Resolve identity: prefer session token, fall back to name
+    const identity = await resolveRoomIdentity(roomSessionToken, name, roomId);
+    if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     // Verify requester is a member of this room
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    const isMember = room.members.some(m => m.name === name);
+    const isMember = room.members.some(m => m.name === identity.name);
     if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
 
     const msgs = await getMessages(roomId, after);

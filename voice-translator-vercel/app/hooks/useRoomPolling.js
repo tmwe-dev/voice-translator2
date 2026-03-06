@@ -24,6 +24,7 @@ export default function useRoomPolling({
   const sentByMeRef = useRef(new Set());
   const pollErrorCountRef = useRef(0);  // FASE 6B: track consecutive errors
   const [pollError, setPollError] = useState(false);
+  const roomSessionTokenRef = useRef(null); // Server-verified identity token
 
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -32,7 +33,8 @@ export default function useRoomPolling({
     setPollError(false);
     pollRef.current = setInterval(async () => {
       try {
-        const mRes = await fetch(`/api/messages?room=${rid}&name=${encodeURIComponent(prefsRef.current.name)}&after=${lastMsgRef.current}`);
+        const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
+        const mRes = await fetch(`/api/messages?room=${rid}&name=${encodeURIComponent(prefsRef.current.name)}&after=${lastMsgRef.current}${rstParam}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
           if (newMsgs && newMsgs.length > 0) {
@@ -68,7 +70,7 @@ export default function useRoomPolling({
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat', roomId: rid, name: prefsRef.current.name })
+          body: JSON.stringify({ action: 'heartbeat', roomId: rid, name: prefsRef.current.name, roomSessionToken: roomSessionTokenRef.current })
         });
         if (rRes.ok) {
           const { room } = await rRes.json();
@@ -124,6 +126,7 @@ export default function useRoomPolling({
           action: 'speaking',
           roomId: rid,
           name: prefsRef.current.name,
+          roomSessionToken: roomSessionTokenRef.current,
           speaking,
           liveText,
           typing
@@ -153,6 +156,7 @@ export default function useRoomPolling({
           action: 'changeLang',
           roomId,
           name: prefsRef.current.name,
+          roomSessionToken: roomSessionTokenRef.current,
           lang: newLang,
         })
       });
@@ -170,6 +174,7 @@ export default function useRoomPolling({
         action: 'speaking',
         roomId,
         name: prefsRef.current.name,
+        roomSessionToken: roomSessionTokenRef.current,
         speaking: false,
         typing: isTyping
       })
@@ -208,7 +213,9 @@ export default function useRoomPolling({
         })
       });
       if (!res.ok) throw new Error('Error');
-      const { room } = await res.json();
+      const data = await res.json();
+      const { room, roomSessionToken: token } = data;
+      if (token) roomSessionTokenRef.current = token;
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
@@ -238,7 +245,9 @@ export default function useRoomPolling({
         const err = await res.json();
         throw new Error(err.error || 'Room not found');
       }
-      const { room } = await res.json();
+      const data = await res.json();
+      const { room, roomSessionToken: token } = data;
+      if (token) roomSessionTokenRef.current = token;
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
@@ -252,6 +261,7 @@ export default function useRoomPolling({
 
   function leaveRoom() {
     stopPolling();
+    roomSessionTokenRef.current = null;
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);
@@ -282,6 +292,7 @@ export default function useRoomPolling({
     handleCreateRoom,
     handleJoinRoom,
     leaveRoom,
-    sentByMeRef
+    sentByMeRef,
+    roomSessionTokenRef
   };
 }

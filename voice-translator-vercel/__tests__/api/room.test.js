@@ -12,6 +12,13 @@ const mockUpdateHeartbeat = vi.fn();
 const mockSetSpeaking = vi.fn();
 const mockUpdateRoomMode = vi.fn();
 const mockChangeMemberLang = vi.fn();
+const mockCreateRoomSession = vi.fn().mockResolvedValue({ token: 'test-token-123' });
+// resolveRoomIdentity: with no token, falls back to name
+const mockResolveRoomIdentity = vi.fn(async (token, name, roomId) => {
+  if (token) return { name, role: 'host', verified: true };
+  if (name) return { name, role: 'unknown', verified: false };
+  return null;
+});
 
 vi.mock('../../app/lib/store.js', () => ({
   createRoom: (...args) => mockCreateRoom(...args),
@@ -21,6 +28,8 @@ vi.mock('../../app/lib/store.js', () => ({
   setSpeaking: (...args) => mockSetSpeaking(...args),
   updateRoomMode: (...args) => mockUpdateRoomMode(...args),
   changeMemberLang: (...args) => mockChangeMemberLang(...args),
+  createRoomSession: (...args) => mockCreateRoomSession(...args),
+  resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
 }));
 
 // Mock validate
@@ -49,14 +58,16 @@ beforeEach(() => {
 
 describe('POST /api/room', () => {
   describe('create', () => {
-    it('creates a room with valid params', async () => {
+    it('creates a room with valid params and returns session token', async () => {
       const room = { id: 'ABC123', host: 'Luca', members: [{ name: 'Luca', lang: 'it', role: 'host' }] };
       mockCreateRoom.mockResolvedValue(room);
       const res = await POST(makeReq({ action: 'create', name: 'Luca', lang: 'it' }));
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.room.id).toBe('ABC123');
+      expect(data.roomSessionToken).toBe('test-token-123');
       expect(mockCreateRoom).toHaveBeenCalledWith('Luca', 'it', 'conversation', null, null, null, null, 'FREE', null);
+      expect(mockCreateRoomSession).toHaveBeenCalledWith('ABC123', 'Luca', 'host');
     });
 
     it('rejects create without name', async () => {
@@ -71,13 +82,15 @@ describe('POST /api/room', () => {
   });
 
   describe('join', () => {
-    it('joins an existing room', async () => {
-      const room = { id: 'ABC', members: [{ name: 'Host' }, { name: 'Guest' }] };
+    it('joins an existing room and returns session token', async () => {
+      const room = { id: 'ABC', members: [{ name: 'Host', role: 'host' }, { name: 'Guest', role: 'guest' }] };
       mockJoinRoom.mockResolvedValue(room);
       const res = await POST(makeReq({ action: 'join', roomId: 'ABC', name: 'Guest', lang: 'en' }));
       const data = await res.json();
       expect(res.status).toBe(200);
       expect(data.room).toBeTruthy();
+      expect(data.roomSessionToken).toBe('test-token-123');
+      expect(mockCreateRoomSession).toHaveBeenCalledWith('ABC', 'Guest', 'guest');
     });
 
     it('returns 404 for nonexistent room', async () => {
@@ -131,14 +144,15 @@ describe('POST /api/room', () => {
       expect(data.error).toContain('host');
     });
 
-    it('rejects changeMode without name', async () => {
+    it('rejects changeMode without identity', async () => {
       const res = await POST(makeReq({ action: 'changeMode', roomId: 'ABC', mode: 'freetalk' }));
-      expect(res.status).toBe(400);
+      expect(res.status).toBe(401);
     });
   });
 
   describe('changeLang', () => {
     it('changes member language', async () => {
+      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Guest' }] });
       mockChangeMemberLang.mockResolvedValue({ id: 'ABC' });
       const res = await POST(makeReq({ action: 'changeLang', roomId: 'ABC', name: 'Guest', lang: 'fr' }));
       expect(res.status).toBe(200);
@@ -162,6 +176,7 @@ describe('POST /api/room', () => {
 
   describe('webrtc-poll', () => {
     it('returns filtered signals', async () => {
+      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }, { name: 'Guest' }] });
       mockRedis.mockResolvedValue([
         JSON.stringify({ from: 'Guest', type: 'offer' }),
         JSON.stringify({ from: 'Luca', type: 'answer' }),

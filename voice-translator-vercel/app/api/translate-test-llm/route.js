@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { NextResponse } from 'next/server';
+import { validateOutput, MODEL_MAP, PAIR_NOTES } from '../../lib/translateValidation.js';
 
 // ═══════════════════════════════════════════════
 // LLM Translation Test Endpoint — runs ALL paid models in parallel
@@ -36,42 +37,6 @@ setInterval(() => {
   }
 }, 120000);
 
-// ── Output validation (shared with /api/translate) ──
-const SCRIPT_RANGES = {
-  'th': /[\u0E00-\u0E7F]/,
-  'zh': /[\u4E00-\u9FFF]/,
-  'ja': /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF]/,
-  'ko': /[\uAC00-\uD7AF\u1100-\u11FF]/,
-  'ar': /[\u0600-\u06FF]/,
-  'hi': /[\u0900-\u097F]/,
-  'ru': /[\u0400-\u04FF]/,
-  'el': /[\u0370-\u03FF]/,
-};
-const LATIN_LANGS = new Set(['en','es','fr','de','it','pt','nl','pl','sv','tr','vi','id','ms','cs','ro','hu','fi']);
-
-function validateOutput(original, translated, targetLang) {
-  if (!translated || !translated.trim()) return { valid: false, reason: 'empty' };
-  const t = translated.trim();
-  if (t.startsWith('Translation:') || t.startsWith('Here is') || t.startsWith('Note:'))
-    return { valid: false, reason: 'meta_text' };
-  const ratio = t.length / Math.max(original.trim().length, 1);
-  if (ratio > 8 || ratio < 0.05) return { valid: false, reason: 'length_ratio' };
-  if (!LATIN_LANGS.has(targetLang) && SCRIPT_RANGES[targetLang]) {
-    if (!SCRIPT_RANGES[targetLang].test(t)) return { valid: false, reason: 'wrong_script' };
-  }
-  return { valid: true };
-}
-
-// ── Model mapping ──
-const MODEL_MAP = {
-  'gpt-4o-mini':    { actual: 'gpt-4o-mini', provider: 'openai' },
-  'gpt-4o':         { actual: 'gpt-4o', provider: 'openai' },
-  'claude-sonnet':  { actual: 'claude-sonnet-4-5-20250929', provider: 'anthropic' },
-  'claude-haiku':   { actual: 'claude-haiku-4-5-20251001', provider: 'anthropic' },
-  'gemini-flash':   { actual: 'gemini-2.0-flash', provider: 'gemini' },
-  'gemini-pro':     { actual: 'gemini-2.5-pro-preview-05-06', provider: 'gemini' },
-};
-
 // Language names for system prompt
 const LANG_NAMES = {
   'it': 'Italian', 'en': 'English', 'es': 'Spanish', 'fr': 'French', 'de': 'German',
@@ -79,21 +44,6 @@ const LANG_NAMES = {
   'ar': 'Arabic', 'hi': 'Hindi', 'ru': 'Russian', 'tr': 'Turkish', 'th': 'Thai',
   'vi': 'Vietnamese', 'nl': 'Dutch', 'pl': 'Polish', 'sv': 'Swedish', 'el': 'Greek',
   'id': 'Indonesian', 'ms': 'Malay', 'cs': 'Czech', 'ro': 'Romanian', 'hu': 'Hungarian', 'fi': 'Finnish',
-};
-
-// Language pair notes for problematic combinations
-const PAIR_NOTES = {
-  'it->th': 'Italian→Thai: very different structures. Thai is SVO with topic-comment. Rearrange naturally.',
-  'it->zh': 'Italian→Chinese: use measure words (量词) and topic-prominent structure. Sound native, not translated.',
-  'it->ja': 'Italian→Japanese: SOV order, use です/ます form unless very casual.',
-  'en->th': 'English→Thai: no verb conjugation/articles in Thai. Use particles (ค่ะ/ครับ) appropriately.',
-  'th->en': 'Thai→English: Thai is pro-drop. Infer and add appropriate pronouns.',
-  'zh->en': 'Chinese→English: restructure topic-comment to natural SVO.',
-  'th->it': 'Thai→Italian: add articles and conjugations that Thai lacks.',
-  'zh->it': 'Chinese→Italian: add articles, conjugations, restructure from topic-comment to SVO.',
-  'ja->en': 'Japanese→English: restructure SOV to SVO. Expand implied subjects.',
-  'ja->it': 'Japanese→Italian: restructure SOV, add articles and conjugations.',
-  'ko->en': 'Korean→English: restructure SOV to SVO, expand honorifics contextually.',
 };
 
 const TONAL_LANGS = {

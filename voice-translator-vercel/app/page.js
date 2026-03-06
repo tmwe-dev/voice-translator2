@@ -126,7 +126,8 @@ function HomeInner() {
     refreshBalance: auth.refreshBalance,
     trackFreeChars,
     userEmail: auth.userAccount?.email || auth.authEmail || '',
-    sentByMeRef: roomPolling.sentByMeRef  // FASE 1A: for message dedup
+    sentByMeRef: roomPolling.sentByMeRef,  // FASE 1A: for message dedup
+    roomSessionTokenRef: roomPolling.roomSessionTokenRef
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
   const webrtc = useWebRTC({

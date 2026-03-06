@@ -2,6 +2,58 @@
 // Uses shared Redis client from redis.js
 
 import { redis } from './redis.js';
+import { randomUUID } from 'crypto';
+
+// =============================================
+// ROOM SESSION TOKENS — server-verified identity
+// Replaces trust-the-client name-based identity
+// =============================================
+
+/**
+ * Create a room session token for a member.
+ * Called on room create and join. Token proves identity for all room operations.
+ * @returns {{ token: string }} The session token
+ */
+export async function createRoomSession(roomId, memberName, role) {
+  const token = randomUUID();
+  const session = { roomId: roomId.toUpperCase(), name: memberName, role, created: Date.now() };
+  // Same TTL as room (2 hours)
+  await redis('SET', `rsess:${token}`, JSON.stringify(session), 'EX', 7200);
+  return { token };
+}
+
+/**
+ * Verify a room session token. Returns the session data or null.
+ * @returns {{ roomId: string, name: string, role: string, created: number } | null}
+ */
+export async function verifyRoomSession(token) {
+  if (!token || typeof token !== 'string') return null;
+  const data = await redis('GET', `rsess:${token}`);
+  if (!data) return null;
+  return JSON.parse(data);
+}
+
+/**
+ * Resolve identity from request: prefer room session token, fall back to name.
+ * @param {string} token - Room session token (from header or body)
+ * @param {string} name - Fallback name
+ * @param {string} roomId - Expected room ID
+ * @returns {{ name: string, role: string, verified: boolean } | null}
+ */
+export async function resolveRoomIdentity(token, name, roomId) {
+  // Try token first (strong identity)
+  if (token) {
+    const session = await verifyRoomSession(token);
+    if (session && session.roomId === roomId.toUpperCase()) {
+      return { name: session.name, role: session.role, verified: true };
+    }
+  }
+  // Fall back to name (weak identity, backward compatible)
+  if (name) {
+    return { name, role: 'unknown', verified: false };
+  }
+  return null;
+}
 
 // =============================================
 // ROOMS

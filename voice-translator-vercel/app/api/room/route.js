@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang } from '../../lib/store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity } from '../../lib/store.js';
 import { redis } from '../../lib/redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize, rateLimit, getClientIP } from '../../lib/validate.js';
 
@@ -15,49 +15,71 @@ export async function POST(req) {
     const roomId = sanitizeRoomId(body.roomId || '');
     const name = sanitizeName(body.name || '');
     const lang = typeof body.lang === 'string' ? body.lang.slice(0, 10) : '';
+    const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
     const { speaking, mode, avatar, context, contextPrompt, description, liveText, typing, hostTier, hostEmail, signal } = body;
+
+    // ── Helper: resolve identity from token or fallback to name ──
+    async function resolveIdentity(rid) {
+      const identity = await resolveRoomIdentity(roomSessionToken, name, rid);
+      if (!identity) return null;
+      return identity;
+    }
 
     if (action === 'create') {
       if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
       const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null);
-      return NextResponse.json({ room });
+      // Issue a session token for the host
+      const { token } = await createRoomSession(room.id, name, 'host');
+      return NextResponse.json({ room, roomSessionToken: token });
     }
 
     if (action === 'join') {
       if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
       const room = await joinRoom(roomId, name, lang, avatar || null);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      return NextResponse.json({ room });
+      // Determine role from the room member list
+      const member = room.members.find(m => m.name === name);
+      const role = member?.role || 'guest';
+      const { token } = await createRoomSession(room.id, name, role);
+      return NextResponse.json({ room, roomSessionToken: token });
     }
 
     if (action === 'heartbeat') {
-      if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
-      const room = await updateHeartbeat(roomId, name);
+      if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+      const identity = await resolveIdentity(roomId);
+      if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      const room = await updateHeartbeat(roomId, identity.name);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      // heartbeat only updates if name matches existing member (store.js handles this)
       return NextResponse.json({ room });
     }
 
     if (action === 'speaking') {
-      if (!roomId || !name) return NextResponse.json({ error: 'roomId, name required' }, { status: 400 });
-      // Verify membership before allowing speaking status update
+      if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+      const identity = await resolveIdentity(roomId);
+      if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      // Verify membership
       const speakRoom = await getRoom(roomId);
       if (!speakRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (!speakRoom.members.some(m => m.name === name)) {
+      if (!speakRoom.members.some(m => m.name === identity.name)) {
         return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
       }
       const safeLiveText = liveText ? sanitize(liveText, 500) : null;
-      const room = await setSpeaking(roomId, name, !!speaking, safeLiveText, !!typing);
+      const room = await setSpeaking(roomId, identity.name, !!speaking, safeLiveText, !!typing);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }
 
     if (action === 'changeMode') {
-      if (!roomId || !mode || !name) return NextResponse.json({ error: 'roomId, mode, name required' }, { status: 400 });
-      // Only host can change room mode
+      if (!roomId || !mode) return NextResponse.json({ error: 'roomId and mode required' }, { status: 400 });
+      const identity = await resolveIdentity(roomId);
+      if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      // Only host can change room mode (verified identity preferred)
       const currentRoom = await getRoom(roomId);
       if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (currentRoom.host !== name) {
+      if (identity.verified && identity.role !== 'host') {
+        return NextResponse.json({ error: 'Only the host can change room mode' }, { status: 403 });
+      }
+      if (!identity.verified && currentRoom.host !== identity.name) {
         return NextResponse.json({ error: 'Only the host can change room mode' }, { status: 403 });
       }
       const room = await updateRoomMode(roomId, mode);
@@ -67,14 +89,16 @@ export async function POST(req) {
 
     // ── Change member language (synced to all participants) ──
     if (action === 'changeLang') {
-      if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
+      if (!roomId || !lang) return NextResponse.json({ error: 'roomId and lang required' }, { status: 400 });
+      const identity = await resolveIdentity(roomId);
+      if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
       // Verify requester is actually a room member
       const langRoom = await getRoom(roomId);
       if (!langRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (!langRoom.members.some(m => m.name === name)) {
+      if (!langRoom.members.some(m => m.name === identity.name)) {
         return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
       }
-      const room = await changeMemberLang(roomId, name, lang);
+      const room = await changeMemberLang(roomId, identity.name, lang);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
       return NextResponse.json({ room });
     }
@@ -82,17 +106,27 @@ export async function POST(req) {
     // ── WebRTC Signaling ──
     if (action === 'webrtc-signal') {
       if (!roomId || !signal) return NextResponse.json({ error: 'roomId and signal required' }, { status: 400 });
-      // Verify sender is a room member (signal.from must be a member name)
-      const senderName = signal?.from;
-      if (senderName) {
+      // Verify sender via session token or signal.from membership
+      const identity = await resolveIdentity(roomId);
+      if (identity) {
         const sigRoom = await getRoom(roomId);
         if (!sigRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-        const isMember = sigRoom.members.some(m => m.name === senderName);
-        if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+        if (!sigRoom.members.some(m => m.name === identity.name)) {
+          return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+        }
+      } else {
+        // Fallback: verify signal.from
+        const senderName = signal?.from;
+        if (senderName) {
+          const sigRoom = await getRoom(roomId);
+          if (!sigRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+          if (!sigRoom.members.some(m => m.name === senderName)) {
+            return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+          }
+        }
       }
       const key = `rtc:${roomId}`;
       try {
-        // Store signal in Redis list (FIFO, max 50 signals, 5min TTL)
         await redis('RPUSH', key, JSON.stringify(signal));
         await redis('LTRIM', key, -50, -1);
         await redis('EXPIRE', key, 300);
@@ -103,11 +137,13 @@ export async function POST(req) {
     }
 
     if (action === 'webrtc-poll') {
-      if (!roomId || !name) return NextResponse.json({ error: 'roomId and name required' }, { status: 400 });
-      // Verify requester is a room member before returning signals
+      if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+      const identity = await resolveIdentity(roomId);
+      if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+      // Verify requester is a room member
       const pollRoom = await getRoom(roomId);
       if (!pollRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (!pollRoom.members.some(m => m.name === name)) {
+      if (!pollRoom.members.some(m => m.name === identity.name)) {
         return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
       }
       const key = `rtc:${roomId}`;
@@ -115,7 +151,7 @@ export async function POST(req) {
         const raw = await redis('LRANGE', key, 0, -1);
         const signals = (raw || [])
           .map(s => { try { return JSON.parse(s); } catch { return null; } })
-          .filter(s => s && s.from !== name); // Don't return own signals
+          .filter(s => s && s.from !== identity.name);
         return NextResponse.json({ signals });
       } catch {
         return NextResponse.json({ signals: [] });

@@ -37,7 +37,8 @@ export default function useTranslation({
   refreshBalance,
   trackFreeChars,
   userEmail,
-  sentByMeRef
+  sentByMeRef,
+  roomSessionTokenRef
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -149,6 +150,7 @@ export default function useTranslation({
         body: JSON.stringify({
           roomId,
           sender: prefsRef.current.name,
+          roomSessionToken: roomSessionTokenRef?.current || null,
           original,
           translated,
           sourceLang,
