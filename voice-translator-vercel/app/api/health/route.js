@@ -15,6 +15,7 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     uptime: process.uptime?.() || 0,
     version: process.env.npm_package_version || '2.0.0',
+    devMode: process.env.DEV_MODE === 'true',
     services: {},
   };
 

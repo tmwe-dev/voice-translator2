@@ -50,14 +50,16 @@ export async function POST(req) {
   const cors = getCorsHeaders(req);
 
   try {
-    // ── Rate limit: 30 req/min per IP ──
-    const rlKey = getRateLimitKey(req, 'free-translate');
-    const rl = await checkRateLimit(rlKey, 30, 60000);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfterMs: rl.retryAfterMs },
-        { status: 429, headers: { ...cors, 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } }
-      );
+    // ── Rate limit: 30 req/min per IP (bypassed in DEV_MODE) ──
+    if (process.env.DEV_MODE !== 'true') {
+      const rlKey = getRateLimitKey(req, 'free-translate');
+      const rl = await checkRateLimit(rlKey, 30, 60000);
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded', retryAfterMs: rl.retryAfterMs },
+          { status: 429, headers: { ...cors, 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } }
+        );
+      }
     }
 
     const body = await req.json();
@@ -70,25 +72,27 @@ export async function POST(req) {
     const trimmed = text.trim().slice(0, 10000); // Cap at 10K chars
     const charsUsed = trimmed.length;
 
-    // ── Enforce daily character limit per IP (Redis-backed) ──
+    // ── Enforce daily character limit per IP (Redis-backed, bypassed in DEV_MODE) ──
     const ipKey = getRateLimitKey(req, 'free-chars');
     let dailyUsed = 0;
-    try {
-      const todayKey = `daily:${ipKey}:${new Date().toISOString().split('T')[0]}`;
-      const current = await redis('GET', todayKey);
-      dailyUsed = parseInt(current || '0');
-      if (dailyUsed + charsUsed > FREE_DAILY_LIMIT) {
-        return NextResponse.json(
-          { error: 'Daily character limit exceeded', dailyUsed, dailyLimit: FREE_DAILY_LIMIT },
-          { status: 429, headers: cors }
-        );
+    if (process.env.DEV_MODE !== 'true') {
+      try {
+        const todayKey = `daily:${ipKey}:${new Date().toISOString().split('T')[0]}`;
+        const current = await redis('GET', todayKey);
+        dailyUsed = parseInt(current || '0');
+        if (dailyUsed + charsUsed > FREE_DAILY_LIMIT) {
+          return NextResponse.json(
+            { error: 'Daily character limit exceeded', dailyUsed, dailyLimit: FREE_DAILY_LIMIT },
+            { status: 429, headers: cors }
+          );
+        }
+        // Increment and set TTL to end of day (max 24h)
+        await redis('INCRBY', todayKey, charsUsed);
+        if (!current) await redis('EXPIRE', todayKey, 86400);
+      } catch (e) {
+        console.error('Daily limit check error:', e);
+        // Fail-open: if Redis fails, allow the request
       }
-      // Increment and set TTL to end of day (max 24h)
-      await redis('INCRBY', todayKey, charsUsed);
-      if (!current) await redis('EXPIRE', todayKey, 86400);
-    } catch (e) {
-      console.error('Daily limit check error:', e);
-      // Fail-open: if Redis fails, allow the request
     }
 
     // ── Check Redis cache first ──

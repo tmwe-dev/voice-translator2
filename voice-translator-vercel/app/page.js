@@ -343,6 +343,18 @@ function HomeInner() {
         return 'home';
       };
 
+      // ── DEV_MODE check: bypass auth for testers ──
+      fetch('/api/health').then(r => r.json()).then(h => {
+        if (h.devMode) {
+          console.log('[DEV_MODE] Active — all features unlocked for testing');
+          auth.setIsTrial(false);
+          auth.setIsTopPro(true);
+          auth.setCanUseElevenLabs(true);
+          auth.setCreditBalance(99999);
+          auth.setPlatformHasEL(true);
+        }
+      }).catch(() => {});
+
       if (savedToken) {
         auth.setUserToken(savedToken);
         auth.userTokenRef.current = savedToken;

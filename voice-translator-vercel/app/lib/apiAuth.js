@@ -40,6 +40,17 @@ export async function resolveAuth({
   };
   const defaultKey = envKeys[provider] || process.env.OPENAI_API_KEY;
 
+  // ── DEV_MODE: bypass ALL auth, use platform keys, no billing ──
+  if (process.env.DEV_MODE === 'true') {
+    return {
+      apiKey: defaultKey,
+      isOwnKey: false,
+      billingEmail: null,
+      isLending: false,
+      lendingCodeUsed: null,
+    };
+  }
+
   let apiKey = defaultKey;
   let isOwnKey = false;
   let billingEmail = null;
