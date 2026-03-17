@@ -50,10 +50,10 @@ export default function useTranslationAPI({
   const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return null;
 
-    const senderName = prefsRef.current.name;
+    const senderName = verifiedNameRef?.current || prefsRef.current.name;
     const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-    // Build a message object for instant P2P delivery
+    // Build a message object for instant delivery
     const instantMsg = {
       id: tempId,
       roomId,
@@ -66,16 +66,25 @@ export default function useTranslationAPI({
       timestamp: Date.now(),
     };
 
-    // ── Priority 1: Send via WebRTC DataChannel (P2P, instant) ──
-    let sentViaDC = false;
+    // ── Instant delivery: P2P + Realtime broadcast IMMEDIATELY (don't wait for server) ──
+    // Priority 1: WebRTC DataChannel (P2P, ~50ms)
     if (sendDirectMessage) {
       try {
-        sentViaDC = sendDirectMessage({ type: 'chat-message', message: instantMsg });
-        if (sentViaDC) console.log('[sendMessage] Sent via P2P DataChannel');
+        sendDirectMessage({ type: 'chat-message', message: instantMsg });
       } catch {}
     }
+    // Priority 2: Supabase Realtime broadcast (~100ms) — ALWAYS send, even if P2P worked
+    // Other clients may not have P2P, and DataChannel can fail silently
+    if (broadcastMessage) {
+      broadcastMessage(instantMsg);
+    }
 
-    // ── Always save to server (persistence + non-P2P clients) ──
+    // Mark temp ID as sent by me immediately (before server save)
+    if (sentByMeRef) {
+      sentByMeRef.current.add(tempId);
+    }
+
+    // ── Server save in parallel (persistence) — don't block the UI ──
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -95,12 +104,6 @@ export default function useTranslationAPI({
         const data = await res.json();
         if (data.message?.id && sentByMeRef) {
           sentByMeRef.current.add(data.message.id);
-          // Also mark the temp ID so we don't duplicate from DC echo
-          sentByMeRef.current.add(tempId);
-        }
-        // ── Priority 2: Broadcast via Supabase Realtime (for non-P2P clients) ──
-        if (data.message && broadcastMessage && !sentViaDC) {
-          broadcastMessage(data.message);
         }
         return data;
       }
@@ -108,7 +111,7 @@ export default function useTranslationAPI({
       console.error('[sendMessage] Server save error:', e);
     }
     return null;
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, verifiedNameRef]);
 
   /**
    * Translate text using the appropriate endpoint (free/paid/consensus).

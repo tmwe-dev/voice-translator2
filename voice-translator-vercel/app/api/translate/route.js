@@ -79,15 +79,14 @@ export async function POST(req) {
     });
 
     // Glossary injection — if user has active glossaries for this language pair
+    // NOTE: This is a self-referencing fetch that adds 200-500ms latency.
+    // Only do it if the user likely has glossaries (check Redis first).
     if (userToken) {
       try {
-        const glossaryRes = await fetch(`${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/api/glossary`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'inject', token: userToken, data: { source_lang: sourceLang, target_lang: targetLang } }),
-        });
-        const glossaryData = await glossaryRes.json();
-        if (glossaryData.prompt) systemPrompt += glossaryData.prompt;
+        const glossaryCheck = await redis('GET', `glossary:${sourceLang}:${targetLang}:${userToken.slice(-8)}`).catch(() => null);
+        if (glossaryCheck) {
+          systemPrompt += glossaryCheck;
+        }
       } catch (e) { /* glossary injection is optional */ }
     }
 
@@ -162,81 +161,70 @@ export async function POST(req) {
       }
     }
 
-    // Cache simple translations in Redis with 24h TTL
-    if (isSimpleTranslation && cacheKey) {
-      try {
-        await redis('SET', cacheKey, translated, 'EX', 86400);
-      } catch (e) {
-        console.error('Cache store error:', e);
-      }
-    }
-
     // Calculate cost (approximate — uses OpenAI pricing as baseline)
     const gptCost = calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 });
     const ttsCost = calcTtsCost(translated.length);
     const msgCostUsd = gptCost + ttsCost;
     const msgCostEurCents = usdToEurCents(msgCostUsd);
 
-    // Track cost in room
-    if (roomId) {
-      try { await addCost(roomId, msgCostUsd); } catch (e) { console.error('Cost tracking error:', e); }
-    }
-
-    // Deduct credits
+    // Deduct credits (must await — affects billing)
     let remainingCredits = undefined;
     if (billingEmail && !isOwnKey && !isReview) {
       try {
         const charge = Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents);
         const updatedUser = await deductCredits(billingEmail, charge);
         if (updatedUser) remainingCredits = updatedUser.credits;
-        await trackDailySpend(billingEmail, charge);
       } catch (e) { console.error('Credit deduct error:', e); }
     }
 
-    // Track lending token usage
-    if (isLending && lendingCodeUsed) {
-      try {
-        const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);
-        await deductLendingTokens(lendingCodeUsed, tokenEstimate);
-      } catch (e) { console.error('Lending token tracking error:', e); }
-    }
+    // Calculate confidence score
+    const confidence = calcConfidence(text, translated, sourceLang, targetLang);
 
-    // Track in Supabase (non-blocking)
+    // ── Fire-and-forget: cache, cost tracking, Supabase logging ──
+    // These don't affect the response, so don't block the user
+    const bgTasks = [];
+    if (isSimpleTranslation && cacheKey) {
+      bgTasks.push(redis('SET', cacheKey, translated, 'EX', 86400).catch(() => {}));
+    }
+    if (roomId) {
+      bgTasks.push(addCost(roomId, msgCostUsd).catch(() => {}));
+    }
+    if (billingEmail && !isOwnKey && !isReview) {
+      bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents)).catch(() => {}));
+    }
+    if (isLending && lendingCodeUsed) {
+      const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);
+      bgTasks.push(deductLendingTokens(lendingCodeUsed, tokenEstimate).catch(() => {}));
+    }
+    // Supabase tracking (fully non-blocking)
     try {
       const sb = getSupabaseAdmin();
       if (sb && billingEmail) {
-        const { data: profile } = await sb.from('profiles').select('id').eq('email', billingEmail).single().catch(() => ({ data: null }));
-        if (profile) {
-          // Save translation record
-          saveTranslationDB({
-            user_id: profile.id,
-            room_id: roomId || null,
-            source_lang: sourceLang,
-            target_lang: targetLang,
-            source_text: text.substring(0, 500),
-            translated_text: (translated || '').substring(0, 500),
-            provider: modelInfo.provider,
-            ai_model: modelInfo.actual,
-            tokens_in: usage?.prompt_tokens || 0,
-            tokens_out: usage?.completion_tokens || 0,
-            duration_ms: Date.now() - (Date.now() - (usage?.prompt_tokens || 0)), // approx
-            cost_usd: roundCost(msgCostUsd),
-            cost_eur_cents: roundEurCents(msgCostEurCents),
-            is_cached: false,
-            context_type: domainContext || 'general',
-          }).catch(() => {});
-          // Track daily usage
-          trackUsage(profile.id, {
-            translations: 1,
-            costCents: Math.round(msgCostEurCents),
-            tokens: (usage?.prompt_tokens || 0) + (usage?.completion_tokens || 0),
-          }).catch(() => {});
-        }
+        bgTasks.push(
+          sb.from('profiles').select('id').eq('email', billingEmail).single()
+            .then(({ data: profile }) => {
+              if (!profile) return;
+              saveTranslationDB({
+                user_id: profile.id, room_id: roomId || null,
+                source_lang: sourceLang, target_lang: targetLang,
+                source_text: text.substring(0, 500),
+                translated_text: (translated || '').substring(0, 500),
+                provider: modelInfo.provider, ai_model: modelInfo.actual,
+                tokens_in: usage?.prompt_tokens || 0, tokens_out: usage?.completion_tokens || 0,
+                duration_ms: 0, cost_usd: roundCost(msgCostUsd),
+                cost_eur_cents: roundEurCents(msgCostEurCents),
+                is_cached: false, context_type: domainContext || 'general',
+              }).catch(() => {});
+              trackUsage(profile.id, {
+                translations: 1, costCents: Math.round(msgCostEurCents),
+                tokens: (usage?.prompt_tokens || 0) + (usage?.completion_tokens || 0),
+              }).catch(() => {});
+            }).catch(() => {})
+        );
       }
-    } catch (e) { /* Supabase tracking is non-blocking */ }
-
-    // Calculate confidence score
-    const confidence = calcConfidence(text, translated, sourceLang, targetLang);
+    } catch {}
+    // Fire all background tasks without awaiting
+    if (bgTasks.length > 0) Promise.allSettled(bgTasks).catch(() => {});
 
     return NextResponse.json({
       translated,

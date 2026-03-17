@@ -134,19 +134,9 @@ export async function POST(req) {
       elapsed: result.elapsed,
     };
 
-    // ── Cache successful results ──
-    if (!result.fallback) {
-      try {
-        await redis('SET', cacheKey, JSON.stringify(response), 'EX', 86400);
-      } catch (e) {
-        console.error('Cache store error:', e);
-      }
-    } else {
-      // Cache failures briefly to avoid hammering providers
-      try {
-        await redis('SET', cacheKey, JSON.stringify(response), 'EX', 1800);
-      } catch {}
-    }
+    // ── Cache results (fire-and-forget — don't block the response) ──
+    const cacheTTL = result.fallback ? 1800 : 86400;
+    redis('SET', cacheKey, JSON.stringify(response), 'EX', cacheTTL).catch(() => {});
 
     return NextResponse.json(response, { headers: cors });
   } catch (e) {

@@ -148,14 +148,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
 
-        {/* ── Right: Primary actions (always visible) ── */}
-        <div style={{display:'flex', alignItems:'center', gap:4, flexShrink:0}}>
-          {/* Connection quality */}
-          <ConnectionQuality
-            webrtcState={webrtc?.webrtcState || 'idle'}
-            partnerConnected={partnerConnected}
-            realtimeConnected={realtimeConnected}
-          />
+        {/* ── Right: Primary actions (compact for mobile) ── */}
+        <div style={{display:'flex', alignItems:'center', gap:3, flexShrink:0}}>
           {/* Video call button */}
           {webrtc && (
             <button onClick={() => {
@@ -166,7 +160,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 setShowVideoCall(false);
               }
             }}
-              style={{...S.iconBtn, width:30, height:30, fontSize:13,
+              style={{...S.iconBtn, width:28, height:28, fontSize:13,
                 background: showVideoCall ? S.colors.accent4Bg : S.colors.overlayBg,
                 border: showVideoCall ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
               {showVideoCall ? '\u{1F4F9}' : '\u{1F4F7}'}
@@ -174,23 +168,24 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            style={{...S.iconBtn, display:'flex', alignItems:'center', gap:2, width:'auto', height:30,
-              padding:'0 6px', fontSize:12,
+            style={{...S.iconBtn, width:28, height:28, fontSize:13,
               color: audioEnabled ? S.colors.statusOk : S.colors.statusError,
               background: audioEnabled ? S.colors.accent4Bg : S.colors.accent3Bg,
               border: audioEnabled ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.accent3Border}`}}>
-            <span style={{fontSize:13}}>{audioEnabled ? '\u{1F50A}' : '\u{1F512}'}</span>
+            {audioEnabled ? '\u{1F50A}' : '\u{1F507}'}
           </button>
-          {/* Partner connected dot */}
-          <div style={{width:8, height:8, borderRadius:4, flexShrink:0,
-            background:partnerConnected ? S.colors.statusOk : S.colors.statusError}} />
-          {/* More menu button ("...") */}
+          {/* More menu button — includes connection quality + partner status */}
           <div style={{position:'relative', flexShrink:0}}>
             <button onClick={() => setShowMoreMenu(!showMoreMenu)}
-              style={{...S.iconBtn, width:30, height:30, fontSize:16, fontWeight:700, letterSpacing:1,
+              style={{...S.iconBtn, width:28, height:28, fontSize:14, fontWeight:700, letterSpacing:1,
                 background: showMoreMenu ? S.colors.accent4Bg : S.colors.overlayBg,
-                border: showMoreMenu ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
+                border: showMoreMenu ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`,
+                position:'relative'}}>
               {'\u22EF'}
+              {/* Partner status dot overlaid on menu button */}
+              <div style={{position:'absolute', top:-1, right:-1, width:7, height:7, borderRadius:4,
+                background: partnerConnected ? S.colors.statusOk : S.colors.statusError,
+                border:'1px solid rgba(0,0,0,0.3)'}} />
             </button>
             {/* ── Overflow menu dropdown ── */}
             {showMoreMenu && (
@@ -198,6 +193,18 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
                 borderRadius:12, padding:6, minWidth:220, backdropFilter:'blur(12px)',
                 boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
+                {/* Connection quality (moved here from header for mobile space) */}
+                <div style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
+                  borderBottom:`1px solid ${S.colors.overlayBorder}`, marginBottom:4}}>
+                  <ConnectionQuality
+                    webrtcState={webrtc?.webrtcState || 'idle'}
+                    partnerConnected={partnerConnected}
+                    realtimeConnected={realtimeConnected}
+                  />
+                  <span style={{fontSize:11, color: partnerConnected ? S.colors.statusOk : S.colors.textMuted, fontWeight:600}}>
+                    {partnerConnected ? (partner?.name || 'Partner') : 'In attesa...'}
+                  </span>
+                </div>
                 {/* Captions toggle */}
                 <button onClick={() => { setShowCaptions(!showCaptions); setShowMoreMenu(false); }}
                   style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',

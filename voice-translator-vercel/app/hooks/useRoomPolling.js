@@ -73,8 +73,19 @@ export default function useRoomPolling({
 
   const handleRealtimeMessage = useCallback((message) => {
     setMessages(prev => {
+      // Dedup by ID
       const ids = new Set(prev.map(m => m.id));
       if (ids.has(message.id)) return prev;
+      // Dedup: if a temp message (tmp_xxx) exists with same sender+original, replace it with server version
+      const tempIdx = prev.findIndex(m =>
+        m.id?.startsWith('tmp_') && m.sender === message.sender && m.original === message.original
+      );
+      if (tempIdx >= 0) {
+        // Replace temp message with server-persisted version (keeps real ID for polling dedup)
+        const updated = [...prev];
+        updated[tempIdx] = { ...message, _replaced: true };
+        return updated;
+      }
       return [...prev, message];
     });
     if (message.timestamp) {
@@ -170,8 +181,23 @@ export default function useRoomPolling({
           if (newMsgs && newMsgs.length > 0) {
             setMessages(prev => {
               const ids = new Set(prev.map(m => m.id));
-              const fresh = newMsgs.filter(m => !ids.has(m.id));
-              return fresh.length > 0 ? [...prev, ...fresh] : prev;
+              let updated = [...prev];
+              let changed = false;
+              for (const m of newMsgs) {
+                if (ids.has(m.id)) continue;
+                // Replace temp message with server version (dedup broadcast vs poll)
+                const tempIdx = updated.findIndex(t =>
+                  t.id?.startsWith('tmp_') && t.sender === m.sender && t.original === m.original
+                );
+                if (tempIdx >= 0) {
+                  updated[tempIdx] = m;
+                  changed = true;
+                } else {
+                  updated.push(m);
+                  changed = true;
+                }
+              }
+              return changed ? updated : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
