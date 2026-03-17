@@ -151,6 +151,9 @@ export default function useAudioSystem({
     };
   }, []);
 
+  // ── Live mode: enhanced noise suppression + voice focus ──
+  const liveModeRef = useRef(false);
+
   async function getMicStream() {
     // Resume suspended AudioContext before requesting mic
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -158,18 +161,70 @@ export default function useAudioSystem({
     }
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getTracks();
-      if (tracks.length > 0 && tracks[0].readyState === 'live') return persistentMicRef.current;
+      if (tracks.length > 0 && tracks[0].readyState === 'live') {
+        // If live mode changed, apply new constraints to existing track
+        const track = tracks[0];
+        if (liveModeRef.current && track.applyConstraints) {
+          try {
+            await track.applyConstraints({
+              noiseSuppression: true,
+              echoCancellation: true,
+              autoGainControl: true,
+            });
+          } catch {}
+        }
+        return persistentMicRef.current;
+      }
       // Dead tracks — clean up
       persistentMicRef.current = null;
     }
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Audio constraints: enhanced for live mode
+    const audioConstraints = liveModeRef.current
+      ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+      : true;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
     persistentMicRef.current = stream;
     return stream;
   }
 
+  /**
+   * Toggle live mode and re-acquire mic with enhanced constraints.
+   * Returns the new live mode state.
+   */
+  async function setLiveMode(enabled) {
+    liveModeRef.current = enabled;
+    // Apply constraints to existing mic track immediately
+    if (persistentMicRef.current) {
+      const tracks = persistentMicRef.current.getAudioTracks();
+      for (const track of tracks) {
+        if (track.readyState === 'live' && track.applyConstraints) {
+          try {
+            await track.applyConstraints({
+              noiseSuppression: enabled,
+              echoCancellation: enabled,
+              autoGainControl: enabled,
+            });
+          } catch (e) {
+            console.warn('[LiveMode] Could not apply constraints:', e);
+            // Fallback: re-acquire mic with new constraints
+            try {
+              persistentMicRef.current.getTracks().forEach(t => t.stop());
+              persistentMicRef.current = null;
+              await getMicStream();
+            } catch {}
+          }
+        }
+      }
+    }
+    return enabled;
+  }
+
   function requestMicEarly() {
     if (persistentMicRef.current) return;
-    navigator.mediaDevices.getUserMedia({ audio: true })
+    const audioConstraints = liveModeRef.current
+      ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
+      : true;
+    navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       .then(stream => { persistentMicRef.current = stream; })
       .catch(() => {});
   }
@@ -710,5 +765,8 @@ export default function useAudioSystem({
     stopDucking,
     connectToDucking,
     audioContextRef,
+    // Live mode (noise suppression + voice focus)
+    setLiveMode,
+    liveModeRef,
   };
 }

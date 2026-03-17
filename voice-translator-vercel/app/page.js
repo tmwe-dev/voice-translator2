@@ -940,7 +940,8 @@ function HomeInner() {
       realtimeConnected={roomPolling.realtimeConnected}
       webrtc={webrtc}
       isHostVerified={roomPolling.isHostRef?.current || false}
-      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name}
+      setLiveMode={audio.setLiveMode} />
   );
 
   if (view === 'history') return (

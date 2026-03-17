@@ -18,7 +18,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
-  realtimeConnected, webrtc, isHostVerified, verifiedName }) {
+  realtimeConnected, webrtc, isHostVerified, verifiedName,
+  setLiveMode }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -32,6 +33,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [videoDucking, setVideoDucking] = useState(false); // auto-ducking during video call
   const [lastTranslationSubtitle, setLastTranslationSubtitle] = useState(null); // { text, ts }
   const [partnerVolume, setPartnerVolume] = useState(0.7); // Partner audio volume (0-1), default 70%
+  const [liveMode, setLiveModeState] = useState(false); // Live mode: noise suppression on
+  const partnerVolumeBeforeMuteRef = useRef(0.7); // Save volume before auto-mute during recording
   const subtitleTimerRef = useRef(null);
 
   // Video refs
@@ -103,6 +106,22 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       remoteVideoRef.current.volume = partnerVolume;
     }
   }, [partnerVolume]);
+
+  // ── Auto-mute partner audio when recording (prevents mic pickup of partner's voice) ──
+  useEffect(() => {
+    if (recording || isListening) {
+      // Save current volume and mute
+      partnerVolumeBeforeMuteRef.current = partnerVolume;
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.volume = 0;
+      }
+    } else {
+      // Restore volume when recording stops
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.volume = partnerVolumeBeforeMuteRef.current;
+      }
+    }
+  }, [recording, isListening]);
 
   // Helper: get the best translation for the viewer's language from a message
   function getTranslationForMe(msg) {
@@ -1130,6 +1149,24 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 {'\u2716'}
               </button>
             )}
+            {/* Live mode button — noise suppression + voice focus */}
+            <button onClick={async () => {
+              const next = !liveMode;
+              setLiveModeState(next);
+              if (setLiveMode) await setLiveMode(next);
+              vibrate(15);
+            }}
+              title={liveMode ? 'Live Mode ON — riduzione rumore attiva' : 'Live Mode — attiva riduzione rumore'}
+              aria-label={liveMode ? 'Disable live mode' : 'Enable live mode'}
+              style={{width:44, height:44, borderRadius:'50%',
+                border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
+                background: liveMode ? 'rgba(34,197,94,0.15)' : S.colors.overlayBg,
+                color: liveMode ? '#22c55e' : S.colors.textMuted, fontSize:11, fontWeight:700,
+                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.3)' : 'none'}}>
+              LIVE
+            </button>
             <button onClick={() => { vibrate(25); toggleRecording(); }}
               aria-label={recording ? (L('stopRecording') || 'Stop recording') : (L('startRecording') || 'Start recording')}
               style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {}),
