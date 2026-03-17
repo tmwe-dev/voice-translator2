@@ -374,6 +374,7 @@ export default function useTranslation({
     getRecorderMime,
     speechRecRef,
     allWordsRef,
+    lastInterimRef,
     streamingModeRef,
     whisperOnlyRef,
     lowConfidenceCountRef,
@@ -519,8 +520,14 @@ export default function useTranslation({
     // Stop Deepgram if active
     stopDeepgramStreaming();
 
-    // Collect accumulated text
-    const allOriginal = allWordsRef.current.trim();
+    // ── CRITICAL: Include BOTH finalized AND interim text ──
+    // allWordsRef only contains finalized STT results. But lastInterimRef contains
+    // text the user SEES in the preview bubble that hasn't been finalized yet.
+    // recognition.stop() is async — the browser may NOT finalize interim text
+    // before we read allWordsRef. Without this, partial speech is silently lost.
+    // Rule: every piece of recognized text MUST be sent, never discarded.
+    const interimText = lastInterimRef.current?.trim() || '';
+    const allOriginal = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
 
     // If no text accumulated but backup recording exists → fallback to Whisper
     if (!allOriginal && backupRecRef.current && backupRecRef.current.state !== 'inactive') {
@@ -559,12 +566,15 @@ export default function useTranslation({
     backupStreamRef.current = null;
 
     if (!allOriginal) {
+      console.log('[stopStreaming] No text accumulated (finals + interims), nothing to send');
       setRecording(false);
       stoppingRef.current = false;
       if (roomId) setSpeakingState(roomId, false);
       setStreamingMsg(null);
       return;
     }
+
+    console.log(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
 
     // ── Translate and send using DRY helper ──
     setStreamingMsg({ original: allOriginal, translated: '...', isStreaming: false });

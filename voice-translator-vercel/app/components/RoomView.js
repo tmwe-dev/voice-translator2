@@ -792,6 +792,10 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         partnerVolume={partnerVolume}
         setPartnerVolume={setPartnerVolume}
         lastTranslationSubtitle={lastTranslationSubtitle}
+        recording={recording}
+        isListening={isListening}
+        partnerSpeaking={partnerSpeaking}
+        partnerTyping={partnerTyping}
         S={S}
       />
 

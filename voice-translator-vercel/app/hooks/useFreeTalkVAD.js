@@ -31,6 +31,7 @@ export default function useFreeTalkVAD({
   // Speech recognition integration
   speechRecRef,
   allWordsRef,
+  lastInterimRef,   // interim text ref — include in pending text on manual stop
   streamingModeRef,
   whisperOnlyRef,
   lowConfidenceCountRef,
@@ -216,8 +217,9 @@ export default function useFreeTalkVAD({
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
 
+                // Include any interim text that wasn't finalized
                 const allOriginal = allWordsRef.current.trim();
-                if (allOriginal) {
+                if (allOriginal) {  // Note: interims handled by recognition finalizing on silence
                   freeTalkSendingRef.current = true;
                   try {
                     await translateAndSend(allOriginal, { clearStreamingMsg: true });
@@ -283,7 +285,9 @@ export default function useFreeTalkVAD({
       }
 
       // ── Send any pending accumulated text before stopping ──
-      const pendingText = allWordsRef.current?.trim();
+      // Include interim text that wasn't finalized (same fix as stopStreamingTranslation)
+      const interimText = lastInterimRef?.current?.trim() || '';
+      const pendingText = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
       if (pendingText && !freeTalkSendingRef.current) {
         freeTalkSendingRef.current = true;
         try {
