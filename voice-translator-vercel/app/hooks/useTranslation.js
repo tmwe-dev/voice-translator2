@@ -612,12 +612,14 @@ export default function useTranslation({
   // =============================================
   async function sendTextMessage() {
     if (!textInput.trim() || sendingText || !roomId) return;
+    const trimText = textInput.trim();
+    setTextInput(''); // Clear immediately — Phase 1 sends the original text right away
     setSendingText(true);
     try {
-      const trimText = textInput.trim();
-      const result = await translateAndSend(trimText);
-      if (result.primaryTranslated) setTextInput('');
-    } catch {}
+      await translateAndSend(trimText);
+    } catch (e) {
+      console.error('[sendTextMessage] Error:', e);
+    }
     setSendingText(false);
   }
 

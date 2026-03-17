@@ -52,7 +52,7 @@ export default function useRoomPolling({
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
     if (msg.sender === myVerifiedName) return;
 
-    // ── Unified TTS dedup: ALWAYS check fingerprint ──
+    // ── Unified TTS dedup: check fingerprint BEFORE playing ──
     // Uses sender + original text ONLY (no timestamp!) because:
     // - temp message (P2P/Realtime) has client-side timestamp
     // - server message (polling) has a DIFFERENT server-side timestamp
@@ -61,32 +61,33 @@ export default function useRoomPolling({
     if (processedForTTSRef.current.has(contentFingerprint)) {
       return; // Already played TTS for this exact content
     }
-    processedForTTSRef.current.add(contentFingerprint);
-    // LRU cap: prevent unbounded growth
-    if (processedForTTSRef.current.size > 500) {
-      const first = processedForTTSRef.current.values().next().value;
-      processedForTTSRef.current.delete(first);
-    }
 
     // Queue audio for the translation in MY language
     const myLang = myLangRef.current;
     let textToPlay = '';
     let speechLang = '';
     if (msg.translations && msg.translations[myLang]) {
-      // Best case: we have a translation for my exact language
       textToPlay = msg.translations[myLang];
       speechLang = getLang(myLang).speech;
     } else if (msg.sourceLang === myLang && msg.original) {
-      // Message was spoken in my language — play the original
       textToPlay = msg.original;
       speechLang = getLang(myLang).speech;
     } else if (msg.targetLang === myLang && msg.translated) {
-      // Backward compat: single translated field matches my language
       textToPlay = msg.translated;
       speechLang = getLang(myLang).speech;
     }
-    // If none of the above matched, don't play audio in the wrong language
+
+    // IMPORTANT: Only add fingerprint when we actually play TTS.
+    // Phase 1 messages arrive with NO translation → no TTS → don't add fingerprint.
+    // Phase 2 update arrives WITH translation → TTS plays → add fingerprint.
+    // This ensures Phase 2 isn't blocked by Phase 1's empty arrival.
     if (textToPlay && prefsRef.current.autoPlay) {
+      processedForTTSRef.current.add(contentFingerprint);
+      // LRU cap: prevent unbounded growth
+      if (processedForTTSRef.current.size > 500) {
+        const first = processedForTTSRef.current.values().next().value;
+        processedForTTSRef.current.delete(first);
+      }
       queueAudio(textToPlay, speechLang, msg.id);
     }
   }, [prefsRef, myLangRef, queueAudio]);
@@ -525,6 +526,25 @@ export default function useRoomPolling({
     }
   }
 
+  // ── Stable callbacks for two-phase send (avoid cascading re-creations) ──
+  const updateLocalMessage = useCallback((original, sender, updates) => {
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.sender === sender && m.original === original);
+      if (idx < 0) return prev;
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], ...updates };
+      return updated;
+    });
+  }, []); // setMessages is stable — no deps needed
+
+  const addLocalMessage = useCallback((msg) => {
+    setMessages(prev => {
+      const ids = new Set(prev.map(m => m.id));
+      if (ids.has(msg.id)) return prev;
+      return [...prev, msg];
+    });
+  }, []); // setMessages is stable — no deps needed
+
   function leaveRoom() {
     stopPolling();
     roomSessionTokenRef.current = null;
@@ -572,25 +592,11 @@ export default function useRoomPolling({
     broadcastMemberUpdate,
     // P2P message-update handler (reused by handleDirectMessage in page.js)
     handleMessageUpdate,
-    // Update an existing local message (e.g., add translation after Phase 1 send)
-    updateLocalMessage: (original, sender, updates) => {
-      setMessages(prev => {
-        const idx = prev.findIndex(m => m.sender === sender && m.original === original);
-        if (idx < 0) return prev;
-        const updated = [...prev];
-        updated[idx] = { ...updated[idx], ...updates };
-        return updated;
-      });
-    },
-    // Add sender's own message to local list immediately (for instant display)
-    addLocalMessage: (msg) => {
-      setMessages(prev => {
-        const ids = new Set(prev.map(m => m.id));
-        if (ids.has(msg.id)) return prev;
-        return [...prev, msg];
-      });
-    },
+    updateLocalMessage,
+    addLocalMessage,
     // P2P DataChannel: add incoming message (same logic as Realtime)
     addIncomingMessage: handleRealtimeMessage,
   };
 }
+
+// ── END OF HOOK ──
