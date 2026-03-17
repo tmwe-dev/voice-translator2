@@ -243,8 +243,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
         </div>
 
-        {/* ── Right: Primary actions (compact for mobile) ── */}
-        <div style={{display:'flex', alignItems:'center', gap:3, flexShrink:0}}>
+        {/* ── Right: Primary actions ── */}
+        <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
           {/* Video call button */}
           {webrtc && (
             <button onClick={() => {
@@ -255,32 +255,45 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 setShowVideoCall(false);
               }
             }}
-              style={{...S.iconBtn, width:28, height:28, fontSize:13,
-                background: showVideoCall ? S.colors.accent4Bg : S.colors.overlayBg,
-                border: showVideoCall ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`}}>
-              {showVideoCall ? '\u{1F4F9}' : '\u{1F4F7}'}
+              title={showVideoCall ? 'Chiudi video' : 'Videochiamata'}
+              style={{display:'flex', alignItems:'center', justifyContent:'center', gap:4,
+                height:36, padding:'0 12px', borderRadius:18, fontSize:16, cursor:'pointer',
+                border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
+                background: showVideoCall
+                  ? (webrtc.webrtcConnected ? 'rgba(34,197,94,0.2)' : S.colors.accent4Bg)
+                  : S.colors.overlayBg,
+                color: showVideoCall
+                  ? (webrtc.webrtcConnected ? '#22c55e' : S.colors.textPrimary)
+                  : S.colors.textMuted,
+                boxShadow: webrtc.webrtcConnected && showVideoCall ? '0 0 8px rgba(34,197,94,0.3)' : 'none'}}>
+              {'\u{1F4F9}'}
+              {webrtc.webrtcConnected && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
             </button>
           )}
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            style={{...S.iconBtn, width:28, height:28, fontSize:13,
-              color: audioEnabled ? S.colors.statusOk : S.colors.statusError,
-              background: audioEnabled ? S.colors.accent4Bg : S.colors.accent3Bg,
-              border: audioEnabled ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.accent3Border}`}}>
+            title={audioEnabled ? 'Disattiva audio traduzioni' : 'Attiva audio traduzioni'}
+            style={{display:'flex', alignItems:'center', justifyContent:'center',
+              width:36, height:36, borderRadius:18, fontSize:16, cursor:'pointer',
+              border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
+              background: audioEnabled ? S.colors.accent4Bg : 'rgba(239,68,68,0.15)',
+              color: audioEnabled ? S.colors.statusOk : '#ef4444'}}>
             {audioEnabled ? '\u{1F50A}' : '\u{1F507}'}
           </button>
-          {/* More menu button — includes connection quality + partner status */}
+          {/* More menu button */}
           <div style={{position:'relative', flexShrink:0}}>
             <button onClick={() => setShowMoreMenu(!showMoreMenu)}
-              style={{...S.iconBtn, width:28, height:28, fontSize:14, fontWeight:700, letterSpacing:1,
+              title="Impostazioni"
+              style={{display:'flex', alignItems:'center', justifyContent:'center',
+                width:36, height:36, borderRadius:18, fontSize:18, fontWeight:700,
+                cursor:'pointer', border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
                 background: showMoreMenu ? S.colors.accent4Bg : S.colors.overlayBg,
-                border: showMoreMenu ? `1px solid ${S.colors.accent4Border}` : `1px solid ${S.colors.overlayBorder}`,
-                position:'relative'}}>
-              {'\u22EF'}
-              {/* Partner status dot overlaid on menu button */}
-              <div style={{position:'absolute', top:-1, right:-1, width:7, height:7, borderRadius:4,
-                background: partnerConnected ? S.colors.statusOk : S.colors.statusError,
-                border:'1px solid rgba(0,0,0,0.3)'}} />
+                color: S.colors.textPrimary, position:'relative'}}>
+              {'\u2699\uFE0F'}
+              {/* Partner status dot */}
+              <div style={{position:'absolute', top:2, right:2, width:8, height:8, borderRadius:4,
+                background: partnerConnected ? '#22c55e' : '#ef4444',
+                border:'2px solid rgba(0,0,0,0.4)'}} />
             </button>
             {/* ── Overflow menu dropdown ── */}
             {showMoreMenu && (
@@ -405,18 +418,19 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
       )}
 
-      {/* Mode bar + Cost */}
-      <div style={{padding:'5px 12px', background:S.colors.overlayBg,
+      {/* Mode + Info bar — compact single row */}
+      <div style={{padding:'4px 12px', background:S.colors.overlayBg,
         borderBottom:`1px solid ${S.colors.overlayBorder}`, display:'flex', alignItems:'center',
-        justifyContent:'space-between', flexShrink:0}}>
+        justifyContent:'space-between', flexShrink:0, minHeight:28}}>
         <button onClick={() => isHost && setShowModeSelector(!showModeSelector)}
-          style={{background:'none', border:'none', padding:0, cursor:isHost ? 'pointer' : 'default',
-            display:'flex', alignItems:'center', gap:4, WebkitTapHighlightColor:'transparent'}}>
-          <span style={{fontSize:11, color:S.colors.textMuted}}>
+          style={{background:'none', border:'none', padding:'2px 6px', cursor:isHost ? 'pointer' : 'default',
+            display:'flex', alignItems:'center', gap:4, borderRadius:6,
+            WebkitTapHighlightColor:'transparent', transition:'background 0.15s'}}>
+          <span style={{fontSize:12, color:S.colors.textMuted, fontWeight:500}}>
             {modeInfo.icon} {L(modeInfo.nameKey)}
             {roomCtx.id !== 'general' && <span style={{marginLeft:4}}>{roomCtx.icon} {L(roomCtx.nameKey)}</span>}
           </span>
-          {isHost && <span style={{fontSize:9, color:S.colors.textMuted}}>{'\u25BC'}</span>}
+          {isHost && <span style={{fontSize:10, color:S.colors.textMuted}}>{'\u25BC'}</span>}
           {!isHost && roomMode === 'classroom' && (
             <span style={{fontSize:10, color:S.colors.textTertiary}}>
               {' \u2022 '}{roomInfo?.host || 'Host'} presenta
@@ -425,7 +439,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </button>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
           {isHost && (
-            <span style={{fontSize:8, fontWeight:700, letterSpacing:0.5, padding:'2px 6px', borderRadius:6,
+            <span style={{fontSize:9, fontWeight:700, letterSpacing:0.5, padding:'2px 8px', borderRadius:6,
               background: isTrial ? S.colors.accent4Bg : isTopPro ? `${S.colors.goldAccent}26` : S.colors.accent3Bg,
               color: isTrial ? S.colors.statusOk : isTopPro ? S.colors.goldAccent : S.colors.accent3,
               border: `1px solid ${isTrial ? S.colors.accent4Border : isTopPro ? `${S.colors.goldAccent}40` : S.colors.accent3Border}`}}>
@@ -433,14 +447,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             </span>
           )}
           {isHost && !isTrial && (
-            <>
-              <span style={{fontSize:10, color:S.colors.textTertiary, fontFamily:'monospace'}}>
-                ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)}
-              </span>
-              <span style={{fontSize:9, color:S.colors.textMuted}}>
-                {msgCount} msg
-              </span>
-            </>
+            <span style={{fontSize:10, color:S.colors.textTertiary, fontFamily:'monospace'}}>
+              ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)} {'\u2022'} {msgCount}msg
+            </span>
           )}
         </div>
       </div>
@@ -949,47 +958,55 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               </span>
             </div>
           </div>
-          {/* Video controls */}
-          <div style={{display:'flex', flexDirection:'column', gap:0, background:'rgba(0,0,0,0.85)'}}>
+          {/* Video controls — redesigned for clarity */}
+          <div style={{background:'rgba(0,0,0,0.9)', padding:'8px 12px'}}>
             {/* Volume slider row */}
-            <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'6px 16px'}}>
-              <span style={{fontSize:12, color:'#94a3b8'}}>
+            <div style={{display:'flex', alignItems:'center', gap:8, padding:'4px 0 8px'}}>
+              <span style={{fontSize:14}}>
                 {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
               </span>
               <input type="range" min="0" max="100" step="5"
                 value={Math.round(partnerVolume * 100)}
                 onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
-                style={{flex:1, maxWidth:200, accentColor:'#60a5fa', height:3}} />
-              <span style={{fontSize:9, color:'#94a3b8', fontFamily:'monospace', minWidth:28}}>
+                style={{flex:1, accentColor:'#60a5fa', height:4}} />
+              <span style={{fontSize:10, color:'#94a3b8', fontFamily:'monospace', minWidth:32, textAlign:'right'}}>
                 {Math.round(partnerVolume * 100)}%
               </span>
             </div>
-            {/* Buttons row */}
-            <div style={{display:'flex', justifyContent:'center', gap:12, padding:'4px 0 8px'}}>
+            {/* Buttons row — labeled for clarity */}
+            <div style={{display:'flex', justifyContent:'space-around', gap:4}}>
               <button onClick={() => webrtc.toggleVideo()}
-                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                  background: webrtc.videoEnabled ? S.colors.accent4Bg : 'rgba(255,255,255,0.12)',
-                  color: webrtc.videoEnabled ? S.colors.statusOk : S.colors.textMuted,
-                  fontSize:16, display:'flex', alignItems:'center', justifyContent:'center'}}>
-                {webrtc.videoEnabled ? '\u{1F4F7}' : '\u{1F6AB}'}
+                title={webrtc.videoEnabled ? 'Spegni camera' : 'Accendi camera'}
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                  padding:'6px 10px', borderRadius:10, border:'none', cursor:'pointer',
+                  background: webrtc.videoEnabled ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.08)',
+                  color: webrtc.videoEnabled ? '#22c55e' : '#94a3b8', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{webrtc.videoEnabled ? '\u{1F4F9}' : '\u{1F6AB}'}</span>
+                <span style={{fontSize:8, fontWeight:600}}>{webrtc.videoEnabled ? 'Camera' : 'Camera OFF'}</span>
               </button>
               <button onClick={() => webrtc.flipCamera()}
-                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                  background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
-                  display:'flex', alignItems:'center', justifyContent:'center'}}>
-                {'\u{1F504}'}
+                title="Ruota camera"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                  padding:'6px 10px', borderRadius:10, border:'none', cursor:'pointer',
+                  background:'rgba(255,255,255,0.08)', color:'#fff', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{'\u{1F504}'}</span>
+                <span style={{fontSize:8, fontWeight:600, color:'#94a3b8'}}>Ruota</span>
               </button>
               <button onClick={() => setVideoFullscreen(true)}
-                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                  background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
-                  display:'flex', alignItems:'center', justifyContent:'center'}}>
-                {'\u{2B06}\uFE0F'}
+                title="Espandi a schermo intero"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                  padding:'6px 14px', borderRadius:10, border:'none', cursor:'pointer',
+                  background:'rgba(96,165,250,0.15)', color:'#60a5fa', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{'\u{1F5A5}\uFE0F'}</span>
+                <span style={{fontSize:8, fontWeight:700}}>FULLSCREEN</span>
               </button>
               <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
-                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                  background:S.colors.statusError, color:'#fff', fontSize:16,
-                  display:'flex', alignItems:'center', justifyContent:'center'}}>
-                {'\u{1F4F5}'}
+                title="Chiudi videochiamata"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2,
+                  padding:'6px 10px', borderRadius:10, border:'none', cursor:'pointer',
+                  background:'rgba(239,68,68,0.15)', color:'#ef4444', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{'\u{1F4F5}'}</span>
+                <span style={{fontSize:8, fontWeight:600}}>Chiudi</span>
               </button>
             </div>
           </div>
@@ -1156,82 +1173,79 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </button>
       </div>
 
-      {/* Talk bar */}
+      {/* ═══ Talk bar — redesigned for clarity and ergonomics ═══ */}
       <div style={S.talkBar} role="toolbar" aria-label="Voice controls">
-        {status && <div style={{fontSize:11, color:S.colors.accent3, marginBottom:4}}>{status}</div>}
-        <div style={{fontSize:9, color:S.colors.textTertiary, marginBottom:4, textTransform:'uppercase', letterSpacing:1}}>
-          {modeInfo.icon} {L(modeInfo.nameKey)}
-          {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
-            <span style={{color:S.colors.statusOk, marginLeft:6}}>{'\u{1F7E2}'} LIVE</span>
-          )}
-        </div>
+        {status && <div style={{fontSize:12, color:S.colors.accent3, marginBottom:6, fontWeight:500}}>{status}</div>}
 
         {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
-          <div style={{display:'flex', alignItems:'center', gap:12}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:16, padding:'4px 0'}}>
+            {/* Cancel button (only when recording) */}
             {recording && (
               <button onClick={() => { vibrate(15); cancelRecording(); }}
-                title="Annulla"
-                aria-label={L('cancel') || 'Cancel recording'}
-                style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
-                  background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
-                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                  boxShadow:`0 0 12px ${S.colors.statusError}33`}}>
-                {'\u2716'}
+                title="Annulla registrazione"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                  width:52, height:52, borderRadius:14, border:`2px solid ${S.colors.statusError}`,
+                  background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
+                  cursor:'pointer', justifyContent:'center',
+                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{'\u2716'}</span>
+                <span style={{fontSize:7, fontWeight:700}}>ANNULLA</span>
               </button>
             )}
-            {/* Live mode button — noise suppression + voice focus */}
+            {/* Live mode button */}
             <button onClick={async () => {
               const next = !liveMode;
               setLiveModeState(next);
               if (setLiveMode) await setLiveMode(next);
               vibrate(15);
             }}
-              title={liveMode ? 'Live Mode ON — riduzione rumore attiva' : 'Live Mode — attiva riduzione rumore'}
-              aria-label={liveMode ? 'Disable live mode' : 'Enable live mode'}
-              style={{width:44, height:44, borderRadius:'50%',
+              title={liveMode ? 'Riduzione rumore attiva' : 'Attiva riduzione rumore'}
+              style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                width:52, height:52, borderRadius:14,
                 border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
-                background: liveMode ? 'rgba(34,197,94,0.15)' : S.colors.overlayBg,
-                color: liveMode ? '#22c55e' : S.colors.textMuted, fontSize:11, fontWeight:700,
-                cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                background: liveMode ? 'rgba(34,197,94,0.12)' : S.colors.overlayBg,
+                color: liveMode ? '#22c55e' : S.colors.textMuted,
+                cursor:'pointer', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.3)' : 'none'}}>
-              LIVE
+                boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
+              <span style={{fontSize:16}}>{liveMode ? '\u{1F7E2}' : '\u{1F399}\uFE0F'}</span>
+              <span style={{fontSize:7, fontWeight:700}}>LIVE</span>
             </button>
+            {/* MAIN record button — hero element */}
             <button onClick={() => { vibrate(25); toggleRecording(); }}
-              aria-label={recording ? (L('stopRecording') || 'Stop recording') : (L('startRecording') || 'Start recording')}
-              style={{...S.talkBtn, ...(recording ? S.talkBtnRec : {}),
-                ...(recording ? {animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
+              aria-label={recording ? 'Stop' : 'Registra'}
+              style={{...S.talkBtn, width:72, height:72, fontSize:30,
+                ...(recording ? {...S.talkBtnRec, animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
               {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
             </button>
           </div>
         )}
 
         {roomMode === 'classroom' && !canTalk && (
-          <div style={{color:S.colors.textMuted, fontSize:11, padding:8}}>
+          <div style={{color:S.colors.textMuted, fontSize:12, padding:10, textAlign:'center'}}>
             {'\u{1F512}'} {L('classroomDesc')}
           </div>
         )}
 
         {(roomMode === 'freetalk' || roomMode === 'simultaneous') && (
-          <div style={{display:'flex', alignItems:'center', gap:12}}>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:16, padding:'4px 0'}}>
+            {/* Cancel button */}
             {recording && (
               <button onClick={() => { vibrate(15); cancelRecording(); }}
-                title="Annulla"
-                aria-label={L('cancel') || 'Cancel recording'}
-                style={{width:44, height:44, borderRadius:'50%', border:`2px solid ${S.colors.statusError}`,
-                  background:S.colors.accent3Bg, color:S.colors.statusError, fontSize:18,
-                  cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                  boxShadow:`0 0 12px ${S.colors.statusError}33`}}>
-                {'\u2716'}
+                title="Annulla registrazione"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                  width:52, height:52, borderRadius:14, border:`2px solid ${S.colors.statusError}`,
+                  background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
+                  cursor:'pointer', justifyContent:'center',
+                  WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
+                <span style={{fontSize:20}}>{'\u2716'}</span>
+                <span style={{fontSize:7, fontWeight:700}}>ANNULLA</span>
               </button>
             )}
             {/* VAD Audio Level Bar */}
             {isListening && typeof vadAudioLevel === 'number' && (
-              <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40}}
-                role="meter" aria-label="Microphone level" aria-valuenow={Math.round(vadAudioLevel * 100)} aria-valuemin={0} aria-valuemax={100}>
-                <div style={{width:6, height:36, borderRadius:3, background:S.colors.overlayBg || 'rgba(255,255,255,0.1)',
+              <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40}}>
+                <div style={{width:6, height:40, borderRadius:3, background:S.colors.overlayBg || 'rgba(255,255,255,0.1)',
                   overflow:'hidden', position:'relative'}}>
                   <div style={{
                     position:'absolute', bottom:0, width:'100%', borderRadius:3,
@@ -1247,9 +1261,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 )}
               </div>
             )}
+            {/* MAIN free talk button — hero element */}
             <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
-              aria-label={isListening ? (L('stopFreeTalk') || 'Stop free talk') : (L('startFreeTalk') || 'Start free talk')}
-              style={{...S.talkBtn, ...(isListening ? S.talkBtnRec : {}),
+              aria-label={isListening ? 'Stop' : 'Avvia ascolto'}
+              style={{...S.talkBtn, width:72, height:72, fontSize:30,
+                ...(isListening ? S.talkBtnRec : {}),
                 ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
                 ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
                   boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
@@ -1257,33 +1273,43 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             </button>
           </div>
         )}
-        {/* VAD Sensitivity selector — shown in FreeTalk/Simultaneous modes */}
-        {(roomMode === 'freetalk' || roomMode === 'simultaneous') && !isListening && (
-          <div style={{display:'flex', alignItems:'center', gap:4, marginTop:4}}>
-            <span style={{fontSize:8, color:S.colors.textMuted, marginRight:2}}>{'\u{1F399}'} Sensibilit\u00E0:</span>
-            {[
-              { id: 'quiet', label: '\u{1F910} Silenzio', short: 'Silenzio' },
-              { id: 'normal', label: '\u{1F3E0} Normale', short: 'Normale' },
-              { id: 'noisy', label: '\u{1F4E2} Rumore', short: 'Rumore' },
-              { id: 'street', label: '\u{1F6A6} Strada', short: 'Strada' },
-            ].map(p => (
-              <button key={p.id} onClick={() => setVadSensitivity(p.id)}
-                style={{padding:'2px 6px', borderRadius:6, fontSize:8, fontWeight:600,
-                  border: vadSensitivity === p.id ? `1px solid ${S.colors.accent3Border}` : `1px solid ${S.colors.overlayBorder}`,
-                  background: vadSensitivity === p.id ? S.colors.accent3Bg : 'transparent',
-                  color: vadSensitivity === p.id ? S.colors.accent3 : S.colors.textMuted,
-                  cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                  fontFamily:FONT}}>
-                {p.short}
-              </button>
-            ))}
-          </div>
-        )}
+
+        {/* Mode label + VAD sensitivity (compact row) */}
+        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:6, flexWrap:'wrap'}}>
+          <span style={{fontSize:10, color:S.colors.textTertiary, fontWeight:500}}>
+            {modeInfo.icon} {L(modeInfo.nameKey)}
+            {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
+              <span style={{color:S.colors.statusOk, marginLeft:4}}>{'\u{1F7E2}'} LIVE</span>
+            )}
+          </span>
+          {/* VAD Sensitivity — inline pills */}
+          {(roomMode === 'freetalk' || roomMode === 'simultaneous') && !isListening && (
+            <>
+              <span style={{color:S.colors.overlayBorder}}>|</span>
+              {[
+                { id: 'quiet', short: '\u{1F910} Silenzio' },
+                { id: 'normal', short: '\u{1F3E0} Normale' },
+                { id: 'noisy', short: '\u{1F4E2} Rumore' },
+                { id: 'street', short: '\u{1F6A6} Strada' },
+              ].map(p => (
+                <button key={p.id} onClick={() => setVadSensitivity(p.id)}
+                  style={{padding:'2px 8px', borderRadius:8, fontSize:9, fontWeight:600,
+                    border: vadSensitivity === p.id ? `1px solid ${S.colors.accent3Border}` : `1px solid ${S.colors.overlayBorder}`,
+                    background: vadSensitivity === p.id ? S.colors.accent3Bg : 'transparent',
+                    color: vadSensitivity === p.id ? S.colors.accent3 : S.colors.textMuted,
+                    cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'all 0.15s',
+                    fontFamily:FONT}}>
+                  {p.short}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
 
         {isTrial && isHost && (
           <button onClick={() => { endChatAndSave(); setTimeout(() => setView('account'), 300); }}
-            style={{marginTop:4, padding:'4px 14px', borderRadius:10, border:`1px solid ${S.colors.accent3Border}`,
-              background:S.colors.accent3Bg, color:S.colors.textMuted, fontSize:10,
+            style={{marginTop:6, padding:'6px 16px', borderRadius:12, border:`1px solid ${S.colors.accent3Border}`,
+              background:S.colors.accent3Bg, color:S.colors.textMuted, fontSize:11,
               cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}>
             {'\u2728'} {L('upgradeToPro')}
           </button>
