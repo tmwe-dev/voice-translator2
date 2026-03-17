@@ -49,9 +49,11 @@ export default function useTranslation({
   sentByMeRef,
   roomSessionTokenRef,
   broadcastMessage,
+  broadcastMessageUpdate, // Phase 2: broadcast translation update
   sendDirectMessage,  // WebRTC DataChannel for P2P instant delivery
   verifiedNameRef,
   addLocalMessage,    // Add sender's own message to local list immediately
+  updateLocalMessage, // Update existing message (add translation)
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -104,6 +106,7 @@ export default function useTranslation({
   const {
     translateUniversal,
     sendMessage,
+    sendTranslationUpdate,
     getTargetLangInfo,
     getAllTargetLangs,
     translateToAllTargets,
@@ -123,9 +126,11 @@ export default function useTranslation({
     sentByMeRef,
     roomSessionTokenRef,
     broadcastMessage,
+    broadcastMessageUpdate,
     sendDirectMessage,
     verifiedNameRef,
     addLocalMessage,
+    updateLocalMessage,
   });
 
   // ── Shared helpers ──
@@ -156,44 +161,55 @@ export default function useTranslation({
   }
 
   /**
-   * Translate text to all target languages and send as a room message.
-   * DRY helper used by stopStreamingTranslation, sendTextMessage, and FreeTalk.
+   * TWO-PHASE send: original text first, translation update second.
    *
-   * @param {string} text - Original text to translate
-   * @param {object} opts - { skipRefresh?, clearStreamingMsg? }
-   * @returns {{ limitExceeded?: boolean }}
+   * Phase 1 (instant): Send original text → visible to sender + receiver immediately
+   * Phase 2 (async):   Translate → update message on both sides → TTS on receiver
+   *
+   * This eliminates the "message disappears" gap and shows text ASAP.
    */
   const translateAndSend = useCallback(async (text, opts = {}) => {
     const { myL, targetLangs } = getAllTargetLangs();
-    const translateOpts = buildTranslateOpts();
+    const primaryTargetLang = targetLangs[0]?.code || 'en';
 
+    // ── PHASE 1: Send original immediately (no translation yet) ──
+    if (roomId) {
+      sendMessage(text, null, myL.code, primaryTargetLang, null);
+    }
+
+    // ── PHASE 2: Translate in background, then update ──
+    const translateOpts = buildTranslateOpts();
     let translations = {};
     let primaryTranslated = '';
-    let primaryTargetLang = targetLangs[0]?.code || 'en';
+    let finalTargetLang = primaryTargetLang;
 
-    if (targetLangs.length === 1) {
-      const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
-      if (data.translated) {
-        primaryTranslated = data.translated;
-        primaryTargetLang = targetLangs[0].code;
-        translations[targetLangs[0].code] = data.translated;
+    try {
+      if (targetLangs.length === 1) {
+        const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
+        if (data.translated) {
+          primaryTranslated = data.translated;
+          finalTargetLang = targetLangs[0].code;
+          translations[targetLangs[0].code] = data.translated;
+        }
+        if (data.limitExceeded) return { limitExceeded: true };
+      } else {
+        const result = await translateToAllTargets(text, myL, targetLangs, translateOpts);
+        translations = result.translations;
+        primaryTranslated = result.primaryTranslated;
+        finalTargetLang = result.primaryTargetLang;
       }
-      if (data.limitExceeded) return { limitExceeded: true };
-    } else {
-      const result = await translateToAllTargets(text, myL, targetLangs, translateOpts);
-      translations = result.translations;
-      primaryTranslated = result.primaryTranslated;
-      primaryTargetLang = result.primaryTargetLang;
+
+      // Send translation update to everyone (sender local + partner broadcast)
+      if (primaryTranslated && roomId) {
+        sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
+        if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
+      }
+    } catch (e) {
+      console.error('[translateAndSend] Phase 2 translation error:', e);
     }
 
-    if (primaryTranslated && roomId) {
-      // sendMessage now returns immediately after broadcast (server save is fire-and-forget)
-      sendMessage(text, primaryTranslated, myL.code, primaryTargetLang, translations);
-      if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
-    }
-
-    return { translations, primaryTranslated, primaryTargetLang };
-  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, roomId, isTrialRef, useOwnKeys, refreshBalance]);
+    return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
+  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance]);
 
   // =============================================
   // Speech result handler

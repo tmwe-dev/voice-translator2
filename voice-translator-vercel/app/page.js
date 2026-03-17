@@ -136,9 +136,11 @@ function HomeInner() {
     sentByMeRef: roomPolling.sentByMeRef,  // FASE 1A: for message dedup
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
     broadcastMessage: roomPolling.broadcastMessage,
+    broadcastMessageUpdate: roomPolling.broadcastMessageUpdate,
     sendDirectMessage: sendDirectMessageStable,
     verifiedNameRef: roomPolling.verifiedNameRef,
     addLocalMessage: roomPolling.addLocalMessage,
+    updateLocalMessage: roomPolling.updateLocalMessage,
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 
@@ -151,7 +153,11 @@ function HomeInner() {
       // Add to messages list via the same handler used by Realtime
       roomPolling.addIncomingMessage(message);
     }
-  }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage]);
+    // Phase 2: translation update arrived via P2P — forward to same handler as Realtime
+    if (msg?.type === 'message-update' && msg.original) {
+      roomPolling.handleMessageUpdate(msg);
+    }
+  }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage, roomPolling.handleMessageUpdate]);
 
   const webrtc = useWebRTC({
     roomId: roomPolling.roomId,

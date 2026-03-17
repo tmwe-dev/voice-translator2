@@ -30,9 +30,11 @@ export default function useTranslationAPI({
   sentByMeRef,
   roomSessionTokenRef,
   broadcastMessage,
+  broadcastMessageUpdate, // Phase 2: broadcast translation to partner
   sendDirectMessage,  // WebRTC DataChannel: P2P instant delivery
   verifiedNameRef,
   addLocalMessage,    // Callback to add message to local messages[] immediately
+  updateLocalMessage, // Callback to update existing message (add translation)
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -126,7 +128,47 @@ export default function useTranslationAPI({
     // Return immediately with the instant message — don't await server save
     // The promise is kept alive so it completes in background
     return { message: instantMsg, serverSave: serverSavePromise };
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, verifiedNameRef]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, verifiedNameRef, addLocalMessage]);
+
+  /**
+   * Phase 2: Send translation update for an already-sent message.
+   * Updates local display, broadcasts to partner via P2P + Realtime,
+   * and updates the server-saved message.
+   */
+  const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
+    if (!roomId) return;
+    const senderName = verifiedNameRef?.current || prefsRef.current.name;
+    const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations };
+
+    // Update local message immediately (sender sees translation)
+    if (updateLocalMessage) {
+      updateLocalMessage(original, senderName, { translated, targetLang, translations });
+    }
+
+    // Broadcast to partner via P2P (fastest)
+    if (sendDirectMessage) {
+      try { sendDirectMessage({ type: 'message-update', ...updatePayload }); } catch {}
+    }
+    // Broadcast to partner via Realtime
+    if (broadcastMessageUpdate) {
+      broadcastMessageUpdate(updatePayload);
+    }
+
+    // Update server record (fire-and-forget)
+    fetch('/api/messages', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        roomSessionToken: roomSessionTokenRef?.current || null,
+        original,
+        sender: senderName,
+        translated,
+        targetLang,
+        translations,
+      })
+    }).catch(e => console.error('[sendTranslationUpdate] Server error:', e));
+  }, [roomId, prefsRef, verifiedNameRef, roomSessionTokenRef, sendDirectMessage, broadcastMessageUpdate, updateLocalMessage]);
 
   /**
    * Translate text using the appropriate endpoint (free/paid/consensus).
@@ -294,6 +336,7 @@ export default function useTranslationAPI({
   return {
     translateUniversal,
     sendMessage,
+    sendTranslationUpdate,
     getTargetLangInfo,
     getAllTargetLangs,
     translateToAllTargets,

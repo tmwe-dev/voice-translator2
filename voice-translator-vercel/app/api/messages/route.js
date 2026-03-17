@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { addMessage, getMessages, getRoom, resolveRoomIdentity } from '../../lib/store.js';
+import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, rateLimit, getClientIP } from '../../lib/validate.js';
 
 // POST /api/messages - Send a translation to the room
@@ -50,7 +50,50 @@ export async function POST(req) {
   }
 }
 
-// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP&rst=TOKEN - Poll for new messages
+// PATCH /api/messages - Update existing message with translation (Phase 2 of two-phase send)
+export async function PATCH(req) {
+  try {
+    const ip = getClientIP(req);
+    const rl = rateLimit(ip, { maxRequests: 120, windowMs: 60000 });
+    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+
+    const body = await req.json();
+    const roomId = sanitizeRoomId(body.roomId);
+    const sender = sanitizeName(body.sender);
+    const original = sanitizeText(body.original, 10000);
+    const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
+
+    if (!roomId || !original) {
+      return NextResponse.json({ error: 'roomId and original required' }, { status: 400 });
+    }
+
+    // Resolve identity: prefer session token, fall back to sender name
+    const identity = await resolveRoomIdentity(roomSessionToken, sender, roomId);
+    if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
+    // Verify sender is a member of this room
+    const room = await getRoom(roomId);
+    if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    const isMember = room.members.some(m => m.name === identity.name);
+    if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+
+    const translated = sanitizeText(body.translated || '', 10000);
+    const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
+    const translations = sanitizeTranslations(body.translations);
+
+    const updated = await updateMessage(roomId, identity.name, original, {
+      translated, targetLang, translations,
+    });
+    if (!updated) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+
+    return NextResponse.json({ message: updated });
+  } catch (e) {
+    console.error('Messages PATCH error:', e);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP&rst=Token - Poll for new messages
 // Supports room session token (rst) for server-verified identity, falls back to name
 export async function GET(req) {
   try {

@@ -202,6 +202,42 @@ export async function addMessage(roomId, msg) {
   return m;
 }
 
+/**
+ * Update an existing message with translation data (Phase 2 of two-phase send).
+ * Finds message by sender + original text, updates translated/targetLang/translations.
+ */
+export async function updateMessage(roomId, sender, original, updates) {
+  const id = roomId.toUpperCase();
+  const key = `msgs:${id}`;
+  const allMsgs = await redis('LRANGE', key, 0, -1);
+  if (!allMsgs || !Array.isArray(allMsgs)) return null;
+
+  // Find the message index by sender + original text (most recent match)
+  let targetIdx = -1;
+  let targetMsg = null;
+  for (let i = allMsgs.length - 1; i >= 0; i--) {
+    const m = JSON.parse(allMsgs[i]);
+    if (m.sender === sender && m.original === original) {
+      targetIdx = i;
+      targetMsg = m;
+      break;
+    }
+  }
+  if (targetIdx < 0 || !targetMsg) return null;
+
+  // Apply updates
+  const updated = {
+    ...targetMsg,
+    translated: updates.translated || targetMsg.translated,
+    targetLang: updates.targetLang || targetMsg.targetLang,
+    translations: updates.translations || targetMsg.translations,
+  };
+
+  // LSET replaces the element at index
+  await redis('LSET', key, targetIdx, JSON.stringify(updated));
+  return updated;
+}
+
 export async function getMessages(roomId, after = 0) {
   const key = `msgs:${roomId.toUpperCase()}`;
   const allMsgs = await redis('LRANGE', key, 0, -1);

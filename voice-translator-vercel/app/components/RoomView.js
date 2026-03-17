@@ -731,6 +731,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         {messages.map((m, i) => {
           const isMine = m.sender === myName;
           const translationForMe = getTranslationForMe(m);
+          const hasTranslation = !!(m.translated || (m.translations && Object.keys(m.translations).length > 0));
+          const pendingTranslation = !hasTranslation && m.original;
           return (
             <div key={m._stableKey || m.id || `${m.sender}-${m.timestamp}-${i}`} style={{display:'flex', gap:8,
               flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end',
@@ -742,19 +744,29 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   {isMine ? 'Tu' : m.sender}
                 </div>
                 <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
+                  {/* Primary line: original for sender, translation for receiver */}
                   <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
-                    {isMine ? m.original : translationForMe}
+                    {isMine ? m.original : (hasTranslation ? translationForMe : m.original)}
                   </div>
-                  <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
-                    {isMine ? translationForMe : m.original}
-                  </div>
+                  {/* Secondary line: translation for sender, original for receiver */}
+                  {pendingTranslation ? (
+                    <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
+                      {L('translating') || 'Traducendo...'}
+                    </div>
+                  ) : (
+                    <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
+                      {isMine ? translationForMe : m.original}
+                    </div>
+                  )}
                 </div>
-                <button onClick={() => playMessage(m)}
-                  style={{marginTop:2, padding:'2px 8px', borderRadius:8,
-                    background:'transparent', border:'none', color:S.colors.textMuted,
-                    fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                  {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
-                </button>
+                {hasTranslation && (
+                  <button onClick={() => playMessage(m)}
+                    style={{marginTop:2, padding:'2px 8px', borderRadius:8,
+                      background:'transparent', border:'none', color:S.colors.textMuted,
+                      fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                    {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
+                  </button>
+                )}
               </div>
             </div>
           );

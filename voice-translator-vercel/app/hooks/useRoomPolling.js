@@ -120,6 +120,38 @@ export default function useRoomPolling({
     processIncomingMessage(message);
   }, [processIncomingMessage]);
 
+  // ── Handle translation update for an existing message (Phase 2) ──
+  // When sender translates text after sending the original, this updates the message
+  // and triggers TTS for the receiver.
+  const handleMessageUpdate = useCallback((data) => {
+    if (!data || !data.original) return;
+    // Find the message by sender + original text (works for both temp and server IDs)
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
+      if (idx < 0) return prev;
+      const updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        translated: data.translated || updated[idx].translated,
+        targetLang: data.targetLang || updated[idx].targetLang,
+        translations: data.translations || updated[idx].translations,
+      };
+      return updated;
+    });
+    // Trigger TTS for the receiver (the sender already has it marked in sentByMeRef)
+    if (data.translated || data.translations) {
+      processIncomingMessage({
+        id: data.tempId || `update_${Date.now()}`,
+        sender: data.sender,
+        original: data.original,
+        translated: data.translated,
+        sourceLang: data.sourceLang,
+        targetLang: data.targetLang,
+        translations: data.translations,
+      });
+    }
+  }, [processIncomingMessage]);
+
   const handleRealtimeSpeaking = useCallback((data) => {
     const myName = verifiedNameRef.current || prefsRef.current.name;
     if (data.name === myName) return;
@@ -170,6 +202,7 @@ export default function useRoomPolling({
     subscribe: realtimeSubscribe,
     unsubscribe: realtimeUnsubscribe,
     broadcastMessage,
+    broadcastMessageUpdate,
     broadcastSpeaking,
     broadcastMemberUpdate,
     broadcastHeartbeat,
@@ -177,6 +210,7 @@ export default function useRoomPolling({
     roomId,
     myName: verifiedNameRef.current || prefsRef.current?.name,
     onNewMessage: handleRealtimeMessage,
+    onMessageUpdate: handleMessageUpdate,
     onSpeakingChange: handleRealtimeSpeaking,
     onMemberUpdate: handleRealtimeMemberUpdate,
     onPresenceChange: handleRealtimePresence,
@@ -534,7 +568,20 @@ export default function useRoomPolling({
     isHostRef,
     // Realtime broadcast functions (for use in useTranslationAPI)
     broadcastMessage,
+    broadcastMessageUpdate,
     broadcastMemberUpdate,
+    // P2P message-update handler (reused by handleDirectMessage in page.js)
+    handleMessageUpdate,
+    // Update an existing local message (e.g., add translation after Phase 1 send)
+    updateLocalMessage: (original, sender, updates) => {
+      setMessages(prev => {
+        const idx = prev.findIndex(m => m.sender === sender && m.original === original);
+        if (idx < 0) return prev;
+        const updated = [...prev];
+        updated[idx] = { ...updated[idx], ...updates };
+        return updated;
+      });
+    },
     // Add sender's own message to local list immediately (for instant display)
     addLocalMessage: (msg) => {
       setMessages(prev => {

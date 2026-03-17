@@ -22,6 +22,7 @@ export default function useRealtimeRoom({
   roomId,
   myName,
   onNewMessage,
+  onMessageUpdate,    // Phase 2: translation arrived for an existing message
   onSpeakingChange,
   onMemberUpdate,
   onPresenceChange,
@@ -61,6 +62,13 @@ export default function useRealtimeRoom({
       }
     });
 
+    // ── Listen for message updates (translation arrived) ──
+    channel.on('broadcast', { event: 'message-update' }, (payload) => {
+      if (payload.payload && onMessageUpdate) {
+        onMessageUpdate(payload.payload);
+      }
+    });
+
     // ── Listen for speaking/typing state changes ──
     channel.on('broadcast', { event: 'speaking' }, (payload) => {
       if (payload.payload && onSpeakingChange) {
@@ -95,7 +103,7 @@ export default function useRealtimeRoom({
     });
 
     channelRef.current = channel;
-  }, [onNewMessage, onSpeakingChange, onMemberUpdate, onPresenceChange]);
+  }, [onNewMessage, onMessageUpdate, onSpeakingChange, onMemberUpdate, onPresenceChange]);
 
   /**
    * Unsubscribe from current room
@@ -138,6 +146,14 @@ export default function useRealtimeRoom({
   }, [safeBroadcast]);
 
   /**
+   * Broadcast translation update for an existing message (Phase 2).
+   * Sent after translation completes, so the receiver can update the message and play TTS.
+   */
+  const broadcastMessageUpdate = useCallback((data) => {
+    return safeBroadcast('message-update', data);
+  }, [safeBroadcast]);
+
+  /**
    * Broadcast speaking/typing state change
    */
   const broadcastSpeaking = useCallback((data) => {
@@ -170,6 +186,7 @@ export default function useRealtimeRoom({
     subscribe,
     unsubscribe,
     broadcastMessage,
+    broadcastMessageUpdate,
     broadcastSpeaking,
     broadcastMemberUpdate,
     broadcastHeartbeat,
