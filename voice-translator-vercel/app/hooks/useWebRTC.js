@@ -120,17 +120,20 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
-    console.log('[WebRTC] Remote track received:', track.kind);
+    console.log('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
+    // Always update the ref with the latest stream/tracks
     if (stream) {
       remoteStreamRef.current = stream;
-      setRemoteStream(stream);
     } else {
       if (!remoteStreamRef.current) {
         remoteStreamRef.current = new MediaStream();
       }
       remoteStreamRef.current.addTrack(track);
-      setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
     }
+    // CRITICAL: Always create a NEW MediaStream object so React detects the state change
+    // (same reference won't trigger re-render even if new tracks were added)
+    const updatedStream = new MediaStream(remoteStreamRef.current.getTracks());
+    setRemoteStream(updatedStream);
     if (track.kind === 'video') setRemoteVideoActive(true);
     track.onended = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
     track.onmute = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
@@ -251,6 +254,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       try {
         const pc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
         pcRef.current = pc;
+        // CRITICAL: Add transceivers BEFORE creating the offer to guarantee the SDP
+        // always has m=audio and m=video sections. Without this, if getUserMedia fails,
+        // the offer has no media sections → the callee can't send their media back.
+        pc.addTransceiver('audio', { direction: 'sendrecv' });
+        pc.addTransceiver('video', { direction: 'sendrecv' });
         const dc = createDataChannel(pc);
         setupDC(dc);
         const stream = await getMediaWithFallback(true);

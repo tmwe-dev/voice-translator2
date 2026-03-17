@@ -99,6 +99,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   }, [webrtc?.localStream, videoFullscreen]);
 
   // ── Attach remote VIDEO stream to both fullscreen and inline elements (MUTED — audio via hidden <audio>) ──
+  // CRITICAL: Must also depend on remoteVideoActive — when video track arrives AFTER audio,
+  // the <video> element only mounts when remoteVideoActive becomes true. Without this dep,
+  // the effect wouldn't re-run to set srcObject on the newly mounted <video> element.
   useEffect(() => {
     const stream = webrtc?.remoteStream;
     if (!stream) return;
@@ -110,7 +113,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       remoteVideoInlineRef.current.srcObject = stream;
       remoteVideoInlineRef.current.muted = true;
     }
-  }, [webrtc?.remoteStream, videoFullscreen]);
+  }, [webrtc?.remoteStream, webrtc?.remoteVideoActive, videoFullscreen, showVideoCall]);
 
   // ── CRITICAL: Hidden <audio> element ALWAYS plays remote audio regardless of video UI ──
   useEffect(() => {
