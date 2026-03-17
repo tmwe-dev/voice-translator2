@@ -5,24 +5,14 @@ import { getSupabaseClient } from '../lib/supabase.js';
 /**
  * useRealtimeRoom — Supabase Realtime Channels for room communication.
  *
- * Replaces the 1-second polling loop with push-based WebSocket events.
- * Falls back gracefully if Supabase isn't configured (polling still works).
- *
- * Events broadcast on channel `room:{roomId}`:
- *   - "new-message"    → { message }           (new translated message)
- *   - "speaking"       → { name, speaking, liveText, typing }
- *   - "member-update"  → { members }           (join/leave/lang change)
- *   - "heartbeat"      → { name }              (presence keepalive)
- *
- * This hook does NOT replace the API routes — messages are still stored
- * in Redis via POST /api/messages. This just broadcasts them instantly
- * to all connected clients so they don't need to poll.
+ * Uses REFS for all callbacks to avoid stale closures.
+ * The channel is subscribed ONCE and always calls the latest callback versions.
  */
 export default function useRealtimeRoom({
   roomId,
   myName,
   onNewMessage,
-  onMessageUpdate,    // Phase 2: translation arrived for an existing message
+  onMessageUpdate,
   onSpeakingChange,
   onMemberUpdate,
   onPresenceChange,
@@ -31,11 +21,25 @@ export default function useRealtimeRoom({
   const [connected, setConnected] = useState(false);
   const readyRef = useRef(false);
 
+  // ── Callback refs: always point to the LATEST version ──
+  // This eliminates stale closure bugs in channel event handlers.
+  const onNewMessageRef = useRef(onNewMessage);
+  const onMessageUpdateRef = useRef(onMessageUpdate);
+  const onSpeakingChangeRef = useRef(onSpeakingChange);
+  const onMemberUpdateRef = useRef(onMemberUpdate);
+  const onPresenceChangeRef = useRef(onPresenceChange);
+
+  useEffect(() => { onNewMessageRef.current = onNewMessage; }, [onNewMessage]);
+  useEffect(() => { onMessageUpdateRef.current = onMessageUpdate; }, [onMessageUpdate]);
+  useEffect(() => { onSpeakingChangeRef.current = onSpeakingChange; }, [onSpeakingChange]);
+  useEffect(() => { onMemberUpdateRef.current = onMemberUpdate; }, [onMemberUpdate]);
+  useEffect(() => { onPresenceChangeRef.current = onPresenceChange; }, [onPresenceChange]);
+
   /**
-   * Subscribe to a room channel
+   * Subscribe to a room channel.
+   * No callback dependencies — channel handlers read from refs.
    */
   const subscribe = useCallback((rid) => {
-    // Unsubscribe from previous channel if any
     readyRef.current = false;
     if (channelRef.current) {
       try { channelRef.current.unsubscribe(); } catch {}
@@ -43,7 +47,6 @@ export default function useRealtimeRoom({
       setConnected(false);
     }
 
-    // Get Supabase client directly (no lazy useEffect init — eliminates race condition)
     const supabase = getSupabaseClient();
     console.log('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
     if (!supabase || !rid) {
@@ -52,41 +55,37 @@ export default function useRealtimeRoom({
     }
 
     const channel = supabase.channel(`room:${rid}`, {
-      config: { broadcast: { self: false } }, // Don't receive own broadcasts
+      config: { broadcast: { self: false } },
     });
 
-    // ── Listen for new messages ──
+    // All handlers read from refs → always call the latest callback version
     channel.on('broadcast', { event: 'new-message' }, (payload) => {
-      if (payload.payload?.message && onNewMessage) {
-        onNewMessage(payload.payload.message);
+      if (payload.payload?.message && onNewMessageRef.current) {
+        onNewMessageRef.current(payload.payload.message);
       }
     });
 
-    // ── Listen for message updates (translation arrived) ──
     channel.on('broadcast', { event: 'message-update' }, (payload) => {
-      if (payload.payload && onMessageUpdate) {
-        onMessageUpdate(payload.payload);
+      if (payload.payload && onMessageUpdateRef.current) {
+        onMessageUpdateRef.current(payload.payload);
       }
     });
 
-    // ── Listen for speaking/typing state changes ──
     channel.on('broadcast', { event: 'speaking' }, (payload) => {
-      if (payload.payload && onSpeakingChange) {
-        onSpeakingChange(payload.payload);
+      if (payload.payload && onSpeakingChangeRef.current) {
+        onSpeakingChangeRef.current(payload.payload);
       }
     });
 
-    // ── Listen for member updates (join/leave/lang change) ──
     channel.on('broadcast', { event: 'member-update' }, (payload) => {
-      if (payload.payload && onMemberUpdate) {
-        onMemberUpdate(payload.payload);
+      if (payload.payload && onMemberUpdateRef.current) {
+        onMemberUpdateRef.current(payload.payload);
       }
     });
 
-    // ── Listen for heartbeats (presence) ──
     channel.on('broadcast', { event: 'heartbeat' }, (payload) => {
-      if (payload.payload && onPresenceChange) {
-        onPresenceChange(payload.payload);
+      if (payload.payload && onPresenceChangeRef.current) {
+        onPresenceChangeRef.current(payload.payload);
       }
     });
 
@@ -103,11 +102,8 @@ export default function useRealtimeRoom({
     });
 
     channelRef.current = channel;
-  }, [onNewMessage, onMessageUpdate, onSpeakingChange, onMemberUpdate, onPresenceChange]);
+  }, []); // No deps — handlers use refs
 
-  /**
-   * Unsubscribe from current room
-   */
   const unsubscribe = useCallback(() => {
     readyRef.current = false;
     if (channelRef.current) {
@@ -117,68 +113,42 @@ export default function useRealtimeRoom({
     }
   }, []);
 
-  /**
-   * Safe broadcast helper — checks channel readiness and validates result.
-   */
   const safeBroadcast = useCallback(async (event, payload) => {
     if (!channelRef.current || !readyRef.current) return false;
-
     const result = await channelRef.current.send({
       type: 'broadcast',
       event,
       payload,
     });
-
     if (result !== 'ok') {
       console.warn(`[Realtime] Broadcast failed for ${event}:`, result);
       return false;
     }
-
     return true;
   }, []);
 
-  /**
-   * Broadcast a new message to all room participants.
-   * Called AFTER the message is saved to Redis (in sendMessage).
-   */
   const broadcastMessage = useCallback((message) => {
     return safeBroadcast('new-message', { message });
   }, [safeBroadcast]);
 
-  /**
-   * Broadcast translation update for an existing message (Phase 2).
-   * Sent after translation completes, so the receiver can update the message and play TTS.
-   */
   const broadcastMessageUpdate = useCallback((data) => {
     return safeBroadcast('message-update', data);
   }, [safeBroadcast]);
 
-  /**
-   * Broadcast speaking/typing state change
-   */
   const broadcastSpeaking = useCallback((data) => {
     return safeBroadcast('speaking', data);
   }, [safeBroadcast]);
 
-  /**
-   * Broadcast member update (join/leave/lang change)
-   */
   const broadcastMemberUpdate = useCallback((data) => {
     return safeBroadcast('member-update', data);
   }, [safeBroadcast]);
 
-  /**
-   * Broadcast heartbeat (presence keepalive)
-   */
   const broadcastHeartbeat = useCallback((name) => {
     return safeBroadcast('heartbeat', { name, ts: Date.now() });
   }, [safeBroadcast]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      unsubscribe();
-    };
+    return () => { unsubscribe(); };
   }, [unsubscribe]);
 
   return {

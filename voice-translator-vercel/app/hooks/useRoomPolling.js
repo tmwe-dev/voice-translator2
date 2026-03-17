@@ -104,13 +104,21 @@ export default function useRoomPolling({
         m.id?.startsWith('tmp_') && m.sender === message.sender && m.original === message.original
       );
       if (tempIdx >= 0) {
-        // Replace temp message with server-persisted version
-        // Preserve _stableKey for React key stability (avoids flash on temp→server ID change)
+        // Replace temp with server version, but MERGE translations to avoid
+        // losing Phase 2 data that arrived before this poll.
+        const tempMsg = prev[tempIdx];
         const updated = [...prev];
-        if (sentByMeRef.current.has(prev[tempIdx].id)) {
+        if (sentByMeRef.current.has(tempMsg.id)) {
           sentByMeRef.current.add(message.id);
         }
-        updated[tempIdx] = { ...message, _replaced: true, _stableKey: prev[tempIdx].id };
+        updated[tempIdx] = {
+          ...message,
+          translated: message.translated || tempMsg.translated,
+          translations: message.translations || tempMsg.translations,
+          targetLang: message.targetLang || tempMsg.targetLang,
+          _replaced: true,
+          _stableKey: tempMsg._stableKey || tempMsg.id,
+        };
         return updated;
       }
       return [...prev, message];
@@ -252,10 +260,19 @@ export default function useRoomPolling({
                 );
                 if (tempIdx >= 0) {
                   // Mark server ID as "sent by me" if the temp was ours
-                  if (sentByMeRef.current.has(updated[tempIdx].id)) {
+                  const tempMsg = updated[tempIdx];
+                  if (sentByMeRef.current.has(tempMsg.id)) {
                     sentByMeRef.current.add(m.id);
                   }
-                  updated[tempIdx] = { ...m, _stableKey: updated[tempIdx]._stableKey || updated[tempIdx].id };
+                  // MERGE: keep local translations if server doesn't have them yet
+                  // (Phase 2 updateLocalMessage may have added them before this poll)
+                  updated[tempIdx] = {
+                    ...m,
+                    translated: m.translated || tempMsg.translated,
+                    translations: m.translations || tempMsg.translations,
+                    targetLang: m.targetLang || tempMsg.targetLang,
+                    _stableKey: tempMsg._stableKey || tempMsg.id,
+                  };
                   changed = true;
                 } else {
                   updated.push(m);
@@ -598,5 +615,3 @@ export default function useRoomPolling({
     addIncomingMessage: handleRealtimeMessage,
   };
 }
-
-// ── END OF HOOK ──
