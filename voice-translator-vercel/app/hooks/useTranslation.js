@@ -330,6 +330,8 @@ export default function useTranslation({
   // Start streaming translation
   // =============================================
   async function startStreamingTranslation() {
+    // Reset stoppingRef in case previous stop is still awaiting async translate
+    stoppingRef.current = false;
     const currentLang = myLangRef.current;
 
     // ── Deepgram streaming: highest priority when available ──
@@ -511,11 +513,17 @@ export default function useTranslation({
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
 
+    // CRITICAL: Reset stoppingRef BEFORE the async translateAndSend call.
+    // Previously, stoppingRef stayed true during the entire API call (~1-2s).
+    // If the user started + stopped a second recording during that time,
+    // stopStreamingTranslation would return immediately (line 446 guard),
+    // silently discarding the second message.
+    stoppingRef.current = false;
+
     try {
       const result = await translateAndSend(allOriginal);
       if (result.limitExceeded) {
         setStreamingMsg(null);
-        stoppingRef.current = false;
         return;
       }
       setStreamingMsg(null);
@@ -524,14 +532,13 @@ export default function useTranslation({
       console.error('[stopStreaming] Translation error:', e);
       setStreamingMsg(null);
     }
-
-    stoppingRef.current = false;
   }
 
   // =============================================
   // Classic Recording (fallback for no SpeechRecognition)
   // =============================================
   async function startClassicRecording() {
+    stoppingRef.current = false; // Reset in case previous stop still awaiting async translate
     unlockAudio();
     setRecording(true);
     if (roomId) setSpeakingState(roomId, true);
