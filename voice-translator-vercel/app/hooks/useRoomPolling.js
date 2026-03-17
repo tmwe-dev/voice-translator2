@@ -42,21 +42,23 @@ export default function useRoomPolling({
   // This prevents TTS replay when polling replaces a temp message with a server version
   const processedForTTSRef = useRef(new Set());
 
-  // ── Helper: process incoming message (shared by realtime + polling) ──
-  // dedupKey: a stable key to prevent TTS replay when temp→server ID changes.
-  // Uses `sender|original` as fallback fingerprint so the same content isn't played twice.
-  const processIncomingMessage = useCallback((msg, { skipIfAlreadyProcessed = false } = {}) => {
+  // ── Helper: process incoming message (shared by realtime + polling + P2P) ──
+  // ALWAYS checks content fingerprint to prevent TTS replay.
+  // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
+  const processIncomingMessage = useCallback((msg) => {
     if (!msg || !msg.id) return;
     // Skip messages sent by me
     if (sentByMeRef.current.has(msg.id)) return;
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
     if (msg.sender === myVerifiedName) return;
 
-    // ── Unified TTS dedup ──
-    // Generate a content-based fingerprint so temp and server versions match
+    // ── Unified TTS dedup: ALWAYS check fingerprint ──
+    // Content-based fingerprint so temp and server versions of the same message match.
+    // This prevents TTS from playing twice when P2P + Realtime both deliver the same message,
+    // and again when polling replaces the temp ID with server ID.
     const contentFingerprint = `${msg.sender}|${msg.original}|${msg.timestamp || ''}`;
-    if (skipIfAlreadyProcessed && processedForTTSRef.current.has(contentFingerprint)) {
-      return; // Already played TTS for this message via Realtime/P2P
+    if (processedForTTSRef.current.has(contentFingerprint)) {
+      return; // Already played TTS for this exact content
     }
     processedForTTSRef.current.add(contentFingerprint);
     // LRU cap: prevent unbounded growth
@@ -228,9 +230,7 @@ export default function useRoomPolling({
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
-              // skipIfAlreadyProcessed: polling messages that replaced a temp
-              // were already processed for TTS via Realtime/P2P broadcast
-              processIncomingMessage(msg, { skipIfAlreadyProcessed: true });
+              processIncomingMessage(msg);
             }
           }
         }
@@ -534,6 +534,14 @@ export default function useRoomPolling({
     // Realtime broadcast functions (for use in useTranslationAPI)
     broadcastMessage,
     broadcastMemberUpdate,
+    // Add sender's own message to local list immediately (for instant display)
+    addLocalMessage: (msg) => {
+      setMessages(prev => {
+        const ids = new Set(prev.map(m => m.id));
+        if (ids.has(msg.id)) return prev;
+        return [...prev, msg];
+      });
+    },
     // P2P DataChannel: add incoming message (same logic as Realtime)
     addIncomingMessage: handleRealtimeMessage,
   };

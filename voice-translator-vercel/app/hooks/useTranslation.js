@@ -51,6 +51,7 @@ export default function useTranslation({
   broadcastMessage,
   sendDirectMessage,  // WebRTC DataChannel for P2P instant delivery
   verifiedNameRef,
+  addLocalMessage,    // Add sender's own message to local list immediately
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -124,6 +125,7 @@ export default function useTranslation({
     broadcastMessage,
     sendDirectMessage,
     verifiedNameRef,
+    addLocalMessage,
   });
 
   // ── Shared helpers ──

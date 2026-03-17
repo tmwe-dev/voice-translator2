@@ -32,6 +32,7 @@ export default function useTranslationAPI({
   broadcastMessage,
   sendDirectMessage,  // WebRTC DataChannel: P2P instant delivery
   verifiedNameRef,
+  addLocalMessage,    // Callback to add message to local messages[] immediately
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -82,6 +83,13 @@ export default function useTranslationAPI({
     // Mark temp ID as sent by me immediately (before server save)
     if (sentByMeRef) {
       sentByMeRef.current.add(tempId);
+    }
+
+    // ── Add to LOCAL messages[] immediately so the sender sees their own message ──
+    // Without this, the sender sees nothing until polling brings it back (2-10s)
+    // because Supabase Realtime has self:false and P2P sends only to partner.
+    if (addLocalMessage) {
+      addLocalMessage(instantMsg);
     }
 
     // ── Server save: fire-and-forget (don't block the UI) ──
