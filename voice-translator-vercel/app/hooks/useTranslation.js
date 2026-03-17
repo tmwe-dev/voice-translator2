@@ -61,6 +61,13 @@ export default function useTranslation({
   const [sendingText, setSendingText] = useState(false);
   const [textInput, setTextInput] = useState('');
 
+  // ── Callback ref for conversationContext (avoids unstable deps) ──
+  // conversationContext is a new object every render; using a ref prevents
+  // translateAndSend from being recreated on every render, which would break
+  // recording and video connections.
+  const convContextRef = useRef(conversationContext);
+  convContextRef.current = conversationContext;
+
   // Refs
   const speechRecRef = useRef(null);
   const allWordsRef = useRef('');
@@ -159,7 +166,7 @@ export default function useTranslation({
       description: roomContextRef.current.description || undefined,
       roomMode: roomInfoRef.current?.mode || undefined,
       nativeLang: myLangRef.current || undefined,
-      conversationContext: conversationContext?.getContext() || undefined,
+      conversationContext: convContextRef.current?.getContext() || undefined,
     };
   }
 
@@ -209,9 +216,9 @@ export default function useTranslation({
       }
 
       // ── Feed message into conversation context for knowledge base ──
-      if (conversationContext?.addMessage) {
+      if (convContextRef.current?.addMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
-        conversationContext.addMessage({
+        convContextRef.current.addMessage({
           sender: senderName,
           original: text,
           translated: primaryTranslated || null,
@@ -225,7 +232,7 @@ export default function useTranslation({
     }
 
     return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
-  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance, conversationContext, verifiedNameRef, prefsRef]);
+  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance]);
 
   // =============================================
   // Speech result handler
@@ -280,7 +287,7 @@ export default function useTranslation({
     if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
     // Include conversation context for Whisper path too
-    const convCtx = conversationContext?.getContext();
+    const convCtx = convContextRef.current?.getContext();
     if (convCtx) form.append('conversationContext', convCtx);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
@@ -311,9 +318,9 @@ export default function useTranslation({
       sendMessage(original, translated, myL.code, primaryTarget.code, translations);
 
       // Feed Whisper-path message into conversation context
-      if (conversationContext?.addMessage) {
+      if (convContextRef.current?.addMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
-        conversationContext.addMessage({
+        convContextRef.current.addMessage({
           sender: senderName,
           original,
           translated: translated || null,
