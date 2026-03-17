@@ -732,7 +732,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           const isMine = m.sender === myName;
           const translationForMe = getTranslationForMe(m);
           return (
-            <div key={m.id || i} style={{display:'flex', gap:8,
+            <div key={m._stableKey || m.id || `${m.sender}-${m.timestamp}-${i}`} style={{display:'flex', gap:8,
               flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end',
               animation:'vtSlideIn 0.25s ease-out'}}>
               <AvatarImg src={isMine ? prefs.avatar : getSenderAvatar(m.sender)} size={56} style={{marginBottom:2}} />

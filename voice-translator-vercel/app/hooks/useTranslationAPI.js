@@ -84,33 +84,40 @@ export default function useTranslationAPI({
       sentByMeRef.current.add(tempId);
     }
 
-    // ── Server save in parallel (persistence) — don't block the UI ──
-    try {
-      const res = await fetch('/api/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          roomId,
-          sender: roomSessionTokenRef?.current ? undefined : senderName,
-          roomSessionToken: roomSessionTokenRef?.current || null,
-          original,
-          translated,
-          sourceLang,
-          targetLang,
-          translations: translations || null,
-        })
-      });
+    // ── Server save: fire-and-forget (don't block the UI) ──
+    // The message is already delivered via P2P + Realtime.
+    // Server save is just for persistence and polling fallback.
+    const serverSavePromise = fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        roomId,
+        sender: roomSessionTokenRef?.current ? undefined : senderName,
+        roomSessionToken: roomSessionTokenRef?.current || null,
+        original,
+        translated,
+        sourceLang,
+        targetLang,
+        translations: translations || null,
+      })
+    }).then(res => {
       if (res.ok) {
-        const data = await res.json();
-        if (data.message?.id && sentByMeRef) {
-          sentByMeRef.current.add(data.message.id);
-        }
-        return data;
+        return res.json().then(data => {
+          if (data.message?.id && sentByMeRef) {
+            sentByMeRef.current.add(data.message.id);
+          }
+          return data;
+        });
       }
-    } catch (e) {
+      return null;
+    }).catch(e => {
       console.error('[sendMessage] Server save error:', e);
-    }
-    return null;
+      return null;
+    });
+
+    // Return immediately with the instant message — don't await server save
+    // The promise is kept alive so it completes in background
+    return { message: instantMsg, serverSave: serverSavePromise };
   }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, verifiedNameRef]);
 
   /**

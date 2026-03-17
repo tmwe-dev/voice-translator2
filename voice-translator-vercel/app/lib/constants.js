@@ -146,8 +146,8 @@ export const WHISPER_PRIMARY_LANGS = new Set([
 
 // Minimum confidence threshold for browser SpeechRecognition
 // Below this, auto-switch to Whisper fallback for the rest of the session
-export const STT_CONFIDENCE_THRESHOLD = 0.55;
-export const STT_LOW_CONFIDENCE_COUNT = 3; // consecutive low-confidence results before switching
+export const STT_CONFIDENCE_THRESHOLD = 0.4;  // lowered: only switch on truly bad recognition
+export const STT_LOW_CONFIDENCE_COUNT = 6; // raised: need 6 consecutive bad results before switching
 
 // Helpers
 export function getLang(code) { return LANGS.find(l => l.code === code) || LANGS[0]; }

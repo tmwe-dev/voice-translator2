@@ -38,13 +38,32 @@ export default function useRoomPolling({
   const verifiedNameRef = useRef(null);
   const isHostRef = useRef(false);
 
+  // ── Unified dedup: track ALL message IDs that have been processed for TTS ──
+  // This prevents TTS replay when polling replaces a temp message with a server version
+  const processedForTTSRef = useRef(new Set());
+
   // ── Helper: process incoming message (shared by realtime + polling) ──
-  const processIncomingMessage = useCallback((msg) => {
+  // dedupKey: a stable key to prevent TTS replay when temp→server ID changes.
+  // Uses `sender|original` as fallback fingerprint so the same content isn't played twice.
+  const processIncomingMessage = useCallback((msg, { skipIfAlreadyProcessed = false } = {}) => {
     if (!msg || !msg.id) return;
     // Skip messages sent by me
     if (sentByMeRef.current.has(msg.id)) return;
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
     if (msg.sender === myVerifiedName) return;
+
+    // ── Unified TTS dedup ──
+    // Generate a content-based fingerprint so temp and server versions match
+    const contentFingerprint = `${msg.sender}|${msg.original}|${msg.timestamp || ''}`;
+    if (skipIfAlreadyProcessed && processedForTTSRef.current.has(contentFingerprint)) {
+      return; // Already played TTS for this message via Realtime/P2P
+    }
+    processedForTTSRef.current.add(contentFingerprint);
+    // LRU cap: prevent unbounded growth
+    if (processedForTTSRef.current.size > 500) {
+      const first = processedForTTSRef.current.values().next().value;
+      processedForTTSRef.current.delete(first);
+    }
 
     // Queue audio for the translation in MY language
     const myLang = myLangRef.current;
@@ -81,9 +100,13 @@ export default function useRoomPolling({
         m.id?.startsWith('tmp_') && m.sender === message.sender && m.original === message.original
       );
       if (tempIdx >= 0) {
-        // Replace temp message with server-persisted version (keeps real ID for polling dedup)
+        // Replace temp message with server-persisted version
+        // Preserve _stableKey for React key stability (avoids flash on temp→server ID change)
         const updated = [...prev];
-        updated[tempIdx] = { ...message, _replaced: true };
+        if (sentByMeRef.current.has(prev[tempIdx].id)) {
+          sentByMeRef.current.add(message.id);
+        }
+        updated[tempIdx] = { ...message, _replaced: true, _stableKey: prev[tempIdx].id };
         return updated;
       }
       return [...prev, message];
@@ -190,7 +213,11 @@ export default function useRoomPolling({
                   t.id?.startsWith('tmp_') && t.sender === m.sender && t.original === m.original
                 );
                 if (tempIdx >= 0) {
-                  updated[tempIdx] = m;
+                  // Mark server ID as "sent by me" if the temp was ours
+                  if (sentByMeRef.current.has(updated[tempIdx].id)) {
+                    sentByMeRef.current.add(m.id);
+                  }
+                  updated[tempIdx] = { ...m, _stableKey: updated[tempIdx]._stableKey || updated[tempIdx].id };
                   changed = true;
                 } else {
                   updated.push(m);
@@ -201,7 +228,9 @@ export default function useRoomPolling({
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
-              processIncomingMessage(msg);
+              // skipIfAlreadyProcessed: polling messages that replaced a temp
+              // were already processed for TTS via Realtime/P2P broadcast
+              processIncomingMessage(msg, { skipIfAlreadyProcessed: true });
             }
           }
         }
@@ -466,6 +495,7 @@ export default function useRoomPolling({
     roomSessionTokenRef.current = null;
     verifiedNameRef.current = null;
     isHostRef.current = false;
+    processedForTTSRef.current.clear();
     setRoomId(null);
     setRoomInfo(null);
     setMessages([]);

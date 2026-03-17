@@ -185,7 +185,8 @@ export default function useTranslation({
     }
 
     if (primaryTranslated && roomId) {
-      await sendMessage(text, primaryTranslated, myL.code, primaryTargetLang, translations);
+      // sendMessage now returns immediately after broadcast (server save is fire-and-forget)
+      sendMessage(text, primaryTranslated, myL.code, primaryTargetLang, translations);
       if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
     }
 
@@ -271,7 +272,8 @@ export default function useTranslation({
           }
         }
       }
-      await sendMessage(original, translated, myL.code, primaryTarget.code, translations);
+      // sendMessage returns immediately after broadcast (server save is fire-and-forget)
+      sendMessage(original, translated, myL.code, primaryTarget.code, translations);
     }
   }
 
@@ -321,6 +323,13 @@ export default function useTranslation({
     }
 
     // ── Hybrid STT routing ──
+    // Reset whisper-only mode on each new recording attempt — give browser STT another chance
+    // (the flag was set because of previous bad results, but conditions may have improved)
+    if (whisperOnlyRef.current && !isWhisperPrimaryLang(currentLang)) {
+      console.log('[STT] Resetting whisper-only mode for new recording attempt');
+      whisperOnlyRef.current = false;
+      lowConfidenceCountRef.current = 0;
+    }
     const useWhisperOnly = isWhisperPrimaryLang(currentLang) || whisperOnlyRef.current;
     const SpeechRecognition = typeof window !== 'undefined'
       ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
@@ -348,27 +357,48 @@ export default function useTranslation({
     recognition.maxAlternatives = 1;
     speechRecRef.current = recognition;
 
-    // Backup recording — capture audio in parallel in case STT fails
-    try {
-      const stream = await getMicStream();
-      backupStreamRef.current = stream;
-      backupChunksRef.current = [];
-      backupRecRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
-      backupRecRef.current.ondataavailable = e => {
-        if (e.data.size > 0) backupChunksRef.current.push(e.data);
-      };
-      backupRecRef.current.start(100);
-    } catch {}
+    // Backup recording — LAZY START: only activate after 2s if no STT results received
+    // This saves CPU/battery in the 95% case where browser STT works fine
+    let backupTimer = null;
+    const startBackupIfNeeded = async () => {
+      if (backupRecRef.current) return; // already started
+      try {
+        const stream = await getMicStream();
+        backupStreamRef.current = stream;
+        backupChunksRef.current = [];
+        backupRecRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
+        backupRecRef.current.ondataavailable = e => {
+          if (e.data.size > 0) backupChunksRef.current.push(e.data);
+        };
+        backupRecRef.current.start(100);
+        console.log('[STT] Backup recording started (STT fallback)');
+      } catch {}
+    };
+    backupTimer = setTimeout(() => {
+      // If no final results after 2s, start backup recording as safety net
+      if (allWordsRef.current === '' && streamingModeRef.current) {
+        startBackupIfNeeded();
+      }
+    }, 2000);
 
     let processedFinals = new Set();
     let errorCount = 0;
 
-    recognition.onresult = (event) => handleSpeechResult(event, processedFinals);
+    recognition.onresult = (event) => {
+      handleSpeechResult(event, processedFinals);
+      // Cancel backup timer if we got results — STT is working
+      if (backupTimer && allWordsRef.current) {
+        clearTimeout(backupTimer);
+        backupTimer = null;
+      }
+    };
 
     recognition.onerror = (event) => {
       if (event.error === 'no-speech') return;
       errorCount++;
       console.warn(`[STT] Error: ${event.error} (count=${errorCount})`);
+      // Start backup immediately on error
+      if (!backupRecRef.current) startBackupIfNeeded();
       if (errorCount >= 3 && !whisperOnlyRef.current) {
         console.warn('[STT] Too many errors — enabling Whisper-only for this session');
         whisperOnlyRef.current = true;
