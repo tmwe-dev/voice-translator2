@@ -47,6 +47,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const stateRef = useRef('idle');
   const iceCandidateQueueRef = useRef([]);
 
+  // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
+  // Without this, dc.onmessage captures the initial handleDCMessage which closes
+  // over the initial onDirectMessage. If onDirectMessage changes (e.g. because
+  // roomPolling.addIncomingMessage or handleMessageUpdate get recreated),
+  // the DataChannel would still use the stale version → messages silently lost.
+  const onDirectMessageRef = useRef(onDirectMessage);
+  useEffect(() => { onDirectMessageRef.current = onDirectMessage; }, [onDirectMessage]);
+
   useEffect(() => { stateRef.current = webrtcState; }, [webrtcState]);
 
   // ── Cleanup ──
@@ -143,9 +151,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const handleDCMessage = useCallback((event) => {
     try {
       const msg = JSON.parse(event.data);
-      onDirectMessage?.(msg);
+      // CRITICAL: Use ref to always call the LATEST onDirectMessage callback.
+      // dc.onmessage is set once in setupDC and never updated — without the ref,
+      // it would keep calling the stale version from when the DC was first opened.
+      onDirectMessageRef.current?.(msg);
     } catch {}
-  }, [onDirectMessage]);
+  }, []); // No deps — reads from ref
 
   // ── Connection state handler ──
   const handleStateChange = useCallback((info) => {

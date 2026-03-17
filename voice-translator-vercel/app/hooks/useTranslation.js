@@ -193,7 +193,10 @@ export default function useTranslation({
     let primaryTranslated = '';
     let finalTargetLang = primaryTargetLang;
 
-    try {
+    // ── Phase 2 translation with retry ──
+    // If translation fails on first attempt, retry once. Without retry,
+    // Phase 1 message is already visible but receiver never gets translation or TTS.
+    const doTranslate = async () => {
       if (targetLangs.length === 1) {
         const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
         if (data.translated) {
@@ -208,6 +211,19 @@ export default function useTranslation({
         primaryTranslated = result.primaryTranslated;
         finalTargetLang = result.primaryTargetLang;
       }
+      return { ok: true };
+    };
+
+    try {
+      let result;
+      try {
+        result = await doTranslate();
+      } catch (firstErr) {
+        console.warn('[translateAndSend] Phase 2 attempt 1 failed, retrying in 1s:', firstErr.message);
+        await new Promise(r => setTimeout(r, 1000));
+        result = await doTranslate(); // retry once — will throw if it fails again
+      }
+      if (result?.limitExceeded) return { limitExceeded: true };
 
       // Send translation update to everyone (sender local + partner broadcast)
       if (primaryTranslated && roomId) {
@@ -228,11 +244,16 @@ export default function useTranslation({
         });
       }
     } catch (e) {
-      console.error('[translateAndSend] Phase 2 translation error:', e);
+      console.error('[translateAndSend] Phase 2 translation failed after retry:', e);
+      // Update local message with error indicator so user knows translation failed
+      if (updateLocalMessage) {
+        const senderName = verifiedNameRef?.current || prefsRef.current.name;
+        updateLocalMessage(text, senderName, { _translationError: true });
+      }
     }
 
     return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
-  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance]);
+  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, updateLocalMessage, roomId, isTrialRef, useOwnKeys, refreshBalance]);
 
   // =============================================
   // Speech result handler

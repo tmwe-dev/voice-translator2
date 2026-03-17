@@ -63,13 +63,17 @@ export default function useRoomPolling({
     if (msg.sender === myVerifiedName) return;
 
     // ── Unified TTS dedup: check fingerprint BEFORE playing ──
-    // Uses sender + original text ONLY (no timestamp!) because:
-    // - temp message (P2P/Realtime) has client-side timestamp
-    // - server message (polling) has a DIFFERENT server-side timestamp
-    // - If we included timestamp, fingerprints wouldn't match → TTS plays twice
-    const contentFingerprint = `${msg.sender}|${msg.original}`;
+    // Purpose: prevent TTS replay when the SAME message is delivered via multiple channels
+    // (P2P ~50ms, Realtime ~100ms, Polling ~2-10s) — all with different IDs but same content.
+    //
+    // Uses sender + original text + coarse timestamp (30s window):
+    // - Different channels for the SAME message arrive within seconds → same window → deduped
+    // - Same person sending the SAME text again (e.g. "ok" twice) → different window → TTS plays
+    // - Without the time window, "ok" sent twice would be blocked by the first fingerprint
+    const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000); // 30-second buckets
+    const contentFingerprint = `${msg.sender}|${msg.original}|${timeWindow}`;
     if (processedForTTSRef.current.has(contentFingerprint)) {
-      return; // Already played TTS for this exact content
+      return; // Already played TTS for this exact content in this time window
     }
 
     // Queue audio for the translation in MY language

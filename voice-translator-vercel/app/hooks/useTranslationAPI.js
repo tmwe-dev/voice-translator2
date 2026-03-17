@@ -40,6 +40,10 @@ export default function useTranslationAPI({
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
   const translationCacheRef = useRef(new Map());
 
+  // ── Track the last server save promise so Phase 2 PATCH can wait for Phase 1 POST ──
+  // Without this, the PATCH arrives before the POST completes → server can't find the message
+  const lastServerSaveRef = useRef(null);
+
   /**
    * Send a translated message to the room.
    *
@@ -97,6 +101,7 @@ export default function useTranslationAPI({
     // ── Server save: fire-and-forget (don't block the UI) ──
     // The message is already delivered via P2P + Realtime.
     // Server save is just for persistence and polling fallback.
+    // IMPORTANT: Store the promise so Phase 2 PATCH can await it before updating.
     const serverSavePromise = fetch('/api/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -124,6 +129,9 @@ export default function useTranslationAPI({
       console.error('[sendMessage] Server save error:', e);
       return null;
     });
+
+    // Store promise so Phase 2 PATCH can await it
+    lastServerSaveRef.current = serverSavePromise;
 
     // Return immediately with the instant message — don't await server save
     // The promise is kept alive so it completes in background
@@ -154,8 +162,10 @@ export default function useTranslationAPI({
       broadcastMessageUpdate(updatePayload);
     }
 
-    // Update server record (fire-and-forget)
-    fetch('/api/messages', {
+    // ── Server update: wait for Phase 1 POST to complete, then PATCH ──
+    // Without this, the PATCH can arrive before the POST finishes,
+    // and the server has no message to update → translation lost for polling users.
+    const doPatch = () => fetch('/api/messages', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -167,7 +177,18 @@ export default function useTranslationAPI({
         targetLang,
         translations,
       })
-    }).catch(e => console.error('[sendTranslationUpdate] Server error:', e));
+    }).catch(e => console.error('[sendTranslationUpdate] Server PATCH error:', e));
+
+    // Await Phase 1 server save before sending PATCH (with 3s timeout safety net)
+    const phase1Promise = lastServerSaveRef.current;
+    if (phase1Promise) {
+      Promise.race([
+        phase1Promise,
+        new Promise(r => setTimeout(r, 3000)), // Don't wait forever
+      ]).then(doPatch).catch(doPatch);
+    } else {
+      doPatch();
+    }
   }, [roomId, prefsRef, verifiedNameRef, roomSessionTokenRef, sendDirectMessage, broadcastMessageUpdate, updateLocalMessage]);
 
   /**
