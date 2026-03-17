@@ -37,9 +37,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const partnerVolumeBeforeMuteRef = useRef(0.7); // Save volume before auto-mute during recording
   const subtitleTimerRef = useRef(null);
 
-  // Video refs
+  // Video refs — separate refs for fullscreen vs inline to avoid ref conflicts
   const localVideoRef = useRef(null);
+  const localVideoInlineRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const remoteVideoInlineRef = useRef(null);
+  // Hidden audio element ref — ALWAYS plays remote audio regardless of video UI state
+  const remoteAudioRef = useRef(null);
 
   // ── Compute derived values BEFORE any useEffects that reference them ──
   const myName = verifiedName || prefs.name;
@@ -86,24 +90,45 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     }
   }, [messages, videoFullscreen]);
 
-  // Attach video streams to DOM elements
+  // ── Attach local video stream to BOTH fullscreen and inline elements ──
   useEffect(() => {
-    if (localVideoRef.current && webrtc?.localStream) {
-      localVideoRef.current.srcObject = webrtc.localStream;
-    }
-  }, [webrtc?.localStream]);
+    const stream = webrtc?.localStream;
+    if (!stream) return;
+    if (localVideoRef.current) localVideoRef.current.srcObject = stream;
+    if (localVideoInlineRef.current) localVideoInlineRef.current.srcObject = stream;
+  }, [webrtc?.localStream, videoFullscreen]);
 
+  // ── Attach remote VIDEO stream to both fullscreen and inline elements (MUTED — audio via hidden <audio>) ──
   useEffect(() => {
-    if (remoteVideoRef.current && webrtc?.remoteStream) {
-      remoteVideoRef.current.srcObject = webrtc.remoteStream;
-      remoteVideoRef.current.volume = partnerVolume;
+    const stream = webrtc?.remoteStream;
+    if (!stream) return;
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = stream;
+      remoteVideoRef.current.muted = true; // Audio plays via hidden <audio> element
+    }
+    if (remoteVideoInlineRef.current) {
+      remoteVideoInlineRef.current.srcObject = stream;
+      remoteVideoInlineRef.current.muted = true;
+    }
+  }, [webrtc?.remoteStream, videoFullscreen]);
+
+  // ── CRITICAL: Hidden <audio> element ALWAYS plays remote audio regardless of video UI ──
+  useEffect(() => {
+    const stream = webrtc?.remoteStream;
+    if (!remoteAudioRef.current) return;
+    if (stream) {
+      remoteAudioRef.current.srcObject = stream;
+      remoteAudioRef.current.volume = partnerVolume;
+      remoteAudioRef.current.play().catch(() => {});
+    } else {
+      remoteAudioRef.current.srcObject = null;
     }
   }, [webrtc?.remoteStream]);
 
-  // Sync partner volume to remote video element in real time
+  // Sync partner volume to hidden audio element in real time
   useEffect(() => {
-    if (remoteVideoRef.current) {
-      remoteVideoRef.current.volume = partnerVolume;
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = partnerVolume;
     }
   }, [partnerVolume]);
 
@@ -112,13 +137,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     if (recording || isListening) {
       // Save current volume and mute
       partnerVolumeBeforeMuteRef.current = partnerVolume;
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.volume = 0;
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.volume = 0;
       }
     } else {
       // Restore volume when recording stops
-      if (remoteVideoRef.current) {
-        remoteVideoRef.current.volume = partnerVolumeBeforeMuteRef.current;
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.volume = partnerVolumeBeforeMuteRef.current;
       }
     }
   }, [recording, isListening]);
@@ -166,6 +191,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
   return (
     <div style={S.roomPage} role="main" aria-label="Translation room">
+      {/* ═══ HIDDEN AUDIO: Always plays remote WebRTC audio regardless of video UI state ═══ */}
+      <audio ref={remoteAudioRef} autoPlay playsInline style={{display:'none'}} />
+
       {/* ═══ Header ═══ */}
       <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:4, padding:'6px 8px'}} role="banner">
         {/* ── Left: Close button ── */}
@@ -763,7 +791,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           {/* Remote video (full screen) */}
           <div style={{flex:1, position:'relative', overflow:'hidden'}}>
             {webrtc.remoteVideoActive && webrtc.remoteStream ? (
-              <video ref={remoteVideoRef} autoPlay playsInline
+              <video ref={remoteVideoRef} autoPlay playsInline muted
                 style={{width:'100%', height:'100%', objectFit:'cover'}} />
             ) : (
               <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column',
@@ -884,7 +912,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           {/* Remote video (full width) */}
           <div style={{position:'relative', width:'100%', height:240, background:'#111'}}>
             {webrtc.remoteVideoActive && webrtc.remoteStream ? (
-              <video ref={remoteVideoRef} autoPlay playsInline
+              <video ref={remoteVideoInlineRef} autoPlay playsInline muted
                 style={{width:'100%', height:'100%', objectFit:'cover'}} />
             ) : (
               <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column',
@@ -902,7 +930,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               <div style={{position:'absolute', bottom:8, right:8, width:100, height:75,
                 borderRadius:10, overflow:'hidden', border:`2px solid ${S.colors.accent4Border}`,
                 boxShadow:'0 4px 12px rgba(0,0,0,0.5)'}}>
-                <video ref={localVideoRef} autoPlay playsInline muted
+                <video ref={localVideoInlineRef} autoPlay playsInline muted
                   style={{width:'100%', height:'100%', objectFit:'cover', transform:'scaleX(-1)'}} />
               </div>
             )}
