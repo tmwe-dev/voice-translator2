@@ -27,18 +27,53 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showCaptions, setShowCaptions] = useState(true);
   const [showDuckingPanel, setShowDuckingPanel] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [videoFullscreen, setVideoFullscreen] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [videoDucking, setVideoDucking] = useState(false); // auto-ducking during video call
+  const [lastTranslationSubtitle, setLastTranslationSubtitle] = useState(null); // { text, ts }
+  const subtitleTimerRef = useRef(null);
 
   // Video refs
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
-  // Auto-open video panel when receiving an incoming call
+  // Auto-open video panel when call connects (not on incoming request)
   useEffect(() => {
-    if (webrtc?.webrtcState === 'connecting' && !showVideoCall) {
+    if (webrtc?.webrtcState === 'connected' && !showVideoCall) {
       setShowVideoCall(true);
+      setVideoFullscreen(true);
     }
   }, [webrtc?.webrtcState]);
+
+  // Auto-enable ducking when in video call and languages are different
+  useEffect(() => {
+    if (webrtc?.webrtcConnected && partner && partner.lang !== myLang) {
+      setVideoDucking(true);
+    }
+  }, [webrtc?.webrtcConnected, partner?.lang, myLang]);
+
+  // Auto-disable ducking when video call ends
+  useEffect(() => {
+    if (!webrtc?.webrtcConnected) {
+      setVideoDucking(false);
+      setVideoFullscreen(false);
+    }
+  }, [webrtc?.webrtcConnected]);
+
+  // Show translation subtitle when last message from partner has translation
+  useEffect(() => {
+    if (!videoFullscreen || !messages.length) return;
+    const lastPartnerMsg = [...messages].reverse().find(m => m.sender !== myName);
+    if (!lastPartnerMsg) return;
+    const translationText = getTranslationForMe(lastPartnerMsg);
+    const hasTranslation = !!(lastPartnerMsg.translated || (lastPartnerMsg.translations && Object.keys(lastPartnerMsg.translations).length > 0));
+    if (hasTranslation && translationText) {
+      setLastTranslationSubtitle({ text: translationText, original: lastPartnerMsg.original, ts: lastPartnerMsg.timestamp });
+      // Clear after 8 seconds
+      if (subtitleTimerRef.current) clearTimeout(subtitleTimerRef.current);
+      subtitleTimerRef.current = setTimeout(() => setLastTranslationSubtitle(null), 8000);
+    }
+  }, [messages, videoFullscreen]);
 
   // Attach video streams to DOM elements
   useEffect(() => {
@@ -641,16 +676,165 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </>
       )}
 
-      {/* Battery pulse animation */}
+      {/* Animations */}
       <style>{`
         @keyframes vtBattPulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.8; }
         }
+        @keyframes vtSlideDown {
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes vtSlideUp {
+          from { transform: translateY(30px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
       `}</style>
 
-      {/* Video Call Panel */}
-      {showVideoCall && webrtc && (
+      {/* ── Incoming Call Banner ── */}
+      {webrtc?.incomingCall && (
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, zIndex:100,
+          background:'linear-gradient(135deg, #1a1a2e, #16213e)',
+          borderBottom:'2px solid #0f3460',
+          padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between',
+          animation:'vtSlideDown 0.3s ease-out', boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+        }}>
+          <div style={{display:'flex', alignItems:'center', gap:12}}>
+            <div style={{width:12, height:12, borderRadius:'50%', background:'#4ade80', animation:'vtBattPulse 1.5s infinite'}} />
+            <div>
+              <div style={{color:'#fff', fontSize:14, fontWeight:600}}>
+                {webrtc.incomingCall.from} {L('callIncoming') || 'ti sta chiamando'}
+              </div>
+              <div style={{color:'#94a3b8', fontSize:11, marginTop:2}}>Video call in arrivo</div>
+            </div>
+          </div>
+          <div style={{display:'flex', gap:10}}>
+            <button onClick={() => webrtc.declineIncomingCall()}
+              style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
+                background:'#ef4444', color:'#fff', fontSize:13, fontWeight:600}}>
+              Rifiuta
+            </button>
+            <button onClick={() => { webrtc.acceptIncomingCall(); setShowVideoCall(true); setVideoFullscreen(true); }}
+              style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
+                background:'#22c55e', color:'#fff', fontSize:13, fontWeight:600}}>
+              Accetta
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Fullscreen Video Call ── */}
+      {videoFullscreen && webrtc?.webrtcConnected && (
+        <div style={{
+          position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200,
+          background:'#000', display:'flex', flexDirection:'column',
+        }}>
+          {/* Remote video (full screen) */}
+          <div style={{flex:1, position:'relative', overflow:'hidden'}}>
+            {webrtc.remoteVideoActive && webrtc.remoteStream ? (
+              <video ref={remoteVideoRef} autoPlay playsInline
+                style={{width:'100%', height:'100%', objectFit:'cover'}} />
+            ) : (
+              <div style={{width:'100%', height:'100%', display:'flex', flexDirection:'column',
+                alignItems:'center', justifyContent:'center', gap:16, background:'#0a0a0a'}}>
+                <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={96} />
+                <span style={{color:'#94a3b8', fontSize:16, fontWeight:500}}>
+                  {partner?.name || 'Partner'} - Camera off
+                </span>
+              </div>
+            )}
+
+            {/* Local video PiP (top-right) */}
+            {webrtc.localStream && webrtc.videoEnabled && (
+              <div style={{position:'absolute', top:50, right:16, width:120, height:90,
+                borderRadius:12, overflow:'hidden', border:'2px solid rgba(255,255,255,0.2)',
+                boxShadow:'0 4px 20px rgba(0,0,0,0.6)'}}>
+                <video ref={localVideoRef} autoPlay playsInline muted
+                  style={{width:'100%', height:'100%', objectFit:'cover', transform:'scaleX(-1)'}} />
+              </div>
+            )}
+
+            {/* Status bar (top-left) */}
+            <div style={{position:'absolute', top:16, left:16, display:'flex', alignItems:'center', gap:8,
+              padding:'6px 14px', borderRadius:24, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)'}}>
+              <div style={{width:8, height:8, borderRadius:4, background:'#4ade80'}} />
+              <span style={{fontSize:12, color:'#fff', fontWeight:600}}>P2P</span>
+              {partner && <span style={{fontSize:12, color:'#94a3b8'}}>{partner.name}</span>}
+            </div>
+
+            {/* Ducking toggle (top-right, above PiP) */}
+            <button onClick={() => setVideoDucking(!videoDucking)}
+              style={{position:'absolute', top:16, right:16, padding:'6px 12px', borderRadius:20,
+                background: videoDucking ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.15)',
+                border:'none', cursor:'pointer', color:'#fff', fontSize:11, fontWeight:500,
+                backdropFilter:'blur(4px)', display:'flex', alignItems:'center', gap:6}}>
+              {videoDucking ? '\u{1F509}' : '\u{1F50A}'} {videoDucking ? 'Ducking ON' : 'Ducking OFF'}
+            </button>
+
+            {/* ── Translation subtitle overlay (bottom) ── */}
+            {lastTranslationSubtitle && (
+              <div style={{
+                position:'absolute', bottom:100, left:16, right:16,
+                background:'linear-gradient(to top, rgba(255,255,255,0.95), rgba(245,245,245,0.92))',
+                borderRadius:16, padding:'14px 20px',
+                boxShadow:'0 -4px 20px rgba(0,0,0,0.3)', backdropFilter:'blur(12px)',
+                animation:'vtSlideUp 0.3s ease-out',
+              }}>
+                <div style={{fontSize:15, fontWeight:600, color:'#1e3a5f', lineHeight:1.5}}>
+                  {lastTranslationSubtitle.text}
+                </div>
+                {lastTranslationSubtitle.original && (
+                  <div style={{fontSize:11, color:'#64748b', marginTop:4}}>
+                    {lastTranslationSubtitle.original}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Video call controls (bottom bar) */}
+          <div style={{
+            padding:'16px 0 32px', display:'flex', justifyContent:'center', gap:16,
+            background:'linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.7))',
+          }}>
+            <button onClick={() => webrtc.toggleVideo()}
+              style={{width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+                background: webrtc.videoEnabled ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)',
+                color:'#fff', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {webrtc.videoEnabled ? '\u{1F4F7}' : '\u{1F6AB}'}
+            </button>
+            <button onClick={() => webrtc.toggleAudio()}
+              style={{width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+                background: webrtc.audioEnabled ? 'rgba(255,255,255,0.15)' : 'rgba(239,68,68,0.3)',
+                color:'#fff', fontSize:20, display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {webrtc.audioEnabled ? '\u{1F3A4}' : '\u{1F507}'}
+            </button>
+            <button onClick={() => webrtc.flipCamera()}
+              style={{width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:'rgba(255,255,255,0.15)', color:'#fff', fontSize:20,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{1F504}'}
+            </button>
+            <button onClick={() => setVideoFullscreen(false)}
+              style={{width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:'rgba(255,255,255,0.15)', color:'#fff', fontSize:20,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{2B07}\uFE0F'}
+            </button>
+            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
+              style={{width:52, height:52, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:'#ef4444', color:'#fff', fontSize:20,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{1F4F5}'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Video Call Panel (inline, non-fullscreen) */}
+      {showVideoCall && !videoFullscreen && webrtc && (
         <div style={{position:'relative', flexShrink:0, background:'#000',
           borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
           {/* Remote video (full width) */}
@@ -706,7 +890,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 display:'flex', alignItems:'center', justifyContent:'center'}}>
               {'\u{1F504}'}
             </button>
-            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); }}
+            <button onClick={() => setVideoFullscreen(true)}
+              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
+                display:'flex', alignItems:'center', justifyContent:'center'}}>
+              {'\u{2B06}\uFE0F'}
+            </button>
+            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
               style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
                 background:S.colors.statusError, color:'#fff', fontSize:16,
                 display:'flex', alignItems:'center', justifyContent:'center'}}>

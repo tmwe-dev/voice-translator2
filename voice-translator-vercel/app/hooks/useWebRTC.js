@@ -10,19 +10,16 @@ import {
 } from '../lib/webrtc.js';
 
 // ═══════════════════════════════════════════════
-// useWebRTC — P2P video call with Supabase Realtime signaling
-//
-// BEFORE: Signaling via Redis polling (1-2s delay → connection failures)
-// AFTER:  Signaling via Supabase Realtime broadcast (~50ms → instant)
+// useWebRTC — P2P video call with accept/decline + Supabase Realtime signaling
 //
 // Flow:
-// 1. User A clicks video → sends "offer" via Realtime channel
-// 2. User B receives offer instantly → sends "answer" back
-// 3. ICE candidates exchanged in real-time via same channel
-// 4. P2P connection established directly between devices
+// 1. User A clicks video → sends "call-request" via Realtime
+// 2. User B sees incoming call banner → clicks Accept
+// 3. User B sends "call-accepted" → User A receives, sends "offer"
+// 4. Normal WebRTC ICE/SDP exchange → P2P connected
 // ═══════════════════════════════════════════════
 
-const CONNECTION_TIMEOUT = 30000; // 30s (was 15s — more time for mobile)
+const CONNECTION_TIMEOUT = 30000;
 
 export default function useWebRTC({ roomId, myName, onDirectMessage, roomSessionTokenRef }) {
   const [webrtcState, setWebrtcState] = useState('idle');
@@ -32,26 +29,32 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const [remoteVideoActive, setRemoteVideoActive] = useState(false);
   const [audioEnabled, setAudioEnabledState] = useState(true);
 
+  // ── Incoming call state ──
+  const [incomingCall, setIncomingCall] = useState(null); // { from: string } or null
+  const incomingCallTimerRef = useRef(null);
+  const pendingCallRef = useRef(false); // caller is waiting for accept
+
   const pcRef = useRef(null);
   const dcRef = useRef(null);
   const timeoutRef = useRef(null);
-  const disconnectTimerRef = useRef(null); // grace period for transient 'disconnected' state
+  const disconnectTimerRef = useRef(null);
   const sendersRef = useRef([]);
   const localStreamRef = useRef(null);
   const remoteStreamRef = useRef(null);
   const channelRef = useRef(null);
   const signalingReadyRef = useRef(false);
   const signalingSubscribePromiseRef = useRef(null);
-  const stateRef = useRef('idle'); // mirrors webrtcState for use in async callbacks
-  const iceCandidateQueueRef = useRef([]); // queue ICE candidates until remote desc is set
+  const stateRef = useRef('idle');
+  const iceCandidateQueueRef = useRef([]);
 
-  // Keep stateRef in sync
   useEffect(() => { stateRef.current = webrtcState; }, [webrtcState]);
 
   // ── Cleanup ──
   const cleanup = useCallback(() => {
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
+    if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+    pendingCallRef.current = false;
     if (dcRef.current) {
       try { dcRef.current.close(); } catch {}
       dcRef.current = null;
@@ -81,7 +84,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   const waitForSignalingReady = useCallback(async (timeoutMs = 5000) => {
     if (signalingReadyRef.current && channelRef.current) return true;
-
     const started = Date.now();
     while (Date.now() - started < timeoutMs) {
       if (signalingReadyRef.current && channelRef.current) return true;
@@ -96,7 +98,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     }
-
     return signalingReadyRef.current && !!channelRef.current;
   }, []);
 
@@ -106,13 +107,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       console.warn('[WebRTC] Signaling channel not ready, cannot send:', type);
       throw new Error(`Signaling channel not ready for ${type}`);
     }
-
     const result = await channelRef.current.send({
       type: 'broadcast',
       event: 'webrtc-signal',
       payload: { type, data, from: myName, timestamp: Date.now() },
     });
-
     if (result !== 'ok') {
       console.warn('[WebRTC] Failed to send signal:', type, result);
       throw new Error(`Failed to send ${type}: ${String(result)}`);
@@ -121,8 +120,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
-    console.log('[WebRTC] Remote track received:', track.kind, 'stream:', !!stream);
-    // Use the provided stream if available (keeps audio+video in sync)
+    console.log('[WebRTC] Remote track received:', track.kind);
     if (stream) {
       remoteStreamRef.current = stream;
       setRemoteStream(stream);
@@ -134,7 +132,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       setRemoteStream(new MediaStream(remoteStreamRef.current.getTracks()));
     }
     if (track.kind === 'video') setRemoteVideoActive(true);
-
     track.onended = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
     track.onmute = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
     track.onunmute = () => { if (track.kind === 'video') setRemoteVideoActive(true); };
@@ -148,45 +145,32 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   }, [onDirectMessage]);
 
   // ── Connection state handler ──
-  // CRITICAL: 'disconnected' is TRANSIENT (network hiccup, Wi-Fi switch, etc.)
-  // Only 'failed' and 'closed' are terminal. We use a 10s grace period for disconnected.
   const handleStateChange = useCallback((info) => {
-    // info = { source: 'ice'|'connection', state: string }
     const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
     console.log(`[WebRTC] State change: ${source}=${state}`);
 
     if (state === 'connected' || state === 'completed') {
-      // Connection established or ICE completed — clear any disconnect timer
       if (disconnectTimerRef.current) {
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
-        console.log('[WebRTC] Recovered from transient disconnect');
       }
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
-
     } else if (state === 'disconnected') {
-      // TRANSIENT state — give it 10 seconds to recover before cleanup
-      // Common causes: Wi-Fi switch, brief network hiccup, mobile backgrounding
       if (!disconnectTimerRef.current && stateRef.current === 'connected') {
-        console.log('[WebRTC] Transient disconnect — waiting 10s for recovery...');
         disconnectTimerRef.current = setTimeout(() => {
           disconnectTimerRef.current = null;
-          // Check ACTUAL state after grace period (might have recovered)
           const pc = pcRef.current;
           if (pc && (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' ||
                      pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
-            console.log('[WebRTC] Disconnect persisted after grace period — cleaning up');
             setWebrtcState('failed');
             stateRef.current = 'failed';
             cleanup();
           }
         }, 10000);
       }
-
     } else if (state === 'failed' || state === 'closed') {
-      // Terminal states — cleanup immediately
       if (disconnectTimerRef.current) {
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
@@ -200,21 +184,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   function setupDC(dc) {
     dcRef.current = dc;
     dc.onopen = () => {
-      console.log('[WebRTC] DataChannel opened');
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     };
     dc.onmessage = handleDCMessage;
-    dc.onclose = () => {
-      console.log('[WebRTC] DataChannel closed');
-      // Don't set to 'failed' immediately — the PeerConnection handles terminal states
-      // DataChannel can briefly close during renegotiation
-      dcRef.current = null;
-    };
+    dc.onclose = () => { dcRef.current = null; };
   }
 
-  // ── Get media stream with fallback ──
   async function getMediaWithFallback(withVideo) {
     try {
       const stream = await getLocalMediaStream({ video: withVideo, audio: true });
@@ -223,31 +200,23 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (withVideo) setVideoEnabledState(true);
       return stream;
     } catch (e) {
-      console.warn('[WebRTC] Media failed:', e);
       if (withVideo) {
         try {
           const stream = await getLocalMediaStream({ video: false, audio: true });
           localStreamRef.current = stream;
           setLocalStream(stream);
           return stream;
-        } catch (e2) {
-          console.warn('[WebRTC] Audio-only also failed:', e2);
-        }
+        } catch {}
       }
     }
     return null;
   }
 
-  // ── Flush queued ICE candidates after remote description is set ──
   async function flushIceCandidates(pc) {
     const queue = iceCandidateQueueRef.current;
     iceCandidateQueueRef.current = [];
     for (const candidateStr of queue) {
-      try {
-        await addIceCandidate(pc, candidateStr);
-      } catch (e) {
-        console.warn('[WebRTC] Queued ICE candidate error:', e.message);
-      }
+      try { await addIceCandidate(pc, candidateStr); } catch {}
     }
   }
 
@@ -255,53 +224,110 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const handleIncomingSignal = useCallback(async (payload) => {
     if (!payload || payload.from === myName) return;
     const { type, data } = payload;
-
     console.log('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
 
-    if (type === 'offer') {
-      // Someone is calling us — auto-accept
+    // ── NEW: Call request/response flow ──
+    if (type === 'call-request') {
+      // Someone wants to call us — show incoming call banner
       if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
-        console.log('[WebRTC] Already busy, ignoring offer');
+        // Already busy
+        sendSignal('call-declined', JSON.stringify({ reason: 'busy' })).catch(() => {});
+        return;
+      }
+      setIncomingCall({ from: payload.from, withVideo: data?.withVideo !== false });
+      // Auto-decline after 30s if no response
+      if (incomingCallTimerRef.current) clearTimeout(incomingCallTimerRef.current);
+      incomingCallTimerRef.current = setTimeout(() => {
+        setIncomingCall(null);
+        sendSignal('call-declined', JSON.stringify({ reason: 'timeout' })).catch(() => {});
+      }, 30000);
+      return;
+    }
+
+    if (type === 'call-accepted') {
+      // Partner accepted our call — now send the actual offer
+      if (!pendingCallRef.current) return;
+      pendingCallRef.current = false;
+      try {
+        const pc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
+        pcRef.current = pc;
+        const dc = createDataChannel(pc);
+        setupDC(dc);
+        const stream = await getMediaWithFallback(true);
+        if (stream) sendersRef.current = addMediaTracks(pc, stream);
+        collectIceCandidates(pc, (candidateStr) => {
+          sendSignal('ice-candidate', candidateStr).catch(() => {});
+        });
+        const offerStr = await createOffer(pc);
+        await sendSignal('offer', offerStr);
+        timeoutRef.current = setTimeout(() => {
+          if (stateRef.current !== 'connected') {
+            setWebrtcState('failed');
+            stateRef.current = 'failed';
+            cleanup();
+          }
+        }, CONNECTION_TIMEOUT);
+      } catch (e) {
+        console.error('[WebRTC] Post-accept offer error:', e);
+        setWebrtcState('failed');
+        stateRef.current = 'failed';
+      }
+      return;
+    }
+
+    if (type === 'call-declined') {
+      // Partner declined our call
+      pendingCallRef.current = false;
+      setWebrtcState('idle');
+      stateRef.current = 'idle';
+      cleanup();
+      return;
+    }
+
+    if (type === 'offer') {
+      if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
+        // If we're in 'connecting' because we accepted a call-request, proceed
+        // If we got an offer without call-request (legacy/direct), auto-accept
+      }
+
+      if (stateRef.current === 'connected') {
+        console.log('[WebRTC] Already connected, ignoring offer');
         return;
       }
 
-      cleanup();
-      setWebrtcState('connecting');
-      stateRef.current = 'connecting';
+      // Clear incoming call banner if still showing
+      setIncomingCall(null);
+      if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+
+      if (stateRef.current !== 'connecting') {
+        // Direct offer (no call-request) — auto-accept for backward compatibility
+        cleanup();
+        setWebrtcState('connecting');
+        stateRef.current = 'connecting';
+      }
       iceCandidateQueueRef.current = [];
 
       try {
         const newPc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
         pcRef.current = newPc;
         newPc.ondatachannel = (event) => setupDC(event.channel);
-
-        // Match caller's media: if the offer contains video, we send video too
         const offerSdp = JSON.parse(data);
         const callerHasVideo = offerSdp.sdp?.includes('m=video');
         const stream = await getMediaWithFallback(callerHasVideo);
         if (stream) sendersRef.current = addMediaTracks(newPc, stream);
-
         collectIceCandidates(newPc, (candidateStr) => {
-          sendSignal('ice-candidate', candidateStr).catch((e) => {
-            console.warn('[WebRTC] Failed to send ICE candidate:', e.message);
-          });
+          sendSignal('ice-candidate', candidateStr).catch(() => {});
         });
-
         const answerStr = await createAnswer(newPc, data);
         await sendSignal('answer', answerStr);
-
-        // Flush any ICE candidates that arrived before remote description was set
         await flushIceCandidates(newPc);
-
         timeoutRef.current = setTimeout(() => {
           if (stateRef.current !== 'connected') {
-            console.log('[WebRTC] Callee timeout');
             setWebrtcState('failed');
             stateRef.current = 'failed';
             cleanup();
           }
         }, CONNECTION_TIMEOUT);
-
       } catch (e) {
         console.error('[WebRTC] Accept error:', e);
         setWebrtcState('failed');
@@ -315,7 +341,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (pc.signalingState === 'have-local-offer') {
         try {
           await acceptAnswer(pc, data);
-          // Flush any ICE candidates that arrived before answer
           await flushIceCandidates(pc);
         } catch (e) {
           console.error('[WebRTC] Accept answer error:', e);
@@ -325,16 +350,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     } else if (type === 'ice-candidate') {
       const pc = pcRef.current;
       if (!pc) return;
-      // Queue if remote description not yet set
       if (!pc.remoteDescription || !pc.remoteDescription.type) {
         iceCandidateQueueRef.current.push(data);
         return;
       }
-      try {
-        await addIceCandidate(pc, data);
-      } catch (e) {
-        console.warn('[WebRTC] ICE candidate error:', e.message);
-      }
+      try { await addIceCandidate(pc, data); } catch {}
 
     } else if (type === 'renegotiate') {
       const pc = pcRef.current;
@@ -350,42 +370,33 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
   }, [myName, cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal]);
 
-  // Keep a stable ref to the signal handler (prevents channel re-subscription on every render)
   const handleIncomingSignalRef = useRef(handleIncomingSignal);
   useEffect(() => { handleIncomingSignalRef.current = handleIncomingSignal; }, [handleIncomingSignal]);
 
-  // ── Subscribe to Realtime signaling channel when in a room ──
+  // ── Subscribe to Realtime signaling channel ──
   useEffect(() => {
     signalingReadyRef.current = false;
     signalingSubscribePromiseRef.current = null;
-
     if (!roomId) return;
-
     const supabase = getSupabaseClient();
     if (!supabase) return;
-
     const channel = supabase.channel(`webrtc:${roomId}`, {
       config: { broadcast: { self: false } },
     });
-
     channel.on('broadcast', { event: 'webrtc-signal' }, (event) => {
       handleIncomingSignalRef.current(event.payload);
     });
-
     channelRef.current = channel;
-
     signalingSubscribePromiseRef.current = new Promise((resolve) => {
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           signalingReadyRef.current = true;
-          console.log(`[WebRTC] Signaling channel ready for room:${roomId}`);
           resolve(true);
         } else if (status === 'CHANNEL_ERROR' || status === 'CLOSED' || status === 'TIMED_OUT') {
           signalingReadyRef.current = false;
         }
       });
     });
-
     return () => {
       signalingReadyRef.current = false;
       signalingSubscribePromiseRef.current = null;
@@ -394,66 +405,58 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     };
   }, [roomId]);
 
-  // ── Initiate connection (caller side) ──
+  // ── Request video call (sends call-request, waits for acceptance) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
     if (stateRef.current === 'connecting' || stateRef.current === 'connected') return;
-    cleanup();
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
-    iceCandidateQueueRef.current = [];
+    pendingCallRef.current = true;
 
     try {
-      const pc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
-      pcRef.current = pc;
-
-      const dc = createDataChannel(pc);
-      setupDC(dc);
-
-      const stream = await getMediaWithFallback(withVideo);
-      if (stream) sendersRef.current = addMediaTracks(pc, stream);
-
-      collectIceCandidates(pc, (candidateStr) => {
-        sendSignal('ice-candidate', candidateStr).catch((e) => {
-          console.warn('[WebRTC] Failed to send ICE candidate:', e.message);
-        });
-      });
-
-      // Wait for signaling channel to be ready before sending offer
-      const signalingReady = await waitForSignalingReady();
-      if (!signalingReady) {
-        console.warn('[WebRTC] Signaling not ready — will retry when channel connects');
-        // Don't cleanup — keep local stream visible, just mark as failed
-        setWebrtcState('failed');
-        stateRef.current = 'failed';
-        return;
-      }
-
-      // Create and send offer via Realtime (instant delivery!)
-      const offerStr = await createOffer(pc);
-      await sendSignal('offer', offerStr);
-
+      await sendSignal('call-request', { withVideo });
+      // Wait for call-accepted or call-declined (handled by handleIncomingSignal)
+      // Timeout after 30s
       timeoutRef.current = setTimeout(() => {
-        if (stateRef.current !== 'connected') {
-          console.log('[WebRTC] Caller timeout');
-          setWebrtcState('failed');
-          stateRef.current = 'failed';
-          cleanup();
+        if (pendingCallRef.current) {
+          pendingCallRef.current = false;
+          setWebrtcState('idle');
+          stateRef.current = 'idle';
         }
-      }, CONNECTION_TIMEOUT);
-
+      }, 30000);
     } catch (e) {
-      console.error('[WebRTC] Init error:', e);
+      console.error('[WebRTC] Call request error:', e);
       setWebrtcState('failed');
       stateRef.current = 'failed';
-      // Don't cleanup local stream on signaling errors — camera should stay visible
     }
-  }, [cleanup, handleDCMessage, handleStateChange, handleRemoteTrack, sendSignal, waitForSignalingReady]);
+  }, [sendSignal]);
 
-  // ── Toggle video on/off during call ──
+  // ── Accept incoming call ──
+  const acceptIncomingCall = useCallback(async () => {
+    if (!incomingCall) return;
+    if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+    setIncomingCall(null);
+    setWebrtcState('connecting');
+    stateRef.current = 'connecting';
+    try {
+      await sendSignal('call-accepted', {});
+    } catch (e) {
+      console.error('[WebRTC] Accept signal error:', e);
+    }
+  }, [incomingCall, sendSignal]);
+
+  // ── Decline incoming call ──
+  const declineIncomingCall = useCallback(async () => {
+    if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+    setIncomingCall(null);
+    try {
+      await sendSignal('call-declined', JSON.stringify({ reason: 'declined' }));
+    } catch {}
+  }, [sendSignal]);
+
+  // ── Toggle video ──
   const toggleVideo = useCallback(async () => {
     const pc = pcRef.current;
     if (!pc) return;
-
     if (videoEnabled && localStreamRef.current) {
       setVideoEnabled(localStreamRef.current, false);
       setVideoEnabledState(false);
@@ -477,9 +480,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
             setVideoEnabledState(true);
             const offerStr = await createOffer(pc);
-            sendSignal('renegotiate', offerStr).catch((e) => {
-              console.warn('[WebRTC] Failed to send renegotiate:', e.message);
-            });
+            sendSignal('renegotiate', offerStr).catch(() => {});
           }
         }
         sendDirectMessage({ type: 'video-toggle', enabled: true });
@@ -489,41 +490,34 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
   }, [videoEnabled, sendSignal]);
 
-  // ── Switch camera front/back ──
   const flipCamera = useCallback(async () => {
     if (!localStreamRef.current || sendersRef.current.length === 0) return;
     try {
       const newStream = await switchCamera(localStreamRef.current, sendersRef.current);
       localStreamRef.current = newStream;
       setLocalStream(newStream);
-    } catch (e) {
-      console.warn('[WebRTC] Camera flip failed:', e);
-    }
+    } catch {}
   }, []);
 
-  // ── Toggle P2P audio (mute/unmute) ──
   const toggleAudio = useCallback(() => {
     if (!localStreamRef.current) return;
     const audioTracks = localStreamRef.current.getAudioTracks();
     const newState = !audioEnabled;
-    for (const track of audioTracks) {
-      track.enabled = newState;
-    }
+    for (const track of audioTracks) { track.enabled = newState; }
     setAudioEnabledState(newState);
     sendDirectMessage({ type: 'audio-toggle', enabled: newState });
   }, [audioEnabled]);
 
-  // ── Send via DataChannel ──
   const sendDirectMessage = useCallback((msg) => {
     if (!dcRef.current || dcRef.current.readyState !== 'open') return false;
     return sendViaDataChannel(dcRef.current, msg);
   }, []);
 
-  // ── Disconnect ──
   const disconnect = useCallback(() => {
     cleanup();
     setWebrtcState('idle');
     stateRef.current = 'idle';
+    setIncomingCall(null);
   }, [cleanup]);
 
   return {
@@ -534,8 +528,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     videoEnabled,
     audioEnabled,
     remoteVideoActive,
+    incomingCall,          // { from: string } or null
     initiateConnection,
-    acceptConnection: () => {}, // Auto-accepted via Realtime signal
+    acceptIncomingCall,    // Accept incoming video call
+    declineIncomingCall,   // Decline incoming video call
     toggleVideo,
     toggleAudio,
     flipCamera,
