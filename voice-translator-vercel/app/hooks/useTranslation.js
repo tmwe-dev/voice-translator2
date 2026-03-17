@@ -394,7 +394,9 @@ export default function useTranslation({
     const currentLang = myLangRef.current;
 
     // ── Deepgram streaming: highest priority when available ──
-    if (deepgramAvailableRef.current && !isTrialRef.current) {
+    // SKIP Deepgram for WHISPER_PRIMARY_LANGS (Thai, Chinese, Japanese, etc.)
+    // These tonal/complex-script languages get much better results with gpt-4o-mini-transcribe
+    if (deepgramAvailableRef.current && !isTrialRef.current && !isWhisperPrimaryLang(currentLang)) {
       try {
         const started = await startDeepgramStreaming(currentLang);
         if (started) return;
