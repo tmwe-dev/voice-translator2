@@ -52,11 +52,14 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
 
-  // Auto-open video panel when call connects (not on incoming request)
+  // Auto-open video panel when call connects
+  // Works for both caller (initiateConnection) and callee (acceptIncomingCall)
   useEffect(() => {
-    if (webrtc?.webrtcState === 'connected' && !showVideoCall) {
-      setShowVideoCall(true);
-      setVideoFullscreen(true);
+    const state = webrtc?.webrtcState;
+    if (state === 'connected') {
+      // Ensure video panel is open and fullscreen when connected
+      if (!showVideoCall) setShowVideoCall(true);
+      if (!videoFullscreen) setVideoFullscreen(true);
     }
   }, [webrtc?.webrtcState]);
 
@@ -67,13 +70,15 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     }
   }, [webrtc?.webrtcConnected, partner?.lang, myLang]);
 
-  // Auto-disable ducking when video call ends
+  // Auto-disable ducking when video call truly ends (idle or failed, NOT during connecting)
   useEffect(() => {
-    if (!webrtc?.webrtcConnected) {
+    const state = webrtc?.webrtcState;
+    if (state === 'idle' || state === 'failed') {
       setVideoDucking(false);
       setVideoFullscreen(false);
+      setShowVideoCall(false);
     }
-  }, [webrtc?.webrtcConnected]);
+  }, [webrtc?.webrtcState]);
 
   // Show translation subtitle when last message from partner has translation
   useEffect(() => {
@@ -747,6 +752,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
       {/* Animations */}
       <style>{`
+        @keyframes vtConnecting {
+          0% { transform: translateX(-100%); }
+          50% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
         @keyframes vtBattPulse {
           0%, 100% { opacity: 0.3; }
           50% { opacity: 0.8; }
@@ -794,8 +804,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
       )}
 
-      {/* ── Fullscreen Video Call ── */}
-      {videoFullscreen && webrtc?.webrtcConnected && (
+      {/* ── Fullscreen Video Call ── show during BOTH connecting and connected ── */}
+      {videoFullscreen && (webrtc?.webrtcConnected || webrtc?.webrtcState === 'connecting') && (
         <div style={{
           position:'fixed', top:0, left:0, right:0, bottom:0, zIndex:200,
           background:'#000', display:'flex', flexDirection:'column',
@@ -810,8 +820,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 alignItems:'center', justifyContent:'center', gap:16, background:'#0a0a0a'}}>
                 <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={96} />
                 <span style={{color:'#94a3b8', fontSize:16, fontWeight:500}}>
-                  {partner?.name || 'Partner'} - Camera off
+                  {!webrtc.webrtcConnected
+                    ? 'Connessione in corso...'
+                    : `${partner?.name || 'Partner'} - Camera off`}
                 </span>
+                {!webrtc.webrtcConnected && (
+                  <div style={{width:40, height:4, borderRadius:2, background:'rgba(255,255,255,0.1)', overflow:'hidden'}}>
+                    <div style={{width:'60%', height:'100%', borderRadius:2, background:'#60a5fa',
+                      animation:'vtConnecting 1.5s ease-in-out infinite'}} />
+                  </div>
+                )}
               </div>
             )}
 
@@ -828,8 +846,12 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {/* Status bar (top-left) */}
             <div style={{position:'absolute', top:16, left:16, display:'flex', alignItems:'center', gap:8,
               padding:'6px 14px', borderRadius:24, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)'}}>
-              <div style={{width:8, height:8, borderRadius:4, background:'#4ade80'}} />
-              <span style={{fontSize:12, color:'#fff', fontWeight:600}}>P2P</span>
+              <div style={{width:8, height:8, borderRadius:4,
+                background: webrtc.webrtcConnected ? '#4ade80' : '#f59e0b',
+                animation: webrtc.webrtcConnected ? 'none' : 'vtBattPulse 1.5s infinite'}} />
+              <span style={{fontSize:12, color:'#fff', fontWeight:600}}>
+                {webrtc.webrtcConnected ? 'P2P' : 'Connessione...'}
+              </span>
               {partner && <span style={{fontSize:12, color:'#94a3b8'}}>{partner.name}</span>}
             </div>
 
