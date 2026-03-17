@@ -16,7 +16,8 @@ export default function useRoomPolling({
   myLangRef,
   roomInfoRef,
   queueAudio,
-  getEffectiveToken
+  getEffectiveToken,
+  onMessageReceived, // Callback when a new unique incoming message arrives (for conversation context)
 }) {
   const [roomId, setRoomId] = useState(null);
   const [roomInfo, setRoomInfo] = useState(null);
@@ -37,6 +38,10 @@ export default function useRoomPolling({
   const roomSessionTokenRef = useRef(null);
   const verifiedNameRef = useRef(null);
   const isHostRef = useRef(false);
+
+  // ── Callback ref for conversation context ──
+  const onMessageReceivedRef = useRef(onMessageReceived);
+  onMessageReceivedRef.current = onMessageReceived;
 
   // ── Unified dedup: track ALL message IDs that have been processed for TTS ──
   // This prevents TTS replay when polling replaces a temp message with a server version
@@ -94,6 +99,20 @@ export default function useRoomPolling({
         processedForTTSRef.current.delete(first);
       }
       queueAudio(textToPlay, speechLang, msg.id);
+    }
+
+    // ── Feed incoming message to conversation context (knowledge base) ──
+    if (onMessageReceivedRef.current && msg.original) {
+      try {
+        onMessageReceivedRef.current({
+          sender: msg.sender,
+          original: msg.original,
+          translated: msg.translated || (msg.translations ? Object.values(msg.translations)[0] : null),
+          sourceLang: msg.sourceLang,
+          targetLang: msg.targetLang,
+          timestamp: msg.timestamp || Date.now(),
+        });
+      } catch {}
     }
   }, [prefsRef, myLangRef, queueAudio]);
 

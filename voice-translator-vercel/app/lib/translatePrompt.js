@@ -19,12 +19,12 @@ const LANG_NAMES = {
 
 /**
  * Build the system prompt for translation.
- * @param {Object} opts - { sourceLang, targetLang, sourceLangName, targetLangName, roomMode, nativeLang, domainContext, description, isReview, context }
+ * @param {Object} opts - { sourceLang, targetLang, sourceLangName, targetLangName, roomMode, nativeLang, domainContext, description, isReview, conversationContext }
  * @returns {string} systemPrompt
  */
 export function buildSystemPrompt({
   sourceLang, targetLang, sourceLangName, targetLangName,
-  roomMode, nativeLang, domainContext, description, isReview
+  roomMode, nativeLang, domainContext, description, isReview, conversationContext
 }) {
   const srcTonal = TONAL_LANGS[sourceLang];
   const tgtTonal = TONAL_LANGS[targetLang];
@@ -73,6 +73,18 @@ RULES:
   if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
   if (description) systemPrompt += `\nTopic: ${description}`;
   if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;
+
+  // ── Conversation context: rolling knowledge base for disambiguation ──
+  if (conversationContext) {
+    systemPrompt += `\n\nCONVERSATION MEMORY (use for disambiguation and contextual accuracy):
+${conversationContext}
+
+Use this conversation history to:
+- Disambiguate words with multiple meanings based on the topic flow
+- Maintain consistent terminology throughout the conversation
+- Understand references to previously discussed subjects
+- Choose the contextually appropriate translation when multiple options exist`;
+  }
 
   const pairKey = `${sourceLang}->${targetLang}`;
   if (PAIR_NOTES[pairKey]) systemPrompt += `\n\nLanguage pair note: ${PAIR_NOTES[pairKey]}`;

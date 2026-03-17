@@ -54,6 +54,7 @@ export default function useTranslation({
   verifiedNameRef,
   addLocalMessage,    // Add sender's own message to local list immediately
   updateLocalMessage, // Update existing message (add translation)
+  conversationContext, // { addMessage, getContext } from useConversationContext
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -150,6 +151,7 @@ export default function useTranslation({
   /**
    * Build translation options from current room context.
    * Shared by all translate-and-send paths.
+   * Includes conversation memory for context-aware translation.
    */
   function buildTranslateOpts() {
     return {
@@ -157,6 +159,7 @@ export default function useTranslation({
       description: roomContextRef.current.description || undefined,
       roomMode: roomInfoRef.current?.mode || undefined,
       nativeLang: myLangRef.current || undefined,
+      conversationContext: conversationContext?.getContext() || undefined,
     };
   }
 
@@ -204,12 +207,25 @@ export default function useTranslation({
         sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
         if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
       }
+
+      // ── Feed message into conversation context for knowledge base ──
+      if (conversationContext?.addMessage) {
+        const senderName = verifiedNameRef?.current || prefsRef.current.name;
+        conversationContext.addMessage({
+          sender: senderName,
+          original: text,
+          translated: primaryTranslated || null,
+          sourceLang: myL.code,
+          targetLang: finalTargetLang,
+          timestamp: Date.now(),
+        });
+      }
     } catch (e) {
       console.error('[translateAndSend] Phase 2 translation error:', e);
     }
 
     return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
-  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance]);
+  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, roomId, isTrialRef, useOwnKeys, refreshBalance, conversationContext, verifiedNameRef, prefsRef]);
 
   // =============================================
   // Speech result handler
@@ -263,6 +279,9 @@ export default function useTranslation({
     if (roomId) form.append('roomId', roomId);
     if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
     if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
+    // Include conversation context for Whisper path too
+    const convCtx = conversationContext?.getContext();
+    if (convCtx) form.append('conversationContext', convCtx);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
     if (prefsRef.current?.aiModel) form.append('aiModel', prefsRef.current.aiModel);
@@ -271,16 +290,14 @@ export default function useTranslation({
     if (!res.ok) throw new Error('Server error');
     const { original, translated } = await res.json();
     if (original && roomId) {
+      const translateOpts = buildTranslateOpts();
       let translations = { [primaryTarget.code]: translated || '' };
       if (targetLangs.length > 1 && original) {
         const otherTargets = targetLangs.slice(1);
         const otherResults = await Promise.allSettled(
           otherTargets.map(tL =>
-            translateUniversal(original, myL.code, tL.code, myL.name, tL.name, {
-              domainContext: roomContextRef.current.contextPrompt || undefined,
-              roomMode: roomInfoRef.current?.mode || undefined,
-              nativeLang: myLangRef.current || undefined,
-            }).then(d => ({ langCode: tL.code, translated: d.translated || '' }))
+            translateUniversal(original, myL.code, tL.code, myL.name, tL.name, translateOpts)
+              .then(d => ({ langCode: tL.code, translated: d.translated || '' }))
               .catch(() => ({ langCode: tL.code, translated: '' }))
           )
         );
@@ -292,6 +309,19 @@ export default function useTranslation({
       }
       // sendMessage returns immediately after broadcast (server save is fire-and-forget)
       sendMessage(original, translated, myL.code, primaryTarget.code, translations);
+
+      // Feed Whisper-path message into conversation context
+      if (conversationContext?.addMessage) {
+        const senderName = verifiedNameRef?.current || prefsRef.current.name;
+        conversationContext.addMessage({
+          sender: senderName,
+          original,
+          translated: translated || null,
+          sourceLang: myL.code,
+          targetLang: primaryTarget.code,
+          timestamp: Date.now(),
+        });
+      }
     }
   }
 

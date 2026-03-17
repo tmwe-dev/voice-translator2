@@ -23,6 +23,7 @@ async function handlePost(req) {
     const roomId = formData.get('roomId');
     const domainContext = formData.get('domainContext') || '';
     const description = formData.get('description') || '';
+    const conversationContext = formData.get('conversationContext') || '';
     const userToken = formData.get('userToken') || '';
     const aiModel = formData.get('aiModel') || '';
     const lendingCode = formData.get('lendingCode') || '';
@@ -84,7 +85,8 @@ async function handlePost(req) {
     // ── Build translation prompt — reuse shared module ──
     const systemPrompt = buildSystemPrompt({
       sourceLang, targetLang, sourceLangName, targetLangName,
-      domainContext, description
+      domainContext, description,
+      conversationContext: conversationContext || undefined,
     });
 
     // ── Translate with multi-provider support — reuse shared LLM caller ──

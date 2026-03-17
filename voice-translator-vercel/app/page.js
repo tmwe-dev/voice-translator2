@@ -12,6 +12,7 @@ import useRoomPolling from './hooks/useRoomPolling.js';
 import useAuth from './hooks/useAuth.js';
 import useContacts from './hooks/useContacts.js';
 import useWebRTC from './hooks/useWebRTC.js';
+import useConversationContext from './hooks/useConversationContext.js';
 
 // View components
 import WelcomeView from './components/WelcomeView.js';
@@ -98,6 +99,7 @@ function HomeInner() {
   // HOOKS — now use the SAME refs that get synced below
   // =============================================
   const auth = useAuth();
+  const convContext = useConversationContext();
   const audio = useAudioSystem({
     prefsRef,
     myLangRef,
@@ -113,7 +115,8 @@ function HomeInner() {
     myLangRef,
     roomInfoRef,
     queueAudio: audio.queueAudio,
-    getEffectiveToken: auth.getEffectiveToken
+    getEffectiveToken: auth.getEffectiveToken,
+    onMessageReceived: convContext.addMessage, // Feed incoming messages to conversation context
   });
   const translation = useTranslation({
     myLangRef,
@@ -141,6 +144,7 @@ function HomeInner() {
     verifiedNameRef: roomPolling.verifiedNameRef,
     addLocalMessage: roomPolling.addLocalMessage,
     updateLocalMessage: roomPolling.updateLocalMessage,
+    conversationContext: convContext, // Rolling knowledge base for context-aware translation
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 
@@ -664,6 +668,7 @@ function HomeInner() {
         body: JSON.stringify(endBody) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
+    convContext.resetContext(); // Clear conversation knowledge base
     setStatus('');
     setView('home');
   }
@@ -904,7 +909,7 @@ function HomeInner() {
   if (view === 'lobby') return (
     <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={() => { roomPolling.leaveRoom(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
+      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
   );
 
   if (view === 'room') return (

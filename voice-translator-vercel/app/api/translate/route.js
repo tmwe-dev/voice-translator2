@@ -23,12 +23,12 @@ export async function POST(req) {
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
-            roomMode, nativeLang } = await req.json();
+            roomMode, nativeLang, conversationContext } = await req.json();
 
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // Check if this is a simple translation (no context/review/domain/description)
-    const isSimpleTranslation = !context && !isReview && !domainContext && !description;
+    // Check if this is a simple translation (no context/review/domain/description/conversationContext)
+    const isSimpleTranslation = !context && !isReview && !domainContext && !description && !conversationContext;
 
     // Build cache key for simple translations only
     let cacheKey = null;
@@ -75,7 +75,7 @@ export async function POST(req) {
     // Build system prompt using extracted module
     let systemPrompt = buildSystemPrompt({
       sourceLang, targetLang, sourceLangName, targetLangName,
-      roomMode, nativeLang, domainContext, description, isReview
+      roomMode, nativeLang, domainContext, description, isReview, conversationContext
     });
 
     // Glossary injection — if user has active glossaries for this language pair
