@@ -37,6 +37,13 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
+  // ── Compute derived values BEFORE any useEffects that reference them ──
+  const myName = verifiedName || prefs.name;
+  const otherMembers = roomInfo?.members?.filter(m => m.name !== myName) || [];
+  const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
+  const myL = getLang(myLang);
+  const otherL = partner ? getLang(partner.lang) : getLang('en');
+
   // Auto-open video panel when call connects (not on incoming request)
   useEffect(() => {
     if (webrtc?.webrtcState === 'connected' && !showVideoCall) {
@@ -87,12 +94,6 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       remoteVideoRef.current.srcObject = webrtc.remoteStream;
     }
   }, [webrtc?.remoteStream]);
-
-  const myName = verifiedName || prefs.name;
-  const otherMembers = roomInfo?.members?.filter(m => m.name !== myName) || [];
-  const partner = otherMembers[0]; // Primary partner (for 1:1 backward compat)
-  const myL = getLang(myLang);
-  const otherL = partner ? getLang(partner.lang) : getLang('en');
 
   // Helper: get the best translation for the viewer's language from a message
   function getTranslationForMe(msg) {

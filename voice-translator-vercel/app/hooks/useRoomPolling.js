@@ -42,6 +42,11 @@ export default function useRoomPolling({
   // This prevents TTS replay when polling replaces a temp message with a server version
   const processedForTTSRef = useRef(new Set());
 
+  // ── Guard: track message IDs that have already been through processIncomingMessage ──
+  // This prevents calling processIncomingMessage twice for the same message when both
+  // P2P and Realtime deliver it. Without this, handleRealtimeMessage calls it unconditionally.
+  const processedMsgIdsRef = useRef(new Set());
+
   // ── Helper: process incoming message (shared by realtime + polling + P2P) ──
   // ALWAYS checks content fingerprint to prevent TTS replay.
   // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
@@ -95,6 +100,19 @@ export default function useRoomPolling({
   // ── Supabase Realtime handlers ──
 
   const handleRealtimeMessage = useCallback((message) => {
+    // ── ID-based guard: skip if already processed by another delivery channel ──
+    // P2P and Realtime both call this function for the same message.
+    // Without this guard, processIncomingMessage would be called twice.
+    const alreadyProcessed = processedMsgIdsRef.current.has(message.id);
+    if (!alreadyProcessed) {
+      processedMsgIdsRef.current.add(message.id);
+      // LRU cap
+      if (processedMsgIdsRef.current.size > 500) {
+        const first = processedMsgIdsRef.current.values().next().value;
+        processedMsgIdsRef.current.delete(first);
+      }
+    }
+
     setMessages(prev => {
       // Dedup by ID
       const ids = new Set(prev.map(m => m.id));
@@ -126,7 +144,10 @@ export default function useRoomPolling({
     if (message.timestamp) {
       lastMsgRef.current = Math.max(lastMsgRef.current, message.timestamp);
     }
-    processIncomingMessage(message);
+    // Only call processIncomingMessage if this is the FIRST time we see this message ID
+    if (!alreadyProcessed) {
+      processIncomingMessage(message);
+    }
   }, [processIncomingMessage]);
 
   // ── Handle translation update for an existing message (Phase 2) ──
@@ -134,6 +155,21 @@ export default function useRoomPolling({
   // and triggers TTS for the receiver.
   const handleMessageUpdate = useCallback((data) => {
     if (!data || !data.original) return;
+    // ── Deterministic update ID: same content = same ID across P2P + Realtime ──
+    // Previously used `update_${Date.now()}` which generated different IDs for each
+    // delivery channel, defeating the message-ID dedup guard.
+    const updateId = data.tempId || `update_${data.sender}|${data.original}`;
+
+    // ── ID-based guard: skip if already processed by another delivery channel ──
+    const alreadyProcessed = processedMsgIdsRef.current.has(updateId);
+    if (!alreadyProcessed) {
+      processedMsgIdsRef.current.add(updateId);
+      if (processedMsgIdsRef.current.size > 500) {
+        const first = processedMsgIdsRef.current.values().next().value;
+        processedMsgIdsRef.current.delete(first);
+      }
+    }
+
     // Find the message by sender + original text (works for both temp and server IDs)
     setMessages(prev => {
       const idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
@@ -147,10 +183,10 @@ export default function useRoomPolling({
       };
       return updated;
     });
-    // Trigger TTS for the receiver (the sender already has it marked in sentByMeRef)
-    if (data.translated || data.translations) {
+    // Trigger TTS for the receiver ONLY on the first delivery channel
+    if (!alreadyProcessed && (data.translated || data.translations)) {
       processIncomingMessage({
-        id: data.tempId || `update_${Date.now()}`,
+        id: updateId,
         sender: data.sender,
         original: data.original,
         translated: data.translated,
@@ -283,6 +319,13 @@ export default function useRoomPolling({
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
             for (const msg of newMsgs) {
+              // Guard: skip if this message ID was already processed via Realtime/P2P
+              if (processedMsgIdsRef.current.has(msg.id)) continue;
+              processedMsgIdsRef.current.add(msg.id);
+              if (processedMsgIdsRef.current.size > 500) {
+                const first = processedMsgIdsRef.current.values().next().value;
+                processedMsgIdsRef.current.delete(first);
+              }
               processIncomingMessage(msg);
             }
           }
