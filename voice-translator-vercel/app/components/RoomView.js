@@ -31,6 +31,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [videoDucking, setVideoDucking] = useState(false); // auto-ducking during video call
   const [lastTranslationSubtitle, setLastTranslationSubtitle] = useState(null); // { text, ts }
+  const [partnerVolume, setPartnerVolume] = useState(0.7); // Partner audio volume (0-1), default 70%
   const subtitleTimerRef = useRef(null);
 
   // Video refs
@@ -92,8 +93,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   useEffect(() => {
     if (remoteVideoRef.current && webrtc?.remoteStream) {
       remoteVideoRef.current.srcObject = webrtc.remoteStream;
+      remoteVideoRef.current.volume = partnerVolume;
     }
   }, [webrtc?.remoteStream]);
+
+  // Sync partner volume to remote video element in real time
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.volume = partnerVolume;
+    }
+  }, [partnerVolume]);
 
   // Helper: get the best translation for the viewer's language from a message
   function getTranslationForMe(msg) {
@@ -749,7 +758,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
             {/* Local video PiP (top-right) */}
             {webrtc.localStream && webrtc.videoEnabled && (
-              <div style={{position:'absolute', top:50, right:16, width:120, height:90,
+              <div style={{position:'absolute', top:110, right:16, width:120, height:90,
                 borderRadius:12, overflow:'hidden', border:'2px solid rgba(255,255,255,0.2)',
                 boxShadow:'0 4px 20px rgba(0,0,0,0.6)'}}>
                 <video ref={localVideoRef} autoPlay playsInline muted
@@ -765,14 +774,29 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               {partner && <span style={{fontSize:12, color:'#94a3b8'}}>{partner.name}</span>}
             </div>
 
-            {/* Ducking toggle (top-right, above PiP) */}
-            <button onClick={() => setVideoDucking(!videoDucking)}
-              style={{position:'absolute', top:16, right:16, padding:'6px 12px', borderRadius:20,
-                background: videoDucking ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.15)',
-                border:'none', cursor:'pointer', color:'#fff', fontSize:11, fontWeight:500,
-                backdropFilter:'blur(4px)', display:'flex', alignItems:'center', gap:6}}>
-              {videoDucking ? '\u{1F509}' : '\u{1F50A}'} {videoDucking ? 'Ducking ON' : 'Ducking OFF'}
-            </button>
+            {/* Controls (top-right): volume slider + ducking toggle */}
+            <div style={{position:'absolute', top:16, right:16, display:'flex', flexDirection:'column', gap:8, alignItems:'flex-end'}}>
+              {/* Ducking toggle */}
+              <button onClick={() => setVideoDucking(!videoDucking)}
+                style={{padding:'6px 12px', borderRadius:20,
+                  background: videoDucking ? 'rgba(59,130,246,0.8)' : 'rgba(255,255,255,0.15)',
+                  border:'none', cursor:'pointer', color:'#fff', fontSize:11, fontWeight:500,
+                  backdropFilter:'blur(4px)', display:'flex', alignItems:'center', gap:6}}>
+                {videoDucking ? '\u{1F509}' : '\u{1F50A}'} {videoDucking ? 'Ducking ON' : 'Ducking OFF'}
+              </button>
+              {/* Partner volume slider */}
+              <div style={{display:'flex', alignItems:'center', gap:8, padding:'6px 12px', borderRadius:20,
+                background:'rgba(0,0,0,0.6)', backdropFilter:'blur(8px)'}}>
+                <span style={{fontSize:14}}>{partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}</span>
+                <input type="range" min="0" max="100" step="5"
+                  value={Math.round(partnerVolume * 100)}
+                  onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
+                  style={{width:80, accentColor:'#60a5fa', height:3}} />
+                <span style={{fontSize:10, color:'#94a3b8', fontFamily:'monospace', minWidth:28}}>
+                  {Math.round(partnerVolume * 100)}%
+                </span>
+              </div>
+            </div>
 
             {/* ── Translation subtitle overlay (bottom) ── */}
             {lastTranslationSubtitle && (
@@ -876,33 +900,48 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             </div>
           </div>
           {/* Video controls */}
-          <div style={{display:'flex', justifyContent:'center', gap:12, padding:'8px 0',
-            background:'rgba(0,0,0,0.85)'}}>
-            <button onClick={() => webrtc.toggleVideo()}
-              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                background: webrtc.videoEnabled ? S.colors.accent4Bg : 'rgba(255,255,255,0.12)',
-                color: webrtc.videoEnabled ? S.colors.statusOk : S.colors.textMuted,
-                fontSize:16, display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {webrtc.videoEnabled ? '\u{1F4F7}' : '\u{1F6AB}'}
-            </button>
-            <button onClick={() => webrtc.flipCamera()}
-              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {'\u{1F504}'}
-            </button>
-            <button onClick={() => setVideoFullscreen(true)}
-              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {'\u{2B06}\uFE0F'}
-            </button>
-            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
-              style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
-                background:S.colors.statusError, color:'#fff', fontSize:16,
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-              {'\u{1F4F5}'}
-            </button>
+          <div style={{display:'flex', flexDirection:'column', gap:0, background:'rgba(0,0,0,0.85)'}}>
+            {/* Volume slider row */}
+            <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'6px 16px'}}>
+              <span style={{fontSize:12, color:'#94a3b8'}}>
+                {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
+              </span>
+              <input type="range" min="0" max="100" step="5"
+                value={Math.round(partnerVolume * 100)}
+                onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
+                style={{flex:1, maxWidth:200, accentColor:'#60a5fa', height:3}} />
+              <span style={{fontSize:9, color:'#94a3b8', fontFamily:'monospace', minWidth:28}}>
+                {Math.round(partnerVolume * 100)}%
+              </span>
+            </div>
+            {/* Buttons row */}
+            <div style={{display:'flex', justifyContent:'center', gap:12, padding:'4px 0 8px'}}>
+              <button onClick={() => webrtc.toggleVideo()}
+                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                  background: webrtc.videoEnabled ? S.colors.accent4Bg : 'rgba(255,255,255,0.12)',
+                  color: webrtc.videoEnabled ? S.colors.statusOk : S.colors.textMuted,
+                  fontSize:16, display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {webrtc.videoEnabled ? '\u{1F4F7}' : '\u{1F6AB}'}
+              </button>
+              <button onClick={() => webrtc.flipCamera()}
+                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                  background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
+                  display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {'\u{1F504}'}
+              </button>
+              <button onClick={() => setVideoFullscreen(true)}
+                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                  background:'rgba(255,255,255,0.12)', color:'#fff', fontSize:16,
+                  display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {'\u{2B06}\uFE0F'}
+              </button>
+              <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
+                style={{width:40, height:40, borderRadius:'50%', border:'none', cursor:'pointer',
+                  background:S.colors.statusError, color:'#fff', fontSize:16,
+                  display:'flex', alignItems:'center', justifyContent:'center'}}>
+                {'\u{1F4F5}'}
+              </button>
+            </div>
           </div>
         </div>
       )}
