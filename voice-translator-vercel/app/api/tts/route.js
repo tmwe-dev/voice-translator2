@@ -59,9 +59,26 @@ async function handlePost(req) {
     });
 
     const openai = new OpenAI({ apiKey });
-    const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'nova';
-
     const lang2 = (langCode || '').replace(/-.*/, '');
+
+    // ── Auto voice-language matching for OpenAI TTS ──
+    // gpt-4o-mini-tts is multilingual but some voices sound more natural for certain languages.
+    // If user selected a specific voice, respect that choice. Otherwise auto-pick.
+    const VOICE_BY_LANG = {
+      'th': 'shimmer',  // Shimmer: best for tonal Asian languages — clearer tone separation
+      'zh': 'shimmer',  // Shimmer: clean Mandarin tone delivery
+      'ja': 'nova',     // Nova: natural Japanese pitch accent
+      'ko': 'nova',     // Nova: warm Korean intonation
+      'vi': 'shimmer',  // Shimmer: clear Vietnamese tones
+      'ar': 'onyx',     // Onyx: deep, authoritative Arabic
+      'hi': 'nova',     // Nova: natural Hindi rhythm
+      'ru': 'onyx',     // Onyx: natural Russian depth
+      'de': 'fable',    // Fable: clear German pronunciation
+      'fr': 'shimmer',  // Shimmer: elegant French
+    };
+    const autoVoice = VOICE_BY_LANG[lang2];
+    const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice)
+      ? voice : (autoVoice || 'nova');
     const instructions = TTS_INSTRUCTIONS[lang2] || TTS_INSTRUCTIONS['en'];
     const cleanText = preprocessForTTS(text, lang2);
     const speed = SLOW_SPEED_LANGS[lang2] || 1.0;

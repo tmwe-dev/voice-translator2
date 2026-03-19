@@ -53,18 +53,47 @@ const FEMALE_VOICES = {
 };
 
 // Avatar name → voice mapping
-// Marcus=male, Elena=female, Omar=male, Aisha=female, Alex=male,
-// Thomas=male, Yuki=female, Margaret=female, Leo=male
 const AVATAR_VOICE_MAP = {
-  'Marcus':   MALE_VOICES.default,   // Adam - deep, authoritative
-  'Elena':    FEMALE_VOICES.default,  // Sarah - warm, natural
-  'Omar':     MALE_VOICES.alt1,       // Antoni - warm
-  'Aisha':    FEMALE_VOICES.alt1,     // Rachel - natural
-  'Alex':     MALE_VOICES.alt2,       // Josh - young
-  'Thomas':   MALE_VOICES.alt4,       // Thomas - calm
-  'Yuki':     FEMALE_VOICES.alt2,     // Charlotte - elegant
-  'Margaret': FEMALE_VOICES.alt3,     // Nicole - friendly
-  'Leo':      MALE_VOICES.alt5,       // Drew - confident
+  'Marcus':   MALE_VOICES.default,
+  'Elena':    FEMALE_VOICES.default,
+  'Omar':     MALE_VOICES.alt1,
+  'Aisha':    FEMALE_VOICES.alt1,
+  'Alex':     MALE_VOICES.alt2,
+  'Thomas':   MALE_VOICES.alt4,
+  'Yuki':     FEMALE_VOICES.alt2,
+  'Margaret': FEMALE_VOICES.alt3,
+  'Leo':      MALE_VOICES.alt5,
+};
+
+// ═══════════════════════════════════════════════
+// AUTO VOICE-LANGUAGE MATCHING — curated native voices per language
+//
+// When no explicit voiceId is selected, the system picks a native-sounding
+// voice for the TARGET language. This ensures Thai text is read by a
+// Thai-sounding voice, not an English one.
+//
+// These are ElevenLabs premade voices that sound natural for each language.
+// Female + male options for each. Falls back to multilingual defaults.
+// ═══════════════════════════════════════════════
+const NATIVE_VOICES_BY_LANG = {
+  'en': { female: 'EXAVITQu4vr4xnSDxMaL', male: 'pNInz6obpgDQGcFmaJgB' },  // Sarah / Adam
+  'it': { female: 'EXAVITQu4vr4xnSDxMaL', male: 'ErXwobaYiN019PkySvjV' },  // Sarah / Antoni
+  'es': { female: 'XB0fDUnXU5powFXDhCwa', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Charlotte / Josh
+  'fr': { female: 'XB0fDUnXU5powFXDhCwa', male: 'GBv7mTt0atIp3Br8iCZE' },  // Charlotte / Thomas
+  'de': { female: 'piTKgcLEGmPE4e6mEKli', male: 'GBv7mTt0atIp3Br8iCZE' },  // Nicole / Thomas
+  'pt': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni
+  'zh': { female: 'XB0fDUnXU5powFXDhCwa', male: 'pNInz6obpgDQGcFmaJgB' },  // Charlotte / Adam
+  'ja': { female: 'piTKgcLEGmPE4e6mEKli', male: 'GBv7mTt0atIp3Br8iCZE' },  // Nicole / Thomas
+  'ko': { female: 'MF3mGyEYCl7XYWbV9V6O', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Elli / Josh
+  'th': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni (multilingual)
+  'vi': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni (multilingual)
+  'ar': { female: 'XB0fDUnXU5powFXDhCwa', male: 'pNInz6obpgDQGcFmaJgB' },  // Charlotte / Adam
+  'hi': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni
+  'ru': { female: 'piTKgcLEGmPE4e6mEKli', male: 'VR6AewLTigWG4xSOukaG' },  // Nicole / Arnold
+  'tr': { female: 'EXAVITQu4vr4xnSDxMaL', male: '29vD33N1CtxCmqQRPOHJ' },  // Sarah / Drew
+  'nl': { female: 'XB0fDUnXU5powFXDhCwa', male: 'GBv7mTt0atIp3Br8iCZE' },  // Charlotte / Thomas
+  'pl': { female: 'piTKgcLEGmPE4e6mEKli', male: 'VR6AewLTigWG4xSOukaG' },  // Nicole / Arnold
+  'sv': { female: 'MF3mGyEYCl7XYWbV9V6O', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Elli / Josh
 };
 
 async function handlePost(req) {
@@ -81,13 +110,23 @@ async function handlePost(req) {
       minCredits: MIN_CREDITS.TTS_ELEVENLABS,
     });
 
-    // Voice selection priority: explicit voiceId → avatar mapping → default
+    // ── Voice selection priority ──
+    // 1. Explicit voiceId (user chose a specific voice or cloned voice)
+    // 2. Native voice for target language (auto-matching — best experience)
+    // 3. Avatar mapping (personality-based default)
+    // 4. Global female default
+    const lang2 = (langCode || '').replace(/-.*/, '');
+    const genderHint = avatarName
+      ? (['Marcus','Omar','Alex','Thomas','Leo'].includes(avatarName) ? 'male' : 'female')
+      : 'female';
+    const nativeVoice = NATIVE_VOICES_BY_LANG[lang2]?.[genderHint]
+      || NATIVE_VOICES_BY_LANG[lang2]?.female;
     const selectedVoice = voiceId
+      || nativeVoice
       || (avatarName && AVATAR_VOICE_MAP[avatarName])
       || FEMALE_VOICES.default;
 
     // ── FASE 4: Model selection with Flash v2.5 as default ──
-    const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
     let modelId;
 
     // If using a cloned voice, use multilingual model for best quality
