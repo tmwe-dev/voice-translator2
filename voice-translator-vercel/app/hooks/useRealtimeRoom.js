@@ -113,18 +113,32 @@ export default function useRealtimeRoom({
     }
   }, []);
 
+  // ── Broadcast with single retry on failure ──
+  // Supabase Realtime does NOT guarantee delivery — if the first attempt fails
+  // (transient network blip, channel reconnecting), a single retry after 500ms
+  // catches most cases. Combined with P2P DataChannel + HTTP polling, this gives
+  // triple redundancy for every message.
   const safeBroadcast = useCallback(async (event, payload) => {
     if (!channelRef.current || !readyRef.current) return false;
-    const result = await channelRef.current.send({
-      type: 'broadcast',
-      event,
-      payload,
-    });
-    if (result !== 'ok') {
-      console.warn(`[Realtime] Broadcast failed for ${event}:`, result);
+    try {
+      const result = await channelRef.current.send({
+        type: 'broadcast',
+        event,
+        payload,
+      });
+      if (result === 'ok') return true;
+      // First attempt failed — retry once after 500ms
+      console.warn(`[Realtime] Broadcast failed for ${event}, retrying in 500ms...`);
+      await new Promise(r => setTimeout(r, 500));
+      if (!channelRef.current || !readyRef.current) return false;
+      const retry = await channelRef.current.send({ type: 'broadcast', event, payload });
+      if (retry === 'ok') return true;
+      console.warn(`[Realtime] Broadcast retry failed for ${event}`);
+      return false;
+    } catch (e) {
+      console.error(`[Realtime] Broadcast error for ${event}:`, e);
       return false;
     }
-    return true;
   }, []);
 
   const broadcastMessage = useCallback((message) => {

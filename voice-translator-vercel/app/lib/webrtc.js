@@ -90,9 +90,13 @@ export function createPeerConnection(onMessage, onStateChange, onRemoteTrack) {
  * Create a DataChannel on the peer connection
  */
 export function createDataChannel(pc, label = 'messages') {
+  // ── Fully reliable + ordered (SCTP default per RFC 8831) ──
+  // Previously used maxRetransmits:3 which could silently drop messages.
+  // For chat messages, reliability is more important than latency.
+  // SCTP retransmits automatically until delivered or connection fails.
   const dc = pc.createDataChannel(label, {
     ordered: true,
-    maxRetransmits: 3,
+    // No maxRetransmits or maxPacketLifeTime → fully reliable delivery
   });
   return dc;
 }

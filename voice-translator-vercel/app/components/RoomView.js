@@ -78,18 +78,36 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
     }
   }, [webrtc?.webrtcState]);
 
-  // Show translation subtitle when last message from partner has translation
+  // ── Subtitle queue: show up to 2 subtitles with auto-expire (FIFO) ──
+  // Previous approach: single subtitle, overwritten by next message → user misses text
+  // New approach: queue of max 2, each expires after 7s, oldest removed first
+  const lastSubMsgIdRef = useRef(null);
   useEffect(() => {
     if (!videoFullscreen || !messages.length) return;
     const lastPartnerMsg = [...messages].reverse().find(m => m.sender !== myName);
     if (!lastPartnerMsg) return;
+    const msgKey = lastPartnerMsg.id || `${lastPartnerMsg.sender}|${lastPartnerMsg.original}`;
+    if (msgKey === lastSubMsgIdRef.current) return; // Already showing this one
     const translationText = getTranslationForMe(lastPartnerMsg);
     const hasTranslation = !!(lastPartnerMsg.translated || (lastPartnerMsg.translations && Object.keys(lastPartnerMsg.translations).length > 0));
     if (hasTranslation && translationText) {
-      setLastTranslationSubtitle({ text: translationText, original: lastPartnerMsg.original, ts: lastPartnerMsg.timestamp });
-      // Clear after 8 seconds
-      if (subtitleTimerRef.current) clearTimeout(subtitleTimerRef.current);
-      subtitleTimerRef.current = setTimeout(() => setLastTranslationSubtitle(null), 8000);
+      lastSubMsgIdRef.current = msgKey;
+      const newSub = { text: translationText, original: lastPartnerMsg.original, ts: Date.now(), key: msgKey };
+      setLastTranslationSubtitle(prev => {
+        // Queue: keep max 2 — push new, trim oldest
+        const queue = Array.isArray(prev) ? prev : (prev ? [prev] : []);
+        const updated = [...queue, newSub].slice(-2);
+        return updated;
+      });
+      // Auto-expire each subtitle after 7s
+      setTimeout(() => {
+        setLastTranslationSubtitle(prev => {
+          if (!prev) return null;
+          const queue = Array.isArray(prev) ? prev : [prev];
+          const filtered = queue.filter(s => s.key !== msgKey);
+          return filtered.length > 0 ? filtered : null;
+        });
+      }, 7000);
     }
   }, [messages, videoFullscreen]);
 

@@ -33,7 +33,16 @@ export default function useRoomPolling({
   const lastMsgRef = useRef(0);
   const liveTextTimerRef = useRef(null);
   const lastLiveTextRef = useRef('');
+  // ── sentByMeRef: track IDs of messages I sent (for dedup) ──
+  // LRU cap prevents unbounded growth after thousands of messages in long sessions
   const sentByMeRef = useRef(new Set());
+  const addSentByMe = (id) => {
+    sentByMeRef.current.add(id);
+    if (sentByMeRef.current.size > 500) {
+      const first = sentByMeRef.current.values().next().value;
+      sentByMeRef.current.delete(first);
+    }
+  };
   const pollErrorCountRef = useRef(0);
   const [pollError, setPollError] = useState(false);
   const roomSessionTokenRef = useRef(null);
@@ -151,7 +160,7 @@ export default function useRoomPolling({
         const tempMsg = prev[tempIdx];
         const updated = [...prev];
         if (sentByMeRef.current.has(tempMsg.id)) {
-          sentByMeRef.current.add(message.id);
+          addSentByMe(message.id);
         }
         updated[tempIdx] = {
           ...message,
@@ -322,7 +331,7 @@ export default function useRoomPolling({
                   // Mark server ID as "sent by me" if the temp was ours
                   const tempMsg = updated[tempIdx];
                   if (sentByMeRef.current.has(tempMsg.id)) {
-                    sentByMeRef.current.add(m.id);
+                    addSentByMe(m.id);
                   }
                   // MERGE: keep local translations if server doesn't have them yet
                   // (Phase 2 updateLocalMessage may have added them before this poll)

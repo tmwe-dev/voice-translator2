@@ -236,23 +236,30 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </button>
           </div>
 
-          {/* Translation subtitle */}
+          {/* Translation subtitle queue (up to 2 stacked) */}
           {lastTranslationSubtitle && (
             <div style={{
               position: 'absolute', bottom: 110, left: 16, right: 76,
-              background: 'rgba(255,255,255,0.95)',
-              borderRadius: 16, padding: '12px 18px',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backdropFilter: 'blur(12px)',
-              animation: 'vtSlideUp 0.3s ease-out',
+              display: 'flex', flexDirection: 'column', gap: 6,
             }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#1e3a5f', lineHeight: 1.5 }}>
-                {lastTranslationSubtitle.text}
-              </div>
-              {lastTranslationSubtitle.original && (
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
-                  {lastTranslationSubtitle.original}
+              {(Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle : [lastTranslationSubtitle]).map((sub, i) => (
+                <div key={sub.key || i} style={{
+                  background: 'rgba(255,255,255,0.95)',
+                  borderRadius: 14, padding: '10px 16px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.25)', backdropFilter: 'blur(12px)',
+                  animation: 'vtSlideUp 0.3s ease-out',
+                  opacity: i === 0 && (Array.isArray(lastTranslationSubtitle) && lastTranslationSubtitle.length > 1) ? 0.7 : 1,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4 }}>
+                    {sub.text}
+                  </div>
+                  {sub.original && (
+                    <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>
+                      {sub.original}
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
           )}
         </div>

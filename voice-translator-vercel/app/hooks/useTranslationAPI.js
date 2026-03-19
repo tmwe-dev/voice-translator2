@@ -89,6 +89,11 @@ export default function useTranslationAPI({
     // Mark temp ID as sent by me immediately (before server save)
     if (sentByMeRef) {
       sentByMeRef.current.add(tempId);
+      // LRU cap to prevent unbounded growth
+      if (sentByMeRef.current.size > 500) {
+        const first = sentByMeRef.current.values().next().value;
+        sentByMeRef.current.delete(first);
+      }
     }
 
     // ── Add to LOCAL messages[] immediately so the sender sees their own message ──

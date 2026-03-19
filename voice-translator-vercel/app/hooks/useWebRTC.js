@@ -46,6 +46,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const signalingSubscribePromiseRef = useRef(null);
   const stateRef = useRef('idle');
   const iceCandidateQueueRef = useRef([]);
+  const heartbeatIntervalRef = useRef(null);
+  const lastPongRef = useRef(0);
 
   // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
   // Without this, dc.onmessage captures the initial handleDCMessage which closes
@@ -62,6 +64,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+    if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
     pendingCallRef.current = false;
     if (dcRef.current) {
       try { dcRef.current.close(); } catch {}
@@ -158,6 +161,34 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     } catch {}
   }, []); // No deps — reads from ref
 
+  // ── ICE restart: attempt to reconnect without tearing down the peer connection ──
+  // MDN recommendation: initiate ICE restart 3-4s after 'disconnected'
+  // Media continues flowing on the old path while ICE renegotiates a new one
+  const iceRestartAttemptRef = useRef(0);
+  const MAX_ICE_RESTARTS = 2;
+
+  const attemptIceRestart = useCallback(async () => {
+    const pc = pcRef.current;
+    if (!pc || pc.signalingState === 'closed') return false;
+    if (iceRestartAttemptRef.current >= MAX_ICE_RESTARTS) {
+      console.warn(`[WebRTC] ICE restart limit reached (${MAX_ICE_RESTARTS}), giving up`);
+      return false;
+    }
+    iceRestartAttemptRef.current++;
+    console.log(`[WebRTC] ICE restart attempt ${iceRestartAttemptRef.current}/${MAX_ICE_RESTARTS}`);
+    try {
+      // Modern approach: restartIce() + createOffer
+      if (pc.restartIce) pc.restartIce();
+      const offer = await pc.createOffer({ iceRestart: true });
+      await pc.setLocalDescription(offer);
+      await sendSignal('offer', JSON.stringify(pc.localDescription));
+      return true;
+    } catch (e) {
+      console.error('[WebRTC] ICE restart failed:', e);
+      return false;
+    }
+  }, [sendSignal]);
+
   // ── Connection state handler ──
   const handleStateChange = useCallback((info) => {
     const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
@@ -168,32 +199,55 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
+      iceRestartAttemptRef.current = 0; // Reset ICE restart counter on successful connection
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
     } else if (state === 'disconnected') {
+      // ── ICE restart strategy (MDN-recommended: 3-4s after disconnected) ──
+      // Don't destroy the connection — try to renegotiate ICE first.
+      // Media keeps flowing on the old path while new ICE candidates are gathered.
       if (!disconnectTimerRef.current && stateRef.current === 'connected') {
-        disconnectTimerRef.current = setTimeout(() => {
+        disconnectTimerRef.current = setTimeout(async () => {
           disconnectTimerRef.current = null;
           const pc = pcRef.current;
-          if (pc && (pc.connectionState === 'disconnected' || pc.connectionState === 'failed' ||
-                     pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed')) {
+          if (!pc) return;
+          const stillDisconnected = pc.connectionState === 'disconnected' || pc.connectionState === 'failed'
+            || pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed';
+          if (!stillDisconnected) return; // Reconnected on its own
+
+          // Try ICE restart before giving up
+          const restarted = await attemptIceRestart();
+          if (!restarted) {
+            // ICE restart exhausted — tear down
             setWebrtcState('failed');
             stateRef.current = 'failed';
             cleanup();
           }
-        }, 10000);
+          // If restarted, wait for 'connected' state — don't cleanup yet
+        }, 4000); // 4s — MDN recommended window
       }
     } else if (state === 'failed' || state === 'closed') {
       if (disconnectTimerRef.current) {
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
-      setWebrtcState('failed');
-      stateRef.current = 'failed';
-      cleanup();
+      // On 'failed': try one ICE restart before giving up
+      if (state === 'failed' && iceRestartAttemptRef.current < MAX_ICE_RESTARTS) {
+        attemptIceRestart().then(restarted => {
+          if (!restarted) {
+            setWebrtcState('failed');
+            stateRef.current = 'failed';
+            cleanup();
+          }
+        });
+      } else {
+        setWebrtcState('failed');
+        stateRef.current = 'failed';
+        cleanup();
+      }
     }
-  }, [cleanup]);
+  }, [cleanup, attemptIceRestart]);
 
   function setupDC(dc) {
     dcRef.current = dc;
@@ -201,9 +255,43 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+      // ── P2P Heartbeat: detect silent DataChannel death ──
+      // ICE state can lag behind actual connectivity by seconds.
+      // Sending periodic pings via DataChannel detects dead connections faster.
+      lastPongRef.current = Date.now();
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      heartbeatIntervalRef.current = setInterval(() => {
+        if (dcRef.current?.readyState === 'open') {
+          try { dcRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch {}
+          // If no pong for 20s, connection is likely dead
+          if (Date.now() - lastPongRef.current > 20000 && stateRef.current === 'connected') {
+            console.warn('[WebRTC] No heartbeat pong for 20s — connection may be dead');
+          }
+        }
+      }, 8000); // Every 8s
     };
-    dc.onmessage = handleDCMessage;
-    dc.onclose = () => { dcRef.current = null; };
+    dc.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        // Handle heartbeat ping/pong silently
+        if (msg.type === 'ping') {
+          if (dcRef.current?.readyState === 'open') {
+            try { dcRef.current.send(JSON.stringify({ type: 'pong', ts: Date.now() })); } catch {}
+          }
+          return;
+        }
+        if (msg.type === 'pong') {
+          lastPongRef.current = Date.now();
+          return;
+        }
+        // Forward all other messages to the application handler
+        onDirectMessageRef.current?.(msg);
+      } catch {}
+    };
+    dc.onclose = () => {
+      dcRef.current = null;
+      if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+    };
   }
 
   async function getMediaWithFallback(withVideo) {
