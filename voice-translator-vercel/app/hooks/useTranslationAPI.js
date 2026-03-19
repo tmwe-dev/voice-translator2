@@ -185,12 +185,14 @@ export default function useTranslationAPI({
       })
     }).catch(e => console.error('[sendTranslationUpdate] Server PATCH error:', e));
 
-    // Await Phase 1 server save before sending PATCH (with 3s timeout safety net)
+    // Await Phase 1 server save before sending PATCH (with 1.5s timeout — was 3s)
+    // Reduced from 3s: the POST typically completes in <500ms, 1.5s is plenty of buffer.
+    // The PATCH is fire-and-forget anyway — it only affects polling users.
     const phase1Promise = lastServerSaveRef.current;
     if (phase1Promise) {
       Promise.race([
         phase1Promise,
-        new Promise(r => setTimeout(r, 3000)), // Don't wait forever
+        new Promise(r => setTimeout(r, 1500)),
       ]).then(doPatch).catch(doPatch);
     } else {
       doPatch();
@@ -205,7 +207,7 @@ export default function useTranslationAPI({
     // ── Cache lookup: exact match avoids redundant API calls ──
     const cacheKey = `${text}|${sourceLang}|${targetLang}`;
     const cached = translationCacheRef.current.get(cacheKey);
-    if (cached && (Date.now() - cached.ts) < 300000) { // 5 min TTL
+    if (cached && (Date.now() - cached.ts) < 900000) { // 15 min TTL (was 5min)
       return { translated: cached.translated, cached: true };
     }
 
@@ -302,8 +304,8 @@ export default function useTranslationAPI({
     if (result.translated) {
       const cache = translationCacheRef.current;
       cache.set(cacheKey, { translated: result.translated, ts: Date.now() });
-      // LRU cap: keep max 200 entries
-      if (cache.size > 200) {
+      // LRU cap: keep max 500 entries (increased for longer conversations)
+      if (cache.size > 500) {
         const oldest = cache.keys().next().value;
         cache.delete(oldest);
       }
