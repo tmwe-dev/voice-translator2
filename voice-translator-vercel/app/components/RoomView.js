@@ -150,19 +150,26 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
   // Helper: get the best translation for the viewer's language from a message
   function getTranslationForMe(msg) {
-    // Multi-lang: check translations object first
+    // 1. Exact match: translations object has my language
     if (msg.translations && msg.translations[myLang]) {
       return msg.translations[myLang];
     }
-    // If the message was originally in MY language, show the original text
+    // 2. If the message was originally in MY language, show the original text
     if (msg.sourceLang === myLang && msg.original) {
       return msg.original;
     }
-    // Backward compat: use single translated field only if targetLang matches myLang
+    // 3. Backward compat: single translated field when targetLang matches
     if (msg.targetLang === myLang && msg.translated) {
       return msg.translated;
     }
-    // Last resort: show translated (may be wrong lang) or original
+    // 4. Any translation available (for 2-person chat, there's usually only one target)
+    if (msg.translations) {
+      const keys = Object.keys(msg.translations);
+      if (keys.length > 0) {
+        return msg.translations[keys[0]];
+      }
+    }
+    // 5. Last resort: translated field or original
     return msg.translated || msg.original || '';
   }
 

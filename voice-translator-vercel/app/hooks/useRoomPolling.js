@@ -206,7 +206,23 @@ export default function useRoomPolling({
     // Find the message by sender + original text (works for both temp and server IDs)
     setMessages(prev => {
       const idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
-      if (idx < 0) return prev;
+      if (idx < 0) {
+        // ── Fallback: try matching by sender only + similar original (trim whitespace) ──
+        const trimmedOriginal = data.original?.trim();
+        const altIdx = prev.findIndex(m => m.sender === data.sender && m.original?.trim() === trimmedOriginal);
+        if (altIdx >= 0) {
+          const updated = [...prev];
+          updated[altIdx] = {
+            ...updated[altIdx],
+            translated: data.translated || updated[altIdx].translated,
+            targetLang: data.targetLang || updated[altIdx].targetLang,
+            translations: data.translations || updated[altIdx].translations,
+          };
+          return updated;
+        }
+        console.warn('[handleMessageUpdate] Message not found for update:', { sender: data.sender, original: data.original?.substring(0, 30), messagesCount: prev.length });
+        return prev;
+      }
       const updated = [...prev];
       updated[idx] = {
         ...updated[idx],
