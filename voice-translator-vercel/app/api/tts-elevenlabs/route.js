@@ -5,6 +5,7 @@ import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
+import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 
 // ═══════════════════════════════════════════════
 // FASE 4: ElevenLabs Flash v2.5 + adaptive stability
@@ -112,35 +113,31 @@ async function handlePost(req) {
 
     // ── Voice selection priority ──
     // 1. Explicit voiceId (user chose a specific voice or cloned voice)
-    // 2. Native voice for target language (auto-matching — best experience)
-    // 3. Avatar mapping (personality-based default)
-    // 4. Global female default
+    // 2. Admin default for language (from voiceDefaults.js — Luca configures)
+    // 3. Hardcoded native voice map (fallback)
+    // 4. Avatar mapping
+    // 5. Global female default
     const lang2 = (langCode || '').replace(/-.*/, '');
     const genderHint = avatarName
       ? (['Marcus','Omar','Alex','Thomas','Leo'].includes(avatarName) ? 'male' : 'female')
       : 'female';
+    const adminDefault = getELVoiceForLang(lang2, genderHint);
     const nativeVoice = NATIVE_VOICES_BY_LANG[lang2]?.[genderHint]
       || NATIVE_VOICES_BY_LANG[lang2]?.female;
     const selectedVoice = voiceId
+      || adminDefault
       || nativeVoice
       || (avatarName && AVATAR_VOICE_MAP[avatarName])
       || FEMALE_VOICES.default;
 
-    // ── FASE 4: Model selection with Flash v2.5 as default ──
-    let modelId;
-
-    // If using a cloned voice, use multilingual model for best quality
+    // ── Model selection: cloned voice → admin config → auto ──
     const isClonedVoice = voiceId && !Object.values(MALE_VOICES).includes(voiceId)
       && !Object.values(FEMALE_VOICES).includes(voiceId);
-
+    let modelId;
     if (isClonedVoice) {
       modelId = 'eleven_multilingual_v2'; // Best quality for cloned voices
-    } else if (V3_ONLY_LANGS.has(lang2)) {
-      modelId = 'eleven_v3';
-    } else if (FLASH_SUPPORTED_LANGS.has(lang2)) {
-      modelId = 'eleven_flash_v2_5'; // 75ms latency — 4x faster than multilingual_v2
     } else {
-      modelId = 'eleven_multilingual_v2'; // fallback for any unlisted language
+      modelId = getELModelForLang(lang2); // From voiceDefaults.js (admin-configurable)
     }
 
     // Map language code for pronunciation
