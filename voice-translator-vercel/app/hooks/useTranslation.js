@@ -227,14 +227,21 @@ export default function useTranslation({
         await new Promise(r => setTimeout(r, 1000));
         result = await doTranslate(); // retry once — will throw if it fails again
       }
-      if (result?.limitExceeded) return { limitExceeded: true };
+      if (result?.limitExceeded) {
+        console.warn('[translateAndSend] Free limit exceeded');
+        return { limitExceeded: true };
+      }
 
       getPerf().measure(PERF.TRANSLATE_LATENCY);
+      console.log('[translateAndSend] Phase 2 result:', { primaryTranslated: !!primaryTranslated, translationKeys: Object.keys(translations), finalTargetLang });
+
       // Send translation update to everyone (sender local + partner broadcast)
       getPerf().mark(PERF.PHASE2_SEND);
       if (primaryTranslated && roomId) {
         sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
         if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
+      } else {
+        console.warn('[translateAndSend] No translation to send — primaryTranslated empty or no roomId', { primaryTranslated, roomId });
       }
       getPerf().measure(PERF.PHASE2_SEND);
 
@@ -321,14 +328,19 @@ export default function useTranslation({
     if (effectiveToken) form.append('userToken', effectiveToken);
 
     const res = await fetch('/api/transcribe', { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Transcribe error');
+    if (!res.ok) {
+      console.error('[processAndSendAudio] Transcribe API error:', res.status);
+      throw new Error(`Transcribe error ${res.status}`);
+    }
     const { original } = await res.json();
     getPerf().measure(PERF.STT_LATENCY);
+    console.log('[processAndSendAudio] STT result:', original?.substring(0, 50));
     if (!original?.trim() || !roomId) return;
 
     // ── Step 2 (Phase 1): Send original text IMMEDIATELY ──
     // Partner sees the original text RIGHT NOW — no waiting for translation
     sendMessage(original, null, myL.code, primaryTarget.code, null);
+    console.log('[processAndSendAudio] Phase 1 sent, starting Phase 2 translation...');
 
     // Show streaming indicator while translating
     setStreamingMsg({ original, translated: '...', isStreaming: false });
@@ -364,6 +376,7 @@ export default function useTranslation({
    * Similar to translateAndSend but WITHOUT Phase 1 send (already done).
    */
   async function translateAndSend_phase2Only(text, myL, targetLangs, primaryTarget) {
+    console.log('[Phase2Only] Starting translation:', { text: text.substring(0, 30), src: myL.code, tgt: primaryTarget.code, numTargets: targetLangs.length });
     const translateOpts = buildTranslateOpts();
     let translations = {};
     let primaryTranslated = '';
@@ -398,8 +411,11 @@ export default function useTranslation({
     if (result?.limitExceeded) return { limitExceeded: true };
 
     if (primaryTranslated && roomId) {
+      console.log('[Phase2Only] Sending translation update:', primaryTranslated.substring(0, 30));
       sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
       if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+    } else {
+      console.warn('[Phase2Only] No translation result — primaryTranslated:', !!primaryTranslated, 'roomId:', !!roomId);
     }
 
     return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };

@@ -260,7 +260,7 @@ export default function useTTSEngine({
   // OPENAI TTS (PRO) — streaming
   // ═══════════════════════════════════════════════
 
-  async function fetchTTSResponse(text, langCode, retries = 1) {
+  async function fetchTTSBlob(text, langCode, retries = 1) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch('/api/tts', {
@@ -271,33 +271,20 @@ export default function useTTSEngine({
             langCode: langCode || undefined,
             userToken: getEffectiveToken(),
             roomId: roomIdRef.current || undefined,
-            stream: true,
           })
         });
         if (!res.ok) { if (attempt < retries) continue; throw new Error(`TTS ${res.status}`); }
-        return res;
+        return await res.blob();
       } catch (e) { if (attempt < retries) continue; throw e; }
     }
   }
 
   async function playTTS(text, lang) {
     try {
-      const res = await fetchTTSResponse(text, lang);
-      if (!res.body) {
-        const blob = await res.blob();
-        await playBlobWithFallback(blob, text, lang);
-        return;
-      }
-      const reader = res.body.getReader();
-      const chunks = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-      const blob = new Blob(chunks, { type: 'audio/mpeg' });
+      const blob = await fetchTTSBlob(text, lang);
       await playBlobWithFallback(blob, text, lang);
-    } catch {
+    } catch (e) {
+      console.warn('[TTS-OpenAI] Failed, falling back to browser:', e.message);
       await browserSpeak(text, lang);
     }
   }

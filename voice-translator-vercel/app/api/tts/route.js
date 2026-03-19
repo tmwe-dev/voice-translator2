@@ -86,36 +86,17 @@ async function handlePost(req) {
       speed,
     });
 
-    // ── STREAMING MODE: pipe audio chunks directly to client ──
-    // Client receives first bytes in ~100ms instead of waiting for full buffer (~1-2s)
-    if (wantStream && response.body) {
-      const nodeStream = response.body;
-      // Convert Node.js Readable to Web ReadableStream
-      const webStream = new ReadableStream({
-        async start(controller) {
-          try {
-            for await (const chunk of nodeStream) {
-              controller.enqueue(chunk);
-            }
-            controller.close();
-          } catch (e) {
-            controller.error(e);
-          }
-        }
-      });
-      return new NextResponse(webStream, {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'Transfer-Encoding': 'chunked',
-          'Cache-Control': 'no-cache',
-        }
-      });
-    }
-
-    // ── BUFFER MODE: backward compatible (full buffer response) ──
+    // ── Always use buffer mode (most reliable across all Vercel runtimes) ──
+    // Streaming via ReadableStream can fail in Vercel Serverless because
+    // OpenAI SDK's response.body type varies across Node.js versions.
+    // Buffer mode adds ~200ms but is 100% reliable.
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
-      headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length.toString() }
+      headers: {
+        'Content-Type': 'audio/mpeg',
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'public, max-age=300', // Cache 5min for repeated phrases
+      }
     });
   } catch (e) {
     if (e instanceof NextResponse) return e;
