@@ -97,31 +97,57 @@ const MessageList = memo(function MessageList({
           </div>
         );
       })}
-      {/* Streaming live bubble */}
-      {streamingMsg && streamingMsg.original && !(messages.length > 0 && messages[messages.length - 1].sender === prefs.name && messages[messages.length - 1].original === streamingMsg.original.trim()) && (
+      {/* Streaming live bubble — includes Whisper "listening" indicator for Asian languages */}
+      {streamingMsg && (streamingMsg.original || streamingMsg._whisperListening || streamingMsg._whisperProcessing) &&
+        !(streamingMsg.original && messages.length > 0 && messages[messages.length - 1].sender === prefs.name && messages[messages.length - 1].original === streamingMsg.original.trim()) && (
         <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
           <AvatarImg src={prefs.avatar} size={56} style={{marginBottom:2}} />
           <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
             <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
               <span>Tu</span>
-              <span style={{display:'inline-block', width:6, height:6, borderRadius:3, background:S.colors.accent3,
+              <span style={{display:'inline-block', width:6, height:6, borderRadius:3,
+                background: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
                 animation:'vtPulse 1.2s infinite ease-in-out'}} />
-              <span style={{color:S.colors.accent3, fontSize:9, fontWeight:600}}>LIVE</span>
+              <span style={{color: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
+                fontSize:9, fontWeight:600}}>
+                {streamingMsg._whisperProcessing ? 'ELABORAZIONE' : streamingMsg._whisperListening ? 'ASCOLTO' : 'LIVE'}
+              </span>
             </div>
             <div style={{...S.bubble, ...S.bubbleMine, border:`1px solid ${S.colors.accent3Border}`}}>
-              <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
-                {streamingMsg.original}
-              </div>
+              {/* Whisper listening: show animated dots instead of text */}
+              {streamingMsg._whisperListening && !streamingMsg.original ? (
+                <div style={{display:'flex', alignItems:'center', gap:8, padding:'4px 0'}}>
+                  <div style={S.speakingDots}>
+                    <span style={{...S.dot, animationDelay:'0s'}}/>
+                    <span style={{...S.dot, animationDelay:'0.2s'}}/>
+                    <span style={{...S.dot, animationDelay:'0.4s'}}/>
+                  </div>
+                  <span style={{fontSize:12, color:S.colors.textMuted, fontStyle:'italic'}}>
+                    {L('listening') || 'In ascolto...'}
+                  </span>
+                </div>
+              ) : streamingMsg._whisperProcessing && !streamingMsg.original ? (
+                <div style={{display:'flex', alignItems:'center', gap:8, padding:'4px 0'}}>
+                  <span style={{fontSize:16, animation:'vtSpin 1s linear infinite'}}>&#x2699;&#xFE0F;</span>
+                  <span style={{fontSize:12, color:S.colors.textMuted, fontStyle:'italic'}}>
+                    {L('processing') || 'Elaborazione in corso...'}
+                  </span>
+                </div>
+              ) : (
+                <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
+                  {streamingMsg.original}
+                </div>
+              )}
               {streamingMsg.translated ? (
                 <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4,
                   borderTop:`1px solid ${S.colors.dividerColor}`, paddingTop:4}}>
                   {streamingMsg.translated}
                 </div>
-              ) : (
+              ) : streamingMsg.original ? (
                 <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
                   {L('translating')}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

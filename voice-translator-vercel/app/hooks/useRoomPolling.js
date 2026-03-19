@@ -5,10 +5,11 @@ import useRealtimeRoom from './useRealtimeRoom.js';
 
 // ═══════════════════════════════════════════════════════════════
 // POLLING_INTERVAL: With Supabase Realtime active, polling is just
-// a safety net. We poll every 10s to catch anything missed.
+// a safety net. We poll every 6s to catch anything missed (was 10s).
+// Reduced to 6s for faster recovery if both P2P and Realtime fail silently.
 // Without Realtime, we fall back to 2s polling (still better than 1s).
 // ═══════════════════════════════════════════════════════════════
-const REALTIME_FALLBACK_POLL = 10000;  // 10s when WebSocket is active
+const REALTIME_FALLBACK_POLL = 6000;   // 6s when WebSocket is active
 const LEGACY_POLL_INTERVAL = 2000;     // 2s fallback when no WebSocket
 
 export default function useRoomPolling({

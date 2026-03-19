@@ -293,64 +293,107 @@ export default function useTranslation({
   }
 
   // =============================================
-  // Process audio blob (Whisper STT + translate)
+  // Process audio blob — TWO-PHASE (like streaming path)
+  //
+  // OLD: /api/process does STT+Translate → sendMessage (partner waits ~2s)
+  // NEW: /api/transcribe does STT only → Phase 1 sends original (~700ms)
+  //      → Phase 2 translates in parallel → sendTranslationUpdate
+  //      Partner sees original ~800ms EARLIER than before!
   // =============================================
   async function processAndSendAudio(blob) {
     const { myL, targetLangs } = getAllTargetLangs();
     const primaryTarget = targetLangs[0];
+
+    // ── Step 1: Transcribe audio (STT only — no translation) ──
     const form = new FormData();
     form.append('audio', blob, 'audio.webm');
     form.append('sourceLang', myL.code);
-    form.append('targetLang', primaryTarget.code);
-    form.append('sourceLangName', myL.name);
-    form.append('targetLangName', primaryTarget.name);
     if (roomId) form.append('roomId', roomId);
-    if (roomContextRef.current.contextPrompt) form.append('domainContext', roomContextRef.current.contextPrompt);
-    if (roomContextRef.current.description) form.append('description', roomContextRef.current.description);
-    // Include conversation context for Whisper path too
-    const convCtx = convContextRef.current?.getContext();
-    if (convCtx) form.append('conversationContext', convCtx);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
-    if (prefsRef.current?.aiModel) form.append('aiModel', prefsRef.current.aiModel);
 
-    const res = await fetch('/api/process', { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Server error');
-    const { original, translated } = await res.json();
-    if (original && roomId) {
-      const translateOpts = buildTranslateOpts();
-      let translations = { [primaryTarget.code]: translated || '' };
-      if (targetLangs.length > 1 && original) {
-        const otherTargets = targetLangs.slice(1);
-        const otherResults = await Promise.allSettled(
-          otherTargets.map(tL =>
-            translateUniversal(original, myL.code, tL.code, myL.name, tL.name, translateOpts)
-              .then(d => ({ langCode: tL.code, translated: d.translated || '' }))
-              .catch(() => ({ langCode: tL.code, translated: '' }))
-          )
-        );
-        for (const r of otherResults) {
-          if (r.status === 'fulfilled' && r.value.translated) {
-            translations[r.value.langCode] = r.value.translated;
-          }
-        }
-      }
-      // sendMessage returns immediately after broadcast (server save is fire-and-forget)
-      sendMessage(original, translated, myL.code, primaryTarget.code, translations);
+    const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+    if (!res.ok) throw new Error('Transcribe error');
+    const { original } = await res.json();
+    if (!original?.trim() || !roomId) return;
 
-      // Feed Whisper-path message into conversation context
+    // ── Step 2 (Phase 1): Send original text IMMEDIATELY ──
+    // Partner sees the original text RIGHT NOW — no waiting for translation
+    sendMessage(original, null, myL.code, primaryTarget.code, null);
+
+    // Show streaming indicator while translating
+    setStreamingMsg({ original, translated: '...', isStreaming: false });
+
+    // ── Step 3 (Phase 2): Translate in background, then update ──
+    try {
+      const result = await translateAndSend_phase2Only(original, myL, targetLangs, primaryTarget);
+
+      // Feed into conversation context
       if (convContextRef.current?.addMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         convContextRef.current.addMessage({
           sender: senderName,
           original,
-          translated: translated || null,
+          translated: result?.primaryTranslated || null,
           sourceLang: myL.code,
           targetLang: primaryTarget.code,
           timestamp: Date.now(),
         });
       }
+    } catch (e) {
+      console.error('[processAndSendAudio] Phase 2 failed:', e);
+      if (updateLocalMessage) {
+        const senderName = verifiedNameRef?.current || prefsRef.current.name;
+        updateLocalMessage(original, senderName, { _translationError: true });
+      }
     }
+    setStreamingMsg(null);
+  }
+
+  /**
+   * Phase 2 only: translate and send update (reused by processAndSendAudio).
+   * Similar to translateAndSend but WITHOUT Phase 1 send (already done).
+   */
+  async function translateAndSend_phase2Only(text, myL, targetLangs, primaryTarget) {
+    const translateOpts = buildTranslateOpts();
+    let translations = {};
+    let primaryTranslated = '';
+    let finalTargetLang = primaryTarget.code;
+
+    const doTranslate = async () => {
+      if (targetLangs.length === 1) {
+        const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
+        if (data.translated) {
+          primaryTranslated = data.translated;
+          finalTargetLang = targetLangs[0].code;
+          translations[targetLangs[0].code] = data.translated;
+        }
+        if (data.limitExceeded) return { limitExceeded: true };
+      } else {
+        const result = await translateToAllTargets(text, myL, targetLangs, translateOpts);
+        translations = result.translations;
+        primaryTranslated = result.primaryTranslated;
+        finalTargetLang = result.primaryTargetLang;
+      }
+      return { ok: true };
+    };
+
+    let result;
+    try {
+      result = await doTranslate();
+    } catch (firstErr) {
+      console.warn('[Phase2] Attempt 1 failed, retrying:', firstErr.message);
+      await new Promise(r => setTimeout(r, 800));
+      result = await doTranslate();
+    }
+    if (result?.limitExceeded) return { limitExceeded: true };
+
+    if (primaryTranslated && roomId) {
+      sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
+      if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+    }
+
+    return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
   }
 
   // ── FreeTalk VAD hook ──
@@ -613,6 +656,8 @@ export default function useTranslation({
     setRecording(true);
     if (roomId) setSpeakingState(roomId, true);
     chunksRef.current = [];
+    // ── Show "listening" indicator for Whisper-only languages (no live STT preview) ──
+    setStreamingMsg({ original: '', translated: null, isStreaming: true, _whisperListening: true });
     try {
       const stream = await getMicStream();
       recRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
@@ -621,14 +666,17 @@ export default function useTranslation({
       };
       recRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
-        if (blob.size < 1000) { setRecording(false); return; }
+        if (blob.size < 1000) { setRecording(false); setStreamingMsg(null); return; }
+        setStreamingMsg({ original: '', translated: null, isStreaming: false, _whisperProcessing: true });
         try { await processAndSendAudio(blob); } catch {}
         setRecording(false);
+        setStreamingMsg(null);
         if (!isTrialRef.current && !useOwnKeys) refreshBalance();
       };
       recRef.current.start(100);
     } catch (err) {
       setRecording(false);
+      setStreamingMsg(null);
       if (roomId) setSpeakingState(roomId, false);
     }
   }

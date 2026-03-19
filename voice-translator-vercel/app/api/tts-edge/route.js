@@ -73,10 +73,15 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
     }
 
+    // ── Language-specific speech rate ──
+    // Asian tonal languages need slower delivery for clarity and correct tone perception
+    const SLOW_RATE_LANGS = { 'th': '-12%', 'zh': '-8%', 'ja': '-8%', 'ko': '-5%', 'vi': '-10%', 'ar': '-5%', 'hi': '-5%' };
+    const speechRate = SLOW_RATE_LANGS[lang2] || '+0%';
+
     // Generate audio
     const tts = new EdgeTTS();
     await tts.synthesize(trimmed, voiceName, {
-      rate: '+0%',
+      rate: speechRate,
       volume: '+0%',
       pitch: '+0Hz',
     });

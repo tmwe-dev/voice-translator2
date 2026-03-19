@@ -279,6 +279,7 @@ export default function useAudioSystem({
   }
 
   // Split text into chunks for Chrome's 15-second speech bug
+  // Thai/Chinese/Japanese: no spaces between words, split by sentence markers or character count
   function splitTextForSpeech(text, maxChars = 180) {
     if (text.length <= maxChars) return [text];
     const chunks = [];
@@ -288,22 +289,33 @@ export default function useAudioSystem({
         chunks.push(remaining);
         break;
       }
-      // Find best split point: sentence end, comma, or space
       let splitAt = -1;
-      // Try sentence boundaries first
+      // Try sentence boundaries first (including CJK/Thai punctuation)
       for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-        if ('.!?;'.includes(remaining[i])) { splitAt = i + 1; break; }
+        const ch = remaining[i];
+        // Latin + CJK + Thai sentence endings
+        if ('.!?;\u3002\uFF01\uFF1F\u0E2F'.includes(ch)) { splitAt = i + 1; break; }
       }
-      // Try comma
+      // Try comma (including CJK commas)
       if (splitAt === -1) {
         for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-          if (remaining[i] === ',') { splitAt = i + 1; break; }
+          const ch = remaining[i];
+          if (',\u3001\uFF0C'.includes(ch)) { splitAt = i + 1; break; }
         }
       }
-      // Try space
+      // Try space (works for Latin-script languages)
       if (splitAt === -1) {
         for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.3; i--) {
           if (remaining[i] === ' ') { splitAt = i + 1; break; }
+        }
+      }
+      // For Thai/CJK: try splitting at Thai character class boundary (consonant start)
+      if (splitAt === -1) {
+        // Look for a reasonable break point in Thai/CJK text
+        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.4; i--) {
+          const ch = remaining.charCodeAt(i);
+          // Thai space-like characters: \u0E40-\u0E44 are leading vowels (word boundaries)
+          if (ch >= 0x0E40 && ch <= 0x0E44) { splitAt = i; break; }
         }
       }
       // Hard split as last resort
@@ -314,13 +326,17 @@ export default function useAudioSystem({
     return chunks.filter(c => c.length > 0);
   }
 
+  // ── Language-specific speech rate for browser TTS ──
+  const BROWSER_TTS_RATE = { 'th': 0.8, 'zh': 0.85, 'ja': 0.85, 'ko': 0.88, 'vi': 0.82, 'ar': 0.88, 'hi': 0.9 };
+
   // Speak a single chunk with Promise — resolves when speech ends
   function speakChunk(text, lang, voice) {
     return new Promise((resolve) => {
       if (typeof speechSynthesis === 'undefined') { resolve(); return; }
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
-      u.rate = 0.95;
+      const langBase = lang.split('-')[0].toLowerCase();
+      u.rate = BROWSER_TTS_RATE[langBase] || 0.95;
       u.pitch = 1.0;
       u.volume = 1.0;
       if (voice) u.voice = voice;

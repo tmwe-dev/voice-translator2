@@ -19,15 +19,15 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 // These dramatically improve pronunciation for non-English languages
 const TTS_INSTRUCTIONS = {
   'it': 'Speak in fluent Italian with natural Italian intonation and rhythm. Use clear pronunciation with proper Italian vowels and consonants. Sound like a native Italian speaker in casual conversation.',
-  'th': 'Speak in fluent Thai with correct tonal pronunciation. Thai has 5 tones — each tone must be precisely correct or the meaning changes. Speak clearly at a moderate pace. Use natural Thai rhythm and intonation.',
+  'th': 'Speak in fluent Thai with correct tonal pronunciation. Thai has 5 tones — each tone must be precisely correct or the meaning changes. Speak SLOWLY and clearly, slightly slower than normal conversation speed. Pause briefly between clauses. Use natural Thai rhythm and intonation. Do NOT rush — clarity is more important than speed.',
   'en': 'Speak in clear, natural English with a neutral accent. Use conversational tone and natural pacing.',
   'es': 'Speak in fluent Spanish with natural Castilian intonation. Roll the R sounds where appropriate. Sound like a native Spanish speaker.',
   'fr': 'Speak in fluent French with natural Parisian intonation. Use proper liaison and nasal vowels. Sound like a native French speaker.',
   'de': 'Speak in fluent German with clear pronunciation of umlauts (ä, ö, ü) and compound words. Use natural German rhythm.',
   'pt': 'Speak in fluent Brazilian Portuguese with natural intonation. Use proper nasal vowels and open/closed vowel distinctions.',
-  'zh': 'Speak in fluent Mandarin Chinese with correct four tones. Each tone must be precise. Speak clearly at a moderate pace with natural Mandarin rhythm.',
-  'ja': 'Speak in fluent Japanese with natural pitch accent patterns. Use proper mora timing — each mora should be roughly equal length. Sound like a native Japanese speaker.',
-  'ko': 'Speak in fluent Korean with natural intonation. Use proper Korean vowel and consonant pronunciation including tense consonants. Sound like a native Korean speaker.',
+  'zh': 'Speak in fluent Mandarin Chinese with correct four tones. Each tone must be precise. Speak SLOWLY and clearly, slightly slower than normal conversation. Pause briefly between phrases. Use natural Mandarin rhythm.',
+  'ja': 'Speak in fluent Japanese with natural pitch accent patterns. Use proper mora timing — each mora should be roughly equal length. Speak at a calm, measured pace. Pause naturally between sentences. Sound like a native Japanese speaker.',
+  'ko': 'Speak in fluent Korean with natural intonation. Use proper Korean vowel and consonant pronunciation including tense consonants. Speak at a calm, clear pace. Sound like a native Korean speaker.',
   'ar': 'Speak in fluent Modern Standard Arabic with clear pronunciation of emphatic consonants and proper vowel length distinctions. Use natural Arabic rhythm.',
   'hi': 'Speak in fluent Hindi with natural Devanagari pronunciation. Use proper aspirated/unaspirated consonant distinctions and natural Hindi intonation.',
   'ru': 'Speak in fluent Russian with natural intonation. Use proper vowel reduction in unstressed syllables and palatalized consonants. Sound like a native Russian speaker.',
@@ -68,13 +68,17 @@ async function handlePost(req) {
     // Preprocess text for TTS quality
     const cleanText = preprocessForTTS(text, lang2);
 
+    // ── Language-specific speed: tonal languages benefit from slower delivery ──
+    const SLOW_SPEED_LANGS = { 'th': 0.9, 'zh': 0.92, 'ja': 0.92, 'vi': 0.9, 'ar': 0.95 };
+    const speed = SLOW_SPEED_LANGS[lang2] || 1.0;
+
     const response = await openai.audio.speech.create({
       model: 'gpt-4o-mini-tts',
       voice: selectedVoice,
       input: cleanText,
       instructions,
       response_format: 'mp3',
-      speed: 1.0
+      speed,
     });
 
     // Calculate and deduct cost
