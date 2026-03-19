@@ -1,7 +1,21 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, AVATAR_NAMES, AVATARS } from '../lib/constants.js';
+import { getLang } from '../lib/constants.js';
+import useTTSEngine from './useTTSEngine.js';
 
+/**
+ * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
+ *
+ * Responsibilities (after refactor):
+ * - Mic management (persistent stream, live mode constraints)
+ * - Audio context + unlock
+ * - Ducking (reduce partner volume during TTS)
+ * - Audio queue (sequential TTS playback, dedup by msg ID)
+ * - Notification sound
+ * - playMessage (pick correct translation, select engine, play)
+ *
+ * TTS engines are in useTTSEngine.js (browser, Edge, OpenAI, ElevenLabs)
+ */
 export default function useAudioSystem({
   prefsRef,
   myLangRef,
@@ -26,25 +40,15 @@ export default function useAudioSystem({
   const persistentMicRef = useRef(null);
   const audioEnabledRef = useRef(audioEnabled);
   const activeBlobUrlsRef = useRef(new Set());
-  const voiceCacheRef = useRef({});
 
-  // ── DUCKING: reduce remote/other audio while TTS plays ──
+  // Ducking
   const duckingGainRef = useRef(null);
-  const [duckingLevel, setDuckingLevel] = useState(0.2); // 0.0=mute, 1.0=full
+  const [duckingLevel, setDuckingLevel] = useState(0.2);
   const duckingLevelRef = useRef(0.2);
 
   // Sync refs
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { duckingLevelRef.current = duckingLevel; }, [duckingLevel]);
-
-  // Preload browser voices (Chrome loads them asynchronously)
-  useEffect(() => {
-    if (typeof speechSynthesis === 'undefined') return;
-    speechSynthesis.getVoices();
-    const handler = () => { voiceCacheRef.current = {}; };
-    speechSynthesis.addEventListener('voiceschanged', handler);
-    return () => speechSynthesis.removeEventListener('voiceschanged', handler);
-  }, []);
 
   function getPersistentAudio() {
     if (!persistentAudioRef.current) {
@@ -53,6 +57,24 @@ export default function useAudioSystem({
     }
     return persistentAudioRef.current;
   }
+
+  // ── TTS Engine hook (all 4 engines) ──
+  const tts = useTTSEngine({
+    prefsRef,
+    isTrialRef,
+    canUseElevenLabsRef,
+    selectedELVoice,
+    clonedVoiceIdRef,
+    roomIdRef,
+    getEffectiveToken,
+    audioReady,
+    getPersistentAudio,
+    activeBlobUrlsRef,
+  });
+
+  // =============================================
+  // AUDIO UNLOCK + CONTEXT
+  // =============================================
 
   function unlockAudio() {
     if (audioReady) return;
@@ -71,7 +93,6 @@ export default function useAudioSystem({
       const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
       a.volume = 0.01;
       a.play().catch(() => {});
-      // Create ducking GainNode for controlling remote audio volume during TTS
       if (!duckingGainRef.current) {
         const duckGain = ctx.createGain();
         duckGain.gain.value = 1.0;
@@ -82,26 +103,24 @@ export default function useAudioSystem({
     } catch (e) {}
   }
 
-  // ── DUCKING CONTROLS ──
+  // =============================================
+  // DUCKING
+  // =============================================
+
   function startDucking() {
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try {
-      gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03);
-    } catch {}
+    try { gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03); } catch {}
   }
 
   function stopDucking() {
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try {
-      gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06);
-    } catch {}
+    try { gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06); } catch {}
   }
 
-  // Connect any audio element to ducking chain (for remote WebRTC audio)
   function connectToDucking(audioElement) {
     const ctx = audioContextRef.current;
     const gain = duckingGainRef.current;
@@ -113,6 +132,7 @@ export default function useAudioSystem({
     } catch { return null; }
   }
 
+  // Auto-unlock on first touch/click
   useEffect(() => {
     if (audioReady) return;
     const handler = () => unlockAudio();
@@ -127,58 +147,45 @@ export default function useAudioSystem({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (persistentAudioRef.current) {
-        persistentAudioRef.current.pause();
-        persistentAudioRef.current.src = '';
-      }
+      if (persistentAudioRef.current) { persistentAudioRef.current.pause(); persistentAudioRef.current.src = ''; }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
         try { audioContextRef.current.close(); } catch (e) {}
       }
       if (persistentMicRef.current) {
-        persistentMicRef.current.getTracks().forEach(track => {
-          try { track.stop(); } catch (e) {}
-        });
+        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) {} });
         persistentMicRef.current = null;
       }
-      activeBlobUrlsRef.current.forEach(url => {
-        try { URL.revokeObjectURL(url); } catch (e) {}
-      });
+      activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) {} });
       activeBlobUrlsRef.current.clear();
       audioQueueRef.current = [];
       playedMsgIdsRef.current.clear();
-      // Cancel any browser speech
       if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
     };
   }, []);
 
-  // ── Live mode: enhanced noise suppression + voice focus ──
+  // =============================================
+  // MIC MANAGEMENT
+  // =============================================
+
   const liveModeRef = useRef(false);
 
   async function getMicStream() {
-    // Resume suspended AudioContext before requesting mic
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
       try { await audioContextRef.current.resume(); } catch {}
     }
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getTracks();
       if (tracks.length > 0 && tracks[0].readyState === 'live') {
-        // If live mode changed, apply new constraints to existing track
         const track = tracks[0];
         if (liveModeRef.current && track.applyConstraints) {
           try {
-            await track.applyConstraints({
-              noiseSuppression: true,
-              echoCancellation: true,
-              autoGainControl: true,
-            });
+            await track.applyConstraints({ noiseSuppression: true, echoCancellation: true, autoGainControl: true });
           } catch {}
         }
         return persistentMicRef.current;
       }
-      // Dead tracks — clean up
       persistentMicRef.current = null;
     }
-    // Audio constraints: enhanced for live mode
     const audioConstraints = liveModeRef.current
       ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
       : true;
@@ -187,26 +194,16 @@ export default function useAudioSystem({
     return stream;
   }
 
-  /**
-   * Toggle live mode and re-acquire mic with enhanced constraints.
-   * Returns the new live mode state.
-   */
   async function setLiveMode(enabled) {
     liveModeRef.current = enabled;
-    // Apply constraints to existing mic track immediately
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getAudioTracks();
       for (const track of tracks) {
         if (track.readyState === 'live' && track.applyConstraints) {
           try {
-            await track.applyConstraints({
-              noiseSuppression: enabled,
-              echoCancellation: enabled,
-              autoGainControl: enabled,
-            });
+            await track.applyConstraints({ noiseSuppression: enabled, echoCancellation: enabled, autoGainControl: enabled });
           } catch (e) {
             console.warn('[LiveMode] Could not apply constraints:', e);
-            // Fallback: re-acquire mic with new constraints
             try {
               persistentMicRef.current.getTracks().forEach(t => t.stop());
               persistentMicRef.current = null;
@@ -227,449 +224,6 @@ export default function useAudioSystem({
     navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       .then(stream => { persistentMicRef.current = stream; })
       .catch(() => {});
-  }
-
-  // =============================================
-  // BROWSER TTS (FREE tier) — Promise-based with onend
-  // =============================================
-
-  function findBestVoice(lang) {
-    if (typeof speechSynthesis === 'undefined') return null;
-    if (voiceCacheRef.current[lang]) return voiceCacheRef.current[lang];
-
-    const voices = speechSynthesis.getVoices();
-    if (!voices.length) return null;
-
-    const langLower = lang.toLowerCase();
-    const langBase = langLower.split('-')[0];
-
-    // Collect ALL matching voices for this language
-    const matchingVoices = voices.filter(v => {
-      const vLang = v.lang.toLowerCase();
-      const vBase = vLang.split('-')[0];
-      return vBase === langBase;
-    });
-
-    if (matchingVoices.length === 0) return null;
-
-    // Score voices: higher = better quality
-    function scoreVoice(v) {
-      let score = 0;
-      const name = v.name.toLowerCase();
-      // Exact locale match (e.g. it-IT vs it-IT)
-      if (v.lang.toLowerCase() === langLower) score += 10;
-      // Premium voice engines
-      if (name.includes('google')) score += 50;
-      if (name.includes('microsoft')) score += 45;
-      if (name.includes('neural')) score += 40;
-      if (name.includes('natural')) score += 40;
-      if (name.includes('premium')) score += 35;
-      if (name.includes('enhanced')) score += 30;
-      if (name.includes('wavenet')) score += 25;
-      // Avoid compact/espeak voices
-      if (name.includes('compact')) score -= 20;
-      if (name.includes('espeak')) score -= 30;
-      return score;
-    }
-
-    matchingVoices.sort((a, b) => scoreVoice(b) - scoreVoice(a));
-    const best = matchingVoices[0];
-    voiceCacheRef.current[lang] = best;
-    return best;
-  }
-
-  // Split text into chunks for Chrome's 15-second speech bug
-  // Thai/Chinese/Japanese: no spaces between words, split by sentence markers or character count
-  function splitTextForSpeech(text, maxChars = 180) {
-    if (text.length <= maxChars) return [text];
-    const chunks = [];
-    let remaining = text;
-    while (remaining.length > 0) {
-      if (remaining.length <= maxChars) {
-        chunks.push(remaining);
-        break;
-      }
-      let splitAt = -1;
-      // Try sentence boundaries first (including CJK/Thai punctuation)
-      for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-        const ch = remaining[i];
-        // Latin + CJK + Thai sentence endings
-        if ('.!?;\u3002\uFF01\uFF1F\u0E2F'.includes(ch)) { splitAt = i + 1; break; }
-      }
-      // Try comma (including CJK commas)
-      if (splitAt === -1) {
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-          const ch = remaining[i];
-          if (',\u3001\uFF0C'.includes(ch)) { splitAt = i + 1; break; }
-        }
-      }
-      // Try space (works for Latin-script languages)
-      if (splitAt === -1) {
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.3; i--) {
-          if (remaining[i] === ' ') { splitAt = i + 1; break; }
-        }
-      }
-      // For Thai/CJK: try splitting at Thai character class boundary (consonant start)
-      if (splitAt === -1) {
-        // Look for a reasonable break point in Thai/CJK text
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.4; i--) {
-          const ch = remaining.charCodeAt(i);
-          // Thai space-like characters: \u0E40-\u0E44 are leading vowels (word boundaries)
-          if (ch >= 0x0E40 && ch <= 0x0E44) { splitAt = i; break; }
-        }
-      }
-      // Hard split as last resort
-      if (splitAt === -1) splitAt = maxChars;
-      chunks.push(remaining.substring(0, splitAt).trim());
-      remaining = remaining.substring(splitAt).trim();
-    }
-    return chunks.filter(c => c.length > 0);
-  }
-
-  // ── Language-specific speech rate for browser TTS ──
-  const BROWSER_TTS_RATE = { 'th': 0.8, 'zh': 0.85, 'ja': 0.85, 'ko': 0.88, 'vi': 0.82, 'ar': 0.88, 'hi': 0.9 };
-
-  // Speak a single chunk with Promise — resolves when speech ends
-  function speakChunk(text, lang, voice) {
-    return new Promise((resolve) => {
-      if (typeof speechSynthesis === 'undefined') { resolve(); return; }
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      const langBase = lang.split('-')[0].toLowerCase();
-      u.rate = BROWSER_TTS_RATE[langBase] || 0.95;
-      u.pitch = 1.0;
-      u.volume = 1.0;
-      if (voice) u.voice = voice;
-
-      // Safety timeout: ~120ms per char, min 3s, max 20s
-      const timeoutMs = Math.min(20000, Math.max(3000, text.length * 120));
-      const safetyTimer = setTimeout(() => {
-        speechSynthesis.cancel();
-        resolve();
-      }, timeoutMs);
-
-      u.onend = () => { clearTimeout(safetyTimer); resolve(); };
-      u.onerror = () => { clearTimeout(safetyTimer); resolve(); };
-
-      // Chrome bug workaround: resume if paused
-      if (speechSynthesis.paused) speechSynthesis.resume();
-      speechSynthesis.speak(u);
-
-      // Chrome bug: keep alive with periodic resume for long utterances
-      const keepAlive = setInterval(() => {
-        if (speechSynthesis.speaking && !speechSynthesis.paused) return;
-        if (speechSynthesis.paused) speechSynthesis.resume();
-      }, 5000);
-      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); }
-      u.onend = done;
-      u.onerror = done;
-    });
-  }
-
-  // Full browser TTS — splits text, speaks each chunk sequentially
-  async function browserSpeak(text, lang) {
-    if (typeof speechSynthesis === 'undefined') return;
-    speechSynthesis.cancel();
-
-    const voice = findBestVoice(lang);
-    const chunks = splitTextForSpeech(text);
-
-    for (const chunk of chunks) {
-      await speakChunk(chunk, lang, voice);
-    }
-  }
-
-  // =============================================
-  // FASE 5: Voice availability check
-  // Returns quality info about browser TTS for a given language
-  // =============================================
-  function checkVoiceAvailability(lang) {
-    if (typeof speechSynthesis === 'undefined') return { available: false, quality: 'none' };
-    const voice = findBestVoice(lang);
-    if (!voice) return { available: false, quality: 'none' };
-    const name = voice.name.toLowerCase();
-    let quality = 'basic';
-    if (name.includes('google') || name.includes('microsoft') || name.includes('neural') || name.includes('natural')) {
-      quality = 'premium';
-    } else if (name.includes('enhanced') || name.includes('wavenet')) {
-      quality = 'good';
-    } else if (name.includes('compact') || name.includes('espeak')) {
-      quality = 'low';
-    }
-    return { available: true, quality, voiceName: voice.name };
-  }
-
-  // =============================================
-  // EDGE TTS (FREE tier) — Neural voices, no cost
-  // =============================================
-
-  async function fetchEdgeTTSBlob(text, langCode, gender) {
-    // Race with timeout for faster fallback
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
-
-    try {
-      const res = await fetch('/api/tts-edge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text,
-          langCode: langCode || 'en',
-          gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
-      return await res.blob();
-    } catch (e) {
-      clearTimeout(timeoutId);
-      throw e;
-    }
-  }
-
-  // Pre-warm TTS connections when audio is ready (all engines)
-  const ttsPrewarmedRef = useRef(false);
-  useEffect(() => {
-    if (!audioReady || ttsPrewarmedRef.current) return;
-    ttsPrewarmedRef.current = true;
-    // Silent pre-warm requests to reduce first-speech latency
-    fetch('/api/tts-edge', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '.', langCode: 'en', gender: 'female' })
-    }).catch(() => {});
-    // Pre-warm OpenAI TTS connection (TCP handshake + TLS)
-    if (!isTrialRef.current) {
-      fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: '.', voice: 'nova', langCode: 'en', userToken: getEffectiveToken() })
-      }).catch(() => {});
-    }
-  }, [audioReady]);
-
-  async function playEdgeTTS(text, langCode) {
-    let blob;
-    try {
-      blob = await fetchEdgeTTSBlob(text, langCode);
-    } catch {
-      // Edge TTS failed or timed out — try opposite gender as retry
-      try {
-        const currentGender = prefsRef.current?.edgeTtsVoiceGender || 'female';
-        const altGender = currentGender === 'female' ? 'male' : 'female';
-        blob = await fetchEdgeTTSBlob(text, langCode, altGender);
-      } catch {
-        // All Edge TTS failed — fallback to browser speech
-        await browserSpeak(text, langCode);
-        return;
-      }
-    }
-
-    const url = URL.createObjectURL(blob);
-    activeBlobUrlsRef.current.add(url);
-
-    let played = await playBlobAudio(url);
-    if (!played) played = await playBlobNewAudio(url);
-    if (!played) {
-      // Audio playback failed — browser TTS as last resort
-      activeBlobUrlsRef.current.delete(url);
-      URL.revokeObjectURL(url);
-      await browserSpeak(text, langCode);
-      return;
-    }
-
-    activeBlobUrlsRef.current.delete(url);
-    URL.revokeObjectURL(url);
-  }
-
-  // =============================================
-  // OPENAI TTS (PRO tier) — with retry
-  // =============================================
-
-  // ── Streaming TTS fetch: request chunked streaming from server ──
-  // Returns a Response object so the caller can choose streaming or blob mode
-  async function fetchTTSResponse(text, langCode, retries = 1) {
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text,
-            voice: prefsRef.current.voice || 'nova',
-            langCode: langCode || undefined,
-            userToken: getEffectiveToken(),
-            roomId: roomIdRef.current || undefined,
-            stream: true, // Request streaming response
-          })
-        });
-        if (!res.ok) {
-          if (attempt < retries) continue;
-          throw new Error(`TTS ${res.status}`);
-        }
-        return res;
-      } catch (e) {
-        if (attempt < retries) continue;
-        throw e;
-      }
-    }
-  }
-
-  // Legacy blob fetch (for fallback)
-  async function fetchTTSBlob(text, langCode, retries = 1) {
-    const res = await fetchTTSResponse(text, langCode, retries);
-    return await res.blob();
-  }
-
-  // Play an audio blob URL via an Audio element, returns Promise
-  function playBlobAudio(blobUrl) {
-    return new Promise((resolve) => {
-      const audio = getPersistentAudio();
-      // Clean up old handlers
-      audio.onended = null;
-      audio.onerror = null;
-
-      const timeoutMs = 30000;
-      const safetyTimer = setTimeout(() => {
-        audio.pause();
-        cleanup();
-        resolve(false);
-      }, timeoutMs);
-
-      function cleanup() {
-        clearTimeout(safetyTimer);
-        audio.onended = null;
-        audio.onerror = null;
-      }
-
-      audio.onended = () => { cleanup(); resolve(true); };
-      audio.onerror = () => { cleanup(); resolve(false); };
-      audio.src = blobUrl;
-      audio.play().catch(() => { cleanup(); resolve(false); });
-    });
-  }
-
-  // Play blob in a fresh Audio element (fallback if persistent one fails)
-  function playBlobNewAudio(blobUrl) {
-    return new Promise((resolve) => {
-      const a = new Audio(blobUrl);
-      a.volume = 1.0;
-      const safetyTimer = setTimeout(() => { a.pause(); resolve(false); }, 30000);
-      a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
-      a.onerror = () => { clearTimeout(safetyTimer); resolve(false); };
-      a.play().catch(() => { clearTimeout(safetyTimer); resolve(false); });
-    });
-  }
-
-  // ── Streaming playback: collect chunks progressively, play as soon as ready ──
-  // Uses ReadableStream reader to collect audio data and creates a blob for playback.
-  // Key improvement: starts the fetch with streaming, so server sends first bytes
-  // in ~100ms instead of waiting for full generation (~1-2s).
-  async function playTTSStreaming(text, lang) {
-    try {
-      const res = await fetchTTSResponse(text, lang);
-      if (!res.body) {
-        // No streaming support — fall back to blob
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        activeBlobUrlsRef.current.add(url);
-        let played = await playBlobAudio(url);
-        if (!played) played = await playBlobNewAudio(url);
-        if (!played) await browserSpeak(text, lang);
-        activeBlobUrlsRef.current.delete(url);
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      // Collect all chunks from the stream
-      const reader = res.body.getReader();
-      const chunks = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        chunks.push(value);
-      }
-
-      // Create blob from collected chunks and play
-      const blob = new Blob(chunks, { type: 'audio/mpeg' });
-      const url = URL.createObjectURL(blob);
-      activeBlobUrlsRef.current.add(url);
-      let played = await playBlobAudio(url);
-      if (!played) played = await playBlobNewAudio(url);
-      if (!played) await browserSpeak(text, lang);
-      activeBlobUrlsRef.current.delete(url);
-      URL.revokeObjectURL(url);
-    } catch {
-      await browserSpeak(text, lang);
-    }
-  }
-
-  async function playTTS(text, lang) {
-    // Use streaming path — faster TTFB from server
-    return playTTSStreaming(text, lang);
-
-    /* Legacy non-streaming path (kept as reference):
-    const blob = await fetchTTSBlob(text, lang);
-    const url = URL.createObjectURL(blob);
-    let played = await playBlobAudio(url);
-    if (!played) played = await playBlobNewAudio(url);
-    if (!played) await browserSpeak(text, lang);
-    URL.revokeObjectURL(url);
-    */
-  }
-
-  // =============================================
-  // ELEVENLABS TTS (TOP PRO tier)
-  // =============================================
-
-  function getAvatarName() {
-    const avatar = prefsRef.current?.avatar;
-    if (!avatar) return undefined;
-    const idx = AVATARS.indexOf(avatar);
-    return idx >= 0 ? AVATAR_NAMES[idx] : undefined;
-  }
-
-  async function fetchElevenLabsBlob(text, langCode) {
-    const res = await fetch('/api/tts-elevenlabs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        voiceId: clonedVoiceIdRef?.current || selectedELVoice || undefined,
-        langCode: langCode || undefined,
-        avatarName: getAvatarName(),
-        userToken: getEffectiveToken(),
-        roomId: roomIdRef.current || undefined
-      })
-    });
-    if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
-    return await res.blob();
-  }
-
-  async function playTTSElevenLabs(text, langCode) {
-    let blob;
-    try {
-      blob = await fetchElevenLabsBlob(text, langCode);
-    } catch {
-      // ElevenLabs failed — try OpenAI as fallback
-      return playTTS(text, langCode);
-    }
-
-    const url = URL.createObjectURL(blob);
-    activeBlobUrlsRef.current.add(url);
-
-    let played = await playBlobAudio(url);
-    if (!played) played = await playBlobNewAudio(url);
-    if (!played) {
-      // All audio playback failed — try OpenAI, then browser
-      activeBlobUrlsRef.current.delete(url);
-      URL.revokeObjectURL(url);
-      return playTTS(text, langCode);
-    }
-
-    activeBlobUrlsRef.current.delete(url);
-    URL.revokeObjectURL(url);
   }
 
   // =============================================
@@ -696,23 +250,19 @@ export default function useAudioSystem({
   }
 
   // =============================================
-  // AUDIO QUEUE
+  // AUDIO QUEUE — Sequential TTS playback
   // =============================================
 
   async function queueAudio(text, lang, msgId) {
     if (msgId && playedMsgIdsRef.current.has(msgId)) return;
     if (msgId) {
       playedMsgIdsRef.current.add(msgId);
-      // LRU cap: prevent unbounded growth after many messages
       if (playedMsgIdsRef.current.size > 500) {
         const first = playedMsgIdsRef.current.values().next().value;
         playedMsgIdsRef.current.delete(first);
       }
     }
-    if (!audioEnabledRef.current) {
-      playNotifSound();
-      return;
-    }
+    if (!audioEnabledRef.current) { playNotifSound(); return; }
     audioQueueRef.current.push({ text, lang });
     processAudioQueue();
   }
@@ -721,40 +271,31 @@ export default function useAudioSystem({
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
     const { text, lang } = audioQueueRef.current.shift();
-    // ── DUCKING: reduce other audio while TTS plays ──
     startDucking();
     try {
       const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
-      if (voiceEngine === 'edge') {
-        await playEdgeTTS(text, lang);
-      } else if (voiceEngine === 'elevenlabs') {
-        await playTTSElevenLabs(text, lang);
-      } else if (voiceEngine === 'openai') {
-        await playTTS(text, lang);
-      } else {
-        // Auto mode: select based on tier
-        if (isTrialRef.current) {
-          await playEdgeTTS(text, lang);
-        } else if (canUseElevenLabsRef?.current) {
-          await playTTSElevenLabs(text, lang);
-        } else {
-          await playTTS(text, lang);
-        }
+      if (voiceEngine === 'edge') await tts.playEdgeTTS(text, lang);
+      else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, lang);
+      else if (voiceEngine === 'openai') await tts.playTTS(text, lang);
+      else {
+        if (isTrialRef.current) await tts.playEdgeTTS(text, lang);
+        else if (canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
+        else await tts.playTTS(text, lang);
       }
-    } catch (e) {
-      console.error('[Audio] playback error:', e);
-    }
-    // ── UNDUCK: restore audio after TTS finishes ──
+    } catch (e) { console.error('[Audio] playback error:', e); }
     stopDucking();
     isPlayingRef.current = false;
     processAudioQueue();
   }
 
+  // =============================================
+  // PLAY MESSAGE (manual replay)
+  // =============================================
+
   async function playMessage(msg) {
     unlockAudio();
     setPlayingMsgId(msg.id);
     try {
-      // Multi-lang: pick translation for MY language from translations object
       const myLang = myLangRef?.current;
       let text = '';
       let speechLang = '';
@@ -762,36 +303,24 @@ export default function useAudioSystem({
         text = msg.translations[myLang];
         speechLang = getLang(myLang).speech;
       } else if (myLang && msg.sourceLang === myLang && msg.original) {
-        // Message was spoken in my language — play the original
         text = msg.original;
         speechLang = getLang(myLang).speech;
       } else if (myLang && msg.targetLang === myLang && msg.translated) {
-        // Backward compat: single translated field matches my language
         text = msg.translated;
         speechLang = getLang(myLang).speech;
       }
       if (text && speechLang) {
         const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
-        if (voiceEngine === 'edge') {
-          await playEdgeTTS(text, speechLang);
-        } else if (voiceEngine === 'elevenlabs') {
-          await playTTSElevenLabs(text, speechLang);
-        } else if (voiceEngine === 'openai') {
-          await playTTS(text, speechLang);
-        } else {
-          // Auto mode
-          if (isTrialRef.current) {
-            await playEdgeTTS(text, speechLang);
-          } else if (canUseElevenLabsRef?.current) {
-            await playTTSElevenLabs(text, speechLang);
-          } else {
-            await playTTS(text, speechLang);
-          }
+        if (voiceEngine === 'edge') await tts.playEdgeTTS(text, speechLang);
+        else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, speechLang);
+        else if (voiceEngine === 'openai') await tts.playTTS(text, speechLang);
+        else {
+          if (isTrialRef.current) await tts.playEdgeTTS(text, speechLang);
+          else if (canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, speechLang);
+          else await tts.playTTS(text, speechLang);
         }
       }
-    } catch (e) {
-      console.error('[Audio] playMessage error:', e);
-    }
+    } catch (e) { console.error('[Audio] playMessage error:', e); }
     setPlayingMsgId(null);
   }
 
@@ -809,7 +338,7 @@ export default function useAudioSystem({
     getPersistentAudio,
     persistentMicRef,
     audioEnabledRef,
-    checkVoiceAvailability,
+    checkVoiceAvailability: tts.checkVoiceAvailability,
     // Ducking
     duckingLevel,
     setDuckingLevel,
@@ -817,7 +346,7 @@ export default function useAudioSystem({
     stopDucking,
     connectToDucking,
     audioContextRef,
-    // Live mode (noise suppression + voice focus)
+    // Live mode
     setLiveMode,
     liveModeRef,
   };
