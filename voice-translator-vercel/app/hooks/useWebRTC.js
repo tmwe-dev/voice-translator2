@@ -8,6 +8,10 @@ import {
   addMediaTracks, getLocalMediaStream,
   setVideoEnabled, switchCamera,
 } from '../lib/webrtc.js';
+import {
+  generateKeyPair, exportPublicKey, importPublicKey,
+  deriveSharedKey, encryptMessage, decryptMessage, isE2EAvailable,
+} from '../lib/e2eCrypto.js';
 
 // ═══════════════════════════════════════════════
 // useWebRTC — P2P video call with accept/decline + Supabase Realtime signaling
@@ -49,6 +53,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const heartbeatIntervalRef = useRef(null);
   const lastPongRef = useRef(0);
 
+  // ── E2E Encryption refs ──
+  const e2eKeyPairRef = useRef(null);   // { publicKey, privateKey }
+  const e2eSharedKeyRef = useRef(null); // derived AES-GCM key
+  const e2eReadyRef = useRef(false);
+
   // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
   // Without this, dc.onmessage captures the initial handleDCMessage which closes
   // over the initial onDirectMessage. If onDirectMessage changes (e.g. because
@@ -65,6 +74,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
     if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+    // Destroy ephemeral E2E keys on disconnect
+    e2eKeyPairRef.current = null;
+    e2eSharedKeyRef.current = null;
+    e2eReadyRef.current = false;
     pendingCallRef.current = false;
     if (dcRef.current) {
       try { dcRef.current.close(); } catch {}
@@ -249,48 +262,95 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
   }, [cleanup, attemptIceRestart]);
 
+  // ── E2E key exchange: send our public key after DC opens ──
+  async function initiateE2EKeyExchange() {
+    if (!isE2EAvailable()) { e2eReadyRef.current = false; return; }
+    try {
+      const keyPair = await generateKeyPair();
+      e2eKeyPairRef.current = keyPair;
+      const pubKeyStr = await exportPublicKey(keyPair.publicKey);
+      if (dcRef.current?.readyState === 'open') {
+        dcRef.current.send(JSON.stringify({ type: 'e2e-pubkey', key: pubKeyStr }));
+      }
+    } catch (e) {
+      console.warn('[E2E] Key generation failed:', e);
+      e2eReadyRef.current = false;
+    }
+  }
+
+  // ── Handle received partner public key → derive shared secret ──
+  async function handleE2EPublicKey(partnerKeyStr) {
+    if (!e2eKeyPairRef.current) return;
+    try {
+      const partnerPubKey = await importPublicKey(partnerKeyStr);
+      const sharedKey = await deriveSharedKey(e2eKeyPairRef.current.privateKey, partnerPubKey);
+      e2eSharedKeyRef.current = sharedKey;
+      e2eReadyRef.current = true;
+      console.log('[E2E] Shared key derived — messages are now encrypted');
+    } catch (e) {
+      console.warn('[E2E] Key derivation failed:', e);
+      e2eReadyRef.current = false;
+    }
+  }
+
   function setupDC(dc) {
     dcRef.current = dc;
     dc.onopen = () => {
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+
+      // ── E2E: initiate key exchange immediately after DC opens ──
+      initiateE2EKeyExchange();
+
       // ── P2P Heartbeat: detect silent DataChannel death ──
-      // ICE state can lag behind actual connectivity by seconds.
-      // Sending periodic pings via DataChannel detects dead connections faster.
       lastPongRef.current = Date.now();
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = setInterval(() => {
         if (dcRef.current?.readyState === 'open') {
           try { dcRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch {}
-          // If no pong for 20s, connection is likely dead
           if (Date.now() - lastPongRef.current > 20000 && stateRef.current === 'connected') {
             console.warn('[WebRTC] No heartbeat pong for 20s — connection may be dead');
           }
         }
-      }, 8000); // Every 8s
+      }, 8000);
     };
-    dc.onmessage = (event) => {
+    dc.onmessage = async (event) => {
       try {
         const msg = JSON.parse(event.data);
-        // Handle heartbeat ping/pong silently
+        // ── Internal protocol messages ──
         if (msg.type === 'ping') {
           if (dcRef.current?.readyState === 'open') {
             try { dcRef.current.send(JSON.stringify({ type: 'pong', ts: Date.now() })); } catch {}
           }
           return;
         }
-        if (msg.type === 'pong') {
-          lastPongRef.current = Date.now();
+        if (msg.type === 'pong') { lastPongRef.current = Date.now(); return; }
+        if (msg.type === 'e2e-pubkey') { await handleE2EPublicKey(msg.key); return; }
+
+        // ── E2E decryption: if message is encrypted, decrypt it ──
+        if (msg.type === 'e2e-encrypted' && e2eSharedKeyRef.current) {
+          try {
+            const plaintext = await decryptMessage(e2eSharedKeyRef.current, msg.data);
+            const decrypted = JSON.parse(plaintext);
+            onDirectMessageRef.current?.(decrypted);
+          } catch (e) {
+            console.warn('[E2E] Decryption failed, forwarding as-is:', e);
+            onDirectMessageRef.current?.(msg);
+          }
           return;
         }
-        // Forward all other messages to the application handler
+
+        // ── Unencrypted message (E2E not yet established or fallback) ──
         onDirectMessageRef.current?.(msg);
       } catch {}
     };
     dc.onclose = () => {
       dcRef.current = null;
       if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+      // Destroy keys on DC close
+      e2eSharedKeyRef.current = null;
+      e2eReadyRef.current = false;
     };
   }
 
@@ -615,8 +675,23 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     sendDirectMessage({ type: 'audio-toggle', enabled: newState });
   }, [audioEnabled]);
 
-  const sendDirectMessage = useCallback((msg) => {
+  const sendDirectMessage = useCallback(async (msg) => {
     if (!dcRef.current || dcRef.current.readyState !== 'open') return false;
+    // ── E2E encrypt if shared key is established ──
+    // Internal protocol messages (ping/pong/e2e-pubkey/video-toggle/audio-toggle) are NOT encrypted
+    // because they're not sensitive and encryption would add latency to control messages.
+    const isControlMsg = msg?.type === 'ping' || msg?.type === 'pong' || msg?.type === 'e2e-pubkey'
+      || msg?.type === 'video-toggle' || msg?.type === 'audio-toggle';
+    if (e2eReadyRef.current && e2eSharedKeyRef.current && !isControlMsg) {
+      try {
+        const plaintext = JSON.stringify(msg);
+        const encrypted = await encryptMessage(e2eSharedKeyRef.current, plaintext);
+        return sendViaDataChannel(dcRef.current, { type: 'e2e-encrypted', data: encrypted });
+      } catch {
+        // Encryption failed — send unencrypted as fallback
+        return sendViaDataChannel(dcRef.current, msg);
+      }
+    }
     return sendViaDataChannel(dcRef.current, msg);
   }, []);
 

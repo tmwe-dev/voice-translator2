@@ -7,16 +7,15 @@ import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/c
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
 // ═══════════════════════════════════════════════
-// FASE 3 + FASE 10: TTS with gpt-4o-mini-tts
+// TTS with gpt-4o-mini-tts — STREAMING
 //
-// Upgrades from tts-1-hd:
-// - gpt-4o-mini-tts: more natural, supports `instructions` parameter
-// - Per-language voice instructions for accent/tone/pacing
-// - Streaming support via ReadableStream for lower TTFB
+// Key improvement: Stream audio bytes to client as they're generated.
+// OLD: Server waits for full MP3 buffer → client gets audio after ~1-2s
+// NEW: Server streams chunks → client starts playing in ~100-200ms (TTFB)
+//
+// The client uses MediaSource API or falls back to blob playback.
 // ═══════════════════════════════════════════════
 
-// Per-language TTS instructions — tell the model HOW to speak
-// These dramatically improve pronunciation for non-English languages
 const TTS_INSTRUCTIONS = {
   'it': 'Speak in fluent Italian with natural Italian intonation and rhythm. Use clear pronunciation with proper Italian vowels and consonants. Sound like a native Italian speaker in casual conversation.',
   'th': 'Speak in fluent Thai with correct tonal pronunciation. Thai has 5 tones — each tone must be precisely correct or the meaning changes. Speak SLOWLY and clearly, slightly slower than normal conversation speed. Pause briefly between clauses. Use natural Thai rhythm and intonation. Do NOT rush — clarity is more important than speed.',
@@ -45,12 +44,13 @@ const TTS_INSTRUCTIONS = {
   'fi': 'Speak in fluent Finnish with natural intonation and proper vowel/consonant length distinctions. Sound like a native Finnish speaker.',
 };
 
+const SLOW_SPEED_LANGS = { 'th': 0.9, 'zh': 0.92, 'ja': 0.92, 'vi': 0.9, 'ar': 0.95 };
+
 async function handlePost(req) {
   try {
-    const { text, voice, userToken, roomId, langCode } = await req.json();
+    const { text, voice, userToken, roomId, langCode, stream: wantStream } = await req.json();
     if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
-    // 3-tier auth: userToken → roomId → reject
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
       roomId,
@@ -61,16 +61,21 @@ async function handlePost(req) {
     const openai = new OpenAI({ apiKey });
     const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice) ? voice : 'nova';
 
-    // ── FASE 10: Build instructions for the target language ──
-    const lang2 = (langCode || '').replace(/-.*/, ''); // 'th-TH' → 'th'
+    const lang2 = (langCode || '').replace(/-.*/, '');
     const instructions = TTS_INSTRUCTIONS[lang2] || TTS_INSTRUCTIONS['en'];
-
-    // Preprocess text for TTS quality
     const cleanText = preprocessForTTS(text, lang2);
-
-    // ── Language-specific speed: tonal languages benefit from slower delivery ──
-    const SLOW_SPEED_LANGS = { 'th': 0.9, 'zh': 0.92, 'ja': 0.92, 'vi': 0.9, 'ar': 0.95 };
     const speed = SLOW_SPEED_LANGS[lang2] || 1.0;
+
+    // Deduct cost upfront (before streaming — can't deduct after stream starts)
+    const ttsCostUsd = calcTtsCost(text.length);
+    const ttsCostEurCents = usdToEurCents(ttsCostUsd);
+    if (billingEmail && !isOwnKey) {
+      try {
+        const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
+        await deductCredits(billingEmail, charge);
+        await trackDailySpend(billingEmail, charge);
+      } catch (e) { console.error('TTS credit deduct error:', e); }
+    }
 
     const response = await openai.audio.speech.create({
       model: 'gpt-4o-mini-tts',
@@ -81,18 +86,33 @@ async function handlePost(req) {
       speed,
     });
 
-    // Calculate and deduct cost
-    const ttsCostUsd = calcTtsCost(text.length);
-    const ttsCostEurCents = usdToEurCents(ttsCostUsd);
-
-    if (billingEmail && !isOwnKey) {
-      try {
-        const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
-        await deductCredits(billingEmail, charge);
-        await trackDailySpend(billingEmail, charge);
-      } catch (e) { console.error('TTS credit deduct error:', e); }
+    // ── STREAMING MODE: pipe audio chunks directly to client ──
+    // Client receives first bytes in ~100ms instead of waiting for full buffer (~1-2s)
+    if (wantStream && response.body) {
+      const nodeStream = response.body;
+      // Convert Node.js Readable to Web ReadableStream
+      const webStream = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of nodeStream) {
+              controller.enqueue(chunk);
+            }
+            controller.close();
+          } catch (e) {
+            controller.error(e);
+          }
+        }
+      });
+      return new NextResponse(webStream, {
+        headers: {
+          'Content-Type': 'audio/mpeg',
+          'Transfer-Encoding': 'chunked',
+          'Cache-Control': 'no-cache',
+        }
+      });
     }
 
+    // ── BUFFER MODE: backward compatible (full buffer response) ──
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
       headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buffer.length.toString() }

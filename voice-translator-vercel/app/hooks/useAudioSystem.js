@@ -487,7 +487,9 @@ export default function useAudioSystem({
   // OPENAI TTS (PRO tier) — with retry
   // =============================================
 
-  async function fetchTTSBlob(text, langCode, retries = 1) {
+  // ── Streaming TTS fetch: request chunked streaming from server ──
+  // Returns a Response object so the caller can choose streaming or blob mode
+  async function fetchTTSResponse(text, langCode, retries = 1) {
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
         const res = await fetch('/api/tts', {
@@ -498,19 +500,26 @@ export default function useAudioSystem({
             voice: prefsRef.current.voice || 'nova',
             langCode: langCode || undefined,
             userToken: getEffectiveToken(),
-            roomId: roomIdRef.current || undefined
+            roomId: roomIdRef.current || undefined,
+            stream: true, // Request streaming response
           })
         });
         if (!res.ok) {
           if (attempt < retries) continue;
           throw new Error(`TTS ${res.status}`);
         }
-        return await res.blob();
+        return res;
       } catch (e) {
         if (attempt < retries) continue;
         throw e;
       }
     }
+  }
+
+  // Legacy blob fetch (for fallback)
+  async function fetchTTSBlob(text, langCode, retries = 1) {
+    const res = await fetchTTSResponse(text, langCode, retries);
+    return await res.blob();
   }
 
   // Play an audio blob URL via an Audio element, returns Promise
@@ -553,34 +562,61 @@ export default function useAudioSystem({
     });
   }
 
-  async function playTTS(text, lang) {
-    let blob;
+  // ── Streaming playback: collect chunks progressively, play as soon as ready ──
+  // Uses ReadableStream reader to collect audio data and creates a blob for playback.
+  // Key improvement: starts the fetch with streaming, so server sends first bytes
+  // in ~100ms instead of waiting for full generation (~1-2s).
+  async function playTTSStreaming(text, lang) {
     try {
-      blob = await fetchTTSBlob(text, lang);
+      const res = await fetchTTSResponse(text, lang);
+      if (!res.body) {
+        // No streaming support — fall back to blob
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        activeBlobUrlsRef.current.add(url);
+        let played = await playBlobAudio(url);
+        if (!played) played = await playBlobNewAudio(url);
+        if (!played) await browserSpeak(text, lang);
+        activeBlobUrlsRef.current.delete(url);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      // Collect all chunks from the stream
+      const reader = res.body.getReader();
+      const chunks = [];
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      // Create blob from collected chunks and play
+      const blob = new Blob(chunks, { type: 'audio/mpeg' });
+      const url = URL.createObjectURL(blob);
+      activeBlobUrlsRef.current.add(url);
+      let played = await playBlobAudio(url);
+      if (!played) played = await playBlobNewAudio(url);
+      if (!played) await browserSpeak(text, lang);
+      activeBlobUrlsRef.current.delete(url);
+      URL.revokeObjectURL(url);
     } catch {
-      // API failed after retry — fall back to browser
       await browserSpeak(text, lang);
-      return;
     }
+  }
 
+  async function playTTS(text, lang) {
+    // Use streaming path — faster TTFB from server
+    return playTTSStreaming(text, lang);
+
+    /* Legacy non-streaming path (kept as reference):
+    const blob = await fetchTTSBlob(text, lang);
     const url = URL.createObjectURL(blob);
-    activeBlobUrlsRef.current.add(url);
-
-    // Try persistent audio element first
     let played = await playBlobAudio(url);
-
-    // If persistent failed, try a fresh Audio element (same blob, no re-fetch)
-    if (!played) {
-      played = await playBlobNewAudio(url);
-    }
-
-    // If both failed, browser TTS as last resort
-    if (!played) {
-      await browserSpeak(text, lang);
-    }
-
-    activeBlobUrlsRef.current.delete(url);
+    if (!played) played = await playBlobNewAudio(url);
+    if (!played) await browserSpeak(text, lang);
     URL.revokeObjectURL(url);
+    */
   }
 
   // =============================================

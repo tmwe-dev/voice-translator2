@@ -1,6 +1,7 @@
 // Service Worker for VoiceTranslate — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 7;
+const CACHE_VERSION = 8;
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
+const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const STATIC_ASSETS = [
   '/manifest.json',
   '/icons/icon-192x192.png',
@@ -173,11 +174,56 @@ async function updateBadge(count) {
 }
 
 // =============================================
+// TTS EDGE CACHE — POST caching by body hash
+// Same text + language always produces same audio
+// =============================================
+async function handleTTSEdgeCache(request) {
+  try {
+    const bodyText = await request.clone().text();
+    const cacheKey = new Request(`/_tts_cache/${simpleHash(bodyText)}`);
+    const cache = await caches.open(TTS_CACHE_NAME);
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    const response = await fetch(request);
+    if (response.ok) {
+      const cloned = response.clone();
+      cache.put(cacheKey, cloned);
+      // Cap TTS cache at ~150 entries to avoid storage bloat
+      cache.keys().then(keys => {
+        if (keys.length > 150) {
+          // Remove oldest 50 entries
+          keys.slice(0, 50).forEach(k => cache.delete(k));
+        }
+      });
+    }
+    return response;
+  } catch (e) {
+    return fetch(request).catch(() => new Response('TTS offline', { status: 503 }));
+  }
+}
+
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h.toString(36);
+}
+
+// =============================================
 // FETCH — caching strategies
 // =============================================
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  // ── TTS Edge POST caching: same input text+lang = same audio (deterministic) ──
+  if (request.method === 'POST' && url.pathname === '/api/tts-edge') {
+    event.respondWith(handleTTSEdgeCache(request));
+    return;
+  }
 
   // Skip non-GET, extensions, chrome internals
   if (request.method !== 'GET') return;
