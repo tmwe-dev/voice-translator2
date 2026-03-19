@@ -26,7 +26,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
-  const [showExitMenu, setShowExitMenu] = useState(false);
+  // showExitMenu removed — replaced by simple back button + archive in more menu
   const [showCaptions, setShowCaptions] = useState(true);
   const [showDuckingPanel, setShowDuckingPanel] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
@@ -196,29 +196,17 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
       {/* ═══ Header ═══ */}
       <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:4, padding:'6px 8px'}} role="banner">
-        {/* ── Left: Close button ── */}
-        <div style={{position:'relative', flexShrink:0}}>
-          <button style={S.backBtnSmall} onClick={() => setShowExitMenu(!showExitMenu)} title={L('endChat')}>{'\u2716'}</button>
-          {showExitMenu && (
-            <div style={{position:'absolute', top:'100%', left:0, zIndex:100, marginTop:4,
-              background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
-              borderRadius:12, padding:4, minWidth:180, backdropFilter:'blur(12px)',
-              boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
-              <button onClick={() => { setShowExitMenu(false); if (leaveRoomTemporary) leaveRoomTemporary(); }}
-                style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 14px',
-                  background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
-                  fontSize:13, fontWeight:600, textAlign:'left'}}>
-                <span>{'\u{1F6AA}'}</span> {L('leaveTemp') || 'Esci temporaneamente'}
-              </button>
-              <button onClick={() => { setShowExitMenu(false); endChatAndSave(); }}
-                style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'10px 14px',
-                  background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.statusError || '#FF6B6B',
-                  fontSize:13, fontWeight:600, textAlign:'left'}}>
-                <span>{'\u{1F4BE}'}</span> {L('closeArchive') || 'Chiudi e archivia'}
-              </button>
-            </div>
-          )}
-        </div>
+        {/* ── Left: Back button — single tap to leave (most common action) ── */}
+        <button onClick={() => { if (leaveRoomTemporary) leaveRoomTemporary(); }}
+          style={{
+            ...S.backBtnSmall,
+            fontSize: 18, padding: '4px 10px', borderRadius: 10,
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
+          title={L('leaveTemp') || 'Esci'}>
+          <span style={{fontSize: 16}}>{'\u2190'}</span>
+          <span style={{fontSize: 11, fontWeight: 600}}>{L('exit') || 'Esci'}</span>
+        </button>
 
         {/* ── Center: Language flags (flex:1 centered, no absolute) ── */}
         <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, minWidth:0}}>
@@ -344,6 +332,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                     Volume partner durante la traduzione
                   </div>
                 </div>
+                {/* Close & Archive */}
+                <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
+                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
+                    background:'none', border:'none', cursor:'pointer', borderRadius:8,
+                    color: S.colors.statusError || '#FF6B6B',
+                    fontSize:13, fontWeight:600, textAlign:'left',
+                    borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
+                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F4BE}'}</span>
+                  <span>{L('closeArchive') || 'Chiudi e archivia'}</span>
+                </button>
                 {/* FREE tier battery */}
                 {isTrial && (() => {
                   const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
@@ -382,8 +380,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         </div>
       </div>
       {/* Backdrop to close menus */}
-      {(showMoreMenu || showExitMenu) && (
-        <div onClick={() => { setShowMoreMenu(false); setShowExitMenu(false); }}
+      {showMoreMenu && (
+        <div onClick={() => { setShowMoreMenu(false); }}
           style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
       )}
 
