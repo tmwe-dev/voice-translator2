@@ -71,6 +71,7 @@ export default function useTranslationAPI({
       targetLang,
       translations: translations || null,
       timestamp: Date.now(),
+      _status: 'sent', // ✓ sent → ✓✓ delivered (updated when partner acks)
     };
 
     // ── Instant delivery: P2P + Realtime broadcast IMMEDIATELY (don't wait for server) ──

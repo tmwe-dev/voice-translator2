@@ -156,10 +156,18 @@ function HomeInner() {
       if (roomPolling.sentByMeRef?.current?.has(message.id)) return;
       // Add to messages list via the same handler used by Realtime
       roomPolling.addIncomingMessage(message);
+      // ── Send delivery ack back to sender via P2P ──
+      if (sendDirectMessageRef.current && message.id) {
+        try { sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }); } catch {}
+      }
     }
     // Phase 2: translation update arrived via P2P — forward to same handler as Realtime
     if (msg?.type === 'message-update' && msg.original) {
       roomPolling.handleMessageUpdate(msg);
+    }
+    // ── Delivery ack received — update message status to 'delivered' ──
+    if (msg?.type === 'msg-ack' && msg.msgId) {
+      roomPolling.markDelivered(msg.msgId);
     }
   }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage, roomPolling.handleMessageUpdate]);
 

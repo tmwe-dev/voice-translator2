@@ -85,14 +85,23 @@ const MessageList = memo(function MessageList({
                   </div>
                 )}
               </div>
-              {hasTranslation && (
-                <button onClick={() => playMessage(m)}
-                  style={{marginTop:2, padding:'2px 8px', borderRadius:8,
-                    background:'transparent', border:'none', color:S.colors.textMuted,
-                    fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                  {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
-                </button>
-              )}
+              <div style={{display:'flex', alignItems:'center', gap:4, marginTop:2}}>
+                {hasTranslation && (
+                  <button onClick={() => playMessage(m)}
+                    style={{padding:'2px 8px', borderRadius:8,
+                      background:'transparent', border:'none', color:S.colors.textMuted,
+                      fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                    {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
+                  </button>
+                )}
+                {/* Delivery status checkmarks (only for my messages) */}
+                {isMine && (
+                  <span style={{fontSize:10, color: m._status === 'delivered' ? '#22c55e' : S.colors.textMuted,
+                    marginLeft:'auto', fontWeight:600}}>
+                    {m._status === 'delivered' ? '\u2713\u2713' : '\u2713'}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         );

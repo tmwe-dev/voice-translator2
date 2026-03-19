@@ -5,6 +5,7 @@ import { t } from '../lib/i18n.js';
 import useDeepgramSTT from './useDeepgramSTT.js';
 import useTranslationAPI from './useTranslationAPI.js';
 import useFreeTalkVAD from './useFreeTalkVAD.js';
+import { getPerf, PERF } from '../lib/perfTelemetry.js';
 
 // ═══════════════════════════════════════════════════════════════
 // FASE 10: Simplified Translation Pipeline
@@ -183,11 +184,14 @@ export default function useTranslation({
     const primaryTargetLang = targetLangs[0]?.code || 'en';
 
     // ── PHASE 1: Send original immediately (no translation yet) ──
+    getPerf().mark(PERF.PHASE1_SEND);
     if (roomId) {
       sendMessage(text, null, myL.code, primaryTargetLang, null);
     }
+    getPerf().measure(PERF.PHASE1_SEND);
 
     // ── PHASE 2: Translate in background, then update ──
+    getPerf().mark(PERF.TRANSLATE_LATENCY);
     const translateOpts = buildTranslateOpts();
     let translations = {};
     let primaryTranslated = '';
@@ -225,11 +229,14 @@ export default function useTranslation({
       }
       if (result?.limitExceeded) return { limitExceeded: true };
 
+      getPerf().measure(PERF.TRANSLATE_LATENCY);
       // Send translation update to everyone (sender local + partner broadcast)
+      getPerf().mark(PERF.PHASE2_SEND);
       if (primaryTranslated && roomId) {
         sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
         if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
       }
+      getPerf().measure(PERF.PHASE2_SEND);
 
       // ── Feed message into conversation context for knowledge base ──
       if (convContextRef.current?.addMessage) {
@@ -305,6 +312,7 @@ export default function useTranslation({
     const primaryTarget = targetLangs[0];
 
     // ── Step 1: Transcribe audio (STT only — no translation) ──
+    getPerf().mark(PERF.STT_LATENCY);
     const form = new FormData();
     form.append('audio', blob, 'audio.webm');
     form.append('sourceLang', myL.code);
@@ -315,6 +323,7 @@ export default function useTranslation({
     const res = await fetch('/api/transcribe', { method: 'POST', body: form });
     if (!res.ok) throw new Error('Transcribe error');
     const { original } = await res.json();
+    getPerf().measure(PERF.STT_LATENCY);
     if (!original?.trim() || !roomId) return;
 
     // ── Step 2 (Phase 1): Send original text IMMEDIATELY ──
@@ -551,6 +560,7 @@ export default function useTranslation({
   async function stopStreamingTranslation() {
     if (stoppingRef.current) return;
     stoppingRef.current = true;
+    getPerf().mark(PERF.E2E_LATENCY); // Start measuring end-to-end
 
     // Stop keepalive
     if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }

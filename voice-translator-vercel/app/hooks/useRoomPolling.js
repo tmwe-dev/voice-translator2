@@ -638,6 +638,18 @@ export default function useRoomPolling({
     });
   }, []); // setMessages is stable — no deps needed
 
+  // ── Mark a message as delivered (partner received it via P2P) ──
+  const markDelivered = useCallback((msgId) => {
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
+      if (idx < 0) return prev;
+      if (prev[idx]._status === 'delivered') return prev; // Already marked
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], _status: 'delivered' };
+      return updated;
+    });
+  }, []);
+
   function leaveRoom() {
     stopPolling();
     roomSessionTokenRef.current = null;
@@ -687,6 +699,7 @@ export default function useRoomPolling({
     handleMessageUpdate,
     updateLocalMessage,
     addLocalMessage,
+    markDelivered,
     // P2P DataChannel: add incoming message (same logic as Realtime)
     addIncomingMessage: handleRealtimeMessage,
   };

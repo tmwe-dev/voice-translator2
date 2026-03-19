@@ -74,6 +74,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
     if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
+    if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
     // Destroy ephemeral E2E keys on disconnect
     e2eKeyPairRef.current = null;
     e2eSharedKeyRef.current = null;
@@ -179,6 +180,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // Media continues flowing on the old path while ICE renegotiates a new one
   const iceRestartAttemptRef = useRef(0);
   const MAX_ICE_RESTARTS = 2;
+  const autoReconnectAttemptRef = useRef(0);
+  const MAX_AUTO_RECONNECTS = 2;
+  const autoReconnectTimerRef = useRef(null);
 
   const attemptIceRestart = useCallback(async () => {
     const pc = pcRef.current;
@@ -213,6 +217,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         disconnectTimerRef.current = null;
       }
       iceRestartAttemptRef.current = 0; // Reset ICE restart counter on successful connection
+      autoReconnectAttemptRef.current = 0; // Reset auto-reconnect counter
+      if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
@@ -232,10 +238,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           // Try ICE restart before giving up
           const restarted = await attemptIceRestart();
           if (!restarted) {
-            // ICE restart exhausted — tear down
-            setWebrtcState('failed');
-            stateRef.current = 'failed';
-            cleanup();
+            // ICE restart exhausted — try full auto-reconnect
+            attemptAutoReconnect();
           }
           // If restarted, wait for 'connected' state — don't cleanup yet
         }, 4000); // 4s — MDN recommended window
@@ -245,22 +249,75 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         clearTimeout(disconnectTimerRef.current);
         disconnectTimerRef.current = null;
       }
-      // On 'failed': try one ICE restart before giving up
+      // On 'failed': try ICE restart first, then auto-reconnect
       if (state === 'failed' && iceRestartAttemptRef.current < MAX_ICE_RESTARTS) {
         attemptIceRestart().then(restarted => {
-          if (!restarted) {
-            setWebrtcState('failed');
-            stateRef.current = 'failed';
-            cleanup();
-          }
+          if (!restarted) attemptAutoReconnect();
         });
+      } else if (state === 'failed') {
+        attemptAutoReconnect();
       } else {
+        // 'closed' — clean tear down
         setWebrtcState('failed');
         stateRef.current = 'failed';
         cleanup();
       }
     }
   }, [cleanup, attemptIceRestart]);
+
+  // ── Auto-reconnect: rebuild the entire P2P connection from scratch ──
+  // Called when ICE restart fails. Tears down current connection and sends a new
+  // call-request via signaling. Partner auto-accepts renegotiation offers.
+  // Max 2 attempts with exponential backoff (3s, 6s).
+  function attemptAutoReconnect() {
+    if (autoReconnectAttemptRef.current >= MAX_AUTO_RECONNECTS) {
+      console.warn('[WebRTC] Auto-reconnect limit reached — giving up');
+      setWebrtcState('failed');
+      stateRef.current = 'failed';
+      cleanup();
+      return;
+    }
+    autoReconnectAttemptRef.current++;
+    const delay = 3000 * autoReconnectAttemptRef.current; // 3s, 6s
+    console.log(`[WebRTC] Auto-reconnect attempt ${autoReconnectAttemptRef.current}/${MAX_AUTO_RECONNECTS} in ${delay}ms`);
+
+    setWebrtcState('connecting');
+    stateRef.current = 'connecting';
+    cleanup(); // Tear down old connection
+
+    autoReconnectTimerRef.current = setTimeout(async () => {
+      autoReconnectTimerRef.current = null;
+      if (!navigator.onLine) {
+        // Wait for network to come back
+        const onOnline = () => {
+          window.removeEventListener('online', onOnline);
+          attemptAutoReconnect();
+        };
+        window.addEventListener('online', onOnline);
+        return;
+      }
+      try {
+        // Send a new call-request — partner should auto-accept since we were connected before
+        pendingCallRef.current = true;
+        await sendSignal('call-request', { withVideo: true, reconnect: true });
+        timeoutRef.current = setTimeout(() => {
+          if (pendingCallRef.current) {
+            pendingCallRef.current = false;
+            // If this attempt also fails, try again or give up
+            if (autoReconnectAttemptRef.current < MAX_AUTO_RECONNECTS) {
+              attemptAutoReconnect();
+            } else {
+              setWebrtcState('failed');
+              stateRef.current = 'failed';
+            }
+          }
+        }, 15000);
+      } catch {
+        setWebrtcState('failed');
+        stateRef.current = 'failed';
+      }
+    }, delay);
+  }
 
   // ── E2E key exchange: send our public key after DC opens ──
   async function initiateE2EKeyExchange() {
