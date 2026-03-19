@@ -1,6 +1,8 @@
 'use client';
 import { memo, useRef, useEffect, useState } from 'react';
 import AvatarImg from './AvatarImg.js';
+import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
+  IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord } from './Icons.js';
 
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
@@ -66,7 +68,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
       color: active ? (color || '#22c55e') : '#94a3b8',
       transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
     }}>
-      <span style={{ fontSize: size > 50 ? 24 : 20, lineHeight: 1 }}>{icon}</span>
+      <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeof icon === 'string' ? icon : icon}</span>
       <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</span>
     </button>
   );
@@ -83,7 +85,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
         background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(8px)',
         animation: 'vtPulse 2s infinite ease-in-out',
       }}>
-        <span style={{ fontSize: 14 }}>{isSpeaking ? '\u{1F3A4}' : '\u{2328}\uFE0F'}</span>
+        {isSpeaking ? <IconMic size={14}/> : <IconKeyboard size={14}/>}
         <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>
           {partner?.name || 'Partner'} {isSpeaking ? 'sta parlando...' : 'sta scrivendo...'}
         </span>
@@ -232,7 +234,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
                 color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-              {partnerVolume < 0.01 ? '\u{1F507}' : '\u{1F50A}'}
+              {partnerVolume < 0.01 ? <IconVolumeOff size={20}/> : <IconVolume size={20}/>}
             </button>
           </div>
 
@@ -272,35 +274,35 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           <ControlBtn
             onClick={() => webrtc.toggleVideo()}
             active={webrtc.videoEnabled}
-            icon={webrtc.videoEnabled ? '\u{1F4F9}' : '\u{1F6AB}'}
+            icon={webrtc.videoEnabled ? <IconCamera size={24}/> : <IconCameraOff size={24}/>}
             label={webrtc.videoEnabled ? 'Camera' : 'Camera OFF'}
             color="#22c55e" activeColor="rgba(34,197,94,0.2)"
           />
           <ControlBtn
             onClick={() => webrtc.toggleAudio()}
             active={webrtc.audioEnabled}
-            icon={webrtc.audioEnabled ? '\u{1F3A4}' : '\u{1F507}'}
+            icon={webrtc.audioEnabled ? <IconMic size={24}/> : <IconVolumeOff size={24}/>}
             label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
             color="#22c55e" activeColor="rgba(34,197,94,0.2)"
           />
           <ControlBtn
             onClick={() => webrtc.flipCamera()}
             active={true}
-            icon={'\u{1F504}'}
+            icon={<IconFlipCamera size={24}/>}
             label="Ruota"
             color="#60a5fa" activeColor="rgba(96,165,250,0.15)"
           />
           <ControlBtn
             onClick={() => setVideoFullscreen(false)}
             active={true}
-            icon={'\u{2B07}\uFE0F'}
+            icon={<IconMinimize size={24}/>}
             label="Riduci"
             color="#f59e0b" activeColor="rgba(245,158,11,0.15)"
           />
           <ControlBtn
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             active={false}
-            icon={'\u{1F4F5}'}
+            icon={<IconPhoneOff size={24}/>}
             label="Chiudi"
             color="#ef4444" activeColor="rgba(239,68,68,0.3)"
             size={56}
@@ -390,7 +392,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
         }}>
           <button onClick={() => setPartnerVolume(partnerVolume > 0.01 ? 0 : 0.7)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 18, lineHeight: 1 }}>
-            {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
+            {partnerVolume < 0.01 ? <IconVolumeOff size={18}/> : partnerVolume < 0.4 ? <IconVolumeLow size={18}/> : <IconVolume size={18}/>}
           </button>
           <input type="range" min="0" max="100" step="5"
             value={Math.round(partnerVolume * 100)}
@@ -409,28 +411,28 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           <ControlBtn size={48}
             onClick={() => webrtc.toggleVideo()}
             active={webrtc.videoEnabled}
-            icon={webrtc.videoEnabled ? '\u{1F4F9}' : '\u{1F6AB}'}
+            icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
             label={webrtc.videoEnabled ? 'Camera' : 'OFF'}
             color="#22c55e" activeColor="rgba(34,197,94,0.15)"
           />
           <ControlBtn size={48}
             onClick={() => webrtc.flipCamera()}
             active={true}
-            icon={'\u{1F504}'}
+            icon={<IconFlipCamera size={20}/>}
             label="Ruota"
             color="#60a5fa" activeColor="rgba(96,165,250,0.12)"
           />
           <ControlBtn size={48}
             onClick={() => setVideoFullscreen(true)}
             active={true}
-            icon={'\u{1F5A5}\uFE0F'}
+            icon={<IconExpand size={20}/>}
             label="Espandi"
             color="#f59e0b" activeColor="rgba(245,158,11,0.15)"
           />
           <ControlBtn size={48}
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             active={false}
-            icon={'\u{1F4F5}'}
+            icon={<IconPhoneOff size={20}/>}
             label="Chiudi"
             color="#ef4444" activeColor="rgba(239,68,68,0.2)"
           />

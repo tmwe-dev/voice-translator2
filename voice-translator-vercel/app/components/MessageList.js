@@ -1,6 +1,7 @@
 'use client';
 import { memo } from 'react';
 import AvatarImg from './AvatarImg.js';
+import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
 
 /**
  * MessageList — Extracted from RoomView.js
@@ -91,14 +92,14 @@ const MessageList = memo(function MessageList({
                     style={{padding:'2px 8px', borderRadius:8,
                       background:'transparent', border:'none', color:S.colors.textMuted,
                       fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                    {playingMsgId === m.id ? '\u{1F50A}' : '\u{25B6}\uFE0F'}
+                    {playingMsgId === m.id ? <IconVolume size={14}/> : <IconPlay size={14}/>}
                   </button>
                 )}
                 {/* Delivery status checkmarks (only for my messages) */}
                 {isMine && (
                   <span style={{fontSize:10, color: m._status === 'delivered' ? '#22c55e' : S.colors.textMuted,
                     marginLeft:'auto', fontWeight:600}}>
-                    {m._status === 'delivered' ? '\u2713\u2713' : '\u2713'}
+                    {m._status === 'delivered' ? <IconCheckDouble size={12}/> : <IconCheck size={12}/>}
                   </span>
                 )}
               </div>
@@ -137,7 +138,7 @@ const MessageList = memo(function MessageList({
                 </div>
               ) : streamingMsg._whisperProcessing && !streamingMsg.original ? (
                 <div style={{display:'flex', alignItems:'center', gap:8, padding:'4px 0'}}>
-                  <span style={{fontSize:16, animation:'vtSpin 1s linear infinite'}}>&#x2699;&#xFE0F;</span>
+                  <IconLoader size={18}/>
                   <span style={{fontSize:12, color:S.colors.textMuted, fontStyle:'italic'}}>
                     {L('processing') || 'Elaborazione in corso...'}
                   </span>
@@ -173,7 +174,7 @@ const MessageList = memo(function MessageList({
               <span style={{...S.dot, animationDelay:'0.4s'}}/>
             </div>
             <span style={{fontSize:12, color:S.colors.accent3}}>
-              {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}...
+              {partner?.name} {partnerSpeaking ? <IconMic size={13}/> : <IconKeyboard size={13}/>}...
             </span>
           </div>
           {partnerLiveText && (
