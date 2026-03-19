@@ -169,6 +169,10 @@ function HomeInner() {
     if (msg?.type === 'msg-ack' && msg.msgId) {
       roomPolling.markDelivered(msg.msgId);
     }
+    // ── Read receipt received — update message status to 'read' ──
+    if (msg?.type === 'msg-read' && msg.msgId) {
+      roomPolling.markRead(msg.msgId);
+    }
   }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage, roomPolling.handleMessageUpdate]);
 
   const webrtc = useWebRTC({
@@ -949,7 +953,13 @@ function HomeInner() {
       webrtc={webrtc}
       isHostVerified={roomPolling.isHostRef?.current || false}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name}
-      setLiveMode={audio.setLiveMode} />
+      setLiveMode={audio.setLiveMode}
+      onMessageRead={(msgId) => {
+        // Send read receipt to partner via P2P DataChannel
+        if (sendDirectMessageRef.current && msgId) {
+          try { sendDirectMessageRef.current({ type: 'msg-read', msgId }); } catch {}
+        }
+      }} />
   );
 
   if (view === 'history') return (

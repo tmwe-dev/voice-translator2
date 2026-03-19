@@ -1,5 +1,5 @@
 'use client';
-import { memo } from 'react';
+import { memo, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
 
@@ -40,7 +40,34 @@ const MessageList = memo(function MessageList({
   playMessage, playingMsgId,
   partnerSpeaking, partnerTyping, partnerLiveText,
   msgsEndRef, S, L,
+  onMessageRead, // callback(msgId) when a partner's message becomes visible
 }) {
+  // ── Read receipt: IntersectionObserver to detect when partner messages are on screen ──
+  const observerRef = useRef(null);
+  const readMsgIdsRef = useRef(new Set());
+
+  useEffect(() => {
+    if (!onMessageRead) return;
+    observerRef.current = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const msgId = entry.target.dataset.msgid;
+          if (msgId && !readMsgIdsRef.current.has(msgId)) {
+            readMsgIdsRef.current.add(msgId);
+            onMessageRead(msgId);
+          }
+          observerRef.current?.unobserve(entry.target);
+        }
+      }
+    }, { threshold: 0.5 }); // 50% visible = read
+    return () => { observerRef.current?.disconnect(); };
+  }, [onMessageRead]);
+
+  // Ref callback for partner message elements
+  const observeMsg = useCallback((el) => {
+    if (el && observerRef.current) observerRef.current.observe(el);
+  }, []);
+
   return (
     <div style={S.chatArea}>
       {messages.length === 0 && (
@@ -59,7 +86,10 @@ const MessageList = memo(function MessageList({
         const hasTranslation = !!(m.translated || (m.translations && Object.keys(m.translations).length > 0));
         const pendingTranslation = !hasTranslation && m.original;
         return (
-          <div key={m._stableKey || m.id || `${m.sender}-${m.timestamp}-${i}`} style={{display:'flex', gap:8,
+          <div key={m._stableKey || m.id || `${m.sender}-${m.timestamp}-${i}`}
+            ref={!isMine && m.id ? observeMsg : undefined}
+            data-msgid={!isMine ? m.id : undefined}
+            style={{display:'flex', gap:8,
             flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end',
             animation:'vtSlideIn 0.25s ease-out'}}>
             <AvatarImg src={isMine ? prefs.avatar : getSenderAvatar(m.sender)} size={56} style={{marginBottom:2}} />
@@ -95,11 +125,15 @@ const MessageList = memo(function MessageList({
                     {playingMsgId === m.id ? <IconVolume size={14}/> : <IconPlay size={14}/>}
                   </button>
                 )}
-                {/* Delivery status checkmarks (only for my messages) */}
+                {/* Delivery status: ✓ sent → ✓✓ delivered → ✓✓ green (read) */}
                 {isMine && (
-                  <span style={{fontSize:10, color: m._status === 'delivered' ? '#22c55e' : S.colors.textMuted,
-                    marginLeft:'auto', fontWeight:600}}>
-                    {m._status === 'delivered' ? <IconCheckDouble size={12}/> : <IconCheck size={12}/>}
+                  <span style={{
+                    color: m._status === 'read' ? '#22c55e' : m._status === 'delivered' ? '#60a5fa' : S.colors.textMuted,
+                    marginLeft:'auto', display:'flex', alignItems:'center',
+                  }}>
+                    {m._status === 'read' || m._status === 'delivered'
+                      ? <IconCheckDouble size={13}/>
+                      : <IconCheck size={13}/>}
                   </span>
                 )}
               </div>

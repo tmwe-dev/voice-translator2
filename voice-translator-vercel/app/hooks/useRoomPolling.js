@@ -654,6 +654,18 @@ export default function useRoomPolling({
     });
   }, []); // setMessages is stable — no deps needed
 
+  // ── Mark a message as read (partner has SEEN it on screen) ──
+  const markRead = useCallback((msgId) => {
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
+      if (idx < 0) return prev;
+      if (prev[idx]._status === 'read') return prev; // Already marked
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], _status: 'read' };
+      return updated;
+    });
+  }, []);
+
   // ── Mark a message as delivered (partner received it via P2P) ──
   const markDelivered = useCallback((msgId) => {
     setMessages(prev => {
@@ -716,6 +728,7 @@ export default function useRoomPolling({
     updateLocalMessage,
     addLocalMessage,
     markDelivered,
+    markRead,
     // P2P DataChannel: add incoming message (same logic as Realtime)
     addIncomingMessage: handleRealtimeMessage,
   };

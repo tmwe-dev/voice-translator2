@@ -25,7 +25,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
-  setLiveMode }) {
+  setLiveMode, onMessageRead }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -847,6 +847,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         msgsEndRef={msgsEndRef}
         S={S}
         L={L}
+        onMessageRead={onMessageRead}
       />
 
       {/* Captions Overlay — floating subtitle for partner live speech */}
