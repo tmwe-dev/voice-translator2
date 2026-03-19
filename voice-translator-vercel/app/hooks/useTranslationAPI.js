@@ -246,27 +246,57 @@ export default function useTranslationAPI({
       return data;
     }
 
-    const res = await fetch('/api/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        sourceLang,
-        targetLang,
-        sourceLangName,
-        targetLangName,
-        roomId,
-        aiModel: prefsRef.current?.aiModel || undefined,
-        ...options,
-        userToken: getEffectiveToken()
-      })
-    });
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      if (res.status === 402) throw new Error(errData.error || 'No credits');
-      throw new Error('Translation error');
+    let result;
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          sourceLang,
+          targetLang,
+          sourceLangName,
+          targetLangName,
+          roomId,
+          aiModel: prefsRef.current?.aiModel || undefined,
+          ...options,
+          userToken: getEffectiveToken()
+        })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 402) {
+          console.warn('[translateUniversal] No credits (402), falling back to free translation');
+          throw new Error('no-credits');
+        }
+        console.warn('[translateUniversal] Paid translate failed:', res.status, errData.error);
+        throw new Error('Translation error');
+      }
+      result = await res.json();
+    } catch (paidErr) {
+      // ── Fallback to free translation when paid fails ──
+      // This ensures translation ALWAYS works even if credits are exhausted,
+      // auth is broken, or the paid API has issues. Quality may be lower
+      // (Microsoft/Google vs LLM) but the message gets translated.
+      console.log('[translateUniversal] Falling back to free translation:', paidErr.message);
+      try {
+        const freeRes = await fetch('/api/translate-free', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, sourceLang, targetLang })
+        });
+        if (freeRes.ok) {
+          result = await freeRes.json();
+        } else {
+          // Both paid and free failed — return original text
+          console.error('[translateUniversal] Free fallback also failed:', freeRes.status);
+          return { translated: text, fallback: true };
+        }
+      } catch (freeErr) {
+        console.error('[translateUniversal] Free fallback error:', freeErr);
+        return { translated: text, fallback: true };
+      }
     }
-    const result = await res.json();
 
     // ── Cache the result ──
     if (result.translated) {
