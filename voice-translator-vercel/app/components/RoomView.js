@@ -5,6 +5,10 @@ import AvatarImg from './AvatarImg.js';
 import ConnectionQuality from './ConnectionQuality.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
 import MessageList from './MessageList.js';
+import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconMoreVertical,
+  IconCheck, IconSubtitles, IconClipboard, IconMusic, IconArchive, IconBattery,
+  IconSwap, IconMic, IconStop, IconClose, IconSend, IconLock, IconRecord,
+  IconHome, IconMegaphone, IconSignal, IconSparkles, IconChevronDown } from './Icons.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -211,7 +215,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             display: 'flex', alignItems: 'center', gap: 4,
           }}
           title={L('leaveTemp') || 'Esci'}>
-          <span style={{fontSize: 16}}>{'\u2190'}</span>
+          <IconBack size={16}/>
           <span style={{fontSize: 11, fontWeight: 600}}>{L('exit') || 'Esci'}</span>
         </button>
 
@@ -223,7 +227,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               outline: showLangPicker ? `2px solid ${S.colors.accent4Border}` : 'none'}}>
             {myL.flag}
           </button>
-          <span style={{color:S.colors.textTertiary, fontSize:14, flexShrink:0}}>{'\u21C4'}</span>
+          <span style={{color:S.colors.textTertiary, fontSize:14, flexShrink:0}}>{<IconSwap size={14}/>}</span>
           {otherMembers.length > 0 ? (
             <span style={{fontSize:18, display:'flex', gap:2, flexShrink:0}}>
               {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
@@ -258,7 +262,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   ? (webrtc.webrtcConnected ? '#22c55e' : S.colors.textPrimary)
                   : S.colors.textMuted,
                 boxShadow: webrtc.webrtcConnected && showVideoCall ? '0 0 8px rgba(34,197,94,0.3)' : 'none'}}>
-              {'\u{1F4F9}'}
+              <IconCamera size={18}/>
               {webrtc.webrtcConnected && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
             </button>
           )}
@@ -270,7 +274,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
               background: audioEnabled ? S.colors.accent4Bg : 'rgba(239,68,68,0.15)',
               color: audioEnabled ? S.colors.statusOk : '#ef4444'}}>
-            {audioEnabled ? '\u{1F50A}' : '\u{1F507}'}
+            {audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}
           </button>
           {/* More menu button */}
           <div style={{position:'relative', flexShrink:0}}>
@@ -281,7 +285,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 cursor:'pointer', border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
                 background: showMoreMenu ? S.colors.accent4Bg : S.colors.overlayBg,
                 color: S.colors.textPrimary, position:'relative'}}>
-              {'\u2699\uFE0F'}
+              <IconSettings size={18}/>
               {/* Partner status dot */}
               <div style={{position:'absolute', top:2, right:2, width:8, height:8, borderRadius:4,
                 background: partnerConnected ? '#22c55e' : '#ef4444',
@@ -312,20 +316,20 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                     fontSize:13, fontWeight:500, textAlign:'left'}}>
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{showCaptions ? 'CC' : 'cc'}</span>
                   <span>{showCaptions ? 'Nascondi sottotitoli' : 'Mostra sottotitoli'}</span>
-                  {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}>{'\u2713'}</span>}
+                  {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}>{<IconCheck size={12}/>}</span>}
                 </button>
                 {/* Export */}
                 <button onClick={() => { exportConversation(); setShowMoreMenu(false); }}
                   style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
                     background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
                     fontSize:13, fontWeight:500, textAlign:'left'}}>
-                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F4CB}'}</span>
+                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconClipboard size={15}/>}</span>
                   <span>{L('exportConversation') || 'Esporta conversazione'}</span>
                 </button>
                 {/* Audio Ducking */}
                 <div style={{padding:'8px 12px'}}>
                   <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
-                    <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F3B5}'}</span>
+                    <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconMusic size={15}/>}</span>
                     <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>Audio Ducking</span>
                     <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
                       {Math.round((duckingLevel || 0.2) * 100)}%
@@ -346,7 +350,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                     color: S.colors.statusError || '#FF6B6B',
                     fontSize:13, fontWeight:600, textAlign:'left',
                     borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
-                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F4BE}'}</span>
+                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconArchive size={15}/>}</span>
                   <span>{L('closeArchive') || 'Chiudi e archivia'}</span>
                 </button>
                 {/* FREE tier battery */}
@@ -360,7 +364,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   return (
                     <div style={{padding:'8px 12px', borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4}}>
                       <div style={{display:'flex', alignItems:'center', gap:10}}>
-                        <span style={{fontSize:15, width:24, textAlign:'center'}}>{'\u{1F50B}'}</span>
+                        <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconBattery size={15}/>}</span>
                         <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
                           {freeLimitExceeded ? 'Limite raggiunto' : 'Piano FREE'}
                         </span>
@@ -408,7 +412,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 transition:'background 0.1s'}}>
               <span style={{fontSize:18}}>{l.flag}</span>
               <span>{l.name}</span>
-              {l.code === myLang && <span style={{marginLeft:'auto', color:S.colors.statusOk, fontSize:14}}>{'\u2713'}</span>}
+              {l.code === myLang && <span style={{marginLeft:'auto', color:S.colors.statusOk, fontSize:14}}>{<IconCheck size={12}/>}</span>}
             </button>
           ))}
         </div>
@@ -432,7 +436,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {modeInfo.icon} {L(modeInfo.nameKey)}
             {roomCtx.id !== 'general' && <span style={{marginLeft:4}}>{roomCtx.icon} {L(roomCtx.nameKey)}</span>}
           </span>
-          {isHost && <span style={{fontSize:10, color:S.colors.textMuted}}>{'\u25BC'}</span>}
+          {isHost && <span style={{fontSize:10, color:S.colors.textMuted}}>{<IconChevronDown size={8}/>}</span>}
           {!isHost && roomMode === 'classroom' && (
             <span style={{fontSize:10, color:S.colors.textTertiary}}>
               {' \u2022 '}{roomInfo?.host || 'Host'} presenta
@@ -450,7 +454,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           )}
           {isHost && !isTrial && (
             <span style={{fontSize:10, color:S.colors.textTertiary, fontFamily:'monospace'}}>
-              ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)} {'\u2022'} {msgCount}msg
+              ${totalCost < 0.01 ? totalCost.toFixed(4) : totalCost.toFixed(3)} {'00B7'} {msgCount}msg
             </span>
           )}
         </div>
@@ -493,14 +497,14 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             {(() => {
               const ve = prefs.voiceEngine || 'auto';
               const engineLabel = ve === 'auto'
-                ? (isTrial ? '\u{1F50A} Edge TTS' : canUseElevenLabs ? '\u{1F3A4} ElevenLabs' : '\u{1F3A4} OpenAI')
-                : ve === 'elevenlabs' ? '\u{1F3A4} ElevenLabs'
-                : ve === 'openai' ? '\u{1F3A4} OpenAI'
-                : '\u{1F50A} Edge TTS';
+                ? (isTrial ? 'Edge TTS' : canUseElevenLabs ? 'ElevenLabs' : 'OpenAI')
+                : ve === 'elevenlabs' ? 'ElevenLabs'
+                : ve === 'openai' ? 'OpenAI'
+                : 'Edge TTS';
               return (
                 <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600, whiteSpace:'nowrap'}}>
                   {engineLabel}
-                  {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted, marginLeft:2}}>{'\u25BC'}</span>}
+                  {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted, marginLeft:2}}>{<IconChevronDown size={8}/>}</span>}
                 </span>
               );
             })()}
@@ -528,7 +532,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               if (activeEngine === 'edge') return (prefs.edgeTtsVoiceGender || 'female') === 'female' ? '\u2640 Female' : '\u2642 Male';
               return 'AUTO';
             })()}
-            {!isTrial && <span style={{fontSize:6, marginLeft:2}}>{'\u25BC'}</span>}
+            {!isTrial && <span style={{fontSize:6, marginLeft:2}}>{<IconChevronDown size={8}/>}</span>}
           </button>
         </div>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
@@ -541,7 +545,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             <span style={{fontSize:9, color:S.colors.textMuted, whiteSpace:'nowrap'}}>
               {isTrial ? 'AI: Free' : `AI: ${(AI_MODELS.find(m => m.id === (prefs?.aiModel || 'gpt-4o-mini'))?.name || 'GPT-4o Mini')}`}
             </span>
-            {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted}}>{'\u25BC'}</span>}
+            {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted}}>{<IconChevronDown size={8}/>}</span>}
           </button>
           {!audioEnabled && (
             <span style={{fontSize:8, fontWeight:700, padding:'1px 4px', borderRadius:3,
@@ -582,7 +586,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 <div style={{display:'flex', alignItems:'center', gap:4, flexShrink:0}}>
                   <span style={{fontSize:8, color:S.colors.textTertiary}}>{m.cost}</span>
                   {m.id === (prefs?.aiModel || 'gpt-4o-mini') && (
-                    <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                    <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>
                   )}
                 </div>
               </button>
@@ -625,7 +629,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                       color:S.colors.textPrimary, transition:'background 0.1s'}}>
                       <span style={{fontWeight:500, textTransform:'capitalize'}}>{v}</span>
                       {v === (prefs.voice || 'nova') && (
-                        <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                        <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>
                       )}
                     </button>
                   ))}
@@ -654,7 +658,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                         <span style={{fontWeight:600}}>{'\uD83C\uDFA4'} {clonedVoiceName || 'La mia voce'}</span>
                         <span style={{fontSize:9, color:S.colors.accent4Border}}>Voce clonata</span>
                       </div>
-                      {selectedELVoice === clonedVoiceId && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                      {selectedELVoice === clonedVoiceId && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                     </button>
                   )}
                   {/* Auto (avatar-based) option */}
@@ -670,7 +674,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                       <span style={{fontWeight:500}}>Auto (Avatar)</span>
                       <span style={{fontSize:9, color:S.colors.textMuted}}>Voce basata sull'avatar</span>
                     </div>
-                    {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                    {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                   </button>
                   {/* ElevenLabs voice list — grouped by gender */}
                   {(elevenLabsVoices || []).length > 0 && (() => {
@@ -704,7 +708,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                                 {[v.accent, v.useCase].filter(Boolean).join(' \u2022 ')}
                               </span>
                             </div>
-                            {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>}
+                            {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                           </button>
                         ))}
                       </div>
@@ -736,7 +740,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                       color:S.colors.textPrimary, transition:'background 0.1s'}}>
                       <span style={{fontWeight:500}}>{g.icon} {g.label}</span>
                       {(prefs.edgeTtsVoiceGender || 'female') === g.id && (
-                        <span style={{color:S.colors.statusOk, fontSize:12}}>{'\u2713'}</span>
+                        <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>
                       )}
                     </button>
                   ))}
@@ -856,7 +860,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4}}>
             <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={20} />
             <span style={{fontSize:10, color:S.colors.accent3, fontWeight:600}}>
-              {partner?.name} {partnerSpeaking ? '\u{1F399}\uFE0F' : '\u{2328}\uFE0F'}
+              {partner?.name} {partnerSpeaking ? 'parla' : 'scrive'}
             </span>
             <span style={{display:'inline-block', width:5, height:5, borderRadius:'50%',
               background:S.colors.accent3, animation:'vtPulse 1.2s infinite ease-in-out'}} />
@@ -890,7 +894,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             color: textInput.trim() ? S.colors.textPrimary : S.colors.textMuted,
             fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
             WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
-          {sendingText ? '...' : '\u{27A4}'}
+          {sendingText ? '...' : '→'}
         </button>
       </div>
 
@@ -929,7 +933,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 cursor:'pointer', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
                 boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
-              <span style={{fontSize:16}}>{liveMode ? '\u{1F7E2}' : '\u{1F399}\uFE0F'}</span>
+              <span style={{fontSize:16, display:'flex'}}><IconMic size={16}/></span>
               <span style={{fontSize:7, fontWeight:700}}>LIVE</span>
             </button>
             {/* MAIN record button — hero element */}
@@ -937,14 +941,14 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
               aria-label={recording ? 'Stop' : 'Registra'}
               style={{...S.talkBtn, width:72, height:72, fontSize:30,
                 ...(recording ? {...S.talkBtnRec, animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
-              {recording ? '\u{23F9}\uFE0F' : '\u{1F399}\uFE0F'}
+              {recording ? <IconStop size={28}/> : <IconMic size={28}/>}
             </button>
           </div>
         )}
 
         {roomMode === 'classroom' && !canTalk && (
           <div style={{color:S.colors.textMuted, fontSize:12, padding:10, textAlign:'center'}}>
-            {'\u{1F512}'} {L('classroomDesc')}
+            {<IconLock size={14}/>} {L('classroomDesc')}
           </div>
         )}
 
@@ -990,7 +994,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
                 ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
                   boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
-              {isListening ? (recording ? '\u{1F534}' : '\u{26A1}') : '\u{1F399}\uFE0F'}
+              {isListening ? (recording ? <IconRecord size={28}/> : <IconMic size={28}/>) : <IconMic size={28}/>}
             </button>
           </div>
         )}
@@ -1000,7 +1004,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           <span style={{fontSize:10, color:S.colors.textTertiary, fontWeight:500}}>
             {modeInfo.icon} {L(modeInfo.nameKey)}
             {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
-              <span style={{color:S.colors.statusOk, marginLeft:4}}>{'\u{1F7E2}'} LIVE</span>
+              <span style={{color:S.colors.statusOk, marginLeft:4}}>LIVE</span>
             )}
           </span>
           {/* VAD Sensitivity — inline pills */}
@@ -1008,10 +1012,10 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             <>
               <span style={{color:S.colors.overlayBorder}}>|</span>
               {[
-                { id: 'quiet', short: '\u{1F910} Silenzio' },
-                { id: 'normal', short: '\u{1F3E0} Normale' },
-                { id: 'noisy', short: '\u{1F4E2} Rumore' },
-                { id: 'street', short: '\u{1F6A6} Strada' },
+                { id: 'quiet', short: 'Silenzio' },
+                { id: 'normal', short: 'Normale' },
+                { id: 'noisy', short: 'Rumore' },
+                { id: 'street', short: 'Strada' },
               ].map(p => (
                 <button key={p.id} onClick={() => setVadSensitivity(p.id)}
                   style={{padding:'2px 8px', borderRadius:8, fontSize:9, fontWeight:600,
@@ -1032,7 +1036,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             style={{marginTop:6, padding:'6px 16px', borderRadius:12, border:`1px solid ${S.colors.accent3Border}`,
               background:S.colors.accent3Bg, color:S.colors.textMuted, fontSize:11,
               cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}>
-            {'\u2728'} {L('upgradeToPro')}
+            {<IconSparkles size={12}/>} {L('upgradeToPro')}
           </button>
         )}
       </div>

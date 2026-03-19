@@ -67,3 +67,25 @@ export const IconMusic = ({ size }) => <I size={size}><path d="M9 18V5l12-2v13"/
 export const IconBattery = ({ size }) => <I size={size}><rect x="1" y="6" width="18" height="12" rx="2" ry="2"/><path d="M23 13v-2"/></I>;
 export const IconSwap = ({ size }) => <I size={size}><path d="M16 3l4 4-4 4"/><path d="M20 7H4"/><path d="M8 21l-4-4 4-4"/><path d="M4 17h16"/></I>;
 export const IconKeyboard = ({ size }) => <I size={size}><rect x="2" y="4" width="20" height="16" rx="2" ry="2"/><path d="M6 8h.01"/><path d="M10 8h.01"/><path d="M14 8h.01"/><path d="M18 8h.01"/><path d="M8 12h.01"/><path d="M12 12h.01"/><path d="M16 12h.01"/><path d="M7 16h10"/></I>;
+
+// ── Additional icons for RoomView + HomeView ──
+export const IconSubtitles = ({ size }) => <I size={size}><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M6 12h2"/><path d="M11 12h6"/><path d="M6 16h8"/></I>;
+export const IconExport = ({ size }) => <I size={size}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></I>;
+export const IconArchive = ({ size }) => <I size={size}><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></I>;
+export const IconUser = ({ size }) => <I size={size}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></I>;
+export const IconKey = ({ size }) => <I size={size}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.78 7.78 5.5 5.5 0 017.78-7.78zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></I>;
+export const IconCreditCard = ({ size }) => <I size={size}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></I>;
+export const IconStar = ({ size }) => <I size={size}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" fill={s}/></I>;
+export const IconCrown = ({ size }) => <I size={size}><path d="M2 20h20"/><path d="M4 16l2-12 4 5 2-5 2 5 4-5 2 12z" fill={s} opacity="0.15"/><path d="M4 16l2-12 4 5 2-5 2 5 4-5 2 12z"/></I>;
+export const IconZap = ({ size }) => <I size={size}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></I>;
+export const IconSparkles = ({ size }) => <I size={size}><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z"/><path d="M19 13l.75 2.25L22 16l-2.25.75L19 19l-.75-2.25L16 16l2.25-.75z"/></I>;
+export const IconMessageCircle = ({ size }) => <I size={size}><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></I>;
+export const IconSchool = ({ size }) => <I size={size}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5"/></I>;
+export const IconLock = ({ size }) => <I size={size}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></I>;
+export const IconHome = ({ size }) => <I size={size}><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></I>;
+export const IconMegaphone = ({ size }) => <I size={size}><path d="M3 11l18-5v12L3 13v-2z"/><path d="M11.6 16.8a3 3 0 11-5.8-1.6"/></I>;
+export const IconSignal = ({ size }) => <I size={size}><path d="M2 20h.01"/><path d="M7 20v-4"/><path d="M12 20v-8"/><path d="M17 20V8"/><path d="M22 20V4"/></I>;
+export const IconShield = ({ size }) => <I size={size}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></I>;
+export const IconGlobe = ({ size }) => <I size={size}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></I>;
+export const IconCheckCircle = ({ size }) => <I size={size}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></I>;
+export const IconDoor = ({ size }) => <I size={size}><path d="M18 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M15 13h.01"/></I>;
