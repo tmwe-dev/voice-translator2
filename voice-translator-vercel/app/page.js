@@ -894,20 +894,14 @@ function HomeInner() {
   );
 
   if (view === 'home') return (
-    <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} selectedMode={selectedMode}
-      setSelectedMode={setSelectedMode} selectedContext={selectedContext}
-      setSelectedContext={setSelectedContext} roomDescription={roomDescription}
-      setRoomDescription={setRoomDescription} handleCreateRoom={handleCreateRoom} setView={setView}
-      userToken={auth.userToken} userAccount={auth.userAccount} useOwnKeys={auth.useOwnKeys}
-      creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} setAuthStep={auth.setAuthStep}
-      loadHistory={loadHistory} showShareApp={showShareApp} setShowShareApp={setShowShareApp}
-      shareAppLang={shareAppLang} setShareAppLang={setShareAppLang} shareApp={shareApp}
-      showTutorial={showTutorial} setShowTutorial={setShowTutorial} tutorialStep={tutorialStep}
-      setTutorialStep={setTutorialStep} status={status} isTrial={auth.isTrial} platformHasEL={auth.platformHasEL}
-      referralCode={auth.referralCode}  theme={theme} setTheme={setTheme} logout={auth.logout}
-      showInstallBanner={showInstallBanner} handleInstallApp={handleInstallApp} dismissInstallBanner={dismissInstallBanner}
-      notifPermission={notifPermission} requestNotifPermission={requestNotifPermission}
-      deferredInstallPrompt={deferredInstallPrompt} rejoinRoom={rejoinRoom} />
+    <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
+      selectedMode={selectedMode} setSelectedMode={setSelectedMode}
+      selectedContext={selectedContext} setSelectedContext={setSelectedContext}
+      roomDescription={roomDescription} setRoomDescription={setRoomDescription}
+      handleCreateRoom={handleCreateRoom} setView={setView}
+      theme={theme} setTheme={setTheme}
+      contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
+      rejoinRoom={rejoinRoom} />
   );
 
   if (view === 'join') return (

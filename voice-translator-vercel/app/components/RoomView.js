@@ -4,6 +4,7 @@ import { LANGS, MODES, CONTEXTS, FONT, getLang, vibrate, FREE_DAILY_LIMIT, AVATA
 import AvatarImg from './AvatarImg.js';
 import ConnectionQuality from './ConnectionQuality.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
+import VoiceCallOverlay from './VoiceCallOverlay.js';
 import MessageList from './MessageList.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconMoreVertical,
   IconCheck, IconSubtitles, IconClipboard, IconMusic, IconArchive, IconBattery,
@@ -34,7 +35,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [showCaptions, setShowCaptions] = useState(true);
   const [showDuckingPanel, setShowDuckingPanel] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
+  const [showVoiceCall, setShowVoiceCall] = useState(false);
   const [videoFullscreen, setVideoFullscreen] = useState(false);
+  const [interpreterActive, setInterpreterActive] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [videoDucking, setVideoDucking] = useState(false); // auto-ducking during video call
   const [lastTranslationSubtitle, setLastTranslationSubtitle] = useState(null); // { text, ts }
@@ -54,14 +57,19 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
 
-  // Auto-open video panel when call connects
+  // Auto-open voice/video panel when call connects
   // Works for both caller (initiateConnection) and callee (acceptIncomingCall)
   useEffect(() => {
     const state = webrtc?.webrtcState;
     if (state === 'connected') {
-      // Ensure video panel is open and fullscreen when connected
-      if (!showVideoCall) setShowVideoCall(true);
-      if (!videoFullscreen) setVideoFullscreen(true);
+      const type = webrtc?.callType;
+      if (type === 'voice') {
+        setShowVoiceCall(true);
+        setShowVideoCall(false);
+      } else {
+        if (!showVideoCall) setShowVideoCall(true);
+        if (!videoFullscreen) setVideoFullscreen(true);
+      }
     }
   }, [webrtc?.webrtcState]);
 
@@ -79,6 +87,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       setVideoDucking(false);
       setVideoFullscreen(false);
       setShowVideoCall(false);
+      setShowVoiceCall(false);
+      setInterpreterActive(false);
     }
   }, [webrtc?.webrtcState]);
 
@@ -241,6 +251,27 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
 
         {/* ── Right: Primary actions ── */}
         <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
+          {/* Voice call button */}
+          {webrtc && (
+            <button onClick={() => {
+              if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
+                setShowVoiceCall(true);
+              } else if (webrtc.webrtcState === 'idle') {
+                webrtc.initiateConnection(false); // audio-only
+              }
+            }}
+              title="Chiamata vocale"
+              style={{display:'flex', alignItems:'center', justifyContent:'center', gap:4,
+                height:36, padding:'0 10px', borderRadius:18, fontSize:16, cursor:'pointer',
+                border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
+                background: (webrtc.webrtcConnected && webrtc.callType === 'voice')
+                  ? 'rgba(34,197,94,0.2)' : S.colors.overlayBg,
+                color: (webrtc.webrtcConnected && webrtc.callType === 'voice')
+                  ? '#22c55e' : S.colors.textMuted}}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+              {webrtc.webrtcConnected && webrtc.callType === 'voice' && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
+            </button>
+          )}
           {/* Video call button */}
           {webrtc && (
             <button onClick={() => {
@@ -263,7 +294,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   : S.colors.textMuted,
                 boxShadow: webrtc.webrtcConnected && showVideoCall ? '0 0 8px rgba(34,197,94,0.3)' : 'none'}}>
               <IconCamera size={18}/>
-              {webrtc.webrtcConnected && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
+              {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
             </button>
           )}
           {/* Audio toggle */}
@@ -772,38 +803,48 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         }
       `}</style>
 
-      {/* ── Incoming Call Banner ── */}
-      {webrtc?.incomingCall && (
-        <div style={{
-          position:'absolute', top:0, left:0, right:0, zIndex:100,
-          background:'linear-gradient(135deg, #1a1a2e, #16213e)',
-          borderBottom:'2px solid #0f3460',
-          padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between',
-          animation:'vtSlideDown 0.3s ease-out', boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
-        }}>
-          <div style={{display:'flex', alignItems:'center', gap:12}}>
-            <div style={{width:12, height:12, borderRadius:'50%', background:'#4ade80', animation:'vtBattPulse 1.5s infinite'}} />
-            <div>
-              <div style={{color:'#fff', fontSize:14, fontWeight:600}}>
-                {webrtc.incomingCall.from} {L('callIncoming') || 'ti sta chiamando'}
+      {/* ── Incoming Call Banner (voice or video) ── */}
+      {webrtc?.incomingCall && (() => {
+        const isVideo = webrtc.incomingCall.withVideo !== false;
+        return (
+          <div style={{
+            position:'absolute', top:0, left:0, right:0, zIndex:100,
+            background:'linear-gradient(135deg, #1a1a2e, #16213e)',
+            borderBottom:'2px solid #0f3460',
+            padding:'16px 20px', display:'flex', alignItems:'center', justifyContent:'space-between',
+            animation:'vtSlideDown 0.3s ease-out', boxShadow:'0 4px 20px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{display:'flex', alignItems:'center', gap:12}}>
+              <div style={{width:12, height:12, borderRadius:'50%', background:'#4ade80', animation:'vtBattPulse 1.5s infinite'}} />
+              <div>
+                <div style={{color:'#fff', fontSize:14, fontWeight:600}}>
+                  {isVideo ? <IconCamera size={16} /> : <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>}
+                  {' '}{webrtc.incomingCall.from} {L('callIncoming') || 'ti sta chiamando'}
+                </div>
+                <div style={{color:'#94a3b8', fontSize:11, marginTop:2}}>
+                  {isVideo ? 'Video call in arrivo' : 'Chiamata vocale in arrivo'}
+                </div>
               </div>
-              <div style={{color:'#94a3b8', fontSize:11, marginTop:2}}>Video call in arrivo</div>
+            </div>
+            <div style={{display:'flex', gap:10}}>
+              <button onClick={() => webrtc.declineIncomingCall()}
+                style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
+                  background:'#ef4444', color:'#fff', fontSize:13, fontWeight:600}}>
+                Rifiuta
+              </button>
+              <button onClick={() => {
+                webrtc.acceptIncomingCall();
+                if (isVideo) { setShowVideoCall(true); setVideoFullscreen(true); }
+                // Voice calls auto-open via the useEffect on webrtcState
+              }}
+                style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
+                  background:'#22c55e', color:'#fff', fontSize:13, fontWeight:600}}>
+                Accetta
+              </button>
             </div>
           </div>
-          <div style={{display:'flex', gap:10}}>
-            <button onClick={() => webrtc.declineIncomingCall()}
-              style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                background:'#ef4444', color:'#fff', fontSize:13, fontWeight:600}}>
-              Rifiuta
-            </button>
-            <button onClick={() => { webrtc.acceptIncomingCall(); setShowVideoCall(true); setVideoFullscreen(true); }}
-              style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                background:'#22c55e', color:'#fff', fontSize:13, fontWeight:600}}>
-              Accetta
-            </button>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Video Call (fullscreen + inline) — extracted component ── */}
       <VideoCallOverlay
@@ -825,6 +866,29 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         partnerTyping={partnerTyping}
         S={S}
       />
+
+      {/* ── Voice Call Overlay ── */}
+      {showVoiceCall && webrtc?.webrtcConnected && webrtc?.callType === 'voice' && (
+        <VoiceCallOverlay
+          webrtc={webrtc}
+          partner={partner}
+          getSenderAvatar={getSenderAvatar}
+          S={S}
+          partnerVolume={partnerVolume}
+          setPartnerVolume={setPartnerVolume}
+          partnerSpeaking={partnerSpeaking}
+          partnerTyping={partnerTyping}
+          interpreterActive={interpreterActive}
+          setInterpreterActive={setInterpreterActive}
+          interpreter={null}
+          onClose={() => setShowVoiceCall(false)}
+          onUpgradeToVideo={() => {
+            setShowVoiceCall(false);
+            setShowVideoCall(true);
+            setVideoFullscreen(true);
+          }}
+        />
+      )}
 
       {/* ── Messages — extracted component ── */}
       <MessageList

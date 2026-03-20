@@ -33,8 +33,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const [remoteVideoActive, setRemoteVideoActive] = useState(false);
   const [audioEnabled, setAudioEnabledState] = useState(true);
 
+  // ── Call type: 'voice' | 'video' | null ──
+  const [callType, setCallType] = useState(null);
+  const callTypeRef = useRef(null);
+
   // ── Incoming call state ──
-  const [incomingCall, setIncomingCall] = useState(null); // { from: string } or null
+  const [incomingCall, setIncomingCall] = useState(null); // { from: string, withVideo: boolean } or null
   const incomingCallTimerRef = useRef(null);
   const pendingCallRef = useRef(false); // caller is waiting for accept
 
@@ -99,6 +103,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setRemoteStream(null);
     setVideoEnabledState(false);
     setRemoteVideoActive(false);
+    setCallType(null);
+    callTypeRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -299,7 +305,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       try {
         // Send a new call-request — partner should auto-accept since we were connected before
         pendingCallRef.current = true;
-        await sendSignal('call-request', { withVideo: true, reconnect: true });
+        await sendSignal('call-request', { withVideo: callTypeRef.current === 'video', reconnect: true });
         timeoutRef.current = setTimeout(() => {
           if (pendingCallRef.current) {
             pendingCallRef.current = false;
@@ -471,13 +477,15 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         const pc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
         pcRef.current = pc;
         // CRITICAL: Add transceivers BEFORE creating the offer to guarantee the SDP
-        // always has m=audio and m=video sections. Without this, if getUserMedia fails,
-        // the offer has no media sections → the callee can't send their media back.
+        // always has m=audio (and optionally m=video) sections.
+        const wantVideo = callTypeRef.current === 'video';
         pc.addTransceiver('audio', { direction: 'sendrecv' });
-        pc.addTransceiver('video', { direction: 'sendrecv' });
+        if (wantVideo) {
+          pc.addTransceiver('video', { direction: 'sendrecv' });
+        }
         const dc = createDataChannel(pc);
         setupDC(dc);
-        const stream = await getMediaWithFallback(true);
+        const stream = await getMediaWithFallback(wantVideo);
         if (stream) sendersRef.current = addMediaTracks(pc, stream);
         collectIceCandidates(pc, (candidateStr) => {
           sendSignal('ice-candidate', candidateStr).catch(() => {});
@@ -629,9 +637,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     };
   }, [roomId]);
 
-  // ── Request video call (sends call-request, waits for acceptance) ──
+  // ── Request call (sends call-request, waits for acceptance) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
     if (stateRef.current === 'connecting' || stateRef.current === 'connected') return;
+    const type = withVideo ? 'video' : 'voice';
+    setCallType(type);
+    callTypeRef.current = type;
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
     pendingCallRef.current = true;
@@ -657,6 +668,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Accept incoming call ──
   const acceptIncomingCall = useCallback(async () => {
     if (!incomingCall) return;
+    const type = incomingCall.withVideo ? 'video' : 'voice';
+    setCallType(type);
+    callTypeRef.current = type;
     if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
     setIncomingCall(null);
     setWebrtcState('connecting');
@@ -762,15 +776,16 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   return {
     webrtcState,
     webrtcConnected: webrtcState === 'connected',
+    callType,              // 'voice' | 'video' | null
     localStream,
     remoteStream,
     videoEnabled,
     audioEnabled,
     remoteVideoActive,
-    incomingCall,          // { from: string } or null
-    initiateConnection,
-    acceptIncomingCall,    // Accept incoming video call
-    declineIncomingCall,   // Decline incoming video call
+    incomingCall,          // { from: string, withVideo: boolean } or null
+    initiateConnection,    // (withVideo?: boolean) => Promise<void>
+    acceptIncomingCall,    // Accept incoming call (voice or video)
+    declineIncomingCall,   // Decline incoming call
     toggleVideo,
     toggleAudio,
     flipCamera,
