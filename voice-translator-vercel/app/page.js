@@ -96,6 +96,10 @@ function HomeInner() {
     return sendDirectMessageRef.current ? sendDirectMessageRef.current(msg) : false;
   }, []);
 
+  // ── Stable ref for interpreter — breaks circular dependency ──
+  // handleDirectMessage → interpreter → webrtc → handleDirectMessage
+  const interpreterRef = useRef(null);
+
   // =============================================
   // HOOKS — now use the SAME refs that get synced below
   // =============================================
@@ -174,7 +178,11 @@ function HomeInner() {
     if (msg?.type === 'msg-read' && msg.msgId) {
       roomPolling.markRead(msg.msgId);
     }
-  }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage, roomPolling.handleMessageUpdate]);
+    // ── Interpreter messages: subtitles + audio from partner ──
+    if (msg?.type === 'interpreter-subtitle' || msg?.type === 'interpreter-audio' || msg?.type === 'interpreter-audio-part') {
+      interpreterRef.current?.handleInterpreterMessage?.(msg);
+    }
+  }, [roomPolling.sentByMeRef, roomPolling.addIncomingMessage, roomPolling.handleMessageUpdate, roomPolling.markDelivered, roomPolling.markRead]);
 
   const webrtc = useWebRTC({
     roomId: roomPolling.roomId,
@@ -193,6 +201,9 @@ function HomeInner() {
     userToken: auth.userToken,
     useOwnKeys: auth.useOwnKeys,
   });
+
+  // Sync interpreterRef so handleDirectMessage can access it without circular deps
+  useEffect(() => { interpreterRef.current = interpreter; }, [interpreter]);
 
   // Sync sendDirectMessageRef when WebRTC connects/disconnects
   useEffect(() => {

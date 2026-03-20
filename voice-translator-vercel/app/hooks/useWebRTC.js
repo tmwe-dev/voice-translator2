@@ -178,7 +178,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       // dc.onmessage is set once in setupDC and never updated — without the ref,
       // it would keep calling the stale version from when the DC was first opened.
       onDirectMessageRef.current?.(msg);
-    } catch {}
+    } catch (e) {
+      // Only log non-JSON-parse errors (those indicate bugs in message handlers)
+      if (e instanceof SyntaxError) return; // Expected: binary/malformed DC data
+      console.warn('[DC] Message handler error:', e);
+    }
   }, []); // No deps — reads from ref
 
   // ── ICE restart: attempt to reconnect without tearing down the peer connection ──
@@ -406,7 +410,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
         // ── Unencrypted message (E2E not yet established or fallback) ──
         onDirectMessageRef.current?.(msg);
-      } catch {}
+      } catch (e) {
+        if (!(e instanceof SyntaxError)) console.warn('[DC] setupDC message error:', e);
+      }
     };
     dc.onclose = () => {
       dcRef.current = null;

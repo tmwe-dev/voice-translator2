@@ -190,12 +190,20 @@ export async function addIceCandidate(pc, candidateStr) {
 }
 
 /**
- * Send a message via DataChannel
+ * Send a message via DataChannel.
+ * Includes try/catch — dc.send() can throw on oversized messages
+ * or when the channel is closing mid-send.
  */
 export function sendViaDataChannel(dc, data) {
   if (dc && dc.readyState === 'open') {
-    dc.send(typeof data === 'string' ? data : JSON.stringify(data));
-    return true;
+    try {
+      const payload = typeof data === 'string' ? data : JSON.stringify(data);
+      dc.send(payload);
+      return true;
+    } catch (e) {
+      console.warn('[DC] send failed:', e.message, '| payload size:', JSON.stringify(data).length);
+      return false;
+    }
   }
   return false;
 }
