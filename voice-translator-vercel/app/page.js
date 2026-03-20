@@ -12,6 +12,7 @@ import useRoomPolling from './hooks/useRoomPolling.js';
 import useAuth from './hooks/useAuth.js';
 import useContacts from './hooks/useContacts.js';
 import useWebRTC from './hooks/useWebRTC.js';
+import useInterpreterMode from './hooks/useInterpreterMode.js';
 import useConversationContext from './hooks/useConversationContext.js';
 
 // View components
@@ -180,6 +181,17 @@ function HomeInner() {
     myName: roomPolling.verifiedNameRef?.current || prefs.name,
     onDirectMessage: handleDirectMessage,
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
+  });
+
+  // Interpreter mode — bidirectional STT → Translate → TTS
+  const partnerLang = roomPolling.roomInfo?.members?.find(m => m.name !== (roomPolling.verifiedNameRef?.current || prefs.name))?.lang || 'en';
+  const interpreter = useInterpreterMode({
+    webrtc,
+    myLang,
+    partnerLang,
+    roomId: roomPolling.roomId,
+    userToken: auth.userToken,
+    useOwnKeys: auth.useOwnKeys,
   });
 
   // Sync sendDirectMessageRef when WebRTC connects/disconnects
@@ -966,6 +978,7 @@ function HomeInner() {
       isHostVerified={roomPolling.isHostRef?.current || false}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name}
       setLiveMode={audio.setLiveMode}
+      interpreter={interpreter}
       onMessageRead={(msgId) => {
         // Send read receipt to partner via P2P DataChannel
         if (sendDirectMessageRef.current && msgId) {

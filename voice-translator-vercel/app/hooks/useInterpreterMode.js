@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { createNoiseGate } from '../lib/noiseGate.js';
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
@@ -21,6 +22,7 @@ export default function useInterpreterMode({
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
+  const noiseGateRef = useRef(null);
   const activeRef = useRef(false);
   const processingRef = useRef(false);
 
@@ -173,14 +175,24 @@ export default function useInterpreterMode({
   // Start recording + processing loop
   const startInterpreter = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
+      const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = rawStream;
+
+      // Apply noise gate for cleaner STT in noisy environments
+      let recordStream = rawStream;
+      try {
+        const ng = createNoiseGate(rawStream, { threshold: -45 });
+        noiseGateRef.current = ng;
+        recordStream = ng.cleanStream;
+      } catch (e) {
+        console.warn('[Interpreter] Noise gate unavailable, using raw stream:', e);
+      }
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(recordStream, { mimeType });
       recorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -205,6 +217,10 @@ export default function useInterpreterMode({
       try { recorderRef.current.stop(); } catch {}
     }
     recorderRef.current = null;
+    if (noiseGateRef.current) {
+      try { noiseGateRef.current.destroy(); } catch {}
+      noiseGateRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       streamRef.current = null;

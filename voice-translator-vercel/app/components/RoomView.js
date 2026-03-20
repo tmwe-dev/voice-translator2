@@ -26,7 +26,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
-  setLiveMode, onMessageRead }) {
+  setLiveMode, interpreter, onMessageRead }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -91,6 +91,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
       setInterpreterActive(false);
     }
   }, [webrtc?.webrtcState]);
+
+  // ── Interpreter start/stop when toggled ──
+  useEffect(() => {
+    if (!interpreter) return;
+    if (interpreterActive && !interpreter.active) {
+      interpreter.start();
+    } else if (!interpreterActive && interpreter.active) {
+      interpreter.stop();
+    }
+  }, [interpreterActive, interpreter]);
 
   // ── Subtitle queue: show up to 2 subtitles with auto-expire (FIFO) ──
   // Previous approach: single subtitle, overwritten by next message → user misses text
@@ -260,7 +270,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 webrtc.initiateConnection(false); // audio-only
               }
             }}
-              title="Chiamata vocale"
+              title="Chiamata vocale" aria-label="Avvia chiamata vocale"
               style={{display:'flex', alignItems:'center', justifyContent:'center', gap:4,
                 height:36, padding:'0 10px', borderRadius:18, fontSize:16, cursor:'pointer',
                 border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
@@ -880,7 +890,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           partnerTyping={partnerTyping}
           interpreterActive={interpreterActive}
           setInterpreterActive={setInterpreterActive}
-          interpreter={null}
+          interpreter={interpreter}
           onClose={() => setShowVoiceCall(false)}
           onUpgradeToVideo={() => {
             setShowVoiceCall(false);

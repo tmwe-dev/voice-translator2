@@ -446,6 +446,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         <div style={{display:'flex', gap:8, width:'100%', maxWidth:400, marginBottom:16,
           padding:'4px', borderRadius:14, background:C.tabBg, border:`1px solid ${C.tabBorder}`}}>
           <button
+            aria-label="Le mie chat" role="tab" aria-selected={selectedTab === 0}
             onClick={() => setSelectedTab(0)}
             style={{flex:1, padding:'10px 12px', borderRadius:11, cursor:'pointer', fontFamily:FONT,
               fontSize:12, fontWeight:700, border:'none',
@@ -456,6 +457,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
             Le mie
           </button>
           <button
+            aria-label="Chat pubbliche" role="tab" aria-selected={selectedTab === 1}
             onClick={() => setSelectedTab(1)}
             style={{flex:1, padding:'10px 12px', borderRadius:11, cursor:'pointer', fontFamily:FONT,
               fontSize:12, fontWeight:700, border:'none',
@@ -584,6 +586,9 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         @keyframes vtDoorGlow {
           0%, 100% { filter: drop-shadow(0 16px 40px ${C.doorGlowShadow[0]}) drop-shadow(0 4px 12px rgba(0,0,0,0.25)); }
           50% { filter: drop-shadow(0 16px 48px ${C.doorGlowShadow[1]}) drop-shadow(0 6px 16px rgba(0,0,0,0.30)); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
     </div>

@@ -135,7 +135,7 @@ function VoiceCallOverlay({
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20,
       }}>
         {/* Mute */}
-        <button onClick={() => webrtc.toggleAudio()} style={{
+        <button aria-label={webrtc.audioEnabled ? 'Disattiva microfono' : 'Attiva microfono'} onClick={() => webrtc.toggleAudio()} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: webrtc.audioEnabled ? 'rgba(255,255,255,0.08)' : 'rgba(255,80,80,0.2)',
           border: '1px solid rgba(255,255,255,0.12)',
@@ -146,7 +146,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* Interpreter toggle */}
-        <button onClick={() => setInterpreterActive && setInterpreterActive(!interpreterActive)} style={{
+        <button aria-label={interpreterActive ? 'Disattiva interprete' : 'Attiva interprete'} onClick={() => setInterpreterActive && setInterpreterActive(!interpreterActive)} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: interpreterActive ? 'rgba(123,115,255,0.25)' : 'rgba(255,255,255,0.08)',
           border: `1px solid ${interpreterActive ? 'rgba(123,115,255,0.4)' : 'rgba(255,255,255,0.12)'}`,
@@ -156,7 +156,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* Upgrade to video */}
-        <button onClick={onUpgradeToVideo} style={{
+        <button aria-label="Passa a videochiamata" onClick={onUpgradeToVideo} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
@@ -166,7 +166,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* End call */}
-        <button onClick={() => { webrtc.disconnect(); onClose(); }} style={{
+        <button aria-label="Termina chiamata" onClick={() => { webrtc.disconnect(); onClose(); }} style={{
           width: 60, height: 60, borderRadius: '50%',
           background: 'linear-gradient(135deg, #ff4444, #cc0000)',
           border: 'none',
@@ -177,11 +177,14 @@ function VoiceCallOverlay({
         </button>
       </div>
 
-      {/* CSS animation for pulse rings */}
+      {/* CSS animation for pulse rings — respects prefers-reduced-motion */}
       <style>{`
         @keyframes voicePulse {
           0% { transform: scale(1); opacity: 0.4; }
           100% { transform: scale(1.4); opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
     </div>
