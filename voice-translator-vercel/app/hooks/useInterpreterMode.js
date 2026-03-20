@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createNoiseGate } from '../lib/noiseGate.js';
+import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
@@ -14,6 +15,7 @@ const CHUNK_DURATION = 3000; // 3 seconds
 
 export default function useInterpreterMode({
   webrtc, myLang, partnerLang, roomId, userToken, useOwnKeys,
+  startDucking, stopDucking,
 }) {
   const [active, setActive] = useState(false);
   const [mySubtitles, setMySubtitles] = useState([]);
@@ -29,6 +31,11 @@ export default function useInterpreterMode({
 
   // Keep refs in sync
   useEffect(() => { activeRef.current = active; }, [active]);
+
+  // Dedup: track recently processed message fingerprints to prevent duplicate audio/subtitles
+  const seenMsgsRef = useRef(new Set());
+  // Track subtitle timeout IDs for cleanup on unmount
+  const subtitleTimersRef = useRef([]);
 
   // Buffer for reassembling chunked audio parts
   const audioPartsRef = useRef({}); // { [id]: { parts: {}, total: number, ts: number } }
@@ -48,7 +55,7 @@ export default function useInterpreterMode({
     return () => clearInterval(interval);
   }, []);
 
-  // Play base64 audio helper
+  // Play base64 audio helper — activates ducking while playing
   const playBase64Audio = useCallback((base64Data) => {
     try {
       const audioBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
@@ -56,29 +63,54 @@ export default function useInterpreterMode({
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
       audio.volume = 0.9;
+      // Duck partner audio while interpreter speaks
+      startDucking?.();
       audio.play().catch(() => {});
-      audio.onended = () => URL.revokeObjectURL(url);
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        stopDucking?.();
+      };
+      audio.onerror = () => { stopDucking?.(); };
     } catch (e) {
       console.warn('[Interpreter] Failed to play audio:', e);
+      stopDucking?.();
     }
-  }, []);
+  }, [startDucking, stopDucking]);
 
   // Process incoming interpreter data from partner
   const handleInterpreterMessage = useCallback((msg) => {
     if (!msg) return;
 
     if (msg.type === 'interpreter-subtitle') {
+      // Dedup: skip if we already showed this exact subtitle recently
+      const fingerprint = `sub:${msg.text}:${msg.lang}`;
+      if (seenMsgsRef.current.has(fingerprint)) return;
+      seenMsgsRef.current.add(fingerprint);
+      // LRU: cap at 50 entries
+      if (seenMsgsRef.current.size > 50) {
+        seenMsgsRef.current.delete(seenMsgsRef.current.values().next().value);
+      }
+
       const sub = { text: msg.text, lang: msg.lang, ts: Date.now() };
       setPartnerSubtitles(prev => [...prev.slice(-20), sub]);
       setLastSubtitle(msg.text);
-      // Auto-clear after 8s
-      setTimeout(() => {
+      // Auto-clear after 8s — track timer for cleanup on unmount
+      const timerId = setTimeout(() => {
         setLastSubtitle(prev => prev === msg.text ? null : prev);
+        subtitleTimersRef.current = subtitleTimersRef.current.filter(id => id !== timerId);
       }, 8000);
+      subtitleTimersRef.current.push(timerId);
     }
 
     // Single audio message (fits in one DC frame)
     if (msg.type === 'interpreter-audio' && msg.data) {
+      // Dedup: skip if we already played this audio (first 40 chars as fingerprint)
+      const audioFp = `audio:${msg.data.substring(0, 40)}`;
+      if (seenMsgsRef.current.has(audioFp)) return;
+      seenMsgsRef.current.add(audioFp);
+      if (seenMsgsRef.current.size > 50) {
+        seenMsgsRef.current.delete(seenMsgsRef.current.values().next().value);
+      }
       playBase64Audio(msg.data);
     }
 
@@ -116,10 +148,9 @@ export default function useInterpreterMode({
       if (userToken) formData.append('userToken', userToken);
       if (roomId) formData.append('roomId', roomId);
 
-      const sttRes = await fetch('/api/transcribe', {
-        method: 'POST',
-        body: formData,
-      });
+      const sttRes = await apiCircuitBreaker.execute('interpreter-stt', () =>
+        fetch('/api/transcribe', { method: 'POST', body: formData })
+      );
 
       if (!sttRes.ok) { processingRef.current = false; return; }
       const { original: transcript } = await sttRes.json();
@@ -130,17 +161,19 @@ export default function useInterpreterMode({
       setMySubtitles(prev => [...prev.slice(-20), mySub]);
 
       // 2. Translate — /api/translate expects sourceLang/targetLang/userToken in JSON body
-      const translateRes = await fetch('/api/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: transcript,
-          sourceLang: myLang,
-          targetLang: partnerLang,
-          userToken: userToken || '',
-          roomId,
-        }),
-      });
+      const translateRes = await apiCircuitBreaker.execute('interpreter-translate', () =>
+        fetch('/api/translate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: transcript,
+            sourceLang: myLang,
+            targetLang: partnerLang,
+            userToken: userToken || '',
+            roomId,
+          }),
+        })
+      );
 
       if (!translateRes.ok) { processingRef.current = false; return; }
       const { translated } = await translateRes.json();
@@ -148,14 +181,16 @@ export default function useInterpreterMode({
 
       // 3. TTS — Generate audio of translation
       // /api/tts-edge expects langCode (not lang)
-      const ttsRes = await fetch('/api/tts-edge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: translated,
-          langCode: partnerLang,
-        }),
-      });
+      const ttsRes = await apiCircuitBreaker.execute('interpreter-tts', () =>
+        fetch('/api/tts-edge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: translated,
+            langCode: partnerLang,
+          }),
+        })
+      );
 
       if (!ttsRes.ok) { processingRef.current = false; return; }
       const ttsBlob = await ttsRes.blob();
@@ -286,6 +321,9 @@ export default function useInterpreterMode({
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       }
+      // Clear all pending subtitle timers
+      subtitleTimersRef.current.forEach(id => clearTimeout(id));
+      subtitleTimersRef.current = [];
     };
   }, []);
 

@@ -200,6 +200,8 @@ function HomeInner() {
     roomId: roomPolling.roomId,
     userToken: auth.userToken,
     useOwnKeys: auth.useOwnKeys,
+    startDucking: audio.startDucking,
+    stopDucking: audio.stopDucking,
   });
 
   // Sync interpreterRef so handleDirectMessage can access it without circular deps

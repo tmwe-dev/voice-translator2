@@ -36,6 +36,17 @@ async function handlePost(req) {
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
+    // Security: validate audio file size (max 25MB)
+    const MAX_AUDIO_SIZE = 25 * 1024 * 1024;
+    if (audioFile.size > MAX_AUDIO_SIZE) {
+      return NextResponse.json({ error: 'Audio file too large (max 25MB)' }, { status: 413 });
+    }
+
+    // Security: validate sourceLang format (e.g., "en", "zh-CN")
+    if (sourceLang && !/^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(sourceLang)) {
+      return NextResponse.json({ error: 'Invalid sourceLang format' }, { status: 400 });
+    }
+
     // Auth: need OpenAI for STT
     const { apiKey } = await resolveAuth({
       userToken: userToken || undefined,

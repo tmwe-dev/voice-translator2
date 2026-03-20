@@ -157,18 +157,10 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   }, [partnerVolume]);
 
   // ── Auto-mute partner audio when recording (prevents mic pickup of partner's voice) ──
+  // Uses muted property (not volume=0) to avoid de-sync if volume changes during recording
   useEffect(() => {
-    if (recording || isListening) {
-      // Save current volume and mute
-      partnerVolumeBeforeMuteRef.current = partnerVolume;
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.volume = 0;
-      }
-    } else {
-      // Restore volume when recording stops
-      if (remoteAudioRef.current) {
-        remoteAudioRef.current.volume = partnerVolumeBeforeMuteRef.current;
-      }
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.muted = !!(recording || isListening);
     }
   }, [recording, isListening]);
 
