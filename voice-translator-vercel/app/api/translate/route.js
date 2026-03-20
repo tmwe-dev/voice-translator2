@@ -11,6 +11,7 @@ import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supa
 import { validateOutput, MODEL_MAP, calcConfidence, getSimpleHash } from '../../lib/translateValidation.js';
 import { buildSystemPrompt, buildMessages } from '../../lib/translatePrompt.js';
 import { callLLM } from '../../lib/llmCaller.js';
+import { routeProvider } from '../../lib/providerRouter.js';
 
 export async function POST(req) {
   try {
@@ -54,6 +55,34 @@ export async function POST(req) {
         costEurCents: 0,
         cached: true
       });
+    }
+
+    // ── Smart Provider Routing: check if Asia provider is better for this pair ──
+    const providerRoute = routeProvider(sourceLang, targetLang);
+    let useAsiaProvider = false;
+
+    if (providerRoute.provider === 'asia' && providerRoute.confidence >= 0.85) {
+      // Try Qwen-MT for CJK pairs — faster and cheaper
+      try {
+        const { translateAsia } = await import('../../lib/translateAsia.js');
+        const asiaResult = await translateAsia(text, sourceLang, targetLang, {});
+        if (asiaResult?.translated) {
+          const asiaConfidence = calcConfidence(text, asiaResult.translated, sourceLang, targetLang);
+          const asiaValidation = validateOutput(text, asiaResult.translated, targetLang);
+          if (asiaValidation.valid) {
+            return NextResponse.json({
+              translated: asiaResult.translated,
+              confidence: asiaConfidence,
+              cost: asiaResult.cost || 0,
+              costEurCents: 0,
+              provider: asiaResult.provider || 'qwen',
+              cached: false
+            });
+          }
+        }
+      } catch (asiaErr) {
+        console.warn('[Translate] Asia provider failed, falling back to global:', asiaErr.message);
+      }
     }
 
     // Resolve model selection

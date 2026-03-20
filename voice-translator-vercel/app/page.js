@@ -14,6 +14,7 @@ import useContacts from './hooks/useContacts.js';
 import useWebRTC from './hooks/useWebRTC.js';
 import useInterpreterMode from './hooks/useInterpreterMode.js';
 import useConversationContext from './hooks/useConversationContext.js';
+import useLocalChat from './hooks/useLocalChat.js';
 
 // View components
 import WelcomeView from './components/WelcomeView.js';
@@ -32,6 +33,9 @@ import ContactsView from './components/ContactsView.js';
 import VoiceCloneView from './components/VoiceCloneView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import ConnectionQuality from './components/ConnectionQuality.js';
+import InterpreterView from './components/InterpreterView.js';
+import ChatActionsPanel from './components/ChatActionsPanel.js';
+import ProviderBadge from './components/ProviderBadge.js';
 
 
 export default function Home() {
@@ -152,6 +156,18 @@ function HomeInner() {
     conversationContext: convContext, // Rolling knowledge base for context-aware translation
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
+
+  // ── Local chat persistence (IndexedDB — WhatsApp model) ──
+  const localChat = useLocalChat({
+    roomId: roomPolling.roomId,
+    myName: roomPolling.verifiedNameRef?.current || prefs.name,
+    members: roomPolling.roomInfo?.members,
+    mode: roomPolling.roomInfo?.mode,
+    context: roomPolling.roomInfo?.context,
+  });
+
+  // ── Chat Actions panel state ──
+  const [showChatActions, setShowChatActions] = useState(false);
 
   // Handle incoming P2P messages via DataChannel
   const handleDirectMessage = useCallback((msg) => {
@@ -539,6 +555,13 @@ function HomeInner() {
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
+
+  // ── Persist incoming messages to IndexedDB ──
+  useEffect(() => {
+    if (roomPolling.messages?.length > 0) {
+      localChat.persistMessages(roomPolling.messages);
+    }
+  }, [roomPolling.messages]);
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
 
@@ -997,7 +1020,10 @@ function HomeInner() {
         if (sendDirectMessageRef.current && msgId) {
           try { sendDirectMessageRef.current({ type: 'msg-read', msgId }); } catch {}
         }
-      }} />
+      }}
+      showChatActions={showChatActions} setShowChatActions={setShowChatActions}
+      localChat={localChat}
+      ProviderBadge={ProviderBadge} />
   );
 
   if (view === 'history') return (

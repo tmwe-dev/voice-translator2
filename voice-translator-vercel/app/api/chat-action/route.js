@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { resolveAuth } from '../../lib/apiAuth.js';
-import { rateLimit } from '../../lib/rateLimit.js';
+import { checkRateLimit } from '../../lib/rateLimit.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
 
@@ -33,8 +33,8 @@ export async function POST(request) {
   try {
     // Rate limit: 5 per minute
     const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    const rl = await rateLimit(`chat-action:${ip}`, 5, 60);
-    if (!rl.ok) {
+    const rl = await checkRateLimit(`chat-action:${ip}`, 5, 60000);
+    if (!rl.allowed) {
       return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
     }
 

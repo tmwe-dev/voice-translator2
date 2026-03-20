@@ -6,6 +6,7 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDefaults.js';
+import { routeTTS } from '../../lib/ttsRouter.js';
 
 // ═══════════════════════════════════════════════
 // TTS with gpt-4o-mini-tts — STREAMING
@@ -61,6 +62,29 @@ async function handlePost(req) {
 
     const openai = new OpenAI({ apiKey });
     const lang2 = (langCode || '').replace(/-.*/, '');
+
+    // ── TTS Router: check if a better engine is available for this language ──
+    const ttsRoute = routeTTS(lang2, { hasElevenLabs: false, hasOpenAI: true });
+    // If CosyVoice is the best engine and DashScope is available, try it first
+    if (ttsRoute.engine === 'cosyvoice') {
+      try {
+        const { ttsCosyVoice } = await import('../../lib/ttsAsia.js');
+        const cosyResult = await ttsCosyVoice(text, langCode, {});
+        if (cosyResult?.audio) {
+          const audioBuffer = Buffer.from(cosyResult.audio);
+          return new NextResponse(audioBuffer, {
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'Content-Length': audioBuffer.length.toString(),
+              'Cache-Control': 'public, max-age=300',
+              'X-TTS-Engine': 'cosyvoice',
+            }
+          });
+        }
+      } catch (cosyErr) {
+        console.warn('[TTS] CosyVoice failed, falling back to OpenAI:', cosyErr.message);
+      }
+    }
 
     // ── Voice selection: user's choice > admin default per language > 'nova' ──
     const adminVoice = getOpenAIVoiceForLang(lang2);

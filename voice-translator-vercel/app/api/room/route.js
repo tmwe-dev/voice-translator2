@@ -4,7 +4,8 @@ import { sanitizeRoomId, sanitizeName, rateLimit, getClientIP } from '../../lib/
 import {
   resolveIdentity,
   handleCreate, handleJoin, handleHeartbeat, handleSpeaking,
-  handleChangeMode, handleChangeLang, handleWebrtcSignal, handleWebrtcPoll, handleCheck
+  handleChangeMode, handleChangeLang, handleWebrtcSignal, handleWebrtcPoll, handleCheck,
+  handleRaiseHand, handleGrantSpeak
 } from '../../lib/roomActions.js';
 
 // POST /api/room - Create, join, or manage a room
@@ -22,7 +23,7 @@ export async function POST(req) {
     const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
 
     // For actions that require identity, resolve once
-    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'webrtc-signal', 'webrtc-poll'];
+    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'webrtc-signal', 'webrtc-poll', 'raiseHand', 'grantSpeak'];
     let identity = null;
     if (needsIdentity.includes(action)) {
       identity = await resolveIdentity(roomSessionToken, name, roomId);
@@ -59,6 +60,12 @@ export async function POST(req) {
 
       case 'webrtc-poll':
         return handleWebrtcPoll({ roomId, identity });
+
+      case 'raiseHand':
+        return handleRaiseHand({ roomId, identity, raised: body.raised });
+
+      case 'grantSpeak':
+        return handleGrantSpeak({ roomId, identity, targetMember: body.targetMember });
 
       case 'check':
         return handleCheck({ roomId });

@@ -9,7 +9,9 @@ import MessageList from './MessageList.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconMoreVertical,
   IconCheck, IconSubtitles, IconClipboard, IconMusic, IconArchive, IconBattery,
   IconSwap, IconMic, IconStop, IconClose, IconSend, IconLock, IconRecord,
-  IconHome, IconMegaphone, IconSignal, IconSparkles, IconChevronDown } from './Icons.js';
+  IconHome, IconMegaphone, IconSignal, IconSparkles, IconChevronDown, IconBrainAI } from './Icons.js';
+import InterpreterView from './InterpreterView.js';
+import ChatActionsPanel from './ChatActionsPanel.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -26,7 +28,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
-  setLiveMode, interpreter, onMessageRead }) {
+  setLiveMode, interpreter, onMessageRead,
+  showChatActions, setShowChatActions, localChat, ProviderBadge }) {
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -359,6 +362,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconClipboard size={15}/>}</span>
                   <span>{L('exportConversation') || 'Esporta conversazione'}</span>
                 </button>
+                {/* Chat AI Actions */}
+                {messages.length >= 3 && (
+                  <button onClick={() => { setShowChatActions(true); setShowMoreMenu(false); }}
+                    style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
+                      background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
+                      fontSize:13, fontWeight:500, textAlign:'left'}}>
+                    <span style={{fontSize:15, width:24, textAlign:'center'}}><IconBrainAI size={15}/></span>
+                    <span>AI Actions</span>
+                  </button>
+                )}
                 {/* Audio Ducking */}
                 <div style={{padding:'8px 12px'}}>
                   <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
@@ -1107,6 +1120,43 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           </button>
         )}
       </div>
+
+      {/* ═══ Provider Badge ═══ */}
+      {ProviderBadge && partner && (
+        <div style={{position:'absolute', top:50, left:8, zIndex:10}}>
+          <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
+        </div>
+      )}
+
+      {/* ═══ Interpreter View Overlay ═══ */}
+      {interpreterActive && interpreter?.active && webrtc?.remoteStream && (
+        <InterpreterView
+          theme={theme}
+          remoteStream={webrtc.remoteStream}
+          mySubtitles={interpreter.mySubtitles || []}
+          partnerSubtitles={interpreter.partnerSubtitles || []}
+          latencyMs={0}
+          onClose={() => setInterpreterActive(false)}
+          partnerName={partner?.name || ''}
+          myLang={myLang}
+          partnerLang={partner?.lang || 'en'}
+        />
+      )}
+
+      {/* ═══ Chat Actions Panel Overlay ═══ */}
+      {showChatActions && (
+        <ChatActionsPanel
+          theme={theme}
+          messages={messages}
+          members={roomInfo?.members || []}
+          mode={roomMode}
+          domain={roomInfo?.context}
+          userToken={null}
+          lendingCode={null}
+          onClose={() => setShowChatActions(false)}
+          t={L}
+        />
+      )}
 
       <style>{`
         @keyframes vtPulse {
