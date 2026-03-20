@@ -1,7 +1,9 @@
 'use client';
-import { memo, useEffect, useRef, useCallback } from 'react';
+import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
+
+const QUICK_REACTIONS = ['\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D\uDC4D', '\uD83D\uDE4F', '\uD83D\uDD25'];
 
 /**
  * MessageList — Extracted from RoomView.js
@@ -41,7 +43,10 @@ const MessageList = memo(function MessageList({
   partnerSpeaking, partnerTyping, partnerLiveText,
   msgsEndRef, S, L,
   onMessageRead, // callback(msgId) when a partner's message becomes visible
+  onReaction, // callback(msgId, emoji) for sending reactions via P2P
 }) {
+  const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
+  const longPressTimerRef = useRef(null);
   // ── Read receipt: IntersectionObserver to detect when partner messages are on screen ──
   const observerRef = useRef(null);
   const readMsgIdsRef = useRef(new Set());
@@ -116,6 +121,22 @@ const MessageList = memo(function MessageList({
                   </div>
                 )}
               </div>
+              {/* Reactions display */}
+              {m._reactions && Object.keys(m._reactions).length > 0 && (
+                <div style={{display:'flex', gap:2, flexWrap:'wrap', marginTop:4}}>
+                  {Object.entries(m._reactions).map(([emoji, users]) => (
+                    <span key={emoji} style={{
+                      display:'inline-flex', alignItems:'center', gap:2,
+                      padding:'1px 6px', borderRadius:10,
+                      background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.1)',
+                      fontSize:13, cursor:'pointer',
+                    }}
+                    onClick={() => onReaction?.(m.id, emoji)}>
+                      {emoji}<span style={{fontSize:10, color:S.colors.textMuted}}>{users.length}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
               <div style={{display:'flex', alignItems:'center', gap:4, marginTop:2}}>
                 {hasTranslation && (
                   <button onClick={() => playMessage(m)}
@@ -125,6 +146,13 @@ const MessageList = memo(function MessageList({
                     {playingMsgId === m.id ? <IconVolume size={14}/> : <IconPlay size={14}/>}
                   </button>
                 )}
+                {/* React button */}
+                <button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id)}
+                  style={{padding:'2px 6px', borderRadius:8,
+                    background:'transparent', border:'none', color:S.colors.textMuted,
+                    fontSize:13, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
+                  +
+                </button>
                 {/* Delivery status: ✓ sent → ✓✓ delivered → ✓✓ green (read) */}
                 {isMine && (
                   <span style={{
@@ -137,6 +165,29 @@ const MessageList = memo(function MessageList({
                   </span>
                 )}
               </div>
+              {/* Reaction picker */}
+              {reactionPickerMsgId === m.id && (
+                <div style={{
+                  display:'flex', gap:4, marginTop:4, padding:'4px 8px',
+                  background:'rgba(0,0,0,0.5)', backdropFilter:'blur(12px)',
+                  borderRadius:16, border:'1px solid rgba(255,255,255,0.1)',
+                  animation:'vtSlideIn 0.15s ease-out',
+                }}>
+                  {QUICK_REACTIONS.map(emoji => (
+                    <button key={emoji}
+                      onClick={() => { onReaction?.(m.id, emoji); setReactionPickerMsgId(null); }}
+                      style={{
+                        background:'none', border:'none', fontSize:20, cursor:'pointer',
+                        padding:'2px 4px', borderRadius:8,
+                        transition:'transform 0.15s',
+                      }}
+                      onPointerDown={e => e.currentTarget.style.transform = 'scale(1.3)'}
+                      onPointerUp={e => e.currentTarget.style.transform = 'scale(1)'}
+                      onPointerLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                    >{emoji}</button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );

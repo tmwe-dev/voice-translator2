@@ -9,7 +9,7 @@ import MessageList from './MessageList.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconMoreVertical,
   IconCheck, IconSubtitles, IconClipboard, IconMusic, IconArchive, IconBattery,
   IconSwap, IconMic, IconStop, IconClose, IconSend, IconLock, IconRecord,
-  IconHome, IconMegaphone, IconSignal, IconSparkles, IconChevronDown, IconBrainAI } from './Icons.js';
+  IconHome, IconMegaphone, IconSignal, IconSparkles, IconChevronDown, IconBrainAI, IconHandRaise } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 
@@ -927,6 +927,12 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         S={S}
         L={L}
         onMessageRead={onMessageRead}
+        onReaction={(msgId, emoji) => {
+          // Send reaction via P2P DataChannel
+          if (webrtc?.sendDirectMessage) {
+            webrtc.sendDirectMessage({ type: 'msg-reaction', msgId, emoji, from: myName });
+          }
+        }}
       />
 
       {/* Captions Overlay — floating subtitle for partner live speech */}
@@ -1027,8 +1033,64 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         )}
 
         {roomMode === 'classroom' && !canTalk && (
-          <div style={{color:S.colors.textMuted, fontSize:12, padding:10, textAlign:'center'}}>
-            {<IconLock size={14}/>} {L('classroomDesc')}
+          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:10}}>
+            <button
+              onClick={async () => {
+                const body = {
+                  action: 'raiseHand', roomId,
+                  raised: true,
+                  roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
+                  name: myName,
+                };
+                try {
+                  await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                } catch {}
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 20px', borderRadius: 14,
+                background: 'rgba(255,165,0,0.15)', border: '1px solid rgba(255,165,0,0.3)',
+                color: '#FFA500', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                fontFamily: FONT, transition: 'all 0.2s',
+              }}
+            >
+              <IconHandRaise size={18} /> Alza la mano
+            </button>
+            <span style={{ color: S.colors.textMuted, fontSize: 12 }}>
+              <IconLock size={12} /> In attesa del permesso
+            </span>
+          </div>
+        )}
+        {/* Host: show who raised hands */}
+        {roomMode === 'classroom' && isHost && roomInfo?.members?.some(m => m.handRaised) && (
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: 6, padding: '6px 14px',
+            background: 'rgba(255,165,0,0.08)', borderRadius: 12, margin: '0 10px 6px',
+          }}>
+            <span style={{ fontSize: 12, color: '#FFA500', fontWeight: 600 }}>{'\u270B'} Mani alzate:</span>
+            {roomInfo.members.filter(m => m.handRaised).map(m => (
+              <button key={m.name}
+                onClick={async () => {
+                  const body = {
+                    action: 'grantSpeak', roomId,
+                    targetMember: m.name,
+                    roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
+                    name: myName,
+                  };
+                  try {
+                    await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  } catch {}
+                }}
+                style={{
+                  padding: '3px 10px', borderRadius: 8,
+                  background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
+                  color: '#22c55e', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: FONT,
+                }}
+              >
+                {'\u2713'} {m.name}
+              </button>
+            ))}
           </div>
         )}
 

@@ -36,6 +36,7 @@ import ConnectionQuality from './components/ConnectionQuality.js';
 import InterpreterView from './components/InterpreterView.js';
 import ChatActionsPanel from './components/ChatActionsPanel.js';
 import ProviderBadge from './components/ProviderBadge.js';
+import MondoView from './components/MondoView.js';
 
 
 export default function Home() {
@@ -193,6 +194,20 @@ function HomeInner() {
     // ── Read receipt received — update message status to 'read' ──
     if (msg?.type === 'msg-read' && msg.msgId) {
       roomPolling.markRead(msg.msgId);
+    }
+    // ── Reaction received — add emoji to message ──
+    if (msg?.type === 'msg-reaction' && msg.msgId && msg.emoji) {
+      roomPolling.setMessages(prev => prev.map(m => {
+        if (m.id === msg.msgId) {
+          const reactions = { ...(m._reactions || {}) };
+          const users = reactions[msg.emoji] || [];
+          if (!users.includes(msg.from)) {
+            reactions[msg.emoji] = [...users, msg.from];
+          }
+          return { ...m, _reactions: reactions };
+        }
+        return m;
+      }));
     }
     // ── Interpreter messages: subtitles + audio from partner ──
     if (msg?.type === 'interpreter-subtitle' || msg?.type === 'interpreter-audio' || msg?.type === 'interpreter-audio-part') {
@@ -562,6 +577,26 @@ function HomeInner() {
       localChat.persistMessages(roomPolling.messages);
     }
   }, [roomPolling.messages]);
+
+  // ── Flush offline queue when connection returns ──
+  useEffect(() => {
+    async function flushQueue() {
+      if (!navigator.onLine || !roomPolling.roomId) return;
+      try {
+        const { flushOfflineQueue } = await import('./lib/chatStorage.js');
+        const result = await flushQueue(async (msg) => {
+          await translation.sendTextMessage(msg.text || msg.original);
+        });
+        if (result.sent > 0) {
+          setStatus(`${result.sent} messaggi offline inviati`);
+          setTimeout(() => setStatus(''), 3000);
+        }
+      } catch {}
+    }
+    function onOnline() { flushQueue(); }
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, [roomPolling.roomId]);
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
 
@@ -1059,6 +1094,11 @@ function HomeInner() {
       pickDeviceContacts={contactsHook.pickDeviceContacts}
       hasDeviceContacts={contactsHook.hasDeviceContacts}
       setView={setView} status={status} theme={theme} />
+  );
+
+  if (view === 'mondo') return (
+    <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
+      onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }} />
   );
 
   if (view === 'voice-clone') return (

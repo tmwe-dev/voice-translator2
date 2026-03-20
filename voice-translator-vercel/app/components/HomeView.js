@@ -562,10 +562,22 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         {selectedTab === 1 && (
           <div style={{width:'100%', maxWidth:400, textAlign:'center', padding:'20px 14px',
             borderRadius:14, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}}>
-            <div style={{fontSize:14, color:C.textMuted, fontWeight:600, fontFamily:FONT}}>
-              Le chat pubbliche saranno disponibili presto
+            <div style={{fontSize:48, marginBottom:8}}>{'\uD83C\uDF0D'}</div>
+            <div style={{fontSize:16, color:C.textPrimary, fontWeight:700, fontFamily:FONT, marginBottom:8}}>
+              Mondo — Stanze Pubbliche
             </div>
-            <div style={{fontSize:11, color:C.textTertiary, marginTop:8, fontFamily:FONT}}>
+            <div style={{fontSize:13, color:C.textMuted, fontFamily:FONT, marginBottom:16}}>
+              Esplora e unisciti a conversazioni pubbliche da tutto il mondo
+            </div>
+            <button onClick={() => setView('mondo')}
+              style={{padding:'12px 24px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
+                background:'linear-gradient(135deg, #6C63FF 0%, #a855f7 100%)',
+                border:'none', color:'#fff', fontSize:15, fontWeight:700,
+                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                boxShadow:'0 4px 16px rgba(108,99,255,0.4)'}}>
+              {'\uD83C\uDF10'} Esplora Mondo
+            </button>
+            <div style={{fontSize:11, color:C.textTertiary, marginTop:12, fontFamily:FONT}}>
               Rimani in contatto con il tuo team
             </div>
           </div>

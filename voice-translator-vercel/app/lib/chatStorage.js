@@ -282,3 +282,64 @@ export async function getSetting(key) {
     req.onerror = () => reject(req.error);
   });
 }
+
+// ═══════════════════════════════════════════════
+// Offline Message Queue
+//
+// When user is offline, messages are queued locally.
+// When connection returns, queue is flushed via provided send function.
+// ═══════════════════════════════════════════════
+
+const OFFLINE_QUEUE_KEY = 'offline_queue';
+
+/**
+ * Queue a message for sending when back online
+ */
+export async function queueOfflineMessage(message) {
+  const queue = JSON.parse(await getSetting(OFFLINE_QUEUE_KEY) || '[]');
+  queue.push({ ...message, _queuedAt: Date.now() });
+  await saveSetting(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+  return queue.length;
+}
+
+/**
+ * Get all queued offline messages
+ */
+export async function getOfflineQueue() {
+  const raw = await getSetting(OFFLINE_QUEUE_KEY);
+  return JSON.parse(raw || '[]');
+}
+
+/**
+ * Clear the offline queue (after successful flush)
+ */
+export async function clearOfflineQueue() {
+  await saveSetting(OFFLINE_QUEUE_KEY, '[]');
+}
+
+/**
+ * Flush offline queue — sends all queued messages via provided function
+ * @param {Function} sendFn - async function(message) that sends a single message
+ * @returns {{ sent: number, failed: number }}
+ */
+export async function flushOfflineQueue(sendFn) {
+  const queue = await getOfflineQueue();
+  if (!queue.length) return { sent: 0, failed: 0 };
+
+  let sent = 0;
+  let failed = 0;
+  const remaining = [];
+
+  for (const msg of queue) {
+    try {
+      await sendFn(msg);
+      sent++;
+    } catch {
+      failed++;
+      remaining.push(msg);
+    }
+  }
+
+  await saveSetting(OFFLINE_QUEUE_KEY, JSON.stringify(remaining));
+  return { sent, failed };
+}
