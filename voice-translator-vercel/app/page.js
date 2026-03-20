@@ -807,6 +807,24 @@ function HomeInner() {
     } catch (e) { setStatus('Error: ' + e.message); }
   }
 
+  async function startChatWithContact(contact) {
+    try {
+      setStatus('...');
+      const room = await roomPolling.handleCreateRoom(
+        prefs.name, myLang, selectedMode, prefs.avatar,
+        selectedContext, selectedMode, '',
+        auth.isTrial, auth.isTopPro, auth.userAccount
+      );
+      roomInfoRef.current = room;
+      roomContextRef.current = { contextId: selectedContext, contextPrompt: CONTEXTS.find(c => c.id === selectedContext)?.prompt || '', description: '' };
+      setView('lobby');
+      setStatus('');
+      // Auto-copy invite link for the contact
+      const link = `${window.location.origin}?room=${room.roomId}`;
+      try { await navigator.clipboard.writeText(link); } catch {}
+    } catch (e) { setStatus('Error: ' + e.message); }
+  }
+
   async function handleJoinRoom() {
     if (!joinCode.trim()) return;
     // Unlock audio + mic early (must be in user gesture context)
@@ -901,7 +919,7 @@ function HomeInner() {
       handleCreateRoom={handleCreateRoom} setView={setView}
       theme={theme} setTheme={setTheme}
       contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
-      rejoinRoom={rejoinRoom} />
+      rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact} />
   );
 
   if (view === 'join') return (

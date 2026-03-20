@@ -232,7 +232,7 @@ const DoorSVG = ({ C }) => (
 
 const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView,
-  theme, setTheme, contacts, fetchContacts, rejoinRoom }) {
+  theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact }) {
 
   const langInfo = getLang(prefs.lang);
   const [showCreatePopup, setShowCreatePopup] = useState(false);
@@ -535,7 +535,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                       fontSize:11, fontWeight:700, border:`1px solid ${C.chataBtnBorder}`,
                       background:C.chataBtnBg, color:C.chataBtnColor,
                       WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}
-                      onClick={() => { /* TODO: start chat with contact */ }}>
+                      onClick={() => { vibrate(); if (startChatWithContact) startChatWithContact(contact); }}>
                       Chatta
                     </button>
                   </div>
