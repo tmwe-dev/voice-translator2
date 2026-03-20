@@ -3,14 +3,15 @@
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
 export const LANGS = [
+  // ── Core languages ──
   { code:'it', name:'Italiano', flag:'\u{1F1EE}\u{1F1F9}', speech:'it-IT' },
   { code:'th', name:'\u0E44\u0E17\u0E22 (Thai)', flag:'\u{1F1F9}\u{1F1ED}', speech:'th-TH' },
-  { code:'en', name:'English', flag:'\u{1F1EC}\u{1F1E7}', speech:'en-US' },
-  { code:'es', name:'Espa\u00F1ol', flag:'\u{1F1EA}\u{1F1F8}', speech:'es-ES' },
+  { code:'en', name:'English (US)', flag:'\u{1F1FA}\u{1F1F8}', speech:'en-US' },
+  { code:'es', name:'Espa\u00F1ol (Espa\u00F1a)', flag:'\u{1F1EA}\u{1F1F8}', speech:'es-ES' },
   { code:'fr', name:'Fran\u00E7ais', flag:'\u{1F1EB}\u{1F1F7}', speech:'fr-FR' },
   { code:'de', name:'Deutsch', flag:'\u{1F1E9}\u{1F1EA}', speech:'de-DE' },
-  { code:'pt', name:'Portugu\u00EAs', flag:'\u{1F1E7}\u{1F1F7}', speech:'pt-BR' },
-  { code:'zh', name:'\u4E2D\u6587', flag:'\u{1F1E8}\u{1F1F3}', speech:'zh-CN' },
+  { code:'pt', name:'Portugu\u00EAs (Brasil)', flag:'\u{1F1E7}\u{1F1F7}', speech:'pt-BR' },
+  { code:'zh', name:'\u4E2D\u6587 (\u7B80\u4F53)', flag:'\u{1F1E8}\u{1F1F3}', speech:'zh-CN' },
   { code:'ja', name:'\u65E5\u672C\u8A9E', flag:'\u{1F1EF}\u{1F1F5}', speech:'ja-JP' },
   { code:'ko', name:'\uD55C\uAD6D\uC5B4', flag:'\u{1F1F0}\u{1F1F7}', speech:'ko-KR' },
   { code:'ar', name:'\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag:'\u{1F1F8}\u{1F1E6}', speech:'ar-SA' },
@@ -28,6 +29,27 @@ export const LANGS = [
   { code:'ro', name:'Rom\u00E2n\u0103', flag:'\u{1F1F7}\u{1F1F4}', speech:'ro-RO' },
   { code:'hu', name:'Magyar', flag:'\u{1F1ED}\u{1F1FA}', speech:'hu-HU' },
   { code:'fi', name:'Suomi', flag:'\u{1F1EB}\u{1F1EE}', speech:'fi-FI' },
+  // ── Regional variants ──
+  { code:'en-GB', name:'English (UK)', flag:'\u{1F1EC}\u{1F1E7}', speech:'en-GB' },
+  { code:'es-MX', name:'Espa\u00F1ol (M\u00E9xico)', flag:'\u{1F1F2}\u{1F1FD}', speech:'es-MX' },
+  { code:'fr-CA', name:'Fran\u00E7ais (Canada)', flag:'\u{1F1E8}\u{1F1E6}', speech:'fr-CA' },
+  { code:'pt-PT', name:'Portugu\u00EAs (Portugal)', flag:'\u{1F1F5}\u{1F1F9}', speech:'pt-PT' },
+  { code:'zh-TW', name:'\u4E2D\u6587 (\u7E41\u9AD4)', flag:'\u{1F1F9}\u{1F1FC}', speech:'zh-TW' },
+  { code:'ar-EG', name:'\u0627\u0644\u0639\u0631\u0628\u064A\u0629 (\u0645\u0635\u0631)', flag:'\u{1F1EA}\u{1F1EC}', speech:'ar-EG' },
+  // ── New languages ──
+  { code:'uk', name:'\u0423\u043A\u0440\u0430\u0457\u043D\u0441\u044C\u043A\u0430', flag:'\u{1F1FA}\u{1F1E6}', speech:'uk-UA' },
+  { code:'da', name:'Dansk', flag:'\u{1F1E9}\u{1F1F0}', speech:'da-DK' },
+  { code:'nb', name:'Norsk Bokm\u00E5l', flag:'\u{1F1F3}\u{1F1F4}', speech:'nb-NO' },
+  { code:'he', name:'\u05E2\u05D1\u05E8\u05D9\u05EA', flag:'\u{1F1EE}\u{1F1F1}', speech:'he-IL' },
+  { code:'fil', name:'Filipino', flag:'\u{1F1F5}\u{1F1ED}', speech:'fil-PH' },
+  { code:'bg', name:'\u0411\u044A\u043B\u0433\u0430\u0440\u0441\u043A\u0438', flag:'\u{1F1E7}\u{1F1EC}', speech:'bg-BG' },
+  { code:'hr', name:'Hrvatski', flag:'\u{1F1ED}\u{1F1F7}', speech:'hr-HR' },
+  { code:'sk', name:'Sloven\u010Dina', flag:'\u{1F1F8}\u{1F1F0}', speech:'sk-SK' },
+  { code:'ca', name:'Catal\u00E0', flag:'\u{1F3F3}\u{FE0F}', speech:'ca-ES' },
+  { code:'bn', name:'\u09AC\u09BE\u0982\u09B2\u09BE', flag:'\u{1F1E7}\u{1F1E9}', speech:'bn-BD' },
+  { code:'ta', name:'\u0BA4\u0BAE\u0BBF\u0BB4\u0BCD', flag:'\u{1F1EE}\u{1F1F3}', speech:'ta-IN' },
+  { code:'sw', name:'Kiswahili', flag:'\u{1F1F0}\u{1F1EA}', speech:'sw-KE' },
+  { code:'af', name:'Afrikaans', flag:'\u{1F1FF}\u{1F1E6}', speech:'af-ZA' },
 ];
 
 export const VOICES = ['alloy','echo','fable','onyx','nova','shimmer'];

@@ -1,0 +1,192 @@
+'use client';
+// ═══════════════════════════════════════════════
+// ChatActionsPanel — AI-powered post-chat actions
+//
+// 5 actions: summary, report, analysis, advice, vocabulary
+// Fetches from /api/chat-action, displays result in modal.
+// ═══════════════════════════════════════════════
+
+import { memo, useState, useCallback } from 'react';
+import { CHAT_ACTIONS } from '../lib/chatActions.js';
+import getStyles from '../lib/styles.js';
+import { FONT } from '../lib/constants.js';
+
+function ChatActionsPanel({
+  theme = 'dark',
+  messages = [],
+  members = [],
+  mode,
+  domain,
+  userToken,
+  lendingCode,
+  onClose,
+  t = (k) => k,
+}) {
+  const s = getStyles(theme);
+  const [loading, setLoading] = useState(null); // action id being loaded
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+
+  const runAction = useCallback(async (actionId) => {
+    setLoading(actionId);
+    setError(null);
+    setResult(null);
+
+    try {
+      const res = await fetch('/api/chat-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: actionId,
+          messages,
+          members,
+          mode,
+          domain,
+          userToken,
+          lendingCode,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `Error ${res.status}`);
+      }
+
+      const data = await res.json();
+      setResult({ action: actionId, text: data.result, provider: data.provider });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(null);
+    }
+  }, [messages, members, mode, domain, userToken, lendingCode]);
+
+  const actionName = CHAT_ACTIONS.find(a => a.id === result?.action)?.name || '';
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9000,
+      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: FONT,
+    }} onClick={onClose}>
+      <div
+        style={{
+          background: s.cardBg, border: `1px solid ${s.cardBorder}`,
+          borderRadius: 20, padding: 24, width: '90%', maxWidth: 500,
+          maxHeight: '80vh', overflowY: 'auto',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
+        }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ color: s.textPrimary, fontSize: 18, fontWeight: 600, margin: 0 }}>
+            {result ? actionName : 'Chat Actions'}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', border: 'none', color: s.textSecondary,
+              fontSize: 20, cursor: 'pointer', padding: 4,
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background: 'rgba(255,59,48,0.15)', border: '1px solid rgba(255,59,48,0.3)',
+            borderRadius: 12, padding: '10px 14px', marginBottom: 16,
+            color: '#FF3B30', fontSize: 14,
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{
+              color: s.textPrimary, fontSize: 15, lineHeight: 1.6,
+              whiteSpace: 'pre-wrap',
+            }}>
+              {result.text}
+            </div>
+            <div style={{ marginTop: 12, fontSize: 12, color: s.textTertiary }}>
+              Provider: {result.provider}
+            </div>
+            <button
+              onClick={() => setResult(null)}
+              style={{
+                marginTop: 12, padding: '8px 16px',
+                background: s.accent1, color: '#fff', border: 'none',
+                borderRadius: 10, fontSize: 14, cursor: 'pointer',
+              }}
+            >
+              {'\u2190'} Back
+            </button>
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {!result && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {CHAT_ACTIONS.map(action => (
+              <button
+                key={action.id}
+                onClick={() => runAction(action.id)}
+                disabled={!!loading}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '14px 16px',
+                  background: loading === action.id ? s.accent1 : s.inputBg,
+                  border: `1px solid ${loading === action.id ? s.accent1 : s.inputBorder}`,
+                  borderRadius: 14, cursor: loading ? 'wait' : 'pointer',
+                  color: s.textPrimary, fontSize: 15, textAlign: 'left',
+                  transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+                  opacity: loading && loading !== action.id ? 0.5 : 1,
+                }}
+              >
+                <span style={{ fontSize: 22 }}>{action.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 500 }}>{t(action.nameKey) || action.name}</div>
+                  <div style={{ fontSize: 12, color: s.textTertiary, marginTop: 2 }}>
+                    {action.description}
+                  </div>
+                </div>
+                {loading === action.id && (
+                  <div style={{
+                    marginLeft: 'auto', width: 20, height: 20,
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#fff', borderRadius: '50%',
+                    animation: 'vtSpin 0.8s linear infinite',
+                  }} />
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Disabled state message */}
+        {messages.length < 3 && !result && (
+          <div style={{
+            marginTop: 12, fontSize: 13, color: s.textTertiary, textAlign: 'center',
+          }}>
+            Need at least 3 messages for analysis
+          </div>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes vtSpin { to { transform: rotate(360deg); } }
+      `}</style>
+    </div>
+  );
+}
+
+export default memo(ChatActionsPanel);

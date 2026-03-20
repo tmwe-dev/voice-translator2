@@ -4,8 +4,9 @@
 // All icons are inline SVG components with:
 // - currentColor fill (inherits from parent)
 // - Configurable size (default 20px)
-// - Clean, minimal line style (2px stroke)
+// - Clean, minimal thin line style (1.5px stroke)
 // - No emoji — professional look on all platforms
+// - Smooth transitions on all state changes
 // ═══════════════════════════════════════════════
 
 const d = 'none';
@@ -13,15 +14,22 @@ const s = 'currentColor';
 const r = 'round';
 
 // Helper: wraps an SVG path in a consistent container
-function I({ size = 20, children, style, ...props }) {
+function I({ size = 20, sw, children, style, ...props }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={s}
-      strokeWidth="2" strokeLinecap={r} strokeLinejoin={r}
-      style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle', ...style }} {...props}>
+      strokeWidth={sw || "1.5"} strokeLinecap={r} strokeLinejoin={r}
+      style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle', transition: 'all 0.2s ease', ...style }} {...props}>
       {children}
     </svg>
   );
 }
+
+// ── New icons for interpreter and AI features ──
+export function IconInterpreter(p) { return <I {...p}><path d="M4 4h7v7H4z"/><path d="M13 13h7v7h-7z"/><path d="M11 7.5h2.5V11"/><path d="M13 16.5h-2.5V13"/><circle cx="7.5" cy="7.5" r="1.5" fill={s} stroke={d}/><circle cx="16.5" cy="16.5" r="1.5" fill={s} stroke={d}/></I>; }
+export function IconWaveform(p) { return <I {...p}><line x1="4" y1="12" x2="4" y2="12"/><line x1="8" y1="8" x2="8" y2="16"/><line x1="12" y1="4" x2="12" y2="20"/><line x1="16" y1="8" x2="16" y2="16"/><line x1="20" y1="12" x2="20" y2="12"/></I>; }
+export function IconSubtitlesAlt(p) { return <I {...p}><rect x="2" y="4" width="20" height="16" rx="3"/><line x1="6" y1="14" x2="14" y2="14"/><line x1="6" y1="10" x2="18" y2="10"/></I>; }
+export function IconBrainAI(p) { return <I {...p}><path d="M12 2a7 7 0 0 1 5 2.18A5.5 5.5 0 0 1 21 9.5 5.5 5.5 0 0 1 17 14.5V22h-2v-4h-6v4H7V14.5A5.5 5.5 0 0 1 3 9.5 5.5 5.5 0 0 1 7 4.18 7 7 0 0 1 12 2z"/></I>; }
+export function IconHandRaise(p) { return <I {...p}><path d="M18 12.5V10a2 2 0 0 0-4 0v1.5"/><path d="M14 11V8a2 2 0 0 0-4 0v3"/><path d="M10 10.5V7a2 2 0 0 0-4 0v5.5"/><path d="M18 12.5a2 2 0 0 1 4 0v3.5a8 8 0 0 1-16 0v-3"/></I>; }
 
 // ── Navigation ──
 export const IconBack = ({ size }) => <I size={size}><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></I>;

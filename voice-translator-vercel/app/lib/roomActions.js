@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity } from './store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking } from './store.js';
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 
@@ -76,6 +76,30 @@ export async function handleChangeMode({ roomId, mode, identity }) {
     return NextResponse.json({ error: 'Only the host can change room mode' }, { status: 403 });
   }
   const room = await updateRoomMode(roomId, mode);
+  if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+  return NextResponse.json({ room });
+}
+
+// ── Action: raiseHand (classroom mode) ──
+export async function handleRaiseHand({ roomId, identity, raised }) {
+  if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+  if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  const { error } = await verifyMembership(roomId, identity);
+  if (error) return error;
+  const room = await setHandRaised(roomId, identity.name, raised !== false);
+  if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+  return NextResponse.json({ room });
+}
+
+// ── Action: grantSpeak (classroom mode — host only) ──
+export async function handleGrantSpeak({ roomId, identity, targetMember }) {
+  if (!roomId || !targetMember) return NextResponse.json({ error: 'roomId and targetMember required' }, { status: 400 });
+  if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  const currentRoom = await getRoom(roomId);
+  if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+  const isHost = identity.verified ? identity.role === 'host' : currentRoom.host === identity.name;
+  if (!isHost) return NextResponse.json({ error: 'Only the host can grant speaking' }, { status: 403 });
+  const room = await grantSpeaking(roomId, targetMember);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   return NextResponse.json({ room });
 }

@@ -5,6 +5,56 @@ import { FONT } from './constants.js';
 // 4 themes: dark, light, brown, orange
 // HIGH CONTRAST: no invisible grays
 // ========================================
+
+// ── Design Tokens (theme-independent) ──
+export const tokens = {
+  // Animation durations
+  duration: { fast: '0.15s', normal: '0.25s', slow: '0.4s' },
+  // Easings
+  easing: { ease: 'cubic-bezier(0.4,0,0.2,1)', easeOut: 'cubic-bezier(0,0,0.2,1)', spring: 'cubic-bezier(0.175,0.885,0.32,1.275)' },
+  // Shadows
+  shadow: {
+    xs: '0 1px 2px rgba(0,0,0,0.1)',
+    sm: '0 2px 4px rgba(0,0,0,0.15)',
+    md: '0 4px 12px rgba(0,0,0,0.2)',
+    lg: '0 8px 24px rgba(0,0,0,0.25)',
+    xl: '0 16px 48px rgba(0,0,0,0.3)',
+    glow: (color) => `0 0 20px ${color}40, 0 0 40px ${color}20`,
+    innerGlow: (color) => `inset 0 1px 0 ${color}15`,
+  },
+  // Blur
+  blur: { none: 'none', sm: 'blur(4px)', md: 'blur(12px)', lg: 'blur(24px)', xl: 'blur(40px)' },
+  // Spacing (px)
+  spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 },
+  // Border radius
+  radius: { xs: 6, sm: 10, md: 14, lg: 18, xl: 24, full: 999 },
+  // Focus styles
+  focus: (color) => ({
+    ring: `0 0 0 2px ${color}40`,
+    outline: `2px solid ${color}60`,
+  }),
+};
+
+// ── CSS Keyframes (inject once via style tag) ──
+export const keyframes = `
+  @keyframes vtSpin { to { transform: rotate(360deg); } }
+  @keyframes vtPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  @keyframes vtFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes vtSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes vtScaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+  @keyframes vtGlow { 0%,100% { box-shadow: 0 0 5px currentColor; } 50% { box-shadow: 0 0 20px currentColor; } }
+  @keyframes vtShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+  @keyframes vtWave { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.5); } }
+  @keyframes vtBreathe { 0%,100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.1); opacity: 1; } }
+  @keyframes vtRipple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.5); opacity: 0; } }
+  @keyframes vtRecordPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,59,48,0.4); } 50% { box-shadow: 0 0 0 12px rgba(255,59,48,0); } }
+  @keyframes vtConnecting { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes vtSubtitleIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes vtGlowBorder { 0%,100% { border-color: rgba(99,102,241,0.4); } 50% { border-color: rgba(139,92,246,0.8); } }
+  @keyframes vtFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  @keyframes vtTypewriter { from { width: 0; } to { width: 100%; } }
+`;
+
 export default function getStyles(theme = 'dark') {
   const isDark = theme === 'dark' || theme === 'brown' || theme === 'orange';
 
