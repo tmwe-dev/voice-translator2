@@ -22,7 +22,18 @@ function ChatActionsPanel({
   onClose,
   t = (k) => k,
 }) {
-  const s = getStyles(theme);
+  const _s = getStyles(theme);
+  const _c = _s.colors || {};
+  const s = {
+    textPrimary: _c.textPrimary || '#F2F4F7',
+    textSecondary: _c.textSecondary || 'rgba(242,244,247,0.90)',
+    textTertiary: _c.textTertiary || 'rgba(242,244,247,0.75)',
+    cardBg: _c.glassCard || 'rgba(12,16,30,0.65)',
+    cardBorder: _c.cardBorder || 'rgba(255,255,255,0.05)',
+    accent1: _c.accent1 || '#26D9B0',
+    inputBg: _c.inputBg || 'rgba(14,18,32,0.6)',
+    inputBorder: _c.inputBorder || 'rgba(255,255,255,0.07)',
+  };
   const [loading, setLoading] = useState(null); // action id being loaded
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);

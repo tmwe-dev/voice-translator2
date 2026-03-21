@@ -111,6 +111,8 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   }, []);
 
   // ═══ GET USER GPS POSITION when destination is set ═══
+  // NOTE: fetchRoute is defined later via useCallback — we call it via ref to avoid TDZ
+  const fetchRouteRef = useRef(null);
   useEffect(() => {
     if (!destCoords) {
       setUserPos(null);
@@ -125,7 +127,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
         lon: position.coords.longitude,
       };
       setUserPos(pos);
-      fetchRoute(pos.lat, pos.lon, destCoords.lat, destCoords.lon);
+      if (fetchRouteRef.current) fetchRouteRef.current(pos.lat, pos.lon, destCoords.lat, destCoords.lon);
     };
 
     const error = (err) => {
@@ -133,7 +135,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
     };
 
     navigator.geolocation.getCurrentPosition(success, error, { timeout: 10000 });
-  }, [destCoords, fetchRoute]);
+  }, [destCoords]);
 
   // ═══ SWAP LANGUAGES ═══
   const swapLangs = useCallback(() => {
@@ -271,6 +273,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
     }
     setRouteLoading(false);
   }, []);
+  fetchRouteRef.current = fetchRoute;
 
   // ═══ TRANSLATE TYPED MESSAGE ═══
   const sendTextMessage = useCallback(async () => {
