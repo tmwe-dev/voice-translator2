@@ -300,7 +300,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 display:'flex', alignItems:'center', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent'}}
                 onClick={() => setShowVoicePicker(!showVoicePicker)}
-                title="Voice">
+                title="Voice" aria-label="Seleziona voce">
                 <span style={{fontSize:13}}>{'🎤'}</span>
               </button>
               {showVoicePicker && (
@@ -331,7 +331,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               display:'flex', alignItems:'center', justifyContent:'center',
               WebkitTapHighlightColor:'transparent'}}
               onClick={() => setView('contacts')}
-              title="Contacts">
+              title="Contacts" aria-label="Contatti">
               <span style={{fontSize:14}}>{'👥'}</span>
             </button>
             {/* Settings button */}
@@ -339,7 +339,8 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               background:C.settingsBtnBg, border:`1px solid ${C.settingsBtnBorder}`,
               display:'flex', alignItems:'center', justifyContent:'center',
               WebkitTapHighlightColor:'transparent'}}
-              onClick={() => setView('settings')}>
+              onClick={() => setView('settings')}
+              aria-label="Impostazioni">
               <Icon name="settings" size={16} color={C.settingsIconColor} />
             </button>
           </div>
@@ -378,7 +379,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
                 {L('createRoom')}
               </div>
               <div style={{fontSize:11, color:C.textMuted, marginTop:3, fontFamily:FONT, letterSpacing:0.5}}>
-                Crea una nuova stanza o entra in una chat
+                Parla con chiunque nel mondo nella tua lingua
               </div>
             </div>
           </button>
@@ -557,14 +558,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               </div>
             )}
 
-            {/* Link to chat history */}
-            <button style={{width:'100%', padding:'12px 14px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
-              background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
-              color:C.textSecondary, fontSize:12, fontWeight:600,
-              WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}
-              onClick={() => { setView('history'); }}>
-              📜 Storico Chat
-            </button>
+            {/* Storico Chat rimosso — duplicato con "Cronologia" nel MainMenu */}
           </div>
         )}
 
