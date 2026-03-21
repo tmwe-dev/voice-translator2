@@ -170,10 +170,34 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
     } catch { return ''; }
   }, [sourceLang, targetLang, userToken]);
 
-  // ═══ TTS PLAY ═══
+  // ═══ TTS PLAY — Edge TTS (gratis) → OpenAI fallback ═══
   const playTTS = useCallback(async (text, lang) => {
     if (!text) return;
     setPlaying(true);
+    try {
+      // Prima prova Edge TTS (gratuito, nessun auth necessario)
+      const langCode = getLang(lang)?.speech || lang || 'en';
+      const edgeRes = await fetch('/api/tts-edge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, langCode, gender: 'female' }),
+      });
+      if (edgeRes.ok) {
+        const blob = await edgeRes.blob();
+        if (blob.size > 0) {
+          const url = URL.createObjectURL(blob);
+          if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+          const audio = new Audio(url);
+          audioRef.current = audio;
+          audio.volume = 1.0;
+          audio.play().catch(() => {});
+          audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); };
+          audio.onerror = () => { setPlaying(false); };
+          return;
+        }
+      }
+    } catch { /* Edge TTS failed, try OpenAI fallback */ }
+    // Fallback: OpenAI TTS
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -197,22 +221,25 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   }, [prefs?.voice, userToken]);
 
   // ═══ DESTINATION: Geocoding via OpenStreetMap Nominatim ═══
+  const [searchResults, setSearchResults] = useState([]); // Multiple results for user to pick
   const searchDestination = useCallback(async (query) => {
     if (!query || query.trim().length < 2) return;
     setDestLoading(true);
     setDestError('');
+    setSearchResults([]);
     try {
       const q = encodeURIComponent(query.trim());
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1`,
         { headers: { 'Accept-Language': targetLang || 'en' } }
       );
       if (!res.ok) throw new Error('Geocoding failed');
       const data = await res.json();
       if (data.length === 0) {
-        setDestError('Luogo non trovato');
+        setDestError('Luogo non trovato. Prova un indirizzo più specifico.');
         setDestCoords(null);
-      } else {
+      } else if (data.length === 1) {
+        // Solo un risultato → seleziona direttamente
         const place = data[0];
         setDestCoords({
           lat: parseFloat(place.lat),
@@ -220,7 +247,15 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
           displayName: place.display_name,
         });
         setDestError('');
-        setPhase('compose'); // → passa alla fase messaggio
+        setPhase('compose');
+      } else {
+        // Più risultati → mostra lista per scelta
+        setSearchResults(data.map(p => ({
+          lat: parseFloat(p.lat),
+          lon: parseFloat(p.lon),
+          displayName: p.display_name,
+          type: p.type || '',
+        })));
       }
     } catch {
       setDestError('Errore di ricerca');
@@ -228,6 +263,13 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
     }
     setDestLoading(false);
   }, [targetLang]);
+
+  const selectSearchResult = useCallback((result) => {
+    setDestCoords(result);
+    setSearchResults([]);
+    setDestError('');
+    setPhase('compose');
+  }, []);
 
   const clearDestination = useCallback(() => {
     setDestination('');
@@ -809,6 +851,22 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
             </div>
             {destError && (
               <div style={{ fontSize: 11, color: '#FF6584', marginTop: 6 }}>{destError}</div>
+            )}
+            {searchResults.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {searchResults.map((r, i) => (
+                  <button key={i} onClick={() => selectSearchResult(r)}
+                    style={{
+                      padding: '8px 10px', borderRadius: 10, cursor: 'pointer',
+                      background: C.inputBg || 'rgba(14,18,32,0.6)',
+                      border: `1px solid ${C.inputBorder || 'rgba(255,255,255,0.07)'}`,
+                      color: C.textPrimary || '#F2F4F7', fontSize: 12, textAlign: 'left',
+                      fontFamily: 'inherit', lineHeight: 1.4,
+                    }}>
+                    {r.displayName?.split(',').slice(0, 3).join(',')}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
         )}

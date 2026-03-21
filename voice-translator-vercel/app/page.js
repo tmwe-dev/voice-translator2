@@ -1248,7 +1248,20 @@ function HomeInner() {
   if (view === 'quickinvite') return (
     <Suspense fallback={<LazyFallback />}>
     <QuickInvite L={L} S={S} prefs={prefs} theme={theme} setView={setView}
-      handleCreateRoom={handleCreateRoom}
+      handleCreateRoom={async (overrideLang) => {
+        try {
+          setStatus('...');
+          const langToUse = overrideLang || myLang;
+          const room = await roomPolling.handleCreateRoom(
+            prefs.name, langToUse, selectedMode, prefs.avatar,
+            selectedContext, selectedMode, '',
+            auth.isTrial, auth.isTopPro, auth.userAccount
+          );
+          roomInfoRef.current = room;
+          setStatus('');
+          return room;
+        } catch (e) { setStatus('Error: ' + e.message); throw e; }
+      }}
       roomId={roomPolling.roomId}
       setViewAfterCreate={() => setView('lobby')} />
     </Suspense>

@@ -54,11 +54,11 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
     setGender(g);
     const autoVoice = VOICE_PRESETS[g]?.voice || 'nova';
     setVoice(autoVoice);
-    // Auto-crea stanza subito dopo selezione genere
+    // Auto-crea stanza subito dopo selezione genere, passando la lingua selezionata
     if (lang && !createdRoomId && !creating) {
       setCreating(true);
       try {
-        const room = await handleCreateRoom();
+        const room = await handleCreateRoom(lang);
         if (room?.id || room?.roomId) { setCreatedRoomId(room.id || room.roomId); setCreated(true); }
       } catch (e) { console.warn('[QuickInvite] Auto-create failed:', e); }
       setCreating(false);
@@ -153,7 +153,11 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
               const info = LANGS.find(l => l.code === code);
               const sel = code === lang;
               return (
-                <button key={code} onClick={() => { vibrate(); setLang(code); }}
+                <button key={code} onClick={() => {
+                    vibrate(); setLang(code);
+                    // Se la stanza è già creata, resettala — l'utente dovrà ritoccare il genere
+                    if (createdRoomId) { setCreatedRoomId(''); setCreated(false); setGender(''); }
+                  }}
                   style={{
                     padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
                     background: sel ? 'linear-gradient(135deg, #26D9B0, #1EB898)' : 'rgba(255,255,255,0.03)',
