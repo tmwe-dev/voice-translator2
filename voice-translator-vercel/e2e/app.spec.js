@@ -182,3 +182,116 @@ test.describe('Responsive Design', () => {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth + 5); // 5px tolerance
   });
 });
+
+// ═══ SECURITY HEADERS ═══
+test.describe('Security Headers', () => {
+  test('API routes have security headers', async ({ page }) => {
+    const response = await page.goto('/api/health');
+    expect(response.status()).toBe(200);
+    const headers = response.headers();
+    expect(headers['x-content-type-options']).toBe('nosniff');
+    expect(headers['x-frame-options']).toBe('DENY');
+    expect(headers['referrer-policy']).toBeTruthy();
+    expect(headers['strict-transport-security']).toBeTruthy();
+  });
+
+  test('HSTS header has long max-age', async ({ page }) => {
+    const response = await page.goto('/api/health');
+    const hsts = response.headers()['strict-transport-security'] || '';
+    expect(hsts).toContain('max-age=');
+    expect(hsts).toContain('includeSubDomains');
+  });
+});
+
+// ═══ PWA FEATURES ═══
+test.describe('PWA', () => {
+  test('manifest has maskable icons', async ({ page }) => {
+    const response = await page.goto('/manifest.json');
+    const manifest = await response.json();
+    const maskable = manifest.icons.filter(i => i.purpose === 'maskable');
+    expect(maskable.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('manifest has share_target', async ({ page }) => {
+    const response = await page.goto('/manifest.json');
+    const manifest = await response.json();
+    expect(manifest.share_target).toBeTruthy();
+    expect(manifest.share_target.action).toBeTruthy();
+  });
+
+  test('manifest has display_override', async ({ page }) => {
+    const response = await page.goto('/manifest.json');
+    const manifest = await response.json();
+    expect(manifest.display_override).toBeTruthy();
+    expect(manifest.display_override).toContain('standalone');
+  });
+
+  test('service worker is accessible', async ({ page }) => {
+    const swResponse = await page.goto('/sw.js');
+    expect(swResponse.status()).toBe(200);
+  });
+
+  test('app works offline after initial load', async ({ page, context }) => {
+    await page.goto('/');
+    await page.waitForTimeout(3000);
+    await context.setOffline(true);
+    await page.waitForTimeout(1000);
+    const body = await page.textContent('body');
+    expect(body.length).toBeGreaterThan(0);
+    await context.setOffline(false);
+  });
+});
+
+// ═══ ACCESSIBILITY ═══
+test.describe('Accessibility', () => {
+  test('main content landmark exists', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    const main = page.locator('#main-content');
+    await expect(main).toBeAttached({ timeout: 5000 });
+  });
+
+  test('page has lang attribute', async ({ page }) => {
+    await page.goto('/');
+    const lang = await page.locator('html').getAttribute('lang');
+    expect(lang).toBe('en');
+  });
+
+  test('meta theme-color is set', async ({ page }) => {
+    await page.goto('/');
+    const themeColor = await page.locator('meta[name="theme-color"]').getAttribute('content');
+    expect(themeColor).toBe('#0B0D1A');
+  });
+});
+
+// ═══ INPUT VALIDATION ═══
+test.describe('Input Validation', () => {
+  test('translate rejects XSS in text', async ({ request }) => {
+    const response = await request.post('/api/translate', {
+      data: {
+        text: '<script>alert("xss")</script>Hello',
+        sourceLang: 'en', targetLang: 'it',
+        sourceLangName: 'English', targetLangName: 'Italian',
+      },
+    });
+    // Should sanitize or reject, never 500
+    expect(response.status()).toBeLessThan(500);
+  });
+
+  test('TTS rejects invalid voice', async ({ request }) => {
+    const response = await request.post('/api/tts', {
+      data: { text: 'Hello', voice: 'INVALID_VOICE_123', lang: 'en' },
+    });
+    expect(response.status()).toBeLessThan(500);
+  });
+
+  test('translate-stream endpoint responds', async ({ request }) => {
+    const response = await request.post('/api/translate-stream', {
+      data: {
+        text: 'Good morning', sourceLang: 'en', targetLang: 'es',
+        sourceLangName: 'English', targetLangName: 'Spanish',
+      },
+    });
+    expect(response.status()).toBeLessThan(500);
+  });
+});

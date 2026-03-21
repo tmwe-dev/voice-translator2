@@ -35,7 +35,11 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=self, microphone=self, geolocation=()',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://api.stripe.com https://*.upstash.io wss://*; frame-src https://js.stripe.com https://accounts.google.com; media-src 'self' blob:",
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://api.stripe.com https://*.upstash.io https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://* ws://*; frame-src https://js.stripe.com https://accounts.google.com; media-src 'self' blob: data:; worker-src 'self' blob:",
+  // ── Cross-Origin isolation (allow SharedArrayBuffer for audio worklets) ──
+  'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+  // ── DNS prefetch control ──
+  'X-DNS-Prefetch-Control': 'on',
 };
 
 export function middleware(request) {

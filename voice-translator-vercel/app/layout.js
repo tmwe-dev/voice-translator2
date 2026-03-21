@@ -35,8 +35,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#0B0D1A" />
+        <meta name="theme-color" content="#0B0D1A" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#F5F5F7" media="(prefers-color-scheme: light)" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        {/* Preconnect to critical external APIs for faster first request */}
+        <link rel="preconnect" href="https://api.openai.com" />
+        <link rel="dns-prefetch" href="https://api.openai.com" />
+        <link rel="preconnect" href="https://api.deepgram.com" />
+        <link rel="dns-prefetch" href="https://api.deepgram.com" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96x96.png" />

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
   FREE_DAILY_LIMIT, THEMES, getLang, vibrate, formatCredits } from './lib/constants.js';
@@ -16,28 +16,41 @@ import useInterpreterMode from './hooks/useInterpreterMode.js';
 import useConversationContext from './hooks/useConversationContext.js';
 import useLocalChat from './hooks/useLocalChat.js';
 
-// View components
+// ═══ CRITICAL PATH: eagerly loaded components (always visible) ═══
 import WelcomeView from './components/WelcomeView.js';
-import AccountView from './components/AccountView.js';
-import CreditsView from './components/CreditsView.js';
-import ApiKeysView from './components/ApiKeysView.js';
-import SettingsView from './components/SettingsView.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
-import LobbyView from './components/LobbyView.js';
-import RoomView from './components/RoomView.js';
-import HistoryView from './components/HistoryView.js';
-import SummaryView from './components/SummaryView.js';
-import VoiceTestView from './components/VoiceTestView.js';
-import ContactsView from './components/ContactsView.js';
-import VoiceCloneView from './components/VoiceCloneView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
+import ToastContainer, { toast } from './components/Toast.js';
+import { setAppState, setRoomState, setAuthState } from './stores/appStore.js';
+
+// ═══ LAZY-LOADED: secondary views (loaded on demand → faster initial bundle) ═══
+const AccountView = lazy(() => import('./components/AccountView.js'));
+const CreditsView = lazy(() => import('./components/CreditsView.js'));
+const ApiKeysView = lazy(() => import('./components/ApiKeysView.js'));
+const SettingsView = lazy(() => import('./components/SettingsView.js'));
+const LobbyView = lazy(() => import('./components/LobbyView.js'));
+const RoomView = lazy(() => import('./components/RoomView.js'));
+const HistoryView = lazy(() => import('./components/HistoryView.js'));
+const SummaryView = lazy(() => import('./components/SummaryView.js'));
+const VoiceTestView = lazy(() => import('./components/VoiceTestView.js'));
+const ContactsView = lazy(() => import('./components/ContactsView.js'));
+const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
+const MondoView = lazy(() => import('./components/MondoView.js'));
+
+// ═══ Always-imported (lightweight, used within RoomView) ═══
 import ConnectionQuality from './components/ConnectionQuality.js';
 import InterpreterView from './components/InterpreterView.js';
 import ChatActionsPanel from './components/ChatActionsPanel.js';
 import ProviderBadge from './components/ProviderBadge.js';
-import MondoView from './components/MondoView.js';
-import ToastContainer, { toast } from './components/Toast.js';
+
+// ═══ Lazy loading fallback ═══
+const LazyFallback = () => (
+  <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#0B0D1A'}}>
+    <div style={{width:32,height:32,borderRadius:'50%',border:'3px solid rgba(108,99,255,0.2)',borderTopColor:'#6C63FF',animation:'vtSpin 0.8s linear infinite'}} />
+    <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
+  </div>
+);
 
 
 export default function Home() {
@@ -274,6 +287,24 @@ function HomeInner() {
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomPolling.roomInfo; }, [roomPolling.roomInfo]);
   useEffect(() => { roomIdRef.current = roomPolling.roomId; }, [roomPolling.roomId]);
+
+  // ═══ STORE BRIDGE: sync local state → Zustand-lite stores ═══
+  // This allows new components to read from stores instead of prop-drilling
+  useEffect(() => { setAppState({ view, theme, prefs, isOnline: navigator.onLine }); }, [view, theme, prefs]);
+  useEffect(() => {
+    setRoomState({
+      roomId: roomPolling.roomId, roomInfo: roomPolling.roomInfo,
+      messages: roomPolling.messages, members: roomPolling.roomInfo?.members || [],
+      isConnected: roomPolling.partnerConnected,
+    });
+  }, [roomPolling.roomId, roomPolling.roomInfo, roomPolling.messages, roomPolling.partnerConnected]);
+  useEffect(() => {
+    setAuthState({
+      userToken: auth.userToken, tier: auth.isTopPro ? 'TOP_PRO' : auth.isTrial ? 'FREE' : 'PRO',
+      credits: auth.creditBalance, isAuthenticated: !!auth.userToken,
+      user: auth.userAccount, email: auth.authEmail,
+    });
+  }, [auth.userToken, auth.isTopPro, auth.isTrial, auth.creditBalance, auth.userAccount]);
 
 
   // =============================================
@@ -1008,26 +1039,33 @@ function HomeInner() {
   );
 
   if (view === 'account') return (
+    <Suspense fallback={<LazyFallback />}>
     <AccountView L={L} S={S} authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
       authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
       authTestCode={auth.authTestCode} sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
       loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
       pendingReferralCode={auth.pendingReferralCode}
       setAuthStep={auth.setAuthStep} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+    </Suspense>
   );
 
   if (view === 'credits') return (
+    <Suspense fallback={<LazyFallback />}>
     <CreditsView L={L} S={S} creditBalance={auth.creditBalance} buyCredits={auth.buyCredits}
       authLoading={auth.authLoading} userAccount={auth.userAccount} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+    </Suspense>
   );
 
   if (view === 'apikeys') return (
+    <Suspense fallback={<LazyFallback />}>
     <ApiKeysView L={L} S={S} apiKeyInputs={auth.apiKeyInputs} setApiKeyInputs={auth.setApiKeyInputs}
       saveUserApiKeys={auth.saveUserApiKeys} authLoading={auth.authLoading} userAccount={auth.userAccount}
       setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+    </Suspense>
   );
 
   if (view === 'settings') return (
+    <Suspense fallback={<LazyFallback />}>
     <SettingsView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} setView={setView}
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} setIsTopPro={auth.setIsTopPro} useOwnKeys={auth.useOwnKeys}
       apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL} elevenLabsVoices={auth.elevenLabsVoices}
@@ -1037,6 +1075,7 @@ function HomeInner() {
       creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed}
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       setClonedVoiceId={auth.setClonedVoiceId} setClonedVoiceName={auth.setClonedVoiceName} />
+    </Suspense>
   );
 
   if (view === 'home') return (
@@ -1059,12 +1098,15 @@ function HomeInner() {
   );
 
   if (view === 'lobby') return (
+    <Suspense fallback={<LazyFallback />}>
     <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
       leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
+    </Suspense>
   );
 
   if (view === 'room') return (
+    <Suspense fallback={<LazyFallback />}>
     <RoomView L={L} S={S} prefs={prefs} myLang={myLang} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
       isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
@@ -1104,30 +1146,38 @@ function HomeInner() {
       showChatActions={showChatActions} setShowChatActions={setShowChatActions}
       localChat={localChat}
       ProviderBadge={ProviderBadge} />
+    </Suspense>
   );
 
   if (view === 'history') return (
+    <Suspense fallback={<LazyFallback />}>
     <HistoryView L={L} S={S} prefs={prefs} convHistory={convHistory}
       viewConversation={viewConversation} setView={setView} status={status} theme={theme} setTheme={setTheme}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+    </Suspense>
   );
 
   if (view === 'summary') return (
+    <Suspense fallback={<LazyFallback />}>
     <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
       shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status} theme={theme} setTheme={setTheme}
       verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+    </Suspense>
   );
 
   if (view === 'voicetest') return (
+    <Suspense fallback={<LazyFallback />}>
     <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
       isTrial={auth.isTrial} isTopPro={auth.isTopPro} useOwnKeys={auth.useOwnKeys}
       apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL}
       elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
       setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
       userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
+    </Suspense>
   );
 
   if (view === 'contacts') return (
+    <Suspense fallback={<LazyFallback />}>
     <ContactsView L={L} S={S} prefs={prefs}
       contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
       inviteCode={contactsHook.inviteCode} creditBalance={auth.creditBalance}
@@ -1139,14 +1189,18 @@ function HomeInner() {
       pickDeviceContacts={contactsHook.pickDeviceContacts}
       hasDeviceContacts={contactsHook.hasDeviceContacts}
       setView={setView} status={status} theme={theme} />
+    </Suspense>
   );
 
   if (view === 'mondo') return (
+    <Suspense fallback={<LazyFallback />}>
     <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
       onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }} />
+    </Suspense>
   );
 
   if (view === 'voice-clone') return (
+    <Suspense fallback={<LazyFallback />}>
     <VoiceCloneView L={L} S={S} prefs={prefs}
       userToken={auth.userToken} userTokenRef={auth.userTokenRef}
       setView={setView} creditBalance={auth.creditBalance} theme={theme}
@@ -1155,6 +1209,7 @@ function HomeInner() {
         auth.setClonedVoiceName(name);
         auth.refreshBalance();
       }} />
+    </Suspense>
   );
 
   return null;

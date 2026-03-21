@@ -92,10 +92,43 @@
   "categories": ["productivity", "utilities", "communication", "business"],
   "prefer_related_applications": false,
   "handle_links": "preferred",
+  "display_override": ["standalone", "window-controls-overlay", "minimal-ui"],
   "launch_handler": {
     "client_mode": "navigate-existing"
   },
   "edge_side_panel": {
     "preferred_width": 400
-  }
+  },
+  "share_target": {
+    "action": "/?source=share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "screenshots": [
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "VoiceTranslate Home Screen"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "VoiceTranslate Mobile View"
+    }
+  ],
+  "related_applications": [],
+  "protocol_handlers": [
+    {
+      "protocol": "web+voicetranslate",
+      "url": "/?room=%s"
+    }
+  ]
 }
