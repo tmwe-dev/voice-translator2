@@ -460,8 +460,6 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
                   Voci AI premium, ElevenLabs, traduzioni illimitate
                 </div>
               </div>
-
-              })}
             </div>
 
             {/* CTA Button — FREE FOR ALL: sempre visibile */}
