@@ -259,10 +259,8 @@ async function handleGet(req) {
           apiKey = user.apiKeys.elevenlabs;
         }
       }
-    } else if (source !== 'testcenter') {
-      // No token and not test center — reject
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
+    // FREE ACCESS MODE — allow all users to browse voices
 
     if (!apiKey) {
       return NextResponse.json({ error: 'No ElevenLabs API key' }, { status: 400 });

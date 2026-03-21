@@ -24,14 +24,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
   const [deletingVoice, setDeletingVoice] = useState(false);
   const [previewingClone, setPreviewingClone] = useState(false);
 
-  // Lending state
-  const [showLending, setShowLending] = useState(false);
-  const [lendingTokens, setLendingTokens] = useState([]);
-  const [lendingLoading, setLendingLoading] = useState(false);
-  const [lendingType, setLendingType] = useState('time');
-  const [lendingDuration, setLendingDuration] = useState(24);
-  const [lendingBudget, setLendingBudget] = useState(5000);
-  const [lendingResult, setLendingResult] = useState(null);
+  // Auto-load ref for ElevenLabs voices
+  const loadVoicesTriggered = useRef(false);
 
   const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
   const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
@@ -133,16 +127,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
     setPlayingVoice(null);
   }, [playingVoice, prefs.lang, userTokenRef, stopAudio]);
 
-  // API key status helpers
-  const hasOpenAI = !!(apiKeyInputs?.openai?.trim());
-  const hasAnthropic = !!(apiKeyInputs?.anthropic?.trim());
-  const hasGemini = !!(apiKeyInputs?.gemini?.trim());
-  const hasElevenLabs = !!(apiKeyInputs?.elevenlabs?.trim());
-  const keyCount = [hasOpenAI, hasAnthropic, hasGemini, hasElevenLabs].filter(Boolean).length;
-
-  // Free usage
-  const freePercent = Math.min(100, Math.round((freeCharsUsed || 0) / FREE_DAILY_LIMIT * 100));
-  const freeCharsLeft = Math.max(0, FREE_DAILY_LIMIT - (freeCharsUsed || 0));
+  // Removed: API key status helpers, free usage counters (no longer needed in free-for-all mode)
 
   async function handleRefresh() {
     setRefreshing(true);
@@ -170,134 +155,24 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
         </div>
 
         {/* ══════════════════════════════════════════════════
-            ACCOUNT STATUS — FREE FOR ALL
+            ACCOUNT STATUS — compact
            ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400, marginBottom:4, borderRadius:20,
+        <div style={{width:'100%', maxWidth:400, marginBottom:4, borderRadius:16,
           background:S.colors.accent1Bg, border:'1px solid ' + S.colors.accent1Border,
-          overflow:'hidden'}}>
-
-          {/* Status header — simplified for free-for-all */}
-          <div style={{padding:'16px 18px 12px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-            <div style={{display:'flex', alignItems:'center', gap:10}}>
-              <div style={{width:36, height:36, borderRadius:12,
-                background: 'linear-gradient(135deg, rgba(0,255,148,0.15), rgba(38,217,176,0.15))',
-                display:'flex', alignItems:'center', justifyContent:'center', fontSize: 18}}>
-                <IconStar size={18} color={S.colors.goldAccent} />
-              </div>
-              <div>
-                <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary}}>
-                  Tutto Gratuito e Illimitato
-                </div>
-                <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:1}}>
-                  {userAccount?.email || (L('startFreeDesc') || 'Voci AI premium, traduzioni illimitate')}
-                </div>
-              </div>
+          padding:'14px 18px', display:'flex', alignItems:'center', gap:12}}>
+          <div style={{width:36, height:36, borderRadius:12,
+            background: 'linear-gradient(135deg, rgba(0,255,148,0.15), rgba(38,217,176,0.15))',
+            display:'flex', alignItems:'center', justifyContent:'center'}}>
+            <IconCheckCircle size={18} color={S.colors.accent1} />
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary}}>
+              {userAccount?.email ? userAccount.email : (L('freeForAll') || 'Accesso Gratuito')}
+            </div>
+            <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:1}}>
+              {L('allFeaturesUnlocked') || 'Traduzioni, voci AI premium, ElevenLabs'}
             </div>
           </div>
-
-          {/* ── Usage info — FREE FOR ALL ── */}
-          {isGuest ? (
-            <div style={{padding:'0 18px 16px'}}>
-              <div style={{fontSize:11, color:S.colors.textSecondary, lineHeight:1.5, marginBottom:8}}>
-                <IconStar size={12} style={{display:'inline-block', marginRight:6, verticalAlign:'middle'}} /> Voci AI premium, ElevenLabs, traduzioni illimitate — tutto gratis per tutti.
-              </div>
-              <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
-                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                background:S.colors.accent2Bg, border:'1px solid ' + S.colors.accent2Border,
-                color:S.colors.accent2, display:'flex', alignItems:'center', gap:6}}
-                onClick={() => setView('apikeys')}>
-                <Icon name="key" size={14} color={S.colors.accent2} />
-                Configura chiavi API
-              </button>
-            </div>
-          ) : (
-            /* PRO: credits or own-keys status */
-            <div style={{padding:'0 18px 16px'}}>
-              {useOwnKeys ? (
-                /* Own API Keys status */
-                <div>
-                  <div style={{display:'flex', flexWrap:'wrap', gap:8, marginBottom:8}}>
-                    {[
-                      { name:'OpenAI', ok:hasOpenAI, required:true },
-                      { name:'Anthropic', ok:hasAnthropic },
-                      { name:'Gemini', ok:hasGemini },
-                      { name:'ElevenLabs', ok:hasElevenLabs },
-                    ].map(k => (
-                      <div key={k.name} style={{display:'flex', alignItems:'center', gap:5, padding:'4px 10px',
-                        borderRadius:8, fontSize:11, fontWeight:600,
-                        background: k.ok ? S.colors.accent4Bg : S.colors.overlayBg,
-                        border: k.ok ? '1px solid ' + S.colors.accent4Border : '1px solid ' + S.colors.overlayBorder,
-                        color: k.ok ? S.colors.accent4 : S.colors.textTertiary}}>
-                        <span style={{fontSize:12}}>{k.ok ? '\u2713' : '\u2715'}</span>
-                        {k.name}
-                        {k.required && !k.ok && <span style={{fontSize:9, color:S.colors.accent3}}>*</span>}
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{display:'flex', alignItems:'center', gap:8, marginTop:6}}>
-                    <span style={{fontSize:10, fontWeight:700, padding:'3px 10px', borderRadius:6,
-                      background: hasOpenAI ? S.colors.accent4Bg : S.colors.accent3Bg,
-                      border: hasOpenAI ? '1px solid ' + S.colors.accent4Border : '1px solid ' + S.colors.accent3Border,
-                      color: hasOpenAI ? S.colors.accent4 : S.colors.accent3}}>
-                      {hasOpenAI ? (L('ready') || 'Ready') : (L('incomplete') || 'Incomplete')}
-                    </span>
-                    <span style={{fontSize:11, color:S.colors.textSecondary}}>
-                      {keyCount > 0
-                        ? `${keyCount} key${keyCount > 1 ? 's' : ''} ${L('configured') || 'configurate'}`
-                        : L('noKeysConfigured') || 'Nessuna chiave configurata'}
-                    </span>
-                  </div>
-                  {!hasOpenAI && (
-                    <div style={{fontSize:10, color:S.colors.accent3, marginTop:4}}>
-                      {L('openaiRequired') || 'OpenAI key richiesta per traduzione e voci AI'}
-                    </div>
-                  )}
-                  <button style={{marginTop:8, padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
-                    cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                    background:S.colors.accent2Bg, border:'1px solid ' + S.colors.accent2Border,
-                    color:S.colors.accent2, display:'flex', alignItems:'center', gap:6}}
-                    onClick={() => setView('apikeys')}>
-                    <Icon name="key" size={14} color={S.colors.accent2} />
-                    {L('manageKeys') || 'Gestisci chiavi API'}
-                  </button>
-                </div>
-              ) : (
-                /* Platform credits */
-                <div>
-                  <div style={{display:'flex', alignItems:'baseline', gap:8, marginBottom:4}}>
-                    <span style={{fontSize:24, fontWeight:800,
-                      color: creditBalance > 50 ? S.colors.accent4 : creditBalance > 0 ? S.colors.goldAccent : S.colors.accent3}}>
-                      {formatCredits(creditBalance)}
-                    </span>
-                    <span style={{fontSize:11, color:S.colors.textTertiary}}>
-                      {L('credit')}
-                    </span>
-                  </div>
-                  <div style={{fontSize:11, color:S.colors.textSecondary, marginBottom:8}}>
-                    ~{Math.floor(creditBalance / 0.5)} {L('messagesRemaining') || 'messaggi rimanenti'}
-                  </div>
-                  <div style={{display:'flex', gap:8}}>
-                    <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
-                      cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                      background:S.colors.accent1Bg, border:'1px solid ' + S.colors.accent1Border,
-                      color:S.colors.accent1, display:'flex', alignItems:'center', gap:5}}
-                      onClick={() => setView('credits')}>
-                      <Icon name="zap" size={14} color={S.colors.accent1} />
-                      {L('recharge')}
-                    </button>
-                    <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
-                      cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
-                      background:S.colors.accent2Bg, border:'1px solid ' + S.colors.accent2Border,
-                      color:S.colors.accent2, display:'flex', alignItems:'center', gap:5}}
-                      onClick={() => setView('apikeys')}>
-                      <Icon name="key" size={14} color={S.colors.accent2} />
-                      {L('useOwnKeysBtn') || 'Usa API personali'}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
         </div>
 
         {/* ══════════════════════════════════════════════════
@@ -428,351 +303,12 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             </button>
           </div>
 
-          {/* ══════════════════════════════════════════════════
-              AI TRANSLATION MODEL SELECTOR
-             ══════════════════════════════════════════════════ */}
-          {!isGuest && (() => {
-            // Filter models: own-key users see all models for which they have keys
-            // Platform users only see gpt-4o-mini (default)
-            const availableModels = AI_MODELS.filter(m => {
-              if (!m.ownKeyOnly) return true;
-              if (!useOwnKeys) return false;
-              if (m.provider === 'openai') return hasOpenAI;
-              if (m.provider === 'anthropic') return hasAnthropic;
-              if (m.provider === 'gemini') return hasGemini;
-              return false;
-            });
-
-            const PROVIDER_ICONS = { openai:'\u26A1', anthropic:'\u{1F9E0}', gemini:'\u2728' };
-
-            return (
-              <div style={S.field}>
-                <div style={S.label}>{L('aiTranslationModel') || 'Modello AI traduzione'}</div>
-                <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:8}}>
-                  {useOwnKeys
-                    ? (L('aiModelHintOwnKeys') || 'Scegli il motore AI \u2022 Usa le tue API keys')
-                    : (L('aiModelHint') || 'Scegli il motore di traduzione AI')}
-                </div>
-                <div style={{display:'flex', flexDirection:'column', gap:6}}>
-                  {availableModels.map(m => {
-                    const isSelected = (prefs.aiModel || 'gpt-4o-mini') === m.id;
-                    return (
-                      <button key={m.id} onClick={() => setPrefs({...prefs, aiModel: m.id})}
-                        style={{display:'flex', alignItems:'center', gap:10,
-                          padding:'10px 14px', borderRadius:14, cursor:'pointer',
-                          background: isSelected ? S.colors.accent1Bg : S.colors.overlayBg,
-                          border: isSelected ? '1.5px solid ' + S.colors.accent1Border : '1.5px solid ' + S.colors.overlayBorder,
-                          fontFamily:FONT, WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
-                        <div style={{width:32, height:32, borderRadius:10, flexShrink:0,
-                          background: isSelected ? S.colors.accent1Bg : S.colors.overlayBg,
-                          border: isSelected ? '1.5px solid ' + S.colors.accent1Border : '1.5px solid ' + S.colors.overlayBorder,
-                          display:'flex', alignItems:'center', justifyContent:'center'}}>
-                          <span style={{fontSize:14}}>{PROVIDER_ICONS[m.provider] || '\u26A1'}</span>
-                        </div>
-                        <div style={{flex:1, textAlign:'left'}}>
-                          <div style={{fontSize:14, fontWeight: isSelected ? 700 : 500,
-                            color: isSelected ? S.colors.accent1 : S.colors.textSecondary, letterSpacing:-0.2}}>
-                            {m.name}
-                          </div>
-                          <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:1}}>
-                            {m.desc} {'\u2022'} {m.cost}
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <div style={{width:24, height:24, borderRadius:12,
-                            background:S.colors.accent1Bg, border:'1.5px solid ' + S.colors.accent1Border,
-                            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                            <span style={{fontSize:12, color:S.colors.accent1}}>{'\u2713'}</span>
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {useOwnKeys && !hasAnthropic && !hasGemini && (
-                  <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:8, lineHeight:1.4}}>
-                    {L('addMoreKeysHint') || 'Aggiungi chiavi Anthropic o Gemini per sbloccare altri modelli AI'}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* ══════════════════════════════════════════════════
-              FREE TRANSLATION SERVICES
-             ══════════════════════════════════════════════════ */}
-          {(() => {
-            const tm = prefs.translationMode || 'standard';
-
-            const updateMode = (mode) => {
-              setPrefs({ ...prefs, translationMode: mode });
-              savePrefs({ ...prefs, translationMode: mode });
-            };
-            const updateGender = (g) => {
-              setPrefs({ ...prefs, edgeTtsVoiceGender: g });
-              savePrefs({ ...prefs, edgeTtsVoiceGender: g });
-            };
-
-            return (
-              <div style={S.field}>
-                <div style={{...S.label, display:'flex', alignItems:'center', gap:6}}><IconGlobe size={14} style={{color:S.colors.textMuted}} /> {L('translationServices') || 'Servizi di Traduzione (Free)'}</div>
-                <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:10}}>
-                  {L('translationServicesHint') || 'Traduzione automatica gestita dal sistema: Microsoft Translator (primario) + Google Translate (fallback).'}
-                </div>
-
-                {/* Provider info (read-only) */}
-                <div style={{display:'flex', flexDirection:'column', gap:4, marginBottom:12}}>
-                  <div style={{
-                    display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
-                    background: S.colors.accent1Bg, borderRadius:8, fontSize:12,
-                  }}>
-                    <span style={{width:18, textAlign:'center'}}>1.</span>
-                    <span style={{width:12, height:12, borderRadius:'50%', background:'#22c55e', flexShrink:0}}></span>
-                    <span style={{flex:1, fontWeight:600}}>Microsoft Translator</span>
-                    <span style={{color:'#eab308', fontSize:10}}>★★★★★</span>
-                    <span style={{color:S.colors.textTertiary, fontSize:10}}>~75ms</span>
-                  </div>
-                  <div style={{
-                    display:'flex', alignItems:'center', gap:8, padding:'6px 10px',
-                    background: 'transparent', borderRadius:8, fontSize:12,
-                  }}>
-                    <span style={{width:18, textAlign:'center'}}>2.</span>
-                    <span style={{width:12, height:12, borderRadius:'50%', background:'#3b82f6', flexShrink:0}}></span>
-                    <span style={{flex:1, fontWeight:400}}>Google Translate</span>
-                    <span style={{color:'#eab308', fontSize:10}}>★★★★☆</span>
-                    <span style={{color:S.colors.textTertiary, fontSize:10}}>~200ms</span>
-                  </div>
-                </div>
-
-                {/* Translation mode toggle */}
-                <div style={{marginTop:12, marginBottom:8}}>
-                  <div style={{fontSize:11, color:S.colors.textSecondary, fontWeight:600, marginBottom:6}}>
-                    Modalità traduzione:
-                  </div>
-                  <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
-                    {[
-                      { id: 'standard', label: 'Standard', desc: '1 provider, veloce' },
-                      { id: 'guaranteed', label: 'Garantita', desc: '2 provider, consenso' },
-                      { id: 'superfast', label: 'Superfast', desc: '1 velocissimo' },
-                    ].map(m => (
-                      <button key={m.id} onClick={() => updateMode(m.id)}
-                        style={{
-                          flex:1, minWidth:90, padding:'8px 6px', borderRadius:10,
-                          border: tm === m.id ? '2px solid ' + S.colors.accent1 : '1px solid ' + S.colors.border,
-                          background: tm === m.id ? S.colors.accent1Bg : 'transparent',
-                          color: S.colors.text, cursor:'pointer', textAlign:'center',
-                        }}>
-                        <div style={{fontSize:13, fontWeight:600}}>{m.label}</div>
-                        <div style={{fontSize:9, color:S.colors.textTertiary, marginTop:2}}>{m.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Edge TTS voice gender */}
-                <div style={{marginTop:10, display:'flex', alignItems:'center', gap:8}}>
-                  <span style={{fontSize:11, color:S.colors.textTertiary}}>Voce Edge TTS (Free):</span>
-                  <button onClick={() => updateGender('female')}
-                    style={{padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer',
-                      border:'none', fontWeight:600,
-                      background: (prefs.edgeTtsVoiceGender || 'female') === 'female' ? S.colors.accent1 : S.colors.cardBg,
-                      color: (prefs.edgeTtsVoiceGender || 'female') === 'female' ? '#000' : S.colors.text}}>
-                    Femminile
-                  </button>
-                  <button onClick={() => updateGender('male')}
-                    style={{padding:'4px 10px', borderRadius:6, fontSize:11, cursor:'pointer',
-                      border:'none', fontWeight:600,
-                      background: prefs.edgeTtsVoiceGender === 'male' ? S.colors.accent1 : S.colors.cardBg,
-                      color: prefs.edgeTtsVoiceGender === 'male' ? '#000' : S.colors.text}}>
-                    Maschile
-                  </button>
-                </div>
-
-                {/* Test Center link */}
-                <a href="/testcenter" target="_blank" rel="noopener"
-                  style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:12, padding:'8px 12px', borderRadius:8,
-                    background:S.colors.accent2Bg || '#1e3a5f', textDecoration:'none',
-                    color:S.colors.accent2 || '#60a5fa', fontSize:12, fontWeight:600}}>
-                  <IconZap size={12} /> Apri Test Center
-                </a>
-              </div>
-            );
-          })()}
-
-          {/* ══════════════════════════════════════════════════
-              API KEY LENDING — TOP PRO
-             ══════════════════════════════════════════════════ */}
-          {useOwnKeys && apiKeyInputs?.elevenlabs && (() => {
-            const isIT = L('createRoom') === 'Crea Stanza';
-
-            async function fetchLendingTokens() {
-              const token = userTokenRef?.current;
-              if (!token) return;
-              setLendingLoading(true);
-              try {
-                const res = await fetch('/api/lending', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'list', token })
-                });
-                const data = await res.json();
-                if (data.tokens) setLendingTokens(data.tokens);
-              } catch {}
-              setLendingLoading(false);
-            }
-
-            async function handleCreateLending() {
-              const token = userTokenRef?.current;
-              if (!token) return;
-              try {
-                const res = await fetch('/api/lending', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'create',
-                    token,
-                    type: lendingType,
-                    duration: lendingDuration * 3600000,
-                    tokenBudget: lendingType !== 'time' ? lendingBudget : undefined
-                  })
-                });
-                const data = await res.json();
-                if (data.lendingCode) {
-                  setLendingResult(data.lendingCode);
-                  fetchLendingTokens();
-                }
-              } catch {}
-            }
-
-            async function handleRevoke(code) {
-              const token = userTokenRef?.current;
-              if (!token) return;
-              try {
-                await fetch('/api/lending', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'revoke', token, code })
-                });
-                fetchLendingTokens();
-              } catch {}
-            }
-
-            return (
-              <div style={{...S.card, marginTop:16}}>
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer'}}
-                  onClick={() => { setShowLending(!showLending); if (!showLending) fetchLendingTokens(); }}>
-                  <div style={{...S.label, display:'flex', alignItems:'center', gap:6}}><IconKey size={14} /> {isIT ? 'Presta Accesso TOP PRO' : 'Lend TOP PRO Access'}</div>
-                  <Icon name="chevDown" size={16} color={S.colors.textMuted}
-                    style={{transform: showLending ? 'rotate(180deg)' : 'none', transition:'transform 0.2s'}} />
-                </div>
-
-                {showLending && (
-                  <div style={{marginTop:12}}>
-                    <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:12}}>
-                      {isIT
-                        ? 'Crea un token temporaneo che permette ad altri di usare il tuo accesso TOP PRO (le tue chiavi API).'
-                        : 'Create a temporary token that lets others use your TOP PRO access (your API keys).'}
-                    </div>
-
-                    {/* Create form */}
-                    <div style={{display:'flex', gap:8, marginBottom:8, flexWrap:'wrap'}}>
-                      {['time', 'tokens', 'combined'].map(t => (
-                        <button key={t} onClick={() => setLendingType(t)}
-                          style={{padding:'6px 12px', borderRadius:8, fontSize:11, fontFamily:FONT, cursor:'pointer',
-                            background: lendingType === t ? S.colors.accent2Bg : S.colors.overlayBg,
-                            border: `1px solid ${lendingType === t ? S.colors.accent2Border : S.colors.overlayBorder}`,
-                            color: lendingType === t ? S.colors.accent2 : S.colors.textMuted}}>
-                          {t === 'time' ? (isIT ? 'Tempo' : 'Time')
-                            : t === 'tokens' ? 'Token'
-                            : (isIT ? 'Combinato' : 'Combined')}
-                        </button>
-                      ))}
-                    </div>
-
-                    {(lendingType === 'time' || lendingType === 'combined') && (
-                      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
-                        <span style={{fontSize:11, color:S.colors.textMuted}}>{isIT ? 'Durata:' : 'Duration:'}</span>
-                        <select value={lendingDuration} onChange={e => setLendingDuration(parseInt(e.target.value))}
-                          style={{...S.input, padding:'4px 8px', fontSize:12, width:'auto'}}>
-                          <option value={1}>1h</option>
-                          <option value={6}>6h</option>
-                          <option value={24}>24h</option>
-                          <option value={72}>3 {isIT ? 'giorni' : 'days'}</option>
-                          <option value={168}>7 {isIT ? 'giorni' : 'days'}</option>
-                          <option value={720}>30 {isIT ? 'giorni' : 'days'}</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {(lendingType === 'tokens' || lendingType === 'combined') && (
-                      <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:8}}>
-                        <span style={{fontSize:11, color:S.colors.textMuted}}>Token budget:</span>
-                        <input type="number" value={lendingBudget} onChange={e => setLendingBudget(parseInt(e.target.value) || 0)}
-                          style={{...S.input, padding:'4px 8px', fontSize:12, width:80}} min={100} step={1000} />
-                      </div>
-                    )}
-
-                    <button onClick={handleCreateLending}
-                      style={{...S.btn, width:'100%', marginBottom:8, fontSize:12, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
-                      <IconKey size={12} /> {isIT ? 'Crea Token' : 'Create Token'}
-                    </button>
-
-                    {lendingResult && (
-                      <div style={{padding:'8px 12px', borderRadius:8, background:S.colors.accent4Bg,
-                        border:`1px solid ${S.colors.accent4Border}`, marginBottom:12}}>
-                        <div style={{fontSize:11, color:S.colors.textMuted, marginBottom:4}}>
-                          {isIT ? 'Token creato! Condividilo:' : 'Token created! Share it:'}
-                        </div>
-                        <div style={{fontSize:13, fontWeight:700, fontFamily:'monospace', color:S.colors.textPrimary,
-                          cursor:'pointer', userSelect:'all'}}
-                          onClick={() => { navigator.clipboard?.writeText(lendingResult); }}>
-                          {lendingResult}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Active tokens list */}
-                    {lendingTokens.length > 0 && (
-                      <div style={{marginTop:8}}>
-                        <div style={{fontSize:11, fontWeight:700, color:S.colors.textSecondary, marginBottom:6}}>
-                          {isIT ? 'Token attivi' : 'Active tokens'}
-                        </div>
-                        {lendingTokens.map(t => (
-                          <div key={t.code} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
-                            padding:'6px 10px', borderRadius:8, background:S.colors.overlayBg,
-                            border:`1px solid ${S.colors.overlayBorder}`, marginBottom:4, fontSize:11}}>
-                            <div>
-                              <span style={{fontFamily:'monospace', color:S.colors.textPrimary}}>{t.code}</span>
-                              <span style={{color:S.colors.textMuted, marginLeft:6}}>
-                                {t.tokensUsed > 0 ? `${t.tokensUsed} tok` : ''} · {t.status}
-                              </span>
-                            </div>
-                            {t.status === 'active' && (
-                              <button onClick={() => handleRevoke(t.code)}
-                                style={{background:'none', border:'none', color:S.colors.accent3,
-                                  cursor:'pointer', fontSize:10, fontFamily:FONT}}>
-                                {isIT ? 'Revoca' : 'Revoke'}
-                              </button>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {lendingLoading && (
-                      <div style={{fontSize:11, color:S.colors.textMuted, textAlign:'center', padding:8}}>
-                        {isIT ? 'Caricamento...' : 'Loading...'}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })()}
+          {/* AI Model and Translation Services removed — system manages automatically */}
 
           {/* ══════════════════════════════════════════════════
               LA TUA VOCE — Voice Clone
              ══════════════════════════════════════════════════ */}
-          {!isGuest && (() => {
+          {(() => {
             const isIT = L('createRoom') === 'Crea Stanza';
 
             async function handleDeleteClone() {
@@ -835,11 +371,11 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       </div>
                     </div>
                     <div style={{display:'flex', gap:8}}>
-                      <button onClick={handlePreviewClone} disabled={previewingClone || isTrial}
+                      <button onClick={handlePreviewClone} disabled={previewingClone}
                         style={{flex:1, padding:'8px 0', borderRadius:10,
                           background:S.colors.accent4Bg, border:`1px solid ${S.colors.accent4Border}`,
                           color:S.colors.textPrimary, fontFamily:'inherit', fontSize:11, fontWeight:600,
-                          cursor: previewingClone || isTrial ? 'default' : 'pointer', opacity: previewingClone ? 0.6 : 1}}>
+                          cursor: previewingClone ? 'default' : 'pointer', opacity: previewingClone ? 0.6 : 1}}>
                         {previewingClone ? (isIT ? 'Riproduzione...' : 'Playing...') : (isIT ? 'Anteprima' : 'Preview')}
                       </button>
                       <button onClick={() => setView('voice-clone')}
@@ -871,11 +407,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                         color:S.colors.textPrimary, fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
                       <IconMic size={14} /> {isIT ? 'Campiona la tua voce' : 'Record your voice'}
                     </button>
-                    {isTrial && (
-                      <div style={{fontSize:9, color:S.colors.textMuted, textAlign:'center', marginTop:6}}>
-                        {isIT ? 'Richiede piano PRO' : 'Requires PRO plan'}
-                      </div>
-                    )}
+                    {/* Voice clone is free for all */}
                   </>
                 )}
               </div>
@@ -883,9 +415,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           })()}
 
           {/* ══════════════════════════════════════════════════
-              ELEVENLABS — TOP PRO
+              ELEVENLABS VOICES — Free for all
              ══════════════════════════════════════════════════ */}
-          {((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL || true) && (() => {
+          {(() => {
             // Comprehensive accent/language → flag mapping
             const ACCENT_FLAGS = {
               // English variants
@@ -1059,50 +591,41 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               );
             };
 
+            // Auto-load voices on first render
+            if (!loadVoicesTriggered.current && elevenLabsVoices.length === 0) {
+              loadVoicesTriggered.current = true;
+              fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef?.current || ''}&source=testcenter`)
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                  if (data?.voices) {
+                    setElevenLabsVoices(data.voices);
+                    if (data.avatarVoiceMap) setAvatarVoiceMap(data.avatarVoiceMap);
+                  }
+                })
+                .catch(() => {});
+            }
+
             return (
               <div style={{...S.field, padding:'14px', borderRadius:16,
                 background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.12)'}}>
                 <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
                   <span style={{fontSize:14, fontWeight:700, color:S.colors.goldAccent, display:'flex', alignItems:'center', gap:6}}>
-                    {'\u2B50'} TOP PRO {'\u2014'} ElevenLabs
+                    <IconMusic size={16} /> ElevenLabs Voices
                   </span>
-                  <button onClick={() => setIsTopPro(!isTopPro)}
-                    style={{...S.toggle, background:isTopPro ? S.colors.goldAccent : S.colors.toggleOff}}>
-                    <div style={{...S.toggleDot, transform:isTopPro ? 'translateX(20px)' : 'translateX(0)'}} />
-                  </button>
+                  <span style={{fontSize:9, padding:'2px 8px', borderRadius:6, fontWeight:700,
+                    background:S.colors.accent4Bg, border:'1px solid ' + S.colors.accent4Border,
+                    color:S.colors.accent4}}>FREE</span>
                 </div>
-                {!useOwnKeys && platformHasEL && (
-                  <div style={{fontSize:10, color:'rgba(255,215,0,0.65)', marginBottom:8, lineHeight:1.5,
-                    padding:'6px 10px', borderRadius:8, background:'rgba(255,215,0,0.04)',
-                    border:'1px solid rgba(255,215,0,0.08)'}}>
-                    {'\u26A1'} {L('elCostNote') || 'Voci premium ElevenLabs: ogni messaggio consuma ~5 crediti (vs ~0.5 standard). Usa le tue chiavi API per costo zero.'}
+
+                {/* Loading state */}
+                {elevenLabsVoices.length === 0 && (
+                  <div style={{textAlign:'center', padding:16, fontSize:12, color:S.colors.textTertiary}}>
+                    {L('loadingVoices') || 'Caricamento voci...'}
                   </div>
                 )}
 
-                {/* Load voices button */}
-                {isTopPro && elevenLabsVoices.length === 0 && (
-                  <button style={{width:'100%', padding:'10px 14px', borderRadius:10, cursor:'pointer',
-                    background:'rgba(255,215,0,0.08)', border:'1px solid rgba(255,215,0,0.2)',
-                    color:S.colors.goldAccent, fontSize:13, fontWeight:700, fontFamily:FONT,
-                    display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-                    WebkitTapHighlightColor:'transparent'}}
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef.current || ''}`);
-                        if (res.ok) {
-                          const data = await res.json();
-                          setElevenLabsVoices(data.voices || []);
-                          if (data.avatarVoiceMap) setAvatarVoiceMap(data.avatarVoiceMap);
-                        }
-                      } catch(e) { console.error('Failed to load voices:', e); }
-                    }}>
-                    <Icon name="refresh" size={16} color={S.colors.goldAccent} />
-                    {L('loadVoices') || 'Carica voci ElevenLabs'}
-                  </button>
-                )}
-
                 {/* ElevenLabs voice browser */}
-                {isTopPro && elevenLabsVoices.length > 0 && (
+                {elevenLabsVoices.length > 0 && (
                   <div>
                     {/* ── Personal voices section ── */}
                     {personalVoices.length > 0 && (
