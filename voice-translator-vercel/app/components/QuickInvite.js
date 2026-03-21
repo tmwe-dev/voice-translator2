@@ -49,9 +49,21 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
   const [copied, setCopied] = useState(false);
   const canvasRef = useRef(null);
 
-  const selectGender = useCallback((g) => {
-    vibrate(); setGender(g); setVoice(VOICE_PRESETS[g]?.voice || 'nova'); setShowVoicePicker(true);
-  }, []);
+  const selectGender = useCallback(async (g) => {
+    vibrate();
+    setGender(g);
+    const autoVoice = VOICE_PRESETS[g]?.voice || 'nova';
+    setVoice(autoVoice);
+    // Auto-crea stanza subito dopo selezione genere
+    if (lang && !createdRoomId && !creating) {
+      setCreating(true);
+      try {
+        const room = await handleCreateRoom();
+        if (room?.id || room?.roomId) { setCreatedRoomId(room.id || room.roomId); setCreated(true); }
+      } catch (e) { console.warn('[QuickInvite] Auto-create failed:', e); }
+      setCreating(false);
+    }
+  }, [lang, createdRoomId, creating, handleCreateRoom]);
 
   const createInstant = useCallback(async () => {
     if (!lang || !gender) return;
@@ -198,56 +210,15 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
             </button>
           </div>
 
-          {gender && (
-            <button onClick={() => { vibrate(); setShowVoicePicker(!showVoicePicker); }}
-              style={{
-                width: '100%', padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                fontFamily: FONT, fontSize: 11, color: glass.text.muted,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                marginTop: 10, transition: 'all 0.2s',
-              }}>
-              <Icon name="music" size={14} color="currentColor" style={{ marginRight: -2 }} /> Voce: {ALL_VOICES.find(v => v.id === voice)?.label || voice}
-              <span style={{ marginLeft: 'auto', fontSize: 10 }}>{showVoicePicker ? '▲' : '▼'}</span>
-            </button>
-          )}
-
-          {showVoicePicker && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-              {ALL_VOICES.map(v => (
-                <button key={v.id} onClick={() => { vibrate(); setVoice(v.id); setShowVoicePicker(false); }}
-                  style={{
-                    padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                    background: v.id === voice ? 'linear-gradient(135deg, #26D9B0, #1EB898)' : 'rgba(255,255,255,0.03)',
-                    border: v.id === voice ? 'none' : '1px solid rgba(255,255,255,0.06)',
-                    color: v.id === voice ? '#000' : glass.text.secondary,
-                    fontSize: 12, fontWeight: v.id === voice ? 700 : 400, fontFamily: FONT,
-                    transition: 'all 0.2s',
-                  }}>
-                  {v.label}
-                  <span style={{ fontSize: 9, marginLeft: 4, opacity: 0.5 }}>
-                    {v.gender === 'male' ? '♂' : v.gender === 'female' ? '♀' : '◎'}
-                  </span>
-                </button>
-              ))}
+          {/* Voce auto-selezionata dal genere — nessun picker manuale */}
+          {gender && !creating && !createdRoomId && (
+            <div style={{ marginTop: 8, fontSize: 10, color: glass.text.muted, textAlign: 'center' }}>
+              Voce: {ALL_VOICES.find(v => v.id === voice)?.label || voice}
             </div>
           )}
         </div>
 
-        {/* ═══ BOTTONE CREA — appare dopo scelta genere+voce ═══ */}
-        {gender && !creating && !createdRoomId && (
-          <button onClick={createInstant}
-            style={{
-              width: '100%', padding: '18px 0', borderRadius: 16, cursor: 'pointer', border: 'none',
-              background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 50%, #178F78 100%)',
-              color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
-              boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              transition: 'all 0.2s',
-            }}>
-            <Icon name="share" size={20} color="#000" /> Genera QR Code
-          </button>
-        )}
+        {/* Bottone manuale rimosso — la stanza si crea automaticamente al tap sul genere */}
 
         {/* ═══ CREATING SPINNER ═══ */}
         {creating && (
