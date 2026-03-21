@@ -248,6 +248,7 @@ function HomeInner() {
     useOwnKeys: auth.useOwnKeys,
     startDucking: audio.startDucking,
     stopDucking: audio.stopDucking,
+    conversationContext: convContext,  // Subtitle-first pipeline: context memory for disambiguation
   });
 
   // Sync interpreterRef so handleDirectMessage can access it without circular deps

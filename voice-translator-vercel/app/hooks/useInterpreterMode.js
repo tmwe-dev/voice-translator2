@@ -2,20 +2,30 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createNoiseGate } from '../lib/noiseGate.js';
 import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
+import useStreamingInterpreter from './useStreamingInterpreter.js';
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
 //
-// Captures 3-second audio chunks, transcribes, translates, and sends
-// translated audio + subtitles to the remote peer via DataChannel.
+// TWO MODES:
+// A) STREAMING (Deepgram available): subtitle-first pipeline
+//    - Real-time STT via WebSocket
+//    - Incremental translation with conversation context
+//    - Subtitles appear instantly, TTS per completed sentence
+//
+// B) LEGACY (Deepgram unavailable): 3-second chunk pipeline
+//    - Capture 3s audio chunks via MediaRecorder
+//    - STT → Translate → TTS per chunk (sequenziale)
+//
 // Works on both voice and video calls.
 // ═══════════════════════════════════════
 
-const CHUNK_DURATION = 3000; // 3 seconds
+const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
 
 export default function useInterpreterMode({
   webrtc, myLang, partnerLang, roomId, userToken, useOwnKeys,
   startDucking, stopDucking,
+  conversationContext,  // NEW: { getContext, addMessage } from useConversationContext
 }) {
   const [active, setActive] = useState(false);
   const [mySubtitles, setMySubtitles] = useState([]);
@@ -334,14 +344,54 @@ export default function useInterpreterMode({
     }
   }, [webrtc?.webrtcState, active, stopInterpreter]);
 
+  // ═══ STREAMING INTERPRETER (subtitle-first pipeline) ═══
+  const streaming = useStreamingInterpreter({
+    webrtc, myLang, partnerLang, roomId, userToken,
+    conversationContext,
+    startDucking, stopDucking,
+  });
+
+  // ═══ UNIFIED API ═══
+  // Try streaming first; if Deepgram unavailable, fall back to legacy chunks
+  const startUnified = useCallback(async () => {
+    const streamingOk = await streaming.start();
+    if (streamingOk) {
+      console.log('[Interpreter] Using streaming pipeline (subtitle-first)');
+      return;
+    }
+    // Fallback to legacy chunk-based pipeline
+    console.log('[Interpreter] Streaming unavailable, using legacy 3s chunks');
+    startInterpreter();
+  }, [streaming.start, startInterpreter]);
+
+  const stopUnified = useCallback(() => {
+    if (streaming.active) streaming.stop();
+    else stopInterpreter();
+  }, [streaming.active, streaming.stop, stopInterpreter]);
+
+  const unifiedActive = active || streaming.active;
+  const isStreaming = streaming.active;
+
+  // Route incoming messages to the right handler
+  const handleUnifiedMessage = useCallback((msg) => {
+    if (streaming.active) {
+      streaming.handleIncomingMessage(msg);
+    } else {
+      handleInterpreterMessage(msg);
+    }
+  }, [streaming.active, streaming.handleIncomingMessage, handleInterpreterMessage]);
+
   return {
-    active,
+    active: unifiedActive,
+    isStreaming,
     setActive,
-    mySubtitles,
-    partnerSubtitles,
-    lastSubtitle,
-    start: startInterpreter,
-    stop: stopInterpreter,
-    handleInterpreterMessage,
+    mySubtitles: isStreaming ? streaming.mySubtitles : mySubtitles,
+    partnerSubtitles: isStreaming ? streaming.partnerSubtitles : partnerSubtitles,
+    lastSubtitle: isStreaming ? streaming.partnerLiveSubtitle : lastSubtitle,
+    myLiveText: streaming.myLiveText,
+    partnerLiveSubtitle: streaming.partnerLiveSubtitle,
+    start: startUnified,
+    stop: stopUnified,
+    handleInterpreterMessage: handleUnifiedMessage,
   };
 }

@@ -1202,6 +1202,9 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           partnerName={partner?.name || ''}
           myLang={myLang}
           partnerLang={partner?.lang || 'en'}
+          isStreaming={interpreter.isStreaming || false}
+          myLiveText={interpreter.myLiveText || ''}
+          partnerLiveSubtitle={interpreter.partnerLiveSubtitle || ''}
         />
       )}
 

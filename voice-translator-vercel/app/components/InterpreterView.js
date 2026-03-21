@@ -23,6 +23,10 @@ function InterpreterView({
   partnerName = '',
   myLang = '',
   partnerLang = '',
+  // ── Streaming mode props (subtitle-first pipeline) ──
+  isStreaming = false,
+  myLiveText = '',
+  partnerLiveSubtitle = '',
 }) {
   const s = getStyles(theme);
   const videoRef = useRef(null);
@@ -73,44 +77,68 @@ function InterpreterView({
       />
 
       {/* My subtitles — top-left, small */}
-      {lastMySub?.text && (
+      {/* In streaming mode: show live STT text; in legacy mode: show last final subtitle */}
+      {(isStreaming ? myLiveText : lastMySub?.text) && (
         <div style={{
           position: 'absolute', top: 60, left: 16, right: '40%',
           padding: '8px 14px',
           background: 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(12px)',
           borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: `1px solid ${isStreaming ? 'rgba(108,99,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
           color: 'rgba(255,255,255,0.7)',
           fontSize: 14, lineHeight: 1.4,
           animation: 'vtSubtitleIn 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}>
-          <span style={{ opacity: 0.5, fontSize: 11 }}>{myLang.toUpperCase()}</span>{' '}
-          {lastMySub.text}
+          <span style={{ opacity: 0.5, fontSize: 11 }}>
+            {isStreaming ? '🎤 ' : ''}{myLang.toUpperCase()}
+          </span>{' '}
+          {isStreaming ? myLiveText : lastMySub?.text}
         </div>
       )}
 
       {/* Partner subtitles — bottom center, large, glass */}
-      {lastPartnerSub?.text && (
+      {/* In streaming mode: show live translated subtitle; in legacy mode: show last final */}
+      {(isStreaming ? partnerLiveSubtitle : lastPartnerSub?.text) && (
         <div style={{
           position: 'absolute', bottom: 100, left: 16, right: 16,
           padding: '14px 20px',
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(20px)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.12)',
+          border: `1px solid ${isStreaming ? 'rgba(108,99,255,0.2)' : 'rgba(255,255,255,0.12)'}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.4)',
           color: '#fff',
           fontSize: 20, fontWeight: 500, lineHeight: 1.5,
           textAlign: 'center',
           animation: 'vtSubtitleIn 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}>
-          {lastPartnerSub.text}
-          {lastPartnerSub.original && (
+          {isStreaming ? partnerLiveSubtitle : lastPartnerSub?.text}
+          {!isStreaming && lastPartnerSub?.original && (
             <div style={{ fontSize: 13, opacity: 0.5, marginTop: 4 }}>
               {lastPartnerSub.original}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Streaming mode indicator */}
+      {isStreaming && (
+        <div style={{
+          position: 'absolute', top: 16, left: 16,
+          padding: '4px 10px', borderRadius: 20,
+          background: 'rgba(108,99,255,0.3)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(108,99,255,0.4)',
+          color: '#B0A8FF', fontSize: 11, fontWeight: 600,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: '#6C63FF',
+            animation: 'vtSubtitlePulse 1.5s ease-in-out infinite',
+          }} />
+          LIVE
         </div>
       )}
 
@@ -178,6 +206,10 @@ function InterpreterView({
         @keyframes vtFadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        @keyframes vtSubtitlePulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.4; }
         }
       `}</style>
     </div>
