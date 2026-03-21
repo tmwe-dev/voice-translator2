@@ -31,20 +31,6 @@ const MENU_ITEMS = [
     size: 'medium', badge: 'New',
   },
   {
-    id: 'call', iconName: 'phone', label: 'Chiama',
-    descIT: 'Voice call tradotta',
-    descEN: 'Translated voice call',
-    accentFrom: '#E8924A', accentTo: '#FF6B6B',
-    size: 'medium',
-  },
-  {
-    id: 'video', iconName: 'video', label: 'Video',
-    descIT: 'Video call tradotta',
-    descEN: 'Translated video call',
-    accentFrom: '#8B6AFF', accentTo: '#EC4899',
-    size: 'medium',
-  },
-  {
     id: 'mondo', iconName: 'globe', label: 'Mondo',
     descIT: 'Stanze pubbliche',
     descEN: 'Public rooms',
@@ -107,7 +93,7 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
     vibrate();
     setPressedId(id);
     setTimeout(() => setPressedId(null), 150);
-    if (id === 'create' || id === 'call' || id === 'video') {
+    if (id === 'create') {
       if (setShowCreatePopup) setShowCreatePopup(true);
       else setView('home');
       return;

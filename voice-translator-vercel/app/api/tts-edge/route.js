@@ -5,9 +5,8 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 // ═══════════════════════════════════════════════
 // Edge TTS — FREE Neural Text-to-Speech
 //
-// Uses Microsoft Edge's neural TTS voices via edge-tts-universal.
+// Uses Microsoft Edge's neural TTS voices via @andresaya/edge-tts.
 // No API key needed, no cost, high quality neural voices for ALL 25 languages.
-// This replaces browser speechSynthesis for the FREE tier.
 //
 // Quality: ★★★★☆ (comparable to paid neural TTS)
 // Latency: ~100-300ms
@@ -63,56 +62,33 @@ export async function POST(req) {
     // Get voice for language + gender preference
     const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');
 
-    // Dynamic import to handle if package is missing gracefully
-    let EdgeTTSClass;
-    try {
-      const mod = await import('edge-tts-universal');
-      EdgeTTSClass = mod.EdgeTTS || mod.default || mod;
-    } catch (e) {
-      console.error('[EdgeTTS] Package not available:', e.message);
-      return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
-    }
-
     // ── Language-specific speech rate (from voiceDefaults.js) ──
     const { getEdgeRateForLang } = await import('../../lib/voiceDefaults.js');
     const speechRate = getEdgeRateForLang(lang2);
 
-    // Generate audio — edge-tts-universal API: new EdgeTTS(text, voice, opts)
+    // Dynamic import for graceful fallback
+    let EdgeTTS;
+    try {
+      const mod = await import('@andresaya/edge-tts');
+      EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
+    } catch (e) {
+      console.error('[EdgeTTS] @andresaya/edge-tts not available:', e.message);
+      return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
+    }
+
+    // Generate audio — @andresaya/edge-tts API:
+    // const tts = new EdgeTTS(); await tts.synthesize(text, voice, opts); tts.toBuffer()
     let audioBuffer;
     try {
-      const tts = new EdgeTTSClass(trimmed, voiceName, {
+      const tts = new EdgeTTS();
+      await tts.synthesize(trimmed, voiceName, {
         rate: speechRate,
         volume: '+0%',
         pitch: '+0Hz',
       });
-      const result = await tts.synthesize();
-      // result.audio is a Blob/File — convert to Buffer
-      if (result?.audio?.arrayBuffer) {
-        audioBuffer = Buffer.from(await result.audio.arrayBuffer());
-      } else if (Buffer.isBuffer(result?.audio)) {
-        audioBuffer = result.audio;
-      } else if (result?.audio) {
-        audioBuffer = Buffer.from(result.audio);
-      }
+      audioBuffer = tts.toBuffer();
     } catch (synthErr) {
-      console.error('[EdgeTTS] Synthesize error, trying Communicate fallback:', synthErr.message);
-      // Fallback: use Communicate streaming API
-      try {
-        const mod2 = await import('edge-tts-universal');
-        const Communicate = mod2.Communicate || mod2.default?.Communicate;
-        if (Communicate) {
-          const comm = new Communicate(trimmed, { voice: voiceName, rate: speechRate });
-          const chunks = [];
-          for await (const chunk of comm.stream()) {
-            if (chunk.type === 'audio' && chunk.data) {
-              chunks.push(Buffer.isBuffer(chunk.data) ? chunk.data : Buffer.from(chunk.data));
-            }
-          }
-          audioBuffer = Buffer.concat(chunks);
-        }
-      } catch (commErr) {
-        console.error('[EdgeTTS] Communicate fallback also failed:', commErr.message);
-      }
+      console.error('[EdgeTTS] Synthesize error:', synthErr.message);
     }
 
     if (!audioBuffer || audioBuffer.length === 0) {
