@@ -213,6 +213,43 @@ function simpleHash(str) {
 }
 
 // =============================================
+// BACKGROUND SYNC — flush offline message queue
+// When connection returns, SW wakes up and sends queued messages
+// =============================================
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'flush-offline-queue') {
+    event.waitUntil(flushOfflineQueue());
+  }
+});
+
+async function flushOfflineQueue() {
+  try {
+    // Notify all open clients to flush their IndexedDB queue
+    const clientList = await clients.matchAll({ type: 'window' });
+    for (const client of clientList) {
+      client.postMessage({ type: 'FLUSH_OFFLINE_QUEUE' });
+    }
+  } catch (e) {
+    console.warn('[SW] Background sync flush failed:', e);
+  }
+}
+
+// =============================================
+// PERIODIC SYNC — keep alive, refresh cache
+// =============================================
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'refresh-cache') {
+    event.waitUntil(
+      caches.open(CACHE_NAME).then(async (cache) => {
+        // Re-cache the app shell
+        try { await cache.add('/'); } catch {}
+        try { await cache.add('/manifest.json'); } catch {}
+      })
+    );
+  }
+});
+
+// =============================================
 // FETCH — caching strategies
 // =============================================
 self.addEventListener('fetch', (event) => {

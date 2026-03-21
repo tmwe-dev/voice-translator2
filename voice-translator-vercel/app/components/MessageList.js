@@ -3,6 +3,16 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
 
+// Haptic feedback helper (mobile)
+function haptic(ms = 10) {
+  try { navigator?.vibrate?.(ms); } catch {}
+}
+
+// Virtual scroll threshold — only render all messages if under this count
+// Above this, render last N + spacer to avoid DOM bloat
+const VIRTUAL_THRESHOLD = 50;
+const VISIBLE_WINDOW = 30;
+
 const QUICK_REACTIONS = ['\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D\uDC4D', '\uD83D\uDE4F', '\uD83D\uDD25'];
 
 /**
@@ -85,7 +95,12 @@ const MessageList = memo(function MessageList({
               : L('conversationDesc')}
         </div>
       )}
-      {messages.map((m, i) => {
+      {/* Virtual scroll: for 50+ messages, only render last 30 + spacer */}
+      {messages.length > VIRTUAL_THRESHOLD && (
+        <div style={{ height: (messages.length - VISIBLE_WINDOW) * 80, flexShrink: 0 }}
+          aria-hidden="true" />
+      )}
+      {(messages.length > VIRTUAL_THRESHOLD ? messages.slice(-VISIBLE_WINDOW) : messages).map((m, i) => {
         const isMine = m.sender === myName;
         const translationForMe = getTranslationForMe(m);
         const hasTranslation = !!(m.translated || (m.translations && Object.keys(m.translations).length > 0));
@@ -179,7 +194,7 @@ const MessageList = memo(function MessageList({
                   {QUICK_REACTIONS.map(emoji => (
                     <button key={emoji}
                       aria-label={`React with ${emoji}`}
-                      onClick={() => { onReaction?.(m.id, emoji); setReactionPickerMsgId(null); }}
+                      onClick={() => { haptic(); onReaction?.(m.id, emoji); setReactionPickerMsgId(null); }}
                       style={{
                         background:'none', border:'none', fontSize:20, cursor:'pointer',
                         padding:'2px 4px', borderRadius:8,

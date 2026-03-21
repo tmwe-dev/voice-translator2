@@ -37,11 +37,13 @@ import InterpreterView from './components/InterpreterView.js';
 import ChatActionsPanel from './components/ChatActionsPanel.js';
 import ProviderBadge from './components/ProviderBadge.js';
 import MondoView from './components/MondoView.js';
+import ToastContainer, { toast } from './components/Toast.js';
 
 
 export default function Home() {
   return (
     <ErrorBoundary>
+      <ToastContainer />
       <HomeInner />
     </ErrorBoundary>
   );
@@ -599,6 +601,49 @@ function HomeInner() {
   }, [roomPolling.roomId]);
 
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
+
+  // ── Escape key: back navigation from any view ──
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === 'Escape') {
+        if (view === 'room') { /* stay in room — Escape does nothing */ }
+        else if (view !== 'home' && view !== 'loading') { setView('home'); }
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [view]);
+
+  // ── Offline/Online toast notifications ──
+  useEffect(() => {
+    function onOffline() { toast.offline(); }
+    function onOnlineToast() { toast.success('Connessione ristabilita'); }
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('online', onOnlineToast);
+    return () => {
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('online', onOnlineToast);
+    };
+  }, []);
+
+  // ── Register background sync when SW available ──
+  useEffect(() => {
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      navigator.serviceWorker.ready.then(reg => {
+        // Listen for SW flush signal
+        navigator.serviceWorker.addEventListener('message', e => {
+          if (e.data?.type === 'FLUSH_OFFLINE_QUEUE') {
+            // Trigger queue flush from chatStorage
+            import('./lib/chatStorage.js').then(mod => {
+              if (mod.flushOfflineQueue) mod.flushOfflineQueue(async (msg) => {
+                await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(msg) });
+              });
+            }).catch(() => {});
+          }
+        });
+      }).catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (view === 'home' && !localStorage.getItem('vt-tutorial-done')) {

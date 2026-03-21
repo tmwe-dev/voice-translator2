@@ -275,14 +275,14 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   }, [contacts]);
 
   return (
-    <div style={S.page}>
+    <main style={S.page} aria-label="BarChat Home">
       <div style={S.scrollCenter}>
 
         {/* ═══════════════════════════════════════
             TOP BAR: Avatar + Name + Language + Voice + Contacts + Settings
            ═══════════════════════════════════════ */}
-        <div style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:16,
-          padding:'12px 14px', borderRadius:18, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}}>
+        <header style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:16,
+          padding:'12px 14px', borderRadius:18, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}} role="banner">
           <AvatarImg src={prefs.avatar} size={56} style={{borderRadius:14}} />
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:14, fontWeight:800, letterSpacing:-0.3, color:C.textPrimary}}>{prefs.name}</div>
@@ -342,7 +342,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               <Icon name="settings" size={16} color={C.settingsIconColor} />
             </button>
           </div>
-        </div>
+        </header>
 
         {/* ═══════════════════════════════════════
             DOOR CTA — Create/Enter Room
@@ -603,7 +603,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }
       `}</style>
-    </div>
+    </main>
   );
 });
 
