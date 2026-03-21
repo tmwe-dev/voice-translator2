@@ -24,9 +24,9 @@ export default function useAuth() {
   const [pendingReferralCode, setPendingReferralCode] = useState(null);
 
   // Tier state
-  const [isTrial, setIsTrial] = useState(true);
-  const [isTopPro, setIsTopPro] = useState(false);
-  const [canUseElevenLabs, setCanUseElevenLabs] = useState(false);
+  const [isTrial, setIsTrial] = useState(false);    // FREE FOR ALL
+  const [isTopPro, setIsTopPro] = useState(true);    // FREE FOR ALL
+  const [canUseElevenLabs, setCanUseElevenLabs] = useState(true); // FREE FOR ALL
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState('');
   const [platformHasEL, setPlatformHasEL] = useState(false);
@@ -35,9 +35,9 @@ export default function useAuth() {
 
   // Refs
   const userTokenRef = useRef(null);
-  const isTrialRef = useRef(true);
-  const isTopProRef = useRef(false);
-  const canUseElevenLabsRef = useRef(false);
+  const isTrialRef = useRef(false);
+  const isTopProRef = useRef(true);
+  const canUseElevenLabsRef = useRef(true);
   const roomTierOverrideRef = useRef(null);
 
   // Sync refs
@@ -57,28 +57,16 @@ export default function useAuth() {
     canUseElevenLabsRef.current = canUseElevenLabs;
   }, [canUseElevenLabs]);
 
-  // Update tier based on account status
+  // ═══ FREE FOR ALL: nessun limite, tutti usano tutto ═══
+  // isTrial = false per tutti, canUseElevenLabs = true per tutti
   useEffect(() => {
-    if (roomTierOverrideRef.current) return;
-    if (userToken && (creditBalance > 0 || useOwnKeys)) {
-      setIsTrial(false);
-    } else {
-      setIsTrial(true);
-      if (!(useOwnKeys && apiKeyInputs.elevenlabs?.trim())) {
-        setIsTopPro(false);
-      }
-    }
-  }, [userToken, creditBalance, useOwnKeys, apiKeyInputs.elevenlabs]);
+    setIsTrial(false);
+    setIsTopPro(true);
+  }, []);
 
-  // Derive canUseElevenLabs: TOP PRO (own key) OR PRO with platform ElevenLabs key
   useEffect(() => {
-    if (roomTierOverrideRef.current) {
-      // Guest in room — use host's tier
-      setCanUseElevenLabs(roomTierOverrideRef.current === 'TOP PRO');
-    } else {
-      setCanUseElevenLabs(isTopPro || (platformHasEL && !isTrial));
-    }
-  }, [isTopPro, platformHasEL, isTrial]);
+    setCanUseElevenLabs(true);
+  }, []);
 
   function getEffectiveToken() {
     if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') return undefined;

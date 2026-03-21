@@ -20,8 +20,8 @@ export default function Loading() {
       {/* Animated logo / spinner */}
       <div style={{
         width: 48, height: 48, borderRadius: '50%',
-        border: '3px solid rgba(108,99,255,0.2)',
-        borderTopColor: '#6C63FF',
+        border: '3px solid rgba(38,217,176,0.2)',
+        borderTopColor: '#26D9B0',
         animation: 'vtSpin 0.8s linear infinite',
         marginBottom: 24,
       }} />
@@ -51,7 +51,7 @@ export default function Loading() {
         {/* Button skeleton */}
         <div style={{
           height: 40, width: '50%', borderRadius: 12, marginTop: 16,
-          background: 'rgba(108,99,255,0.15)',
+          background: 'rgba(38,217,176,0.15)',
           animation: 'vtPulse 1.5s ease-in-out infinite',
           animationDelay: '0.6s',
         }} />

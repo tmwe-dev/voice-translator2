@@ -10,7 +10,7 @@ export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveU
           <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
         </div>
         <div style={S.card}>
-          <div style={{fontSize:12, color:'rgba(255,255,255,0.4)', marginBottom:16, lineHeight:1.5}}>
+          <div style={{fontSize:12, color:'rgba(255,255,255,0.75)', marginBottom:16, lineHeight:1.5}}>
             {L('apiKeysDesc')}
           </div>
           <div style={S.field}>
@@ -32,7 +32,7 @@ export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveU
             <div style={{fontSize:13, fontWeight:600, color:'#ffd700', marginBottom:8, display:'flex', alignItems:'center', gap:6}}>
               {'⭐'} TOP PRO - ElevenLabs
             </div>
-            <div style={{fontSize:11, color:'rgba(255,255,255,0.35)', marginBottom:10, lineHeight:1.5}}>
+            <div style={{fontSize:11, color:'rgba(255,255,255,0.75)', marginBottom:10, lineHeight:1.5}}>
               {L('elevenLabsDesc')}
             </div>
             <div style={S.field}>

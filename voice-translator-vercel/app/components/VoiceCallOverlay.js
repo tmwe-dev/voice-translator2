@@ -45,7 +45,7 @@ function VoiceCallOverlay({
       }}>
         <Icon name="phone" size={16} color="rgba(255,255,255,0.5)" />
         <span>Chiamata vocale</span>
-        <span style={{ marginLeft: 8, color: '#7B73FF', fontWeight: 600 }}>
+        <span style={{ marginLeft: 8, color: '#26D9B0', fontWeight: 600 }}>
           {formatTime(duration)}
         </span>
       </div>
@@ -61,7 +61,7 @@ function VoiceCallOverlay({
             <div key={i} style={{
               position: 'absolute', inset: -10 - i * 14,
               borderRadius: '50%',
-              border: '2px solid rgba(123,115,255,0.3)',
+              border: '2px solid rgba(38,217,176,0.3)',
               animation: `voicePulse 1.5s ease-out infinite`,
               animationDelay: `${i * 0.3}s`,
               opacity: 0,
@@ -70,12 +70,12 @@ function VoiceCallOverlay({
           {/* Avatar */}
           <div style={{
             width: 140, height: 140, borderRadius: '50%',
-            background: 'linear-gradient(135deg, #7B73FF 0%, #4A40E0 100%)',
+            background: 'linear-gradient(135deg, #26D9B0 0%, #4A40E0 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             overflow: 'hidden',
             boxShadow: partnerSpeaking
-              ? '0 0 40px rgba(123,115,255,0.5)'
-              : '0 0 20px rgba(123,115,255,0.2)',
+              ? '0 0 40px rgba(38,217,176,0.5)'
+              : '0 0 20px rgba(38,217,176,0.2)',
             transition: 'box-shadow 0.3s',
           }}>
             {avatarUrl ? (
@@ -100,8 +100,8 @@ function VoiceCallOverlay({
         {interpreterActive && interpreter?.lastSubtitle && (
           <div style={{
             maxWidth: '85%', padding: '10px 18px',
-            background: 'rgba(123,115,255,0.12)',
-            border: '1px solid rgba(123,115,255,0.2)',
+            background: 'rgba(38,217,176,0.12)',
+            border: '1px solid rgba(38,217,176,0.2)',
             borderRadius: 12, color: '#fff', fontSize: 15,
             textAlign: 'center', lineHeight: 1.4,
           }}>
@@ -115,16 +115,16 @@ function VoiceCallOverlay({
         position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       }}>
-        <Icon name="speaker" size={14} color="rgba(255,255,255,0.4)" />
+        <Icon name="speaker" size={14} color="rgba(255,255,255,0.75)" />
         <input type="range" min={0} max={2} step={0.01}
           value={partnerVolume}
           onChange={e => setPartnerVolume(parseFloat(e.target.value))}
           style={{
             writingMode: 'vertical-lr', direction: 'rtl',
-            width: 28, height: 100, accentColor: '#7B73FF',
+            width: 28, height: 100, accentColor: '#26D9B0',
           }}
         />
-        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>
+        <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 10 }}>
           {Math.round(partnerVolume * 100)}%
         </span>
       </div>
@@ -148,11 +148,11 @@ function VoiceCallOverlay({
         {/* Interpreter toggle */}
         <button aria-label={interpreterActive ? 'Disattiva interprete' : 'Attiva interprete'} onClick={() => setInterpreterActive && setInterpreterActive(!interpreterActive)} style={{
           width: 52, height: 52, borderRadius: '50%',
-          background: interpreterActive ? 'rgba(123,115,255,0.25)' : 'rgba(255,255,255,0.08)',
-          border: `1px solid ${interpreterActive ? 'rgba(123,115,255,0.4)' : 'rgba(255,255,255,0.12)'}`,
+          background: interpreterActive ? 'rgba(38,217,176,0.25)' : 'rgba(255,255,255,0.08)',
+          border: `1px solid ${interpreterActive ? 'rgba(38,217,176,0.4)' : 'rgba(255,255,255,0.12)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}>
-          <Icon name="globe" size={22} color={interpreterActive ? '#7B73FF' : '#fff'} />
+          <Icon name="globe" size={22} color={interpreterActive ? '#26D9B0' : '#fff'} />
         </button>
 
         {/* Upgrade to video */}

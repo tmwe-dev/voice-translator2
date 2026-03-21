@@ -212,9 +212,7 @@ export default function useTranslationAPI({
     }
 
     if (isTrialRef.current) {
-      if (freeCharsRef.current >= FREE_DAILY_LIMIT) {
-        return { translated: text, fallback: true, limitExceeded: true };
-      }
+      // FREE FOR ALL: no daily limit check
       const translationMode = prefsRef.current?.translationMode || 'standard';
       const translationProviders = prefsRef.current?.translationProviders;
 

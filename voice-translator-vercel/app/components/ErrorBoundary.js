@@ -100,7 +100,7 @@ export default class ErrorBoundary extends Component {
             </button>
             <button onClick={this.handleReload} style={{
               padding: '10px 24px', borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #6C63FF, #8B5CF6)', color: '#fff',
+              background: 'linear-gradient(135deg, #26D9B0, #8B6AFF)', color: '#fff',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
             }}>
               {this.getErrorText('reload')}

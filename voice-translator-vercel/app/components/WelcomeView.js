@@ -34,7 +34,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     glassHover: 'rgba(255,255,255,0.06)',
     glassBorder: 'rgba(255,255,255,0.06)',
     glassBorderHover: 'rgba(255,255,255,0.12)',
-    neon1: '#7B73FF', neon2: '#00D2FF', neon3: '#FF6B9D', neon4: '#00FF94',
+    neon1: '#26D9B0', neon2: '#8B6AFF', neon3: '#FF6B6B', neon4: '#26D9B0',
     gold: '#FFD700',
     text: '#FFFFFF',
     textSoft: 'rgba(255,255,255,0.75)',
@@ -159,13 +159,6 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   const popularLangs = ['it', 'en', 'es', 'fr', 'de', 'th', 'zh', 'ja'].map(code => LANGS.find(l => l.code === code)).filter(Boolean);
   const [showAllLangs, setShowAllLangs] = useState(false);
   const displayLangs = showAllLangs ? LANGS : popularLangs;
-
-  // Tier descriptions
-  const tierDescriptions = {
-    free: Lf('tierFreeDesc', 'Voce browser base, 50 traduzioni/giorno, contesti limitati'),
-    starter: Lf('tierStarterDesc', 'Voci AI OpenAI, 500 traduzioni/giorno, tutti i contesti'),
-    pro: Lf('tierProDesc', 'Voci ElevenLabs premium, traduzioni illimitate, tue API keys'),
-  };
 
   // Progress dots (2 dots only)
   const dots = (
@@ -449,116 +442,54 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
               </div>
             </div>
 
-            {/* Tier Selection — Horizontal Chips */}
+            {/* ═══ FREE FOR ALL: nessun tier, bottone diretto ═══ */}
             <div style={{
               width: '100%', marginBottom: 18,
               ...stagger(2),
             }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: D.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
-                {Lf('selectTier', 'Scegli il piano')}
-              </div>
-
-              <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                {['free', 'starter', 'pro'].map((tierKey) => {
-                  const isSelected = selectedTier === tierKey;
-                  const tierEmojis = { free: '⚡', starter: '🚀', pro: '💎' };
-                  const tierLabels = { free: 'FREE', starter: 'STARTER', pro: 'PRO' };
-                  const tierColors = { free: D.neon4, starter: D.neon1, pro: D.gold };
-                  const tierColor = tierColors[tierKey];
-
-                  return (
-                    <button key={tierKey}
-                      onClick={() => setSelectedTier(tierKey)}
-                      style={{
-                        flex: 1, padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
-                        border: isSelected ? `2px solid ${tierColor}` : '1.5px solid rgba(255,255,255,0.06)',
-                        background: isSelected ? `linear-gradient(135deg, ${tierColor}15, ${tierColor}05)` : 'rgba(255,255,255,0.02)',
-                        color: isSelected ? tierColor : D.textSoft,
-                        fontFamily: FONT, fontSize: 13, fontWeight: 700, letterSpacing: 0.5,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        boxShadow: isSelected ? `0 4px 12px ${tierColor}18` : 'none',
-                        transform: isSelected ? 'scale(1.04)' : 'scale(1)',
-                        WebkitTapHighlightColor: 'transparent',
-                      }}>
-                      <span>{tierEmojis[tierKey]}</span>
-                      <span>{tierLabels[tierKey]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Tier Description */}
               <div style={{
-                padding: '12px 14px', borderRadius: 12,
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                fontSize: 11.5, color: D.textSoft, lineHeight: 1.6,
-                transition: 'all 0.3s',
+                padding: '14px 16px', borderRadius: 14, marginBottom: 12,
+                background: `linear-gradient(135deg, ${D.neon4}15, ${D.neon1}10)`,
+                border: `1px solid ${D.neon4}30`,
+                textAlign: 'center',
               }}>
-                {tierDescriptions[selectedTier]}
+                <div style={{ fontSize: 13, fontWeight: 600, color: D.neon4, marginBottom: 2 }}>
+                  {'✨'} Tutto gratuito e illimitato
+                </div>
+                <div style={{ fontSize: 11, color: D.textMuted }}>
+                  Voci AI premium, ElevenLabs, traduzioni illimitate
+                </div>
               </div>
+
+              })}
             </div>
 
-            {/* CTA Buttons — Based on Tier Selection */}
+            {/* CTA Button — FREE FOR ALL: sempre visibile */}
             <div style={{
               width: '100%',
               ...stagger(3),
             }}>
-              {selectedTier === 'free' ? (
-                <button onClick={finishWelcome}
-                  style={{
-                    width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer',
-                    background: `linear-gradient(135deg, ${D.neon4}, ${D.neon4}dd)`,
-                    border: 'none', color: '#000',
-                    fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    WebkitTapHighlightColor: 'transparent',
-                    boxShadow: `0 6px 22px ${D.neon4}40, inset 0 1px 0 rgba(255,255,255,0.18)`,
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                  <div style={{
-                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                    background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
-                    pointerEvents: 'none',
-                  }} />
-                  <span style={{ position: 'relative', zIndex: 1 }}>🎯 {Lf('startTranslating', 'Inizia a Tradurre')}</span>
-                </button>
-              ) : (
-                <button onClick={() => {
-                  setShowAuthModal(true);
-                  setAuthStep('email');
-                }}
-                  style={{
-                    width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer',
-                    background: selectedTier === 'pro'
-                      ? `linear-gradient(135deg, ${D.gold}, ${D.gold}dd)`
-                      : `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
-                    border: 'none', color: selectedTier === 'pro' ? '#000' : '#fff',
-                    fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                    transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                    WebkitTapHighlightColor: 'transparent',
-                    boxShadow: selectedTier === 'pro'
-                      ? `0 6px 22px ${D.gold}40, inset 0 1px 0 rgba(255,255,255,0.18)`
-                      : `0 6px 22px ${D.neon1}30, inset 0 1px 0 rgba(255,255,255,0.18)`,
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                  <div style={{
-                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-                    background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)',
-                    backgroundSize: '200% 100%',
-                    animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
-                    pointerEvents: 'none',
-                  }} />
-                  <span style={{ position: 'relative', zIndex: 1 }}>
-                    {selectedTier === 'pro' ? '💎 Attiva PRO' : '🚀 Attiva Starter'}
-                  </span>
-                </button>
-              )}
+              <button onClick={finishWelcome}
+                style={{
+                  width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer',
+                  background: `linear-gradient(135deg, ${D.neon4}, ${D.neon4}dd)`,
+                  border: 'none', color: '#000',
+                  fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                  WebkitTapHighlightColor: 'transparent',
+                  boxShadow: `0 6px 22px ${D.neon4}40, inset 0 1px 0 rgba(255,255,255,0.18)`,
+                  position: 'relative', overflow: 'hidden',
+                }}>
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)',
+                  backgroundSize: '200% 100%',
+                  animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
+                  pointerEvents: 'none',
+                }} />
+                <span style={{ position: 'relative', zIndex: 1 }}>🎯 {Lf('startTranslating', 'Inizia a Tradurre')}</span>
+              </button>
             </div>
 
             {/* Back button */}

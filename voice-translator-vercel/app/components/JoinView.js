@@ -39,8 +39,8 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
 
   // Color palette
   const C = S.colors;
-  const accent = '#7B73FF';
-  const accentSoft = 'rgba(123,115,255,0.15)';
+  const accent = '#26D9B0';
+  const accentSoft = 'rgba(38,217,176,0.15)';
 
   const cardStyle = {
     background: C.glassCard,

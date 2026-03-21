@@ -75,7 +75,7 @@ export default function DebugPage() {
     title: { fontSize: 22, fontWeight: 700, marginBottom: 4,
       background: 'linear-gradient(135deg, #f093fb, #f5576c, #4facfe)',
       WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-    label: { fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'rgba(255,255,255,0.35)',
+    label: { fontSize: 10, fontWeight: 600, letterSpacing: 1, color: 'rgba(255,255,255,0.75)',
       textTransform: 'uppercase', marginBottom: 4 },
     input: { width: '100%', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.05)',
       border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none',
@@ -102,7 +102,7 @@ export default function DebugPage() {
     <div style={S.page}>
       <div style={{ maxWidth: 500, margin: '0 auto' }}>
         <div style={S.title}>Debug Costi & Crediti</div>
-        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: 12, marginBottom: 16 }}>
+        <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, marginBottom: 16 }}>
           Pagina nascosta per analisi costi e verifica crediti
         </div>
 
@@ -334,13 +334,13 @@ export default function DebugPage() {
                     <div style={{ fontSize: 20, fontWeight: 700, color: '#f5576c' }}>
                       {'\u20AC'}{p.euros}
                     </div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>
                       {p.credits} cent crediti
                     </div>
                     <div style={{ fontSize: 24, fontWeight: 700, color: '#4ecdc4' }}>
                       ~{p.messagesEstimate}
                     </div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>messaggi</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.75)' }}>messaggi</div>
                   </div>
                 ))}
               </div>
@@ -397,7 +397,7 @@ export default function DebugPage() {
           </>
         )}
 
-        <div style={{ textAlign: 'center', padding: 20, fontSize: 11, color: 'rgba(255,255,255,0.2)' }}>
+        <div style={{ textAlign: 'center', padding: 20, fontSize: 11, color: 'rgba(255,255,255,0.65)' }}>
           /debug — Pagina nascosta di test
         </div>
       </div>

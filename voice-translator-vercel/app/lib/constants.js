@@ -104,13 +104,13 @@ export const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFon
 
 export const THEMES = { DARK: 'dark', LIGHT: 'light', BROWN: 'brown', ORANGE: 'orange' };
 export const THEME_LIST = [
-  { id:'dark', name:'Dark', icon:'\uD83C\uDF19', desc:'Tema scuro classico' },
-  { id:'light', name:'Light', icon:'\u2600\uFE0F', desc:'Tema chiaro' },
-  { id:'brown', name:'Elegante', icon:'\u{1F33F}', desc:'Marrone scuro elegante' },
-  { id:'orange', name:'Vivace', icon:'\u{1F525}', desc:'Arancione energico' },
+  { id:'dark', name:'Ambient', icon:'\u2728', desc:'Dark ambient con teal e viola' },
+  { id:'light', name:'Light', icon:'\u2600\uFE0F', desc:'Tema chiaro e luminoso' },
+  { id:'brown', name:'Elegante', icon:'\u{1F33F}', desc:'Caldo e raffinato' },
+  { id:'orange', name:'Vivace', icon:'\u{1F525}', desc:'Energico e vibrante' },
 ];
 
-export const FREE_DAILY_LIMIT = 50000;
+export const FREE_DAILY_LIMIT = 999999999; // No limit — free for all
 
 export const CREDIT_PACKAGES = [
   { id:'pack_starter', euros:0.90, credits:90, label:'\u20AC0.90', messages:'90 crediti', starter:true,

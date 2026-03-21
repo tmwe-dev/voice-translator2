@@ -85,7 +85,7 @@ function InterpreterView({
           background: 'rgba(0,0,0,0.5)',
           backdropFilter: 'blur(12px)',
           borderRadius: 12,
-          border: `1px solid ${isStreaming ? 'rgba(108,99,255,0.3)' : 'rgba(255,255,255,0.1)'}`,
+          border: `1px solid ${isStreaming ? 'rgba(38,217,176,0.3)' : 'rgba(255,255,255,0.1)'}`,
           color: 'rgba(255,255,255,0.7)',
           fontSize: 14, lineHeight: 1.4,
           animation: 'vtSubtitleIn 0.3s cubic-bezier(0.4,0,0.2,1)',
@@ -106,7 +106,7 @@ function InterpreterView({
           background: 'rgba(0,0,0,0.6)',
           backdropFilter: 'blur(20px)',
           borderRadius: 16,
-          border: `1px solid ${isStreaming ? 'rgba(108,99,255,0.2)' : 'rgba(255,255,255,0.12)'}`,
+          border: `1px solid ${isStreaming ? 'rgba(38,217,176,0.2)' : 'rgba(255,255,255,0.12)'}`,
           boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 32px rgba(0,0,0,0.4)',
           color: '#fff',
           fontSize: 20, fontWeight: 500, lineHeight: 1.5,
@@ -127,15 +127,15 @@ function InterpreterView({
         <div style={{
           position: 'absolute', top: 16, left: 16,
           padding: '4px 10px', borderRadius: 20,
-          background: 'rgba(108,99,255,0.3)',
+          background: 'rgba(38,217,176,0.3)',
           backdropFilter: 'blur(8px)',
-          border: '1px solid rgba(108,99,255,0.4)',
+          border: '1px solid rgba(38,217,176,0.4)',
           color: '#B0A8FF', fontSize: 11, fontWeight: 600,
           display: 'flex', alignItems: 'center', gap: 6,
         }}>
           <span style={{
             width: 6, height: 6, borderRadius: '50%',
-            background: '#6C63FF',
+            background: '#26D9B0',
             animation: 'vtSubtitlePulse 1.5s ease-in-out infinite',
           }} />
           LIVE

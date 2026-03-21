@@ -3,6 +3,7 @@ import { memo, useState, useMemo, useEffect } from 'react';
 import { VOICES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
+import MainMenu from './MainMenu.js';
 
 // ═══════════════════════════════════════
 // Theme-aware color palette for HomeView
@@ -11,13 +12,13 @@ function getHomeColors(theme) {
   const palettes = {
     dark: {
       // Primary accent
-      accent: '#7B73FF', accentLight: '#B8B3FF', accentDark: '#4A40E0', accentMid: '#6C63FF',
-      accent2: '#00D2FF', accent3: '#FF6B9D', accent4: '#00FF94',
+      accent: '#26D9B0', accentLight: '#B8B3FF', accentDark: '#4A40E0', accentMid: '#26D9B0',
+      accent2: '#8B6AFF', accent3: '#FF6B6B', accent4: '#26D9B0',
       // Door SVG
-      doorBody: ['#9B93FF', '#7B73FF', '#4A40E0'],
+      doorBody: ['#9B93FF', '#26D9B0', '#4A40E0'],
       doorFace: ['#B8B3FF', '#8B83FF', '#5A50F0'],
       doorArch: ['#C4BFFF', '#D4D0FF', '#A8A0FF'],
-      doorFloor: 'rgba(108,99,255,0.15)',
+      doorFloor: 'rgba(38,217,176,0.15)',
       doorHandle: ['#FFE066', '#FFB800'],
       doorHandleGlow: 'rgba(255,215,0,0.35)',
       doorHandleStroke: 'rgba(255,200,0,0.3)',
@@ -26,40 +27,40 @@ function getHomeColors(theme) {
       doorPanelStroke1: 'rgba(255,255,255,0.12)', doorPanelStroke2: 'rgba(255,255,255,0.08)',
       doorShine: ['rgba(255,255,255,0.30)', 'rgba(255,255,255,0)'],
       doorShadow: 'rgba(0,0,0,0.12)',
-      doorGlowShadow: ['rgba(108,99,255,0.30)', 'rgba(108,99,255,0.45)'],
+      doorGlowShadow: ['rgba(38,217,176,0.30)', 'rgba(38,217,176,0.45)'],
       // Title gradient
-      titleGrad: 'linear-gradient(135deg, #B8B3FF 0%, #7B73FF 40%, #00D2FF 100%)',
+      titleGrad: 'linear-gradient(135deg, #B8B3FF 0%, #26D9B0 40%, #8B6AFF 100%)',
       // Top bar
-      topBarBg: 'rgba(108,99,255,0.06)', topBarBorder: 'rgba(108,99,255,0.1)',
+      topBarBg: 'rgba(38,217,176,0.06)', topBarBorder: 'rgba(38,217,176,0.1)',
       // Texts
       textPrimary: '#FFFFFF', textSecondary: 'rgba(255,255,255,0.72)',
       textTertiary: 'rgba(255,255,255,0.55)', textMuted: 'rgba(255,255,255,0.40)',
       // Buttons
       btnBg: 'rgba(255,255,255,0.04)', btnBorder: 'rgba(255,255,255,0.08)',
       btnIconColor: 'rgba(255,255,255,0.65)',
-      settingsBtnBg: 'rgba(108,99,255,0.06)', settingsBtnBorder: 'rgba(108,99,255,0.12)',
+      settingsBtnBg: 'rgba(38,217,176,0.06)', settingsBtnBorder: 'rgba(38,217,176,0.12)',
       settingsIconColor: 'rgba(255,255,255,0.80)',
       contactsBtnBg: 'rgba(0,210,255,0.06)', contactsBtnBorder: 'rgba(0,210,255,0.15)',
       // Popup
       popupBg: 'linear-gradient(160deg, rgba(20,22,50,0.98) 0%, rgba(15,17,40,0.98) 100%)',
-      popupBorder: 'rgba(108,99,255,0.2)', popupShadow: 'rgba(108,99,255,0.08)',
+      popupBorder: 'rgba(38,217,176,0.2)', popupShadow: 'rgba(38,217,176,0.08)',
       popupCloseBg: 'rgba(255,255,255,0.06)', popupCloseBorder: 'rgba(255,255,255,0.1)',
       popupCloseColor: 'rgba(255,255,255,0.55)',
-      createBtnGrad: 'linear-gradient(135deg, #6C63FF 0%, #00D2FF 100%)',
-      createBtnShadow: '0 6px 24px rgba(108,99,255,0.4), 0 2px 8px rgba(0,0,0,0.2)',
+      createBtnGrad: 'linear-gradient(135deg, #26D9B0 0%, #8B6AFF 100%)',
+      createBtnShadow: '0 6px 24px rgba(38,217,176,0.4), 0 2px 8px rgba(0,0,0,0.2)',
       // Tabs
-      tabBg: 'rgba(108,99,255,0.04)', tabBorder: 'rgba(108,99,255,0.1)',
-      tabActiveBg: 'rgba(108,99,255,0.1)', tabActiveBorder: 'rgba(108,99,255,0.25)',
-      tabActiveColor: '#6C63FF',
+      tabBg: 'rgba(38,217,176,0.04)', tabBorder: 'rgba(38,217,176,0.1)',
+      tabActiveBg: 'rgba(38,217,176,0.1)', tabActiveBorder: 'rgba(38,217,176,0.25)',
+      tabActiveColor: '#26D9B0',
       // Online friends
-      onlineStatusBg: 'rgba(0,255,148,0.15)', onlineStatusColor: '#00FF94',
-      chataBtnBg: 'rgba(0,210,255,0.1)', chataBtnBorder: 'rgba(0,210,255,0.25)', chataBtnColor: '#00D2FF',
+      onlineStatusBg: 'rgba(0,255,148,0.15)', onlineStatusColor: '#26D9B0',
+      chataBtnBg: 'rgba(0,210,255,0.1)', chataBtnBorder: 'rgba(0,210,255,0.25)', chataBtnColor: '#8B6AFF',
     },
     light: {
-      accent: '#5A52E0', accentLight: '#7B73FF', accentDark: '#3D35B0', accentMid: '#6C63FF',
+      accent: '#5A52E0', accentLight: '#26D9B0', accentDark: '#3D35B0', accentMid: '#26D9B0',
       accent2: '#00A3C4', accent3: '#E0527A', accent4: '#00AA6B',
-      doorBody: ['#8B83F0', '#6C63FF', '#4A40D0'],
-      doorFace: ['#A8A0FF', '#7B73FF', '#5A50E8'],
+      doorBody: ['#8B83F0', '#26D9B0', '#4A40D0'],
+      doorFace: ['#A8A0FF', '#26D9B0', '#5A50E8'],
       doorArch: ['#B0A8FF', '#C0B8FF', '#9088F0'],
       doorFloor: 'rgba(90,82,224,0.12)',
       doorHandle: ['#FFD84D', '#F0A800'],
@@ -71,7 +72,7 @@ function getHomeColors(theme) {
       doorShine: ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0)'],
       doorShadow: 'rgba(0,0,0,0.08)',
       doorGlowShadow: ['rgba(90,82,224,0.25)', 'rgba(90,82,224,0.40)'],
-      titleGrad: 'linear-gradient(135deg, #5A52E0 0%, #6C63FF 40%, #00A3C4 100%)',
+      titleGrad: 'linear-gradient(135deg, #5A52E0 0%, #26D9B0 40%, #00A3C4 100%)',
       topBarBg: 'rgba(90,82,224,0.06)', topBarBorder: 'rgba(90,82,224,0.12)',
       textPrimary: '#1A1D3A', textSecondary: 'rgba(26,29,58,0.72)',
       textTertiary: 'rgba(26,29,58,0.52)', textMuted: 'rgba(26,29,58,0.38)',
@@ -84,7 +85,7 @@ function getHomeColors(theme) {
       popupBorder: 'rgba(90,82,224,0.18)', popupShadow: 'rgba(90,82,224,0.08)',
       popupCloseBg: 'rgba(26,29,58,0.05)', popupCloseBorder: 'rgba(26,29,58,0.10)',
       popupCloseColor: 'rgba(26,29,58,0.45)',
-      createBtnGrad: 'linear-gradient(135deg, #6C63FF 0%, #00A3C4 100%)',
+      createBtnGrad: 'linear-gradient(135deg, #26D9B0 0%, #00A3C4 100%)',
       createBtnShadow: '0 6px 24px rgba(90,82,224,0.25), 0 2px 8px rgba(0,0,0,0.08)',
       tabBg: 'rgba(90,82,224,0.04)', tabBorder: 'rgba(90,82,224,0.08)',
       tabActiveBg: 'rgba(90,82,224,0.08)', tabActiveBorder: 'rgba(90,82,224,0.2)',
@@ -441,6 +442,17 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         )}
 
         {/* ═══════════════════════════════════════
+            MAIN MENU — Hub con icone grandi
+           ═══════════════════════════════════════ */}
+        <MainMenu L={L} S={{...S, colors: C}} prefs={prefs} theme={theme} setView={setView}
+          handleCreateRoom={handleCreateRoom} setShowCreatePopup={setShowCreatePopup} />
+
+        {/* spacer */}
+        <div style={{height: 16}} />
+
+        {/* (TaxiTalk + QuickInvite — ora accessibili da MainMenu) */}
+
+        {/* ═══════════════════════════════════════
             TABS: "Le mie" (0) and "Mondo" (1)
            ═══════════════════════════════════════ */}
         <div style={{display:'flex', gap:8, width:'100%', maxWidth:400, marginBottom:16,
@@ -571,10 +583,10 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
             </div>
             <button onClick={() => setView('mondo')}
               style={{padding:'12px 24px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
-                background:'linear-gradient(135deg, #6C63FF 0%, #a855f7 100%)',
+                background:'linear-gradient(135deg, #26D9B0 0%, #a855f7 100%)',
                 border:'none', color:'#fff', fontSize:15, fontWeight:700,
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                boxShadow:'0 4px 16px rgba(108,99,255,0.4)'}}>
+                boxShadow:'0 4px 16px rgba(38,217,176,0.4)'}}>
               {'\uD83C\uDF10'} Esplora Mondo
             </button>
             <div style={{fontSize:11, color:C.textTertiary, marginTop:12, fontFamily:FONT}}>

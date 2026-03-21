@@ -151,74 +151,54 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
   return (
     <div style={S.page}>
-      <div style={S.scrollCenter}>
-        <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => setView('home')}>{'←'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>{L('settings')}</span>
+      <div style={{...S.scrollCenter, gap: 12}}>
+        {/* Header migliorato */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 400,
+          padding: '16px 0 8px',
+        }}>
+          <button onClick={() => setView('home')}
+            style={{ background: 'none', border: 'none', color: S.colors.textPrimary, cursor: 'pointer', padding: 4, fontSize: 20 }}>
+            {'←'}
+          </button>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: S.colors.textPrimary, fontFamily: FONT }}>
+              {'⚙️'} {L('settings')}
+            </div>
+          </div>
         </div>
 
         {/* ══════════════════════════════════════════════════
-            ACCOUNT & API STATUS DASHBOARD
+            ACCOUNT STATUS — FREE FOR ALL
            ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400, marginBottom:16, borderRadius:20,
+        <div style={{width:'100%', maxWidth:400, marginBottom:4, borderRadius:20,
           background:S.colors.accent1Bg, border:'1px solid ' + S.colors.accent1Border,
           overflow:'hidden'}}>
 
-          {/* Status header */}
+          {/* Status header — simplified for free-for-all */}
           <div style={{padding:'16px 18px 12px', display:'flex', alignItems:'center', justifyContent:'space-between'}}>
             <div style={{display:'flex', alignItems:'center', gap:10}}>
               <div style={{width:36, height:36, borderRadius:12,
-                background: isGuest ? S.colors.accent4Bg : (useOwnKeys ? S.colors.accent2Bg : S.colors.accent1Bg),
-                display:'flex', alignItems:'center', justifyContent:'center'}}>
-                <Icon name={isGuest ? 'zap' : (useOwnKeys ? 'key' : 'credit')} size={18}
-                  color={isGuest ? S.colors.accent4 : (useOwnKeys ? S.colors.accent2 : S.colors.accent1)} />
+                background: 'linear-gradient(135deg, rgba(0,255,148,0.15), rgba(38,217,176,0.15))',
+                display:'flex', alignItems:'center', justifyContent:'center', fontSize: 18}}>
+                {'✨'}
               </div>
               <div>
                 <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary}}>
-                  {isGuest ? 'FREE Mode' : (useOwnKeys ? L('personalApiKeys') : 'PRO Mode')}
+                  Tutto Gratuito e Illimitato
                 </div>
                 <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:1}}>
-                  {isGuest ? L('startFreeDesc') : (userAccount?.email || '')}
+                  {userAccount?.email || (L('startFreeDesc') || 'Voci AI premium, traduzioni illimitate')}
                 </div>
               </div>
             </div>
-            {/* Refresh button */}
-            <button onClick={handleRefresh}
-              style={{width:36, height:36, borderRadius:12, cursor:'pointer',
-                background:S.colors.overlayBg, border:'1px solid ' + S.colors.overlayBorder,
-                display:'flex', alignItems:'center', justifyContent:'center',
-                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                animation: refreshing ? 'spin 0.8s linear infinite' : 'none'}}>
-              <Icon name="refresh" size={16} color={S.colors.textSecondary} />
-            </button>
           </div>
 
-          {/* ── Usage info ── */}
+          {/* ── Usage info — FREE FOR ALL ── */}
           {isGuest ? (
-            /* FREE tier usage bar */
             <div style={{padding:'0 18px 16px'}}>
-              <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6}}>
-                <span style={{fontSize:10, fontWeight:700, color:S.colors.textTertiary, textTransform:'uppercase', letterSpacing:1}}>
-                  {L('dailyUsage') || 'Utilizzo giornaliero'}
-                </span>
-                <span style={{fontSize:11, fontWeight:600, color: freePercent >= 90 ? S.colors.accent3 : S.colors.accent4}}>
-                  {freePercent}%
-                </span>
-              </div>
-              <div style={{width:'100%', height:6, borderRadius:3, background:S.colors.overlayBorder, overflow:'hidden'}}>
-                <div style={{width:`${freePercent}%`, height:'100%', borderRadius:3, transition:'width 0.3s',
-                  background: freePercent >= 90 ? `linear-gradient(90deg, ${S.colors.accent3}, ${S.colors.accent3}cc)` :
-                    freePercent >= 60 ? `linear-gradient(90deg, ${S.colors.goldAccent}, ${S.colors.accent3})` :
-                      `linear-gradient(90deg, ${S.colors.accent4}, ${S.colors.accent2})`}} />
-              </div>
-              <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:5}}>
-                {((freeCharsUsed || 0) / 1000).toFixed(1)}k / {(FREE_DAILY_LIMIT / 1000).toFixed(0)}k {L('characters') || 'caratteri'}
-                <span style={{marginLeft:8, color: freePercent >= 90 ? S.colors.accent3 : S.colors.textTertiary}}>
-                  ({(freeCharsLeft / 1000).toFixed(1)}k {L('remaining') || 'rimanenti'})
-                </span>
-              </div>
-              <div style={{fontSize:9, color:S.colors.textMuted, marginTop:6, lineHeight:1.4}}>
-                {L('freePrivacyNote') || 'Il piano gratuito utilizza Microsoft Translator e Google Translate.'}
+              <div style={{fontSize:11, color:S.colors.textSecondary, lineHeight:1.5}}>
+                {'🎯'} Voci AI premium, ElevenLabs, traduzioni illimitate — tutto gratis per tutti.
               </div>
             </div>
           ) : (
@@ -312,8 +292,12 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
         </div>
 
         {/* ══════════════════════════════════════════════════
-            MAIN SETTINGS CARD
+            PROFILO
            ══════════════════════════════════════════════════ */}
+        <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
+          letterSpacing:1.2, width:'100%', maxWidth:400, padding:'4px 4px 6px'}}>
+          {'👤'} Profilo
+        </div>
         <div style={S.card}>
           <div style={S.field}>
             <div style={S.label}>{L('name')}</div>
@@ -415,6 +399,11 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             )}
           </div>
 
+          {/* Sezione Voce */}
+          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
+            letterSpacing:1.2, padding:'12px 0 6px'}}>
+            {'🎙️'} Voce AI
+          </div>
           <div style={S.field}>
             <div style={S.label}>{L('voiceTranslation')} (OpenAI)</div>
             <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:8}}>
@@ -1247,7 +1236,11 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             </div>
           </div>
 
-          {/* Theme selector */}
+          {/* Sezione Aspetto */}
+          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
+            letterSpacing:1.2, padding:'12px 0 6px'}}>
+            {'🎨'} Aspetto
+          </div>
           <div style={S.field}>
             <div style={S.label}>{L('theme') || 'Tema'}</div>
             <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:8}}>

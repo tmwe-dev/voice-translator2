@@ -1,8 +1,10 @@
 // Service Worker for VoiceTranslate — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 8;
+const CACHE_VERSION = 9;
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
+const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;
 const STATIC_ASSETS = [
+  '/',
   '/manifest.json',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
@@ -67,8 +69,12 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
-    )
+      Promise.all(
+        names
+          .filter((n) => n !== CACHE_NAME && n !== TTS_CACHE_NAME && n !== TRANSLATE_CACHE_NAME)
+          .map((n) => caches.delete(n))
+      )
+    ).then(() => checkCacheSize())
   );
   self.clients.claim();
 });
@@ -203,6 +209,52 @@ async function handleTTSEdgeCache(request) {
   }
 }
 
+// =============================================
+// TRANSLATE CACHE — POST caching by body hash
+// Same translation request always produces same result (deterministic)
+// =============================================
+async function handleTranslateCache(request) {
+  try {
+    const bodyText = await request.clone().text();
+    const cacheKey = new Request(`/_translate_cache/${simpleHash(bodyText)}`);
+    const cache = await caches.open(TRANSLATE_CACHE_NAME);
+    const cached = await cache.match(cacheKey);
+    if (cached) return cached;
+
+    const response = await fetch(request);
+    if (response.ok) {
+      const cloned = response.clone();
+      cache.put(cacheKey, cloned);
+      // Cap translation cache at 300 entries
+      cache.keys().then(keys => {
+        if (keys.length > 300) {
+          // Remove oldest 100 entries
+          keys.slice(0, 100).forEach(k => cache.delete(k));
+        }
+      });
+    }
+    return response;
+  } catch (e) {
+    // On offline, store in IndexedDB for later retry
+    try {
+      const bodyText = await request.clone().text();
+      const db = await openOfflineQueueDB();
+      const tx = db.transaction('pending-messages', 'readwrite');
+      const store = tx.objectStore('pending-messages');
+      await store.add({ body: bodyText, timestamp: Date.now() });
+      // Signal SW to register background sync
+      self.registration.sync.register('flush-offline-queue').catch(() => {});
+      return new Response(JSON.stringify({ queued: true }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (queueErr) {
+      console.warn('[SW] Failed to queue translation:', queueErr);
+      return new Response('Translation offline', { status: 503 });
+    }
+  }
+}
+
 function simpleHash(str) {
   let h = 0;
   for (let i = 0; i < str.length; i++) {
@@ -210,6 +262,60 @@ function simpleHash(str) {
     h |= 0;
   }
   return h.toString(36);
+}
+
+// =============================================
+// IndexedDB — offline queue for failed requests
+// =============================================
+function openOfflineQueueDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('vt-offline-queue', 1);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => resolve(req.result);
+    req.onupgradeneeded = (evt) => {
+      const db = evt.target.result;
+      if (!db.objectStoreNames.contains('pending-messages')) {
+        db.createObjectStore('pending-messages', { autoIncrement: true });
+      }
+    };
+  });
+}
+
+// =============================================
+// CACHE SIZE MANAGEMENT
+// Check total cache size and trim if > 50MB
+// =============================================
+async function checkCacheSize() {
+  try {
+    if (!navigator.storage || !navigator.storage.estimate) return;
+    const estimate = await navigator.storage.estimate();
+    const usage = estimate.usage || 0;
+    const maxSize = 50 * 1024 * 1024; // 50MB
+
+    if (usage > maxSize) {
+      console.warn(`[SW] Cache size ${(usage / 1024 / 1024).toFixed(2)}MB exceeds 50MB limit, trimming...`);
+      // Trim TRANSLATE_CACHE first (most replaceable)
+      await trimCacheBySize(TRANSLATE_CACHE_NAME, 100, maxSize / 2);
+      // Then trim TTS_CACHE if still over
+      await trimCacheBySize(TTS_CACHE_NAME, 50, maxSize / 3);
+      // Finally trim main CACHE_NAME if still over
+      await trimCacheBySize(CACHE_NAME, 30, maxSize / 4);
+    }
+  } catch (e) {
+    console.warn('[SW] Cache size check failed:', e);
+  }
+}
+
+async function trimCacheBySize(cacheName, removeCount, targetSize) {
+  try {
+    const cache = await caches.open(cacheName);
+    const keys = await cache.keys();
+    for (let i = 0; i < Math.min(removeCount, keys.length); i++) {
+      await cache.delete(keys[i]);
+    }
+  } catch (e) {
+    console.warn(`[SW] Failed to trim ${cacheName}:`, e);
+  }
 }
 
 // =============================================
@@ -259,6 +365,12 @@ self.addEventListener('fetch', (event) => {
   // ── TTS Edge POST caching: same input text+lang = same audio (deterministic) ──
   if (request.method === 'POST' && url.pathname === '/api/tts-edge') {
     event.respondWith(handleTTSEdgeCache(request));
+    return;
+  }
+
+  // ── Translate POST caching: same request = same translation (deterministic) ──
+  if (request.method === 'POST' && url.pathname === '/api/translate') {
+    event.respondWith(handleTranslateCache(request));
     return;
   }
 
