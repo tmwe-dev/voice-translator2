@@ -268,7 +268,7 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
                 ? 'Crea una stanza pubblica per farti trovare da persone in tutto il mondo!'
                 : 'Create a public room to be found by people around the world!'}
             </div>
-            <button onClick={() => setView('home')}
+            <button onClick={() => setView('create')}
               style={{
                 padding: '14px 28px', borderRadius: 16, cursor: 'pointer',
                 background: `linear-gradient(135deg, ${S.colors.accent1 || '#26D9B0'}, ${S.colors.accent2 || '#8B6AFF'})`,

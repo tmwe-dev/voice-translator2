@@ -55,7 +55,10 @@ export default function ContactsView({
     } else if (result.notRegistered) {
       setAddError(isIT ? 'Utente non registrato. Invia un invito!' : 'User not registered. Send an invite!');
     } else {
-      setAddError(result.error || 'Error');
+      const errMsg = result.error === 'notAuthenticated'
+        ? (isIT ? 'Accedi per aggiungere contatti' : 'Sign in to add contacts')
+        : (result.error || (isIT ? 'Errore' : 'Error'));
+      setAddError(errMsg);
     }
   }
 

@@ -475,7 +475,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                             {m.name}
                           </div>
                           <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:1}}>
-                            {m.desc} \u2022 {m.cost}
+                            {m.desc} {'\u2022'} {m.cost}
                           </div>
                         </div>
                         {isSelected && (
@@ -1064,7 +1064,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                 background:'rgba(255,215,0,0.04)', border:'1px solid rgba(255,215,0,0.12)'}}>
                 <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8}}>
                   <span style={{fontSize:14, fontWeight:700, color:S.colors.goldAccent, display:'flex', alignItems:'center', gap:6}}>
-                    {'\u2B50'} TOP PRO \u2014 ElevenLabs
+                    {'\u2B50'} TOP PRO {'\u2014'} ElevenLabs
                   </span>
                   <button onClick={() => setIsTopPro(!isTopPro)}
                     style={{...S.toggle, background:isTopPro ? S.colors.goldAccent : S.colors.toggleOff}}>
@@ -1160,7 +1160,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     </div>
 
                     <div style={{fontSize:9, color:S.colors.textMuted, marginBottom:6}}>
-                      {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'} \u2022 {L('tapToSelect') || 'Tocca per selezionare'}
+                      {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'} {'\u2022'} {L('tapToSelect') || 'Tocca per selezionare'}
                     </div>
 
                     {/* Voice list */}
@@ -1192,7 +1192,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {/* Sezione Aspetto */}
           <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
             letterSpacing:1.2, padding:'12px 0 6px', display:'flex', alignItems:'center', gap:6}}>
-            <IconSettings size={14} style={{color:S.colors.textMuted}} /> Aspetto
+            <IconSettings size={14} style={{color:S.colors.textMuted}} /> {L('appearance') || 'Aspetto'}
           </div>
           <div style={S.field}>
             <div style={S.label}>{L('theme') || 'Tema'}</div>

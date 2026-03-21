@@ -815,13 +815,13 @@ function HomeInner() {
     const url = `${APP_URL}?lang=${lang || shareAppLang}`;
     const text = t(lang || shareAppLang, 'shareAppText');
     if (navigator.share) navigator.share({ title:'VoiceTranslate', text, url });
-    else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
+    else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
   }
 
   function shareRoom() {
     const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}`;
     if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(inviteLang,'inviteText')}`, url });
-    else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
+    else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
   }
 
   function exportConversation() {

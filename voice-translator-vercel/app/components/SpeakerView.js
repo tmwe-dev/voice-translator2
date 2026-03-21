@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import Icon from './Icon.js';
+import { toast } from './Toast.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — "Parla e Traduci al volo"
@@ -331,6 +332,8 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
         destination: destCoords?.displayName?.split(',').slice(0, 2).join(',') || '',
       }]);
       playTTS(translated, targetLang);
+    } else {
+      toast.error(L('translationError') || 'Traduzione fallita. Riprova.');
     }
     setProcessing(false);
     setTextMessage('');
@@ -745,7 +748,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
                 maxWidth: '100%', wordBreak: 'break-word',
                 textShadow: '0 0 30px rgba(38,217,176,0.3)',
               }}>
-                {translatedText || (processing ? '...' : '')}
+                {translatedText || (processing ? (L('processing') || 'Elaborazione...') : '')}
               </div>
             </>
           )}
@@ -952,15 +955,16 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
         padding: '0 16px', marginBottom: 12, flexShrink: 0,
       }}>
         {langButton(sourceLang, 'source')}
-        <button onClick={swapLangs}
+        <button onClick={(e) => { e.stopPropagation(); swapLangs(); }}
           style={{
-            width: 40, height: 40, borderRadius: 12, cursor: 'pointer',
+            width: 48, height: 48, borderRadius: 14, cursor: 'pointer',
             background: 'linear-gradient(135deg, #26D9B0, #FF6584)',
             border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, WebkitTapHighlightColor: 'transparent',
-            transition: 'transform 0.2s',
-          }}>
-          <span style={{ fontSize: 16, color: '#fff' }}>{'⇄'}</span>
+            transition: 'transform 0.2s', zIndex: 2,
+          }}
+          aria-label="Swap languages">
+          <Icon name="swap" size={20} color="#fff" />
         </button>
         {langButton(targetLang, 'target')}
       </div>

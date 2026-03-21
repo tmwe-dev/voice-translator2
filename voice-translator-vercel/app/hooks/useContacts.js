@@ -75,7 +75,7 @@ export default function useContacts({ userTokenRef }) {
   // Add contact by email
   const addContact = useCallback(async (contactEmail) => {
     const token = userTokenRef?.current;
-    if (!token) return { ok: false, error: 'Not authenticated' };
+    if (!token) return { ok: false, error: 'notAuthenticated' };
     try {
       const res = await fetch('/api/contacts', {
         method: 'POST',
