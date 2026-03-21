@@ -20,7 +20,28 @@ import Icon from './Icon.js';
 const COMMON_LANGS = ['en','it','es','fr','de','pt','zh','ja','ko','ar','hi','ru','tr','th','vi'];
 
 function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
-  const C = getStyles(theme);
+  const _S = getStyles(theme);
+  const col = _S.colors || {};
+  // Map legacy property names used throughout this component
+  const C = {
+    pageBg: '#060810',
+    textPrimary: col.textPrimary || '#F2F4F7',
+    textSecondary: col.textSecondary || 'rgba(242,244,247,0.90)',
+    textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
+    btnBg: col.cardBg || 'rgba(14,18,32,0.55)',
+    btnBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
+    topBarBg: col.glassCard || 'rgba(12,16,30,0.65)',
+    topBarBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
+    tabBg: col.overlayBg || 'rgba(255,255,255,0.03)',
+    tabBorder: col.overlayBorder || 'rgba(255,255,255,0.05)',
+    tabActiveBg: col.accent1Bg || 'rgba(38,217,176,0.10)',
+    tabActiveColor: col.accent1 || '#26D9B0',
+    popupBg: col.popupBg || 'rgba(10,14,26,0.96)',
+    popupBorder: col.overlayBorder || 'rgba(255,255,255,0.05)',
+    inputBg: col.inputBg || 'rgba(14,18,32,0.6)',
+    inputBorder: col.inputBorder || 'rgba(255,255,255,0.07)',
+    accent1: col.accent1 || '#26D9B0',
+  };
 
   // State
   const [sourceLang, setSourceLang] = useState(prefs?.lang || 'it');

@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { APP_URL, LANGS, FONT, vibrate } from '../lib/constants.js';
+import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
 // QuickInvite — Dark Ambient Glassmorphism QR Invite
@@ -49,7 +50,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
   const canvasRef = useRef(null);
 
   const selectGender = useCallback((g) => {
-    vibrate(); setGender(g); setVoice(VOICE_PRESETS[g]?.voice || 'nova'); setShowVoicePicker(false);
+    vibrate(); setGender(g); setVoice(VOICE_PRESETS[g]?.voice || 'nova'); setShowVoicePicker(true);
   }, []);
 
   const createInstant = useCallback(async () => {
@@ -62,9 +63,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
     setCreating(false);
   }, [lang, gender, handleCreateRoom]);
 
-  useEffect(() => {
-    if (gender && lang && !created && !creating && !createdRoomId) createInstant();
-  }, [gender, lang, created, creating, createdRoomId, createInstant]);
+  // NO auto-create — l'utente deve scegliere voce e poi premere "Crea"
 
   useEffect(() => {
     if (!createdRoomId || !canvasRef.current) return;
@@ -177,7 +176,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                 transition: 'all 0.25s',
                 boxShadow: gender === 'male' ? '0 4px 20px rgba(59,130,246,0.15)' : 'none',
               }}>
-              <span style={{ fontSize: 36 }}>{'👨'}</span>
+              <Icon name="user" size={36} color={gender === 'male' ? '#93C5FD' : 'rgba(242,244,247,0.92)'} />
               <span style={{ fontSize: 15, fontWeight: 600, fontFamily: FONT, color: gender === 'male' ? '#93C5FD' : glass.text.primary }}>Lui</span>
               <span style={{ fontSize: 10, color: gender === 'male' ? 'rgba(147,197,253,0.7)' : glass.text.muted }}>{VOICE_PRESETS.male.label}</span>
             </button>
@@ -193,7 +192,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                 transition: 'all 0.25s',
                 boxShadow: gender === 'female' ? '0 4px 20px rgba(236,72,153,0.15)' : 'none',
               }}>
-              <span style={{ fontSize: 36 }}>{'👩'}</span>
+              <Icon name="user" size={36} color={gender === 'female' ? '#F9A8D4' : 'rgba(242,244,247,0.92)'} />
               <span style={{ fontSize: 15, fontWeight: 600, fontFamily: FONT, color: gender === 'female' ? '#F9A8D4' : glass.text.primary }}>Lei</span>
               <span style={{ fontSize: 10, color: gender === 'female' ? 'rgba(249,168,212,0.7)' : glass.text.muted }}>{VOICE_PRESETS.female.label}</span>
             </button>
@@ -208,7 +207,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 marginTop: 10, transition: 'all 0.2s',
               }}>
-              {'🎵'} Voce: {ALL_VOICES.find(v => v.id === voice)?.label || voice}
+              <Icon name="music" size={14} color="currentColor" style={{ marginRight: -2 }} /> Voce: {ALL_VOICES.find(v => v.id === voice)?.label || voice}
               <span style={{ marginLeft: 'auto', fontSize: 10 }}>{showVoicePicker ? '▲' : '▼'}</span>
             </button>
           )}
@@ -234,6 +233,21 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
             </div>
           )}
         </div>
+
+        {/* ═══ BOTTONE CREA — appare dopo scelta genere+voce ═══ */}
+        {gender && !creating && !createdRoomId && (
+          <button onClick={createInstant}
+            style={{
+              width: '100%', padding: '18px 0', borderRadius: 16, cursor: 'pointer', border: 'none',
+              background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 50%, #178F78 100%)',
+              color: '#000', fontFamily: FONT, fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
+              boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              transition: 'all 0.2s',
+            }}>
+            <Icon name="share" size={20} color="#000" /> Genera QR Code
+          </button>
+        )}
 
         {/* ═══ CREATING SPINNER ═══ */}
         {creating && (
@@ -286,7 +300,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                   transition: 'all 0.2s',
                 }}>
-                {copied ? '✓ Copiato!' : '🔗 Copia link'}
+                {copied ? '✓ Copiato!' : <><Icon name="link" size={14} color="currentColor" /> Copia link</>}
               </button>
               <button onClick={() => {
                 if (navigator.share) {
@@ -296,8 +310,9 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                 style={{
                   padding: '12px 16px', borderRadius: 14, cursor: 'pointer',
                   ...glass.btn, color: glass.text.primary, fontFamily: FONT, fontSize: 13, fontWeight: 600,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                {'📤'}
+                <Icon name="share" size={16} color={glass.text.primary} />
               </button>
             </div>
 
@@ -310,7 +325,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                 transition: 'all 0.2s',
               }}>
-              {'💬'} Entra e inizia a parlare
+              <Icon name="doorCreate" size={20} color="#000" /> Entra e inizia a parlare
             </button>
 
             <div style={{ fontSize: 11, color: glass.text.muted, marginTop: 14, lineHeight: 1.6 }}>
@@ -325,7 +340,9 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
             textAlign: 'center', padding: '32px 16px',
             ...glass.card, borderRadius: 22,
           }}>
-            <div style={{ fontSize: 48, marginBottom: 14, filter: 'drop-shadow(0 4px 20px rgba(38,217,176,0.2))' }}>{'📱'}</div>
+            <div style={{ marginBottom: 14, filter: 'drop-shadow(0 4px 20px rgba(38,217,176,0.2))', display: 'inline-block' }}>
+              <Icon name="share" size={48} color="#26D9B0" />
+            </div>
             <div style={{ fontSize: 14, lineHeight: 1.7, color: glass.text.secondary, fontWeight: 300 }}>
               Seleziona lingua e voce — il QR code apparirà automaticamente.
             </div>

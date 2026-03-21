@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
+import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -8,37 +9,37 @@ import { FONT } from '../lib/constants.js';
 
 const STEPS = [
   {
-    emoji: '🏠',
+    iconName: 'doorOpen',
     title: 'Benvenuto in BarChat',
     desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, il tuo interlocutore sente nella sua.',
     accent: '#26D9B0',
   },
   {
-    emoji: '🔗',
+    iconName: 'link',
     title: 'Crea o Entra in una Stanza',
     desc: 'Condividi il codice stanza con chi vuoi. Si connette in P2P, senza server intermediari.',
     accent: '#8B6AFF',
   },
   {
-    emoji: '🎙️',
+    iconName: 'mic',
     title: 'Parla e Traduci',
     desc: 'Premi il microfono e parla. La traduzione appare istantaneamente con audio AI premium.',
     accent: '#E8924A',
   },
   {
-    emoji: '🚕',
+    iconName: 'swap',
     title: 'TaxiTalk Mode',
     desc: 'Perfetto per conversazioni dal vivo. Lo schermo si divide in due: tu da un lato, l\'interlocutore dall\'altro.',
     accent: '#26D9B0',
   },
   {
-    emoji: '🪞',
+    iconName: 'refresh',
     title: 'Mirror Automatico',
     desc: 'Inclina il telefono oltre 120° e lo schermo si capovolge automaticamente per chi è di fronte a te.',
     accent: '#8B6AFF',
   },
   {
-    emoji: '🎉',
+    iconName: 'star',
     title: 'Tutto Gratuito',
     desc: 'Voci AI premium, ElevenLabs, traduzioni illimitate in 140+ lingue. Nessun limite, nessun abbonamento.',
     accent: '#26D9B0',
@@ -161,13 +162,13 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
             ))}
           </div>
 
-          {/* Emoji */}
+          {/* Icon */}
           <div style={{
-            fontSize: 60, marginBottom: 20,
+            marginBottom: 20,
             animation: 'tutorialPulse 3s ease-in-out infinite', display: 'inline-block',
             filter: `drop-shadow(0 4px 20px ${current.accent}30)`,
           }}>
-            {current.emoji}
+            <Icon name={current.iconName} size={48} color={current.accent} />
           </div>
 
           {/* Title */}

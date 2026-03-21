@@ -3,6 +3,7 @@ import { memo, useState, useRef, useCallback } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS } from '../lib/constants.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
+import { IconMic, IconSettings, IconGlobe, IconKey, IconStar, IconMusic, IconZap, IconUser, IconCheckCircle } from './Icons.js';
 
 const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
@@ -163,7 +164,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           </button>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 20, fontWeight: 700, color: S.colors.textPrimary, fontFamily: FONT }}>
-              {'⚙️'} {L('settings')}
+              <IconSettings size={20} style={{display:'inline-block', marginRight:8, verticalAlign:'middle'}} /> {L('settings')}
             </div>
           </div>
         </div>
@@ -181,7 +182,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={{width:36, height:36, borderRadius:12,
                 background: 'linear-gradient(135deg, rgba(0,255,148,0.15), rgba(38,217,176,0.15))',
                 display:'flex', alignItems:'center', justifyContent:'center', fontSize: 18}}>
-                {'✨'}
+                <IconStar size={18} color={S.colors.goldAccent} />
               </div>
               <div>
                 <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary}}>
@@ -198,7 +199,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {isGuest ? (
             <div style={{padding:'0 18px 16px'}}>
               <div style={{fontSize:11, color:S.colors.textSecondary, lineHeight:1.5}}>
-                {'🎯'} Voci AI premium, ElevenLabs, traduzioni illimitate — tutto gratis per tutti.
+                <IconStar size={12} style={{display:'inline-block', marginRight:6, verticalAlign:'middle'}} /> Voci AI premium, ElevenLabs, traduzioni illimitate — tutto gratis per tutti.
               </div>
             </div>
           ) : (
@@ -295,8 +296,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             PROFILO
            ══════════════════════════════════════════════════ */}
         <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-          letterSpacing:1.2, width:'100%', maxWidth:400, padding:'4px 4px 6px'}}>
-          {'👤'} Profilo
+          letterSpacing:1.2, width:'100%', maxWidth:400, padding:'4px 4px 6px', display:'flex', alignItems:'center', gap:6}}>
+          <IconUser size={14} style={{color:S.colors.textMuted}} /> Profilo
         </div>
         <div style={S.card}>
           <div style={S.field}>
@@ -399,79 +400,23 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             )}
           </div>
 
-          {/* Sezione Voce */}
+          {/* Voce AI — voci gestite automaticamente */}
           <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px'}}>
-            {'🎙️'} Voce AI
+            letterSpacing:1.2, padding:'12px 0 6px', display:'flex', alignItems:'center', gap:6}}>
+            <IconMic size={14} style={{color:S.colors.textMuted}} /> Voce AI
           </div>
           <div style={S.field}>
-            <div style={S.label}>{L('voiceTranslation')} (OpenAI)</div>
-            <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:8}}>
-              {L('tapToSelect') || 'Tocca per selezionare'} \u2022 {L('tapPlayToPreview') || 'Premi \u25B6 per ascoltare'}
+            <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:8, lineHeight:1.4}}>
+              Le voci vengono gestite automaticamente dal sistema in base al sesso e alla lingua. Usa ElevenLabs (sotto) per voci premium.
             </div>
-            <div style={{display:'flex', flexDirection:'column', gap:6}}>
-              {VOICES.map(v => {
-                const isSelected = prefs.voice === v;
-                const isPlaying = playingVoice === v;
-                return (
-                  <div key={v} style={{display:'flex', alignItems:'center', gap:8,
-                    padding:'10px 14px', borderRadius:14, transition:'all 0.15s',
-                    background: isSelected ? S.colors.accent1Bg : S.colors.overlayBg,
-                    border: isSelected ? '1.5px solid ' + S.colors.accent1Border : '1.5px solid ' + S.colors.overlayBorder}}>
-                    {/* Play/Stop button */}
-                    <button onClick={(e) => { e.stopPropagation(); previewVoice(v); }}
-                      style={{width:36, height:36, borderRadius:10, cursor:'pointer', flexShrink:0,
-                        background: isPlaying ? S.colors.accent3Bg : S.colors.overlayBg,
-                        border: isPlaying ? '1.5px solid ' + S.colors.accent3Border : '1.5px solid ' + S.colors.overlayBorder,
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
-                      <Icon name={isPlaying ? 'stop' : 'play'} size={16}
-                        color={isPlaying ? S.colors.accent3 : S.colors.textSecondary} />
-                    </button>
-                    {/* Voice name — click to select */}
-                    <button onClick={() => setPrefs({...prefs, voice:v})}
-                      style={{flex:1, textAlign:'left', background:'none', border:'none', cursor:'pointer',
-                        fontFamily:FONT, WebkitTapHighlightColor:'transparent', padding:0}}>
-                      <div style={{fontSize:14, fontWeight:isSelected ? 700 : 500,
-                        color: isSelected ? S.colors.accent1 : S.colors.textSecondary,
-                        letterSpacing:-0.2}}>
-                        {v.charAt(0).toUpperCase() + v.slice(1)}
-                      </div>
-                      <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:1}}>
-                        {v === 'alloy' ? (L('voiceAlloyDesc') || 'Neutra, versatile') :
-                         v === 'echo' ? (L('voiceEchoDesc') || 'Maschile, calda') :
-                         v === 'fable' ? (L('voiceFableDesc') || 'Espressiva, narrativa') :
-                         v === 'onyx' ? (L('voiceOnyxDesc') || 'Profonda, autorevole') :
-                         v === 'nova' ? (L('voiceNovaDesc') || 'Femminile, naturale') :
-                         v === 'shimmer' ? (L('voiceShimmerDesc') || 'Luminosa, chiara') : ''}
-                      </div>
-                    </button>
-                    {/* Selected indicator */}
-                    {isSelected && (
-                      <div style={{width:24, height:24, borderRadius:12,
-                        background:S.colors.accent1Bg, border:'1.5px solid ' + S.colors.accent1Border,
-                        display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-                        <span style={{fontSize:12, color:S.colors.accent1}}>{'\u2713'}</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{fontSize:10, color:S.colors.textTertiary, marginTop:8, lineHeight:1.4}}>
-              {(userToken && (useOwnKeys || creditBalance > 0))
-                ? (L('previewUsesRealVoice') || '\u2713 Anteprima con la vera voce OpenAI TTS')
-                : (L('previewRequiresAccount') || 'Accedi con account PRO o configura le chiavi API per ascoltare l\'anteprima delle voci')}
-            </div>
-            {/* Voice Test Page button */}
             <button onClick={() => setView('voicetest')}
-              style={{width:'100%', marginTop:10, padding:'10px 14px', borderRadius:12, cursor:'pointer',
+              style={{width:'100%', padding:'10px 14px', borderRadius:12, cursor:'pointer',
                 background:S.colors.accent1Bg, border:'1px solid ' + S.colors.accent1Border,
                 color:S.colors.accent1, fontSize:12, fontWeight:700, fontFamily:FONT,
                 display:'flex', alignItems:'center', justifyContent:'center', gap:8,
                 WebkitTapHighlightColor:'transparent'}}>
               <Icon name="play" size={16} color={S.colors.accent1} />
-              {L('voiceTestPage') || 'Test completo voci'}
+              Test completo voci
             </button>
           </div>
 
@@ -562,7 +507,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
             return (
               <div style={S.field}>
-                <div style={S.label}>{'🌐'} {L('translationServices') || 'Servizi di Traduzione (Free)'}</div>
+                <div style={{...S.label, display:'flex', alignItems:'center', gap:6}}><IconGlobe size={14} style={{color:S.colors.textMuted}} /> {L('translationServices') || 'Servizi di Traduzione (Free)'}</div>
                 <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:10}}>
                   {L('translationServicesHint') || 'Traduzione automatica gestita dal sistema: Microsoft Translator (primario) + Google Translate (fallback).'}
                 </div>
@@ -574,7 +519,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     background: S.colors.accent1Bg, borderRadius:8, fontSize:12,
                   }}>
                     <span style={{width:18, textAlign:'center'}}>1.</span>
-                    <span>🟢</span>
+                    <span style={{width:12, height:12, borderRadius:'50%', background:'#22c55e', flexShrink:0}}></span>
                     <span style={{flex:1, fontWeight:600}}>Microsoft Translator</span>
                     <span style={{color:'#eab308', fontSize:10}}>★★★★★</span>
                     <span style={{color:S.colors.textTertiary, fontSize:10}}>~75ms</span>
@@ -584,7 +529,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     background: 'transparent', borderRadius:8, fontSize:12,
                   }}>
                     <span style={{width:18, textAlign:'center'}}>2.</span>
-                    <span>🔵</span>
+                    <span style={{width:12, height:12, borderRadius:'50%', background:'#3b82f6', flexShrink:0}}></span>
                     <span style={{flex:1, fontWeight:400}}>Google Translate</span>
                     <span style={{color:'#eab308', fontSize:10}}>★★★★☆</span>
                     <span style={{color:S.colors.textTertiary, fontSize:10}}>~200ms</span>
@@ -598,9 +543,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                   </div>
                   <div style={{display:'flex', gap:6, flexWrap:'wrap'}}>
                     {[
-                      { id: 'standard', label: '⚡ Standard', desc: '1 provider, veloce' },
-                      { id: 'guaranteed', label: '✅ Garantita', desc: '2 provider, consenso' },
-                      { id: 'superfast', label: '🏎️ Superfast', desc: '1 velocissimo' },
+                      { id: 'standard', label: 'Standard', desc: '1 provider, veloce' },
+                      { id: 'guaranteed', label: 'Garantita', desc: '2 provider, consenso' },
+                      { id: 'superfast', label: 'Superfast', desc: '1 velocissimo' },
                     ].map(m => (
                       <button key={m.id} onClick={() => updateMode(m.id)}
                         style={{
@@ -637,10 +582,10 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
                 {/* Test Center link */}
                 <a href="/testcenter" target="_blank" rel="noopener"
-                  style={{display:'block', marginTop:12, padding:'8px 12px', borderRadius:8,
+                  style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6, marginTop:12, padding:'8px 12px', borderRadius:8,
                     background:S.colors.accent2Bg || '#1e3a5f', textDecoration:'none',
-                    color:S.colors.accent2 || '#60a5fa', fontSize:12, fontWeight:600, textAlign:'center'}}>
-                  🧪 Apri Test Center
+                    color:S.colors.accent2 || '#60a5fa', fontSize:12, fontWeight:600}}>
+                  <IconZap size={12} /> Apri Test Center
                 </a>
               </div>
             );
@@ -708,7 +653,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={{...S.card, marginTop:16}}>
                 <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer'}}
                   onClick={() => { setShowLending(!showLending); if (!showLending) fetchLendingTokens(); }}>
-                  <div style={S.label}>{'🔑'} {isIT ? 'Presta Accesso TOP PRO' : 'Lend TOP PRO Access'}</div>
+                  <div style={{...S.label, display:'flex', alignItems:'center', gap:6}}><IconKey size={14} /> {isIT ? 'Presta Accesso TOP PRO' : 'Lend TOP PRO Access'}</div>
                   <Icon name="chevDown" size={16} color={S.colors.textMuted}
                     style={{transform: showLending ? 'rotate(180deg)' : 'none', transition:'transform 0.2s'}} />
                 </div>
@@ -760,8 +705,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     )}
 
                     <button onClick={handleCreateLending}
-                      style={{...S.btn, width:'100%', marginBottom:8, fontSize:12}}>
-                      {'🔑'} {isIT ? 'Crea Token' : 'Create Token'}
+                      style={{...S.btn, width:'100%', marginBottom:8, fontSize:12, display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
+                      <IconKey size={12} /> {isIT ? 'Crea Token' : 'Create Token'}
                     </button>
 
                     {lendingResult && (
@@ -866,7 +811,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               <div style={{background:S.colors.glassCard, borderRadius:16,
                 border:`1px solid ${S.colors.cardBorder}`, padding:16, marginBottom:12}}>
                 <div style={{fontSize:13, fontWeight:700, color:S.colors.textPrimary, marginBottom:10, display:'flex', alignItems:'center', gap:6}}>
-                  {'\uD83C\uDFA4'} {isIT ? 'La tua Voce' : 'Your Voice'}
+                  <IconMic size={16} /> {isIT ? 'La tua Voce' : 'Your Voice'}
                 </div>
 
                 {clonedVoiceId ? (
@@ -874,7 +819,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                     <div style={{display:'flex', alignItems:'center', gap:8, marginBottom:10}}>
                       <div style={{width:36, height:36, borderRadius:'50%', background:S.colors.accent4Bg,
                         display:'flex', alignItems:'center', justifyContent:'center', fontSize:18}}>
-                        {'\uD83C\uDFA4'}
+                        <IconMic size={18} />
                       </div>
                       <div>
                         <div style={{fontSize:13, fontWeight:600, color:S.colors.textPrimary}}>{clonedVoiceName || 'My Voice'}</div>
@@ -915,8 +860,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
                       style={{width:'100%', padding:'10px 0', borderRadius:12,
                         background:`linear-gradient(135deg, ${S.colors.accent4Bg}, ${S.colors.accent2Bg || S.colors.accent4Bg})`,
                         border:`1px solid ${S.colors.accent4Border}`,
-                        color:S.colors.textPrimary, fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer'}}>
-                      {'\uD83C\uDFA4'} {isIT ? 'Campiona la tua voce' : 'Record your voice'}
+                        color:S.colors.textPrimary, fontFamily:'inherit', fontSize:12, fontWeight:700, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:6}}>
+                      <IconMic size={14} /> {isIT ? 'Campiona la tua voce' : 'Record your voice'}
                     </button>
                     {isTrial && (
                       <div style={{fontSize:9, color:S.colors.textMuted, textAlign:'center', marginTop:6}}>
@@ -1238,8 +1183,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
           {/* Sezione Aspetto */}
           <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px'}}>
-            {'🎨'} Aspetto
+            letterSpacing:1.2, padding:'12px 0 6px', display:'flex', alignItems:'center', gap:6}}>
+            <IconSettings size={14} style={{color:S.colors.textMuted}} /> Aspetto
           </div>
           <div style={S.field}>
             <div style={S.label}>{L('theme') || 'Tema'}</div>

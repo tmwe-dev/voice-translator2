@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
+import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
 // MainMenu — Dark Ambient Glassmorphism Hub
@@ -9,70 +10,70 @@ import getStyles from '../lib/styles.js';
 
 const MENU_ITEMS = [
   {
-    id: 'speaker', icon: '🚕', label: 'TaxiTalk',
+    id: 'speaker', iconName: 'swap', label: 'TaxiTalk',
     descIT: 'Traduci faccia a faccia',
     descEN: 'Face-to-face translation',
     accentFrom: '#26D9B0', accentTo: '#0FA88A',
     size: 'large',
   },
   {
-    id: 'create', icon: '💬', label: 'Chat',
+    id: 'create', iconName: 'doorCreate', label: 'Chat',
     descIT: 'Crea una stanza',
     descEN: 'Create a room',
     accentFrom: '#8B6AFF', accentTo: '#6B4ADF',
     size: 'large',
   },
   {
-    id: 'quickinvite', icon: '📱', label: 'Invita',
+    id: 'quickinvite', iconName: 'share', label: 'Invita',
     descIT: 'QR code istantaneo',
     descEN: 'Instant QR code',
     accentFrom: '#26D9B0', accentTo: '#3B82F6',
     size: 'medium', badge: 'New',
   },
   {
-    id: 'call', icon: '📞', label: 'Chiama',
+    id: 'call', iconName: 'phone', label: 'Chiama',
     descIT: 'Voice call tradotta',
     descEN: 'Translated voice call',
     accentFrom: '#E8924A', accentTo: '#FF6B6B',
     size: 'medium',
   },
   {
-    id: 'video', icon: '📹', label: 'Video',
+    id: 'video', iconName: 'video', label: 'Video',
     descIT: 'Video call tradotta',
     descEN: 'Translated video call',
     accentFrom: '#8B6AFF', accentTo: '#EC4899',
     size: 'medium',
   },
   {
-    id: 'mondo', icon: '🌍', label: 'Mondo',
+    id: 'mondo', iconName: 'globe', label: 'Mondo',
     descIT: 'Stanze pubbliche',
     descEN: 'Public rooms',
     accentFrom: '#06B6D4', accentTo: '#26D9B0',
     size: 'medium',
   },
   {
-    id: 'voicetest', icon: '🎙️', label: 'Voce',
+    id: 'voicetest', iconName: 'mic', label: 'Voce',
     descIT: 'Test e impostazioni voce',
     descEN: 'Voice test & settings',
     accentFrom: '#E8924A', accentTo: '#FBBF24',
     size: 'small',
   },
   {
-    id: 'history', icon: '📋', label: 'Cronologia',
+    id: 'history', iconName: 'history', label: 'Cronologia',
     descIT: 'Le tue conversazioni',
     descEN: 'Your conversations',
     accentFrom: '#8B6AFF', accentTo: '#26D9B0',
     size: 'small',
   },
   {
-    id: 'contacts', icon: '👥', label: 'Contatti',
+    id: 'contacts', iconName: 'user', label: 'Contatti',
     descIT: 'Gestisci contatti',
     descEN: 'Manage contacts',
     accentFrom: '#A78BFA', accentTo: '#8B6AFF',
     size: 'small',
   },
   {
-    id: 'settings', icon: '⚙️', label: 'Impostazioni',
+    id: 'settings', iconName: 'settings', label: 'Impostazioni',
     descIT: 'Lingua, tema, voce',
     descEN: 'Language, theme, voice',
     accentFrom: '#64748B', accentTo: '#475569',
@@ -139,7 +140,7 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
               transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
               transform: pressedId === item.id ? 'scale(0.95)' : 'scale(1)',
             }}>
-            <span style={{ fontSize: 40 }}>{item.icon}</span>
+            <Icon name={item.iconName} size={40} color={item.accentFrom} />
             <span style={{
               fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
               background: `linear-gradient(135deg, ${item.accentFrom}, #fff)`,
@@ -185,9 +186,8 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
               background: `linear-gradient(135deg, ${item.accentFrom}25, ${item.accentTo}15)`,
               border: `1px solid ${item.accentFrom}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 22,
             }}>
-              {item.icon}
+              <Icon name={item.iconName} size={22} color={item.accentFrom} />
             </div>
             <div style={{ textAlign: 'left', minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>{item.label}</div>
@@ -219,9 +219,8 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
               background: `linear-gradient(135deg, ${item.accentFrom}25, ${item.accentTo}15)`,
               border: `1px solid ${item.accentFrom}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 16,
             }}>
-              {item.icon}
+              <Icon name={item.iconName} size={16} color={item.accentFrom} />
             </div>
             <div style={{ textAlign: 'left', minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.90)' }}>{item.label}</div>

@@ -40,6 +40,7 @@ const paths = {
   wave: 'M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0 4 4 6 0',
   doorOpen: 'M5 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 12h.01M22 12l-4-4m4 4l-4 4m4-4H14',
   doorCreate: 'M5 2h11a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 12h.01M21 9v6M18 12h6',
+  music: 'M9 18v-5m4 5V7m4 11v-3M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
 };
 
 export default function Icon({ name, size = 20, color = 'currentColor', style = {} }) {
