@@ -1,5 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Mock circuit breaker to pass through
+vi.mock('../../app/lib/circuitBreaker.js', () => ({
+  apiCircuitBreaker: {
+    execute: (key, fn) => fn(),
+    canExecute: () => true,
+    getState: () => 'CLOSED',
+  },
+}));
+
 // Mock OpenAI
 const mockCreate = vi.fn();
 vi.mock('openai', () => ({
@@ -29,7 +38,7 @@ vi.mock('@google/generative-ai', () => ({
   }
 }));
 
-const { callLLM } = await import('../../app/lib/llmCaller.js');
+const { callLLM, callLLMWithFallback } = await import('../../app/lib/llmCaller.js');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -70,7 +79,7 @@ describe('callLLM', () => {
     expect(mockAnthropicCreate).toHaveBeenCalledTimes(1);
   });
 
-  it('calls Gemini provider', async () => {
+  it('calls Gemini with native systemInstruction', async () => {
     mockGenerate.mockResolvedValue({
       response: {
         text: () => 'Ciao mondo',
@@ -102,7 +111,6 @@ describe('callLLM', () => {
     });
 
     expect(result.translated).toBe('Continuo...');
-    // Verify context was included in the prompt
     const callArgs = mockGenerate.mock.calls[0][0];
     expect(callArgs.contents[0].parts[0].text).toContain('previous translation');
   });
@@ -121,5 +129,63 @@ describe('callLLM', () => {
 
     expect(result.translated).toBe('Result');
     expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('times out after specified ms', async () => {
+    mockCreate.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 5000)));
+
+    await expect(callLLM({
+      provider: 'openai', model: 'gpt-4o-mini', apiKey: 'key',
+      messages: [{ role: 'user', content: 'test' }],
+      systemPrompt: 'sys', text: 'test',
+      timeoutMs: 50, // 50ms timeout
+    })).rejects.toThrow(/timed out/);
+  });
+});
+
+describe('callLLMWithFallback', () => {
+  it('returns primary result on success', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [{ message: { content: 'Primary result' } }],
+      usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 }
+    });
+
+    const result = await callLLMWithFallback({
+      provider: 'openai', model: 'gpt-4o-mini', apiKey: 'key',
+      messages: [{ role: 'user', content: 'test' }],
+      systemPrompt: 'sys', text: 'test',
+    }, [{ provider: 'anthropic', model: 'fallback', apiKey: 'key2' }]);
+
+    expect(result.translated).toBe('Primary result');
+    expect(result.wasFallback).toBe(false);
+  });
+
+  it('falls back on primary failure', async () => {
+    mockCreate.mockRejectedValue(new Error('OpenAI down'));
+    mockAnthropicCreate.mockResolvedValue({
+      content: [{ text: 'Fallback result' }],
+      usage: { input_tokens: 5, output_tokens: 3 }
+    });
+
+    const result = await callLLMWithFallback({
+      provider: 'openai', model: 'gpt-4o-mini', apiKey: 'key',
+      messages: [{ role: 'system', content: 'sys' }, { role: 'user', content: 'test' }],
+      systemPrompt: 'sys', text: 'test',
+    }, [{ provider: 'anthropic', model: 'claude-3-haiku', apiKey: 'key2' }]);
+
+    expect(result.translated).toBe('Fallback result');
+    expect(result.wasFallback).toBe(true);
+    expect(result.provider).toBe('anthropic');
+  });
+
+  it('throws when all providers fail', async () => {
+    mockCreate.mockRejectedValue(new Error('OpenAI down'));
+    mockAnthropicCreate.mockRejectedValue(new Error('Anthropic down'));
+
+    await expect(callLLMWithFallback({
+      provider: 'openai', model: 'gpt-4o-mini', apiKey: 'key',
+      messages: [{ role: 'system', content: 'sys' }, { role: 'user', content: 'test' }],
+      systemPrompt: 'sys', text: 'test',
+    }, [{ provider: 'anthropic', model: 'claude-3-haiku', apiKey: 'key2' }])).rejects.toThrow(/All LLM providers failed/);
   });
 });

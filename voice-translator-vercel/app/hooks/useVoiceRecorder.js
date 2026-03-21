@@ -54,9 +54,16 @@ export default function useVoiceRecorder() {
     }
   }, []);
 
+  // Reuse Float32Array across frames to avoid GC pressure
+  const dataBufferRef = useRef(null);
+
   const updateLevels = useCallback(() => {
     if (!analyserRef.current) return;
-    const data = new Float32Array(analyserRef.current.fftSize);
+    // Allocate once, reuse across frames
+    if (!dataBufferRef.current || dataBufferRef.current.length !== analyserRef.current.fftSize) {
+      dataBufferRef.current = new Float32Array(analyserRef.current.fftSize);
+    }
+    const data = dataBufferRef.current;
     analyserRef.current.getFloatTimeDomainData(data);
 
     let sum = 0;

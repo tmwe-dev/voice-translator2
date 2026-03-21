@@ -74,7 +74,7 @@ const MessageList = memo(function MessageList({
   }, []);
 
   return (
-    <div style={S.chatArea}>
+    <div style={S.chatArea} role="log" aria-live="polite" aria-label="Chat messages">
       {messages.length === 0 && (
         <div style={{textAlign:'center', color:S.colors.textMuted, marginTop:60, fontSize:13, lineHeight:1.6}}>
           {L('speakNow')}{'\n'}
@@ -140,6 +140,7 @@ const MessageList = memo(function MessageList({
               <div style={{display:'flex', alignItems:'center', gap:4, marginTop:2}}>
                 {hasTranslation && (
                   <button onClick={() => playMessage(m)}
+                    aria-label={playingMsgId === m.id ? 'Stop audio' : 'Play message audio'}
                     style={{padding:'2px 8px', borderRadius:8,
                       background:'transparent', border:'none', color:S.colors.textMuted,
                       fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
@@ -148,6 +149,8 @@ const MessageList = memo(function MessageList({
                 )}
                 {/* React button */}
                 <button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id)}
+                  aria-label="Add reaction"
+                  aria-expanded={reactionPickerMsgId === m.id}
                   style={{padding:'2px 6px', borderRadius:8,
                     background:'transparent', border:'none', color:S.colors.textMuted,
                     fontSize:13, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
@@ -175,6 +178,7 @@ const MessageList = memo(function MessageList({
                 }}>
                   {QUICK_REACTIONS.map(emoji => (
                     <button key={emoji}
+                      aria-label={`React with ${emoji}`}
                       onClick={() => { onReaction?.(m.id, emoji); setReactionPickerMsgId(null); }}
                       style={{
                         background:'none', border:'none', fontSize:20, cursor:'pointer',

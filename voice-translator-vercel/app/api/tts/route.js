@@ -7,15 +7,16 @@ import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/c
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDefaults.js';
 import { routeTTS } from '../../lib/ttsRouter.js';
+import { ErrorCode, apiError } from '../../lib/errors.js';
+import { validateTTSInput } from '../../lib/schemas.js';
 
 // ═══════════════════════════════════════════════
-// TTS with gpt-4o-mini-tts — STREAMING
+// TTS with gpt-4o-mini-tts — TRUE STREAMING
 //
-// Key improvement: Stream audio bytes to client as they're generated.
-// OLD: Server waits for full MP3 buffer → client gets audio after ~1-2s
-// NEW: Server streams chunks → client starts playing in ~100-200ms (TTFB)
-//
-// The client uses MediaSource API or falls back to blob playback.
+// Stream audio bytes to client as they're generated.
+// Client receives first bytes in ~100-200ms (TTFB)
+// Uses TransformStream to pipe OpenAI response to client.
+// Falls back to buffer mode if streaming fails.
 // ═══════════════════════════════════════════════
 
 const TTS_INSTRUCTIONS = {
@@ -24,7 +25,7 @@ const TTS_INSTRUCTIONS = {
   'en': 'Speak in clear, natural English with a neutral accent. Use conversational tone and natural pacing.',
   'es': 'Speak in fluent Spanish with natural Castilian intonation. Roll the R sounds where appropriate. Sound like a native Spanish speaker.',
   'fr': 'Speak in fluent French with natural Parisian intonation. Use proper liaison and nasal vowels. Sound like a native French speaker.',
-  'de': 'Speak in fluent German with clear pronunciation of umlauts (ä, ö, ü) and compound words. Use natural German rhythm.',
+  'de': 'Speak in fluent German with clear pronunciation of umlauts (a, o, u) and compound words. Use natural German rhythm.',
   'pt': 'Speak in fluent Brazilian Portuguese with natural intonation. Use proper nasal vowels and open/closed vowel distinctions.',
   'zh': 'Speak in fluent Mandarin Chinese with correct four tones. Each tone must be precise. Speak SLOWLY and clearly, slightly slower than normal conversation. Pause briefly between phrases. Use natural Mandarin rhythm.',
   'ja': 'Speak in fluent Japanese with natural pitch accent patterns. Use proper mora timing — each mora should be roughly equal length. Speak at a calm, measured pace. Pause naturally between sentences. Sound like a native Japanese speaker.',
@@ -40,18 +41,21 @@ const TTS_INSTRUCTIONS = {
   'el': 'Speak in fluent Greek with natural intonation and proper stress placement. Sound like a native Greek speaker.',
   'id': 'Speak in fluent Indonesian with clear pronunciation and natural Bahasa Indonesia rhythm.',
   'ms': 'Speak in fluent Malay with natural Malaysian intonation and proper pronunciation.',
-  'cs': 'Speak in fluent Czech with natural intonation and proper ř pronunciation. Sound like a native Czech speaker.',
-  'ro': 'Speak in fluent Romanian with natural intonation and proper pronunciation of ă, â, î, ș, ț.',
+  'cs': 'Speak in fluent Czech with natural intonation and proper pronunciation. Sound like a native Czech speaker.',
+  'ro': 'Speak in fluent Romanian with natural intonation and proper pronunciation.',
   'hu': 'Speak in fluent Hungarian with natural intonation and proper vowel length distinctions. Sound like a native Hungarian speaker.',
   'fi': 'Speak in fluent Finnish with natural intonation and proper vowel/consonant length distinctions. Sound like a native Finnish speaker.',
 };
 
-// Speed per language now managed in voiceDefaults.js
-
 async function handlePost(req) {
   try {
-    const { text, voice, userToken, roomId, langCode, stream: wantStream } = await req.json();
-    if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
+    // Validate input
+    const body = await req.json();
+    const validation = validateTTSInput(body);
+    if (!validation.valid) {
+      return apiError(ErrorCode.INVALID_INPUT, validation.error);
+    }
+    const { text, voice, userToken, roomId, langCode, wantStream } = validation.data;
 
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
@@ -65,7 +69,6 @@ async function handlePost(req) {
 
     // ── TTS Router: check if a better engine is available for this language ──
     const ttsRoute = routeTTS(lang2, { hasElevenLabs: false, hasOpenAI: true });
-    // If CosyVoice is the best engine and DashScope is available, try it first
     if (ttsRoute.engine === 'cosyvoice') {
       try {
         const { ttsCosyVoice } = await import('../../lib/ttsAsia.js');
@@ -86,22 +89,22 @@ async function handlePost(req) {
       }
     }
 
-    // ── Voice selection: user's choice > admin default per language > 'nova' ──
+    // Voice selection
     const adminVoice = getOpenAIVoiceForLang(lang2);
-    const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer'].includes(voice)
+    const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer','ash','ballad','coral','sage','verse'].includes(voice)
       ? voice : (adminVoice || 'nova');
     const instructions = TTS_INSTRUCTIONS[lang2] || TTS_INSTRUCTIONS['en'];
     const cleanText = preprocessForTTS(text, lang2);
     const speed = getOpenAISpeedForLang(lang2);
 
-    // Deduct cost upfront (before streaming — can't deduct after stream starts)
+    // Deduct cost upfront (before streaming)
     const ttsCostUsd = calcTtsCost(text.length);
     const ttsCostEurCents = usdToEurCents(ttsCostUsd);
     if (billingEmail && !isOwnKey) {
       try {
         const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
         await deductCredits(billingEmail, charge);
-        await trackDailySpend(billingEmail, charge);
+        trackDailySpend(billingEmail, charge).catch(() => {});
       } catch (e) { console.error('TTS credit deduct error:', e); }
     }
 
@@ -114,22 +117,38 @@ async function handlePost(req) {
       speed,
     });
 
-    // ── Always use buffer mode (most reliable across all Vercel runtimes) ──
-    // Streaming via ReadableStream can fail in Vercel Serverless because
-    // OpenAI SDK's response.body type varies across Node.js versions.
-    // Buffer mode adds ~200ms but is 100% reliable.
+    // ── Try true streaming first, fallback to buffer ──
+    if (wantStream && response.body) {
+      try {
+        // Pipe OpenAI's ReadableStream directly to the client
+        const stream = response.body;
+        return new NextResponse(stream, {
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'Transfer-Encoding': 'chunked',
+            'Cache-Control': 'public, max-age=300',
+            'X-TTS-Engine': 'openai-stream',
+          }
+        });
+      } catch (streamErr) {
+        console.warn('[TTS] Streaming failed, falling back to buffer:', streamErr.message);
+      }
+    }
+
+    // Buffer mode (reliable fallback)
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=300', // Cache 5min for repeated phrases
+        'Cache-Control': 'public, max-age=300',
+        'X-TTS-Engine': 'openai',
       }
     });
   } catch (e) {
     if (e instanceof NextResponse) return e;
     console.error('TTS error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return apiError(ErrorCode.TTS_FAILED, e.message);
   }
 }
 

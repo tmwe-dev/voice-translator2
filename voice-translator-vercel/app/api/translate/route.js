@@ -10,23 +10,31 @@ import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
 import { validateOutput, MODEL_MAP, calcConfidence, getSimpleHash } from '../../lib/translateValidation.js';
 import { buildSystemPrompt, buildMessages } from '../../lib/translatePrompt.js';
-import { callLLM } from '../../lib/llmCaller.js';
+import { callLLM, callLLMWithFallback } from '../../lib/llmCaller.js';
 import { routeProvider } from '../../lib/providerRouter.js';
+import { validateTranslateInput } from '../../lib/schemas.js';
+import { ErrorCode, apiError } from '../../lib/errors.js';
 
 export async function POST(req) {
   try {
     // Rate limit: 30 requests/minute per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'translate'), 30);
     if (!rl.allowed) {
-      return NextResponse.json({ error: 'Too many requests. Please wait.' }, { status: 429,
-        headers: { 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } });
+      return apiError(ErrorCode.RATE_LIMIT, null, { retryAfter: Math.ceil(rl.retryAfterMs / 1000) });
+    }
+
+    // Validate and sanitize input
+    const rawBody = await req.json();
+    const inputValidation = validateTranslateInput(rawBody);
+    if (!inputValidation.valid) {
+      return apiError(ErrorCode.INVALID_INPUT, inputValidation.error);
     }
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
-            roomMode, nativeLang, conversationContext } = await req.json();
+            roomMode, nativeLang, conversationContext } = { ...rawBody, ...inputValidation.data };
 
-    if (!text) return NextResponse.json({ error: 'No text' }, { status: 400 });
+    if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 
     // Check if this is a simple translation (no context/review/domain/description/conversationContext)
     const isSimpleTranslation = !context && !isReview && !domainContext && !description && !conversationContext;
@@ -122,8 +130,8 @@ export async function POST(req) {
     // Build messages array
     const messages = buildMessages(systemPrompt, text, context);
 
-    // Call LLM using extracted multi-provider caller
-    let { translated, usage } = await callLLM({
+    // Call LLM with fallback chain — if primary fails, try alternatives
+    const primaryOpts = {
       provider: modelInfo.provider,
       model: modelInfo.actual,
       apiKey,
@@ -131,7 +139,18 @@ export async function POST(req) {
       systemPrompt,
       text,
       context,
-    });
+    };
+
+    // Build fallback chain (only providers we have keys for)
+    const fallbacks = [];
+    if (modelInfo.provider !== 'openai' && process.env.OPENAI_API_KEY) {
+      fallbacks.push({ provider: 'openai', model: 'gpt-4o-mini', apiKey: process.env.OPENAI_API_KEY });
+    }
+    if (modelInfo.provider !== 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+      fallbacks.push({ provider: 'anthropic', model: 'claude-3-haiku-20240307', apiKey: process.env.ANTHROPIC_API_KEY });
+    }
+
+    let { translated, usage, wasFallback } = await callLLMWithFallback(primaryOpts, fallbacks, 10000);
 
     // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
     const validation = validateOutput(text, translated, targetLang);
@@ -270,6 +289,6 @@ export async function POST(req) {
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'translate', source: 'api' } });
     }).catch(() => {});
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return apiError(ErrorCode.TRANSLATION_FAILED, e.message);
   }
 }

@@ -70,38 +70,12 @@ export function sanitizeText(text, maxLen = 10000) {
     .slice(0, maxLen);
 }
 
-/**
- * Rate limiter helper for API routes (IP-based, in-memory)
- * Returns { allowed, remaining, resetIn }
- */
-const rateLimitStore = new Map();
-
-export function rateLimit(ip, { maxRequests = 60, windowMs = 60000 } = {}) {
-  const now = Date.now();
-  const key = ip || 'unknown';
-  let entry = rateLimitStore.get(key);
-
-  // Clean expired entries periodically
-  if (rateLimitStore.size > 10000) {
-    for (const [k, v] of rateLimitStore) {
-      if (now - v.start > windowMs * 2) rateLimitStore.delete(k);
-    }
-  }
-
-  if (!entry || now - entry.start > windowMs) {
-    entry = { count: 0, start: now };
-    rateLimitStore.set(key, entry);
-  }
-
-  entry.count++;
-  const remaining = Math.max(0, maxRequests - entry.count);
-  const resetIn = Math.max(0, windowMs - (now - entry.start));
-
-  return {
-    allowed: entry.count <= maxRequests,
-    remaining,
-    resetIn,
-  };
+// NOTE: In-memory rate limiter REMOVED — use Redis-backed checkRateLimit from rateLimit.js
+// via apiGuard.js (single unified rate limiting layer).
+// Legacy export kept for backward compat — always returns allowed: true
+/** @deprecated Use apiGuard.js instead */
+export function rateLimit(_ip, _opts = {}) {
+  return { allowed: true, remaining: 999, resetIn: 0 };
 }
 
 /**
