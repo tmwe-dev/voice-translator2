@@ -145,8 +145,8 @@ export async function POST(req) {
     if (engine === 'edge') {
       let EdgeTTS;
       try {
-        const mod = await import('edge-tts-universal');
-        EdgeTTS = mod.default || mod.EdgeTTS || mod;
+        const mod = await import('@andresaya/edge-tts');
+        EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
       } catch (e) {
         return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
       }
@@ -154,7 +154,7 @@ export async function POST(req) {
       const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');
       const tts = new EdgeTTS();
       await tts.synthesize(trimmed, voiceName, { rate: '+0%', volume: '+0%', pitch: '+0Hz' });
-      const audioBuffer = await tts.toBuffer();
+      const audioBuffer = tts.toBuffer();
 
       if (!audioBuffer || audioBuffer.length === 0) {
         return NextResponse.json({ error: 'Failed to generate audio' }, { status: 500 });
