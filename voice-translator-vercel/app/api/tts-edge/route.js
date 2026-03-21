@@ -64,10 +64,10 @@ export async function POST(req) {
     const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');
 
     // Dynamic import to handle if package is missing gracefully
-    let EdgeTTS;
+    let EdgeTTSClass;
     try {
       const mod = await import('edge-tts-universal');
-      EdgeTTS = mod.default || mod.EdgeTTS || mod;
+      EdgeTTSClass = mod.EdgeTTS || mod.default || mod;
     } catch (e) {
       console.error('[EdgeTTS] Package not available:', e.message);
       return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
@@ -77,15 +77,43 @@ export async function POST(req) {
     const { getEdgeRateForLang } = await import('../../lib/voiceDefaults.js');
     const speechRate = getEdgeRateForLang(lang2);
 
-    // Generate audio
-    const tts = new EdgeTTS();
-    await tts.synthesize(trimmed, voiceName, {
-      rate: speechRate,
-      volume: '+0%',
-      pitch: '+0Hz',
-    });
-
-    const audioBuffer = await tts.toBuffer();
+    // Generate audio — edge-tts-universal API: new EdgeTTS(text, voice, opts)
+    let audioBuffer;
+    try {
+      const tts = new EdgeTTSClass(trimmed, voiceName, {
+        rate: speechRate,
+        volume: '+0%',
+        pitch: '+0Hz',
+      });
+      const result = await tts.synthesize();
+      // result.audio is a Blob/File — convert to Buffer
+      if (result?.audio?.arrayBuffer) {
+        audioBuffer = Buffer.from(await result.audio.arrayBuffer());
+      } else if (Buffer.isBuffer(result?.audio)) {
+        audioBuffer = result.audio;
+      } else if (result?.audio) {
+        audioBuffer = Buffer.from(result.audio);
+      }
+    } catch (synthErr) {
+      console.error('[EdgeTTS] Synthesize error, trying Communicate fallback:', synthErr.message);
+      // Fallback: use Communicate streaming API
+      try {
+        const mod2 = await import('edge-tts-universal');
+        const Communicate = mod2.Communicate || mod2.default?.Communicate;
+        if (Communicate) {
+          const comm = new Communicate(trimmed, { voice: voiceName, rate: speechRate });
+          const chunks = [];
+          for await (const chunk of comm.stream()) {
+            if (chunk.type === 'audio' && chunk.data) {
+              chunks.push(Buffer.isBuffer(chunk.data) ? chunk.data : Buffer.from(chunk.data));
+            }
+          }
+          audioBuffer = Buffer.concat(chunks);
+        }
+      } catch (commErr) {
+        console.error('[EdgeTTS] Communicate fallback also failed:', commErr.message);
+      }
+    }
 
     if (!audioBuffer || audioBuffer.length === 0) {
       return NextResponse.json({ error: 'Failed to generate audio' }, { status: 500 });

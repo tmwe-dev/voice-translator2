@@ -255,13 +255,20 @@ export default function useAudioSystem({
 
   async function queueAudio(text, lang, msgId) {
     if (msgId && playedMsgIdsRef.current.has(msgId)) return;
+    // Content-based dedup: same text should never play twice within 30s
+    // regardless of message ID (tmp_xxx vs msg_xxx can differ for same message)
+    const contentKey = `${text?.substring(0, 60)}|${lang}`;
+    if (playedMsgIdsRef.current.has(contentKey)) return;
     if (msgId) {
       playedMsgIdsRef.current.add(msgId);
-      if (playedMsgIdsRef.current.size > 500) {
-        const first = playedMsgIdsRef.current.values().next().value;
-        playedMsgIdsRef.current.delete(first);
-      }
     }
+    playedMsgIdsRef.current.add(contentKey);
+    if (playedMsgIdsRef.current.size > 500) {
+      const first = playedMsgIdsRef.current.values().next().value;
+      playedMsgIdsRef.current.delete(first);
+    }
+    // Auto-expire content key after 30s to allow replaying same text later
+    setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
     if (!audioEnabledRef.current) { playNotifSound(); return; }
     audioQueueRef.current.push({ text, lang });
     processAudioQueue();

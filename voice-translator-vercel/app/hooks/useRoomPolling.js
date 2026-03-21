@@ -242,6 +242,10 @@ export default function useRoomPolling({
         sourceLang: data.sourceLang,
         targetLang: data.targetLang,
         translations: data.translations,
+        // IMPORTANT: preserve original timestamp for TTS fingerprint dedup.
+        // Without this, Date.now() is used, which can cross 30-second bucket
+        // boundaries and cause duplicate TTS playback.
+        timestamp: data.timestamp,
       });
     }
   }, [processIncomingMessage]);
@@ -367,6 +371,15 @@ export default function useRoomPolling({
               return changed ? updated : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
+            // Build set of server IDs that replaced temp messages (already processed via P2P/Realtime)
+            const replacedServerIds = new Set();
+            for (const m of newMsgs) {
+              // If this server msg replaced a temp_ msg, the original was already
+              // processed via P2P or Realtime — skip processIncomingMessage to avoid
+              // duplicate TTS and duplicate overlay subtitles.
+              const wasTemp = updated.find(t => t.id === m.id && t._stableKey?.startsWith('tmp_'));
+              if (wasTemp) replacedServerIds.add(m.id);
+            }
             for (const msg of newMsgs) {
               // Guard: skip if this message ID was already processed via Realtime/P2P
               if (processedMsgIdsRef.current.has(msg.id)) continue;
@@ -375,6 +388,8 @@ export default function useRoomPolling({
                 const first = processedMsgIdsRef.current.values().next().value;
                 processedMsgIdsRef.current.delete(first);
               }
+              // Skip TTS/processing for messages that replaced a temp (already handled)
+              if (replacedServerIds.has(msg.id)) continue;
               processIncomingMessage(msg);
             }
           }
