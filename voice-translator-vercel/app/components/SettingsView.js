@@ -198,9 +198,17 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {/* ── Usage info — FREE FOR ALL ── */}
           {isGuest ? (
             <div style={{padding:'0 18px 16px'}}>
-              <div style={{fontSize:11, color:S.colors.textSecondary, lineHeight:1.5}}>
+              <div style={{fontSize:11, color:S.colors.textSecondary, lineHeight:1.5, marginBottom:8}}>
                 <IconStar size={12} style={{display:'inline-block', marginRight:6, verticalAlign:'middle'}} /> Voci AI premium, ElevenLabs, traduzioni illimitate — tutto gratis per tutti.
               </div>
+              <button style={{padding:'8px 14px', borderRadius:10, fontSize:12, fontWeight:700,
+                cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent',
+                background:S.colors.accent2Bg, border:'1px solid ' + S.colors.accent2Border,
+                color:S.colors.accent2, display:'flex', alignItems:'center', gap:6}}
+                onClick={() => setView('apikeys')}>
+                <Icon name="key" size={14} color={S.colors.accent2} />
+                Configura chiavi API
+              </button>
             </div>
           ) : (
             /* PRO: credits or own-keys status */
@@ -877,7 +885,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           {/* ══════════════════════════════════════════════════
               ELEVENLABS — TOP PRO
              ══════════════════════════════════════════════════ */}
-          {!isTrial && ((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL) && (() => {
+          {((useOwnKeys && apiKeyInputs?.elevenlabs) || platformHasEL || true) && (() => {
             // Comprehensive accent/language → flag mapping
             const ACCENT_FLAGS = {
               // English variants
