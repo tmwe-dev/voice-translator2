@@ -1,53 +1,56 @@
 'use client';
 import { useState, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
-import getStyles from '../lib/styles.js';
 
 // ═══════════════════════════════════════════════
-// TutorialOverlay — Onboarding interattivo
-//
-// Miglioramenti:
-// - Swipe gesture support (touch)
-// - Back button per tornare indietro
-// - Animazione transizione tra step
-// - Step counter numerico
-// - Keyboard navigation (frecce)
+// TutorialOverlay — Dark Ambient Onboarding
 // ═══════════════════════════════════════════════
+
+const STEPS = [
+  {
+    emoji: '🏠',
+    title: 'Benvenuto in BarChat',
+    desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, il tuo interlocutore sente nella sua.',
+    accent: '#26D9B0',
+  },
+  {
+    emoji: '🔗',
+    title: 'Crea o Entra in una Stanza',
+    desc: 'Condividi il codice stanza con chi vuoi. Si connette in P2P, senza server intermediari.',
+    accent: '#8B6AFF',
+  },
+  {
+    emoji: '🎙️',
+    title: 'Parla e Traduci',
+    desc: 'Premi il microfono e parla. La traduzione appare istantaneamente con audio AI premium.',
+    accent: '#E8924A',
+  },
+  {
+    emoji: '🚕',
+    title: 'TaxiTalk Mode',
+    desc: 'Perfetto per conversazioni dal vivo. Lo schermo si divide in due: tu da un lato, l\'interlocutore dall\'altro.',
+    accent: '#26D9B0',
+  },
+  {
+    emoji: '🪞',
+    title: 'Mirror Automatico',
+    desc: 'Inclina il telefono oltre 120° e lo schermo si capovolge automaticamente per chi è di fronte a te.',
+    accent: '#8B6AFF',
+  },
+  {
+    emoji: '🎉',
+    title: 'Tutto Gratuito',
+    desc: 'Voci AI premium, ElevenLabs, traduzioni illimitate in 140+ lingue. Nessun limite, nessun abbonamento.',
+    accent: '#26D9B0',
+  },
+];
 
 export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setShowTutorial, theme }) {
-  const S = getStyles(theme);
-  const [direction, setDirection] = useState(0); // -1 left, 0 none, 1 right
+  const [direction, setDirection] = useState(0);
   const touchStartX = useRef(null);
 
-  const stepConfig = [
-    {
-      emoji: '🏠', title: 'tutorialStep1Title', desc: 'tutorialStep1Desc',
-      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    },
-    {
-      emoji: '🔗', title: 'tutorialStep2Title', desc: 'tutorialStep2Desc',
-      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-    },
-    {
-      emoji: '🎙️', title: 'tutorialStep3Title', desc: 'tutorialStep3Desc',
-      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-    },
-    {
-      emoji: '🚕', title: 'tutorialStep4Title', desc: 'tutorialStep4Desc',
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-    },
-    {
-      emoji: '🪞', title: 'tutorialStep5Title', desc: 'tutorialStep5Desc',
-      gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-    },
-    {
-      emoji: '📋', title: 'tutorialStep6Title', desc: 'tutorialStep6Desc',
-      gradient: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
-    },
-  ];
-
-  const totalSteps = stepConfig.length;
-  const currentConfig = stepConfig[tutorialStep];
+  const totalSteps = STEPS.length;
+  const current = STEPS[tutorialStep];
   const isFirstStep = tutorialStep === 0;
   const isLastStep = tutorialStep === totalSteps - 1;
 
@@ -68,7 +71,6 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
     }
   }, [isFirstStep, tutorialStep, setTutorialStep]);
 
-  // Touch swipe handling
   const handleTouchStart = useCallback((e) => {
     touchStartX.current = e.touches[0].clientX;
   }, []);
@@ -78,12 +80,11 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
     const diff = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
     if (Math.abs(diff) > 50) {
-      if (diff < 0) goNext(); // Swipe left → next
-      else goBack(); // Swipe right → back
+      if (diff < 0) goNext();
+      else goBack();
     }
   }, [goNext, goBack]);
 
-  // Keyboard navigation
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'ArrowRight' || e.key === 'Enter') goNext();
     else if (e.key === 'ArrowLeft') goBack();
@@ -91,13 +92,17 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
   }, [goNext, goBack, setShowTutorial]);
 
   const keyframes = `
-    @keyframes pulse-scale {
+    @keyframes tutorialPulse {
       0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.15); }
+      50% { transform: scale(1.1); }
     }
-    @keyframes fadeSlideIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to { opacity: 1; transform: translateY(0); }
+    @keyframes tutorialFadeIn {
+      from { opacity: 0; transform: translateY(16px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes tutorialGlow {
+      0%, 100% { box-shadow: 0 0 40px ${current.accent}15, 0 24px 64px rgba(0,0,0,0.5); }
+      50% { box-shadow: 0 0 60px ${current.accent}25, 0 24px 64px rgba(0,0,0,0.5); }
     }
   `;
 
@@ -111,42 +116,46 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
         onTouchEnd={handleTouchEnd}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          zIndex: 9999, background: 'rgba(0,0,0,0.85)',
-          backdropFilter: 'blur(12px)',
+          zIndex: 9999, background: 'rgba(4,6,14,0.92)',
+          backdropFilter: 'blur(20px)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: 20, boxSizing: 'border-box', outline: 'none',
         }}
         onClick={() => setShowTutorial(false)}
       >
         <div
-          key={tutorialStep} // force re-mount for animation
+          key={tutorialStep}
           style={{
             maxWidth: 380, width: '100%', textAlign: 'center',
-            borderRadius: 28, padding: '44px 36px 36px',
-            background: currentConfig.gradient,
-            boxShadow: '0 24px 64px rgba(0,0,0,0.4)',
-            animation: 'fadeSlideIn 0.35s ease-out',
+            borderRadius: 28, padding: '44px 32px 36px',
+            background: `linear-gradient(160deg, rgba(14,18,35,0.90) 0%, rgba(10,14,28,0.95) 50%, ${current.accent}08 100%)`,
+            border: `1px solid ${current.accent}18`,
+            backdropFilter: 'blur(40px) saturate(1.1)',
+            WebkitBackdropFilter: 'blur(40px) saturate(1.1)',
+            animation: 'tutorialFadeIn 0.35s ease-out, tutorialGlow 4s ease-in-out infinite',
           }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Step counter */}
           <div style={{
-            fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.65)',
+            fontSize: 11, fontWeight: 600, color: current.accent,
             letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 24,
+            opacity: 0.8,
           }}>
             {tutorialStep + 1} / {totalSteps}
           </div>
 
           {/* Progress dots */}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 28 }}>
-            {stepConfig.map((_, i) => (
+            {STEPS.map((s, i) => (
               <div key={i}
                 onClick={(e) => { e.stopPropagation(); setTutorialStep(i); }}
                 style={{
                   width: tutorialStep === i ? 28 : 10, height: 10, borderRadius: 5,
-                  background: tutorialStep === i ? 'rgba(255,255,255,1)' : (i < tutorialStep ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.3)'),
+                  background: tutorialStep === i ? current.accent : (i < tutorialStep ? `${current.accent}80` : 'rgba(255,255,255,0.12)'),
                   transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   cursor: 'pointer',
+                  boxShadow: tutorialStep === i ? `0 0 12px ${current.accent}40` : 'none',
                 }}
               />
             ))}
@@ -155,71 +164,77 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
           {/* Emoji */}
           <div style={{
             fontSize: 60, marginBottom: 20,
-            animation: 'pulse-scale 2s ease-in-out infinite', display: 'inline-block',
+            animation: 'tutorialPulse 3s ease-in-out infinite', display: 'inline-block',
+            filter: `drop-shadow(0 4px 20px ${current.accent}30)`,
           }}>
-            {currentConfig.emoji}
+            {current.emoji}
           </div>
 
           {/* Title */}
           <div style={{
-            fontSize: 24, fontWeight: 800, marginBottom: 12,
-            color: '#ffffff', textShadow: '0 2px 8px rgba(0,0,0,0.2)',
-            fontFamily: FONT,
+            fontSize: 22, fontWeight: 300, marginBottom: 14, letterSpacing: -0.5,
+            background: `linear-gradient(135deg, #fff 0%, ${current.accent} 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text', fontFamily: FONT,
           }}>
-            {L(currentConfig.title)}
+            {current.title}
           </div>
 
           {/* Description */}
           <div style={{
-            fontSize: 15, color: 'rgba(255,255,255,0.95)',
+            fontSize: 14, color: 'rgba(255,255,255,0.72)',
             lineHeight: 1.7, marginBottom: 36,
-            textShadow: '0 1px 4px rgba(0,0,0,0.1)',
+            fontFamily: FONT, fontWeight: 300,
           }}>
-            {L(currentConfig.desc)}
+            {current.desc}
           </div>
 
-          {/* Navigation Buttons — 3 buttons: Back, Skip, Next */}
+          {/* Navigation */}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
-            {/* Back button */}
             {!isFirstStep && (
               <button onClick={goBack}
                 style={{
                   padding: '12px 18px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
-                  color: '#ffffff', fontSize: 13, fontWeight: 600,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: FONT, transition: 'all 0.3s',
+                  backdropFilter: 'blur(12px)',
                 }}>
                 ←
               </button>
             )}
 
-            {/* Skip */}
             <button onClick={() => setShowTutorial(false)}
               style={{
                 padding: '12px 20px', borderRadius: 12,
-                background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)',
-                color: '#ffffff', fontSize: 13, fontWeight: 600,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 500,
                 cursor: 'pointer', fontFamily: FONT, transition: 'all 0.3s',
+                backdropFilter: 'blur(12px)',
               }}>
-              {L('skip')}
+              Salta
             </button>
 
-            {/* Next / Inizia */}
             <button onClick={goNext}
               style={{
-                padding: '12px 32px', borderRadius: 12, border: 'none',
-                background: 'rgba(255,255,255,0.95)', color: '#000000',
-                fontSize: 15, fontWeight: 800, cursor: 'pointer', fontFamily: FONT,
-                boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                padding: '12px 32px', borderRadius: 12,
+                border: 'none',
+                background: `linear-gradient(135deg, ${current.accent}, ${current.accent}cc)`,
+                color: '#000', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                fontFamily: FONT,
+                boxShadow: `0 8px 24px ${current.accent}35`,
                 transition: 'all 0.3s',
               }}>
-              {isLastStep ? '🎉 Inizia!' : `${L('next')} →`}
+              {isLastStep ? 'Inizia!' : 'Avanti →'}
             </button>
           </div>
 
-          {/* Swipe hint on mobile */}
+          {/* Swipe hint */}
           <div style={{
-            marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.75)',
+            marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.30)',
+            fontFamily: FONT,
           }}>
             {'← swipe →'}
           </div>

@@ -4,14 +4,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 
 // ═══════════════════════════════════════════════════════════════
-// MainMenu — Hub centrale con icone grandi
-//
-// Miglioramenti:
-// - Tap animation (scale feedback)
-// - Badge "Nuovo" su features recenti
-// - Descrizioni localizzate
-// - Active press state con haptic
-// - Icone più grandi nel tier large
+// MainMenu — Dark Ambient Glassmorphism Hub
 // ═══════════════════════════════════════════════════════════════
 
 const MENU_ITEMS = [
@@ -19,76 +12,93 @@ const MENU_ITEMS = [
     id: 'speaker', icon: '🚕', label: 'TaxiTalk',
     descIT: 'Traduci faccia a faccia',
     descEN: 'Face-to-face translation',
-    gradient: 'linear-gradient(135deg, #26D9B0 0%, #FF6584 100%)',
+    accentFrom: '#26D9B0', accentTo: '#0FA88A',
     size: 'large',
   },
   {
     id: 'create', icon: '💬', label: 'Chat',
     descIT: 'Crea una stanza',
     descEN: 'Create a room',
-    gradient: 'linear-gradient(135deg, #26D9B0 0%, #8B6AFF 100%)',
+    accentFrom: '#8B6AFF', accentTo: '#6B4ADF',
     size: 'large',
   },
   {
     id: 'quickinvite', icon: '📱', label: 'Invita',
     descIT: 'QR code istantaneo',
     descEN: 'Instant QR code',
-    gradient: 'linear-gradient(135deg, #10B981 0%, #3B82F6 100%)',
+    accentFrom: '#26D9B0', accentTo: '#3B82F6',
     size: 'medium', badge: 'New',
   },
   {
     id: 'call', icon: '📞', label: 'Chiama',
     descIT: 'Voice call tradotta',
     descEN: 'Translated voice call',
-    gradient: 'linear-gradient(135deg, #F59E0B 0%, #EF4444 100%)',
+    accentFrom: '#E8924A', accentTo: '#FF6B6B',
     size: 'medium',
   },
   {
     id: 'video', icon: '📹', label: 'Video',
     descIT: 'Video call tradotta',
     descEN: 'Translated video call',
-    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
+    accentFrom: '#8B6AFF', accentTo: '#EC4899',
     size: 'medium',
   },
   {
     id: 'mondo', icon: '🌍', label: 'Mondo',
     descIT: 'Stanze pubbliche',
     descEN: 'Public rooms',
-    gradient: 'linear-gradient(135deg, #06B6D4 0%, #10B981 100%)',
+    accentFrom: '#06B6D4', accentTo: '#26D9B0',
     size: 'medium',
   },
   {
     id: 'voicetest', icon: '🎙️', label: 'Voce',
     descIT: 'Test e impostazioni voce',
     descEN: 'Voice test & settings',
-    gradient: 'linear-gradient(135deg, #F97316 0%, #FBBF24 100%)',
+    accentFrom: '#E8924A', accentTo: '#FBBF24',
     size: 'small',
   },
   {
     id: 'history', icon: '📋', label: 'Cronologia',
     descIT: 'Le tue conversazioni',
     descEN: 'Your conversations',
-    gradient: 'linear-gradient(135deg, #64748B 0%, #94A3B8 100%)',
+    accentFrom: '#8B6AFF', accentTo: '#26D9B0',
     size: 'small',
   },
   {
     id: 'contacts', icon: '👥', label: 'Contatti',
     descIT: 'Gestisci contatti',
     descEN: 'Manage contacts',
-    gradient: 'linear-gradient(135deg, #A78BFA 0%, #C084FC 100%)',
+    accentFrom: '#A78BFA', accentTo: '#8B6AFF',
     size: 'small',
   },
   {
     id: 'settings', icon: '⚙️', label: 'Impostazioni',
     descIT: 'Lingua, tema, voce',
     descEN: 'Language, theme, voice',
-    gradient: 'linear-gradient(135deg, #475569 0%, #64748B 100%)',
+    accentFrom: '#64748B', accentTo: '#475569',
     size: 'small',
   },
 ];
 
+// Dark glass card style
+const glassCard = (accent1, accent2) => ({
+  background: `linear-gradient(135deg, rgba(14,18,35,0.75) 0%, rgba(10,14,28,0.85) 100%)`,
+  border: `1px solid rgba(255,255,255,0.06)`,
+  backdropFilter: 'blur(24px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(24px) saturate(1.1)',
+  boxShadow: `0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`,
+});
+
+// Large card - glassmorphism with subtle accent glow
+const largeGlass = (accent1, accent2) => ({
+  background: `linear-gradient(160deg, ${accent1}12 0%, rgba(14,18,35,0.80) 40%, ${accent2}08 100%)`,
+  border: `1px solid ${accent1}20`,
+  backdropFilter: 'blur(40px) saturate(1.1)',
+  WebkitBackdropFilter: 'blur(40px) saturate(1.1)',
+  boxShadow: `0 12px 40px rgba(0,0,0,0.5), 0 0 60px ${accent1}08, inset 0 1px 0 rgba(255,255,255,0.06)`,
+});
+
 function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreatePopup }) {
-  const C = getStyles(theme);
   const [pressedId, setPressedId] = useState(null);
   const isIT = L('createRoom') === 'Crea Stanza';
 
@@ -96,7 +106,6 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
     vibrate();
     setPressedId(id);
     setTimeout(() => setPressedId(null), 150);
-
     if (id === 'create' || id === 'call' || id === 'video') {
       if (setShowCreatePopup) setShowCreatePopup(true);
       else setView('home');
@@ -108,7 +117,6 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
   const largeItems = MENU_ITEMS.filter(i => i.size === 'large');
   const mediumItems = MENU_ITEMS.filter(i => i.size === 'medium');
   const smallItems = MENU_ITEMS.filter(i => i.size === 'small');
-
   const getDesc = (item) => isIT ? item.descIT : item.descEN;
 
   return (
@@ -123,18 +131,22 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
             onPointerUp={() => setPressedId(null)}
             onPointerLeave={() => setPressedId(null)}
             style={{
-              flex: 1, padding: '24px 14px', borderRadius: 22, cursor: 'pointer',
-              background: item.gradient, border: 'none',
+              flex: 1, padding: '28px 14px', borderRadius: 22, cursor: 'pointer',
+              ...largeGlass(item.accentFrom, item.accentTo),
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              gap: 6, fontFamily: FONT,
-              boxShadow: '0 8px 28px rgba(0,0,0,0.25)',
+              gap: 8, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
               transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
               transform: pressedId === item.id ? 'scale(0.95)' : 'scale(1)',
             }}>
             <span style={{ fontSize: 40 }}>{item.icon}</span>
-            <span style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{item.label}</span>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', textAlign: 'center' }}>
+            <span style={{
+              fontSize: 16, fontWeight: 700, letterSpacing: -0.3,
+              background: `linear-gradient(135deg, ${item.accentFrom}, #fff)`,
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>{item.label}</span>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.65)', textAlign: 'center' }}>
               {getDesc(item)}
             </span>
           </button>
@@ -151,19 +163,18 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
             onPointerLeave={() => setPressedId(null)}
             style={{
               padding: '18px 12px', borderRadius: 18, cursor: 'pointer',
-              background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
+              ...glassCard(item.accentFrom, item.accentTo),
               display: 'flex', alignItems: 'center', gap: 12,
               fontFamily: FONT, position: 'relative',
               WebkitTapHighlightColor: 'transparent',
               transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)',
               transform: pressedId === item.id ? 'scale(0.96)' : 'scale(1)',
             }}>
-            {/* Badge */}
             {item.badge && (
               <div style={{
                 position: 'absolute', top: 6, right: 8,
                 padding: '2px 6px', borderRadius: 6,
-                background: 'linear-gradient(135deg, #FF6B6B, #FF9A53)',
+                background: 'linear-gradient(135deg, #26D9B0, #8B6AFF)',
                 color: '#fff', fontSize: 8, fontWeight: 800, letterSpacing: 0.5,
               }}>
                 {item.badge}
@@ -171,15 +182,16 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
             )}
             <div style={{
               width: 44, height: 44, borderRadius: 14, flexShrink: 0,
-              background: item.gradient,
+              background: `linear-gradient(135deg, ${item.accentFrom}25, ${item.accentTo}15)`,
+              border: `1px solid ${item.accentFrom}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 22,
             }}>
               {item.icon}
             </div>
             <div style={{ textAlign: 'left', minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{item.label}</div>
-              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 1 }}>{getDesc(item)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.92)' }}>{item.label}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>{getDesc(item)}</div>
             </div>
           </button>
         ))}
@@ -195,7 +207,7 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
             onPointerLeave={() => setPressedId(null)}
             style={{
               padding: '12px 10px', borderRadius: 14, cursor: 'pointer',
-              background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
+              ...glassCard(item.accentFrom, item.accentTo),
               display: 'flex', alignItems: 'center', gap: 10,
               fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
@@ -204,15 +216,16 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
             }}>
             <div style={{
               width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-              background: item.gradient,
+              background: `linear-gradient(135deg, ${item.accentFrom}25, ${item.accentTo}15)`,
+              border: `1px solid ${item.accentFrom}20`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16,
             }}>
               {item.icon}
             </div>
             <div style={{ textAlign: 'left', minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary }}>{item.label}</div>
-              <div style={{ fontSize: 9, color: C.textMuted }}>{getDesc(item)}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.90)' }}>{item.label}</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.50)' }}>{getDesc(item)}</div>
             </div>
           </button>
         ))}
