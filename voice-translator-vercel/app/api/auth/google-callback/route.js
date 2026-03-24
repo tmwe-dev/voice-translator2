@@ -4,6 +4,12 @@ import { createUser, getUser, createSession, getReferralCode } from '../../../li
 // Force dynamic rendering — this route uses req.url and query params
 export const dynamic = 'force-dynamic';
 
+
+// Force dynamic rendering — this route uses req.url and query params
+export const dynamic = 'force-dynamic';
+// Force dynamic rendering — this route uses req.url and query params
+export const dynamic = 'force-dynamic';
+
 // Google OAuth callback — exchanges authorization code for user info
 // Used as fallback when Google One Tap SDK doesn't load
 export async function GET(req) {
