@@ -334,6 +334,15 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
               title="Contacts" aria-label="Contatti">
               <span style={{fontSize:14}}>{'👥'}</span>
             </button>
+            {/* Help button */}
+            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
+              background:C.settingsBtnBg, border:`1px solid ${C.settingsBtnBorder}`,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              WebkitTapHighlightColor:'transparent'}}
+              onClick={() => setView('help')}
+              aria-label="Aiuto">
+              <span style={{fontSize:14}}>{'❓'}</span>
+            </button>
             {/* Settings button */}
             <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
               background:C.settingsBtnBg, border:`1px solid ${C.settingsBtnBorder}`,

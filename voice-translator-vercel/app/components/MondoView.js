@@ -2,30 +2,24 @@
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
-// Browse and join public chat rooms from around the world.
-// Features:
-// - Language filter pills
-// - Search rooms by host/description
-// - Category filter (mode)
-// - Pull-to-refresh visual indicator
-// - Auto-refresh every 30s
-// - Better empty state with CTA
-// - Animated loading skeleton
+// Redesigned: glassmorphism cards, ambient orb,
+// horizontal lang/mode pills, skeleton shimmer,
+// search bar, room cards with gradient accents.
 // ═══════════════════════════════════════════════
 
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
+import getStyles from '../lib/styles.js';
 
 const MODE_LABELS = {
   conversation: { label: 'Chat', icon: '💬', color: '#26D9B0' },
-  classroom: { label: 'Classroom', icon: '🏫', color: '#10B981' },
-  interview: { label: 'Interview', icon: '🎤', color: '#F59E0B' },
-  conference: { label: 'Conference', icon: '🏛️', color: '#8B5CF6' },
-  freetalk: { label: 'Free Talk', icon: '🎉', color: '#EC4899' },
+  classroom:    { label: 'Classroom', icon: '🏫', color: '#10B981' },
+  interview:    { label: 'Interview', icon: '🎤', color: '#F59E0B' },
+  conference:   { label: 'Conference', icon: '🏛️', color: '#8B5CF6' },
+  freetalk:     { label: 'Free Talk', icon: '🎉', color: '#EC4899' },
   simultaneous: { label: 'Live', icon: '⚡', color: '#EF4444' },
 };
 
-// Popular language filters
 const LANG_FILTERS = [
   { code: 'all', flag: '🌍', name: 'Tutte' },
   { code: 'it', flag: '🇮🇹', name: 'IT' },
@@ -42,6 +36,23 @@ const LANG_FILTERS = [
 ];
 
 function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
+  const _S = getStyles(theme);
+  const col = _S.colors || {};
+  const C = {
+    bg: '#060810',
+    textPrimary: col.textPrimary || '#F2F4F7',
+    textSecondary: col.textSecondary || 'rgba(242,244,247,0.90)',
+    textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
+    card: col.glassCard || 'rgba(12,16,30,0.65)',
+    cardBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
+    input: col.inputBg || 'rgba(14,18,32,0.6)',
+    inputBorder: col.inputBorder || 'rgba(255,255,255,0.07)',
+    accent: col.accent1 || '#26D9B0',
+    purple: col.accent2 || '#8B6AFF',
+    red: col.accent3 || '#FF6B6B',
+    divider: col.dividerColor || 'rgba(255,255,255,0.04)',
+  };
+
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,25 +60,16 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
   const [langFilter, setLangFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
   const [refreshAnim, setRefreshAnim] = useState(false);
-  const isIT = L('createRoom') === 'Crea Stanza';
 
   const fetchRooms = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/mondo');
-      if (res.ok) {
-        const data = await res.json();
-        setRooms(data.rooms || []);
-        setError(null);
-      }
-    } catch (e) {
-      setError(isIT ? 'Impossibile caricare le stanze' : 'Failed to load rooms');
-    } finally {
-      setLoading(false);
-    }
-  }, [isIT]);
+      if (res.ok) { const data = await res.json(); setRooms(data.rooms || []); setError(null); }
+    } catch { setError('Impossibile caricare le stanze'); }
+    finally { setLoading(false); }
+  }, []);
 
-  // Fetch on mount + auto-refresh every 30s
   useEffect(() => {
     fetchRooms();
     const timer = setInterval(fetchRooms, 30000);
@@ -79,130 +81,121 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
     fetchRooms().finally(() => setTimeout(() => setRefreshAnim(false), 600));
   }, [fetchRooms]);
 
-  const getLangFlag = (code) => {
-    const lang = LANGS.find(l => l.code === code);
-    return lang?.flag || '🌍';
-  };
+  const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '🌍';
 
   const timeAgo = (ts) => {
     const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return isIT ? 'ora' : 'now';
+    if (mins < 1) return 'ora';
     if (mins < 60) return `${mins}m`;
     return `${Math.floor(mins / 60)}h`;
   };
 
-  // Filter rooms
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
-    if (langFilter !== 'all') {
-      list = list.filter(r => r.lang === langFilter);
-    }
-    if (modeFilter !== 'all') {
-      list = list.filter(r => r.mode === modeFilter);
-    }
+    if (langFilter !== 'all') list = list.filter(r => r.lang === langFilter);
+    if (modeFilter !== 'all') list = list.filter(r => r.mode === modeFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(r =>
-        r.host?.toLowerCase().includes(q) ||
-        r.description?.toLowerCase().includes(q)
-      );
+      list = list.filter(r => r.host?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q));
     }
     return list;
   }, [rooms, langFilter, modeFilter, search]);
 
-  // Available modes from current rooms
   const availableModes = useMemo(() => {
     const modes = new Set(rooms.map(r => r.mode));
     return ['all', ...modes];
   }, [rooms]);
 
-  const skeletonStyle = {
-    background: `linear-gradient(90deg, ${S.colors.overlayBg || 'rgba(255,255,255,0.03)'} 25%, rgba(255,255,255,0.06) 50%, ${S.colors.overlayBg || 'rgba(255,255,255,0.03)'} 75%)`,
-    backgroundSize: '200% 100%',
-    animation: 'shimmer 1.5s infinite',
-    borderRadius: 16, height: 80, marginBottom: 10,
-  };
-
   return (
-    <div style={{ ...S.page, display: 'flex', flexDirection: 'column' }}>
-      <style>{`@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes spinRefresh { to { transform: rotate(360deg); } }`}</style>
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100dvh',
+      background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+    }}>
 
-      {/* Header */}
+      {/* Ambient orb */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '16px 16px 12px',
-        borderBottom: `1px solid ${S.colors.overlayBorder || 'rgba(255,255,255,0.06)'}`,
+        position: 'absolute', top: '-15%', left: '-20%', width: '60vw', height: '60vw',
+        borderRadius: '50%', background: `radial-gradient(circle, ${C.purple}0A 0%, transparent 70%)`,
+        pointerEvents: 'none', animation: 'vtOrbBreathe 8s ease-in-out infinite',
+      }} />
+
+      {/* ═══ HEADER ═══ */}
+      <header style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        <button onClick={() => setView('home')}
-          style={{ background: 'none', border: 'none', color: S.colors.textPrimary, cursor: 'pointer', padding: 4, fontSize: 20 }}>
-          {'←'}
+        <button onClick={() => setView('home')} style={{
+          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+          background: C.card, border: `1px solid ${C.cardBorder}`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: C.textMuted, fontSize: 18, WebkitTapHighlightColor: 'transparent',
+        }}>
+          {'‹'}
         </button>
         <div style={{ flex: 1 }}>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: S.colors.textPrimary, fontFamily: FONT }}>
-            {'🌍'} Mondo
-          </h2>
-          <div style={{ fontSize: 12, color: S.colors.textMuted }}>
-            {rooms.length} {rooms.length === 1 ? (isIT ? 'stanza attiva' : 'active room') : (isIT ? 'stanze attive' : 'active rooms')}
+          <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
+            🌍 Mondo
+          </div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+            {rooms.length} {rooms.length === 1 ? 'stanza attiva' : 'stanze attive'}
           </div>
         </div>
-        <button onClick={handleRefresh}
-          style={{
-            width: 40, height: 40, borderRadius: 12, cursor: 'pointer',
-            background: S.colors.accent1Bg || 'rgba(38,217,176,0.15)',
-            border: `1px solid ${S.colors.accent1Border || 'rgba(38,217,176,0.3)'}`,
-            color: S.colors.accent1 || '#26D9B0', fontSize: 18,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            animation: refreshAnim ? 'spinRefresh 0.6s linear' : 'none',
-          }}>
+        <button onClick={handleRefresh} style={{
+          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+          background: `${C.accent}12`, border: `1px solid ${C.accent}20`,
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          color: C.accent, fontSize: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: refreshAnim ? 'vtSpin 0.6s linear' : 'none',
+          WebkitTapHighlightColor: 'transparent',
+        }}>
           {'↻'}
         </button>
-      </div>
+      </header>
 
-      {/* Search */}
-      <div style={{ padding: '12px 16px 4px' }}>
+      {/* ═══ SEARCH BAR ═══ */}
+      <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          background: S.colors.overlayBg || 'rgba(255,255,255,0.03)',
-          border: `1px solid ${S.colors.overlayBorder || 'rgba(255,255,255,0.08)'}`,
+          background: C.card, border: `1px solid ${C.cardBorder}`,
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           borderRadius: 14, padding: '10px 14px',
         }}>
-          <span style={{ fontSize: 16, opacity: 0.5 }}>{'🔍'}</span>
-          <input
-            type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={isIT ? 'Cerca stanze...' : 'Search rooms...'}
-            style={{ flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: S.colors.textPrimary, fontSize: 14, fontFamily: FONT }}
+          <span style={{ fontSize: 14, opacity: 0.4 }}>🔍</span>
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Cerca stanze..."
+            style={{
+              flex: 1, background: 'none', border: 'none', outline: 'none',
+              color: C.textPrimary, fontSize: 13, fontFamily: FONT,
+            }}
           />
           {search && (
-            <button onClick={() => setSearch('')}
-              style={{ background: 'none', border: 'none', color: S.colors.textMuted, cursor: 'pointer', fontSize: 16, padding: 0 }}>
-              {'×'}
-            </button>
+            <button onClick={() => setSearch('')} style={{
+              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0,
+            }}>×</button>
           )}
         </div>
       </div>
 
-      {/* Language filter pills */}
+      {/* ═══ LANGUAGE PILLS ═══ */}
       <div style={{
-        display: 'flex', gap: 6, padding: '10px 16px', overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        msOverflowStyle: 'none', scrollbarWidth: 'none',
+        display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
       }}>
         {LANG_FILTERS.map(lf => {
           const active = langFilter === lf.code;
           return (
-            <button key={lf.code} onClick={() => setLangFilter(lf.code)}
-              style={{
-                padding: '6px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-                background: active
-                  ? `linear-gradient(135deg, ${S.colors.accent1 || '#26D9B0'}, ${S.colors.accent2 || '#8B6AFF'})`
-                  : (S.colors.overlayBg || 'rgba(255,255,255,0.03)'),
-                border: active ? 'none' : `1px solid ${S.colors.overlayBorder || 'rgba(255,255,255,0.08)'}`,
-                color: active ? '#fff' : S.colors.textSecondary,
-                fontSize: 12, fontWeight: 600, fontFamily: FONT,
-                display: 'flex', alignItems: 'center', gap: 4,
-                transition: 'all 0.2s',
-              }}>
+            <button key={lf.code} onClick={() => setLangFilter(lf.code)} style={{
+              padding: '5px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+              background: active ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
+              border: active ? 'none' : `1px solid ${C.cardBorder}`,
+              color: active ? '#fff' : C.textSecondary,
+              fontSize: 11, fontWeight: 600, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', gap: 4,
+              WebkitTapHighlightColor: 'transparent',
+              boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
+            }}>
               <span>{lf.flag}</span>
               <span>{lf.name}</span>
             </button>
@@ -210,72 +203,84 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
         })}
       </div>
 
-      {/* Mode filter (if multiple modes exist) */}
+      {/* ═══ MODE PILLS ═══ */}
       {availableModes.length > 2 && (
-        <div style={{ display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+        <div style={{
+          display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+        }}>
           {availableModes.map(mode => {
             const active = modeFilter === mode;
             const info = MODE_LABELS[mode];
             return (
-              <button key={mode} onClick={() => setModeFilter(mode)}
-                style={{
-                  padding: '4px 10px', borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-                  background: active ? `${info?.color || S.colors.accent1}20` : 'transparent',
-                  border: active ? `1px solid ${info?.color || S.colors.accent1}40` : '1px solid transparent',
-                  color: active ? (info?.color || S.colors.accent1) : S.colors.textMuted,
-                  fontSize: 11, fontWeight: 600, fontFamily: FONT,
-                }}>
-                {mode === 'all' ? (isIT ? 'Tutte' : 'All') : `${info?.icon || ''} ${info?.label || mode}`}
+              <button key={mode} onClick={() => setModeFilter(mode)} style={{
+                padding: '4px 10px', borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                background: active ? `${info?.color || C.accent}18` : 'transparent',
+                border: active ? `1px solid ${info?.color || C.accent}35` : '1px solid transparent',
+                color: active ? (info?.color || C.accent) : C.textMuted,
+                fontSize: 10, fontWeight: 600, fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+                {mode === 'all' ? 'Tutte' : `${info?.icon || ''} ${info?.label || mode}`}
               </button>
             );
           })}
         </div>
       )}
 
-      {/* Room list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px' }}>
+      {/* ═══ ROOM LIST ═══ */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px', scrollbarWidth: 'none' }}>
+
         {/* Loading skeleton */}
         {loading && rooms.length === 0 && (
           <div>
-            {[0, 1, 2, 3].map(i => <div key={i} style={{ ...skeletonStyle, opacity: 1 - i * 0.15 }} />)}
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} style={{
+                background: `linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 75%)`,
+                backgroundSize: '200% 100%', animation: 'vtShimmer 1.5s infinite',
+                borderRadius: 18, height: 80, marginBottom: 10, opacity: 1 - i * 0.2,
+              }} />
+            ))}
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div style={{ textAlign: 'center', padding: 20, color: S.colors.accent3 || '#FF6B6B', fontSize: 13 }}>
-            {error}
-            <button onClick={handleRefresh}
-              style={{
-                display: 'block', margin: '12px auto 0', padding: '8px 20px', borderRadius: 10,
-                background: S.colors.accent1Bg, border: `1px solid ${S.colors.accent1Border}`,
-                color: S.colors.accent1, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
-              }}>
-              {isIT ? 'Riprova' : 'Retry'}
+          <div style={{ textAlign: 'center', padding: 24 }}>
+            <div style={{ fontSize: 13, color: C.red, marginBottom: 12 }}>{error}</div>
+            <button onClick={handleRefresh} style={{
+              padding: '8px 20px', borderRadius: 12,
+              background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
+              color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
+            }}>
+              Riprova
             </button>
           </div>
         )}
 
-        {/* Empty state */}
+        {/* Empty state — no rooms at all */}
         {!loading && !error && rooms.length === 0 && (
           <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-            <div style={{ fontSize: 64, marginBottom: 16, opacity: 0.8 }}>{'🌍'}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: S.colors.textPrimary, marginBottom: 8 }}>
-              {isIT ? 'Nessuna stanza al momento' : 'No rooms right now'}
+            <div style={{
+              width: 80, height: 80, borderRadius: 24, margin: '0 auto 16px',
+              background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
+              border: `1px solid ${C.accent}15`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
+            }}>
+              🌍
             </div>
-            <div style={{ fontSize: 14, color: S.colors.textMuted, lineHeight: 1.6, maxWidth: 280, margin: '0 auto', marginBottom: 24 }}>
-              {isIT
-                ? 'Crea una stanza pubblica per farti trovare da persone in tutto il mondo!'
-                : 'Create a public room to be found by people around the world!'}
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
+              Nessuna stanza al momento
             </div>
-            <button onClick={() => setView('create')}
-              style={{
-                padding: '14px 28px', borderRadius: 16, cursor: 'pointer',
-                background: `linear-gradient(135deg, ${S.colors.accent1 || '#26D9B0'}, ${S.colors.accent2 || '#8B6AFF'})`,
-                border: 'none', color: '#fff', fontSize: 14, fontWeight: 700,
-                fontFamily: FONT, boxShadow: `0 4px 16px ${S.colors.accent1 || '#26D9B0'}40`,
-              }}>
-              {'💬'} {isIT ? 'Crea stanza pubblica' : 'Create public room'}
+            <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
+              Crea una stanza pubblica per farti trovare da persone in tutto il mondo!
+            </div>
+            <button onClick={() => setView('create')} style={{
+              padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
+              background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              boxShadow: `0 4px 20px ${C.accent}35`,
+            }}>
+              💬 Crea stanza pubblica
             </button>
           </div>
         )}
@@ -283,44 +288,40 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
         {/* Filtered empty */}
         {!loading && rooms.length > 0 && filteredRooms.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 40, marginBottom: 12, opacity: 0.6 }}>{'🔍'}</div>
-            <div style={{ fontSize: 14, color: S.colors.textMuted }}>
-              {isIT ? 'Nessuna stanza trovata con questi filtri' : 'No rooms match these filters'}
+            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}>🔍</div>
+            <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>
+              Nessuna stanza con questi filtri
             </div>
-            <button onClick={() => { setSearch(''); setLangFilter('all'); setModeFilter('all'); }}
-              style={{
-                marginTop: 12, padding: '8px 20px', borderRadius: 10,
-                background: 'none', border: `1px solid ${S.colors.overlayBorder}`,
-                color: S.colors.textSecondary, fontSize: 12, cursor: 'pointer', fontFamily: FONT,
-              }}>
-              {isIT ? 'Resetta filtri' : 'Reset filters'}
+            <button onClick={() => { setSearch(''); setLangFilter('all'); setModeFilter('all'); }} style={{
+              padding: '7px 18px', borderRadius: 10,
+              background: 'none', border: `1px solid ${C.cardBorder}`,
+              color: C.textSecondary, fontSize: 11, cursor: 'pointer', fontFamily: FONT,
+            }}>
+              Resetta filtri
             </button>
           </div>
         )}
 
         {/* Room cards */}
-        {filteredRooms.map((room) => {
+        {filteredRooms.map((room, idx) => {
           const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '💬', color: '#26D9B0' };
           return (
-            <button
-              key={room.roomId}
-              onClick={() => onJoinRoom(room.roomId)}
+            <button key={room.roomId} onClick={() => onJoinRoom(room.roomId)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-                padding: '16px 18px', marginBottom: 8,
-                background: S.colors.cardBg || 'rgba(255,255,255,0.03)',
-                border: `1px solid ${S.colors.cardBorder || 'rgba(255,255,255,0.06)'}`,
-                borderRadius: 18, cursor: 'pointer', textAlign: 'left',
-                fontFamily: FONT,
-                transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-              }}
-            >
-              {/* Language flag */}
+                padding: '14px 16px', marginBottom: 8,
+                background: C.card, border: `1px solid ${C.cardBorder}`,
+                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                borderRadius: 18, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent',
+                animation: `vtSlideUp 0.3s ease-out ${idx * 0.05}s both`,
+              }}>
+              {/* Flag avatar */}
               <div style={{
-                fontSize: 28, width: 52, height: 52, borderRadius: 16, flexShrink: 0,
-                background: `${modeInfo.color}15`,
+                fontSize: 26, width: 50, height: 50, borderRadius: 16, flexShrink: 0,
+                background: `${modeInfo.color}12`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${modeInfo.color}25`,
+                border: `1px solid ${modeInfo.color}20`,
               }}>
                 {getLangFlag(room.lang)}
               </div>
@@ -328,27 +329,27 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <span style={{ fontWeight: 700, fontSize: 15, color: S.colors.textPrimary }}>
+                  <span style={{ fontWeight: 700, fontSize: 14, color: C.textPrimary }}>
                     {room.host}
                   </span>
                   <span style={{
-                    padding: '2px 8px', borderRadius: 8, fontSize: 10, fontWeight: 700,
-                    background: `${modeInfo.color}20`, color: modeInfo.color,
+                    padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
+                    background: `${modeInfo.color}18`, color: modeInfo.color,
                   }}>
                     {modeInfo.icon} {modeInfo.label}
                   </span>
                 </div>
                 {room.description && (
                   <div style={{
-                    fontSize: 13, color: S.colors.textSecondary, marginTop: 2,
+                    fontSize: 12, color: C.textSecondary, marginTop: 1,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {room.description}
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: 11, color: S.colors.textMuted }}>
-                  <span>{'👥'} {room.memberCount}</span>
-                  <span>{'🕐'} {timeAgo(room.createdAt)}</span>
+                <div style={{ display: 'flex', gap: 10, marginTop: 5, fontSize: 10, color: C.textMuted }}>
+                  <span>👥 {room.memberCount}</span>
+                  <span>🕐 {timeAgo(room.createdAt)}</span>
                   {room.targetLangs?.length > 0 && (
                     <span>{room.targetLangs.map(l => getLangFlag(l)).join(' ')}</span>
                   )}
@@ -357,17 +358,25 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
 
               {/* Join arrow */}
               <div style={{
-                width: 36, height: 36, borderRadius: 12, flexShrink: 0,
-                background: `${modeInfo.color}15`,
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                background: `${modeInfo.color}12`, border: `1px solid ${modeInfo.color}20`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: modeInfo.color, fontSize: 16, fontWeight: 700,
+                color: modeInfo.color, fontSize: 14, fontWeight: 700,
               }}>
-                {'→'}
+                →
               </div>
             </button>
           );
         })}
       </div>
+
+      {/* CSS */}
+      <style>{`
+        @keyframes vtShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        @keyframes vtSpin { to { transform: rotate(360deg); } }
+        @keyframes vtSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes vtOrbBreathe { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
+      `}</style>
     </div>
   );
 }

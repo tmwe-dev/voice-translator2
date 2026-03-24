@@ -42,6 +42,7 @@ const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
 const MondoView = lazy(() => import('./components/MondoView.js'));
 const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
 const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
+const HelpView = lazy(() => import('./components/HelpView.js'));
 
 // ═══ Always-imported (lightweight, used within RoomView) ═══
 import ConnectionQuality from './components/ConnectionQuality.js';
@@ -1277,6 +1278,12 @@ function HomeInner() {
         auth.setClonedVoiceName(name);
         auth.refreshBalance();
       }} />
+    </Suspense>
+  );
+
+  if (view === 'help') return (
+    <Suspense fallback={<LazyFallback />}>
+    <HelpView L={L} S={S} prefs={prefs} setView={setView} theme={theme} />
     </Suspense>
   );
 
