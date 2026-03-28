@@ -58,15 +58,36 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
 
   const googleOAuthPopup = useCallback(() => {
     const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
-    if (!clientId) return false;
-    const redirectUri = `${window.location.origin}/api/auth/google-callback`;
-    const scope = 'email profile openid';
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`;
-    const w = 500, h = 600;
-    const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
-    window.open(url, 'googleOAuth', `width=${w},height=${h},left=${left},top=${top}`);
-    return true;
-  }, []);
+    if (!clientId || !window.google?.accounts?.oauth2) return false;
+    try {
+      const client = window.google.accounts.oauth2.initCodeClient({
+        client_id: clientId,
+        scope: 'email profile openid',
+        ux_mode: 'popup',
+        callback: async (response) => {
+          if (response.code) {
+            try {
+              const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: response.code, referralCode: pendingReferralCode }),
+              });
+              const data = await res.json();
+              if (data.ok && loginWithGoogle) {
+                // Reuse the same post-login handler by simulating credential flow result
+                window.postMessage({ type: 'google-oauth-result', data }, '*');
+              }
+            } catch (e) { console.error('Google code exchange error:', e); }
+          }
+        },
+      });
+      client.requestCode();
+      return true;
+    } catch (e) {
+      console.error('initCodeClient error:', e);
+      return false;
+    }
+  }, [pendingReferralCode, loginWithGoogle]);
 
   useEffect(() => {
     initGoogleSignIn();

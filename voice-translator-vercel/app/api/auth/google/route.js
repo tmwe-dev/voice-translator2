@@ -12,33 +12,81 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
     }
 
-    const { credential, referralCode } = await req.json();
+    const { credential, code, referralCode } = await req.json();
 
-    if (!credential) {
-      return NextResponse.json({ error: 'Missing Google credential' }, { status: 400 });
+    if (!credential && !code) {
+      return NextResponse.json({ error: 'Missing Google credential or code' }, { status: 400 });
     }
 
-    // Verify the Google ID token via Google's tokeninfo endpoint
-    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
-    if (!googleRes.ok) {
-      return NextResponse.json({ error: 'Invalid Google token' }, { status: 401 });
+    let email, name;
+
+    if (code) {
+      // ── OAuth Code flow (from initCodeClient popup) ──
+      const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      if (!clientId || !clientSecret) {
+        return NextResponse.json({ error: 'Google OAuth not configured' }, { status: 500 });
+      }
+
+      // Exchange code for tokens — redirect_uri must be 'postmessage' for popup flow
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: 'postmessage',
+          grant_type: 'authorization_code',
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error('Google token exchange failed:', err);
+        return NextResponse.json({ error: 'Google token exchange failed' }, { status: 401 });
+      }
+
+      const tokens = await tokenRes.json();
+
+      // Get user info
+      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${tokens.access_token}` },
+      });
+
+      if (!userInfoRes.ok) {
+        return NextResponse.json({ error: 'Failed to get Google user info' }, { status: 401 });
+      }
+
+      const gUser = await userInfoRes.json();
+      if (!gUser.email || !gUser.email_verified) {
+        return NextResponse.json({ error: 'Email not verified by Google' }, { status: 401 });
+      }
+
+      email = gUser.email.toLowerCase();
+      name = gUser.name || gUser.given_name || '';
+
+    } else {
+      // ── One Tap credential flow (JWT ID token) ──
+      const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+      if (!googleRes.ok) {
+        return NextResponse.json({ error: 'Invalid Google token' }, { status: 401 });
+      }
+
+      const googleUser = await googleRes.json();
+
+      const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+      if (expectedClientId && googleUser.aud !== expectedClientId) {
+        return NextResponse.json({ error: 'Token not issued for this app' }, { status: 401 });
+      }
+
+      if (!googleUser.email || googleUser.email_verified !== 'true') {
+        return NextResponse.json({ error: 'Email not verified by Google' }, { status: 401 });
+      }
+
+      email = googleUser.email.toLowerCase();
+      name = googleUser.name || googleUser.given_name || '';
     }
-
-    const googleUser = await googleRes.json();
-
-    // Verify the token was issued for our app
-    const expectedClientId = process.env.GOOGLE_CLIENT_ID;
-    if (expectedClientId && googleUser.aud !== expectedClientId) {
-      return NextResponse.json({ error: 'Token not issued for this app' }, { status: 401 });
-    }
-
-    // Verify email is present and verified
-    if (!googleUser.email || googleUser.email_verified !== 'true') {
-      return NextResponse.json({ error: 'Email not verified by Google' }, { status: 401 });
-    }
-
-    const email = googleUser.email.toLowerCase();
-    const name = googleUser.name || googleUser.given_name || '';
 
     // Create or get user
     let user = await getUser(email);
