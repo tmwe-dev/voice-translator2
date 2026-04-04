@@ -4,6 +4,8 @@ import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
 
 const BottomNav = ({ currentView, setView, S, L, theme }) => {
+  const C = S.colors || {};
+
   // Define navigation items with their icons and labels
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home', views: ['home', 'quickinvite'] },
@@ -28,6 +30,15 @@ const BottomNav = ({ currentView, setView, S, L, theme }) => {
     setView(viewId);
   };
 
+  // Extract rgb values from hex for rgba backgrounds
+  const accentColor = C.accent1 || '#8b5cf6';
+  const hexToRgb = (hex) => {
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    return `${r},${g},${b}`;
+  };
+
   return (
     <div style={{
       position: 'fixed',
@@ -37,16 +48,15 @@ const BottomNav = ({ currentView, setView, S, L, theme }) => {
       height: '80px',
       backgroundColor: 'rgba(17, 17, 19, 0.96)',
       backdropFilter: 'blur(20px)',
-      borderTop: `1px solid ${S.cardBorder}`,
+      borderTop: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.08)'}`,
       display: 'flex',
       justifyContent: 'space-around',
       alignItems: 'center',
       paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
       zIndex: 50,
-      fontFamily: S.fontFamily || "'Inter', sans-serif",
+      fontFamily: "'Inter', sans-serif",
     }}>
       {navItems.map((item) => {
-        const isActive = activeTab?.id === item.id;
         const isTabActive = item.views.includes(currentView);
 
         return (
@@ -60,12 +70,12 @@ const BottomNav = ({ currentView, setView, S, L, theme }) => {
               justifyContent: 'center',
               gap: '4px',
               padding: '6px 16px',
-              backgroundColor: isTabActive ? `rgba(${S.accent1.replace(/[^0-9,]/g, '')}, 0.12)` : 'transparent',
+              backgroundColor: isTabActive ? `rgba(${hexToRgb(accentColor)}, 0.12)` : 'transparent',
               border: 'none',
               borderRadius: '12px',
               cursor: 'pointer',
               transition: 'all 0.25s',
-              color: isTabActive ? S.accent1 : S.textMuted,
+              color: isTabActive ? accentColor : (C.textMuted || 'rgba(250,250,250,0.60)'),
             }}
             aria-label={item.label}
             aria-current={isTabActive ? 'page' : undefined}
