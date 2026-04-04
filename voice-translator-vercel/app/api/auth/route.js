@@ -33,12 +33,12 @@ export async function POST(req) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              from: process.env.RESEND_FROM || 'VoiceTranslator <noreply@resend.dev>',
+              from: process.env.RESEND_FROM || 'BarTalk <noreply@resend.dev>',
               to: [email],
-              subject: `${authCode} - VoiceTranslate ${t(lang || 'en', 'emailSubject')}`,
+              subject: `${authCode} - BarTalk ${t(lang || 'en', 'emailSubject')}`,
               html: `
                 <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px;">
-                  <h2 style="color:#333;">VoiceTranslate</h2>
+                  <h2 style="color:#333;">BarTalk</h2>
                   <p>${t(lang || 'en', 'emailYourCode')}</p>
                   <div style="font-size:32px;font-weight:bold;letter-spacing:8px;padding:20px;background:#f5f5f5;border-radius:8px;text-align:center;color:#333;">
                     ${authCode}

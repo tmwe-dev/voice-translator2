@@ -30,13 +30,13 @@ export default function useRoomActions({
   const shareApp = useCallback((lang, inviteLang) => {
     const url = `${APP_URL}?lang=${lang || inviteLang}`;
     const text = t(lang || inviteLang, 'shareAppText');
-    if (navigator.share) navigator.share({ title: 'VoiceTranslate', text, url });
+    if (navigator.share) navigator.share({ title: 'BarTalk', text, url });
     else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
   }, [setStatus]);
 
   const shareRoom = useCallback((inviteLang) => {
     const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}`;
-    if (navigator.share) navigator.share({ title: 'VoiceTranslate', text: t(inviteLang, 'inviteText'), url });
+    if (navigator.share) navigator.share({ title: 'BarTalk', text: t(inviteLang, 'inviteText'), url });
     else { navigator.clipboard.writeText(url); setStatus('Link copied!'); setTimeout(() => setStatus(''), 2000); }
   }, [roomPolling.roomId, setStatus]);
 
@@ -44,13 +44,13 @@ export default function useRoomActions({
     if (!roomPolling.messages.length) return;
     const roomName = roomPolling.roomInfo?.host ? `${roomPolling.roomInfo.host}'s Room` : roomPolling.roomId;
     const date = new Date().toLocaleString();
-    let text = `VoiceTranslate - ${roomName}\n${date}\n${'='.repeat(40)}\n\n`;
+    let text = `BarTalk - ${roomName}\n${date}\n${'='.repeat(40)}\n\n`;
     for (const msg of roomPolling.messages) {
       const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       text += `[${time}] ${msg.sender}:\n  ${msg.original}\n  \u2192 ${msg.translated}\n\n`;
     }
-    text += `${'='.repeat(40)}\n${roomPolling.messages.length} ${L('messages')} | VoiceTranslate`;
-    if (navigator.share) navigator.share({ title: `VoiceTranslate - ${roomName}`, text });
+    text += `${'='.repeat(40)}\n${roomPolling.messages.length} ${L('messages')} | BarTalk`;
+    if (navigator.share) navigator.share({ title: `BarTalk - ${roomName}`, text });
     else { navigator.clipboard.writeText(text); setStatus(L('exportCopied')); setTimeout(() => setStatus(''), 2000); }
   }, [roomPolling.messages, roomPolling.roomInfo, roomPolling.roomId, L, setStatus]);
 

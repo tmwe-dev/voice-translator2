@@ -27,7 +27,7 @@ async function handler(req) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        comment: 'VoiceTranslate streaming STT',
+        comment: 'BarTalk streaming STT',
         // Temporary key: expires in 60 seconds
         time_to_live_in_seconds: 60,
         scopes: ['usage:write'],

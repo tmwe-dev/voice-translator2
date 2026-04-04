@@ -58,6 +58,14 @@ const LazyFallback = () => (
   </div>
 );
 
+// ═══ P4 Manifesto integration ═══
+import BottomNav from './components/BottomNav.js';
+import { TaxiButton } from './components/TaxiMode.js';
+const TaxiMode = lazy(() => import('./components/TaxiMode.js'));
+const AIView = lazy(() => import('./components/AIView.js'));
+const DetailView = lazy(() => import('./components/DetailView.js'));
+const ResultView = lazy(() => import('./components/ResultView.js'));
+
 
 export default function Home() {
   return (
@@ -77,6 +85,8 @@ function HomeInner() {
   const [prefs, setPrefs] = useState({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
   const [convHistory, setConvHistory] = useState([]);
   const [currentConv, setCurrentConv] = useState(null);
+  const [detailConversation, setDetailConversation] = useState(null);
+  const [detailMessages, setDetailMessages] = useState([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [myLang, setMyLang] = useState('it');
   const [status, setStatus] = useState('');
@@ -849,13 +859,13 @@ function HomeInner() {
   function shareApp(lang) {
     const url = `${APP_URL}?lang=${lang || shareAppLang}`;
     const text = t(lang || shareAppLang, 'shareAppText');
-    if (navigator.share) navigator.share({ title:'VoiceTranslate', text, url });
+    if (navigator.share) navigator.share({ title:'BarTalk', text, url });
     else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
   }
 
   function shareRoom() {
     const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}`;
-    if (navigator.share) navigator.share({ title:'VoiceTranslate', text:`${t(inviteLang,'inviteText')}`, url });
+    if (navigator.share) navigator.share({ title:'BarTalk', text:`${t(inviteLang,'inviteText')}`, url });
     else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
   }
 
@@ -863,13 +873,13 @@ function HomeInner() {
     if (!roomPolling.messages.length) return;
     const roomName = roomPolling.roomInfo?.host ? `${roomPolling.roomInfo.host}'s Room` : roomPolling.roomId;
     const date = new Date().toLocaleString();
-    let text = `VoiceTranslate - ${roomName}\n${date}\n${'='.repeat(40)}\n\n`;
+    let text = `BarTalk - ${roomName}\n${date}\n${'='.repeat(40)}\n\n`;
     for (const msg of roomPolling.messages) {
       const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
       text += `[${time}] ${msg.sender}:\n  ${msg.original}\n  \u2192 ${msg.translated}\n\n`;
     }
-    text += `${'='.repeat(40)}\n${roomPolling.messages.length} ${L('messages')} | VoiceTranslate`;
-    if (navigator.share) navigator.share({ title: `VoiceTranslate - ${roomName}`, text });
+    text += `${'='.repeat(40)}\n${roomPolling.messages.length} ${L('messages')} | BarTalk`;
+    if (navigator.share) navigator.share({ title: `BarTalk - ${roomName}`, text });
     else { navigator.clipboard.writeText(text); setStatus(L('exportCopied')); setTimeout(() => setStatus(''), 2000); }
   }
 
@@ -1083,6 +1093,7 @@ function HomeInner() {
   // =============================================
   // RENDER
   // =============================================
+  // Full-screen views (no BottomNav)
   if (view === 'loading') return (
     <div style={S.page}>
       <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
@@ -1104,79 +1115,6 @@ function HomeInner() {
       authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
       authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
       authTestCode={auth.authTestCode} pendingReferralCode={auth.pendingReferralCode} />
-  );
-
-  if (view === 'account') return (
-    <Suspense fallback={<LazyFallback />}>
-    <AccountView L={L} S={S} authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
-      authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
-      authTestCode={auth.authTestCode} sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
-      loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
-      pendingReferralCode={auth.pendingReferralCode}
-      setAuthStep={auth.setAuthStep} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
-    </Suspense>
-  );
-
-  if (view === 'credits') return (
-    <Suspense fallback={<LazyFallback />}>
-    <CreditsView L={L} S={S} creditBalance={auth.creditBalance} buyCredits={auth.buyCredits}
-      authLoading={auth.authLoading} userAccount={auth.userAccount} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
-    </Suspense>
-  );
-
-  if (view === 'apikeys') return (
-    <Suspense fallback={<LazyFallback />}>
-    <ApiKeysView L={L} S={S} apiKeyInputs={auth.apiKeyInputs} setApiKeyInputs={auth.setApiKeyInputs}
-      saveUserApiKeys={auth.saveUserApiKeys} authLoading={auth.authLoading} userAccount={auth.userAccount}
-      setView={setView} status={status}  theme={theme} setTheme={setTheme} />
-    </Suspense>
-  );
-
-  if (view === 'settings') return (
-    <Suspense fallback={<LazyFallback />}>
-    <SettingsView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} setView={setView}
-      isTrial={auth.isTrial} isTopPro={auth.isTopPro} setIsTopPro={auth.setIsTopPro} useOwnKeys={auth.useOwnKeys}
-      apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL} elevenLabsVoices={auth.elevenLabsVoices}
-      selectedELVoice={auth.selectedELVoice} setSelectedELVoice={auth.setSelectedELVoice}
-      setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken} userTokenRef={auth.userTokenRef}
-      userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme}
-      creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed}
-      clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
-      setClonedVoiceId={auth.setClonedVoiceId} setClonedVoiceName={auth.setClonedVoiceName} />
-    </Suspense>
-  );
-
-  if (view === 'home') return (
-    <>
-      <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
-        selectedMode={selectedMode} setSelectedMode={setSelectedMode}
-        selectedContext={selectedContext} setSelectedContext={setSelectedContext}
-        roomDescription={roomDescription} setRoomDescription={setRoomDescription}
-        handleCreateRoom={handleCreateRoom} setView={setView}
-        theme={theme} setTheme={setTheme}
-        contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
-        rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact} />
-      {showTutorial && (
-        <TutorialOverlay L={L} tutorialStep={tutorialStep}
-          setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} theme={theme} />
-      )}
-    </>
-  );
-
-  if (view === 'join') return (
-    <JoinView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
-      setMyLang={setMyLang} joinCode={joinCode} setJoinCode={setJoinCode}
-      inviteMsgLang={inviteMsgLang} setInviteMsgLang={setInviteMsgLang}
-      handleJoinRoom={handleJoinRoom} setView={setView} userToken={auth.userToken}
-      setAuthStep={auth.setAuthStep} status={status}  theme={theme} setTheme={setTheme} />
-  );
-
-  if (view === 'lobby') return (
-    <Suspense fallback={<LazyFallback />}>
-    <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
-      inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
-    </Suspense>
   );
 
   if (view === 'room') return (
@@ -1223,102 +1161,255 @@ function HomeInner() {
     </Suspense>
   );
 
-  if (view === 'history') return (
+  if (view === 'lobby') return (
     <Suspense fallback={<LazyFallback />}>
-    <HistoryView L={L} S={S} prefs={prefs} convHistory={convHistory}
-      viewConversation={viewConversation} setView={setView} status={status} theme={theme} setTheme={setTheme}
-      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+    <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
+      inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
+      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
     </Suspense>
+  );
+
+  if (view === 'join') return (
+    <JoinView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
+      setMyLang={setMyLang} joinCode={joinCode} setJoinCode={setJoinCode}
+      inviteMsgLang={inviteMsgLang} setInviteMsgLang={setInviteMsgLang}
+      handleJoinRoom={handleJoinRoom} setView={setView} userToken={auth.userToken}
+      setAuthStep={auth.setAuthStep} status={status}  theme={theme} setTheme={setTheme} />
+  );
+
+  // Define BottomNav for views that use it
+  const bottomNav = <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} />;
+
+  // Views with BottomNav
+  if (view === 'home') return (
+    <>
+      <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
+        selectedMode={selectedMode} setSelectedMode={setSelectedMode}
+        selectedContext={selectedContext} setSelectedContext={setSelectedContext}
+        roomDescription={roomDescription} setRoomDescription={setRoomDescription}
+        handleCreateRoom={handleCreateRoom} setView={setView}
+        theme={theme} setTheme={setTheme}
+        contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
+        rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact} />
+      {showTutorial && (
+        <TutorialOverlay L={L} tutorialStep={tutorialStep}
+          setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} theme={theme} />
+      )}
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'account') return (
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <AccountView L={L} S={S} authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
+        authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
+        authTestCode={auth.authTestCode} sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
+        loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
+        pendingReferralCode={auth.pendingReferralCode}
+        setAuthStep={auth.setAuthStep} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'credits') return (
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <CreditsView L={L} S={S} creditBalance={auth.creditBalance} buyCredits={auth.buyCredits}
+        authLoading={auth.authLoading} userAccount={auth.userAccount} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'apikeys') return (
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <ApiKeysView L={L} S={S} apiKeyInputs={auth.apiKeyInputs} setApiKeyInputs={auth.setApiKeyInputs}
+        saveUserApiKeys={auth.saveUserApiKeys} authLoading={auth.authLoading} userAccount={auth.userAccount}
+        setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'settings') return (
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <SettingsView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} setView={setView}
+        isTrial={auth.isTrial} isTopPro={auth.isTopPro} setIsTopPro={auth.setIsTopPro} useOwnKeys={auth.useOwnKeys}
+        apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL} elevenLabsVoices={auth.elevenLabsVoices}
+        selectedELVoice={auth.selectedELVoice} setSelectedELVoice={auth.setSelectedELVoice}
+        setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken} userTokenRef={auth.userTokenRef}
+        userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme}
+        creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed}
+        clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
+        setClonedVoiceId={auth.setClonedVoiceId} setClonedVoiceName={auth.setClonedVoiceName} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'history' || view === 'archive') return (
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <HistoryView L={L} S={S} prefs={prefs} convHistory={convHistory}
+        viewConversation={viewConversation} setView={setView} status={status} theme={theme} setTheme={setTheme}
+        verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'summary') return (
-    <Suspense fallback={<LazyFallback />}>
-    <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
-      shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status} theme={theme} setTheme={setTheme}
-      verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
+        shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status} theme={theme} setTheme={setTheme}
+        verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'voicetest') return (
-    <Suspense fallback={<LazyFallback />}>
-    <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
-      isTrial={auth.isTrial} isTopPro={auth.isTopPro} useOwnKeys={auth.useOwnKeys}
-      apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL}
-      elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
-      setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
-      userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
+        isTrial={auth.isTrial} isTopPro={auth.isTopPro} useOwnKeys={auth.useOwnKeys}
+        apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL}
+        elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
+        setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
+        userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'contacts') return (
-    <Suspense fallback={<LazyFallback />}>
-    <ContactsView L={L} S={S} prefs={prefs}
-      contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
-      inviteCode={contactsHook.inviteCode} creditBalance={auth.creditBalance}
-      fetchContacts={contactsHook.fetchContacts} addContact={contactsHook.addContact}
-      removeContact={contactsHook.removeContact} createInvite={contactsHook.createInvite}
-      shareInvite={contactsHook.shareInvite} acceptInvite={contactsHook.acceptInvite}
-      startPolling={contactsHook.startPolling}
-      handleStartChat={handleStartChatWithContact}
-      pickDeviceContacts={contactsHook.pickDeviceContacts}
-      hasDeviceContacts={contactsHook.hasDeviceContacts}
-      setView={setView} status={status} theme={theme} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <ContactsView L={L} S={S} prefs={prefs}
+        contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
+        inviteCode={contactsHook.inviteCode} creditBalance={auth.creditBalance}
+        fetchContacts={contactsHook.fetchContacts} addContact={contactsHook.addContact}
+        removeContact={contactsHook.removeContact} createInvite={contactsHook.createInvite}
+        shareInvite={contactsHook.shareInvite} acceptInvite={contactsHook.acceptInvite}
+        startPolling={contactsHook.startPolling}
+        handleStartChat={handleStartChatWithContact}
+        pickDeviceContacts={contactsHook.pickDeviceContacts}
+        hasDeviceContacts={contactsHook.hasDeviceContacts}
+        setView={setView} status={status} theme={theme} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'mondo') return (
-    <Suspense fallback={<LazyFallback />}>
-    <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
-      onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
+        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'speaker') return (
-    <Suspense fallback={<LazyFallback />}>
-    <SpeakerView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
-      userToken={auth.userToken} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <SpeakerView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
+        userToken={auth.userToken} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'quickinvite') return (
-    <Suspense fallback={<LazyFallback />}>
-    <QuickInvite L={L} S={S} prefs={prefs} theme={theme} setView={setView}
-      handleCreateRoom={async (overrideLang) => {
-        try {
-          setStatus('...');
-          const langToUse = overrideLang || myLang;
-          const room = await roomPolling.handleCreateRoom(
-            prefs.name, langToUse, selectedMode, prefs.avatar,
-            selectedContext, selectedMode, '',
-            auth.isTrial, auth.isTopPro, auth.userAccount
-          );
-          roomInfoRef.current = room;
-          setStatus('');
-          return room;
-        } catch (e) { setStatus('Error: ' + e.message); throw e; }
-      }}
-      roomId={roomPolling.roomId}
-      setViewAfterCreate={() => setView('room')} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <QuickInvite L={L} S={S} prefs={prefs} theme={theme} setView={setView}
+        handleCreateRoom={async (overrideLang) => {
+          try {
+            setStatus('...');
+            const langToUse = overrideLang || myLang;
+            const room = await roomPolling.handleCreateRoom(
+              prefs.name, langToUse, selectedMode, prefs.avatar,
+              selectedContext, selectedMode, '',
+              auth.isTrial, auth.isTopPro, auth.userAccount
+            );
+            roomInfoRef.current = room;
+            setStatus('');
+            return room;
+          } catch (e) { setStatus('Error: ' + e.message); throw e; }
+        }}
+        roomId={roomPolling.roomId}
+        setViewAfterCreate={() => setView('room')} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'voice-clone') return (
-    <Suspense fallback={<LazyFallback />}>
-    <VoiceCloneView L={L} S={S} prefs={prefs}
-      userToken={auth.userToken} userTokenRef={auth.userTokenRef}
-      setView={setView} creditBalance={auth.creditBalance} theme={theme}
-      onVoiceCloned={(voiceId, name) => {
-        auth.setClonedVoiceId(voiceId);
-        auth.setClonedVoiceName(name);
-        auth.refreshBalance();
-      }} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <VoiceCloneView L={L} S={S} prefs={prefs}
+        userToken={auth.userToken} userTokenRef={auth.userTokenRef}
+        setView={setView} creditBalance={auth.creditBalance} theme={theme}
+        onVoiceCloned={(voiceId, name) => {
+          auth.setClonedVoiceId(voiceId);
+          auth.setClonedVoiceName(name);
+          auth.refreshBalance();
+        }} />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   if (view === 'help') return (
-    <Suspense fallback={<LazyFallback />}>
-    <HelpView L={L} S={S} prefs={prefs} setView={setView} theme={theme} />
-    </Suspense>
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <HelpView L={L} S={S} prefs={prefs} setView={setView} theme={theme} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'ai') return (
+    <>
+      <Suspense fallback={null}>
+        <AIView
+          L={L} S={S} theme={theme} setView={setView}
+          prefs={prefs} contacts={contactsHook.contacts}
+          recentConversations={convHistory}
+        />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'detail') return (
+    <>
+      <Suspense fallback={null}>
+        <DetailView
+          L={L} S={S} theme={theme}
+          conversation={detailConversation || {}}
+          messages={detailMessages || []}
+          onBack={() => setView('history')}
+          onResume={detailConversation?.roomId ? () => {
+            if (rejoinRoom) rejoinRoom(detailConversation.roomId);
+          } : undefined}
+          onExport={() => {}}
+          onShare={() => {}}
+          onDelete={() => {}}
+          onPlayMessage={null}
+          playingMsgId={null}
+          prefs={prefs}
+        />
+      </Suspense>
+      {bottomNav}
+    </>
   );
 
   return null;

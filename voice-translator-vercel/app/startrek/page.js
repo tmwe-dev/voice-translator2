@@ -147,7 +147,7 @@ export default function StartrekPage() {
           <div style={{...S.header, marginTop:'15vh'}}>
             <div style={{fontSize:50, marginBottom:12}}>{'🖖'}</div>
             <div style={S.title}>STARTREK</div>
-            <div style={S.subtitle}>United Federation of VoiceTranslate</div>
+            <div style={S.subtitle}>United Federation of BarTalk</div>
           </div>
           <form onSubmit={handleLogin} style={{maxWidth:340, margin:'0 auto'}}>
             <div style={{marginBottom:16}}>
@@ -410,7 +410,7 @@ export default function StartrekPage() {
 
         {/* Footer */}
         <div style={{textAlign:'center', padding:'20px 0', fontSize:10, color:'rgba(200,208,255,0.15)'}}>
-          STARTREK Admin Console {'\u2022'} VoiceTranslate {'\u2022'} Auto-refresh ogni 30s
+          STARTREK Admin Console {'\u2022'} BarTalk {'\u2022'} Auto-refresh ogni 30s
         </div>
       </div>
 

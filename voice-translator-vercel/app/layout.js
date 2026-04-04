@@ -2,24 +2,24 @@ import CookieConsent from './components/CookieConsent.js';
 import SkipToContent from './components/SkipToContent.js';
 
 export const metadata = {
-  title: 'VoiceTranslate — Real-time AI Voice Translation',
+  title: 'BarTalk — Real-time AI Voice Translation',
   description: 'Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'VoiceTranslate',
+    title: 'BarTalk',
   },
   openGraph: {
-    title: 'VoiceTranslate — Real-time Voice Translation',
+    title: 'BarTalk — Real-time Voice Translation',
     description: 'Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages.',
     type: 'website',
     url: 'https://voice-translator2.vercel.app',
-    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'VoiceTranslate — Real-time AI Voice Translation' }],
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'BarTalk — Real-time AI Voice Translation' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'VoiceTranslate — Real-time Voice Translation',
+    title: 'BarTalk — Real-time Voice Translation',
     description: 'AI-powered voice translation for 15+ languages. Free to start.',
     images: ['/api/og'],
   },
@@ -49,7 +49,7 @@ export default function RootLayout({ children }) {
         <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
         {/* Enhanced SEO Meta Tags */}
         <meta name="description" content="Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start." />
-        <meta property="og:title" content="VoiceTranslate — Real-time Voice Translation" />
+        <meta property="og:title" content="BarTalk — Real-time Voice Translation" />
         <meta property="og:description" content="Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages." />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://voice-translator2.vercel.app" />
@@ -57,7 +57,7 @@ export default function RootLayout({ children }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="VoiceTranslate — Real-time Voice Translation" />
+        <meta name="twitter:title" content="BarTalk — Real-time Voice Translation" />
         <meta name="twitter:description" content="AI-powered voice translation for 15+ languages. Free to start." />
         <meta name="twitter:image" content="/api/og" />
         {/* OAuth: inject client IDs from env vars + preload SDKs */}
@@ -93,7 +93,7 @@ export default function RootLayout({ children }) {
             __html: JSON.stringify({
               '@context': 'https://schema.org',
               '@type': 'WebApplication',
-              name: 'VoiceTranslate',
+              name: 'BarTalk',
               description: 'Real-time voice translation app with AI-powered speech recognition and synthesis in 15+ languages',
               url: 'https://voice-translator2.vercel.app',
               applicationCategory: 'CommunicationApplication',

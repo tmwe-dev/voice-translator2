@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { LANGS, FONT, getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import ConnectionQuality from './ConnectionQuality.js';
+import { TaxiButton } from './TaxiMode.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconChevronDown, IconBrainAI } from './Icons.js';
 
@@ -18,6 +19,7 @@ const RoomHeader = memo(function RoomHeader({
   duckingLevel, setDuckingLevel,
   isTrial, freeCharsUsed, freeLimitExceeded, freeResetTime,
   endChatAndSave, leaveRoomTemporary,
+  taxiVisible, setTaxiVisible, setTaxiData, myName,
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -104,6 +106,23 @@ const RoomHeader = memo(function RoomHeader({
               <IconCamera size={18}/>
               {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
             </button>
+          )}
+          {/* Taxi Mode toggle */}
+          {setTaxiVisible && (
+            <TaxiButton
+              onClick={() => {
+                const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+                if (lastMsg) {
+                  const original = lastMsg.original || '';
+                  const translated = lastMsg.translated || '';
+                  const fromLang = lastMsg.sourceLang || myLang;
+                  const toLang = lastMsg.targetLang || 'en';
+                  if (setTaxiData) setTaxiData({ original, translated, fromLang, toLang });
+                }
+                setTaxiVisible(true);
+              }}
+              S={S}
+            />
           )}
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}

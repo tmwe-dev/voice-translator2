@@ -1,6 +1,6 @@
 {
-  "name": "VoiceTranslate - Real-time Voice Translator",
-  "short_name": "VoiceTranslate",
+  "name": "BarTalk - Real-time Voice Translator",
+  "short_name": "BarTalk",
   "description": "Translate voice conversations in real-time across 100+ languages with AI-powered accuracy",
   "start_url": "/?source=pwa",
   "display": "standalone",
@@ -114,20 +114,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "VoiceTranslate Home Screen"
+      "label": "BarTalk Home Screen"
     },
     {
       "src": "/icons/icon-384x384.png",
       "sizes": "384x384",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "VoiceTranslate Mobile View"
+      "label": "BarTalk Mobile View"
     }
   ],
   "related_applications": [],
   "protocol_handlers": [
     {
-      "protocol": "web+voicetranslate",
+      "protocol": "web+bartalk",
       "url": "/?room=%s"
     }
   ]

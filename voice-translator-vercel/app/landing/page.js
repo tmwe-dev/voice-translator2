@@ -4,7 +4,7 @@ import { FONT, LANGS } from '../lib/constants.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════
-// VoiceTranslate Landing Page — Fully i18n
+// BarTalk Landing Page — Fully i18n
 // Detects language from: localStorage → navigator → defaults to 'en'
 // ═══════════════════════════════════════════════
 
@@ -269,7 +269,7 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <footer style={{ borderTop: '1px solid #27272a', padding: '32px 24px', textAlign: 'center' }}>
         <div style={{ fontSize: 14, color: '#52525b' }}>
-          {'\u00A9'} {new Date().getFullYear()} VoiceTranslate
+          {'\u00A9'} {new Date().getFullYear()} BarTalk
         </div>
         <div style={{ fontSize: 13, color: '#3f3f46', marginTop: 8 }}>
           <a href="/privacy" style={{ color: '#3f3f46', marginRight: 16 }}>{L('landingFooterPrivacy')}</a>

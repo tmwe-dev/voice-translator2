@@ -1,4 +1,4 @@
-// Lightweight client-side monitoring module for VoiceTranslator
+// Lightweight client-side monitoring module for BarTalk
 // Tracks errors, metrics, Web Vitals, and system health
 
 let errorStore = [];

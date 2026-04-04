@@ -170,8 +170,8 @@ export default function useContacts({ userTokenRef }) {
       ? (isIT ? ` Ti regalo ${(giftAmount / 100).toFixed(2)}€ di crediti!` : ` I'm gifting you €${(giftAmount / 100).toFixed(2)} in credits!`)
       : '';
     const text = isIT
-      ? `Ciao! Ti invito a usare VoiceTranslate, il traduttore vocale in tempo reale.${giftText} Unisciti qui: ${inviteUrl}`
-      : `Hi! I invite you to use VoiceTranslate, the real-time voice translator.${giftText} Join here: ${inviteUrl}`;
+      ? `Ciao! Ti invito a usare BarTalk, il traduttore vocale in tempo reale.${giftText} Unisciti qui: ${inviteUrl}`
+      : `Hi! I invite you to use BarTalk, the real-time BarTalk.${giftText} Join here: ${inviteUrl}`;
 
     switch (channel) {
       case 'whatsapp':
@@ -184,7 +184,7 @@ export default function useContacts({ userTokenRef }) {
         window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
         break;
       case 'email': {
-        const subject = isIT ? 'Ti invito su VoiceTranslate' : 'VoiceTranslate invitation';
+        const subject = isIT ? 'Ti invito su BarTalk' : 'BarTalk invitation';
         window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`, '_blank');
         break;
       }
@@ -197,7 +197,7 @@ export default function useContacts({ userTokenRef }) {
       case 'native':
         if (navigator.share) {
           try {
-            await navigator.share({ title: 'VoiceTranslate', text, url: inviteUrl });
+            await navigator.share({ title: 'BarTalk', text, url: inviteUrl });
           } catch {}
         }
         break;

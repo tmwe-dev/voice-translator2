@@ -2,8 +2,6 @@
 import { memo, useState, useMemo, useEffect } from 'react';
 import { VOICES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
-import Icon from './Icon.js';
-import MainMenu from './MainMenu.js';
 
 // ═══════════════════════════════════════
 // Theme-aware color palette for HomeView
@@ -171,66 +169,6 @@ function getHomeColors(theme) {
   return palettes[theme] || palettes.dark;
 }
 
-// ── Door SVG component (animated door CTA) ──
-const DoorSVG = ({ C }) => (
-  <svg viewBox="0 0 140 180" fill="none" xmlns="http://www.w3.org/2000/svg" style={{width:'100%', height:'100%'}}>
-    <defs>
-      <linearGradient id="doorBody" x1="30" y1="8" x2="110" y2="172">
-        <stop offset="0%" stopColor={C.doorBody[0]}/>
-        <stop offset="35%" stopColor={C.doorBody[1]}/>
-        <stop offset="100%" stopColor={C.doorBody[2]}/>
-      </linearGradient>
-      <linearGradient id="doorFace" x1="38" y1="14" x2="102" y2="168">
-        <stop offset="0%" stopColor={C.doorFace[0]}/>
-        <stop offset="40%" stopColor={C.doorFace[1]}/>
-        <stop offset="100%" stopColor={C.doorFace[2]}/>
-      </linearGradient>
-      <linearGradient id="panelGrad" x1="48" y1="28" x2="92" y2="90">
-        <stop offset="0%" stopColor={C.doorPanel1[0]}/>
-        <stop offset="100%" stopColor={C.doorPanel1[1]}/>
-      </linearGradient>
-      <linearGradient id="panelGrad2" x1="48" y1="100" x2="92" y2="155">
-        <stop offset="0%" stopColor={C.doorPanel2[0]}/>
-        <stop offset="100%" stopColor={C.doorPanel2[1]}/>
-      </linearGradient>
-      <linearGradient id="handleGrad" x1="95" y1="88" x2="102" y2="100">
-        <stop offset="0%" stopColor={C.doorHandle[0]}/>
-        <stop offset="100%" stopColor={C.doorHandle[1]}/>
-      </linearGradient>
-      <radialGradient id="handleGlow" cx="98" cy="94" r="12" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor={C.doorHandleGlow}/>
-        <stop offset="100%" stopColor="rgba(255,215,0,0)"/>
-      </radialGradient>
-      <linearGradient id="archGrad" x1="34" y1="6" x2="106" y2="6">
-        <stop offset="0%" stopColor={C.doorArch[0]}/>
-        <stop offset="50%" stopColor={C.doorArch[1]}/>
-        <stop offset="100%" stopColor={C.doorArch[2]}/>
-      </linearGradient>
-      <linearGradient id="shineGrad" x1="42" y1="14" x2="60" y2="60">
-        <stop offset="0%" stopColor={C.doorShine[0]}/>
-        <stop offset="100%" stopColor={C.doorShine[1]}/>
-      </linearGradient>
-      <linearGradient id="floorGlow" x1="30" y1="172" x2="110" y2="180">
-        <stop offset="0%" stopColor="rgba(0,0,0,0)"/>
-        <stop offset="50%" stopColor={C.doorFloor}/>
-        <stop offset="100%" stopColor="rgba(0,0,0,0)"/>
-      </linearGradient>
-    </defs>
-    <ellipse cx="70" cy="175" rx="50" ry="5" fill="url(#floorGlow)"/>
-    <rect x="30" y="8" width="80" height="164" rx="8" fill="url(#doorBody)"/>
-    <rect x="34" y="12" width="72" height="156" rx="6" fill="url(#doorFace)"/>
-    <path d="M38 18 Q70 4 102 18" stroke="url(#archGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
-    <rect x="48" y="28" width="44" height="58" rx="5" fill="url(#panelGrad)" stroke={C.doorPanelStroke1} strokeWidth="1"/>
-    <rect x="48" y="100" width="44" height="54" rx="5" fill="url(#panelGrad2)" stroke={C.doorPanelStroke2} strokeWidth="1"/>
-    <circle cx="98" cy="94" r="12" fill="url(#handleGlow)"/>
-    <circle cx="98" cy="94" r="5" fill="url(#handleGrad)" stroke={C.doorHandleStroke} strokeWidth="0.5"/>
-    <circle cx="96.5" cy="92.5" r="2" fill="rgba(255,255,255,0.45)"/>
-    <ellipse cx="98" cy="102" rx="1.5" ry="2" fill="rgba(0,0,0,0.25)"/>
-    <path d="M38 14 L58 14 Q42 50 38 70 Z" fill="url(#shineGrad)" opacity="0.7"/>
-    <rect x="30" y="8" width="6" height="164" rx="4" fill={C.doorShadow}/>
-  </svg>
-);
-
 const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView,
   theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact }) {
@@ -276,344 +214,309 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   }, [contacts]);
 
   return (
-    <main style={S.page} aria-label="BarChat Home">
+    <main style={S.page} aria-label="BarChat Home P4">
       <div style={S.scrollCenter}>
 
         {/* ═══════════════════════════════════════
-            TOP BAR: Avatar + Name + Language + Voice + Contacts + Settings
+            1. GREETING AREA (top)
            ═══════════════════════════════════════ */}
-        <header style={{display:'flex', alignItems:'center', gap:10, width:'100%', maxWidth:400, marginBottom:16,
-          padding:'12px 14px', borderRadius:18, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}} role="banner">
-          <AvatarImg src={prefs.avatar} size={56} style={{borderRadius:14}} />
-          <div style={{flex:1, minWidth:0}}>
-            <div style={{fontSize:14, fontWeight:800, letterSpacing:-0.3, color:C.textPrimary}}>{prefs.name}</div>
-            <div style={{fontSize:11, color:C.textSecondary, display:'flex', alignItems:'center', gap:4, marginTop:2}}>
-              <span style={{fontSize:14}}>{langInfo.flag}</span>
-              <span style={{fontSize:10, fontWeight:700}}>{langInfo.name}</span>
+        <header style={{
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          maxWidth: 400, marginBottom: 28, paddingTop: 8
+        }} role="banner">
+          <AvatarImg src={prefs.avatar} size={56} style={{ borderRadius: 14 }} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{
+              fontSize: 18, fontWeight: 900, letterSpacing: -0.5,
+              color: C.textPrimary, fontFamily: FONT
+            }}>
+              Buongiorno, {prefs.name} 👋
             </div>
-          </div>
-          <div style={{display:'flex', gap:4, flexShrink:0}}>
-            {/* Voice picker dropdown */}
-            <div style={{position:'relative'}}>
-              <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
-                background:C.btnBg, border:`1px solid ${C.btnBorder}`,
-                display:'flex', alignItems:'center', justifyContent:'center',
-                WebkitTapHighlightColor:'transparent'}}
-                onClick={() => setShowVoicePicker(!showVoicePicker)}
-                title="Voice" aria-label="Seleziona voce">
-                <span style={{fontSize:13}}>{'🎤'}</span>
-              </button>
-              {showVoicePicker && (
-                <div style={{position:'absolute', top:'100%', right:0, zIndex:50, marginTop:6,
-                  borderRadius:12, overflow:'hidden', background:C.popupBg, border:`1px solid ${C.popupBorder}`,
-                  backdropFilter:'blur(24px)', boxShadow:'0 12px 40px rgba(0,0,0,0.4)', minWidth:120}}>
-                  {VOICES.map(v => (
-                    <button key={v} onClick={() => {
-                      setPrefs({...prefs, voice: v});
-                      savePrefs({...prefs, voice: v});
-                      setShowVoicePicker(false);
-                    }} style={{width:'100%', padding:'10px 12px', cursor:'pointer', border:'none',
-                      background: prefs.voice === v ? C.tabActiveBg : 'transparent',
-                      color: prefs.voice === v ? C.tabActiveColor : C.textSecondary,
-                      fontSize:11, fontWeight: prefs.voice === v ? 700 : 500,
-                      fontFamily:FONT, textAlign:'left', display:'flex', alignItems:'center', gap:6,
-                      WebkitTapHighlightColor:'transparent', transition:'all 0.1s'}}>
-                      <span style={{fontSize:12}}>{'\u{1F50A}'}</span>
-                      {v}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            {/* Contacts button */}
-            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
-              background:C.contactsBtnBg, border:`1px solid ${C.contactsBtnBorder}`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              WebkitTapHighlightColor:'transparent'}}
-              onClick={() => setView('contacts')}
-              title="Contacts" aria-label="Contatti">
-              <span style={{fontSize:14}}>{'👥'}</span>
-            </button>
-            {/* Help button */}
-            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
-              background:C.settingsBtnBg, border:`1px solid ${C.settingsBtnBorder}`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              WebkitTapHighlightColor:'transparent'}}
-              onClick={() => setView('help')}
-              aria-label="Aiuto">
-              <span style={{fontSize:14}}>{'❓'}</span>
-            </button>
-            {/* Settings button */}
-            <button style={{width:32, height:32, borderRadius:9, cursor:'pointer',
-              background:C.settingsBtnBg, border:`1px solid ${C.settingsBtnBorder}`,
-              display:'flex', alignItems:'center', justifyContent:'center',
-              WebkitTapHighlightColor:'transparent'}}
-              onClick={() => setView('settings')}
-              aria-label="Impostazioni">
-              <Icon name="settings" size={16} color={C.settingsIconColor} />
+            <button onClick={() => setView('settings')}
+              style={{
+                fontSize: 12, color: C.textSecondary, marginTop: 4,
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: 0, textDecoration: 'none', fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent'
+              }}>
+              ✏️ Modifica profilo
             </button>
           </div>
         </header>
 
         {/* ═══════════════════════════════════════
-            DOOR CTA — Create/Enter Room
+            2. BIG CTA BUTTON (center, huge)
+           ═══════════════════════════════════════ */}
+        <button
+          onClick={() => {
+            vibrate();
+            handleCreateRoom();
+          }}
+          style={{
+            width: '100%', maxWidth: 400, padding: '48px 24px',
+            marginBottom: 32, borderRadius: 24, border: 'none',
+            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #5b21b6 100%)',
+            cursor: 'pointer', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center', gap: 12,
+            position: 'relative', overflow: 'hidden',
+            boxShadow: '0 12px 48px rgba(139, 92, 246, 0.4)',
+            transition: 'all 0.3s ease', WebkitTapHighlightColor: 'transparent',
+            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%)',
+            backgroundSize: '200% 200%'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.02)';
+            e.currentTarget.style.boxShadow = '0 16px 56px rgba(139, 92, 246, 0.5)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 12px 48px rgba(139, 92, 246, 0.4)';
+          }}>
+          <span style={{ fontSize: 44 }}>🎤</span>
+          <div style={{
+            fontSize: 28, fontWeight: 900, color: '#FFFFFF',
+            letterSpacing: -0.8, fontFamily: FONT
+          }}>
+            Parla e Traduci
+          </div>
+          <div style={{
+            fontSize: 13, color: 'rgba(255,255,255,0.8)',
+            fontWeight: 500, fontFamily: FONT, letterSpacing: 0.3
+          }}>
+            Comunicare nel tuo linguaggio
+          </div>
+        </button>
+
+        {/* ═══════════════════════════════════════
+            3. LANGUAGE BAR (pills + swap button)
            ═══════════════════════════════════════ */}
         <div style={{
-          width:'100%', maxWidth:400, display:'flex', flexDirection:'column',
-          alignItems:'center', marginBottom:20,
+          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+          maxWidth: 400, marginBottom: 28, justifyContent: 'center'
         }}>
-          <button style={{
-            background:'transparent', border:'none', cursor:'pointer',
-            padding:0, WebkitTapHighlightColor:'transparent',
-            display:'flex', flexDirection:'column', alignItems:'center',
-            transition:'transform 0.2s ease',
-          }}
+          <button
+            style={{
+              padding: '10px 16px', borderRadius: 20,
+              background: C.accent + '20', border: `1px solid ${C.accent}40`,
+              color: C.accent, fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}
+            onClick={() => { /* open language selector */ }}>
+            {langInfo.flag} {langInfo.name}
+          </button>
+          <div style={{ fontSize: 18, color: C.textSecondary }}>⇄</div>
+          <button
+            style={{
+              padding: '10px 16px', borderRadius: 20,
+              background: C.accent2 + '20', border: `1px solid ${C.accent2}40`,
+              color: C.accent2, fontSize: 12, fontWeight: 700,
+              cursor: 'pointer', fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}
+            onClick={() => { /* open language selector */ }}>
+            {getLang(myLang).flag} {getLang(myLang).name}
+          </button>
+        </div>
+
+        {/* ═══════════════════════════════════════
+            4. QUICK ACTIONS ROW (horizontal scroll)
+           ═══════════════════════════════════════ */}
+        <div style={{
+          display: 'flex', gap: 10, width: '100%', maxWidth: 400,
+          marginBottom: 28, overflowX: 'auto', paddingBottom: 4,
+          scrollBehavior: 'smooth'
+        }}>
+          {/* Invita QR */}
+          <button
+            onClick={() => { vibrate(); setView('quickinvite'); }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}>
+            <span style={{ fontSize: 22 }}>🔗</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Invita QR</span>
+          </button>
+
+          {/* Chat */}
+          <button
             onClick={() => {
               vibrate();
-              setShowCreatePopup(true);
+              handleCreateRoom();
+            }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
             }}>
+            <span style={{ fontSize: 22 }}>💬</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Chat</span>
+          </button>
+
+          {/* Video */}
+          <button
+            onClick={() => {
+              vibrate();
+              setSelectedMode('classroom');
+              handleCreateRoom();
+            }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}>
+            <span style={{ fontSize: 22 }}>📹</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Video</span>
+          </button>
+
+          {/* Call */}
+          <button
+            onClick={() => {
+              vibrate();
+              setSelectedMode('call');
+              handleCreateRoom();
+            }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}>
+            <span style={{ fontSize: 22 }}>📞</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Chiama</span>
+          </button>
+
+          {/* Interpreter */}
+          <button
+            onClick={() => { vibrate(); setView('interpreter'); }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}>
+            <span style={{ fontSize: 22 }}>🎙️</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Interprete</span>
+          </button>
+
+          {/* Taxi */}
+          <button
+            onClick={() => { vibrate(); setView('taxi'); }}
+            style={{
+              flex: '0 0 auto', padding: '14px 16px',
+              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', gap: 6, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
+            }}>
+            <span style={{ fontSize: 22 }}>🚕</span>
+            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Taxi</span>
+          </button>
+        </div>
+
+        {/* ═══════════════════════════════════════
+            5. RECENT CONVERSATIONS LIST
+           ═══════════════════════════════════════ */}
+        {/* Active Rooms */}
+        {activeRooms.length > 0 && (
+          <div style={{ width: '100%', maxWidth: 400, marginBottom: 24 }}>
             <div style={{
-              width:140, height:180, position:'relative',
-              animation:'vtDoorGlow 3s ease-in-out infinite',
+              fontSize: 11, fontWeight: 700, color: C.textTertiary, marginBottom: 12,
+              letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: FONT
             }}>
-              <DoorSVG C={C} />
+              Chat Attive
             </div>
-            <div style={{marginTop:16, textAlign:'center'}}>
-              <div style={{
-                fontWeight:900, fontSize:24, letterSpacing:-0.8,
-                background:C.titleGrad,
-                WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-                backgroundClip:'text', fontFamily:FONT,
-              }}>
-                {L('createRoom')}
-              </div>
-              <div style={{fontSize:11, color:C.textMuted, marginTop:3, fontFamily:FONT, letterSpacing:0.5}}>
-                Parla con chiunque nel mondo nella tua lingua
-              </div>
-            </div>
-          </button>
-        </div>
-
-        {/* ═══════════════════════════════════════
-            CREATE ROOM POPUP
-           ═══════════════════════════════════════ */}
-        {showCreatePopup && (
-          <>
-            <div onClick={() => setShowCreatePopup(false)}
-              style={{position:'fixed', inset:0, zIndex:200,
-                background:'rgba(0,0,0,0.55)', backdropFilter:'blur(8px)',
-                animation:'vtFadeIn 0.2s ease-out'}} />
-            <div style={{position:'fixed', left:'50%', top:'50%', transform:'translate(-50%, -50%)',
-              zIndex:201, width:'calc(100% - 40px)', maxWidth:380,
-              padding:'28px 22px 24px', borderRadius:28,
-              background:C.popupBg,
-              border:`1px solid ${C.popupBorder}`,
-              boxShadow:`0 24px 80px rgba(0,0,0,0.45), 0 0 50px ${C.popupShadow}`,
-              animation:'vtSlideUp 0.25s ease-out'}}>
-              <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22}}>
-                <div style={{fontWeight:800, fontSize:18, letterSpacing:-0.5, color:C.textPrimary}}>
-                  {L('createRoom')}
-                </div>
-                <button onClick={() => setShowCreatePopup(false)}
-                  style={{width:34, height:34, borderRadius:12, cursor:'pointer',
-                    background:C.popupCloseBg, border:`1px solid ${C.popupCloseBorder}`,
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}>
-                  <span style={{fontSize:16}}>{'✕'}</span>
-                </button>
-              </div>
-              <div style={{marginBottom:20}}>
-                <div style={{fontSize:10, fontWeight:700, color:C.textTertiary,
-                  textTransform:'uppercase', letterSpacing:1.2, marginBottom:7}}>
-                  {L('descriptionOptional')}
-                </div>
-                <input style={{width:'100%', fontSize:13, padding:'12px 16px', borderRadius:14,
-                  background:C.btnBg, border:`1px solid ${C.btnBorder}`,
-                  color:C.textPrimary, fontFamily:FONT, boxSizing:'border-box'}}
-                  value={roomDescription}
-                  onChange={e => setRoomDescription(e.target.value)}
-                  placeholder="Es. lezione di italiano..."
-                  maxLength={150} />
-              </div>
-              <button style={{
-                width:'100%', padding:'17px 0', borderRadius:16, cursor:'pointer', border:'none',
-                background:C.createBtnGrad,
-                boxShadow:C.createBtnShadow,
-                color:'#FFFFFF', fontFamily:FONT, fontSize:16, fontWeight:800,
-                letterSpacing:-0.2, display:'flex', alignItems:'center', justifyContent:'center', gap:10,
-                WebkitTapHighlightColor:'transparent', transition:'all 0.2s'
-              }}
-                onClick={() => { vibrate(); setShowCreatePopup(false); handleCreateRoom(); }}>
-                <span>{'\u{1F4AC}'}</span>
-                {L('createRoom')}
-              </button>
-            </div>
-          </>
-        )}
-
-        {/* ═══════════════════════════════════════
-            MAIN MENU — Hub con icone grandi
-           ═══════════════════════════════════════ */}
-        <MainMenu L={L} S={{...S, colors: C}} prefs={prefs} theme={theme} setView={setView}
-          handleCreateRoom={handleCreateRoom} setShowCreatePopup={setShowCreatePopup} />
-
-        {/* spacer */}
-        <div style={{height: 16}} />
-
-        {/* (TaxiTalk + QuickInvite — ora accessibili da MainMenu) */}
-
-        {/* ═══════════════════════════════════════
-            TABS: "Le mie" (0) and "Mondo" (1)
-           ═══════════════════════════════════════ */}
-        <div style={{display:'flex', gap:8, width:'100%', maxWidth:400, marginBottom:16,
-          padding:'4px', borderRadius:14, background:C.tabBg, border:`1px solid ${C.tabBorder}`}}>
-          <button
-            aria-label="Le mie chat" role="tab" aria-selected={selectedTab === 0}
-            onClick={() => setSelectedTab(0)}
-            style={{flex:1, padding:'10px 12px', borderRadius:11, cursor:'pointer', fontFamily:FONT,
-              fontSize:12, fontWeight:700, border:'none',
-              background: selectedTab === 0 ? C.tabActiveBg : 'transparent',
-              border: selectedTab === 0 ? `1px solid ${C.tabBorder}` : 'none',
-              color: selectedTab === 0 ? C.tabActiveColor : C.textMuted,
-              transition:'all 0.15s', WebkitTapHighlightColor:'transparent'}}>
-            Le mie
-          </button>
-          <button
-            aria-label="Chat pubbliche" role="tab" aria-selected={selectedTab === 1}
-            onClick={() => setSelectedTab(1)}
-            style={{flex:1, padding:'10px 12px', borderRadius:11, cursor:'pointer', fontFamily:FONT,
-              fontSize:12, fontWeight:700, border:'none',
-              background: selectedTab === 1 ? C.tabActiveBg : 'transparent',
-              border: selectedTab === 1 ? `1px solid ${C.tabBorder}` : 'none',
-              color: selectedTab === 1 ? C.tabActiveColor : C.textMuted,
-              transition:'all 0.15s', WebkitTapHighlightColor:'transparent'}}>
-            Mondo
-          </button>
-        </div>
-
-        {/* ═══════════════════════════════════════
-            TAB 0: Le mie (Personal chats)
-           ═══════════════════════════════════════ */}
-        {selectedTab === 0 && (
-          <div style={{width:'100%', maxWidth:400}}>
-            {/* Active Rooms */}
-            {activeRooms.length > 0 && (
-              <div style={{marginBottom:16}}>
-                <div style={{fontSize:11, fontWeight:700, color:C.textTertiary, marginBottom:8,
-                  letterSpacing:0.5, textTransform:'uppercase'}}>
-                  Chat Attive
-                </div>
-                {activeRooms.map((room) => {
-                  const timeAgo = Math.floor((Date.now() - room.leftAt) / 60000);
-                  const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo} min fa` : `${Math.floor(timeAgo / 60)}h fa`;
-                  return (
-                    <div key={room.roomId} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
-                      marginBottom:6, borderRadius:14, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`,
-                      cursor:'pointer', transition:'background 0.15s'}}
-                      onClick={() => { vibrate(); if (rejoinRoom) rejoinRoom(room.roomId); }}>
-                      <div style={{display:'flex', gap:2, fontSize:16}}>
-                        {[...new Set(room.members?.map(m => getLang(m.lang).flag) || [])].map((flag, i) => (
-                          <span key={i}>{flag}</span>
-                        ))}
-                      </div>
-                      <div style={{flex:1, minWidth:0}}>
-                        <div style={{fontSize:12, fontWeight:700, color:C.textPrimary, overflow:'hidden',
-                          textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
-                          {room.members?.map(m => m.name).join(', ') || room.roomId}
-                        </div>
-                        <div style={{fontSize:10, color:C.textMuted}}>
-                          {room.mode === 'conversation' ? '\u{1F4AC}' : room.mode === 'classroom' ? '\u{1F3EB}' : '\u{1F399}'} {timeStr}
-                        </div>
-                      </div>
-                      <div style={{padding:'4px 12px', borderRadius:8, fontSize:10, fontWeight:700,
-                        background:C.accent + '18', color:C.accent, cursor:'pointer'}}>
-                        Rientra
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Online Friends */}
-            {onlineContacts.length > 0 && (
-              <div style={{marginBottom:16}}>
-                <div style={{fontSize:11, fontWeight:700, color:C.textTertiary, marginBottom:8,
-                  letterSpacing:0.5, textTransform:'uppercase'}}>
-                  Amici Online
-                </div>
-                {onlineContacts.map((contact) => (
-                  <div key={contact.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 14px',
-                    marginBottom:6, borderRadius:14, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}}>
-                    <div style={{position:'relative'}}>
-                      <AvatarImg src={contact.avatar} size={40} style={{borderRadius:10}} />
-                      <div style={{position:'absolute', bottom:0, right:0, width:12, height:12, borderRadius:6,
-                        background:C.onlineStatusColor, border:`2px solid ${C.topBarBg}`}} />
-                    </div>
-                    <div style={{flex:1, minWidth:0}}>
-                      <div style={{fontSize:12, fontWeight:700, color:C.textPrimary}}>
-                        {contact.name}
-                      </div>
-                    </div>
-                    <button style={{padding:'6px 14px', borderRadius:10, cursor:'pointer', fontFamily:FONT,
-                      fontSize:11, fontWeight:700, border:`1px solid ${C.chataBtnBorder}`,
-                      background:C.chataBtnBg, color:C.chataBtnColor,
-                      WebkitTapHighlightColor:'transparent', transition:'all 0.15s'}}
-                      onClick={() => { vibrate(); if (startChatWithContact) startChatWithContact(contact); }}>
-                      Chatta
-                    </button>
+            {activeRooms.map((room) => {
+              const timeAgo = Math.floor((Date.now() - room.leftAt) / 60000);
+              const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo} min fa` : `${Math.floor(timeAgo / 60)}h fa`;
+              return (
+                <div
+                  key={room.roomId}
+                  onClick={() => {
+                    vibrate();
+                    if (rejoinRoom) rejoinRoom(room.roomId);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+                    marginBottom: 10, borderRadius: 16, background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
+                    cursor: 'pointer', transition: 'all 0.2s', fontFamily: FONT
+                  }}>
+                  <div style={{ display: 'flex', gap: 6, fontSize: 18 }}>
+                    {[...new Set(room.members?.map(m => getLang(m.lang).flag) || [])].map((flag, i) => (
+                      <span key={i}>{flag}</span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-
-            {/* Storico Chat rimosso — duplicato con "Cronologia" nel MainMenu */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 700, color: C.textPrimary,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                    }}>
+                      {room.members?.map(m => m.name).join(', ') || room.roomId}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+                      {room.mode === 'conversation' ? '💬' : room.mode === 'classroom' ? '🎓' : '🎧'} {timeStr}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        {/* ═══════════════════════════════════════
-            TAB 1: Mondo (Public chats)
-           ═══════════════════════════════════════ */}
-        {selectedTab === 1 && (
-          <div style={{width:'100%', maxWidth:400, textAlign:'center', padding:'20px 14px',
-            borderRadius:14, background:C.topBarBg, border:`1px solid ${C.topBarBorder}`}}>
-            <div style={{fontSize:48, marginBottom:8}}>{'\uD83C\uDF0D'}</div>
-            <div style={{fontSize:16, color:C.textPrimary, fontWeight:700, fontFamily:FONT, marginBottom:8}}>
-              Mondo — Stanze Pubbliche
+        {/* Online Contacts / Recent Conversations */}
+        {onlineContacts.length > 0 && (
+          <div style={{ width: '100%', maxWidth: 400, marginBottom: 24 }}>
+            <div style={{
+              fontSize: 11, fontWeight: 700, color: C.textTertiary, marginBottom: 12,
+              letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: FONT
+            }}>
+              Contatti Online
             </div>
-            <div style={{fontSize:13, color:C.textMuted, fontFamily:FONT, marginBottom:16}}>
-              Esplora e unisciti a conversazioni pubbliche da tutto il mondo
-            </div>
-            <button onClick={() => setView('mondo')}
-              style={{padding:'12px 24px', borderRadius:14, cursor:'pointer', fontFamily:FONT,
-                background:'linear-gradient(135deg, #26D9B0 0%, #a855f7 100%)',
-                border:'none', color:'#fff', fontSize:15, fontWeight:700,
-                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                boxShadow:'0 4px 16px rgba(38,217,176,0.4)'}}>
-              {'\uD83C\uDF10'} Esplora Mondo
-            </button>
-            <div style={{fontSize:11, color:C.textTertiary, marginTop:12, fontFamily:FONT}}>
-              Rimani in contatto con il tuo team
-            </div>
+            {onlineContacts.map((contact) => (
+              <div
+                key={contact.id}
+                onClick={() => {
+                  vibrate();
+                  if (startChatWithContact) startChatWithContact(contact);
+                }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
+                  marginBottom: 10, borderRadius: 16, background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
+                  cursor: 'pointer', transition: 'all 0.2s', fontFamily: FONT
+                }}>
+                <div style={{ position: 'relative' }}>
+                  <AvatarImg src={contact.avatar} size={44} style={{ borderRadius: 12 }} />
+                  <div style={{
+                    position: 'absolute', bottom: 0, right: 0, width: 12, height: 12,
+                    borderRadius: 6, background: C.onlineStatusColor, border: `2px solid ${C.topBarBg}`
+                  }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>
+                    {contact.name}
+                  </div>
+                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
+                    Online
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
       </div>
 
-      {/* Theme-aware animations */}
+      {/* Theme-aware animations & styles */}
       <style>{`
-        @keyframes vtFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes vtSlideUp {
-          from { opacity: 0; transform: translate(-50%, -45%); }
-          to { opacity: 1; transform: translate(-50%, -50%); }
-        }
-        @keyframes vtDoorGlow {
-          0%, 100% { filter: drop-shadow(0 16px 40px ${C.doorGlowShadow[0]}) drop-shadow(0 4px 12px rgba(0,0,0,0.25)); }
-          50% { filter: drop-shadow(0 16px 48px ${C.doorGlowShadow[1]}) drop-shadow(0 6px 16px rgba(0,0,0,0.30)); }
-        }
         @media (prefers-reduced-motion: reduce) {
           * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
         }

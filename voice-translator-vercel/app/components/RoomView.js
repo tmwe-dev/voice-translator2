@@ -11,6 +11,7 @@ import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
 import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
+import TaxiMode, { TaxiButton } from './TaxiMode.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -40,6 +41,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const [lastTranslationSubtitle, setLastTranslationSubtitle] = useState(null);
   const [partnerVolume, setPartnerVolume] = useState(0.7);
   const [liveMode, setLiveModeState] = useState(false);
+  const [taxiVisible, setTaxiVisible] = useState(false);
+  const [taxiData, setTaxiData] = useState({ original: '', translated: '', fromLang: '', toLang: '' });
   const partnerVolumeBeforeMuteRef = useRef(0.7);
   const subtitleTimerRef = useRef(null);
   const remoteAudioRef = useRef(null);
@@ -198,6 +201,8 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         isTrial={isTrial} freeCharsUsed={freeCharsUsed}
         freeLimitExceeded={freeLimitExceeded} freeResetTime={freeResetTime}
         endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary}
+        taxiVisible={taxiVisible} setTaxiVisible={setTaxiVisible} setTaxiData={setTaxiData}
+        myName={myName} messages={messages}
       />
 
       {/* ═══ Voice Engine + Mode Bar ═══ */}
@@ -309,6 +314,14 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             webrtc.sendDirectMessage({ type: 'msg-reaction', msgId, emoji, from: myName });
           }
         }}
+        onMessageDoubleClick={(msg) => {
+          const original = msg.text || msg.original || '';
+          const translated = msg.translation || msg.translated || '';
+          const msgFromLang = msg.from === myName ? myLang : (partner?.lang || 'en');
+          const msgToLang = msg.from === myName ? (msg.targetLang || (partner?.lang || 'en')) : myLang;
+          setTaxiData({ original, translated, fromLang: msgFromLang, toLang: msgToLang });
+          setTaxiVisible(true);
+        }}
       />
 
       {/* Captions Overlay */}
@@ -404,6 +417,19 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
           onClose={() => setShowChatActions(false)} t={L}
         />
       )}
+
+      {/* ═══ Taxi Mode Overlay ═══ */}
+      <TaxiMode
+        visible={taxiVisible}
+        onClose={() => setTaxiVisible(false)}
+        originalText={taxiData.original}
+        translatedText={taxiData.translated}
+        fromLang={taxiData.fromLang}
+        toLang={taxiData.toLang}
+        onPlayTTS={() => { if (playMessage) playMessage(taxiData.translated); }}
+        S={S}
+        theme={theme}
+      />
 
       <style>{`
         @keyframes vtPulse { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }

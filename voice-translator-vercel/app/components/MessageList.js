@@ -54,6 +54,7 @@ const MessageList = memo(function MessageList({
   msgsEndRef, S, L,
   onMessageRead, // callback(msgId) when a partner's message becomes visible
   onReaction, // callback(msgId, emoji) for sending reactions via P2P
+  onMessageDoubleClick, // callback(msg) for Taxi Mode activation on double-tap
 }) {
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
   const longPressTimerRef = useRef(null);
@@ -110,9 +111,10 @@ const MessageList = memo(function MessageList({
           <div key={m._stableKey || m.id || `${m.sender}-${m.timestamp}-${i}`}
             ref={!isMine && m.id ? observeMsg : undefined}
             data-msgid={!isMine ? m.id : undefined}
+            onDoubleClick={() => { if (onMessageDoubleClick) { haptic(20); onMessageDoubleClick(m); } }}
             style={{display:'flex', gap:8,
             flexDirection:isMine ? 'row-reverse' : 'row', marginBottom:12, alignItems:'flex-end',
-            animation:'vtSlideIn 0.25s ease-out'}}>
+            animation:'vtSlideIn 0.25s ease-out', cursor: onMessageDoubleClick ? 'pointer' : undefined}}>
             <AvatarImg src={isMine ? prefs.avatar : getSenderAvatar(m.sender)} size={56} style={{marginBottom:2}} />
             <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
               alignItems:isMine ? 'flex-end' : 'flex-start'}}>

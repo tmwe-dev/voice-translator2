@@ -26,7 +26,7 @@ async function handlePost(req) {
           price_data: {
             currency: 'eur',
             product_data: {
-              name: `VoiceTranslator - Credito ${pkg.label}`,
+              name: `BarTalk - Credito ${pkg.label}`,
               description: `${pkg.messages}${pkg.bonus ? ` (${pkg.bonus})` : ''}`,
             },
             unit_amount: pkg.euros * 100, // Stripe uses cents

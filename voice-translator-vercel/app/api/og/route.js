@@ -42,7 +42,7 @@ export async function GET() {
           fontSize: 56, fontWeight: 800, color: '#ffffff',
           letterSpacing: '-1px', marginBottom: 8, display: 'flex',
         }}>
-          VoiceTranslate
+          BarTalk
         </div>
 
         {/* Subtitle */}

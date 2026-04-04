@@ -102,7 +102,7 @@ export default function Privacy() {
         <div style={sectionStyle}>
           <h2 style={headingFirstStyle}>1. Introduction</h2>
           <p style={paragraphStyle}>
-            VoiceTranslate (we, us, our) is committed to protecting your privacy and ensuring transparency about how we collect, use, and protect your personal data. This Privacy Policy explains our practices in accordance with the General Data Protection Regulation (GDPR) and other applicable data protection laws.
+            BarTalk (we, us, our) is committed to protecting your privacy and ensuring transparency about how we collect, use, and protect your personal data. This Privacy Policy explains our practices in accordance with the General Data Protection Regulation (GDPR) and other applicable data protection laws.
           </p>
         </div>
 
@@ -158,7 +158,7 @@ export default function Privacy() {
         <div style={sectionStyle}>
           <h2 style={headingStyle}>4. Third-Party Services & Data Sharing</h2>
           <p style={paragraphStyle}>
-            VoiceTranslate integrates with the following third-party services. Your content is shared only for processing the translation service:
+            BarTalk integrates with the following third-party services. Your content is shared only for processing the translation service:
           </p>
           <ul style={listStyle}>
             <li style={listItemStyle}><strong>OpenAI</strong> — Language translation via GPT models</li>
@@ -183,14 +183,14 @@ export default function Privacy() {
             <strong>Encryption:</strong> Sensitive data (API keys, payment info) is encrypted at rest using AES-256 encryption. Data in transit is encrypted using TLS/SSL.
           </p>
           <p style={paragraphStyle}>
-            <strong>Voice & Translation Content:</strong> Real-time processing means voice and translation content is typically not permanently retained by VoiceTranslate. If you enable history saving, your translations are encrypted and stored in your account.
+            <strong>Voice & Translation Content:</strong> Real-time processing means voice and translation content is typically not permanently retained by BarTalk. If you enable history saving, your translations are encrypted and stored in your account.
           </p>
         </div>
 
         <div style={sectionStyle}>
           <h2 style={headingStyle}>6. Cookies & localStorage</h2>
           <p style={paragraphStyle}>
-            VoiceTranslate uses:
+            BarTalk uses:
           </p>
           <ul style={listStyle}>
             <li style={listItemStyle}><strong>Session cookies</strong> — Authentication and session management</li>
@@ -239,21 +239,21 @@ export default function Privacy() {
         <div style={sectionStyle}>
           <h2 style={headingStyle}>9. Children's Privacy</h2>
           <p style={paragraphStyle}>
-            VoiceTranslate is not intended for users under 16 years of age. We do not knowingly collect data from children under 16. If we become aware of such collection, we will delete the data promptly.
+            BarTalk is not intended for users under 16 years of age. We do not knowingly collect data from children under 16. If we become aware of such collection, we will delete the data promptly.
           </p>
         </div>
 
         <div style={sectionStyle}>
           <h2 style={headingStyle}>10. International Data Transfers</h2>
           <p style={paragraphStyle}>
-            VoiceTranslate primarily stores data in the EU. When data is transferred to the US or other countries (e.g., for AI processing), we rely on appropriate safeguards such as Standard Contractual Clauses and/or adequacy decisions.
+            BarTalk primarily stores data in the EU. When data is transferred to the US or other countries (e.g., for AI processing), we rely on appropriate safeguards such as Standard Contractual Clauses and/or adequacy decisions.
           </p>
         </div>
 
         <div style={sectionStyle}>
           <h2 style={headingStyle}>11. Policy Updates</h2>
           <p style={paragraphStyle}>
-            We may update this Privacy Policy periodically. Material changes will be communicated via email or a prominent notice. Your continued use of VoiceTranslate constitutes acceptance of updated terms.
+            We may update this Privacy Policy periodically. Material changes will be communicated via email or a prominent notice. Your continued use of BarTalk constitutes acceptance of updated terms.
           </p>
         </div>
 

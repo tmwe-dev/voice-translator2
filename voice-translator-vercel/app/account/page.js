@@ -143,7 +143,7 @@ export default function AccountPage() {
 
       {/* Version */}
       <p style={{ textAlign: 'center', fontSize: 11, color: '#3f3f46', marginTop: 32 }}>
-        VoiceTranslate v2.0
+        BarTalk v2.0
       </p>
     </div>
   );

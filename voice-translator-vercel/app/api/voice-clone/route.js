@@ -73,7 +73,7 @@ async function handlePost(req) {
     // Call ElevenLabs voice clone API
     const elFormData = new FormData();
     elFormData.append('name', `VT-${voiceName}`);
-    elFormData.append('description', `VoiceTranslate cloned voice for ${session.email}`);
+    elFormData.append('description', `BarTalk cloned voice for ${session.email}`);
 
     // Convert webm blob to a File object for ElevenLabs
     const audioBuffer = await audioFile.arrayBuffer();

@@ -222,7 +222,7 @@ export async function tryMyMemoryTranslate(text, sourceLang, targetLang, userEma
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}&de=${encodeURIComponent(email)}`;
 
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'VoiceTranslator/2.0' },
+      headers: { 'User-Agent': 'BarTalk/2.0' },
       signal: AbortSignal.timeout(4000)
     });
     if (!res.ok) return { text: null, match: 0 };

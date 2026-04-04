@@ -29,7 +29,7 @@ export function trackPageView(url) {
   } catch {}
 }
 
-// Pre-defined events for VoiceTranslate
+// Pre-defined events for BarTalk
 export const EVENTS = {
   SIGNUP: 'Signup',
   LOGIN: 'Login',
