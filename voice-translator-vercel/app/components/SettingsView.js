@@ -497,6 +497,9 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
               </button>
             </div>
           )}
+      </div>
+    </div>
+  );
 });
 
 export default SettingsView;
