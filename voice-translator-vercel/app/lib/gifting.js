@@ -153,6 +153,7 @@ export async function refundExpiredGifts() {
             await redis('SET', `gift-escrow:${code}`, JSON.stringify(escrow), 'EX', 86400);
             refunded++; totalAmount += escrow.amount;
           }
+        }
       }
       await redis('SREM', 'expiring-gifts', code);
       continue;
