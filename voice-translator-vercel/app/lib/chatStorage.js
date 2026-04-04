@@ -234,7 +234,7 @@ export async function exportChat(chatId, format = 'json') {
  * @param {string} jsonString - JSON content from exportChat
  */
 export async function importChat(jsonString) {
-  const data = JSON.parse(jsonString);
+  let data; try { data = JSON.parse(jsonString); } catch { throw new Error('Invalid JSON format'); }
   if (!data.chat?.id) throw new Error('Invalid chat export format');
   await saveChat(data.chat);
   if (data.messages?.length) {
@@ -296,7 +296,7 @@ const OFFLINE_QUEUE_KEY = 'offline_queue';
  * Queue a message for sending when back online
  */
 export async function queueOfflineMessage(message) {
-  const queue = JSON.parse(await getSetting(OFFLINE_QUEUE_KEY) || '[]');
+  let queue; try { queue = JSON.parse(await getSetting(OFFLINE_QUEUE_KEY) || '[]'); } catch { queue = []; }
   queue.push({ ...message, _queuedAt: Date.now() });
   await saveSetting(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
   return queue.length;
@@ -307,7 +307,8 @@ export async function queueOfflineMessage(message) {
  */
 export async function getOfflineQueue() {
   const raw = await getSetting(OFFLINE_QUEUE_KEY);
-  return JSON.parse(raw || '[]');
+  let queue; try { queue = JSON.parse(raw || '[]'); } catch { queue = []; }
+  return queue;
 }
 
 /**

@@ -37,7 +37,10 @@ export async function exportPublicKey(publicKey) {
  * Import partner's public key from JWK JSON string.
  */
 export async function importPublicKey(jwkString) {
-  const jwk = JSON.parse(jwkString);
+  let jwk; try { jwk = JSON.parse(jwkString); } catch { throw new Error('Invalid JWK string'); }
+  if (!jwk || jwk.kty !== 'EC' || jwk.crv !== 'P-256') {
+    throw new Error('Invalid public key: expected P-256 EC key');
+  }
   return await crypto.subtle.importKey(
     'jwk', jwk,
     { name: 'ECDH', namedCurve: 'P-256' },
@@ -85,14 +88,18 @@ export async function encryptMessage(sharedKey, plaintext) {
  * @returns {string} plaintext
  */
 export async function decryptMessage(sharedKey, encrypted) {
-  const iv = Uint8Array.from(atob(encrypted.iv), c => c.charCodeAt(0));
-  const ct = Uint8Array.from(atob(encrypted.ct), c => c.charCodeAt(0));
-  const decrypted = await crypto.subtle.decrypt(
-    { name: 'AES-GCM', iv },
-    sharedKey,
-    ct
-  );
-  return new TextDecoder().decode(decrypted);
+  try {
+    const iv = Uint8Array.from(atob(encrypted.iv), c => c.charCodeAt(0));
+    const ct = Uint8Array.from(atob(encrypted.ct), c => c.charCodeAt(0));
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv },
+      sharedKey,
+      ct
+    );
+    return new TextDecoder().decode(decrypted);
+  } catch (e) {
+    throw new Error(`Failed to decrypt message: ${e.message}`);
+  }
 }
 
 /**

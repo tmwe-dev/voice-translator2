@@ -176,7 +176,7 @@ export async function POST(req) {
         return NextResponse.json({ error: 'Invalid or expired invite' }, { status: 404 });
       }
 
-      const invite = JSON.parse(inviteData);
+      let invite; try { invite = JSON.parse(inviteData); } catch { return NextResponse.json({ error: 'Invalid invite data' }, { status: 400 }); }
       if (invite.from === email) {
         return NextResponse.json({ error: 'Cannot accept your own invite' }, { status: 400 });
       }
@@ -196,12 +196,20 @@ export async function POST(req) {
         }
       };
 
-      // If invite has a gift, try to apply it
+      // If invite has a gift, try to apply it (check if not already claimed)
       if (invite.giftAmount && invite.giftAmount > 0 && invite.giftStatus === 'pending') {
-        const giftResult = await acceptGiftInvite(email, inviteCode);
-        if (giftResult) {
-          response.giftReceived = giftResult.giftAmount;
-          response.giftFromName = giftResult.senderName;
+        try {
+          const giftResult = await acceptGiftInvite(email, inviteCode);
+          if (giftResult) {
+            response.giftReceived = giftResult.giftAmount;
+            response.giftFromName = giftResult.senderName;
+            // Mark gift as claimed to prevent double-claims
+            const updatedInviteData = { ...invite, giftStatus: 'claimed', claimedBy: email, claimedAt: Date.now() };
+            await redis('SET', inviteKey, JSON.stringify(updatedInviteData), 'EX', INVITE_TTL);
+          }
+        } catch (e) {
+          console.error('Gift acceptance error:', e);
+          // Gift claim failed, but contact addition succeeded
         }
       }
 
@@ -235,7 +243,10 @@ export async function POST(req) {
 
       // Check if target is online
       const presenceData = await redis('GET', `presence:${targetEmail}`);
-      const targetOnline = presenceData ? JSON.parse(presenceData).online : false;
+      let targetOnline = false;
+      if (presenceData) {
+        try { const p = JSON.parse(presenceData); targetOnline = p.online || false; } catch { targetOnline = false; }
+      }
 
       return NextResponse.json({
         ok: true,

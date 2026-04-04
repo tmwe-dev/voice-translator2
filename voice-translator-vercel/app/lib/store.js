@@ -2,7 +2,7 @@
 // Uses shared Redis client from redis.js
 
 import { redis } from './redis.js';
-import { randomUUID } from 'crypto';
+import { randomUUID, randomBytes } from 'crypto';
 
 // =============================================
 // ROOM SESSION TOKENS — server-verified identity
@@ -17,8 +17,8 @@ import { randomUUID } from 'crypto';
 export async function createRoomSession(roomId, memberName, role) {
   const token = randomUUID();
   const session = { roomId: roomId.toUpperCase(), name: memberName, role, created: Date.now() };
-  // Same TTL as room (2 hours)
-  await redis('SET', `rsess:${token}`, JSON.stringify(session), 'EX', 3600);
+  // 24 hour TTL for room sessions
+  await redis('SET', `rsess:${token}`, JSON.stringify(session), 'EX', 86400);
   return { token };
 }
 
@@ -30,7 +30,7 @@ export async function verifyRoomSession(token) {
   if (!token || typeof token !== 'string') return null;
   const data = await redis('GET', `rsess:${token}`);
   if (!data) return null;
-  return JSON.parse(data);
+  let parsed; try { parsed = JSON.parse(data); } catch { return null; } return parsed;
 }
 
 /**
@@ -60,7 +60,7 @@ export async function resolveRoomIdentity(token, name, roomId) {
 // =============================================
 
 export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null) {
-  const id = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const id = randomBytes(4).toString('hex').toUpperCase();
   const room = {
     id,
     created: Date.now(),
@@ -84,14 +84,14 @@ export async function getRoom(id) {
   if (!id) return null;
   const data = await redis('GET', `room:${id.toUpperCase()}`);
   if (!data) return null;
-  return JSON.parse(data);
+  let parsed; try { parsed = JSON.parse(data); } catch { return null; } return parsed;
 }
 
 export async function joinRoom(id, name, lang, avatar = null) {
   const key = `room:${id.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
 
   const existing = room.members.findIndex(m => m.name === name);
   if (existing >= 0) {
@@ -119,7 +119,7 @@ export async function setSpeaking(roomId, memberName, speaking, liveText = null,
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   const member = room.members.find(m => m.name === memberName);
   if (member) {
     member.speaking = speaking;
@@ -137,7 +137,7 @@ export async function updateHeartbeat(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   // READ-ONLY heartbeat: just refresh TTL without writing room data back.
   // This prevents race conditions where heartbeat overwrites a concurrent
   // joinRoom operation, effectively removing the guest from the room.
@@ -149,7 +149,7 @@ export async function addCost(roomId, amount) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   room.totalCost = (room.totalCost || 0) + amount;
   room.msgCount = (room.msgCount || 0) + 1;
   await redis('SET', key, JSON.stringify(room), 'EX', 3600);
@@ -160,7 +160,7 @@ export async function updateRoomMode(roomId, newMode) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   room.mode = newMode;
   await redis('SET', key, JSON.stringify(room), 'EX', 3600);
   return room;
@@ -170,7 +170,7 @@ export async function changeMemberLang(roomId, memberName, newLang) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   const member = room.members.find(m => m.name === memberName);
   if (member) {
     member.lang = newLang;
@@ -195,7 +195,7 @@ export async function setHandRaised(roomId, memberName, raised) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
   const member = room.members.find(m => m.name === memberName);
   if (member) {
     member.handRaised = !!raised;
@@ -216,7 +216,7 @@ export async function grantSpeaking(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const room = JSON.parse(data);
+  let room; try { room = JSON.parse(data); } catch { return null; }
 
   for (const m of room.members) {
     if (m.name === memberName) {
@@ -273,7 +273,7 @@ export async function updateMessage(roomId, sender, original, updates) {
   let targetIdx = -1;
   let targetMsg = null;
   for (let i = allMsgs.length - 1; i >= 0; i--) {
-    const m = JSON.parse(allMsgs[i]);
+    let m; try { m = JSON.parse(allMsgs[i]); } catch { continue; }
     if (m.sender === sender && m.original === original) {
       targetIdx = i;
       targetMsg = m;
@@ -302,7 +302,7 @@ export async function getMessages(roomId, after = 0) {
   // FASE 6A: Use >= to avoid missing messages at exact timestamp boundary
   // Client-side dedup by message ID handles duplicates
   return allMsgs
-    .map(m => JSON.parse(m))
+    .map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean)
     .filter(m => m.timestamp >= after);
 }
 
@@ -310,7 +310,7 @@ export async function getAllMessages(roomId) {
   const key = `msgs:${roomId.toUpperCase()}`;
   const allMsgs = await redis('LRANGE', key, 0, -1);
   if (!allMsgs || !Array.isArray(allMsgs)) return [];
-  return allMsgs.map(m => JSON.parse(m));
+  return allMsgs.map(m => { try { return JSON.parse(m); } catch { return null; } }).filter(Boolean);
 }
 
 // =============================================
@@ -366,14 +366,14 @@ export async function saveConversation(roomId) {
 export async function getConversation(convId) {
   const data = await redis('GET', `conv:${convId.toUpperCase()}`);
   if (!data) return null;
-  return JSON.parse(data);
+  let parsed; try { parsed = JSON.parse(data); } catch { return null; } return parsed;
 }
 
 export async function updateConversationSummary(convId, summary) {
   const key = `conv:${convId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const conv = JSON.parse(data);
+  let conv; try { conv = JSON.parse(data); } catch { return null; }
   conv.summary = summary;
   await redis('SET', key, JSON.stringify(conv), 'EX', 86400);
   return conv;
@@ -383,5 +383,5 @@ export async function getUserConversations(userName) {
   const listKey = `convlist:${userName}`;
   const entries = await redis('LRANGE', listKey, 0, -1);
   if (!entries || !Array.isArray(entries)) return [];
-  return entries.map(e => JSON.parse(e)).reverse(); // newest first
+  return entries.map(e => { try { return JSON.parse(e); } catch { return null; } }).filter(Boolean).reverse(); // newest first
 }

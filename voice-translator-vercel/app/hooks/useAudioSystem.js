@@ -93,12 +93,6 @@ export default function useAudioSystem({
       const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
       a.volume = 0.01;
       a.play().catch(() => {});
-      if (!duckingGainRef.current) {
-        const duckGain = ctx.createGain();
-        duckGain.gain.value = 1.0;
-        duckGain.connect(ctx.destination);
-        duckingGainRef.current = duckGain;
-      }
       setAudioReady(true);
     } catch (e) {}
   }
@@ -159,7 +153,11 @@ export default function useAudioSystem({
       activeBlobUrlsRef.current.clear();
       audioQueueRef.current = [];
       playedMsgIdsRef.current.clear();
-      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
+      if (typeof speechSynthesis !== 'undefined') {
+        try {
+          speechSynthesis.cancel();
+        } catch (e) {}
+      }
     };
   }, []);
 
@@ -285,9 +283,11 @@ export default function useAudioSystem({
       else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, lang);
       else if (voiceEngine === 'openai') await tts.playTTS(text, lang);
       else {
-        if (isTrialRef.current) await tts.playEdgeTTS(text, lang);
-        else if (canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
-        else await tts.playTTS(text, lang);
+        // Auto mode: prioritize speed. Edge TTS (100-300ms) is fastest.
+        // Use ElevenLabs only when user has a cloned voice (premium feature).
+        const hasClonedVoice = !!clonedVoiceIdRef?.current;
+        if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
+        else await tts.playEdgeTTS(text, lang);
       }
     } catch (e) { console.error('[Audio] playback error:', e); }
     stopDucking();
@@ -322,9 +322,9 @@ export default function useAudioSystem({
         else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, speechLang);
         else if (voiceEngine === 'openai') await tts.playTTS(text, speechLang);
         else {
-          if (isTrialRef.current) await tts.playEdgeTTS(text, speechLang);
-          else if (canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, speechLang);
-          else await tts.playTTS(text, speechLang);
+          const hasClonedVoice = !!clonedVoiceIdRef?.current;
+          if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, speechLang);
+          else await tts.playEdgeTTS(text, speechLang);
         }
       }
     } catch (e) { console.error('[Audio] playMessage error:', e); }

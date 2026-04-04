@@ -353,7 +353,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
       };
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          let data; try { data = JSON.parse(event.data); } catch { console.warn('[SpeakerView] WS message parse failed'); return; }
           if (data.type === 'Results') {
             const transcript = data.channel?.alternatives?.[0]?.transcript || '';
             if (!transcript) return;

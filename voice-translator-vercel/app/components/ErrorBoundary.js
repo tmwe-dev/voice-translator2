@@ -27,7 +27,9 @@ export default class ErrorBoundary extends Component {
           contexts: { react: { componentStack: errorInfo?.componentStack } },
           tags: { source: 'ErrorBoundary' },
         });
-      }).catch(() => {});
+      }).catch(() => {
+        console.error('[ErrorBoundary] Failed to report to Sentry, logged locally:', error);
+      });
     }
   }
 

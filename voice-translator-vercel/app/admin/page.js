@@ -9,7 +9,7 @@ import { t, mapLang } from '../lib/i18n.js';
 
 function detectLang() {
   if (typeof window === 'undefined') return 'en';
-  try { const p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); if (p.lang) return mapLang(p.lang); } catch {}
+  try { let p; try { p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); } catch { p = null; } if (p?.lang) return mapLang(p.lang); } catch {}
   return mapLang((typeof navigator !== 'undefined' ? navigator.language : 'en').split('-')[0]);
 }
 

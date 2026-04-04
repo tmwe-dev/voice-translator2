@@ -26,8 +26,9 @@ function detectLang() {
   if (params.get('lang')) return mapLang(params.get('lang'));
   // 2. Check localStorage (user's saved preference from the app)
   try {
-    const prefs = JSON.parse(localStorage.getItem('vt-prefs') || '{}');
-    if (prefs.lang) return mapLang(prefs.lang);
+    const rawPrefs = localStorage.getItem('vt-prefs') || '{}';
+    let prefs; try { prefs = JSON.parse(rawPrefs); } catch { prefs = null; }
+    if (prefs?.lang) return mapLang(prefs.lang);
   } catch {}
   // 3. Browser language
   const browserLang = (navigator.language || 'en').split('-')[0];

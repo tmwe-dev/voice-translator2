@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 
@@ -67,10 +67,8 @@ const KEYFRAMES = `
 @keyframes mmPulseGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
 `;
 
-let injected = false;
 function injectKeyframes() {
-  if (injected || typeof document === 'undefined') return;
-  injected = true;
+  if (typeof document === 'undefined') return;
   const s = document.createElement('style');
   s.textContent = KEYFRAMES;
   document.head.appendChild(s);
@@ -82,8 +80,10 @@ function MainMenu({ L, S, prefs, theme, setView, handleCreateRoom, setShowCreate
   const isIT = L('createRoom') === 'Crea Stanza';
   const getDesc = (item) => isIT ? item.descIT : item.descEN;
 
-  // Inject CSS animations
-  if (typeof document !== 'undefined') injectKeyframes();
+  // Inject CSS animations once on mount
+  useEffect(() => {
+    injectKeyframes();
+  }, []);
 
   const handleTap = (id) => {
     vibrate();

@@ -37,7 +37,7 @@ export const CREDIT_PACKAGES = [
 export async function createUser(email, name, lang, avatar) {
   const key = `user:${email.toLowerCase()}`;
   const existing = await redis('GET', key);
-  if (existing) return JSON.parse(existing);
+  if (existing) { let u; try { u = JSON.parse(existing); } catch { u = null; } if (u) return u; }
 
   const user = {
     email: email.toLowerCase(),
@@ -60,7 +60,7 @@ export async function getUser(email) {
   if (!email) return null;
   const data = await redis('GET', `user:${email.toLowerCase()}`);
   if (!data) return null;
-  const user = JSON.parse(data);
+  let user; try { user = JSON.parse(data); } catch { return null; }
 
   // Decrypt API keys if encrypted
   if (user.apiKeys && user.apiKeys.encrypted) {
@@ -78,7 +78,8 @@ export async function updateUser(email, updates) {
   const key = `user:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const user = { ...JSON.parse(data), ...updates };
+  let parsed; try { parsed = JSON.parse(data); } catch { return null; }
+  const user = { ...parsed, ...updates };
   await redis('SET', key, JSON.stringify(user));
   return user;
 }
@@ -91,17 +92,11 @@ export async function saveApiKeys(email, keys, useOwnKeys) {
   const key = `user:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const user = JSON.parse(data);
+  let user; try { user = JSON.parse(data); } catch { return null; }
   user.apiKeys = (keys && Object.keys(keys).length > 0) ? encryptKeys(keys) : {};
   user.useOwnKeys = useOwnKeys;
   await redis('SET', key, JSON.stringify(user));
   return user;
-}
-
-export async function getUserApiKey(email, provider = 'openai') {
-  const user = await getUser(email);
-  if (!user || !user.useOwnKeys || !user.apiKeys) return null;
-  return user.apiKeys[provider] || null;
 }
 
 // =============================================
@@ -118,7 +113,7 @@ export async function verifyAuthCode(email, code) {
   const key = `authcode:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return false;
-  const stored = JSON.parse(data);
+  let stored; try { stored = JSON.parse(data); } catch { return false; }
   if (stored.code !== code) return false;
   await redis('DEL', key);
   return true;
@@ -139,7 +134,8 @@ export async function getSession(token) {
   if (!token) return null;
   const data = await redis('GET', `session:${token}`);
   if (!data) return null;
-  return JSON.parse(data);
+  let session; try { session = JSON.parse(data); } catch { return null; }
+  return session;
 }
 
 export async function deleteSession(token) {
@@ -161,7 +157,7 @@ export async function addPaymentRecord(email, payment) {
 export async function getPaymentHistory(email) {
   const entries = await redis('LRANGE', `payments:${email.toLowerCase()}`, 0, -1);
   if (!entries || !Array.isArray(entries)) return [];
-  return entries.map(e => JSON.parse(e)).reverse();
+  return entries.map(e => { try { return JSON.parse(e); } catch { return null; } }).filter(Boolean).reverse();
 }
 
 // =============================================
@@ -200,7 +196,7 @@ export async function deleteUserData(email, sessionToken) {
     for (const code of lendingCodes) {
       const data = await redis('GET', `lending:${code}`);
       if (data) {
-        const lending = JSON.parse(data);
+        let lending; try { lending = JSON.parse(data); } catch { continue; }
         lending.status = 'revoked'; lending.revokedAt = Date.now();
         await redis('SET', `lending:${code}`, JSON.stringify(lending), 'EX', 86400);
       }

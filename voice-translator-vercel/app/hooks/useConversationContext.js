@@ -162,6 +162,11 @@ export default function useConversationContext() {
 
     allMessagesRef.current.push(entry);
 
+    // Cap allMessages to prevent unbounded growth — keep only last 500
+    if (allMessagesRef.current.length > 500) {
+      allMessagesRef.current = allMessagesRef.current.slice(-500);
+    }
+
     // ── Check if we need to summarize a new batch ──
     // Summarize when we have enough messages beyond early + recent windows
     const totalCount = allMessagesRef.current.length;

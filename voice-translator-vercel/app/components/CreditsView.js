@@ -55,8 +55,7 @@ function getPerk(lang, key) {
 }
 
 export default function CreditsView({ L, S, creditBalance, buyCredits, authLoading, userAccount, setView, status, theme, setTheme }) {
-  const lang = ['it','en'].includes(L('appName') === 'VoiceTranslate' ? 'en' : 'it') ? 'it' : 'en';
-  // Simple language detection from L function
+  // Direct language detection from L function
   const pLang = L('createRoom') === 'Crea Stanza' ? 'it' : 'en';
   const colors = S.colors;
 

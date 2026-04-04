@@ -225,19 +225,22 @@ export default function useTTSEngine({
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
-      const res = await fetch('/api/tts-edge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text, langCode: langCode || 'en',
-          gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
-        }),
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
-      return await res.blob();
-    } catch (e) { clearTimeout(timeoutId); throw e; }
+      try {
+        const res = await fetch('/api/tts-edge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text, langCode: langCode || 'en',
+            gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
+          }),
+          signal: controller.signal
+        });
+        if (!res.ok) throw new Error(`EdgeTTS ${res.status}`);
+        return await res.blob();
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    } catch (e) { throw e; }
   }
 
   async function playEdgeTTS(text, langCode) {

@@ -2,6 +2,12 @@
 // Single source of truth for all API routes
 
 // =============================================
+// TESTING MODE — set to false before production launch
+// When true: skips login, unlocks all features, no credit checks
+// =============================================
+export const TESTING_MODE = process.env.TESTING_MODE === 'true';
+
+// =============================================
 // OpenAI Pricing (USD)
 // =============================================
 export const PRICING = {

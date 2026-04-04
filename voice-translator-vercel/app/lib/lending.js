@@ -66,7 +66,7 @@ export async function validateLending(lendingCode) {
   const data = await redis('GET', lendingKey);
   if (!data) return null;
 
-  const lending = JSON.parse(data);
+  let lending; try { lending = JSON.parse(data); } catch { return null; }
   if (lending.status === 'revoked' || lending.status === 'exhausted') return null;
 
   if (Date.now() > lending.expiresAt) {
@@ -99,7 +99,7 @@ export async function deductLendingTokens(lendingCode, tokensUsed) {
   const data = await redis('GET', lendingKey);
   if (!data) return null;
 
-  const lending = JSON.parse(data);
+  let lending; try { lending = JSON.parse(data); } catch { return null; }
   lending.tokensUsed = (lending.tokensUsed || 0) + tokensUsed;
   lending.sessionsCreated = (lending.sessionsCreated || 0) + 1;
   lending.lastUsed = Date.now();
@@ -122,7 +122,7 @@ export async function revokeLending(lendingCode, lenderEmail) {
   const data = await redis('GET', lendingKey);
   if (!data) throw new Error('Lending token not found');
 
-  const lending = JSON.parse(data);
+  let lending; try { lending = JSON.parse(data); } catch { return null; }
   if (lending.lenderEmail !== lenderEmail.toLowerCase()) {
     throw new Error('Not authorized to revoke this token');
   }
@@ -145,7 +145,8 @@ export async function getLendingTokens(lenderEmail) {
   for (const code of codes) {
     const data = await redis('GET', `lending:${code}`);
     if (!data) { await redis('SREM', `lender:active:${lowerEmail}`, code); continue; }
-    tokens.push({ code, ...JSON.parse(data) });
+    let parsed; try { parsed = JSON.parse(data); } catch { await redis('SREM', `lender:active:${lowerEmail}`, code); continue; }
+    tokens.push({ code, ...parsed });
   }
   return tokens;
 }

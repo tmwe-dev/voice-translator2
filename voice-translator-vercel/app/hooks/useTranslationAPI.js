@@ -168,35 +168,37 @@ export default function useTranslationAPI({
       broadcastMessageUpdate(updatePayload);
     }
 
-    // ── Server update: wait for Phase 1 POST to complete, then PATCH ──
-    // Without this, the PATCH can arrive before the POST finishes,
-    // and the server has no message to update → translation lost for polling users.
-    const doPatch = () => fetch('/api/messages', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        roomId,
-        roomSessionToken: roomSessionTokenRef?.current || null,
-        original,
-        sender: senderName,
-        translated,
-        targetLang,
-        translations,
-      })
-    }).catch(e => console.error('[sendTranslationUpdate] Server PATCH error:', e));
+    // ── Server update: PATCH with smart retry ──
+    // Strategy: Try PATCH immediately (Phase 1 POST is usually done by now).
+    // If it fails with 404 (POST not yet persisted), retry up to 2 times after 300ms delay.
+    // This gives the POST more time to persist (300ms + 600ms = up to 900ms total wait).
+    const doPatch = async (retryCount = 0) => {
+      try {
+        const res = await fetch('/api/messages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            roomId,
+            roomSessionToken: roomSessionTokenRef?.current || null,
+            original,
+            sender: senderName,
+            translated,
+            targetLang,
+            translations,
+          })
+        });
+        if (!res.ok && res.status === 404 && retryCount < 2) {
+          // Phase 1 POST not yet persisted — retry after delay to give it time to persist
+          await new Promise(r => setTimeout(r, 300));
+          return doPatch(retryCount + 1);
+        }
+      } catch (e) {
+        console.error('[sendTranslationUpdate] Server PATCH error:', e);
+      }
+    };
 
-    // Await Phase 1 server save before sending PATCH (with 1.5s timeout — was 3s)
-    // Reduced from 3s: the POST typically completes in <500ms, 1.5s is plenty of buffer.
-    // The PATCH is fire-and-forget anyway — it only affects polling users.
-    const phase1Promise = lastServerSaveRef.current;
-    if (phase1Promise) {
-      Promise.race([
-        phase1Promise,
-        new Promise(r => setTimeout(r, 1500)),
-      ]).then(doPatch).catch(doPatch);
-    } else {
-      doPatch();
-    }
+    // Fire PATCH immediately — no more waiting for Phase 1 promise
+    doPatch();
   }, [roomId, prefsRef, verifiedNameRef, roomSessionTokenRef, sendDirectMessage, broadcastMessageUpdate, updateLocalMessage]);
 
   /**

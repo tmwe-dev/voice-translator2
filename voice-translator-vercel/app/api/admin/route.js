@@ -82,7 +82,8 @@ async function handlePost(req) {
         .range(numPage * numLimit, (numPage + 1) * numLimit - 1);
 
       if (search) {
-        query = query.or(`email.ilike.%${search}%,name.ilike.%${search}%`);
+        const sanitized = search.replace(/[%_\\]/g, '\\$&').substring(0, 100);
+        query = query.or(`email.ilike.%${sanitized}%,name.ilike.%${sanitized}%`);
       }
 
       const { data, error, count } = await query;

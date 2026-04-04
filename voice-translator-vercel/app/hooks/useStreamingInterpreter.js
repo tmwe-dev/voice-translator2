@@ -163,17 +163,18 @@ export default function useStreamingInterpreter({
   const processTTSQueue = useCallback(async () => {
     if (processingTTSRef.current) return;
     processingTTSRef.current = true;
-
-    while (ttsQueueRef.current.length > 0) {
-      const item = ttsQueueRef.current.shift();
-      if (item?.text) {
-        startDucking?.();
-        await speakAndSend(item.text);
-        stopDucking?.();
+    try {
+      while (ttsQueueRef.current.length > 0) {
+        const item = ttsQueueRef.current.shift();
+        if (item?.text) {
+          startDucking?.();
+          await speakAndSend(item.text);
+          stopDucking?.();
+        }
       }
+    } finally {
+      processingTTSRef.current = false;
     }
-
-    processingTTSRef.current = false;
   }, [speakAndSend, startDucking, stopDucking]);
 
   // ═══ HANDLE SENTENCE COMPLETE ═══
@@ -347,7 +348,8 @@ export default function useStreamingInterpreter({
           };
 
           source.connect(processor);
-          processor.connect(audioCtx.destination);
+          // Don't connect processor to destination - this causes echo!
+          // Processor only needs to capture audio, not output it
           setActive(true);
           resolve(true);
         };
@@ -422,6 +424,9 @@ export default function useStreamingInterpreter({
         }]);
       }
       setPartnerLiveSubtitle(msg.text);
+      // Clear old timers before adding new one
+      subtitleTimersRef.current.forEach(id => clearTimeout(id));
+      subtitleTimersRef.current = [];
       // Auto-clear
       const timerId = setTimeout(() => {
         setPartnerLiveSubtitle(prev => prev === msg.text ? '' : prev);
@@ -498,6 +503,7 @@ export default function useStreamingInterpreter({
       if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch {} }
       subtitleTimersRef.current.forEach(id => clearTimeout(id));
+      subtitleTimersRef.current = [];
       clearTimeout(sentencePauseTimerRef.current);
       clearTimeout(translateTimerRef.current);
     };

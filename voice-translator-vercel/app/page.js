@@ -323,16 +323,18 @@ function HomeInner() {
     try {
       const saved = localStorage.getItem('vt-free-usage');
       if (saved) {
-        const data = JSON.parse(saved);
-        const savedDate = data.date || '';
-        const todayUTC = new Date().toISOString().split('T')[0];
-        if (savedDate === todayUTC) {
-          setFreeCharsUsed(data.chars || 0);
-          freeCharsRef.current = data.chars || 0;
-          if ((data.chars || 0) >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
-        } else {
-          localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
-          setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
+        let data; try { data = JSON.parse(saved); } catch { data = null; }
+        if (data) {
+          const savedDate = data.date || '';
+          const todayUTC = new Date().toISOString().split('T')[0];
+          if (savedDate === todayUTC) {
+            setFreeCharsUsed(data.chars || 0);
+            freeCharsRef.current = data.chars || 0;
+            if ((data.chars || 0) >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
+          } else {
+            localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
+            setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
+          }
         }
       }
     } catch {}
@@ -422,9 +424,11 @@ function HomeInner() {
       const paymentCredits = urlParams.get('credits');
 
       if (saved) {
-        const p = JSON.parse(saved);
-        if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
-        setPrefs(p); setMyLang(p.lang);
+        let p; try { p = JSON.parse(saved); } catch { p = null; }
+        if (p) {
+          if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
+          setPrefs(p); setMyLang(p.lang);
+        }
       }
 
       const langParam = urlParams.get('lang');
@@ -458,8 +462,8 @@ function HomeInner() {
 
         // Auto-join: se l'invitato ha già i prefs (nome + lingua), entra subito
         if (autoJoin && saved) {
-          const p = JSON.parse(saved);
-          if (p.name && p.lang) {
+          let p; try { p = JSON.parse(saved); } catch { p = null; }
+          if (p && p.name && p.lang) {
             // Imposta la lingua dall'URL se presente
             if (langParam) { p.lang = langParam; setPrefs(p); setMyLang(langParam); }
             // Auto-join verrà triggerato dal flag
@@ -475,21 +479,24 @@ function HomeInner() {
 
       const pickView = (hasSaved) => {
         if (roomParam) return 'join';
-        if (!hasSaved) return 'welcome';
+        if (!hasSaved) {
+          // TESTING_MODE: skip welcome/login, go straight to home
+          const testMode = typeof window !== 'undefined' && window.__VT_TESTING_MODE;
+          if (testMode) return 'home';
+          return 'welcome';
+        }
         return 'home';
       };
 
-      // ── DEV_MODE check: bypass auth for testers ──
-      fetch('/api/health').then(r => r.json()).then(h => {
-        if (h.devMode) {
-          console.log('[DEV_MODE] Active — all features unlocked for testing');
-          auth.setIsTrial(false);
-          auth.setIsTopPro(true);
-          auth.setCanUseElevenLabs(true);
-          auth.setCreditBalance(99999);
-          auth.setPlatformHasEL(true);
-        }
-      }).catch(() => {});
+      // ── TESTING_MODE: bypass auth/billing for testers ──
+      if (typeof window !== 'undefined' && window.__VT_TESTING_MODE) {
+        console.log('[TESTING_MODE] Active — all features unlocked');
+        auth.setIsTrial(false);
+        auth.setIsTopPro(true);
+        auth.setCanUseElevenLabs(true);
+        auth.setCreditBalance(99999);
+        auth.setPlatformHasEL(true);
+      }
 
       if (savedToken) {
         auth.setUserToken(savedToken);
@@ -874,7 +881,7 @@ function HomeInner() {
     if (!roomPolling.roomId) return;
     // Save room to active rooms list in localStorage
     try {
-      let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+      let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
       const roomData = {
         roomId: roomPolling.roomId,
         host: roomPolling.roomInfo?.host,
@@ -905,7 +912,7 @@ function HomeInner() {
       else { auth.setIsTrial(false); auth.setIsTopPro(false); }
       // Remove from active rooms list since we're back in
       try {
-        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
       } catch {}
@@ -914,7 +921,7 @@ function HomeInner() {
     } catch (e) {
       // Room expired or gone — remove from active rooms
       try {
-        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
       } catch {}

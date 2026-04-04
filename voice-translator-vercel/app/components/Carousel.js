@@ -66,18 +66,18 @@ export default function Carousel({ items, renderItem, selectedIndex = 0, onSelec
     e.preventDefault();
   }
 
-  function handleMouseMove(e) {
+  const handleMouseMove = useCallback((e) => {
     if (!mouseDownRef.current) return;
     const diff = mouseStartXRef.current - e.clientX;
     if (Math.abs(diff) > 5) isDraggingRef.current = true;
     if (containerRef.current) {
       containerRef.current.scrollLeft = mouseScrollRef.current + diff;
     }
-  }
+  }, []);
 
-  function handleMouseUp() {
+  const handleMouseUp = useCallback(() => {
     mouseDownRef.current = false;
-  }
+  }, []);
 
   useEffect(() => {
     document.addEventListener('mousemove', handleMouseMove);
@@ -86,7 +86,7 @@ export default function Carousel({ items, renderItem, selectedIndex = 0, onSelec
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [handleMouseMove, handleMouseUp]);
 
   return (
     <div

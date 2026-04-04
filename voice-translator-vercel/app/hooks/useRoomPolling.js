@@ -9,8 +9,8 @@ import useRealtimeRoom from './useRealtimeRoom.js';
 // Reduced to 6s for faster recovery if both P2P and Realtime fail silently.
 // Without Realtime, we fall back to 2s polling (still better than 1s).
 // ═══════════════════════════════════════════════════════════════
-const REALTIME_FALLBACK_POLL = 6000;   // 6s when WebSocket is active
-const LEGACY_POLL_INTERVAL = 2000;     // 2s fallback when no WebSocket
+const REALTIME_FALLBACK_POLL = 3000;   // 3s when WebSocket is active (was 6s)
+const LEGACY_POLL_INTERVAL = 1500;     // 1.5s fallback when no WebSocket (was 2s)
 
 export default function useRoomPolling({
   prefsRef,

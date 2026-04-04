@@ -35,15 +35,18 @@ export async function POST(req) {
     const sig = req.headers.get('stripe-signature');
 
     let event;
-    if (process.env.STRIPE_WEBHOOK_SECRET) {
-      try {
-        event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
-      } catch (err) {
-        console.error('Webhook signature verification failed:', err.message);
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
-      }
-    } else {
-      event = JSON.parse(body);
+    if (!process.env.STRIPE_WEBHOOK_SECRET) {
+      console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured — rejecting all webhooks');
+      return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+    }
+    if (!sig) {
+      return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 });
+    }
+    try {
+      event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+      console.error('Webhook signature verification failed:', err.message);
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
     // ── Idempotency: skip already-processed events (Stripe can retry) ──

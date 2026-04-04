@@ -62,7 +62,8 @@ async function _callProvider({ provider, model, apiKey, messages, systemPrompt, 
       system: systemPrompt,
       messages: anthropicMsgs,
     });
-    translated = msg.content[0]?.text?.trim() || '';
+    const text = msg?.content?.[0]?.text?.trim() || '';
+    translated = text;
     usage = {
       prompt_tokens: msg.usage?.input_tokens || 0,
       completion_tokens: msg.usage?.output_tokens || 0,
@@ -98,7 +99,7 @@ async function _callProvider({ provider, model, apiKey, messages, systemPrompt, 
       temperature,
       max_tokens: maxTokens
     });
-    translated = completion.choices[0].message.content.trim();
+    translated = completion?.choices?.[0]?.message?.content?.trim() || '';
     usage = completion.usage;
   }
 

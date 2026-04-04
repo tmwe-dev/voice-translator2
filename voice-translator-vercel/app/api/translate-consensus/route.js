@@ -65,8 +65,8 @@ export async function POST(req) {
     try {
       const cached = await redis('GET', cacheKey);
       if (cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.translated && parsed.guaranteed) {
+        let parsed; try { parsed = JSON.parse(cached); } catch { parsed = null; }
+        if (parsed && parsed.translated && parsed.guaranteed) {
           return NextResponse.json({ ...parsed, cached: true }, { headers: cors });
         }
       }

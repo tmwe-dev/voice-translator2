@@ -8,10 +8,7 @@ import {
   addMediaTracks, getLocalMediaStream,
   setVideoEnabled, switchCamera,
 } from '../lib/webrtc.js';
-import {
-  generateKeyPair, exportPublicKey, importPublicKey,
-  deriveSharedKey, encryptMessage, decryptMessage, isE2EAvailable,
-} from '../lib/e2eCrypto.js';
+import useE2EEncryption from './useE2EEncryption.js';
 
 // ═══════════════════════════════════════════════
 // useWebRTC — P2P video call with accept/decline + Supabase Realtime signaling
@@ -57,10 +54,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const heartbeatIntervalRef = useRef(null);
   const lastPongRef = useRef(0);
 
-  // ── E2E Encryption refs ──
-  const e2eKeyPairRef = useRef(null);   // { publicKey, privateKey }
-  const e2eSharedKeyRef = useRef(null); // derived AES-GCM key
-  const e2eReadyRef = useRef(false);
+  // ── E2E Encryption (extracted hook) ──
+  const e2e = useE2EEncryption();
 
   // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
   // Without this, dc.onmessage captures the initial handleDCMessage which closes
@@ -80,9 +75,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
     if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
     // Destroy ephemeral E2E keys on disconnect
-    e2eKeyPairRef.current = null;
-    e2eSharedKeyRef.current = null;
-    e2eReadyRef.current = false;
+    e2e.reset();
     pendingCallRef.current = false;
     if (dcRef.current) {
       try { dcRef.current.close(); } catch {}
@@ -329,37 +322,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }, delay);
   }
 
-  // ── E2E key exchange: send our public key after DC opens ──
-  async function initiateE2EKeyExchange() {
-    if (!isE2EAvailable()) { e2eReadyRef.current = false; return; }
-    try {
-      const keyPair = await generateKeyPair();
-      e2eKeyPairRef.current = keyPair;
-      const pubKeyStr = await exportPublicKey(keyPair.publicKey);
-      if (dcRef.current?.readyState === 'open') {
-        dcRef.current.send(JSON.stringify({ type: 'e2e-pubkey', key: pubKeyStr }));
-      }
-    } catch (e) {
-      console.warn('[E2E] Key generation failed:', e);
-      e2eReadyRef.current = false;
-    }
-  }
-
-  // ── Handle received partner public key → derive shared secret ──
-  async function handleE2EPublicKey(partnerKeyStr) {
-    if (!e2eKeyPairRef.current) return;
-    try {
-      const partnerPubKey = await importPublicKey(partnerKeyStr);
-      const sharedKey = await deriveSharedKey(e2eKeyPairRef.current.privateKey, partnerPubKey);
-      e2eSharedKeyRef.current = sharedKey;
-      e2eReadyRef.current = true;
-      console.log('[E2E] Shared key derived — messages are now encrypted');
-    } catch (e) {
-      console.warn('[E2E] Key derivation failed:', e);
-      e2eReadyRef.current = false;
-    }
-  }
-
   function setupDC(dc) {
     dcRef.current = dc;
     dc.onopen = () => {
@@ -368,7 +330,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
 
       // ── E2E: initiate key exchange immediately after DC opens ──
-      initiateE2EKeyExchange();
+      e2e.initiateKeyExchange(dc);
 
       // ── P2P Heartbeat: detect silent DataChannel death ──
       lastPongRef.current = Date.now();
@@ -393,18 +355,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           return;
         }
         if (msg.type === 'pong') { lastPongRef.current = Date.now(); return; }
-        if (msg.type === 'e2e-pubkey') { await handleE2EPublicKey(msg.key); return; }
+        if (msg.type === 'e2e-pubkey') { await e2e.handlePartnerKey(msg.key); return; }
 
         // ── E2E decryption: if message is encrypted, decrypt it ──
-        if (msg.type === 'e2e-encrypted' && e2eSharedKeyRef.current) {
-          try {
-            const plaintext = await decryptMessage(e2eSharedKeyRef.current, msg.data);
-            const decrypted = JSON.parse(plaintext);
-            onDirectMessageRef.current?.(decrypted);
-          } catch (e) {
-            console.warn('[E2E] Decryption failed, forwarding as-is:', e);
-            onDirectMessageRef.current?.(msg);
-          }
+        if (msg.type === 'e2e-encrypted') {
+          const decrypted = await e2e.decryptMsg(msg.data);
+          onDirectMessageRef.current?.(decrypted || msg);
           return;
         }
 
@@ -418,8 +374,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       dcRef.current = null;
       if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
       // Destroy keys on DC close
-      e2eSharedKeyRef.current = null;
-      e2eReadyRef.current = false;
+      e2e.reset();
     };
   }
 
@@ -753,24 +708,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   }, [audioEnabled]);
 
   const sendDirectMessage = useCallback(async (msg) => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') return false;
-    // ── E2E encrypt if shared key is established ──
-    // Internal protocol messages (ping/pong/e2e-pubkey/video-toggle/audio-toggle) are NOT encrypted
-    // because they're not sensitive and encryption would add latency to control messages.
-    const isControlMsg = msg?.type === 'ping' || msg?.type === 'pong' || msg?.type === 'e2e-pubkey'
-      || msg?.type === 'video-toggle' || msg?.type === 'audio-toggle';
-    if (e2eReadyRef.current && e2eSharedKeyRef.current && !isControlMsg) {
-      try {
-        const plaintext = JSON.stringify(msg);
-        const encrypted = await encryptMessage(e2eSharedKeyRef.current, plaintext);
-        return sendViaDataChannel(dcRef.current, { type: 'e2e-encrypted', data: encrypted });
-      } catch {
-        // Encryption failed — send unencrypted as fallback
-        return sendViaDataChannel(dcRef.current, msg);
-      }
-    }
-    return sendViaDataChannel(dcRef.current, msg);
-  }, []);
+    return e2e.sendEncrypted(dcRef.current, msg);
+  }, [e2e.sendEncrypted]);
 
   const disconnect = useCallback(() => {
     cleanup();

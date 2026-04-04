@@ -217,7 +217,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
             </button>
             <button style={{marginTop:10, background:'none', border:'none', color:S.colors.textMuted,
               fontSize:12, cursor:'pointer', fontFamily:FONT, padding:8, width:'100%', textAlign:'center'}}
-              onClick={() => { setAuthStep('email'); setAuthCode(''); }}>
+              onClick={() => { setAuthStep('email'); setAuthCode(''); setAuthError(''); }}>
               {L('changeEmail')}
             </button>
           </div>

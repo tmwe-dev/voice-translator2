@@ -30,8 +30,9 @@ async function handlePost(req) {
     if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     const userId = profile.id;
 
-    // Check tier (free users can't use glossaries)
-    if (profile.tier === 'free' && action !== 'list') {
+    // Check tier (free users can't use glossaries) — skip in TESTING_MODE
+    const testingMode = process.env.TESTING_MODE === 'true';
+    if (!testingMode && profile.tier === 'free' && action !== 'list') {
       return NextResponse.json({ error: 'Glossaries require Pro or Business plan' }, { status: 403 });
     }
 

@@ -63,6 +63,7 @@ const MessageList = memo(function MessageList({
 
   useEffect(() => {
     if (!onMessageRead) return;
+    if (observerRef.current) observerRef.current.disconnect();
     observerRef.current = new IntersectionObserver((entries) => {
       for (const entry of entries) {
         if (entry.isIntersecting) {

@@ -14,7 +14,7 @@ export async function addCredits(email, amount) {
   const key = `user:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const user = JSON.parse(data);
+  let user; try { user = JSON.parse(data); } catch { return data.length ? { credits: 0, useOwnKeys: false } : null; }
   user.credits = (user.credits || 0) + amount;
   await redis('SET', key, JSON.stringify(user));
   return user;
@@ -29,7 +29,7 @@ export async function deductCredits(email, amount) {
   const key = `user:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  const user = JSON.parse(data);
+  let user; try { user = JSON.parse(data); } catch { return data.length ? { credits: 0, useOwnKeys: false } : null; }
   if (user.useOwnKeys) return user;
   if (user.credits < amount) return null;
   user.credits = Math.max(0, user.credits - amount);
@@ -46,6 +46,6 @@ export async function getCredits(email) {
   const key = `user:${email.toLowerCase()}`;
   const data = await redis('GET', key);
   if (!data) return { credits: 0, useOwnKeys: false };
-  const user = JSON.parse(data);
+  let user; try { user = JSON.parse(data); } catch { return data.length ? { credits: 0, useOwnKeys: false } : null; }
   return { credits: user.credits, useOwnKeys: user.useOwnKeys };
 }

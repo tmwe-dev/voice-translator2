@@ -34,16 +34,21 @@ function NetworkStatus() {
     window.addEventListener('offline', goOffline);
 
     // Listen for SW sync messages
+    let swMessageHandler = null;
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', (e) => {
+      swMessageHandler = (e) => {
         if (e.data?.type === 'SYNC_COMPLETE') setSyncing(false);
         if (e.data?.type === 'SYNC_START') setSyncing(true);
-      });
+      };
+      navigator.serviceWorker.addEventListener('message', swMessageHandler);
     }
 
     return () => {
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
+      if (swMessageHandler && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', swMessageHandler);
+      }
     };
   }, []);
 

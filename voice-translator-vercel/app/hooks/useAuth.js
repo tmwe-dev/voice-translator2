@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import { TESTING_MODE } from '../lib/config.js';
 
 export default function useAuth() {
   // Auth state
@@ -9,7 +10,6 @@ export default function useAuth() {
   const [authCode, setAuthCode] = useState('');
   const [authStep, setAuthStep] = useState('email');
   const [authLoading, setAuthLoading] = useState(false);
-  const [authTestCode, setAuthTestCode] = useState('');
   const [apiKeyInputs, setApiKeyInputs] = useState({
     openai: '',
     anthropic: '',
@@ -24,9 +24,9 @@ export default function useAuth() {
   const [pendingReferralCode, setPendingReferralCode] = useState(null);
 
   // Tier state
-  const [isTrial, setIsTrial] = useState(false);    // FREE FOR ALL
-  const [isTopPro, setIsTopPro] = useState(true);    // FREE FOR ALL
-  const [canUseElevenLabs, setCanUseElevenLabs] = useState(true); // FREE FOR ALL
+  const [isTrial, setIsTrial] = useState(true);
+  const [isTopPro, setIsTopPro] = useState(false);
+  const [canUseElevenLabs, setCanUseElevenLabs] = useState(false);
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState('');
   const [platformHasEL, setPlatformHasEL] = useState(false);
@@ -35,9 +35,9 @@ export default function useAuth() {
 
   // Refs
   const userTokenRef = useRef(null);
-  const isTrialRef = useRef(false);
-  const isTopProRef = useRef(true);
-  const canUseElevenLabsRef = useRef(true);
+  const isTrialRef = useRef(true);
+  const isTopProRef = useRef(false);
+  const canUseElevenLabsRef = useRef(false);
   const roomTierOverrideRef = useRef(null);
 
   // Sync refs
@@ -57,16 +57,28 @@ export default function useAuth() {
     canUseElevenLabsRef.current = canUseElevenLabs;
   }, [canUseElevenLabs]);
 
-  // ═══ FREE FOR ALL: nessun limite, tutti usano tutto ═══
-  // isTrial = false per tutti, canUseElevenLabs = true per tutti
+  // ═══ Tier controls ═══
+  // TESTING_MODE: all features unlocked, no restrictions
+  // Production: set based on user account tier
   useEffect(() => {
-    setIsTrial(false);
-    setIsTopPro(true);
-  }, []);
-
-  useEffect(() => {
-    setCanUseElevenLabs(true);
-  }, []);
+    if (TESTING_MODE) {
+      setIsTrial(false);
+      setIsTopPro(true);
+      setCanUseElevenLabs(true);
+      return;
+    }
+    if (!userAccount) {
+      setIsTrial(true);
+      setIsTopPro(false);
+      setCanUseElevenLabs(false);
+      return;
+    }
+    const tier = userAccount.tier || userAccount.subscription_plan || 'free';
+    setIsTrial(tier === 'free');
+    setIsTopPro(tier === 'business' || tier === 'top_pro');
+    const hasOwnEL = userAccount.apiKeys?.elevenlabs?.trim?.();
+    setCanUseElevenLabs(tier !== 'free' || !!hasOwnEL || platformHasEL);
+  }, [userAccount, platformHasEL]);
 
   function getEffectiveToken() {
     if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') return undefined;
@@ -87,7 +99,6 @@ export default function useAuth() {
       const data = await res.json();
       if (data.ok) {
         setAuthStep('code');
-        if (data.testCode) setAuthTestCode(data.testCode);
         return true;
       }
       return false;
@@ -320,8 +331,6 @@ export default function useAuth() {
     setAuthStep,
     authLoading,
     setAuthLoading,
-    authTestCode,
-    setAuthTestCode,
     apiKeyInputs,
     setApiKeyInputs,
     useOwnKeys,

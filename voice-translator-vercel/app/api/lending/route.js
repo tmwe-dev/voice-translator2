@@ -20,15 +20,13 @@ export async function POST(req) {
       if (!code) return NextResponse.json({ error: 'code required' }, { status: 400 });
       const result = await validateLending(code);
       if (!result) {
-        return NextResponse.json({ valid: false });
+        return NextResponse.json({ valid: false, error: 'Invalid lending code' });
       }
       return NextResponse.json({
         valid: true,
-        lenderName: result.lenderName,
         type: result.type,
         tokensRemaining: result.tokensRemaining,
-        expiresAt: result.expiresAt,
-        tokensUsed: result.tokensUsed
+        expiresAt: result.expiresAt
       });
     }
 

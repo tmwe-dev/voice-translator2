@@ -41,14 +41,21 @@ export async function resolveAuth({
   const defaultKey = envKeys[provider] || process.env.OPENAI_API_KEY;
 
   // ── DEV_MODE: bypass ALL auth, use platform keys, no billing ──
+  // Security: DEV_MODE is NOT allowed in production environments
   if (process.env.DEV_MODE === 'true') {
-    return {
-      apiKey: defaultKey,
-      isOwnKey: false,
-      billingEmail: null,
-      isLending: false,
-      lendingCodeUsed: null,
-    };
+    if (process.env.VERCEL_ENV === 'production') {
+      console.error('[SECURITY] DEV_MODE cannot be enabled in production!');
+      // Don't bypass auth in production - proceed with normal auth checks
+    } else {
+      // DEV_MODE allowed in preview/development
+      return {
+        apiKey: defaultKey,
+        isOwnKey: false,
+        billingEmail: null,
+        isLending: false,
+        lendingCodeUsed: null,
+      };
+    }
   }
 
   let apiKey = defaultKey;
@@ -83,10 +90,10 @@ export async function resolveAuth({
             }
           }
         }
-        // FREE ACCESS MODE — skip credit check, all features free
-        // if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && user.credits < minCredits) {
-        //   throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
-        // }
+        // Check credits for platform users
+        if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && user.credits < minCredits) {
+          throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
+        }
       }
     }
   } else if (lendingCode) {
@@ -119,10 +126,10 @@ export async function resolveAuth({
           }
         }
       }
-      // FREE ACCESS MODE — skip credit check
-      // if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
-      //   throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
-      // }
+      // Check credits for lender
+      if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
+        throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
+      }
     }
   } else if (roomId) {
     // Path 3: Guest in a room - bill to host
@@ -137,10 +144,10 @@ export async function resolveAuth({
         throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
       }
     } else {
-      // FREE ACCESS MODE — allow all tiers
-      // if (room.hostTier === 'FREE') {
-      //   throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
-      // }
+      // Require non-FREE tier for guest access
+      if (room.hostTier === 'FREE') {
+        throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
+      }
     }
 
     if (room.hostEmail) {
@@ -166,10 +173,10 @@ export async function resolveAuth({
             }
           }
         }
-        // FREE ACCESS MODE — skip credit check
-        // if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && hostUser.credits < minCredits) {
-        //   throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
-        // }
+        // Check credits for host
+        if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && hostUser.credits < minCredits) {
+          throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
+        }
       }
     }
   } else {

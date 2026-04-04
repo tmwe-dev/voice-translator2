@@ -37,9 +37,10 @@ export async function checkRateLimit(key, maxRequests = 30, windowMs = WINDOW_MS
 
     return { allowed: true, remaining, retryAfterMs: 0 };
   } catch (error) {
-    // Fail-open: if Redis fails, allow the request for availability
+    // Fail-closed: if Redis fails, DENY the request for security
+    // This prevents abuse if rate limiter is unavailable
     console.error('Rate limiter error:', error);
-    return { allowed: true, remaining: maxRequests - 1, retryAfterMs: 0 };
+    return { allowed: false, remaining: 0, retryAfterMs: 5000 };
   }
 }
 

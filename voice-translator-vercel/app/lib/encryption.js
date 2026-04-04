@@ -58,6 +58,10 @@ export function encryptKeys(apiKeys) {
  * @returns {Object} plaintext API keys object
  */
 export function decryptKeys(encryptedData) {
+  if (!encryptedData?.iv || !encryptedData?.authTag || !encryptedData?.encrypted) {
+    throw new Error('Invalid encrypted data format');
+  }
+
   const key = getEncryptionKey();
   const iv = Buffer.from(encryptedData.iv, 'base64');
   const authTag = Buffer.from(encryptedData.authTag, 'base64');
@@ -65,5 +69,10 @@ export function decryptKeys(encryptedData) {
   decipher.setAuthTag(authTag);
   let decrypted = decipher.update(encryptedData.encrypted, 'base64', 'utf8');
   decrypted += decipher.final('utf8');
-  return JSON.parse(decrypted);
+
+  try {
+    return JSON.parse(decrypted);
+  } catch {
+    return decrypted;
+  }
 }

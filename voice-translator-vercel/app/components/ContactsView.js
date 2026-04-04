@@ -84,15 +84,20 @@ export default function ContactsView({
       if (result.cancelled || !result.contacts?.length) { setDeviceImporting(false); return; }
       let added = 0, invited = 0;
       for (const c of result.contacts) {
-        const email = c.email?.[0];
-        const phone = c.tel?.[0];
-        if (email) {
-          const res = await addContact(email);
-          if (res.ok) added++;
-          else if (res.notRegistered) { const inv = await createInvite(0); if (inv?.ok) { await shareInvite('email', inv.inviteCode, prefs.lang); invited++; } }
-        } else if (phone) {
-          const inv = await createInvite(0);
-          if (inv?.ok) { await shareInvite('sms', inv.inviteCode, prefs.lang); invited++; }
+        try {
+          const email = c.email?.[0];
+          const phone = c.tel?.[0];
+          if (email) {
+            const res = await addContact(email);
+            if (res.ok) added++;
+            else if (res.notRegistered) { const inv = await createInvite(0); if (inv?.ok) { await shareInvite('email', inv.inviteCode, prefs.lang); invited++; } }
+          } else if (phone) {
+            const inv = await createInvite(0);
+            if (inv?.ok) { await shareInvite('sms', inv.inviteCode, prefs.lang); invited++; }
+          }
+          await new Promise(r => setTimeout(r, 100)); // Rate limit
+        } catch (err) {
+          console.warn('[Contacts] Import failed for', c, err);
         }
       }
       setDeviceImportResult({ success: true, added, invited, total: result.contacts.length });

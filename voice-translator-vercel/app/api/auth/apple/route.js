@@ -3,8 +3,51 @@ import { createUser, getUser, createSession, getReferralCode, applyReferral } fr
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import crypto from 'crypto';
 
+// ── Apple JWKS cache (refresh every 24h) ──
+let _appleKeys = null;
+let _appleKeysTs = 0;
+const JWKS_TTL = 86400000; // 24h
+
+async function getApplePublicKeys() {
+  if (_appleKeys && Date.now() - _appleKeysTs < JWKS_TTL) return _appleKeys;
+  const res = await fetch('https://appleid.apple.com/auth/keys', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Failed to fetch Apple JWKS');
+  const jwks = await res.json();
+  _appleKeys = jwks.keys;
+  _appleKeysTs = Date.now();
+  return _appleKeys;
+}
+
+function base64urlDecode(str) {
+  const padded = str.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - str.length % 4) % 4);
+  return Buffer.from(padded, 'base64');
+}
+
+async function verifyAppleJWT(id_token) {
+  const parts = id_token.split('.');
+  if (parts.length !== 3) throw new Error('Invalid token format');
+
+  // Decode header to get key ID
+  const header = JSON.parse(base64urlDecode(parts[0]).toString('utf8'));
+  if (!header.kid || header.alg !== 'RS256') throw new Error('Unsupported token header');
+
+  // Find matching Apple public key
+  const appleKeys = await getApplePublicKeys();
+  const jwk = appleKeys.find(k => k.kid === header.kid);
+  if (!jwk) throw new Error('Apple key not found for kid: ' + header.kid);
+
+  // Import JWK as CryptoKey and verify signature
+  const key = crypto.createPublicKey({ key: jwk, format: 'jwk' });
+  const signatureInput = Buffer.from(parts[0] + '.' + parts[1], 'utf8');
+  const signature = base64urlDecode(parts[2]);
+  const valid = crypto.verify('RSA-SHA256', signatureInput, key, signature);
+  if (!valid) throw new Error('Invalid token signature');
+
+  // Decode payload
+  return JSON.parse(base64urlDecode(parts[1]).toString('utf8'));
+}
+
 // Apple Sign-In: verify identity token and create/login user
-// Apple sends id_token as JWT — we decode and verify it
 export async function POST(req) {
   try {
     // Rate limit: 10/min per IP
@@ -19,20 +62,13 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Missing Apple identity token' }, { status: 400 });
     }
 
-    // Decode the JWT payload (Apple's id_token is a standard JWT)
-    // For production, you should verify the signature against Apple's public keys
-    const parts = id_token.split('.');
-    if (parts.length !== 3) {
-      return NextResponse.json({ error: 'Invalid token format' }, { status: 401 });
-    }
-
+    // Verify JWT signature against Apple's public keys (JWKS)
     let payload;
     try {
-      const payloadB64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-      const padded = payloadB64 + '='.repeat((4 - payloadB64.length % 4) % 4);
-      payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-    } catch {
-      return NextResponse.json({ error: 'Invalid token payload' }, { status: 401 });
+      payload = await verifyAppleJWT(id_token);
+    } catch (e) {
+      console.error('Apple JWT verification failed:', e.message);
+      return NextResponse.json({ error: 'Invalid or tampered token' }, { status: 401 });
     }
 
     // Verify issuer and audience

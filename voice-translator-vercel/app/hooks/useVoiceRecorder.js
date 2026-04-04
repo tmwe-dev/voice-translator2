@@ -93,7 +93,15 @@ export default function useVoiceRecorder() {
       ? 'audio/webm;codecs=opus'
       : 'audio/webm';
 
-    const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
+    let mediaRecorder;
+    try {
+      mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
+    } catch (e) {
+      // Stream leak on MediaRecorder error — stop all tracks immediately
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+      throw e;
+    }
 
     mediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
@@ -157,7 +165,11 @@ export default function useVoiceRecorder() {
     }
     if (timerRef.current) clearInterval(timerRef.current);
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-  }, []);
+    // Cleanup object URLs
+    segments.forEach(seg => {
+      if (seg.url) URL.revokeObjectURL(seg.url);
+    });
+  }, [segments]);
 
   useEffect(() => {
     return cleanup;

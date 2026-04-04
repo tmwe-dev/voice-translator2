@@ -248,7 +248,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   useEffect(() => {
     async function checkActiveRooms() {
       try {
-        const saved = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        let saved; try { saved = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { saved = []; }
         if (saved.length === 0) { setActiveRooms([]); return; }
         const checked = [];
         for (const room of saved) {

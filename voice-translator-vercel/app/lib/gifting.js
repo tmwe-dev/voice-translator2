@@ -58,7 +58,7 @@ export async function acceptGiftInvite(recipientEmail, inviteCode) {
   const data = await redis('GET', inviteKey);
   if (!data) return null;
 
-  const invite = JSON.parse(data);
+  let invite; try { invite = JSON.parse(data); } catch { return null; }
   if (!invite.giftAmount || invite.giftAmount <= 0) return null;
   if (invite.giftStatus !== 'pending') return null;
 
@@ -78,11 +78,13 @@ export async function acceptGiftInvite(recipientEmail, inviteCode) {
   const escrowKey = `gift-escrow:${inviteCode}`;
   const escrowData = await redis('GET', escrowKey);
   if (escrowData) {
-    const escrow = JSON.parse(escrowData);
-    escrow.status = 'accepted';
-    escrow.acceptedBy = recipientEmail.toLowerCase();
-    escrow.acceptedAt = Date.now();
-    await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+    let escrow; try { escrow = JSON.parse(escrowData); } catch { escrow = null; }
+    if (escrow) {
+      escrow.status = 'accepted';
+      escrow.acceptedBy = recipientEmail.toLowerCase();
+      escrow.acceptedAt = Date.now();
+      await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+    }
   }
 
   await redis('SREM', 'expiring-gifts', inviteCode);
@@ -95,7 +97,7 @@ export async function acceptGiftInvite(recipientEmail, inviteCode) {
 export async function getGiftInfo(inviteCode, getUser) {
   const data = await redis('GET', `invite:${inviteCode}`);
   if (!data) return null;
-  const invite = JSON.parse(data);
+  let invite; try { invite = JSON.parse(data); } catch { return null; }
   if (!invite.giftAmount || invite.giftStatus !== 'pending') return null;
   const sender = await getUser(invite.from);
   return {
@@ -119,10 +121,12 @@ async function refundGift(code, invite) {
   const escrowKey = `gift-escrow:${code}`;
   const escrowData = await redis('GET', escrowKey);
   if (escrowData) {
-    const escrow = JSON.parse(escrowData);
-    escrow.status = 'refunded';
-    escrow.refundedAt = Date.now();
-    await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+    let escrow; try { escrow = JSON.parse(escrowData); } catch { escrow = null; }
+    if (escrow) {
+      escrow.status = 'refunded';
+      escrow.refundedAt = Date.now();
+      await redis('SET', escrowKey, JSON.stringify(escrow), 'EX', 86400);
+    }
   }
   await redis('SREM', 'expiring-gifts', code);
   return true;
@@ -141,18 +145,19 @@ export async function refundExpiredGifts() {
     if (!data) {
       const escrowData = await redis('GET', `gift-escrow:${code}`);
       if (escrowData) {
-        const escrow = JSON.parse(escrowData);
-        if (escrow.status === 'pending') {
-          await addCredits(escrow.senderEmail, escrow.amount);
-          escrow.status = 'refunded'; escrow.refundedAt = Date.now();
-          await redis('SET', `gift-escrow:${code}`, JSON.stringify(escrow), 'EX', 86400);
-          refunded++; totalAmount += escrow.amount;
-        }
+        let escrow; try { escrow = JSON.parse(escrowData); } catch { escrow = null; }
+        if (escrow) {
+          if (escrow.status === 'pending') {
+            await addCredits(escrow.senderEmail, escrow.amount);
+            escrow.status = 'refunded'; escrow.refundedAt = Date.now();
+            await redis('SET', `gift-escrow:${code}`, JSON.stringify(escrow), 'EX', 86400);
+            refunded++; totalAmount += escrow.amount;
+          }
       }
       await redis('SREM', 'expiring-gifts', code);
       continue;
     }
-    const invite = JSON.parse(data);
+    let invite; try { invite = JSON.parse(data); } catch { return null; }
     if (invite.giftStatus === 'pending' && invite.expires && Date.now() > invite.expires) {
       await refundGift(code, invite);
       refunded++; totalAmount += invite.giftAmount;

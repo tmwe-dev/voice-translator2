@@ -61,6 +61,9 @@ export default function useFreeTalkVAD({
   const vadAnalyserRef = useRef(null);
   const vadAudioCtxRef = useRef(null);
   const freeTalkSendingRef = useRef(false);
+  const isRecRef = useRef(false);
+  const voiceStartTimeRef = useRef(0);
+  const voiceDetectedRef = useRef(false);
 
   // Persist sensitivity preference
   const updateSensitivity = useCallback((val) => {
@@ -99,17 +102,16 @@ export default function useFreeTalkVAD({
       setIsListening(true);
       freeTalkSendingRef.current = false;
 
-      let isRec = false;
+      // Reset voice detection state
+      isRecRef.current = false;
+      voiceStartTimeRef.current = 0;
+      voiceDetectedRef.current = false;
 
       // Get threshold settings from sensitivity preset
       const preset = VAD_PRESETS[vadSensitivity] || VAD_PRESETS.normal;
       const threshold = preset.threshold;
       const silenceDelay = preset.silenceDelay;
       const minVoiceDuration = preset.minVoiceDuration;
-
-      // Noise gate: track how long voice has been continuous above threshold
-      let voiceStartTime = 0;
-      let voiceDetected = false; // true once minVoiceDuration passed
 
       if (canUseBrowserSTT) {
         allWordsRef.current = '';
@@ -160,15 +162,15 @@ export default function useFreeTalkVAD({
         const aboveThreshold = avg > threshold;
 
         // ── Noise gate logic ──
-        if (aboveThreshold && !isRec) {
-          if (!voiceStartTime) {
-            voiceStartTime = Date.now();
+        if (aboveThreshold && !isRecRef.current) {
+          if (!voiceStartTimeRef.current) {
+            voiceStartTimeRef.current = Date.now();
           }
           // Check if voice has been continuous for minVoiceDuration
-          if (!voiceDetected && (Date.now() - voiceStartTime) >= minVoiceDuration) {
-            voiceDetected = true;
+          if (!voiceDetectedRef.current && (Date.now() - voiceStartTimeRef.current) >= minVoiceDuration) {
+            voiceDetectedRef.current = true;
             // ── Voice confirmed: start recording ──
-            isRec = true;
+            isRecRef.current = true;
             if (silenceTimerRef.current) {
               clearTimeout(silenceTimerRef.current);
               silenceTimerRef.current = null;
@@ -193,14 +195,14 @@ export default function useFreeTalkVAD({
               if (roomId) setSpeakingState(roomId, true);
             }
           }
-        } else if (!aboveThreshold && !isRec) {
+        } else if (!aboveThreshold && !isRecRef.current) {
           // Reset noise gate if sound dropped before minVoiceDuration
-          voiceStartTime = 0;
-          voiceDetected = false;
-        } else if (!aboveThreshold && isRec) {
+          voiceStartTimeRef.current = 0;
+          voiceDetectedRef.current = false;
+        } else if (!aboveThreshold && isRecRef.current) {
           // ── Silence detected while recording: start countdown to finalize ──
-          voiceStartTime = 0;
-          voiceDetected = false;
+          voiceStartTimeRef.current = 0;
+          voiceDetectedRef.current = false;
           if (!silenceTimerRef.current) {
             const countdownStart = Date.now();
             vadCountdownRef.current = setInterval(() => {
@@ -213,13 +215,16 @@ export default function useFreeTalkVAD({
               if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
               setVadSilenceCountdown(null);
               if (canUseBrowserSTT) {
-                isRec = false;
+                isRecRef.current = false;
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
 
-                // Include any interim text that wasn't finalized
-                const allOriginal = allWordsRef.current.trim();
-                if (allOriginal) {  // Note: interims handled by recognition finalizing on silence
+                // Grace period: let browser STT finalize last words
+                await new Promise(r => setTimeout(r, 300));
+                // Include both finalized AND interim text (same logic as stopStreamingTranslation)
+                const interimText = lastInterimRef?.current?.trim() || '';
+                const allOriginal = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
+                if (allOriginal) {
                   freeTalkSendingRef.current = true;
                   try {
                     await translateAndSend(allOriginal, { clearStreamingMsg: true });
@@ -235,14 +240,14 @@ export default function useFreeTalkVAD({
                 }
               } else {
                 if (vadRecRef.current?.state === 'recording') vadRecRef.current.stop();
-                isRec = false;
+                isRecRef.current = false;
                 setRecording(false);
                 if (roomId) setSpeakingState(roomId, false);
               }
               silenceTimerRef.current = null;
             }, silenceDelay);
           }
-        } else if (aboveThreshold && isRec && silenceTimerRef.current) {
+        } else if (aboveThreshold && isRecRef.current && silenceTimerRef.current) {
           // ── Voice resumed during countdown: cancel silence timer ──
           clearTimeout(silenceTimerRef.current);
           silenceTimerRef.current = null;
@@ -254,7 +259,7 @@ export default function useFreeTalkVAD({
       check();
     } catch {}
   }, [isListening, myLangRef, roomId, getMicStream, unlockAudio, setSpeakingState,
-      getRecorderMime, speechRecRef, allWordsRef, streamingModeRef, whisperOnlyRef,
+      getRecorderMime, speechRecRef, allWordsRef, lastInterimRef, streamingModeRef, whisperOnlyRef,
       lowConfidenceCountRef, handleSpeechResult, setStreamingMsg, setRecording,
       translateAndSend, processAndSendAudio, vadSensitivity]);
 
@@ -302,7 +307,7 @@ export default function useFreeTalkVAD({
     }
     if (roomId) setSpeakingState(roomId, false);
   }, [setRecording, setStreamingMsg, streamingModeRef, speechRecRef,
-      allWordsRef, translateAndSend, roomId, setSpeakingState]);
+      allWordsRef, lastInterimRef, translateAndSend, roomId, setSpeakingState]);
 
   /**
    * Cleanup function for use in parent's useEffect unmount.

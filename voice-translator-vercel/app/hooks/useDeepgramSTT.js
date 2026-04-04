@@ -89,6 +89,8 @@ export default function useDeepgramSTT({
     deepgramWsRef.current = ws;
 
     return new Promise((resolve) => {
+      let resolved = false;
+
       ws.onopen = () => {
         console.log('[STT-Deepgram] WebSocket connected');
         // Start audio capture
@@ -110,7 +112,8 @@ export default function useDeepgramSTT({
             ws.send(pcm16.buffer);
           };
           source.connect(processor);
-          processor.connect(audioCtx.destination);
+          // Don't connect processor to destination - this causes echo!
+          // Processor only needs to capture audio, not output it
         } catch (e) {
           console.error('[STT-Deepgram] Audio capture error:', e);
         }
@@ -121,12 +124,15 @@ export default function useDeepgramSTT({
           if (roomId && streamingModeRef.current) setSpeakingState(roomId, true);
         }, 15000);
 
-        resolve(true);
+        if (!resolved) {
+          resolved = true;
+          resolve(true);
+        }
       };
 
       ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
+          let data; try { data = JSON.parse(event.data); } catch { console.warn('[useDeepgramSTT] WS parse failed'); return; }
           if (data.type === 'Results') {
             const transcript = data.channel?.alternatives?.[0]?.transcript || '';
             if (!transcript) return;
@@ -143,7 +149,10 @@ export default function useDeepgramSTT({
 
       ws.onerror = () => {
         console.warn('[STT-Deepgram] WebSocket error');
-        resolve(false);
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
       };
 
       ws.onclose = () => {
@@ -151,14 +160,19 @@ export default function useDeepgramSTT({
       };
 
       // Timeout: if WebSocket doesn't connect in 3s, fall back
-      setTimeout(() => resolve(false), 3000);
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          resolve(false);
+        }
+      }, 3000);
     });
   }, [roomId, unlockAudio, setSpeakingState, setRecording, setStreamingMsg, allWordsRef, streamingModeRef, speakingKeepAliveRef]);
 
   /**
    * Stop Deepgram streaming and clean up all resources.
    */
-  const stopDeepgramStreaming = useCallback(() => {
+  const stopDeepgramStreaming = useCallback(async () => {
     if (deepgramProcessorRef.current) {
       try { deepgramProcessorRef.current.disconnect(); } catch {}
       deepgramProcessorRef.current = null;
@@ -174,7 +188,9 @@ export default function useDeepgramSTT({
     if (deepgramWsRef.current) {
       try {
         if (deepgramWsRef.current.readyState === WebSocket.OPEN) {
+          // Send CloseStream and wait for Deepgram to flush final results
           deepgramWsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
+          await new Promise(r => setTimeout(r, 400)); // Wait for final transcription
         }
         deepgramWsRef.current.close();
       } catch {}

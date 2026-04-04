@@ -67,8 +67,7 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
     return `${Math.floor(mins / 60)}h ${mins % 60}m`;
   };
 
-  let globalIdx = 0;
-  const renderGroup = (label, items) => {
+  const renderGroup = (label, items, startIdx) => {
     if (items.length === 0) return null;
     return (
       <div key={label} style={{ marginBottom: 18 }}>
@@ -80,7 +79,7 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {items.map((c, i) => {
-            const idx = globalIdx++;
+            const idx = startIdx + i;
             const isHost = c.host === (verifiedName || prefs.name);
             const memberNames = c.members?.filter(m => m !== (verifiedName || prefs.name)) || [];
             return (
@@ -249,10 +248,10 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
           </div>
         ) : (
           <>
-            {renderGroup('Oggi', grouped.today)}
-            {renderGroup('Ieri', grouped.yesterday)}
-            {renderGroup('Questa settimana', grouped.week)}
-            {renderGroup('Più vecchie', grouped.older)}
+            {renderGroup('Oggi', grouped.today, 0)}
+            {renderGroup('Ieri', grouped.yesterday, grouped.today.length)}
+            {renderGroup('Questa settimana', grouped.week, grouped.today.length + grouped.yesterday.length)}
+            {renderGroup('Più vecchie', grouped.older, grouped.today.length + grouped.yesterday.length + grouped.week.length)}
           </>
         )}
       </div>

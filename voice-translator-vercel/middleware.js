@@ -23,7 +23,10 @@ function isOriginAllowed(origin) {
   if (!origin) return true; // Same-origin requests (no Origin header)
   if (ALLOWED_ORIGINS.has(origin)) return true;
   // Allow only our own Vercel preview deployments (project-specific pattern)
-  if (/^https:\/\/voice-translator[a-z0-9-]*\.vercel\.app$/.test(origin)) return true;
+  // Must start with exactly 'voice-translator-' followed by alphanumerics/hyphens, not arbitrary subdomains
+  const projectName = process.env.VERCEL_PROJECT_NAME || 'voice-translator';
+  const vercelRegex = new RegExp(`^https:\\/\\/${projectName}(-[a-z0-9]+)?\\.vercel\\.app$`);
+  if (vercelRegex.test(origin)) return true;
   return false;
 }
 

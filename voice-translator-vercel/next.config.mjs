@@ -8,11 +8,13 @@ const nextConfig = {
         source: '/(.*)',
         headers: [
           // ── CSP: restrict resource loading to same-origin + trusted CDNs ──
+          // Note: unsafe-inline for scripts is required by Next.js runtime
+          // Remove 'unsafe-eval' to prevent arbitrary code execution
           {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io",
+              "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",

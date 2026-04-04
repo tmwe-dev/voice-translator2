@@ -85,8 +85,8 @@ export async function POST(req) {
     }
 
     if (cachedResult) {
-      const parsed = JSON.parse(cachedResult);
-      if (parsed.translated && !parsed.fallback) {
+      let parsed; try { parsed = JSON.parse(cachedResult); } catch { parsed = null; }
+      if (parsed && parsed.translated && !parsed.fallback) {
         const validation = validateTranslation(trimmed, parsed.translated, sourceLang, targetLang);
         if (validation.valid) {
           return NextResponse.json({ ...parsed, cached: true, charsUsed: 0, dailyUsed: 0, dailyLimit: FREE_DAILY_LIMIT }, { headers: cors });

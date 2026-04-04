@@ -41,6 +41,7 @@ export function levenshteinDistance(str1, str2) {
  * Normalized similarity score (0 to 1, where 1 = identical)
  */
 export function similarity(str1, str2) {
+  if (str1 == null || str2 == null) return 0;
   if (!str1 && !str2) return 1;
   if (!str1 || !str2) return 0;
   const s1 = str1.trim().toLowerCase();

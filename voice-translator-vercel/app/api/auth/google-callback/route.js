@@ -113,8 +113,10 @@ export async function GET(req) {
 }
 
 function closePopupHTML(message) {
+  // Escape HTML to prevent XSS
+  const escaped = escapeHtml(message);
   return `<!DOCTYPE html><html><body>
-    <p>${message}</p>
+    <p>${escaped}</p>
     <script>
       setTimeout(() => window.close(), 2000);
     </script>
@@ -122,15 +124,28 @@ function closePopupHTML(message) {
 }
 
 function successPopupHTML(resultJson) {
+  // Use specific origin instead of '*' to prevent clickjacking
+  const appUrl = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
   return `<!DOCTYPE html><html><body>
     <p>Accesso riuscito! Chiusura in corso...</p>
     <script>
       try {
         if (window.opener) {
-          window.opener.postMessage({ type: 'google-oauth-result', data: ${resultJson} }, '*');
+          window.opener.postMessage({ type: 'google-oauth-result', data: ${resultJson} }, '${appUrl}');
         }
       } catch(e) {}
       setTimeout(() => window.close(), 1000);
     </script>
   </body></html>`;
+}
+
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
 }

@@ -21,6 +21,7 @@ export function useAudioQueue() {
   const [playbackRate, setPlaybackRate] = useState(1.0);
 
   const nextSeqRef = useRef(0);
+  const currentSeqRef = useRef(0);
   const queueRef = useRef(new Map()); // seq → { blob, url, text }
   const audioRef = useRef(null);
   const isProcessingRef = useRef(false);
@@ -53,30 +54,30 @@ export function useAudioQueue() {
     isProcessingRef.current = true;
 
     while (true) {
-      const item = queueRef.current.get(currentSeq);
+      const seq = currentSeqRef.current;
+      const item = queueRef.current.get(seq);
       if (!item) {
         // Wait for the next item (might be synthesizing)
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Check again — if still nothing and queue is empty, stop
-        if (!queueRef.current.has(currentSeq) && queueRef.current.size === 0) {
+        if (!queueRef.current.has(seq) && queueRef.current.size === 0) {
           break;
         }
-        if (!queueRef.current.has(currentSeq)) {
+        if (!queueRef.current.has(seq)) {
           // Item might come later, keep waiting (max 10s)
           let waited = 0;
-          while (!queueRef.current.has(currentSeq) && waited < 10000) {
+          while (!queueRef.current.has(seq) && waited < 10000) {
             await new Promise(r => setTimeout(r, 100));
             waited += 100;
           }
-          if (!queueRef.current.has(currentSeq)) break; // Timeout
+          if (!queueRef.current.has(seq)) break; // Timeout
         }
         continue;
       }
 
       // Play this item
       setIsPlaying(true);
-      setCurrentSeq(prev => prev);
 
       try {
         await playAudio(item.url);
@@ -86,14 +87,15 @@ export function useAudioQueue() {
 
       // Clean up
       URL.revokeObjectURL(item.url);
-      queueRef.current.delete(currentSeq);
+      queueRef.current.delete(seq);
+      currentSeqRef.current++;
       setCurrentSeq(prev => prev + 1);
       setQueueLength(queueRef.current.size);
     }
 
     setIsPlaying(false);
     isProcessingRef.current = false;
-  }, [currentSeq]);
+  }, []);
 
   /**
    * Play a single audio URL
@@ -168,6 +170,7 @@ export function useAudioQueue() {
     setIsPaused(false);
     setQueueLength(0);
     nextSeqRef.current = 0;
+    currentSeqRef.current = 0;
     setCurrentSeq(0);
     isProcessingRef.current = false;
   }, []);

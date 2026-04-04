@@ -75,6 +75,7 @@ export default function useTranslation({
   const lastInterimRef = useRef('');
   const streamingModeRef = useRef(false);
   const stoppingRef = useRef(false);
+  const processedFinalsRef = useRef(null);
 
   // Whisper-only mode ref (for languages where browser STT is unreliable)
   const whisperOnlyRef = useRef(false);
@@ -97,7 +98,6 @@ export default function useTranslation({
   // Legacy refs kept for export compatibility
   const wordBufferRef = useRef('');
   const translatedChunksRef = useRef([]);
-  const reviewTimerRef = useRef(null);
 
   // ── Extracted hooks ──
 
@@ -179,27 +179,30 @@ export default function useTranslation({
    *
    * This eliminates the "message disappears" gap and shows text ASAP.
    */
+  /**
+   * Unified translate-and-send with optional Phase 1 skip.
+   * opts.skipPhase1: true to skip sending original (already sent by caller)
+   * opts.myL / opts.targetLangs: override language resolution (for processAndSendAudio)
+   */
   const translateAndSend = useCallback(async (text, opts = {}) => {
-    const { myL, targetLangs } = getAllTargetLangs();
+    const myL = opts.myL || getAllTargetLangs().myL;
+    const targetLangs = opts.targetLangs || getAllTargetLangs().targetLangs;
     const primaryTargetLang = targetLangs[0]?.code || 'en';
 
-    // ── PHASE 1: Send original immediately (no translation yet) ──
-    getPerf().mark(PERF.PHASE1_SEND);
-    if (roomId) {
-      sendMessage(text, null, myL.code, primaryTargetLang, null);
+    // ── PHASE 1: Send original immediately (skip if caller already sent) ──
+    if (!opts.skipPhase1) {
+      getPerf().mark(PERF.PHASE1_SEND);
+      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null);
+      getPerf().measure(PERF.PHASE1_SEND);
     }
-    getPerf().measure(PERF.PHASE1_SEND);
 
-    // ── PHASE 2: Translate in background, then update ──
+    // ── PHASE 2: Translate + update ──
     getPerf().mark(PERF.TRANSLATE_LATENCY);
     const translateOpts = buildTranslateOpts();
     let translations = {};
     let primaryTranslated = '';
     let finalTargetLang = primaryTargetLang;
 
-    // ── Phase 2 translation with retry ──
-    // If translation fails on first attempt, retry once. Without retry,
-    // Phase 1 message is already visible but receiver never gets translation or TTS.
     const doTranslate = async () => {
       if (targetLangs.length === 1) {
         const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
@@ -223,43 +226,31 @@ export default function useTranslation({
       try {
         result = await doTranslate();
       } catch (firstErr) {
-        console.warn('[translateAndSend] Phase 2 attempt 1 failed, retrying in 1s:', firstErr.message);
-        await new Promise(r => setTimeout(r, 1000));
-        result = await doTranslate(); // retry once — will throw if it fails again
+        console.warn('[translateAndSend] Retry in 500ms:', firstErr.message);
+        await new Promise(r => setTimeout(r, 500));
+        result = await doTranslate();
       }
-      if (result?.limitExceeded) {
-        console.warn('[translateAndSend] Free limit exceeded');
-        return { limitExceeded: true };
-      }
+      if (result?.limitExceeded) return { limitExceeded: true };
 
       getPerf().measure(PERF.TRANSLATE_LATENCY);
-      console.log('[translateAndSend] Phase 2 result:', { primaryTranslated: !!primaryTranslated, translationKeys: Object.keys(translations), finalTargetLang });
 
-      // Send translation update to everyone (sender local + partner broadcast)
       getPerf().mark(PERF.PHASE2_SEND);
       if (primaryTranslated && roomId) {
         sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
         if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
-      } else {
-        console.warn('[translateAndSend] No translation to send — primaryTranslated empty or no roomId', { primaryTranslated, roomId });
       }
       getPerf().measure(PERF.PHASE2_SEND);
 
-      // ── Feed message into conversation context for knowledge base ──
       if (convContextRef.current?.addMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         convContextRef.current.addMessage({
-          sender: senderName,
-          original: text,
+          sender: senderName, original: text,
           translated: primaryTranslated || null,
-          sourceLang: myL.code,
-          targetLang: finalTargetLang,
-          timestamp: Date.now(),
+          sourceLang: myL.code, targetLang: finalTargetLang, timestamp: Date.now(),
         });
       }
     } catch (e) {
-      console.error('[translateAndSend] Phase 2 translation failed after retry:', e);
-      // Update local message with error indicator so user knows translation failed
+      console.error('[translateAndSend] Failed after retry:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         updateLocalMessage(text, senderName, { _translationError: true });
@@ -267,7 +258,7 @@ export default function useTranslation({
     }
 
     return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
-  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, updateLocalMessage, roomId, isTrialRef, useOwnKeys, refreshBalance]);
+  }, [getAllTargetLangs, translateUniversal, translateToAllTargets, sendMessage, sendTranslationUpdate, updateLocalMessage, roomId, isTrialRef, useOwnKeys, refreshBalance, prefsRef, verifiedNameRef, convContextRef]);
 
   // =============================================
   // Speech result handler
@@ -337,88 +328,20 @@ export default function useTranslation({
     console.log('[processAndSendAudio] STT result:', original?.substring(0, 50));
     if (!original?.trim() || !roomId) return;
 
-    // ── Step 2 (Phase 1): Send original text IMMEDIATELY ──
-    // Partner sees the original text RIGHT NOW — no waiting for translation
+    // ── Step 2: Phase 1 send + Phase 2 translate via unified helper ──
     sendMessage(original, null, myL.code, primaryTarget.code, null);
-    console.log('[processAndSendAudio] Phase 1 sent, starting Phase 2 translation...');
-
-    // Show streaming indicator while translating
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
-    // ── Step 3 (Phase 2): Translate in background, then update ──
     try {
-      const result = await translateAndSend_phase2Only(original, myL, targetLangs, primaryTarget);
-
-      // Feed into conversation context
-      if (convContextRef.current?.addMessage) {
-        const senderName = verifiedNameRef?.current || prefsRef.current.name;
-        convContextRef.current.addMessage({
-          sender: senderName,
-          original,
-          translated: result?.primaryTranslated || null,
-          sourceLang: myL.code,
-          targetLang: primaryTarget.code,
-          timestamp: Date.now(),
-        });
-      }
+      await translateAndSend(original, { skipPhase1: true, myL, targetLangs });
     } catch (e) {
-      console.error('[processAndSendAudio] Phase 2 failed:', e);
+      console.error('[processAndSendAudio] Translation failed:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
         updateLocalMessage(original, senderName, { _translationError: true });
       }
     }
     setStreamingMsg(null);
-  }
-
-  /**
-   * Phase 2 only: translate and send update (reused by processAndSendAudio).
-   * Similar to translateAndSend but WITHOUT Phase 1 send (already done).
-   */
-  async function translateAndSend_phase2Only(text, myL, targetLangs, primaryTarget) {
-    console.log('[Phase2Only] Starting translation:', { text: text.substring(0, 30), src: myL.code, tgt: primaryTarget.code, numTargets: targetLangs.length });
-    const translateOpts = buildTranslateOpts();
-    let translations = {};
-    let primaryTranslated = '';
-    let finalTargetLang = primaryTarget.code;
-
-    const doTranslate = async () => {
-      if (targetLangs.length === 1) {
-        const data = await translateUniversal(text, myL.code, targetLangs[0].code, myL.name, targetLangs[0].name, translateOpts);
-        if (data.translated) {
-          primaryTranslated = data.translated;
-          finalTargetLang = targetLangs[0].code;
-          translations[targetLangs[0].code] = data.translated;
-        }
-        if (data.limitExceeded) return { limitExceeded: true };
-      } else {
-        const result = await translateToAllTargets(text, myL, targetLangs, translateOpts);
-        translations = result.translations;
-        primaryTranslated = result.primaryTranslated;
-        finalTargetLang = result.primaryTargetLang;
-      }
-      return { ok: true };
-    };
-
-    let result;
-    try {
-      result = await doTranslate();
-    } catch (firstErr) {
-      console.warn('[Phase2] Attempt 1 failed, retrying:', firstErr.message);
-      await new Promise(r => setTimeout(r, 800));
-      result = await doTranslate();
-    }
-    if (result?.limitExceeded) return { limitExceeded: true };
-
-    if (primaryTranslated && roomId) {
-      console.log('[Phase2Only] Sending translation update:', primaryTranslated.substring(0, 30));
-      sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
-      if (!isTrialRef.current && !useOwnKeys) refreshBalance();
-    } else {
-      console.warn('[Phase2Only] No translation result — primaryTranslated:', !!primaryTranslated, 'roomId:', !!roomId);
-    }
-
-    return { translations, primaryTranslated, primaryTargetLang: finalTargetLang };
   }
 
   // ── FreeTalk VAD hook ──
@@ -521,7 +444,9 @@ export default function useTranslation({
         };
         backupRecRef.current.start(100);
         console.log('[STT] Backup recording started (STT fallback)');
-      } catch {}
+      } catch (e) {
+        console.warn('[STT] Backup mic access failed:', e.name, e.message);
+      }
     };
     backupTimer = setTimeout(() => {
       // If no final results after 2s, start backup recording as safety net
@@ -530,11 +455,11 @@ export default function useTranslation({
       }
     }, 2000);
 
-    let processedFinals = new Set();
+    processedFinalsRef.current = new Set();
     let errorCount = 0;
 
     recognition.onresult = (event) => {
-      handleSpeechResult(event, processedFinals);
+      handleSpeechResult(event, processedFinalsRef.current);
       // Cancel backup timer if we got results — STT is working
       if (backupTimer && allWordsRef.current) {
         clearTimeout(backupTimer);
@@ -546,6 +471,17 @@ export default function useTranslation({
       if (event.error === 'no-speech') return;
       errorCount++;
       console.warn(`[STT] Error: ${event.error} (count=${errorCount})`);
+      // ── Mic permission denied → show visible error to user ──
+      if (event.error === 'not-allowed' || event.error === 'audio-capture') {
+        console.error('[STT] Microphone access denied — user needs to grant permission');
+        setRecording(false);
+        streamingModeRef.current = false;
+        setStreamingMsg({ original: '', translated: null, isStreaming: false,
+          _micError: event.error === 'not-allowed' ? 'mic_denied' : 'mic_unavailable' });
+        setTimeout(() => setStreamingMsg(null), 3000);
+        if (roomId) setSpeakingState(roomId, false);
+        return;
+      }
       // Start backup immediately on error
       if (!backupRecRef.current) startBackupIfNeeded();
       if (errorCount >= 3 && !whisperOnlyRef.current) {
@@ -556,7 +492,7 @@ export default function useTranslation({
 
     recognition.onend = () => {
       if (streamingModeRef.current && !stoppingRef.current) {
-        processedFinals = new Set();
+        processedFinalsRef.current = new Set();
         try { recognition.start(); } catch {}
       }
     };
@@ -581,22 +517,30 @@ export default function useTranslation({
     // Stop keepalive
     if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
 
-    // Stop speech recognition
+    // Stop speech recognition — signal stop but keep ref alive briefly
     streamingModeRef.current = false;
+    const hadSpeechRec = !!speechRecRef.current;
     if (speechRecRef.current) {
       try { speechRecRef.current.stop(); } catch {}
-      speechRecRef.current = null;
+      // DON'T null the ref yet — onresult callback may still fire
     }
 
     // Stop Deepgram if active
     stopDeepgramStreaming();
 
+    // ── GRACE PERIOD: Wait for browser STT to finalize last words ──
+    // recognition.stop() is async — the browser fires a final onresult event
+    // to finalize interim text, but it takes 100-500ms. Without waiting,
+    // the last spoken words are silently lost.
+    if (hadSpeechRec) {
+      await new Promise(r => setTimeout(r, 350));
+    }
+    // Now safe to null the ref
+    speechRecRef.current = null;
+
     // ── CRITICAL: Include BOTH finalized AND interim text ──
-    // allWordsRef only contains finalized STT results. But lastInterimRef contains
-    // text the user SEES in the preview bubble that hasn't been finalized yet.
-    // recognition.stop() is async — the browser may NOT finalize interim text
-    // before we read allWordsRef. Without this, partial speech is silently lost.
-    // Rule: every piece of recognized text MUST be sent, never discarded.
+    // After grace period, allWordsRef should have the final results.
+    // lastInterimRef is a safety net for any remaining unfinalised text.
     const interimText = lastInterimRef.current?.trim() || '';
     const allOriginal = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
 
@@ -652,13 +596,6 @@ export default function useTranslation({
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
 
-    // CRITICAL: Reset stoppingRef BEFORE the async translateAndSend call.
-    // Previously, stoppingRef stayed true during the entire API call (~1-2s).
-    // If the user started + stopped a second recording during that time,
-    // stopStreamingTranslation would return immediately (line 446 guard),
-    // silently discarding the second message.
-    stoppingRef.current = false;
-
     try {
       const result = await translateAndSend(allOriginal);
       if (result.limitExceeded) {
@@ -670,6 +607,12 @@ export default function useTranslation({
     } catch (e) {
       console.error('[stopStreaming] Translation error:', e);
       setStreamingMsg(null);
+    } finally {
+      // CRITICAL: Reset stoppingRef AFTER the async translateAndSend completes.
+      // Previously, stoppingRef was reset BEFORE the async call, so if the user
+      // started + stopped a second recording during the API call (~1-2s),
+      // stopStreamingTranslation would not guard properly and could lose the message.
+      stoppingRef.current = false;
     }
   }
 
@@ -701,8 +644,12 @@ export default function useTranslation({
       };
       recRef.current.start(100);
     } catch (err) {
+      console.error('[Recording] Mic access failed:', err.name, err.message);
       setRecording(false);
-      setStreamingMsg(null);
+      setStreamingMsg({ original: '', translated: null, isStreaming: false,
+        _micError: err.name === 'NotAllowedError' ? 'mic_denied' : 'mic_unavailable' });
+      // Auto-clear error after 3s
+      setTimeout(() => setStreamingMsg(null), 3000);
       if (roomId) setSpeakingState(roomId, false);
     }
   }
@@ -829,7 +776,6 @@ export default function useTranslation({
     setVadSensitivity,      // change sensitivity preset
     streamingModeRef,
     speechRecRef,
-    reviewTimerRef,
     backupRecRef,
     backupStreamRef,
     wordBufferRef,

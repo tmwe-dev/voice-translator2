@@ -91,7 +91,7 @@ export default function useRoomActions({
   const leaveRoomTemporary = useCallback(() => {
     if (!roomPolling.roomId) return;
     try {
-      let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+      let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
       const roomData = {
         roomId: roomPolling.roomId,
         host: roomPolling.roomInfo?.host,
@@ -125,7 +125,7 @@ export default function useRoomActions({
       else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
       else { auth.setIsTrial(false); auth.setIsTopPro(false); }
       try {
-        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
       } catch {}
@@ -133,7 +133,7 @@ export default function useRoomActions({
       setStatus('');
     } catch (e) {
       try {
-        let activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]');
+        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
       } catch {}

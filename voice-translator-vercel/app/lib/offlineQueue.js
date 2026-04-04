@@ -79,6 +79,9 @@ class OfflineQueue {
    */
   async enqueue(body) {
     if (!this.db) {
+      await this.init();
+    }
+    if (!this.db) {
       throw new Error('Database not initialized');
     }
 

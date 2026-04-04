@@ -64,6 +64,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{__html: `
           window.__VT_GOOGLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}";
           window.__VT_APPLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''}";
+          window.__VT_TESTING_MODE = ${process.env.NEXT_PUBLIC_TESTING_MODE !== 'false' ? 'true' : 'false'};
         `}} />
         {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
           <script src="https://accounts.google.com/gsi/client" async defer />

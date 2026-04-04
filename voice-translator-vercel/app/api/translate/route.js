@@ -289,6 +289,6 @@ export async function POST(req) {
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'translate', source: 'api' } });
     }).catch(() => {});
-    return apiError(ErrorCode.TRANSLATION_FAILED, e.message);
+    return apiError(ErrorCode.TRANSLATION_FAILED, 'Translation service temporarily unavailable');
   }
 }

@@ -162,7 +162,7 @@ export async function createOffer(pc) {
  * Create SDP answer from received offer
  */
 export async function createAnswer(pc, offerSdpStr) {
-  const offer = JSON.parse(offerSdpStr);
+  let offer; try { offer = JSON.parse(offerSdpStr); } catch { throw new Error('Invalid offer SDP'); }
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
@@ -173,7 +173,7 @@ export async function createAnswer(pc, offerSdpStr) {
  * Accept SDP answer
  */
 export async function acceptAnswer(pc, answerSdpStr) {
-  const answer = JSON.parse(answerSdpStr);
+  let answer; try { answer = JSON.parse(answerSdpStr); } catch { throw new Error('Invalid answer SDP'); }
   await pc.setRemoteDescription(new RTCSessionDescription(answer));
 }
 
@@ -182,7 +182,7 @@ export async function acceptAnswer(pc, answerSdpStr) {
  */
 export async function addIceCandidate(pc, candidateStr) {
   try {
-    const candidate = JSON.parse(candidateStr);
+    let candidate; try { candidate = JSON.parse(candidateStr); } catch { console.warn('[WebRTC] Invalid ICE candidate JSON'); return; }
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
   } catch (e) {
     console.error('[WebRTC] ICE candidate error:', e);

@@ -157,10 +157,12 @@ class MessageQueue {
       if (typeof sessionStorage !== 'undefined') {
         const saved = sessionStorage.getItem('vt_msg_queue');
         if (saved) {
-          const items = JSON.parse(saved);
-          // Only restore items less than 5 minutes old
-          const cutoff = Date.now() - 5 * 60 * 1000;
-          this.queue = items.filter(item => item.queuedAt > cutoff);
+          let items; try { items = JSON.parse(saved); } catch { items = null; }
+          if (items) {
+            // Only restore items less than 5 minutes old
+            const cutoff = Date.now() - 5 * 60 * 1000;
+            this.queue = items.filter(item => item.queuedAt > cutoff);
+          }
           if (this.queue.length > 0) {
             console.log(`[MessageQueue] Restored ${this.queue.length} queued messages`);
             this._scheduleRetry();

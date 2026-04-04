@@ -35,8 +35,10 @@ async function handlePost(req) {
     }
 
     // Check tier — must be PRO or TOP PRO (not trial/free)
+    // TESTING_MODE: skip tier check
+    const testingMode = process.env.TESTING_MODE === 'true';
     const isTrial = !user.credits && !user.useOwnKeys;
-    if (isTrial) {
+    if (isTrial && !testingMode) {
       return NextResponse.json({ error: 'Voice cloning requires PRO plan' }, { status: 403 });
     }
 
@@ -49,9 +51,9 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'ElevenLabs API key not available' }, { status: 400 });
     }
 
-    // Check credits (skip if using own key)
+    // Check credits (skip if using own key or TESTING_MODE)
     const isOwnKey = user.useOwnKeys && user.apiKeys?.elevenlabs;
-    if (!isOwnKey && (user.credits || 0) < CLONE_COST_CREDITS) {
+    if (!isOwnKey && !testingMode && (user.credits || 0) < CLONE_COST_CREDITS) {
       return NextResponse.json({
         error: `Insufficient credits. Need ${CLONE_COST_CREDITS} credits (€${(CLONE_COST_CREDITS / 100).toFixed(2)})`,
         needCredits: CLONE_COST_CREDITS

@@ -81,10 +81,10 @@ export async function redis(command, ...args) {
     if (command === 'SET' && args[0] && args[1]) {
       fallbackSet(args[0], args[1]);
     }
-    // For non-critical commands (INCR for rate limiting), fail open
+    // For INCR (rate limiting), fail-closed to prevent abuse
     if (command === 'INCR') {
-      console.warn(`[Redis] Fail-open for INCR ${args[0]}`);
-      return 1; // Allow the request
+      console.warn(`[Redis] Fail-closed for INCR ${args[0]}`);
+      return 9999; // Return high count to trigger rate limit check failure
     }
 
     throw err;
