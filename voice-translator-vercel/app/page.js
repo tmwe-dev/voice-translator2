@@ -439,6 +439,27 @@ function HomeInner() {
         setPrefs(p => ({...p, lang: langParam}));
       }
 
+      // Guest pre-fill from QR invite (gn=name, gg=gender, gl=language)
+      const guestNameParam = urlParams.get('gn');
+      const guestGenderParam = urlParams.get('gg');
+      const guestLangParam = urlParams.get('gl');
+      if (guestNameParam || guestGenderParam || guestLangParam) {
+        setPrefs(p => ({
+          ...p,
+          ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
+          ...(guestGenderParam ? { gender: guestGenderParam } : {}),
+          ...(guestLangParam ? { lang: guestLangParam } : {}),
+        }));
+        if (guestLangParam && LANGS.find(l => l.code === guestLangParam)) {
+          setMyLang(guestLangParam);
+          setInviteMsgLang(guestLangParam);
+        }
+        // Flag for instant join mode
+        if (typeof window !== 'undefined') {
+          window.__VT_GUEST_PREFILLED = true;
+        }
+      }
+
       // Capture referral code from URL
       const refParam = urlParams.get('ref');
       if (refParam) {

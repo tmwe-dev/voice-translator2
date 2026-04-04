@@ -42,6 +42,7 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
   const iL = inviteMsgLang || prefs.lang || 'en';
   const tI = (key) => t(iL, key);
   const isInvited = !!inviteMsgLang;
+  const isPrefilled = typeof window !== 'undefined' && window.__VT_GUEST_PREFILLED && prefs.name;
 
   useEffect(() => {
     if (guestStep === 0 && nameInputRef.current) {
@@ -176,6 +177,111 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
           </PrimaryBtn>
 
           {status && <div style={{ textAlign: 'center', marginTop: 10, fontSize: 12, color: C.red }}>{status}</div>}
+        </GlassCard>
+
+        <style>{`@keyframes vtScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>
+      </div>
+    );
+  }
+
+  // ─── INSTANT JOIN: guest with pre-filled data from QR ───
+  if (isInvited && isPrefilled) {
+    const guestLangInfo = LANGS.find(l => l.code === myLang);
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100dvh', padding: '20px 16px',
+        background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute', top: '-10%', left: '10%', width: '80vw', height: '80vw',
+          borderRadius: '50%', background: `radial-gradient(circle, ${C.accent}12 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: '-20%', right: '-10%', width: '60vw', height: '60vw',
+          borderRadius: '50%', background: `radial-gradient(circle, ${C.purple}08 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }} />
+
+        <GlassCard style={{ textAlign: 'center', maxWidth: 380 }}>
+          {/* Invite image / welcome illustration */}
+          <div style={{
+            width: 100, height: 100, borderRadius: 28, margin: '0 auto 20px',
+            background: `linear-gradient(135deg, ${C.accent}20, ${C.purple}20)`,
+            border: `2px solid ${C.accent}25`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48,
+            boxShadow: `0 12px 40px ${C.accent}15`,
+          }}>
+            🌍🎙️
+          </div>
+
+          {/* Welcome message */}
+          <div style={{
+            fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 6,
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          }}>
+            {tI('inviteWelcome') || 'Benvenuto!'}
+          </div>
+
+          <div style={{ fontSize: 15, color: C.textSecondary, lineHeight: 1.6, marginBottom: 24 }}>
+            {tI('inviteInstructions') || 'Sei stato invitato a una conversazione tradotta in tempo reale.'}
+          </div>
+
+          {/* Guest info card */}
+          <div style={{
+            background: `${C.accent}08`, borderRadius: 16, padding: '16px 18px',
+            marginBottom: 24, border: `1px solid ${C.accent}15`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 22, overflow: 'hidden', flexShrink: 0 }}>
+                <AvatarImg src={prefs.avatar} size={44} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: C.textPrimary }}>{prefs.name}</div>
+                <div style={{ fontSize: 13, color: C.textSecondary }}>
+                  {guestLangInfo?.flag} {guestLangInfo?.name}
+                  {prefs.gender && ` · ${prefs.gender === 'male' ? '♂️' : prefs.gender === 'female' ? '♀️' : '⚧️'}`}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ONE BIG BUTTON */}
+          <button onClick={() => {
+            savePrefs(prefs);
+            handleJoinRoom();
+          }} style={{
+            width: '100%', padding: '18px 24px', borderRadius: 18, border: 'none',
+            background: `linear-gradient(135deg, ${C.accent} 0%, #1EB898 50%, ${C.purple} 100%)`,
+            color: '#fff', fontSize: 18, fontWeight: 800, fontFamily: FONT,
+            cursor: 'pointer', letterSpacing: -0.3,
+            boxShadow: `0 8px 32px ${C.accent}30, 0 4px 12px rgba(0,0,0,0.3)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            WebkitTapHighlightColor: 'transparent',
+            transition: 'transform 0.15s, box-shadow 0.15s',
+          }}
+            onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
+            onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            🎙️ {tI('inviteJoinBtn') || 'Entra nella Chat'}
+          </button>
+
+          {status && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: C.red }}>{status}</div>}
+
+          {/* Small link to edit preferences */}
+          <button onClick={() => {
+            if (typeof window !== 'undefined') window.__VT_GUEST_PREFILLED = false;
+            setGuestStep(0);
+          }} style={{
+            marginTop: 14, background: 'none', border: 'none',
+            color: C.textMuted, fontSize: 11, cursor: 'pointer', fontFamily: FONT,
+            textDecoration: 'underline',
+          }}>
+            Modifica nome o lingua
+          </button>
         </GlassCard>
 
         <style>{`@keyframes vtScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>

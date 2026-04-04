@@ -47,6 +47,10 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
   const [created, setCreated] = useState(false);
   const [createdRoomId, setCreatedRoomId] = useState(roomId || '');
   const [copied, setCopied] = useState(false);
+  // Guest info fields
+  const [guestName, setGuestName] = useState('');
+  const [guestGender, setGuestGender] = useState('');
+  const [guestLang, setGuestLang] = useState('en');
   const canvasRef = useRef(null);
 
   const selectGender = useCallback(async (g) => {
@@ -79,7 +83,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
 
   useEffect(() => {
     if (!createdRoomId || !canvasRef.current) return;
-    const url = `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1`;
+    const url = `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1` + (guestName ? `&gn=${encodeURIComponent(guestName)}` : '') + (guestGender ? `&gg=${guestGender}` : '') + (guestLang ? `&gl=${guestLang}` : '');
     let cancelled = false;
     import('qrcode').then(QRCode => {
       if (cancelled) return;
@@ -94,7 +98,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
 
   const copyLink = useCallback(() => {
     if (!createdRoomId) return;
-    const url = `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1`;
+    const url = `${APP_URL}?room=${createdRoomId}&lang=${lang}&auto=1` + (guestName ? `&gn=${encodeURIComponent(guestName)}` : '') + (guestGender ? `&gg=${guestGender}` : '') + (guestLang ? `&gl=${guestLang}` : '');
     navigator.clipboard.writeText(url).then(() => {
       vibrate(); setCopied(true); setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
@@ -222,7 +226,84 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
           )}
         </div>
 
-        {/* Bottone manuale rimosso — la stanza si crea automaticamente al tap sul genere */}
+        {/* ═══ DATI INVITATO ═══ */}
+        {gender && (
+          <div style={{ padding: 16, borderRadius: 18, ...glass.card }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: '#FF9F43', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2 }}>
+              Chi stai invitando?
+            </div>
+
+            {/* Nome invitato */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: glass.text.muted, marginBottom: 4 }}>Nome</div>
+              <input
+                value={guestName}
+                onChange={e => setGuestName(e.target.value)}
+                placeholder="Es. Maria, John..."
+                maxLength={20}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 12, boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                  color: glass.text.primary, fontSize: 14, fontFamily: FONT, outline: 'none',
+                }}
+              />
+            </div>
+
+            {/* Sesso invitato */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, color: glass.text.muted, marginBottom: 4 }}>Sesso</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { key: 'male', icon: '♂️', label: 'Lui' },
+                  { key: 'female', icon: '♀️', label: 'Lei' },
+                ].map(g => (
+                  <button key={g.key} onClick={() => { vibrate(); setGuestGender(g.key); }}
+                    style={{
+                      flex: 1, padding: '10px 8px', borderRadius: 12, cursor: 'pointer',
+                      background: guestGender === g.key
+                        ? (g.key === 'male' ? 'rgba(59,130,246,0.2)' : 'rgba(236,72,153,0.2)')
+                        : 'rgba(255,255,255,0.03)',
+                      border: guestGender === g.key
+                        ? (g.key === 'male' ? '1px solid rgba(59,130,246,0.4)' : '1px solid rgba(236,72,153,0.4)')
+                        : '1px solid rgba(255,255,255,0.06)',
+                      color: guestGender === g.key
+                        ? (g.key === 'male' ? '#93C5FD' : '#F9A8D4')
+                        : glass.text.secondary,
+                      fontFamily: FONT, fontSize: 13, fontWeight: guestGender === g.key ? 700 : 400,
+                      textAlign: 'center', transition: 'all 0.2s',
+                    }}>
+                    <span style={{ fontSize: 18 }}>{g.icon}</span> {g.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lingua invitato */}
+            <div>
+              <div style={{ fontSize: 10, color: glass.text.muted, marginBottom: 4 }}>Lingua</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {COMMON_LANGS.filter(c => c !== lang).map(code => {
+                  const info = LANGS.find(l => l.code === code);
+                  const sel = code === guestLang;
+                  return (
+                    <button key={code} onClick={() => { vibrate(); setGuestLang(code); }}
+                      style={{
+                        padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
+                        background: sel ? 'linear-gradient(135deg, #FF9F43, #FF6B6B)' : 'rgba(255,255,255,0.03)',
+                        border: sel ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                        color: sel ? '#000' : glass.text.secondary,
+                        fontSize: 11, fontWeight: sel ? 700 : 400, fontFamily: FONT,
+                        display: 'flex', alignItems: 'center', gap: 4, transition: 'all 0.2s',
+                      }}>
+                      <span style={{ fontSize: 13 }}>{info?.flag}</span>
+                      {info?.name || code}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ═══ CREATING SPINNER ═══ */}
         {creating && (
@@ -260,9 +341,15 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
             }}>
               {createdRoomId}
             </div>
-            <div style={{ fontSize: 11, color: glass.text.muted, marginBottom: 18 }}>
-              {langInfo?.flag} {langInfo?.name} · {ALL_VOICES.find(v => v.id === voice)?.label}
+            <div style={{ fontSize: 11, color: glass.text.muted, marginBottom: 8 }}>
+              Tu: {langInfo?.flag} {langInfo?.name} · {ALL_VOICES.find(v => v.id === voice)?.label}
             </div>
+            {(guestName || guestLang) && (
+              <div style={{ fontSize: 11, color: '#FF9F43', marginBottom: 18 }}>
+                Invitato: {guestName || '?'} · {LANGS.find(l => l.code === guestLang)?.flag} {LANGS.find(l => l.code === guestLang)?.name}
+                {guestGender && ` · ${guestGender === 'male' ? '♂️' : '♀️'}`}
+              </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               <button onClick={copyLink}
