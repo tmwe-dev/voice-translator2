@@ -157,7 +157,6 @@ export const BROWSER_SPEAK_CHAR_RATE = 80;
 // STT Engine Selection — languages where browser SpeechRecognition is unreliable
 // These languages use Whisper/gpt-4o-mini-transcribe as PRIMARY STT engine
 export const WHISPER_PRIMARY_LANGS = new Set([
-  'th',  // Thai — tonal, no spaces, browser STT very poor
   'zh',  // Chinese — character-based, browser STT mediocre
   'ja',  // Japanese — mixed scripts, browser STT inconsistent
   'ko',  // Korean — browser STT acceptable but Whisper is much better

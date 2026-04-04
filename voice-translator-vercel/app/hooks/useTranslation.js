@@ -71,6 +71,7 @@ export default function useTranslation({
 
   // Refs
   const speechRecRef = useRef(null);
+  const textInputRef = useRef('');
   const allWordsRef = useRef('');
   const lastInterimRef = useRef('');
   const streamingModeRef = useRef(false);
@@ -98,6 +99,11 @@ export default function useTranslation({
   // Legacy refs kept for export compatibility
   const wordBufferRef = useRef('');
   const translatedChunksRef = useRef([]);
+
+  // Keep textInputRef in sync with textInput state (for access in callbacks)
+  useEffect(() => {
+    textInputRef.current = textInput;
+  }, [textInput]);
 
   // ── Extracted hooks ──
 
@@ -293,7 +299,11 @@ export default function useTranslation({
     }
     // Show interim preview
     const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript : '');
-    if (preview) setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+    if (preview) {
+      setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+      // Also populate textInput so user can edit before sending
+      setTextInput(preview);
+    }
     lastInterimRef.current = interimTranscript;
   }
 
@@ -415,11 +425,12 @@ export default function useTranslation({
     setRecording(true);
     if (roomId) setSpeakingState(roomId, true);
 
-    allWordsRef.current = '';
+    // Initialize allWordsRef from current textInput so dictation appends to existing text
+    allWordsRef.current = textInputRef.current || '';
     lastInterimRef.current = '';
     streamingModeRef.current = true;
     lowConfidenceCountRef.current = 0;
-    setStreamingMsg({ original: '', translated: null, isStreaming: true });
+    setStreamingMsg({ original: allWordsRef.current, translated: null, isStreaming: true });
 
     const recognition = new SpeechRecognition();
     const langObj = getLang(currentLang);
@@ -592,7 +603,9 @@ export default function useTranslation({
     console.log(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
 
     // ── Translate and send using DRY helper ──
+    // Also populate textInput so user can see/edit the dictated text in the textarea
     setStreamingMsg({ original: allOriginal, translated: '...', isStreaming: false });
+    setTextInput(allOriginal);
     setRecording(false);
     if (roomId) setSpeakingState(roomId, false);
 

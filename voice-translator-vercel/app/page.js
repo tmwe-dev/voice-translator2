@@ -493,6 +493,12 @@ function HomeInner() {
             }, 500);
           }
         }
+
+        // Also auto-join when guest data is pre-filled from QR (even without saved prefs)
+        const canAutoJoinFromQR = autoJoin && guestNameParam && (guestLangParam || langParam);
+        if (canAutoJoinFromQR) {
+          setTimeout(() => setAutoJoinTriggered(true), 800); // slightly longer delay for state to settle
+        }
       }
       if (paymentStatus === 'success' && paymentCredits) {
         window.history.replaceState({}, '', window.location.pathname);
@@ -1292,7 +1298,7 @@ function HomeInner() {
         } catch (e) { setStatus('Error: ' + e.message); throw e; }
       }}
       roomId={roomPolling.roomId}
-      setViewAfterCreate={() => setView('lobby')} />
+      setViewAfterCreate={() => setView('room')} />
     </Suspense>
   );
 
