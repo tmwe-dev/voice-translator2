@@ -190,9 +190,9 @@ export default function useAuth() {
     }
   }
 
-  async function saveUserApiKeys() {
+  async function saveUserApiKeys(onResult) {
     const token = userTokenRef.current;
-    if (!token) return false;
+    if (!token) { onResult?.('error', 'Not authenticated'); return false; }
     setAuthLoading(true);
     try {
       const res = await fetch('/api/user', {
@@ -209,10 +209,15 @@ export default function useAuth() {
       if (data.ok) {
         setUseOwnKeys(true);
         if (apiKeyInputs.elevenlabs?.trim()) setIsTopPro(true);
+        onResult?.('ok');
         return true;
       }
+      console.error('[Auth] save-keys failed:', data.error);
+      onResult?.('error', data.error || 'Save failed');
       return false;
     } catch (e) {
+      console.error('[Auth] save-keys error:', e.message);
+      onResult?.('error', e.message);
       return false;
     } finally {
       setAuthLoading(false);

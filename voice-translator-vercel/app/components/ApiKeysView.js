@@ -1,7 +1,23 @@
 'use client';
+import { useState } from 'react';
 
 export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveUserApiKeys, authLoading,
   userAccount, setView, status, theme, setTheme }) {
+  const [saveStatus, setSaveStatus] = useState(null); // 'ok' | 'error' | null
+  const [saveError, setSaveError] = useState('');
+  const hasAnyKey = !!(apiKeyInputs.openai?.trim() || apiKeyInputs.anthropic?.trim() || apiKeyInputs.gemini?.trim() || apiKeyInputs.elevenlabs?.trim());
+
+  const handleSave = async () => {
+    setSaveStatus(null);
+    setSaveError('');
+    const ok = await saveUserApiKeys((result, err) => {
+      setSaveStatus(result);
+      if (err) setSaveError(err);
+      // Auto-clear success after 3s
+      if (result === 'ok') setTimeout(() => setSaveStatus(null), 3000);
+    });
+  };
+
   return (
     <div style={S.page}>
       <div style={S.scrollCenter}>
@@ -41,11 +57,21 @@ export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveU
                 onChange={e => setApiKeyInputs({...apiKeyInputs, elevenlabs:e.target.value})} />
             </div>
           </div>
-          <button style={{...S.btn, marginTop:8, opacity:apiKeyInputs.openai.trim()?1:0.4}}
-            disabled={!apiKeyInputs.openai.trim() || authLoading}
-            onClick={saveUserApiKeys}>
+          <button style={{...S.btn, marginTop:8, opacity:hasAnyKey?1:0.4}}
+            disabled={!hasAnyKey || authLoading}
+            onClick={handleSave}>
             {authLoading ? L('saving') : L('saveUseMyKeys')}
           </button>
+          {saveStatus === 'ok' && (
+            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(34,197,94,0.15)', color:'#22c55e', fontSize:13, textAlign:'center'}}>
+              Chiavi salvate con successo!
+            </div>
+          )}
+          {saveStatus === 'error' && (
+            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(239,68,68,0.15)', color:'#ef4444', fontSize:13, textAlign:'center'}}>
+              Errore: {saveError || 'Salvataggio fallito'}
+            </div>
+          )}
         </div>
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
