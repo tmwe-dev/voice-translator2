@@ -12,7 +12,7 @@ export default function useElevenLabsSync(auth) {
       fetch(`/api/tts-elevenlabs?action=voices&token=${token}`)
         .then(r => r.json())
         .then(data => { if (data.voices) auth.setElevenLabsVoices(data.voices); })
-        .catch(() => {});
+        .catch(e => console.warn('[useElevenLabsSync] fetch voices failed:', e?.message || e));
     }
   }, [auth.canUseElevenLabs]);
 
@@ -21,13 +21,13 @@ export default function useElevenLabsSync(auth) {
     try {
       const savedVoice = localStorage.getItem('vt-elvoice');
       if (savedVoice) auth.setSelectedELVoice(savedVoice);
-    } catch {}
+    } catch (e) { console.warn('[useElevenLabsSync] localStorage error:', e?.message); }
   }, []);
 
   // Persist voice selection
   useEffect(() => {
     if (auth.selectedELVoice) {
-      try { localStorage.setItem('vt-elvoice', auth.selectedELVoice); } catch {}
+      try { localStorage.setItem('vt-elvoice', auth.selectedELVoice); } catch (e) { console.warn('[useElevenLabsSync] localStorage error:', e?.message); }
     }
   }, [auth.selectedELVoice]);
 

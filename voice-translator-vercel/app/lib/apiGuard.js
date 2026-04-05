@@ -33,7 +33,7 @@ function extractUserKey(req) {
         return `usr:${token.substring(0, 8)}${token.substring(token.length - 4)}`;
       }
     }
-  } catch {}
+  } catch (e) { console.warn('[apiGuard] extractUserKey failed:', e?.message || e); }
   return null;
 }
 
@@ -145,7 +145,7 @@ export function withApiGuard(handler, opts = {}) {
 let _sentry = null;
 async function getSentry() {
   if (_sentry) return _sentry;
-  try { _sentry = await import('@sentry/nextjs'); return _sentry; } catch { return null; }
+  try { _sentry = await import('@sentry/nextjs'); return _sentry; } catch (e) { console.warn('[apiGuard] sentry import failed:', e?.message || e); return null; }
 }
 
 function trackError(endpoint, error, req) {

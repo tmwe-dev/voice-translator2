@@ -197,7 +197,7 @@ async function handlePost(req) {
           if (billingEmail && !isOwnKey) {
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
-            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch {}
+            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch (e) { console.warn('[tts-elevenlabs] Fallback credit deduct failed:', e?.message); }
           }
           return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString() } });
         }

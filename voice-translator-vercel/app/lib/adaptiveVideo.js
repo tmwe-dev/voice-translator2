@@ -76,7 +76,7 @@ export function startAdaptiveVideo(pc, senders, onQualityChange) {
 
       lastBytesSent = bytesSent;
       lastTimestamp = timestamp;
-    } catch {}
+    } catch (e) { console.warn('[adaptiveVideo] stats check failed:', e?.message || e); }
   }, 5000); // Check every 5s
 
   return () => clearInterval(interval);

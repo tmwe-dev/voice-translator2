@@ -43,7 +43,8 @@ export function loadPrefs() {
   try {
     const raw = localStorage.getItem(PREFS_KEY);
     return raw ? JSON.parse(raw) : null;
-  } catch {
+  } catch (e) {
+    console.warn('[dualPersistence] JSON parse error:', e?.message);
     return null;
   }
 }
@@ -116,7 +117,8 @@ export async function mergeOnLogin(userToken) {
     savePrefs(merged, userToken);
 
     return merged;
-  } catch {
+  } catch (e) {
+    console.warn('[dualPersistence] mergeOnLogin failed:', e?.message || e);
     return localPrefs;
   }
 }
@@ -128,5 +130,5 @@ export function clearPrefs() {
   try {
     localStorage.removeItem(PREFS_KEY);
     localStorage.removeItem(SYNC_KEY);
-  } catch {}
+  } catch (e) { console.warn('[dualPersistence] localStorage error:', e?.message); }
 }

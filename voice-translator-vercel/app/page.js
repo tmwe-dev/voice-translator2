@@ -98,8 +98,7 @@ function HomeInner() {
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [inviteLang, setInviteLang] = useState('en');
   const [inviteMsgLang, setInviteMsgLang] = useState(null);
-  const [showShareApp, setShowShareApp] = useState(false);
-  const [shareAppLang, setShareAppLang] = useState('en');
+  // [Removed dead code: showShareApp, shareAppLang — unused]
 
   // FREE tier usage tracking (extracted hook)
   const freeTier = useFreeTierTracking();
@@ -211,7 +210,7 @@ function HomeInner() {
       roomPolling.addIncomingMessage(message);
       // ── Send delivery ack back to sender via P2P ──
       if (sendDirectMessageRef.current && message.id) {
-        try { sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }); } catch {}
+        try { sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }); } catch (e) { /* P2P ack send failed, non-critical */ }
       }
     }
     // Phase 2: translation update arrived via P2P — forward to same handler as Realtime
@@ -341,7 +340,7 @@ function HomeInner() {
           setStatus(`${result.sent} messaggi offline inviati`);
           setTimeout(() => setStatus(''), 3000);
         }
-      } catch {}
+      } catch (e) { console.warn('[Page] Offline message flush failed:', e?.message); }
     }
     function onOnline() { flushQueue(); }
     window.addEventListener('online', onOnline);
@@ -503,13 +502,6 @@ function HomeInner() {
   // =============================================
   // SHARE
   // =============================================
-  function shareApp(lang) {
-    const url = `${APP_URL}?lang=${lang || shareAppLang}`;
-    const text = t(lang || shareAppLang, 'shareAppText');
-    if (navigator.share) navigator.share({ title:'BarTalk', text, url });
-    else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
-  }
-
   function shareRoom() {
     const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}`;
     if (navigator.share) navigator.share({ title:'BarTalk', text:`${t(inviteLang,'inviteText')}`, url });
@@ -576,7 +568,7 @@ function HomeInner() {
       activeRooms = activeRooms.filter(r => r.roomId !== roomData.roomId);
       activeRooms.unshift(roomData);
       localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms.slice(0, 10)));
-    } catch {}
+    } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
     roomPolling.stopPolling();
     roomPolling.leaveRoom();
     setView('home');
@@ -599,7 +591,7 @@ function HomeInner() {
         let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
-      } catch {}
+      } catch (e) { console.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
       setView('room');
       setStatus('');
     } catch (e) {
@@ -608,7 +600,7 @@ function HomeInner() {
         let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
-      } catch {}
+      } catch (e2) { console.warn('[Page] Cleanup active rooms on rejoin error failed:', e2?.message); }
       setStatus('Chat terminata');
       setTimeout(() => setStatus(''), 2000);
     }
@@ -631,7 +623,7 @@ function HomeInner() {
               const sumRes = await fetch('/api/summary', { method:'POST', headers:{'Content-Type':'application/json'},
                 body: JSON.stringify({ convId, userToken: auth.userTokenRef?.current || null }) });
               if (sumRes.ok) { const { summary } = await sumRes.json(); conversation.summary = summary; }
-            } catch {}
+            } catch (e) { console.warn('[Page] Summary fetch failed:', e?.message); }
             setSummaryLoading(false);
           }
           setCurrentConv(conversation); setView('summary');
@@ -799,7 +791,7 @@ function HomeInner() {
       onMessageRead={(msgId) => {
         // Send read receipt to partner via P2P DataChannel
         if (sendDirectMessageRef.current && msgId) {
-          try { sendDirectMessageRef.current({ type: 'msg-read', msgId }); } catch {}
+          try { sendDirectMessageRef.current({ type: 'msg-read', msgId }); } catch (e) { /* P2P read receipt failed, non-critical */ }
         }
       }}
       showChatActions={showChatActions} setShowChatActions={setShowChatActions}

@@ -271,7 +271,7 @@ async function handlePost(req) {
             }).catch(() => {})
         );
       }
-    } catch {}
+    } catch (e) { console.warn('[translate] Supabase tracking setup failed:', e?.message); }
     // Fire all background tasks without awaiting
     if (bgTasks.length > 0) Promise.allSettled(bgTasks).catch(() => {});
 

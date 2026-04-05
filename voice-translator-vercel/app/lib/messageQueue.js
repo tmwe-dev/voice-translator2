@@ -44,7 +44,7 @@ class MessageQueue {
       try {
         const sent = await this.onSendCallback(message);
         if (sent) return true;
-      } catch {}
+      } catch (e) { console.warn('[messageQueue] immediate send failed:', e?.message || e); }
     }
 
     // Failed or offline — queue it
@@ -88,7 +88,8 @@ class MessageQueue {
             console.warn('[MessageQueue] Dropping message after max retries:', item.message?.id);
           }
         }
-      } catch {
+      } catch (e) {
+        console.warn('[messageQueue] send failed:', e?.message || e);
         item.retries++;
         if (item.retries < MAX_RETRIES) toRetry.push(item);
       }
@@ -149,7 +150,7 @@ class MessageQueue {
           sessionStorage.removeItem('vt_msg_queue');
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[messageQueue] persist error:', e?.message); }
   }
 
   restoreQueue() {
@@ -169,7 +170,7 @@ class MessageQueue {
           }
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[messageQueue] restore error:', e?.message); }
   }
 }
 

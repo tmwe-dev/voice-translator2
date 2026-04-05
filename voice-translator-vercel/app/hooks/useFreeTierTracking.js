@@ -31,7 +31,7 @@ export default function useFreeTierTracking() {
           }
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[useFreeTierTracking] localStorage error:', e?.message); }
   }, []);
 
   // Persist usage changes

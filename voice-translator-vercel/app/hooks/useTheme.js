@@ -14,12 +14,12 @@ export default function useTheme() {
     try {
       const saved = localStorage.getItem('vt-theme');
       if (saved && Object.values(THEMES).includes(saved)) setTheme(saved);
-    } catch {}
+    } catch (e) { console.warn('[useTheme] localStorage error:', e?.message); }
   }, []);
 
   // Save on change
   useEffect(() => {
-    try { localStorage.setItem('vt-theme', theme); } catch {}
+    try { localStorage.setItem('vt-theme', theme); } catch (e) { console.warn('[useTheme] localStorage error:', e?.message); }
   }, [theme]);
 
   const S = useMemo(() => getStyles(theme), [theme]);

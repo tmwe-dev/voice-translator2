@@ -64,6 +64,11 @@ const TTS_INSTRUCTIONS = {
 
 export async function POST(req) {
   try {
+    // Production guard: test endpoints disabled unless TESTING_MODE active
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TESTING_MODE === 'false') {
+      return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+    }
+
     // Require admin pass in production to prevent abuse of platform API keys
     if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
       const { searchParams } = new URL(req.url);

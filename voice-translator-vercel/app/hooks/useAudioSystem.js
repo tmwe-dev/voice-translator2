@@ -94,7 +94,7 @@ export default function useAudioSystem({
       a.volume = 0.01;
       a.play().catch(() => {});
       setAudioReady(true);
-    } catch (e) {}
+    } catch (e) { /* cleanup */ }
   }
 
   // =============================================
@@ -105,14 +105,14 @@ export default function useAudioSystem({
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try { gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03); } catch {}
+    try { gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03); } catch (e) { /* cleanup */ }
   }
 
   function stopDucking() {
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try { gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06); } catch {}
+    try { gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06); } catch (e) { /* cleanup */ }
   }
 
   function connectToDucking(audioElement) {
@@ -123,7 +123,7 @@ export default function useAudioSystem({
       const source = ctx.createMediaElementSource(audioElement);
       source.connect(gain);
       return source;
-    } catch { return null; }
+    } catch (e) { console.warn('[useAudioSystem] connectToDucking failed:', e?.message || e); return null; }
   }
 
   // Auto-unlock on first touch/click
@@ -143,20 +143,20 @@ export default function useAudioSystem({
     return () => {
       if (persistentAudioRef.current) { persistentAudioRef.current.pause(); persistentAudioRef.current.src = ''; }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        try { audioContextRef.current.close(); } catch (e) {}
+        try { audioContextRef.current.close(); } catch (e) { /* cleanup */ }
       }
       if (persistentMicRef.current) {
-        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) {} });
+        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) { /* cleanup */ } });
         persistentMicRef.current = null;
       }
-      activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) {} });
+      activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) { /* cleanup */ } });
       activeBlobUrlsRef.current.clear();
       audioQueueRef.current = [];
       playedMsgIdsRef.current.clear();
       if (typeof speechSynthesis !== 'undefined') {
         try {
           speechSynthesis.cancel();
-        } catch (e) {}
+        } catch (e) { /* cleanup */ }
       }
     };
   }, []);
@@ -169,7 +169,7 @@ export default function useAudioSystem({
 
   async function getMicStream() {
     if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-      try { await audioContextRef.current.resume(); } catch {}
+      try { await audioContextRef.current.resume(); } catch (e) { console.warn('[useAudioSystem] resume context failed:', e?.message || e); }
     }
     if (persistentMicRef.current) {
       const tracks = persistentMicRef.current.getTracks();
@@ -178,7 +178,7 @@ export default function useAudioSystem({
         if (liveModeRef.current && track.applyConstraints) {
           try {
             await track.applyConstraints({ noiseSuppression: true, echoCancellation: true, autoGainControl: true });
-          } catch {}
+          } catch (e) { console.warn('[useAudioSystem] applyConstraints failed:', e?.message || e); }
         }
         return persistentMicRef.current;
       }
@@ -206,7 +206,7 @@ export default function useAudioSystem({
               persistentMicRef.current.getTracks().forEach(t => t.stop());
               persistentMicRef.current = null;
               await getMicStream();
-            } catch {}
+            } catch (e2) { console.warn('[useAudioSystem] mic reset failed:', e2?.message || e2); }
           }
         }
       }
@@ -221,7 +221,7 @@ export default function useAudioSystem({
       : true;
     navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       .then(stream => { persistentMicRef.current = stream; })
-      .catch(() => {});
+      .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e));
   }
 
   // =============================================
@@ -244,7 +244,7 @@ export default function useAudioSystem({
       gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.25);
-    } catch {}
+    } catch (e) { console.warn('[useAudioSystem] playNotifSound failed:', e?.message || e); }
   }
 
   // =============================================

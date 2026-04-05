@@ -199,11 +199,11 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
             });
             const data = await res.json();
             if (data.exists && !data.ended) checked.push(room);
-          } catch {}
+          } catch (e) { console.warn('[HomeView] Room check failed:', e?.message); }
         }
         localStorage.setItem('vt-active-rooms', JSON.stringify(checked));
         setActiveRooms(checked);
-      } catch {}
+      } catch (e) { console.warn('[HomeView] Active rooms check failed:', e?.message); }
     }
     checkActiveRooms();
   }, []);

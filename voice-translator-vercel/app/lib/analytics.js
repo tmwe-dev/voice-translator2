@@ -13,8 +13,9 @@ export function trackEvent(name, props = {}) {
     if (typeof window !== 'undefined' && window.plausible) {
       window.plausible(name, { props });
     }
-  } catch {
+  } catch (e) {
     // Silent fail — analytics should never break the app
+    console.warn('[analytics] trackEvent failed:', e?.message || e);
   }
 }
 
@@ -26,7 +27,7 @@ export function trackPageView(url) {
     if (typeof window !== 'undefined' && window.plausible) {
       window.plausible('pageview', { u: url });
     }
-  } catch {}
+  } catch (e) { console.warn('[analytics] trackPageView failed:', e?.message || e); }
 }
 
 // Pre-defined events for BarTalk

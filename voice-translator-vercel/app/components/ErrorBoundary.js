@@ -59,7 +59,7 @@ export default class ErrorBoundary extends Component {
     try {
       const nav = typeof navigator !== 'undefined' ? (navigator.language || '').slice(0, 2).toLowerCase() : 'en';
       lang = TEXTS[nav] ? nav : mapLang(nav);
-    } catch {}
+    } catch (e) { console.warn('[ErrorBoundary] Language detection failed:', e?.message); }
     const strings = TEXTS[lang] || TEXTS.en;
     return strings[key] || TEXTS.en[key] || key;
   }

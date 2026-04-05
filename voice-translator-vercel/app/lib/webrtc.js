@@ -123,7 +123,7 @@ export function addMediaTracks(pc, stream) {
  */
 export function removeMediaTracks(pc, senders) {
   for (const sender of senders) {
-    try { pc.removeTrack(sender); } catch {}
+    try { pc.removeTrack(sender); } catch (e) { /* cleanup */ }
   }
 }
 

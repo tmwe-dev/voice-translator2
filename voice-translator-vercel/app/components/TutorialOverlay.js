@@ -61,7 +61,7 @@ export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setS
       setTutorialStep(tutorialStep + 1);
     } else {
       setShowTutorial(false);
-      try { localStorage.setItem('vt-tutorial-done', '1'); } catch {}
+      try { localStorage.setItem('vt-tutorial-done', '1'); } catch (e) { console.warn('[TutorialOverlay] localStorage error:', e?.message); }
     }
   }, [isLastStep, tutorialStep, setTutorialStep, setShowTutorial]);
 

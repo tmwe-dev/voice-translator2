@@ -62,7 +62,7 @@ async function handlePost(req) {
           return NextResponse.json({ ...parsed, cached: true }, { headers: cors });
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[translate-consensus] Cache JSON parse error:', e?.message); }
 
     // ── Get top 3 providers for this language ──
     const chain = getProviderChain(targetLang);
@@ -110,7 +110,7 @@ async function handlePost(req) {
     if (consensus.guaranteed) {
       try {
         await redis('SET', cacheKey, JSON.stringify(response), 'EX', 86400);
-      } catch {}
+      } catch (e) { console.warn('[translate-consensus] Cache set failed:', e?.message); }
     }
 
     return NextResponse.json(response, { headers: cors });

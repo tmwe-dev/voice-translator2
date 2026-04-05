@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useRef, useEffect } from 'react';
+import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
@@ -46,6 +46,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const partnerVolumeBeforeMuteRef = useRef(0.7);
   const subtitleTimerRef = useRef(null);
   const remoteAudioRef = useRef(null);
+  const typingDebounceRef = useRef(null);
 
   // ── Compute derived values ──
   const myName = verifiedName || prefs.name;
@@ -357,7 +358,15 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             fontFamily:FONT, boxSizing:'border-box'}}
           placeholder={L('typePlaceholder')}
           value={textInput}
-          onChange={e => { setTextInput(e.target.value); if (e.target.value.trim()) sendTypingState(true); }}
+          onChange={e => {
+            setTextInput(e.target.value);
+            if (e.target.value.trim()) {
+              if (!typingDebounceRef.current) {
+                sendTypingState(true);
+                typingDebounceRef.current = setTimeout(() => { typingDebounceRef.current = null; }, 2000);
+              }
+            }
+          }}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); sendTextMessage(); }}}
           onBlur={() => sendTypingState(false)}
           disabled={sendingText}
@@ -426,7 +435,20 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         translatedText={taxiData.translated}
         fromLang={taxiData.fromLang}
         toLang={taxiData.toLang}
-        onPlayTTS={() => { if (playMessage) playMessage(taxiData.translated); }}
+        onPlayTTS={(text, lang) => {
+          if (playMessage && text) {
+            // Build a synthetic msg object compatible with playMessage
+            const syntheticMsg = {
+              id: 'taxi-tts',
+              original: taxiData.original,
+              translated: text,
+              sourceLang: taxiData.fromLang,
+              targetLang: lang || taxiData.toLang,
+              translations: { [lang || taxiData.toLang]: text },
+            };
+            playMessage(syntheticMsg);
+          }
+        }}
         S={S}
         theme={theme}
       />

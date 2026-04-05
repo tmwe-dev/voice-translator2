@@ -171,7 +171,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
           return;
         }
       }
-    } catch {}
+    } catch (e) { console.warn('[SpeakerView] TTS playback failed:', e?.message); }
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
@@ -251,7 +251,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
         }));
         setRouteInfo({ distKm, durationMin, steps });
       }
-    } catch {}
+    } catch (e) { console.warn('[SpeakerView] Route fetch failed:', e?.message); }
     setRouteLoading(false);
   }, []);
   fetchRouteRef.current = fetchRoute;
@@ -312,7 +312,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   }, [sourceLang, targetLang, translateText, playTTS, destCoords]);
 
   const stopBatchRecord = useCallback(() => {
-    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch {} speechRecRef.current = null; }
+    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch { /* cleanup */ } speechRecRef.current = null; }
   }, []);
 
   // ── Live mode (Deepgram streaming) ──
@@ -382,9 +382,9 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
               setTimeout(() => { setLiveText(''); setTranslatedText(''); }, 3000);
             })();
           }
-        } catch {}
+        } catch (e) { console.warn('[SpeakerView] WebSocket message handling failed:', e?.message); }
       };
-    } catch { setRecording(false); }
+    } catch (e) { console.warn('[SpeakerView] WebSocket setup failed:', e?.message); setRecording(false); }
   }, [sourceLang, targetLang, translateText, playTTS, startBatchRecord]);
 
   const stopLiveMode = useCallback(() => {
@@ -400,11 +400,11 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
       });
     }
     clearTimeout(translateTimerRef.current);
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch {} processorRef.current = null; }
-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch {} audioCtxRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} }); streamRef.current = null; }
+    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* cleanup */ } processorRef.current = null; }
+    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* cleanup */ } audioCtxRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* cleanup */ } }); streamRef.current = null; }
     if (wsRef.current) {
-      try { if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' })); wsRef.current.close(); } catch {}
+      try { if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' })); wsRef.current.close(); } catch { /* cleanup */ }
       wsRef.current = null;
     }
     setRecording(false);
@@ -413,10 +413,10 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   // ── Cleanup ──
   useEffect(() => {
     return () => {
-      if (audioRef.current) try { audioRef.current.pause(); } catch {}
-      if (wsRef.current) try { wsRef.current.close(); } catch {}
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
-      if (audioCtxRef.current?.state !== 'closed') try { audioCtxRef.current?.close(); } catch {}
+      if (audioRef.current) try { audioRef.current.pause(); } catch { /* cleanup */ }
+      if (wsRef.current) try { wsRef.current.close(); } catch { /* cleanup */ }
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* cleanup */ } });
+      if (audioCtxRef.current?.state !== 'closed') try { audioCtxRef.current?.close(); } catch { /* cleanup */ }
       clearTimeout(translateTimerRef.current);
     };
   }, []);

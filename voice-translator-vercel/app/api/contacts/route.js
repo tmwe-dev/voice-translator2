@@ -106,7 +106,7 @@ async function handlePost(req) {
             const p = JSON.parse(presenceData);
             online = p.online || false;
             lastSeen = p.lastSeen || 0;
-          } catch {}
+          } catch (e) { console.warn('[contacts] JSON parse error:', e?.message); }
         }
 
         contacts.push({

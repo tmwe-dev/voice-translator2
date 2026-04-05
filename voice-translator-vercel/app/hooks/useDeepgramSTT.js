@@ -148,7 +148,7 @@ export default function useDeepgramSTT({
               setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
             }
           }
-        } catch {}
+        } catch (e) { /* message parse failed */ }
       };
 
       ws.onerror = () => {

@@ -84,7 +84,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           await audio.play();
           return;
         }
-      } catch {}
+      } catch (e) { console.warn('[SettingsView] Voice preview failed:', e?.message); }
     }
     // No API available → show message
     setPlayingVoice(null);
@@ -123,7 +123,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
         await audio.play();
         return;
       }
-    } catch {}
+    } catch (e) { console.warn('[SettingsView] ElevenLabs voice preview failed:', e?.message); }
     setPlayingVoice(null);
   }, [playingVoice, prefs.lang, userTokenRef, stopAudio]);
 
@@ -131,7 +131,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
   async function handleRefresh() {
     setRefreshing(true);
-    try { await refreshBalance?.(); } catch {}
+    try { await refreshBalance?.(); } catch (e) { console.warn('[SettingsView] Refresh balance failed:', e?.message); }
     setTimeout(() => setRefreshing(false), 800);
   }
 
@@ -177,7 +177,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             </div>
           </div>
           {/* Modifica link */}
-          <button onClick={() => setView('home')}
+          <button onClick={() => setView('account')}
             style={{background:'none', border:'none', color:S.colors.textSecondary, cursor:'pointer',
               fontSize:14, fontWeight:600, padding:0}}>
             Modifica ›

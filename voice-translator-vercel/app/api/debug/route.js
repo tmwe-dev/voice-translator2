@@ -29,6 +29,11 @@ function buildSystemPrompt(sourceLangName, targetLangName, domainContext, descri
 
 async function handlePost(req) {
   try {
+    // Production guard: test endpoints disabled unless TESTING_MODE active
+    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TESTING_MODE === 'false') {
+      return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+    }
+
     // Require admin pass in production
     if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
       const { searchParams } = new URL(req.url);

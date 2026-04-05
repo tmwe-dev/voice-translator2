@@ -19,6 +19,10 @@ function getEncryptionKey() {
     return _derivedKey;
   }
   if (process.env.UPSTASH_REDIS_REST_TOKEN) {
+    // Warn in production — dedicated ENCRYPTION_KEY is strongly recommended
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ [Encryption] Using UPSTASH token fallback for encryption key. Set ENCRYPTION_KEY env var for production!');
+    }
     // PBKDF2 instead of raw SHA256 — proper key derivation
     const salt = 'barchat-v2-encryption-salt'; // static salt (rotated with key)
     _derivedKey = crypto.pbkdf2Sync(

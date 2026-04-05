@@ -12,14 +12,14 @@ export default function CookieConsent() {
       if (!consent) {
         setTimeout(() => setVisible(true), 1500);
       }
-    } catch {}
+    } catch (e) { console.warn('[CookieConsent] localStorage error:', e?.message); }
   }, []);
 
   const handleConsent = (type) => {
     try {
       localStorage.setItem('vt-cookie-consent', type);
       localStorage.setItem('vt-cookie-consent-date', new Date().toISOString());
-    } catch {}
+    } catch (e) { console.warn('[CookieConsent] localStorage error:', e?.message); }
     setVisible(false);
   };
 

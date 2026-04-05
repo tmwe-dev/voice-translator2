@@ -102,7 +102,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
   useEffect(() => {
     if (autoDetectedRef.current) return;
     autoDetectedRef.current = true;
-    try { const saved = localStorage.getItem('vt-prefs'); if (saved) return; } catch {}
+    try { const saved = localStorage.getItem('vt-prefs'); if (saved) return; } catch (e) { console.warn('[WelcomeView] localStorage error:', e?.message); }
     const browserLang = (navigator.language || 'en').split('-')[0];
     const matched = LANGS.find(l => l.code === browserLang);
     if (matched) setPrefs(p => ({ ...p, lang: matched.code }));

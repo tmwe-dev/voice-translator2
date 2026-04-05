@@ -1,5 +1,5 @@
 'use client';
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconStop, IconRecord, IconLock, IconSparkles, IconHandRaise } from './Icons.js';
 
@@ -12,6 +12,10 @@ const TalkControls = memo(function TalkControls({
   status, webrtc, myName, roomInfo,
   endChatAndSave, setView,
 }) {
+  const [handRaising, setHandRaising] = useState(false);
+  const [handRaised, setHandRaised] = useState(false);
+  const [grantingSpeak, setGrantingSpeak] = useState(null);
+
   return (
     <div style={S.talkBar} role="toolbar" aria-label="Voice controls">
       {status && <div style={{fontSize:12, color:S.colors.accent3, marginBottom:6, fontWeight:500}}>{status}</div>}
@@ -63,7 +67,9 @@ const TalkControls = memo(function TalkControls({
       {roomMode === 'classroom' && !canTalk && (
         <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:10}}>
           <button
+            disabled={handRaising || handRaised}
             onClick={async () => {
+              setHandRaising(true);
               const body = {
                 action: 'raiseHand', roomId,
                 raised: true,
@@ -71,20 +77,31 @@ const TalkControls = memo(function TalkControls({
                 name: myName,
               };
               try {
-                await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const res = await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                if (res.ok) {
+                  vibrate(15);
+                  setHandRaised(true);
+                } else {
+                  console.warn('[TalkControls] raiseHand server error:', res.status);
+                }
               } catch (err) {
                 console.error('[TalkControls] raiseHand failed:', err);
+              } finally {
+                setHandRaising(false);
               }
             }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '10px 20px', borderRadius: 14,
-              background: 'rgba(255,165,0,0.15)', border: '1px solid rgba(255,165,0,0.3)',
-              color: '#FFA500', fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              background: handRaised ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
+              border: handRaised ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,165,0,0.3)',
+              color: handRaised ? '#22c55e' : '#FFA500',
+              fontSize: 14, fontWeight: 600, cursor: handRaised ? 'default' : 'pointer',
               fontFamily: FONT, transition: 'all 0.2s',
+              opacity: handRaising ? 0.6 : 1,
             }}
           >
-            <IconHandRaise size={18} /> Alza la mano
+            <IconHandRaise size={18} /> {handRaising ? '...' : handRaised ? '✓ Mano alzata' : 'Alza la mano'}
           </button>
           <span style={{ color: S.colors.textMuted, fontSize: 12 }}>
             <IconLock size={12} /> In attesa del permesso
@@ -100,7 +117,9 @@ const TalkControls = memo(function TalkControls({
           <span style={{ fontSize: 12, color: '#FFA500', fontWeight: 600 }}>{'\u270B'} Mani alzate:</span>
           {roomInfo.members.filter(m => m.handRaised).map(m => (
             <button key={m.name}
+              disabled={grantingSpeak === m.name}
               onClick={async () => {
+                setGrantingSpeak(m.name);
                 const body = {
                   action: 'grantSpeak', roomId,
                   targetMember: m.name,
@@ -108,9 +127,13 @@ const TalkControls = memo(function TalkControls({
                   name: myName,
                 };
                 try {
-                  await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  const res = await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  if (res.ok) vibrate(15);
+                  else console.warn('[TalkControls] grantSpeak server error:', res.status);
                 } catch (err) {
                   console.error('[TalkControls] grantSpeak failed:', err);
+                } finally {
+                  setGrantingSpeak(null);
                 }
               }}
               style={{

@@ -57,7 +57,7 @@ export async function POST(req) {
                 lastLogin: user.lastLogin || 0,
               });
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] User JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -94,7 +94,7 @@ export async function POST(req) {
                 ended: room.ended || false,
               });
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] Room JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -120,7 +120,7 @@ export async function POST(req) {
                 created: session.created || 0,
               });
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] Session JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -149,7 +149,7 @@ export async function POST(req) {
               totalSpent += u.totalSpent || 0;
               totalMessages += u.totalMessages || 0;
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] Stats user JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -271,7 +271,7 @@ export async function POST(req) {
                 created: u.created || 0,
               });
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] Leaderboard user JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -310,7 +310,7 @@ export async function POST(req) {
                 totalRevenue += p.amount || p.euros || 0;
               }
             }
-          } catch {}
+          } catch (e) { console.warn('[startrek] Revenue JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 

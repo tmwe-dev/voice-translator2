@@ -63,7 +63,7 @@ export async function POST(req) {
           if (parsed.roomId === roomId) {
             await redis('LREM', MONDO_KEY, 1, raw);
           }
-        } catch {}
+        } catch (e) { console.warn('[mondo] JSON parse error:', e?.message); }
       }
     }
 

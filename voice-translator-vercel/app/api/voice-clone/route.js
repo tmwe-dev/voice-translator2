@@ -67,7 +67,7 @@ async function handlePost(req) {
           method: 'DELETE',
           headers: { 'xi-api-key': apiKey }
         });
-      } catch {}
+      } catch (e) { console.warn('[voice-clone] ElevenLabs cleanup failed:', e?.message); }
     }
 
     // Call ElevenLabs voice clone API

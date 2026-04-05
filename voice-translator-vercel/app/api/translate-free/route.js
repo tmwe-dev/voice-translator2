@@ -92,7 +92,7 @@ async function handlePost(req) {
         if (validation.valid) {
           return NextResponse.json({ ...parsed, cached: true, charsUsed: 0, dailyUsed: 0, dailyLimit: FREE_DAILY_LIMIT }, { headers: cors });
         }
-        try { await redis('DEL', cacheKey); } catch {}
+        try { await redis('DEL', cacheKey); } catch (e) { /* cache cleanup failed, non-critical */ }
       } else if (!parsed.fallback) {
         return NextResponse.json({ ...parsed, cached: true, charsUsed: 0, dailyUsed: 0, dailyLimit: FREE_DAILY_LIMIT }, { headers: cors });
       }

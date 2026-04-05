@@ -103,6 +103,7 @@ export default function useAuth() {
       }
       return false;
     } catch (e) {
+      console.warn('[useAuth] sendAuthCode failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -142,6 +143,7 @@ export default function useAuth() {
       }
       return false;
     } catch (e) {
+      console.warn('[useAuth] verifyAuthCode failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -162,7 +164,7 @@ export default function useAuth() {
         setCreditBalance(data.credits);
         setUseOwnKeys(data.useOwnKeys || false);
       }
-    } catch {}
+    } catch (e) { console.warn('[useAuth] refreshBalance failed:', e?.message || e); }
   }
 
   async function buyCredits(packageId) {
@@ -184,6 +186,7 @@ export default function useAuth() {
       }
       return false;
     } catch (e) {
+      console.warn('[useAuth] buyCredits failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -216,7 +219,7 @@ export default function useAuth() {
       onResult?.('error', data.error || 'Save failed');
       return false;
     } catch (e) {
-      console.error('[Auth] save-keys error:', e.message);
+      console.warn('[useAuth] saveUserApiKeys failed:', e?.message || e);
       onResult?.('error', e.message);
       return false;
     } finally {
@@ -266,7 +269,7 @@ export default function useAuth() {
       const data = await res.json();
       return handleOAuthLogin(data, 'google');
     } catch (e) {
-      console.error('Google login error:', e);
+      console.warn('[useAuth] loginWithGoogle failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
@@ -299,7 +302,7 @@ export default function useAuth() {
       const data = await res.json();
       return handleOAuthLogin(data, 'apple');
     } catch (e) {
-      console.error('Apple login error:', e);
+      console.warn('[useAuth] loginWithApple failed:', e?.message || e);
       return false;
     } finally {
       setAuthLoading(false);
