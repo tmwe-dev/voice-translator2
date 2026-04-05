@@ -1,10 +1,8 @@
 'use client';
-import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
+import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
-  FREE_DAILY_LIMIT, THEMES, getLang, vibrate, formatCredits } from './lib/constants.js';
-import getStyles from './lib/styles.js';
-
+  getLang, vibrate, formatCredits } from './lib/constants.js';
 // Custom hooks
 import useAudioSystem from './hooks/useAudioSystem.js';
 import useTranslation from './hooks/useTranslation.js';
@@ -15,6 +13,14 @@ import useWebRTC from './hooks/useWebRTC.js';
 import useInterpreterMode from './hooks/useInterpreterMode.js';
 import useConversationContext from './hooks/useConversationContext.js';
 import useLocalChat from './hooks/useLocalChat.js';
+
+// Extracted hooks (refactored from page.js monolith)
+import useInitializeApp from './hooks/useInitializeApp.js';
+import useFreeTierTracking from './hooks/useFreeTierTracking.js';
+import usePWAInstall from './hooks/usePWAInstall.js';
+import useTheme from './hooks/useTheme.js';
+import useNotifications from './hooks/useNotifications.js';
+import useElevenLabsSync from './hooks/useElevenLabsSync.js';
 
 // ═══ CRITICAL PATH: eagerly loaded components (always visible) ═══
 import WelcomeView from './components/WelcomeView.js';
@@ -95,24 +101,21 @@ function HomeInner() {
   const [showShareApp, setShowShareApp] = useState(false);
   const [shareAppLang, setShareAppLang] = useState('en');
 
-  // FREE tier usage tracking
-  const [freeCharsUsed, setFreeCharsUsed] = useState(0);
-  const [freeLimitExceeded, setFreeLimitExceeded] = useState(false);
-  const [freeResetTime, setFreeResetTime] = useState('');
-  const freeCharsRef = useRef(0);
+  // FREE tier usage tracking (extracted hook)
+  const freeTier = useFreeTierTracking();
+  const { freeCharsUsed, freeLimitExceeded, freeResetTime, freeCharsRef, trackFreeChars } = freeTier;
 
-  // PWA install + notifications
-  const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [notifPermission, setNotifPermission] = useState('default');
+  // PWA install (extracted hook)
+  const pwa = usePWAInstall();
+  const { notifPermission } = pwa;
 
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
   const [autoJoinTriggered, setAutoJoinTriggered] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
 
-  // Theme state
-  const [theme, setTheme] = useState(THEMES.DARK);
+  // Theme (extracted hook)
+  const { theme, setTheme, S } = useTheme();
 
   // Refs — created BEFORE hooks so they can be shared
   const msgsEndRef = useRef(null);
@@ -273,28 +276,6 @@ function HomeInner() {
   }, [webrtc.webrtcConnected, webrtc.sendDirectMessage]);
 
   // =============================================
-  // STYLES & THEME
-  // =============================================
-  const S = useMemo(() => getStyles(theme), [theme]);
-
-  // Load theme from localStorage
-  useEffect(() => {
-    try {
-      const savedTheme = localStorage.getItem('vt-theme');
-      if (savedTheme && Object.values(THEMES).includes(savedTheme)) {
-        setTheme(savedTheme);
-      }
-    } catch {}
-  }, []);
-
-  // Save theme to localStorage when changed
-  useEffect(() => {
-    try {
-      localStorage.setItem('vt-theme', theme);
-    } catch {}
-  }, [theme]);
-
-  // =============================================
   // REF SYNC
   // =============================================
   useEffect(() => { prefsRef.current = prefs; }, [prefs]);
@@ -321,391 +302,24 @@ function HomeInner() {
   }, [auth.userToken, auth.isTopPro, auth.isTrial, auth.creditBalance, auth.userAccount]);
 
 
-  // =============================================
-  // FREE TIER USAGE TRACKING
-  // =============================================
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('vt-free-usage');
-      if (saved) {
-        let data; try { data = JSON.parse(saved); } catch { data = null; }
-        if (data) {
-          const savedDate = data.date || '';
-          const todayUTC = new Date().toISOString().split('T')[0];
-          if (savedDate === todayUTC) {
-            setFreeCharsUsed(data.chars || 0);
-            freeCharsRef.current = data.chars || 0;
-            if ((data.chars || 0) >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
-          } else {
-            localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
-            setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
-          }
-        }
-      }
-    } catch {}
-  }, []);
+  // (Free tier tracking extracted to useFreeTierTracking hook)
 
-  useEffect(() => {
-    if (freeCharsUsed > 0) {
-      const todayUTC = new Date().toISOString().split('T')[0];
-      localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: freeCharsUsed }));
-      freeCharsRef.current = freeCharsUsed;
-    }
-  }, [freeCharsUsed]);
-
-  useEffect(() => {
-    function updateCountdown() {
-      const now = new Date();
-      const midnightUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
-      const diff = midnightUTC - now;
-      const hours = Math.floor(diff / 3600000);
-      const mins = Math.floor((diff % 3600000) / 60000);
-      setFreeResetTime(`${hours}h ${mins}m`);
-      if (hours === 0 && mins === 0) {
-        setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
-      }
-    }
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  function trackFreeChars(chars) {
-    setFreeCharsUsed(prev => {
-      const newTotal = prev + chars;
-      if (newTotal >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
-      return newTotal;
-    });
-  }
+  // ElevenLabs voice sync (extracted hook)
+  useElevenLabsSync(auth);
 
   // =============================================
-  // AUTO-LOAD ELEVENLABS VOICES
+  // APP INITIALIZATION (extracted hook)
   // =============================================
-  // When a PRO user has ElevenLabs access and voices aren't loaded yet,
-  // auto-fetch so the voice picker in RoomView works immediately
-  useEffect(() => {
-    if (auth.canUseElevenLabs && auth.elevenLabsVoices.length === 0) {
-      const token = auth.userTokenRef.current || '';
-      fetch(`/api/tts-elevenlabs?action=voices&token=${token}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.voices) auth.setElevenLabsVoices(data.voices);
-        })
-        .catch(() => {});
-    }
-  }, [auth.canUseElevenLabs]);
+  useInitializeApp({
+    setView, setPrefs, setMyLang, setJoinCode, setInviteMsgLang,
+    setAutoJoinTriggered, auth, initMonitoring,
+  });
 
-  // Persist selected ElevenLabs voice to localStorage
-  useEffect(() => {
-    try {
-      const savedVoice = localStorage.getItem('vt-elvoice');
-      if (savedVoice) auth.setSelectedELVoice(savedVoice);
-    } catch {}
-  }, []);
-
-  useEffect(() => {
-    if (auth.selectedELVoice) {
-      try { localStorage.setItem('vt-elvoice', auth.selectedELVoice); } catch {}
-    }
-  }, [auth.selectedELVoice]);
-
-  // Auto-select cloned voice as default when available and no voice selected
-  useEffect(() => {
-    if (auth.clonedVoiceId && !auth.selectedELVoice && auth.canUseElevenLabs) {
-      auth.setSelectedELVoice(auth.clonedVoiceId);
-    }
-  }, [auth.clonedVoiceId, auth.canUseElevenLabs]);
-
-  // =============================================
-  // PREFS & INIT
-  // =============================================
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('vt-prefs');
-      const savedToken = localStorage.getItem('vt-token');
-      const urlParams = new URLSearchParams(window.location.search);
-      const roomParam = urlParams.get('room');
-      const paymentStatus = urlParams.get('payment');
-      const paymentCredits = urlParams.get('credits');
-
-      if (saved) {
-        let p; try { p = JSON.parse(saved); } catch { p = null; }
-        if (p) {
-          if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
-          setPrefs(p); setMyLang(p.lang);
-        }
-      }
-
-      const langParam = urlParams.get('lang');
-      if (langParam && LANGS.find(l => l.code === langParam)) {
-        setInviteMsgLang(langParam);
-        setMyLang(langParam);
-        // Update prefs and persist to localStorage so language survives refresh
-        setPrefs(p => {
-          const updated = {...p, lang: langParam};
-          localStorage.setItem('vt-prefs', JSON.stringify(updated));
-          return updated;
-        });
-      }
-
-      // Guest pre-fill from QR invite (gn=name, gg=gender, gl=language)
-      const guestNameParam = urlParams.get('gn');
-      const guestGenderParam = urlParams.get('gg');
-      const guestLangParam = urlParams.get('gl');
-      if (guestNameParam || guestGenderParam || guestLangParam) {
-        setPrefs(p => {
-          const updated = {
-            ...p,
-            ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
-            ...(guestGenderParam ? { gender: guestGenderParam } : {}),
-            ...(guestLangParam ? { lang: guestLangParam } : {}),
-          };
-          localStorage.setItem('vt-prefs', JSON.stringify(updated));
-          return updated;
-        });
-        if (guestLangParam && LANGS.find(l => l.code === guestLangParam)) {
-          setMyLang(guestLangParam);
-          setInviteMsgLang(guestLangParam);
-        }
-        // Flag for instant join mode
-        if (typeof window !== 'undefined') {
-          window.__VT_GUEST_PREFILLED = true;
-        }
-      }
-
-      // Capture referral code from URL
-      const refParam = urlParams.get('ref');
-      if (refParam) {
-        auth.setPendingReferralCode(refParam);
-      }
-
-      // Capture invite code from URL (contacts system)
-      const inviteParam = urlParams.get('invite');
-      if (inviteParam) {
-        // Store for processing after auth
-        localStorage.setItem('vt-pending-invite', inviteParam);
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-
-      const autoJoin = urlParams.get('auto') === '1';
-
-      if (roomParam) {
-        setJoinCode(roomParam.toUpperCase());
-        // Clean URL so back button works properly (prevents re-entering join on refresh)
-        window.history.replaceState({}, '', window.location.pathname);
-
-        // Auto-join: se l'invitato ha già i prefs (nome + lingua), entra subito
-        if (autoJoin && saved) {
-          let p; try { p = JSON.parse(saved); } catch { p = null; }
-          if (p && p.name && p.lang) {
-            // Imposta la lingua dall'URL se presente
-            if (langParam) { p.lang = langParam; setPrefs(p); setMyLang(langParam); }
-            // Auto-join verrà triggerato dal flag
-            setTimeout(() => {
-              setAutoJoinTriggered(true);
-            }, 500);
-          }
-        }
-
-        // Also auto-join when guest data is pre-filled from QR (even without saved prefs)
-        const canAutoJoinFromQR = autoJoin && guestNameParam && (guestLangParam || langParam);
-        if (canAutoJoinFromQR) {
-          setTimeout(() => setAutoJoinTriggered(true), 800); // slightly longer delay for state to settle
-        }
-      }
-      if (paymentStatus === 'success' && paymentCredits) {
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-
-      const pickView = (hasSaved) => {
-        if (roomParam) return 'join';
-        if (!hasSaved) {
-          // TESTING_MODE: skip welcome/login, go straight to home
-          const testMode = typeof window !== 'undefined' && window.__VT_TESTING_MODE;
-          if (testMode) return 'home';
-          return 'welcome';
-        }
-        return 'home';
-      };
-
-      // ── TESTING_MODE: auto-login with test account ──
-      if (typeof window !== 'undefined' && window.__VT_TESTING_MODE && !savedToken) {
-        console.log('[TESTING_MODE] Auto-login with test account...');
-        fetch('/api/test-login', { method: 'POST' })
-          .then(r => r.json())
-          .then(data => {
-            if (data.ok && data.token) {
-              auth.setUserToken(data.token);
-              auth.userTokenRef.current = data.token;
-              localStorage.setItem('vt-token', data.token);
-              auth.setUserAccount(data.user);
-              auth.setIsTrial(false);
-              auth.setIsTopPro(true);
-              auth.setCanUseElevenLabs(true);
-              auth.setCreditBalance(99999);
-              auth.setPlatformHasEL(data.platformHasElevenLabs || false);
-              auth.setUseOwnKeys(true);
-              if (data.user?.apiKeys) {
-                auth.setApiKeyInputs({
-                  openai: data.user.apiKeys.openai || '',
-                  anthropic: data.user.apiKeys.anthropic || '',
-                  gemini: data.user.apiKeys.gemini || '',
-                  elevenlabs: data.user.apiKeys.elevenlabs || '',
-                });
-              }
-              console.log('[TESTING_MODE] Logged in as test@bartalk.dev');
-            }
-          })
-          .catch(e => console.warn('[TESTING_MODE] Auto-login failed:', e.message));
-      } else if (typeof window !== 'undefined' && window.__VT_TESTING_MODE) {
-        // Already has a token, just unlock features
-        auth.setIsTrial(false);
-        auth.setIsTopPro(true);
-        auth.setCanUseElevenLabs(true);
-        auth.setCreditBalance(99999);
-        auth.setPlatformHasEL(true);
-      }
-
-      if (savedToken) {
-        auth.setUserToken(savedToken);
-        auth.userTokenRef.current = savedToken;
-        // FAST PATH: show view immediately for returning users (don't wait for /api/auth)
-        // Auth validates in background — user sees home/join instantly
-        setView(pickView(!!saved));
-        // Background validation — updates account data without blocking UI
-        fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({ action:'me', token:savedToken })
-        }).then(r => r.json()).then(data => {
-          if (data.user) {
-            auth.setUserAccount(data.user);
-            auth.setCreditBalance(data.user.credits || 0);
-            auth.setUseOwnKeys(data.user.useOwnKeys || false);
-            if (data.referralCode) auth.setReferralCode(data.referralCode);
-            if (data.platformHasElevenLabs) auth.setPlatformHasEL(true);
-            // Restore saved API keys into state so Settings shows them
-            if (data.user.useOwnKeys && data.user.apiKeys) {
-              auth.setApiKeyInputs({
-                openai: data.user.apiKeys.openai || '',
-                anthropic: data.user.apiKeys.anthropic || '',
-                gemini: data.user.apiKeys.gemini || '',
-                elevenlabs: data.user.apiKeys.elevenlabs || ''
-              });
-              if (data.user.apiKeys.elevenlabs) auth.setIsTopPro(true);
-            }
-            // Restore cloned voice if exists
-            if (data.user.clonedVoiceId) {
-              auth.setClonedVoiceId(data.user.clonedVoiceId);
-              auth.setClonedVoiceName(data.user.clonedVoiceName || 'My Voice');
-            }
-          } else {
-            // Token invalid — clear it but DON'T redirect (user is already on a page)
-            localStorage.removeItem('vt-token');
-            auth.setUserToken(null);
-            auth.userTokenRef.current = null;
-            auth.setUserAccount(null);
-          }
-        }).catch(() => { /* Network error — stay on current view, token might still be valid */ });
-      } else {
-        setView(pickView(!!saved));
-      }
-    } catch { setView('welcome'); }
-  }, []);
-
-  // Register service worker for offline support + force update stale caches
-  useEffect(() => {
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(reg => {
-        reg.update().catch(() => {});
-      }).catch(err => console.error('SW registration failed:', err));
-    }
-    // Initialize client-side monitoring (Web Vitals, error tracking)
-    try { initMonitoring(); } catch {}
-  }, []);
-
-  // =============================================
-  // PWA INSTALL PROMPT
-  // =============================================
-  useEffect(() => {
-    // Capture the install prompt event
-    function handleBeforeInstall(e) {
-      e.preventDefault();
-      setDeferredInstallPrompt(e);
-      // Show install banner if not dismissed before
-      if (!localStorage.getItem('vt-install-dismissed')) {
-        setShowInstallBanner(true);
-      }
-    }
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-
-    // Check current notification permission
-    if ('Notification' in window) {
-      setNotifPermission(Notification.permission);
-    }
-
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-  }, []);
-
-  async function handleInstallApp() {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    const result = await deferredInstallPrompt.userChoice;
-    if (result.outcome === 'accepted') {
-      setShowInstallBanner(false);
-      setDeferredInstallPrompt(null);
-    }
-  }
-
-  function dismissInstallBanner() {
-    setShowInstallBanner(false);
-    localStorage.setItem('vt-install-dismissed', '1');
-  }
-
-  async function requestNotifPermission() {
-    if (!('Notification' in window)) return;
-    const perm = await Notification.requestPermission();
-    setNotifPermission(perm);
-    return perm;
-  }
-
-  // Send local notification when new messages arrive and app is in background
-  const prevMsgCountRef = useRef(0);
-  useEffect(() => {
-    const msgs = roomPolling.messages || [];
-    if (msgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
-      const lastMsg = msgs[msgs.length - 1];
-      // Only notify if message is from partner (not from us) and page is hidden
-      if (lastMsg && lastMsg.speaker !== prefs.name && document.hidden) {
-        // Update badge
-        if (navigator.setAppBadge) {
-          const unread = msgs.length - prevMsgCountRef.current;
-          navigator.setAppBadge(unread).catch(() => {});
-        }
-        // Send local notification via SW
-        if (notifPermission === 'granted' && navigator.serviceWorker?.controller) {
-          navigator.serviceWorker.controller.postMessage({
-            type: 'SHOW_LOCAL_NOTIFICATION',
-            title: `${lastMsg.speaker || 'Partner'}`,
-            body: lastMsg.translated || lastMsg.original || 'Nuovo messaggio',
-            tag: `vt-msg-${roomPolling.roomId}`,
-            roomId: roomPolling.roomId,
-            url: '/'
-          });
-        }
-      }
-    }
-    prevMsgCountRef.current = msgs.length;
-  }, [roomPolling.messages]);
-
-  // Clear badge when page becomes visible
-  useEffect(() => {
-    function handleVisibility() {
-      if (!document.hidden && navigator.clearAppBadge) {
-        navigator.clearAppBadge().catch(() => {});
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, []);
+  // PWA + Notifications (extracted hooks)
+  useNotifications({
+    messages: roomPolling.messages, roomId: roomPolling.roomId,
+    myName: prefs.name, notifPermission,
+  });
 
   // ── Persist incoming messages to IndexedDB ──
   useEffect(() => {
