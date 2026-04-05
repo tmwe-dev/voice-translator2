@@ -59,13 +59,14 @@ const TaxiMode = memo(function TaxiMode({
 
   if (!visible) return null;
 
-  // Color defaults (matching typical app color scheme)
-  const bgColor = S.bgPrimary || (theme === 'dark' ? '#1a1a2e' : '#f8f8f8');
-  const textPrimary = S.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
-  const textMuted = S.textMuted || (theme === 'dark' ? '#9ca3af' : '#666666');
-  const accentGradient = 'linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%)';
-  const statusWarning = S.statusWarning || '#f59e0b';
-  const borderColor = S.borderColor || (theme === 'dark' ? '#374151' : '#e5e7eb');
+  // Color defaults — use S.colors namespace
+  const C = S.colors || {};
+  const bgColor = C.bgGradient || (theme === 'dark' ? '#1a1a2e' : '#f8f8f8');
+  const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
+  const textMuted = C.textMuted || (theme === 'dark' ? '#9ca3af' : '#666666');
+  const accentGradient = C.accentGradient || 'linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%)';
+  const statusWarning = C.statusWarning || '#f59e0b';
+  const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
 
   return (
     <div
@@ -305,9 +306,10 @@ const TaxiMode = memo(function TaxiMode({
  * A small toolbar button to activate Taxi Mode.
  */
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
-  const statusWarning = S.statusWarning || '#f59e0b';
-  const textPrimary = S.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
-  const borderColor = S.borderColor || (theme === 'dark' ? '#374151' : '#e5e7eb');
+  const C = S.colors || {};
+  const statusWarning = C.statusWarning || '#f59e0b';
+  const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
+  const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
 
   return (
     <button

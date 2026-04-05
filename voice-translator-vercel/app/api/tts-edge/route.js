@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
@@ -14,38 +15,8 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 // Languages: ALL 25 supported languages
 // ═══════════════════════════════════════════════
 
-// Simple in-memory rate limiting
-const rateLimitMap = new Map();
-const RATE_LIMIT = 60;       // requests per minute
-const RATE_WINDOW = 60000;   // 1 minute in ms
-
-function checkRateLimit(ip) {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now - entry.windowStart > RATE_WINDOW) {
-    rateLimitMap.set(ip, { count: 1, windowStart: now });
-    return true;
-  }
-  if (entry.count >= RATE_LIMIT) return false;
-  entry.count++;
-  return true;
-}
-
-// Clean up rate limit entries periodically
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, entry] of rateLimitMap) {
-    if (now - entry.windowStart > RATE_WINDOW * 2) rateLimitMap.delete(ip);
-  }
-}, 120000);
-
-export async function POST(req) {
+async function handlePost(req) {
   try {
-    // Rate limit by IP
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
-    }
 
     const { text, langCode, gender } = await req.json();
     if (!text?.trim()) {
@@ -89,10 +60,11 @@ export async function POST(req) {
       audioBuffer = tts.toBuffer();
     } catch (synthErr) {
       console.error('[EdgeTTS] Synthesize error:', synthErr.message);
+      return NextResponse.json({ error: 'Edge TTS synthesis failed: ' + synthErr.message }, { status: 503 });
     }
 
     if (!audioBuffer || audioBuffer.length === 0) {
-      return NextResponse.json({ error: 'Failed to generate audio' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to generate audio' }, { status: 503 });
     }
 
     return new NextResponse(audioBuffer, {
@@ -107,3 +79,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'tts-edge' });

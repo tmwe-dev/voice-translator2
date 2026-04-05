@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, createGiftInvite, acceptGiftInvite, getGiftInfo } from '../../lib/users.js';
 import { redis } from '../../lib/redis.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
@@ -12,15 +13,9 @@ import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 const PRESENCE_TTL = 90; // seconds — heartbeat every 60s, expire after 90s
 const INVITE_TTL = 604800; // 7 days
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const { action, token, contactEmail, inviteCode, giftAmount } = await req.json();
-
-    // Rate limit
-    const rl = await checkRateLimit(getRateLimitKey(req, 'contacts'), 30);
-    if (!rl.allowed) {
-      return NextResponse.json({ error: 'Rate limited' }, { status: 429 });
-    }
 
     // Auth required for all actions
     if (!token) {
@@ -262,6 +257,8 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'contacts' });
 
 function generateInviteCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

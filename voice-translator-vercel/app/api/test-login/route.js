@@ -6,8 +6,10 @@ const TEST_EMAIL = 'test@bartalk.dev';
 // POST /api/test-login — Creates or restores a test account with full access
 // Only works when TESTING_MODE is enabled (NEXT_PUBLIC_TESTING_MODE !== 'false')
 export async function POST(req) {
-  // Guard: only available in testing mode
-  if (process.env.NEXT_PUBLIC_TESTING_MODE === 'false') {
+  // Guard: only available when testing mode is NOT explicitly disabled
+  // NEXT_PUBLIC_TESTING_MODE defaults to enabled (undefined = enabled)
+  const testingDisabled = process.env.NEXT_PUBLIC_TESTING_MODE === 'false' || process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TESTING_MODE === 'false';
+  if (testingDisabled) {
     return NextResponse.json({ error: 'Testing mode disabled' }, { status: 403 });
   }
 

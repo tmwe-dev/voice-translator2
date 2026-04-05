@@ -71,8 +71,12 @@ export function decryptKeys(encryptedData) {
   decrypted += decipher.final('utf8');
 
   try {
-    return JSON.parse(decrypted);
+    const parsed = JSON.parse(decrypted);
+    if (typeof parsed === 'object' && parsed !== null) return parsed;
+    console.warn('[Encryption] Decrypted data is not an object, returning empty');
+    return {};
   } catch {
-    return decrypted;
+    console.warn('[Encryption] Failed to parse decrypted data as JSON');
+    return {};
   }
 }

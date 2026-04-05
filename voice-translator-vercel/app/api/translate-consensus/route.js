@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
@@ -37,19 +38,10 @@ export async function OPTIONS(req) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(req) });
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
-    // ── Rate limit: 20 req/min per IP ──
-    const rlKey = getRateLimitKey(req, 'consensus');
-    const rl = await checkRateLimit(rlKey, 20, 60000);
-    if (!rl.allowed) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded', retryAfterMs: rl.retryAfterMs },
-        { status: 429, headers: { ...cors, 'Retry-After': Math.ceil(rl.retryAfterMs / 1000).toString() } }
-      );
-    }
 
     const { text, sourceLang, targetLang, userEmail, threshold } = await req.json();
     if (!text?.trim()) {
@@ -130,3 +122,5 @@ export async function POST(req) {
     );
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'translate-consensus' });

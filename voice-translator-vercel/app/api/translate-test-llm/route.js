@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { validateOutput, MODEL_MAP } from '../../lib/translateValidation.js';
 import { buildSystemPrompt } from '../../lib/translatePrompt.js';
 import { callLLM } from '../../lib/llmCaller.js';
+import { safeCompare } from '../../lib/apiGuard.js';
 
 // ═══════════════════════════════════════════════
 // LLM Translation Test Endpoint — runs ALL paid models in parallel
@@ -128,7 +129,7 @@ export async function POST(req) {
     if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
       const { searchParams } = new URL(req.url);
       const pass = searchParams.get('key') || req.headers.get('x-admin-key');
-      if (pass !== process.env.ADMIN_PASS) {
+      if (!safeCompare(pass, process.env.ADMIN_PASS)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }

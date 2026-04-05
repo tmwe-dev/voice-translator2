@@ -110,7 +110,8 @@ export async function deductLendingTokens(lendingCode, tokensUsed) {
   }
 
   const ttl = await redis('TTL', lendingKey);
-  await redis('SET', lendingKey, JSON.stringify(lending), 'EX', Math.max(ttl, 86400));
+  const expiry = ttl > 0 ? Math.max(ttl, 86400) : 86400;
+  await redis('SET', lendingKey, JSON.stringify(lending), 'EX', expiry);
   return { tokensRemaining: lending.tokenBudget ? Math.max(0, lending.tokenBudget - lending.tokensUsed) : null };
 }
 

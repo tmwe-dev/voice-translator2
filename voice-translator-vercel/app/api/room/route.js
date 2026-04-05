@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { getRoom } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, rateLimit, getClientIP } from '../../lib/validate.js';
 import {
@@ -9,7 +10,7 @@ import {
 } from '../../lib/roomActions.js';
 
 // POST /api/room - Create, join, or manage a room
-export async function POST(req) {
+async function handlePostRoom(req) {
   try {
     const ip = getClientIP(req);
     const rl = rateLimit(ip, { maxRequests: 60, windowMs: 60000 });
@@ -83,7 +84,7 @@ export async function POST(req) {
 }
 
 // GET /api/room?id=XXX - Get room info
-export async function GET(req) {
+async function handleGetRoom(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
@@ -99,3 +100,6 @@ export async function GET(req) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePostRoom, { maxRequests: 120, prefix: 'room' });
+export const GET = withApiGuard(handleGetRoom, { maxRequests: 120, prefix: 'room' });

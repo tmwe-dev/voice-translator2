@@ -1,5 +1,6 @@
 // NOTE: Cannot use edge runtime due to crypto/Redis deps in resolveAuth
 import OpenAI from 'openai';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MODEL_MAP, calcConfidence, validateOutput } from '../../lib/translateValidation.js';
@@ -19,13 +20,8 @@ import { ErrorCode, apiError } from '../../lib/errors.js';
 //   data: {"done":true,"translated":"ciao mondo","confidence":0.95}
 // ═══════════════════════════════════════════════
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
-    // Rate limit
-    const rl = await checkRateLimit(getRateLimitKey(req, 'translate-stream'), 30);
-    if (!rl.allowed) {
-      return apiError(ErrorCode.RATE_LIMIT, null, { retryAfter: Math.ceil(rl.retryAfterMs / 1000) });
-    }
 
     const body = await req.json();
     const validation = validateTranslateInput(body);
@@ -119,3 +115,5 @@ export async function POST(req) {
     return apiError(ErrorCode.TRANSLATION_FAILED, e.message);
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'translate-stream' });

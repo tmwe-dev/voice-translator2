@@ -7,6 +7,10 @@ import { apiCircuitBreaker } from './circuitBreaker.js';
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
+if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+  console.error('[Redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — Redis calls will use fallback cache only');
+}
+
 const REDIS_TIMEOUT_MS = 3000; // 3s max for Redis calls
 
 // In-memory fallback cache when Redis is down (LRU, max 500 entries, 60s TTL)
@@ -38,6 +42,12 @@ function fallbackSet(key, val) {
  * Falls back to in-memory cache for GET/SET when Redis is unavailable.
  */
 export async function redis(command, ...args) {
+  if (!UPSTASH_URL || !UPSTASH_TOKEN) {
+    // No Redis configured — use fallback cache only
+    if (command === 'GET' && args[0]) return fallbackGet(args[0]);
+    if (command === 'SET' && args[0]) { fallbackSet(args[0], args[1]); return 'OK'; }
+    return null;
+  }
   const circuitKey = 'redis:upstash';
 
   try {

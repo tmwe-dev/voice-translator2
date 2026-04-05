@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { checkRateLimit } from '../../lib/rateLimit.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
@@ -29,14 +30,8 @@ async function getCallQwen() {
  *
  * Returns: { result: string, provider: string, cost: number }
  */
-export async function POST(request) {
+async function handlePost(request) {
   try {
-    // Rate limit: 5 per minute
-    const ip = request.headers.get('x-forwarded-for') || 'unknown';
-    const rl = await checkRateLimit(`chat-action:${ip}`, 5, 60000);
-    if (!rl.allowed) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
-    }
 
     const body = await request.json();
     const { action, messages, members, mode, domain, userToken, lendingCode } = body;
@@ -115,3 +110,5 @@ export async function POST(request) {
     return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'chat-action' });

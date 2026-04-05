@@ -440,8 +440,12 @@ function HomeInner() {
       if (langParam && LANGS.find(l => l.code === langParam)) {
         setInviteMsgLang(langParam);
         setMyLang(langParam);
-        // Always update prefs.lang to invite language (so savePrefs won't overwrite myLang)
-        setPrefs(p => ({...p, lang: langParam}));
+        // Update prefs and persist to localStorage so language survives refresh
+        setPrefs(p => {
+          const updated = {...p, lang: langParam};
+          localStorage.setItem('vt-prefs', JSON.stringify(updated));
+          return updated;
+        });
       }
 
       // Guest pre-fill from QR invite (gn=name, gg=gender, gl=language)
@@ -449,12 +453,16 @@ function HomeInner() {
       const guestGenderParam = urlParams.get('gg');
       const guestLangParam = urlParams.get('gl');
       if (guestNameParam || guestGenderParam || guestLangParam) {
-        setPrefs(p => ({
-          ...p,
-          ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
-          ...(guestGenderParam ? { gender: guestGenderParam } : {}),
-          ...(guestLangParam ? { lang: guestLangParam } : {}),
-        }));
+        setPrefs(p => {
+          const updated = {
+            ...p,
+            ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
+            ...(guestGenderParam ? { gender: guestGenderParam } : {}),
+            ...(guestLangParam ? { lang: guestLangParam } : {}),
+          };
+          localStorage.setItem('vt-prefs', JSON.stringify(updated));
+          return updated;
+        });
         if (guestLangParam && LANGS.find(l => l.code === guestLangParam)) {
           setMyLang(guestLangParam);
           setInviteMsgLang(guestLangParam);

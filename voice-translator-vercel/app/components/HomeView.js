@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { VOICES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
+import { VOICES, CONTEXTS, FONT, getLang, vibrate, APP_VERSION } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
 // ═══════════════════════════════════════
@@ -224,7 +224,15 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
           display: 'flex', alignItems: 'center', gap: 12, width: '100%',
           maxWidth: 400, marginBottom: 28, paddingTop: 8
         }} role="banner">
-          <AvatarImg src={prefs.avatar} size={56} style={{ borderRadius: 14 }} />
+          <div style={{ position: 'relative' }}>
+            <AvatarImg src={prefs.avatar} size={56} style={{ borderRadius: 14 }} />
+            <span style={{
+              position: 'absolute', bottom: -4, right: -8,
+              fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)',
+              background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '1px 4px',
+              fontFamily: 'monospace', letterSpacing: 0.3, whiteSpace: 'nowrap'
+            }}>{APP_VERSION}</span>
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{
               fontSize: 18, fontWeight: 900, letterSpacing: -0.5,

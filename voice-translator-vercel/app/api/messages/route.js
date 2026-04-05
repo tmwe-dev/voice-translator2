@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, rateLimit, getClientIP } from '../../lib/validate.js';
 
 // POST /api/messages - Send a translation to the room
 // Supports multi-language: `translations` field contains per-language translations
 // Backward compatible: also accepts single `translated` + `targetLang`
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const ip = getClientIP(req);
     const rl = rateLimit(ip, { maxRequests: 120, windowMs: 60000 });
@@ -51,7 +52,7 @@ export async function POST(req) {
 }
 
 // PATCH /api/messages - Update existing message with translation (Phase 2 of two-phase send)
-export async function PATCH(req) {
+async function handlePatch(req) {
   try {
     const ip = getClientIP(req);
     const rl = rateLimit(ip, { maxRequests: 120, windowMs: 60000 });
@@ -95,7 +96,7 @@ export async function PATCH(req) {
 
 // GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP&rst=Token - Poll for new messages
 // Supports room session token (rst) for server-verified identity, falls back to name
-export async function GET(req) {
+async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const roomId = sanitizeRoomId(searchParams.get('room') || '');
@@ -125,3 +126,7 @@ export async function GET(req) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 120, prefix: 'messages' });
+export const PATCH = withApiGuard(handlePatch, { maxRequests: 120, prefix: 'messages' });
+export const GET = withApiGuard(handleGet, { maxRequests: 120, prefix: 'messages' });

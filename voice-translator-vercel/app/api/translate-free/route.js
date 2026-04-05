@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { runProviderChain, validateTranslation } from '../../lib/providers.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
@@ -46,7 +47,7 @@ export async function OPTIONS(req) {
   return new NextResponse(null, { status: 204, headers: getCorsHeaders(req) });
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
@@ -151,3 +152,5 @@ export async function POST(req) {
     );
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'translate-free' });

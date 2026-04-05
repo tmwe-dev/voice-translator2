@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
+import { safeCompare } from '../../lib/apiGuard.js';
 
 // Admin passphrase — MUST be set in environment variables
 const ADMIN_PASS = process.env.ADMIN_PASS;
@@ -23,7 +24,7 @@ export async function POST(req) {
 
     const { action, pass } = await req.json();
 
-    if (!pass || pass !== ADMIN_PASS) {
+    if (!pass || !safeCompare(pass, ADMIN_PASS)) {
       return NextResponse.json({ error: 'Access denied, Captain.' }, { status: 403 });
     }
 
@@ -190,7 +191,7 @@ export async function POST(req) {
     // === DAILY SPENDING REPORT ===
     if (action === 'daily-report') {
       const todayUTC = new Date().toISOString().split('T')[0];
-      const date = pass === ADMIN_PASS ? todayUTC : todayUTC; // always today for security
+      const date = todayUTC; // always today for security
 
       // Platform total
       const platformKey = `daily:platform:${todayUTC}`;

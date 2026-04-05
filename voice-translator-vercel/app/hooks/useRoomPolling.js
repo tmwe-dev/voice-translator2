@@ -265,12 +265,14 @@ export default function useRoomPolling({
 
   const handleRealtimeMemberUpdate = useCallback((data) => {
     if (data.room) {
+      roomInfoRef.current = data.room;
       setRoomInfo(data.room);
       setPartnerConnected(data.room.members.length >= 2);
       return;
     }
 
     if (data.members) {
+      if (roomInfoRef.current) roomInfoRef.current = { ...roomInfoRef.current, members: data.members };
       setRoomInfo(prev => prev ? { ...prev, members: data.members } : prev);
       setPartnerConnected(data.members.length >= 2);
       return;
@@ -278,6 +280,14 @@ export default function useRoomPolling({
 
     // Handle langChange broadcast (payload: { action, name, lang })
     if (data.action === 'langChange' && data.name && data.lang) {
+      // Update ref immediately so translation targets are correct RIGHT NOW
+      if (roomInfoRef.current?.members) {
+        const updatedMembers = roomInfoRef.current.members.map(m =>
+          m.name === data.name ? { ...m, lang: data.lang } : m
+        );
+        roomInfoRef.current = { ...roomInfoRef.current, members: updatedMembers };
+      }
+      // Also update React state for UI re-render
       setRoomInfo(prev => {
         if (!prev?.members) return prev;
         const members = prev.members.map((m) =>
@@ -407,6 +417,7 @@ export default function useRoomPolling({
           const { room, verifiedName, isHost: hostFlag } = await rRes.json();
           if (verifiedName) verifiedNameRef.current = verifiedName;
           if (hostFlag !== undefined) isHostRef.current = hostFlag;
+          roomInfoRef.current = room;
           setRoomInfo(room);
           setPartnerConnected(room.members.length >= 2);
           const myName = verifiedNameRef.current || prefsRef.current.name;

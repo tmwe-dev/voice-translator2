@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { addCost } from '../../lib/store.js';
 import { deductCredits, deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
@@ -15,7 +16,7 @@ import { routeProvider } from '../../lib/providerRouter.js';
 import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     // Rate limit: 30 requests/minute per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'translate'), 30);
@@ -292,3 +293,5 @@ export async function POST(req) {
     return apiError(ErrorCode.TRANSLATION_FAILED, 'Translation service temporarily unavailable');
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 120, prefix: 'translate' });

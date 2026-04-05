@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withApiGuard } from '../../lib/apiGuard.js';
+import { withApiGuard, safeCompare } from '../../lib/apiGuard.js';
 import { runAllProviders } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
 
@@ -14,7 +14,7 @@ async function handlePost(req) {
     if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
       const { searchParams } = new URL(req.url);
       const pass = searchParams.get('key') || req.headers.get('x-admin-key');
-      if (pass !== process.env.ADMIN_PASS) {
+      if (!safeCompare(pass, process.env.ADMIN_PASS)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
     }

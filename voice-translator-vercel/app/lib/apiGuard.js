@@ -1,5 +1,18 @@
 import { checkRateLimit, getRateLimitKey } from './rateLimit.js';
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
+
+/**
+ * Timing-safe string comparison to prevent timing attacks on secrets.
+ * Returns false if either value is missing/empty.
+ */
+export function safeCompare(a, b) {
+  if (!a || !b || typeof a !== 'string' || typeof b !== 'string') return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 const MAX_BODY_SIZE = 256 * 1024; // 256KB
 
