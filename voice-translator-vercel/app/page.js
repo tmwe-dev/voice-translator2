@@ -520,9 +520,37 @@ function HomeInner() {
         return 'home';
       };
 
-      // ── TESTING_MODE: bypass auth/billing for testers ──
-      if (typeof window !== 'undefined' && window.__VT_TESTING_MODE) {
-        console.log('[TESTING_MODE] Active — all features unlocked');
+      // ── TESTING_MODE: auto-login with test account ──
+      if (typeof window !== 'undefined' && window.__VT_TESTING_MODE && !savedToken) {
+        console.log('[TESTING_MODE] Auto-login with test account...');
+        fetch('/api/test-login', { method: 'POST' })
+          .then(r => r.json())
+          .then(data => {
+            if (data.ok && data.token) {
+              auth.setUserToken(data.token);
+              auth.userTokenRef.current = data.token;
+              localStorage.setItem('vt-token', data.token);
+              auth.setUserAccount(data.user);
+              auth.setIsTrial(false);
+              auth.setIsTopPro(true);
+              auth.setCanUseElevenLabs(true);
+              auth.setCreditBalance(99999);
+              auth.setPlatformHasEL(data.platformHasElevenLabs || false);
+              auth.setUseOwnKeys(true);
+              if (data.user?.apiKeys) {
+                auth.setApiKeyInputs({
+                  openai: data.user.apiKeys.openai || '',
+                  anthropic: data.user.apiKeys.anthropic || '',
+                  gemini: data.user.apiKeys.gemini || '',
+                  elevenlabs: data.user.apiKeys.elevenlabs || '',
+                });
+              }
+              console.log('[TESTING_MODE] Logged in as test@bartalk.dev');
+            }
+          })
+          .catch(e => console.warn('[TESTING_MODE] Auto-login failed:', e.message));
+      } else if (typeof window !== 'undefined' && window.__VT_TESTING_MODE) {
+        // Already has a token, just unlock features
         auth.setIsTrial(false);
         auth.setIsTopPro(true);
         auth.setCanUseElevenLabs(true);
@@ -565,6 +593,8 @@ function HomeInner() {
             // Token invalid — clear it but DON'T redirect (user is already on a page)
             localStorage.removeItem('vt-token');
             auth.setUserToken(null);
+            auth.userTokenRef.current = null;
+            auth.setUserAccount(null);
           }
         }).catch(() => { /* Network error — stay on current view, token might still be valid */ });
       } else {
