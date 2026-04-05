@@ -67,9 +67,9 @@ export default function useStreamingInterpreter({
 
   // ═══ FETCH DEEPGRAM KEY ═══
   useEffect(() => {
-    fetch('/api/deepgram-token').then(r => r.ok ? r.json() : null)
+    fetch('/api/stt-token', { method: 'POST' }).then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.key) deepgramKeyRef.current = d.key; })
-      .catch(() => {});
+      .catch(e => console.warn('[Interpreter] STT token failed:', e.message));
   }, []);
 
   // ═══ INCREMENTAL TRANSLATION ═══
@@ -274,12 +274,12 @@ export default function useStreamingInterpreter({
     if (!deepgramKeyRef.current) {
       // Try to get key
       try {
-        const res = await fetch('/api/deepgram-token');
+        const res = await fetch('/api/stt-token', { method: 'POST' });
         if (res.ok) {
           const d = await res.json();
           if (d?.key) deepgramKeyRef.current = d.key;
         }
-      } catch {}
+      } catch (e) { console.warn('[Interpreter] STT key retry failed:', e.message); }
     }
 
     if (!deepgramKeyRef.current) {

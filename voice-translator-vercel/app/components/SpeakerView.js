@@ -75,9 +75,9 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
 
   // ── Fetch Deepgram key on mount ──
   useEffect(() => {
-    fetch('/api/deepgram-token').then(r => r.ok ? r.json() : null)
+    fetch('/api/stt-token', { method: 'POST' }).then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.key) dgKeyRef.current = d.key; })
-      .catch(() => {});
+      .catch(e => console.warn('[SpeakerView] STT token fetch failed:', e.message));
   }, []);
 
   // ── Auto-scroll history ──
@@ -319,7 +319,7 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   const startLiveMode = useCallback(async () => {
     vibrate();
     if (!dgKeyRef.current) {
-      try { const res = await fetch('/api/deepgram-token'); if (res.ok) { const d = await res.json(); if (d?.key) dgKeyRef.current = d.key; } } catch {}
+      try { const res = await fetch('/api/stt-token', { method: 'POST' }); if (res.ok) { const d = await res.json(); if (d?.key) dgKeyRef.current = d.key; } } catch (e) { console.warn('[SpeakerView] STT retry failed:', e.message); }
     }
     if (!dgKeyRef.current) { setMode('batch'); startBatchRecord(); return; }
     setRecording(true); setLiveText(''); setTranslatedText(''); sentenceRef.current = '';

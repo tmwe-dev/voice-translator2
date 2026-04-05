@@ -6,7 +6,7 @@ import { getLang } from '../lib/constants.js';
  * Deepgram Streaming STT hook — server-grade WebSocket speech recognition.
  *
  * Responsibilities:
- * - Check Deepgram availability via /api/deepgram-token
+ * - Check Deepgram availability via /api/stt-token
  * - Start/stop WebSocket streaming with PCM16 audio capture
  * - Accumulate final + interim transcripts
  * - Clean up all resources on stop or unmount
@@ -34,16 +34,20 @@ export default function useDeepgramSTT({
   useEffect(() => {
     async function checkDeepgram() {
       try {
-        const res = await fetch('/api/deepgram-token');
+        const res = await fetch('/api/stt-token', { method: 'POST' });
         if (res.ok) {
           const data = await res.json();
           if (data.key) {
             deepgramAvailableRef.current = true;
             deepgramKeyRef.current = data.key;
+            console.log('[DeepgramSTT] Available, key obtained');
             return;
           }
         }
-      } catch {}
+        console.warn('[DeepgramSTT] Token endpoint returned', res.status);
+      } catch (e) {
+        console.warn('[DeepgramSTT] Check failed:', e.message);
+      }
       deepgramAvailableRef.current = false;
     }
     checkDeepgram();
