@@ -1216,7 +1216,7 @@ function HomeInner() {
   // Views with BottomNav
   if (view === 'home') return (
     <>
-      <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
+      <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} setMyLang={setMyLang}
         selectedMode={selectedMode} setSelectedMode={setSelectedMode}
         selectedContext={selectedContext} setSelectedContext={setSelectedContext}
         roomDescription={roomDescription} setRoomDescription={setRoomDescription}

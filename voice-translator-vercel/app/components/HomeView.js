@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { VOICES, CONTEXTS, FONT, getLang, vibrate, APP_VERSION } from '../lib/constants.js';
+import { VOICES, CONTEXTS, FONT, getLang, LANGS, vibrate, APP_VERSION } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 
 // ═══════════════════════════════════════
@@ -169,7 +169,7 @@ function getHomeColors(theme) {
   return palettes[theme] || palettes.dark;
 }
 
-const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, selectedMode, setSelectedMode,
+const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView,
   theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact }) {
 
@@ -178,6 +178,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
   const [activeRooms, setActiveRooms] = useState([]);
   const [selectedTab, setSelectedTab] = useState(0); // 0 = Le mie, 1 = Mondo
   const [showVoicePicker, setShowVoicePicker] = useState(false);
+  const [showLangPicker, setShowLangPicker] = useState(null); // null | 'my' | 'partner'
 
   // Theme-aware colors
   const C = useMemo(() => getHomeColors(theme), [theme]);
@@ -300,31 +301,73 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
            ═══════════════════════════════════════ */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-          maxWidth: 400, marginBottom: 28, justifyContent: 'center'
+          maxWidth: 400, marginBottom: 28, justifyContent: 'center', position: 'relative'
         }}>
+          {/* My language button */}
           <button
             style={{
               padding: '10px 16px', borderRadius: 20,
-              background: C.accent + '20', border: `1px solid ${C.accent}40`,
+              background: showLangPicker === 'my' ? C.accent + '40' : C.accent + '20',
+              border: `1px solid ${C.accent}40`,
               color: C.accent, fontSize: 12, fontWeight: 700,
               cursor: 'pointer', fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
             }}
-            onClick={() => { /* open language selector */ }}>
+            onClick={() => { vibrate(); setShowLangPicker(showLangPicker === 'my' ? null : 'my'); }}>
             {langInfo.flag} {langInfo.name}
           </button>
-          <div style={{ fontSize: 18, color: C.textSecondary }}>⇄</div>
-          <button
-            style={{
-              padding: '10px 16px', borderRadius: 20,
-              background: C.accent2 + '20', border: `1px solid ${C.accent2}40`,
-              color: C.accent2, fontSize: 12, fontWeight: 700,
-              cursor: 'pointer', fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}
-            onClick={() => { /* open language selector */ }}>
-            {getLang(myLang).flag} {getLang(myLang).name}
-          </button>
+
+          {/* Arrow */}
+          <div style={{ fontSize: 18, color: C.textSecondary }}>→</div>
+
+          {/* Target: auto (determined by partner in room) */}
+          <div style={{
+            padding: '10px 16px', borderRadius: 20,
+            background: C.accent2 + '15', border: `1px solid ${C.accent2}25`,
+            color: C.accent2, fontSize: 12, fontWeight: 600,
+            fontFamily: FONT, opacity: 0.7
+          }}>
+            🌐 Auto
+          </div>
+
+          {/* Language picker dropdown */}
+          {showLangPicker && (
+            <>
+              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowLangPicker(null)} />
+              <div style={{
+                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 8, zIndex: 100,
+                background: theme === 'dark' ? '#1a1a2e' : '#fff',
+                border: `1px solid ${C.accent}30`, borderRadius: 16,
+                maxHeight: 280, overflowY: 'auto', padding: 8,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+              }}>
+                {LANGS.map(l => {
+                  const isSelected = l.code === prefs.lang;
+                  return (
+                    <button key={l.code}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                        padding: '10px 12px', border: 'none', borderRadius: 10,
+                        background: isSelected ? (C.accent + '25') : 'transparent',
+                        color: isSelected ? C.accent : C.textPrimary,
+                        fontSize: 13, fontWeight: isSelected ? 700 : 400,
+                        cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+                        transition: 'background 0.15s'
+                      }}
+                      onClick={() => {
+                        vibrate();
+                        savePrefs({ ...prefs, lang: l.code });
+                        setShowLangPicker(null);
+                      }}>
+                      <span style={{ fontSize: 20 }}>{l.flag}</span>
+                      <span>{l.name}</span>
+                      {isSelected && <span style={{ marginLeft: 'auto' }}>✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* ═══════════════════════════════════════
