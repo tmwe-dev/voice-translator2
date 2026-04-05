@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 import crypto from 'crypto';
 
 // ── Apple JWKS cache (refresh every 24h) ──
@@ -48,7 +49,7 @@ async function verifyAppleJWT(id_token) {
 }
 
 // Apple Sign-In: verify identity token and create/login user
-export async function POST(req) {
+async function appleHandler(req) {
   try {
     // Rate limit: 10/min per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'auth-apple'), 10);
@@ -121,7 +122,7 @@ export async function POST(req) {
       try {
         const u = typeof appleUser === 'string' ? JSON.parse(appleUser) : appleUser;
         name = [u.name?.firstName, u.name?.lastName].filter(Boolean).join(' ');
-      } catch {}
+      } catch (e) { console.warn('[Apple Auth] Failed to parse user name:', e.message); }
     }
 
     // Create or get user
@@ -166,3 +167,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(appleHandler, { maxRequests: 20, prefix: 'auth-apple' });

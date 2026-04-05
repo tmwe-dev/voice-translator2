@@ -3,9 +3,10 @@ import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, get
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { t } from '../../lib/i18n.js';
+import { withApiGuard } from '../../lib/apiGuard.js';
 
 // POST /api/auth - Handle auth actions
-export async function POST(req) {
+async function handler(req) {
   try {
     const { action, email, code, name, lang, avatar, token, referralCode } = await req.json();
 
@@ -187,3 +188,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handler, { maxRequests: 30, prefix: 'auth' });

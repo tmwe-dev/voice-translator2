@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode } from '../../../lib/users.js';
+import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 
 // Force dynamic rendering — this route uses req.url and query params
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,14 @@ export const dynamic = 'force-dynamic';
 // Used as fallback when Google One Tap SDK doesn't load
 export async function GET(req) {
   try {
+    // Rate limit: 20/min per IP
+    const rl = await checkRateLimit(getRateLimitKey(req, 'auth-google-cb'), 20);
+    if (!rl.allowed) {
+      return new Response(closePopupHTML('Too many attempts. Please wait.'), {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');

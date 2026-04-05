@@ -78,15 +78,15 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     e2e.reset();
     pendingCallRef.current = false;
     if (dcRef.current) {
-      try { dcRef.current.close(); } catch {}
+      try { dcRef.current.close(); } catch (e) { console.warn('[WebRTC] dc close:', e.message); }
       dcRef.current = null;
     }
     if (pcRef.current) {
-      try { pcRef.current.close(); } catch {}
+      try { pcRef.current.close(); } catch (e) { console.warn('[WebRTC] pc close:', e.message); }
       pcRef.current = null;
     }
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      localStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch (e) { console.warn('[WebRTC] track stop:', e.message); } });
       localStreamRef.current = null;
     }
     sendersRef.current = [];
@@ -117,7 +117,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             signalingSubscribePromiseRef.current,
             new Promise((resolve) => setTimeout(resolve, 250)),
           ]);
-        } catch {}
+        } catch (e) { console.warn('[WebRTC] signaling wait:', e.message); }
       } else {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
@@ -147,15 +147,27 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     console.log('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
     // Always update the ref with the latest stream/tracks
     if (stream) {
+      // Remove old tracks of same kind to prevent accumulation & leaked handlers
+      const existing = stream.getTracks().filter(t => t !== track && t.kind === track.kind);
+      existing.forEach(old => {
+        old.onended = null; old.onmute = null; old.onunmute = null;
+        stream.removeTrack(old);
+      });
       remoteStreamRef.current = stream;
     } else {
       if (!remoteStreamRef.current) {
         remoteStreamRef.current = new MediaStream();
       }
+      // Remove old tracks of same kind before adding new one
+      remoteStreamRef.current.getTracks()
+        .filter(t => t.kind === track.kind && t !== track)
+        .forEach(old => {
+          old.onended = null; old.onmute = null; old.onunmute = null;
+          remoteStreamRef.current.removeTrack(old);
+        });
       remoteStreamRef.current.addTrack(track);
     }
     // CRITICAL: Always create a NEW MediaStream object so React detects the state change
-    // (same reference won't trigger re-render even if new tracks were added)
     const updatedStream = new MediaStream(remoteStreamRef.current.getTracks());
     setRemoteStream(updatedStream);
     if (track.kind === 'video') setRemoteVideoActive(true);
@@ -392,7 +404,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           localStreamRef.current = stream;
           setLocalStream(stream);
           return stream;
-        } catch {}
+        } catch (e) { console.warn('[WebRTC] audio-only fallback failed:', e.message); }
       }
     }
     return null;
@@ -402,7 +414,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     const queue = iceCandidateQueueRef.current;
     iceCandidateQueueRef.current = [];
     for (const candidateStr of queue) {
-      try { await addIceCandidate(pc, candidateStr); } catch {}
+      try { await addIceCandidate(pc, candidateStr); } catch (e) { console.warn('[WebRTC] ICE flush:', e.message); }
     }
   }
 
@@ -547,7 +559,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         iceCandidateQueueRef.current.push(data);
         return;
       }
-      try { await addIceCandidate(pc, data); } catch {}
+      try { await addIceCandidate(pc, data); } catch (e) { console.warn('[WebRTC] ICE add:', e.message); }
 
     } else if (type === 'renegotiate') {
       const pc = pcRef.current;
@@ -593,7 +605,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     return () => {
       signalingReadyRef.current = false;
       signalingSubscribePromiseRef.current = null;
-      try { channel.unsubscribe(); } catch {}
+      try { channel.unsubscribe(); } catch (e) { console.warn('[WebRTC] unsubscribe:', e.message); }
       if (channelRef.current === channel) channelRef.current = null;
     };
   }, [roomId]);
@@ -649,7 +661,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setIncomingCall(null);
     try {
       await sendSignal('call-declined', JSON.stringify({ reason: 'declined' }));
-    } catch {}
+    } catch (e) { console.warn('[WebRTC] decline signal:', e.message); }
   }, [sendSignal]);
 
   // ── Toggle video ──
@@ -695,7 +707,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       const newStream = await switchCamera(localStreamRef.current, sendersRef.current);
       localStreamRef.current = newStream;
       setLocalStream(newStream);
-    } catch {}
+    } catch (e) { console.warn('[WebRTC] flipCamera:', e.message); }
   }, []);
 
   const toggleAudio = useCallback(() => {

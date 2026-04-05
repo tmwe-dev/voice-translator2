@@ -45,9 +45,6 @@ const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
 const HelpView = lazy(() => import('./components/HelpView.js'));
 
 // ═══ Always-imported (lightweight, used within RoomView) ═══
-import ConnectionQuality from './components/ConnectionQuality.js';
-import InterpreterView from './components/InterpreterView.js';
-import ChatActionsPanel from './components/ChatActionsPanel.js';
 import ProviderBadge from './components/ProviderBadge.js';
 
 // ═══ Lazy loading fallback ═══
@@ -60,11 +57,9 @@ const LazyFallback = () => (
 
 // ═══ P4 Manifesto integration ═══
 import BottomNav from './components/BottomNav.js';
-import { TaxiButton } from './components/TaxiMode.js';
 const TaxiMode = lazy(() => import('./components/TaxiMode.js'));
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
-const ResultView = lazy(() => import('./components/ResultView.js'));
 
 
 export default function Home() {

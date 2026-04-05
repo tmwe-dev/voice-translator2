@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 
 // Google OAuth: verify ID token and create/login user
 // Uses Google's tokeninfo endpoint (no extra npm packages needed)
-export async function POST(req) {
+async function handler(req) {
   try {
     // Rate limit: 10/min per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'auth-google'), 10);
@@ -131,3 +132,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handler, { maxRequests: 20, prefix: 'auth-google' });
