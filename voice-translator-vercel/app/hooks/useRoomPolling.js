@@ -347,24 +347,45 @@ export default function useRoomPolling({
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
           if (newMsgs && newMsgs.length > 0) {
+            // Track which messages got new translations in this poll cycle
+            const msgsWithNewTranslations = [];
+
             setMessages(prev => {
-              const ids = new Set(prev.map(m => m.id));
+              const idMap = new Map(prev.map(m => [m.id, m]));
               let updated = [...prev];
               let changed = false;
               for (const m of newMsgs) {
-                if (ids.has(m.id)) continue;
+                const existing = idMap.get(m.id);
+                if (existing) {
+                  // Message already exists — check if server has translations we don't
+                  const hadTranslation = existing.translated || (existing.translations && Object.keys(existing.translations).length > 0);
+                  const hasNewTranslation = (m.translated && !existing.translated) ||
+                    (m.translations && Object.keys(m.translations).length > (existing.translations ? Object.keys(existing.translations).length : 0));
+                  if (hasNewTranslation) {
+                    // Update local message with new translations from server
+                    const idx = updated.findIndex(u => u.id === m.id);
+                    if (idx >= 0) {
+                      updated[idx] = {
+                        ...updated[idx],
+                        translated: m.translated || updated[idx].translated,
+                        targetLang: m.targetLang || updated[idx].targetLang,
+                        translations: { ...(updated[idx].translations || {}), ...(m.translations || {}) },
+                      };
+                      changed = true;
+                      if (!hadTranslation) msgsWithNewTranslations.push(updated[idx]);
+                    }
+                  }
+                  continue;
+                }
                 // Replace temp message with server version (dedup broadcast vs poll)
                 const tempIdx = updated.findIndex(t =>
                   t.id?.startsWith('tmp_') && t.sender === m.sender && t.original === m.original
                 );
                 if (tempIdx >= 0) {
-                  // Mark server ID as "sent by me" if the temp was ours
                   const tempMsg = updated[tempIdx];
                   if (sentByMeRef.current.has(tempMsg.id)) {
                     addSentByMe(m.id);
                   }
-                  // MERGE: keep local translations if server doesn't have them yet
-                  // (Phase 2 updateLocalMessage may have added them before this poll)
                   updated[tempIdx] = {
                     ...m,
                     translated: m.translated || tempMsg.translated,
@@ -381,13 +402,17 @@ export default function useRoomPolling({
               return changed ? updated : prev;
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
+
+            // Trigger TTS for messages that just got translations via polling
+            // This is the critical path for guests without Realtime/P2P
+            for (const msg of msgsWithNewTranslations) {
+              processIncomingMessage(msg);
+            }
+
             // Build set of server IDs that replaced temp messages (already processed via P2P/Realtime)
             const replacedServerIds = new Set();
             for (const m of newMsgs) {
-              // If this server msg replaced a temp_ msg, the original was already
-              // processed via P2P or Realtime — skip processIncomingMessage to avoid
-              // duplicate TTS and duplicate overlay subtitles.
-              const wasTemp = updated.find(t => t.id === m.id && t._stableKey?.startsWith('tmp_'));
+              const wasTemp = msgsWithNewTranslations.find(t => t.id === m.id);
               if (wasTemp) replacedServerIds.add(m.id);
             }
             for (const msg of newMsgs) {
@@ -400,6 +425,8 @@ export default function useRoomPolling({
               }
               // Skip TTS/processing for messages that replaced a temp (already handled)
               if (replacedServerIds.has(msg.id)) continue;
+              // Skip if already handled as a new-translation update above
+              if (msgsWithNewTranslations.some(t => t.id === msg.id)) continue;
               processIncomingMessage(msg);
             }
           }
