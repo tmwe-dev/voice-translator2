@@ -54,6 +54,7 @@ export default function useInitializeApp({
         setPrefs(p => {
           const updated = {
             ...p,
+            autoPlay: true, // Ensure guests always have audio enabled
             ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
             ...(guestGenderParam ? { gender: guestGenderParam } : {}),
             ...(guestLangParam ? { lang: guestLangParam } : {}),

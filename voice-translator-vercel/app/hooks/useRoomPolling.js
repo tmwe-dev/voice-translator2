@@ -105,7 +105,7 @@ export default function useRoomPolling({
     // Phase 1 messages arrive with NO translation → no TTS → don't add fingerprint.
     // Phase 2 update arrives WITH translation → TTS plays → add fingerprint.
     // This ensures Phase 2 isn't blocked by Phase 1's empty arrival.
-    if (textToPlay && prefsRef.current.autoPlay) {
+    if (textToPlay && prefsRef.current.autoPlay !== false) {
       processedForTTSRef.current.add(contentFingerprint);
       // LRU cap: prevent unbounded growth
       if (processedForTTSRef.current.size > 500) {

@@ -272,27 +272,32 @@ export default function useAudioSystem({
     processAudioQueue();
   }
 
+  async function playOneItem(text, lang) {
+    const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
+    if (voiceEngine === 'edge') await tts.playEdgeTTS(text, lang);
+    else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, lang);
+    else if (voiceEngine === 'openai') await tts.playTTS(text, lang);
+    else {
+      const hasClonedVoice = !!clonedVoiceIdRef?.current;
+      if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
+      else await tts.playEdgeTTS(text, lang);
+    }
+  }
+
   async function processAudioQueue() {
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
-    const { text, lang } = audioQueueRef.current.shift();
-    startDucking();
-    try {
-      const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
-      if (voiceEngine === 'edge') await tts.playEdgeTTS(text, lang);
-      else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, lang);
-      else if (voiceEngine === 'openai') await tts.playTTS(text, lang);
-      else {
-        // Auto mode: prioritize speed. Edge TTS (100-300ms) is fastest.
-        // Use ElevenLabs only when user has a cloned voice (premium feature).
-        const hasClonedVoice = !!clonedVoiceIdRef?.current;
-        if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
-        else await tts.playEdgeTTS(text, lang);
-      }
-    } catch (e) { console.error('[Audio] playback error:', e); }
-    stopDucking();
+
+    while (audioQueueRef.current.length > 0) {
+      const { text, lang } = audioQueueRef.current.shift();
+      startDucking();
+      try {
+        await playOneItem(text, lang);
+      } catch (e) { console.error('[Audio] playback error:', e); }
+      stopDucking();
+    }
+
     isPlayingRef.current = false;
-    processAudioQueue();
   }
 
   // =============================================

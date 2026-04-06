@@ -223,7 +223,7 @@ export default function useTTSEngine({
 
   async function fetchEdgeTTSBlob(text, langCode, gender) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const timeoutId = setTimeout(() => controller.abort(), 2500);
     try {
       try {
         const res = await fetch('/api/tts-edge', {

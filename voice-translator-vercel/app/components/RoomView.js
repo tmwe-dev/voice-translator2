@@ -62,6 +62,11 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   const msgCount = roomInfo?.msgCount || 0;
   const roomCtx = CONTEXTS.find(c => c.id === (roomInfo?.context || 'general')) || CONTEXTS[0];
 
+  // Force unlock audio on room mount (critical for guests auto-joined from QR)
+  useEffect(() => {
+    if (unlockAudio) unlockAudio();
+  }, []);
+
   // Auto-open voice/video panel when call connects
   useEffect(() => {
     const state = webrtc?.webrtcState;
