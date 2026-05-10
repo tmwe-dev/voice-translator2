@@ -108,6 +108,12 @@ export default function SummaryView({ L, S, prefs, currentConv, summaryLoading, 
           </div>
         )}
 
+        {currentConv.messages?.length > 0 && (
+          <button style={{...S.btn, marginTop:12, width:'100%', maxWidth:380}} onClick={() => setView('detail')}>
+            💬 {L('viewMessages') || 'Vedi messaggi'}
+          </button>
+        )}
+
         {status && <div style={S.statusMsg}>{status}</div>}
       </div>
     </div>

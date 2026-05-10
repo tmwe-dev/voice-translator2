@@ -63,7 +63,7 @@ const LazyFallback = () => (
 
 // ═══ P4 Manifesto integration ═══
 import BottomNav from './components/BottomNav.js';
-const TaxiMode = lazy(() => import('./components/TaxiMode.js'));
+// TaxiMode is used inside RoomView, not standalone
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
 
@@ -135,6 +135,9 @@ function HomeInner() {
   // handleDirectMessage → interpreter → webrtc → handleDirectMessage
   const interpreterRef = useRef(null);
 
+  // ── Cloned voice ref — syncs auth.clonedVoiceId to a ref for useAudioSystem ──
+  const clonedVoiceIdRef = useRef(null);
+
   // =============================================
   // HOOKS — now use the SAME refs that get synced below
   // =============================================
@@ -147,6 +150,7 @@ function HomeInner() {
     isTopProRef: auth.isTopProRef,
     canUseElevenLabsRef: auth.canUseElevenLabsRef,
     selectedELVoice: auth.selectedELVoice,
+    clonedVoiceIdRef,
     roomIdRef,
     getEffectiveToken: auth.getEffectiveToken
   });
@@ -281,6 +285,7 @@ function HomeInner() {
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomPolling.roomInfo; }, [roomPolling.roomInfo]);
   useEffect(() => { roomIdRef.current = roomPolling.roomId; }, [roomPolling.roomId]);
+  useEffect(() => { clonedVoiceIdRef.current = auth.clonedVoiceId || null; }, [auth.clonedVoiceId]);
 
   // ═══ STORE BRIDGE: sync local state → Zustand-lite stores ═══
   // This allows new components to read from stores instead of prop-drilling
@@ -333,7 +338,7 @@ function HomeInner() {
       if (!navigator.onLine || !roomPolling.roomId) return;
       try {
         const { flushOfflineQueue } = await import('./lib/chatStorage.js');
-        const result = await flushQueue(async (msg) => {
+        const result = await flushOfflineQueue(async (msg) => {
           await translation.sendTextMessage(msg.text || msg.original);
         });
         if (result.sent > 0) {
@@ -626,7 +631,10 @@ function HomeInner() {
             } catch (e) { console.warn('[Page] Summary fetch failed:', e?.message); }
             setSummaryLoading(false);
           }
-          setCurrentConv(conversation); setView('summary');
+          setCurrentConv(conversation);
+          setDetailConversation(conversation);
+          setDetailMessages(conversation.messages || []);
+          setView('summary');
         }
       }
     } catch (e) { console.error('View conv error:', e); }
@@ -1039,11 +1047,34 @@ function HomeInner() {
           onResume={detailConversation?.roomId ? () => {
             if (rejoinRoom) rejoinRoom(detailConversation.roomId);
           } : undefined}
-          onExport={() => {}}
-          onShare={() => {}}
-          onDelete={() => {}}
-          onPlayMessage={null}
-          playingMsgId={null}
+          onExport={() => {
+            if (!detailMessages?.length) return;
+            const convName = detailConversation?.host ? `${detailConversation.host}'s Room` : 'BarTalk';
+            const date = new Date().toLocaleString();
+            let text = `BarTalk - ${convName}\n${date}\n${'='.repeat(40)}\n\n`;
+            for (const msg of detailMessages) {
+              const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+              text += `[${time}] ${msg.sender}:\n  ${msg.original}\n  → ${msg.translated}\n\n`;
+            }
+            text += `${'='.repeat(40)}\n${detailMessages.length} messaggi | BarTalk`;
+            if (navigator.share) navigator.share({ title: `BarTalk - ${convName}`, text });
+            else { navigator.clipboard.writeText(text).then(() => { setStatus(L('exportCopied')); setTimeout(() => setStatus(''), 2000); }); }
+          }}
+          onShare={() => {
+            if (!detailConversation?.roomId) return;
+            const link = `${window.location.origin}?room=${detailConversation.roomId}`;
+            if (navigator.share) navigator.share({ title: 'BarTalk', url: link });
+            else navigator.clipboard.writeText(link).then(() => { setStatus('Link copiato!'); setTimeout(() => setStatus(''), 2000); });
+          }}
+          onDelete={() => {
+            if (!detailConversation?.id) return;
+            if (!confirm('Eliminare questa conversazione?')) return;
+            fetch('/api/conversation', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'delete', convId: detailConversation.id, userToken: auth.userTokenRef?.current || null })
+            }).then(() => { loadHistory(); setView('history'); }).catch(e => console.error('Delete error:', e));
+          }}
+          onPlayMessage={(msg) => audio.playMessage(msg)}
+          playingMsgId={audio.playingMsgId}
           prefs={prefs}
         />
       </Suspense>

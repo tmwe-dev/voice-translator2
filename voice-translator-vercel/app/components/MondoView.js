@@ -274,7 +274,7 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
               Crea una stanza pubblica per farti trovare da persone in tutto il mondo!
             </div>
-            <button onClick={() => setView('create')} style={{
+            <button onClick={() => setView('home')} style={{
               padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,

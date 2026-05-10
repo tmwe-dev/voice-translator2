@@ -10,12 +10,12 @@ const BottomNav = ({ currentView, setView, S, L, theme }) => {
   const navItems = [
     { id: 'home', icon: '🏠', label: 'Home', views: ['home', 'quickinvite'] },
     { id: 'archive', icon: '📂', label: 'Archivio', views: ['archive', 'history', 'summary', 'contacts'] },
-    { id: 'ai', icon: '✨', label: 'AI', views: ['ai', 'interpreter'] },
+    { id: 'ai', icon: '✨', label: 'AI', views: ['ai'] },
     { id: 'settings', icon: '⚙️', label: 'Profilo', views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help'] },
   ];
 
   // Views where BottomNav should not be shown
-  const hiddenViews = new Set(['room', 'chat', 'lobby', 'join', 'welcome', 'loading', 'detail', 'result']);
+  const hiddenViews = new Set(['room', 'lobby', 'join', 'welcome', 'loading', 'detail']);
 
   // Check if current view should hide the nav
   if (hiddenViews.has(currentView)) {

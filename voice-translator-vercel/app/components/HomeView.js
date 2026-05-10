@@ -447,7 +447,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
 
           {/* Interpreter */}
           <button
-            onClick={() => { vibrate(); setView('interpreter'); }}
+            onClick={() => { vibrate(); setSelectedMode('interpreter'); handleCreateRoom(); }}
             style={{
               flex: '0 0 auto', padding: '14px 16px',
               borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
@@ -461,7 +461,7 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
 
           {/* Taxi */}
           <button
-            onClick={() => { vibrate(); setView('taxi'); }}
+            onClick={() => { vibrate(); setSelectedMode('conversation'); handleCreateRoom(); }}
             style={{
               flex: '0 0 auto', padding: '14px 16px',
               borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
