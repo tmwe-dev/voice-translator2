@@ -305,6 +305,21 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
           </div>
         )}
 
+        {/* ═══ GENERA QR BUTTON ═══ */}
+        {gender && !creating && !createdRoomId && (
+          <button onClick={createInstant}
+            style={{
+              width: '100%', padding: '18px 0', borderRadius: 16, cursor: 'pointer', border: 'none',
+              background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 50%, #178F78 100%)',
+              color: '#000', fontFamily: FONT, fontSize: 17, fontWeight: 700, letterSpacing: -0.3,
+              boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+              transition: 'all 0.2s',
+            }}>
+            <Icon name="share" size={22} color="#000" /> Genera QR Invito
+          </button>
+        )}
+
         {/* ═══ CREATING SPINNER ═══ */}
         {creating && (
           <div style={{ textAlign: 'center', padding: 30 }}>
