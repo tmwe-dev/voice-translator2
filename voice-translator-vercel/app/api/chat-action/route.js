@@ -107,7 +107,7 @@ async function handlePost(request) {
     });
   } catch (err) {
     console.error('[chat-action] Error:', err);
-    return NextResponse.json({ error: err.message || 'Internal error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

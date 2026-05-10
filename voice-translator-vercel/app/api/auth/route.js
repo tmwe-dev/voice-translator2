@@ -55,12 +55,13 @@ async function handler(req) {
         }
       }
 
-      // In test mode or if email fails, also return code in response
-      const isTest = !process.env.RESEND_API_KEY || !emailSent;
+      // Only return code in dev/test — NEVER in production
+      const isTestEnv = process.env.NEXT_PUBLIC_TESTING_MODE === 'true' || process.env.NODE_ENV === 'development';
+      const emailFailed = !process.env.RESEND_API_KEY || !emailSent;
       return NextResponse.json({
         ok: true,
         emailSent,
-        ...(isTest ? { testCode: authCode } : {})
+        ...(isTestEnv && emailFailed ? { testCode: authCode } : {})
       });
     }
 
@@ -185,7 +186,7 @@ async function handler(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('Auth error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

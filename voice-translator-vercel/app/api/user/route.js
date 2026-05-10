@@ -73,7 +73,7 @@ async function handlePost(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('User error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -144,7 +144,7 @@ async function handleGet(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('User GET error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -211,7 +211,7 @@ async function handlePut(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     console.error('User PUT error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

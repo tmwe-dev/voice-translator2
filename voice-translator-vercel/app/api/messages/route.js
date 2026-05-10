@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
-import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, rateLimit, getClientIP } from '../../lib/validate.js';
+import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getClientIP } from '../../lib/validate.js';
 
 // POST /api/messages - Send a translation to the room
 // Supports multi-language: `translations` field contains per-language translations

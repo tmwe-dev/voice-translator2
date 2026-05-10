@@ -174,7 +174,7 @@ async function handlePost(req) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e) {
     console.error('Admin API error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

@@ -7,6 +7,9 @@ import { CREDIT_PACKAGES } from '../../lib/users.js';
 // POST /api/stripe - Create checkout session
 async function handlePost(req) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json({ error: 'Payment system not configured' }, { status: 503 });
+    }
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
     const { action, packageId, token } = await req.json();
 

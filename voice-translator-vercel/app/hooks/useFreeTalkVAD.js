@@ -43,6 +43,7 @@ export default function useFreeTalkVAD({
   processAndSendAudio,
 }) {
   const [isListening, setIsListening] = useState(false);
+  const isListeningRef = useRef(false);
   const [vadAudioLevel, setVadAudioLevel] = useState(0);
   const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null);
   const [vadSensitivity, setVadSensitivity] = useState(() => {
@@ -77,7 +78,7 @@ export default function useFreeTalkVAD({
    * Start FreeTalk mode: open mic, run VAD loop, auto-record on voice detection.
    */
   const startFreeTalk = useCallback(async () => {
-    if (isListening) return;
+    if (isListeningRef.current) return;
     unlockAudio();
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const currentLang = myLangRef.current;
@@ -99,6 +100,7 @@ export default function useFreeTalkVAD({
       analyser.smoothingTimeConstant = 0.8;
       source.connect(analyser);
       vadAnalyserRef.current = analyser;
+      isListeningRef.current = true;
       setIsListening(true);
       freeTalkSendingRef.current = false;
 
@@ -140,7 +142,7 @@ export default function useFreeTalkVAD({
         };
 
         recognition.onend = () => {
-          if (streamingModeRef.current && isListening) {
+          if (streamingModeRef.current && isListeningRef.current) {
             ftProcessedFinals = new Set();
             try { recognition.start(); } catch {}
           }
@@ -268,6 +270,7 @@ export default function useFreeTalkVAD({
    * IMPORTANT: any pending accumulated text is sent, never discarded.
    */
   const stopFreeTalk = useCallback(async () => {
+    isListeningRef.current = false;
     setIsListening(false);
     setRecording(false);
     setVadAudioLevel(0);

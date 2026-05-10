@@ -11,7 +11,7 @@ import { findConsensus } from '../../lib/consensus.js';
 async function handlePost(req) {
   try {
     // Production guard: test endpoints disabled unless TESTING_MODE active
-    if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TESTING_MODE === 'false') {
+    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
       return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
     }
 

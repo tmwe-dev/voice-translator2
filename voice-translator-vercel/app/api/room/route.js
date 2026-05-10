@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getRoom } from '../../lib/store.js';
-import { sanitizeRoomId, sanitizeName, rateLimit, getClientIP } from '../../lib/validate.js';
+import { sanitizeRoomId, sanitizeName, getClientIP } from '../../lib/validate.js';
 import {
   resolveIdentity,
   handleCreate, handleJoin, handleHeartbeat, handleSpeaking,

@@ -164,7 +164,7 @@ async function appleHandler(req) {
 
   } catch (e) {
     console.error('Apple auth error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

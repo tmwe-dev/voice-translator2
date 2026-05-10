@@ -345,6 +345,6 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Unknown command, Captain.' }, { status: 400 });
   } catch (e) {
     console.error('Startrek error:', e);
-    return NextResponse.json({ error: 'Warp core breach: ' + e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

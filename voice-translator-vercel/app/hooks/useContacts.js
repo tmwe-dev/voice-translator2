@@ -10,17 +10,16 @@ export default function useContacts({ userTokenRef }) {
   const [inviteCode, setInviteCode] = useState(null);
   const heartbeatRef = useRef(null);
 
-  // Heartbeat: keep presence alive
+  // Heartbeat: keep presence alive — reads token from ref each tick
   useEffect(() => {
-    const token = userTokenRef?.current;
-    if (!token) return;
-
     async function sendHeartbeat() {
+      const token = userTokenRef?.current;
+      if (!token) return;
       try {
         await fetch('/api/contacts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat', token: userTokenRef.current })
+          body: JSON.stringify({ action: 'heartbeat', token })
         });
       } catch {}
     }
@@ -30,10 +29,11 @@ export default function useContacts({ userTokenRef }) {
 
     // Go offline on unload
     const handleUnload = () => {
+      const token = userTokenRef?.current;
+      if (!token) return;
       try {
         navigator.sendBeacon('/api/contacts', JSON.stringify({
-          action: 'offline',
-          token: userTokenRef.current
+          action: 'offline', token
         }));
       } catch {}
     };
@@ -43,7 +43,7 @@ export default function useContacts({ userTokenRef }) {
       clearInterval(heartbeatRef.current);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, [userTokenRef?.current]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps — reads from ref
 
   // Fetch contacts list
   const fetchContacts = useCallback(async () => {

@@ -70,14 +70,6 @@ export function sanitizeText(text, maxLen = 10000) {
     .slice(0, maxLen);
 }
 
-// NOTE: In-memory rate limiter REMOVED — use Redis-backed checkRateLimit from rateLimit.js
-// via apiGuard.js (single unified rate limiting layer).
-// Legacy export kept for backward compat — always returns allowed: true
-/** @deprecated Use apiGuard.js instead */
-export function rateLimit(_ip, _opts = {}) {
-  return { allowed: true, remaining: 999, resetIn: 0 };
-}
-
 /**
  * Get client IP from Next.js request
  */

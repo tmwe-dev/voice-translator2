@@ -201,7 +201,7 @@ export async function GET(req) {
   } catch (error) {
     console.error('Data export error:', error);
     return NextResponse.json(
-      { error: 'Internal server error during data export', details: error.message },
+      { error: 'Internal server error during data export' },
       { status: 500 }
     );
   }
@@ -328,7 +328,7 @@ export async function POST(req) {
   } catch (error) {
     console.error('Data export error:', error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

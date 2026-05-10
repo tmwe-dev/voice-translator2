@@ -31,6 +31,10 @@ export default function useAudioSystem({
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [playingMsgId, setPlayingMsgId] = useState(null);
 
+  // Mounted guard for async operations
+  const mountedRef = useRef(true);
+  useEffect(() => { return () => { mountedRef.current = false; }; }, []);
+
   // Audio refs
   const persistentAudioRef = useRef(null);
   const audioContextRef = useRef(null);
@@ -333,7 +337,7 @@ export default function useAudioSystem({
         }
       }
     } catch (e) { console.error('[Audio] playMessage error:', e); }
-    setPlayingMsgId(null);
+    if (mountedRef.current) setPlayingMsgId(null);
   }
 
   return {

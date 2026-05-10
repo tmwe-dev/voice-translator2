@@ -138,6 +138,11 @@ export default function useVoiceRecorder() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
+    // Stop mic tracks to release the microphone
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
     if (timerRef.current) clearInterval(timerRef.current);
     if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     setIsRecording(false);
@@ -154,26 +159,27 @@ export default function useVoiceRecorder() {
     });
   }, []);
 
-  const cleanup = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
-      audioContextRef.current = null;
-    }
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    // Cleanup object URLs
-    segments.forEach(seg => {
-      if (seg.url) URL.revokeObjectURL(seg.url);
-    });
-  }, [segments]);
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
 
   useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+    // Cleanup on unmount only — not on every segments change
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(() => {});
+        audioContextRef.current = null;
+      }
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      segmentsRef.current.forEach(seg => {
+        if (seg.url) URL.revokeObjectURL(seg.url);
+      });
+    };
+  }, []);
 
   const totalDuration = segments.reduce((sum, s) => sum + s.duration, 0);
 

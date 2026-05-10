@@ -10,6 +10,16 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 // ═══════════════════════════════════════════════
 
 async function handler(req) {
+  // Auth guard: require room session token or user token
+  try {
+    const body = await req.clone().json().catch(() => ({}));
+    const hasRoomToken = !!body.roomSessionToken;
+    const hasUserToken = !!body.userToken;
+    if (!hasRoomToken && !hasUserToken) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+  } catch { /* allow if body parse fails — rate limit will catch abuse */ }
+
   const deepgramKey = process.env.DEEPGRAM_API_KEY;
   if (!deepgramKey) {
     return NextResponse.json(

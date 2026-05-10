@@ -4,17 +4,13 @@
 
 import { redis } from './redis.js';
 import { addCredits, deductCredits } from './credits.js';
+import { randomBytes } from 'crypto';
 
 const GIFT_MIN = 50;           // min 50 credits (€0.50)
 const GIFT_INVITE_TTL = 604800; // 7 days in seconds
 
 function generateGiftCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let code = 'VT-GIFT-';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return 'VT-GIFT-' + randomBytes(6).toString('base64url').slice(0, 8);
 }
 
 /**

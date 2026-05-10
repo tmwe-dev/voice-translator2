@@ -3,17 +3,13 @@
 // ═══════════════════════════════════════════════
 
 import { redis } from './redis.js';
+import { randomBytes } from 'crypto';
 
 const LENDING_MIN_DURATION = 3600000;       // 1 hour
 const LENDING_MAX_DURATION = 30 * 86400000; // 30 days
 
 function generateLendingCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let code = 'VT-LEND-';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return 'VT-LEND-' + randomBytes(6).toString('base64url').slice(0, 8);
 }
 
 /**

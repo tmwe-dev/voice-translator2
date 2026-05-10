@@ -231,7 +231,7 @@ async function handlePost(req) {
   } catch (e) {
     if (e instanceof NextResponse) return e;
     console.error('ElevenLabs TTS error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -292,7 +292,7 @@ async function handleGet(req) {
     return NextResponse.json({ voices, avatarVoiceMap: AVATAR_VOICE_MAP });
   } catch (e) {
     console.error('ElevenLabs voices error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

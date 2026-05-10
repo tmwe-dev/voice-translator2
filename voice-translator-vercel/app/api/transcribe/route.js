@@ -77,7 +77,7 @@ async function handlePost(req) {
   } catch (e) {
     if (e instanceof NextResponse) return e;
     console.error('[Transcribe] Error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

@@ -416,7 +416,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{flex:1, minWidth:0}}>
               <div style={{fontSize:12, color:S.colors.textSecondary}}>Glossario personale</div>
             </div>
-            <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
+            <span style={{fontSize:10, color:S.colors.textMuted}}>Presto</span>
           </div>
 
           {/* Row: Esporta dati */}
@@ -428,7 +428,7 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
             <div style={{flex:1, minWidth:0}}>
               <div style={{fontSize:12, color:S.colors.textSecondary}}>Esporta dati</div>
             </div>
-            <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
+            <span style={{fontSize:10, color:S.colors.textMuted}}>Presto</span>
           </div>
         </div>
 
@@ -456,15 +456,16 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
           </div>
 
           {/* Row: Segnala problema */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
+          <button onClick={() => { if (typeof window !== 'undefined') window.open('mailto:support@bartalk.dev?subject=Bug%20Report', '_blank'); }}
+            style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
+            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px', width:'100%', border:'none',
+            cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
             <span style={{fontSize:16, flexShrink:0}}>🐛</span>
             <div style={{flex:1, minWidth:0}}>
               <div style={{fontSize:12, color:S.colors.textSecondary}}>Segnala problema</div>
             </div>
             <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-          </div>
+          </button>
 
           {/* Row: Versione */}
           <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,

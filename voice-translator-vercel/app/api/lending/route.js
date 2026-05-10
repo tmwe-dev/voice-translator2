@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSession, createLendingToken, validateLending, revokeLending, getLendingTokens, deductLendingTokens } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { withApiGuard } from '../../lib/apiGuard.js';
 
 // API Key Lending — Temporary TOP PRO access sharing
 // Allows TOP PRO users to create time/token-limited access passes
 
-export async function POST(req) {
+async function handler(req) {
   try {
     const { action, token, code, type, duration, tokenBudget } = await req.json();
 
@@ -71,6 +72,8 @@ export async function POST(req) {
 
   } catch (e) {
     console.error('Lending error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handler, { maxRequests: 20, prefix: 'lending' });

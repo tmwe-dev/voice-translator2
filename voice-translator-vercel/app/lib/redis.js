@@ -25,6 +25,9 @@ function fallbackGet(key) {
     _fallbackCache.delete(key);
     return undefined;
   }
+  // Re-insert to move to end (true LRU — oldest = first)
+  _fallbackCache.delete(key);
+  _fallbackCache.set(key, entry);
   return entry.val;
 }
 

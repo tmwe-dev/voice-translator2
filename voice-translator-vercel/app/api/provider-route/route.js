@@ -35,6 +35,6 @@ export async function GET(request) {
       languages: { source: sourceLang, target: targetLang },
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

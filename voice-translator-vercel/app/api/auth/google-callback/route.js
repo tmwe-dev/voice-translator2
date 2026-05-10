@@ -115,7 +115,7 @@ export async function GET(req) {
 
   } catch (e) {
     console.error('Google callback error:', e);
-    return new Response(closePopupHTML('Errore interno: ' + e.message), {
+    return new Response(closePopupHTML('Errore interno'), {
       headers: { 'Content-Type': 'text/html' },
     });
   }
@@ -135,15 +135,18 @@ function closePopupHTML(message) {
 function successPopupHTML(resultJson) {
   // Use specific origin instead of '*' to prevent clickjacking
   const appUrl = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+  // Encode as base64 to prevent XSS from user-controlled data (e.g. user.name)
+  const b64 = Buffer.from(resultJson, 'utf-8').toString('base64');
   return `<!DOCTYPE html><html><body>
     <p>Accesso riuscito! Chiusura in corso...</p>
     <script>
       try {
         if (window.opener) {
-          window.opener.postMessage({ type: 'google-oauth-result', data: ${resultJson} }, '${appUrl}');
+          var data = JSON.parse(atob("${b64}"));
+          window.opener.postMessage({ type: 'google-oauth-result', data: data }, '${appUrl}');
         }
       } catch(e) {}
-      setTimeout(() => window.close(), 1000);
+      setTimeout(function() { window.close(); }, 1000);
     </script>
   </body></html>`;
 }

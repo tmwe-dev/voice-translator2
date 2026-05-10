@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
-import { rateLimit, getClientIP } from '../../lib/validate.js';
+import { getClientIP } from '../../lib/validate.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 const MONDO_KEY = 'mondo:rooms';
 const MONDO_TTL = 3600; // 1 hour
@@ -11,8 +12,7 @@ const MONDO_TTL = 3600; // 1 hour
  */
 export async function GET(req) {
   try {
-    const ip = getClientIP(req);
-    const rl = rateLimit(ip, { maxRequests: 30, windowMs: 60000 });
+    const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-get'), 30);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
 
     const raw = await redis('LRANGE', MONDO_KEY, 0, 29); // Max 30 rooms
@@ -37,12 +37,13 @@ export async function GET(req) {
  */
 export async function POST(req) {
   try {
-    const ip = getClientIP(req);
-    const rl = rateLimit(ip, { maxRequests: 10, windowMs: 60000 });
+    const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-post'), 10);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
 
-    const { roomId, host, description, mode, lang, members } = await req.json();
+    const { roomId, host, description, mode, lang, members, roomSessionToken, userToken } = await req.json();
     if (!roomId || !host) return NextResponse.json({ error: 'roomId and host required' }, { status: 400 });
+    // Require some form of authentication to prevent spam
+    if (!roomSessionToken && !userToken) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
     const entry = {
       roomId,

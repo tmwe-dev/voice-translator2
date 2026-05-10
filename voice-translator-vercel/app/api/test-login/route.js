@@ -6,10 +6,9 @@ const TEST_EMAIL = 'test@bartalk.dev';
 // POST /api/test-login — Creates or restores a test account with full access
 // Only works when TESTING_MODE is enabled (NEXT_PUBLIC_TESTING_MODE !== 'false')
 export async function POST(req) {
-  // Production guard: test endpoints disabled unless TESTING_MODE active
-  // Only block when TESTING_MODE is explicitly set to 'false'
-  if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_TESTING_MODE === 'false') {
-    return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+  // Production guard: test endpoints ONLY enabled when TESTING_MODE is explicitly 'true'
+  if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
+    return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
   }
 
   try {
@@ -49,6 +48,6 @@ export async function POST(req) {
     });
   } catch (e) {
     console.error('[test-login] Error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

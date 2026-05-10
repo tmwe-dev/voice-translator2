@@ -4,14 +4,10 @@
 
 import { redis } from './redis.js';
 import { addCredits } from './credits.js';
+import { randomBytes } from 'crypto';
 
 function generateRandomCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  return randomBytes(4).toString('hex').toUpperCase().slice(0, 6);
 }
 
 export async function generateReferralCode(email) {

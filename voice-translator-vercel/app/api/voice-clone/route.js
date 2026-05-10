@@ -125,7 +125,7 @@ async function handlePost(req) {
 
   } catch (e) {
     console.error('[VoiceClone] Error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -156,7 +156,7 @@ async function handleGet(req) {
     });
 
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 
@@ -205,6 +205,6 @@ async function handleDelete(userToken) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

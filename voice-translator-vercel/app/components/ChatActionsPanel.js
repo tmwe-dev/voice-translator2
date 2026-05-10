@@ -177,16 +177,16 @@ function ChatActionsPanel({
               <button
                 key={action.id}
                 onClick={() => runAction(action.id)}
-                disabled={!!loading}
+                disabled={!!loading || messages.length < 3}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '14px 16px',
                   background: loading === action.id ? s.accent1 : s.inputBg,
                   border: `1px solid ${loading === action.id ? s.accent1 : s.inputBorder}`,
-                  borderRadius: 14, cursor: loading ? 'wait' : 'pointer',
+                  borderRadius: 14, cursor: (loading || messages.length < 3) ? 'not-allowed' : 'pointer',
                   color: s.textPrimary, fontSize: 15, textAlign: 'left',
                   transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
-                  opacity: loading && loading !== action.id ? 0.5 : 1,
+                  opacity: (loading && loading !== action.id) || messages.length < 3 ? 0.5 : 1,
                 }}
               >
                 <span style={{ fontSize: 22 }}>{action.icon}</span>

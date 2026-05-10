@@ -124,7 +124,7 @@ Output ONLY valid JSON, no markdown, no code blocks.`
   } catch (e) {
     if (e instanceof NextResponse) return e;
     console.error('Summary error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
 

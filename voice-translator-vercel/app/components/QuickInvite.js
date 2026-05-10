@@ -94,7 +94,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
       }, () => {});
     }).catch(() => {});
     return () => { cancelled = true; };
-  }, [createdRoomId, lang]);
+  }, [createdRoomId, lang, guestName, guestGender, guestLang]);
 
   const copyLink = useCallback(() => {
     if (!createdRoomId) return;
@@ -102,7 +102,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
     navigator.clipboard.writeText(url).then(() => {
       vibrate(); setCopied(true); setTimeout(() => setCopied(false), 2000);
     }).catch(() => {});
-  }, [createdRoomId, lang]);
+  }, [createdRoomId, lang, guestName, guestGender, guestLang]);
 
   const enterRoom = useCallback(() => {
     vibrate();
