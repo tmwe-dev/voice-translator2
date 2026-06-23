@@ -187,12 +187,14 @@ export default function useTTSEngine({
       const audio = getPersistentAudio();
       audio.onended = null;
       audio.onerror = null;
-      const safetyTimer = setTimeout(() => { audio.pause(); cleanup(); resolve(false); }, 30000);
+      const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobAudio timeout'); audio.pause(); cleanup(); resolve(false); }, 30000);
       function cleanup() { clearTimeout(safetyTimer); audio.onended = null; audio.onerror = null; }
       audio.onended = () => { cleanup(); resolve(true); };
-      audio.onerror = () => { cleanup(); resolve(false); };
+      audio.onerror = (e) => { console.warn('[TTS] playBlobAudio error:', e?.type || e); cleanup(); resolve(false); };
       audio.src = blobUrl;
-      audio.play().catch(() => { cleanup(); resolve(false); });
+      // Ensure volume is up (may have been muted)
+      audio.volume = 1.0;
+      audio.play().catch((e) => { console.warn('[TTS] playBlobAudio play() rejected:', e?.message || e); cleanup(); resolve(false); });
     });
   }
 
@@ -200,10 +202,10 @@ export default function useTTSEngine({
     return new Promise((resolve) => {
       const a = new Audio(blobUrl);
       a.volume = 1.0;
-      const safetyTimer = setTimeout(() => { a.pause(); resolve(false); }, 30000);
+      const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobNewAudio timeout'); a.pause(); resolve(false); }, 30000);
       a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
-      a.onerror = () => { clearTimeout(safetyTimer); resolve(false); };
-      a.play().catch(() => { clearTimeout(safetyTimer); resolve(false); });
+      a.onerror = (e) => { console.warn('[TTS] playBlobNewAudio error:', e?.type || e); clearTimeout(safetyTimer); resolve(false); };
+      a.play().catch((e) => { console.warn('[TTS] playBlobNewAudio play() rejected:', e?.message || e); clearTimeout(safetyTimer); resolve(false); });
     });
   }
 

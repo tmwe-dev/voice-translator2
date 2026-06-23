@@ -21,18 +21,33 @@ export async function GET() {
     circuitBreakers: {},
   };
 
-  // Check Redis
-  try {
-    const { redis } = await import('../../lib/redis.js');
-    if (redis) {
+  // Check Redis — direct test bypassing circuit breaker
+  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  checks.services.redis = { envSet: !!(upstashUrl && upstashToken) };
+  if (upstashUrl && upstashToken) {
+    try {
       const start = Date.now();
-      await redis('PING');
-      checks.services.redis = { status: 'ok', latencyMs: Date.now() - start };
-    } else {
-      checks.services.redis = { status: 'not_configured' };
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      const res = await fetch(upstashUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${upstashToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(['PING']),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      const data = await res.json();
+      checks.services.redis.status = data.result === 'PONG' ? 'ok' : 'error';
+      checks.services.redis.latencyMs = Date.now() - start;
+      checks.services.redis.response = data.result || data.error || 'unknown';
+      checks.services.redis.httpStatus = res.status;
+    } catch (e) {
+      checks.services.redis.status = 'error';
+      checks.services.redis.error = e.message;
     }
-  } catch (e) {
-    checks.services.redis = { status: 'error', error: e.message };
+  } else {
+    checks.services.redis.status = 'not_configured';
   }
 
   // Check Supabase

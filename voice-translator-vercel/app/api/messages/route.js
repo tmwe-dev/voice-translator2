@@ -2,14 +2,14 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getClientIP } from '../../lib/validate.js';
+import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 
 // POST /api/messages - Send a translation to the room
 // Supports multi-language: `translations` field contains per-language translations
 // Backward compatible: also accepts single `translated` + `targetLang`
 async function handlePost(req) {
   try {
-    const ip = getClientIP(req);
-    const rl = rateLimit(ip, { maxRequests: 120, windowMs: 60000 });
+    const rl = await checkRateLimit(getRateLimitKey(req, 'messages'), 120);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
 
     const body = await req.json();
@@ -54,8 +54,7 @@ async function handlePost(req) {
 // PATCH /api/messages - Update existing message with translation (Phase 2 of two-phase send)
 async function handlePatch(req) {
   try {
-    const ip = getClientIP(req);
-    const rl = rateLimit(ip, { maxRequests: 120, windowMs: 60000 });
+    const rl = await checkRateLimit(getRateLimitKey(req, 'messages-patch'), 120);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
 
     const body = await req.json();

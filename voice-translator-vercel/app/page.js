@@ -67,6 +67,9 @@ import BottomNav from './components/BottomNav.js';
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
 
+// ═══ Context provider for prop drilling elimination ═══
+import { AppProvider } from './contexts/AppContext.js';
+
 
 export default function Home() {
   return (
@@ -402,6 +405,14 @@ function HomeInner() {
       setTutorialStep(0); setShowTutorial(true);
       localStorage.setItem('vt-tutorial-done', '1');
     }
+    // Auto-load history when navigating to archive tab
+    if (view === 'history' || view === 'archive') {
+      loadHistory();
+    }
+    // Auto-fetch contacts when navigating to contacts view
+    if (view === 'contacts') {
+      contactsHook.fetchContacts();
+    }
   }, [view]);
 
   function savePrefs(newPrefs) {
@@ -671,7 +682,7 @@ function HomeInner() {
     try {
       setStatus('...');
       const room = await roomPolling.handleCreateRoom(
-        prefs.name, myLang, selectedMode, prefs.avatar,
+        prefs.name || 'Host', myLang, selectedMode, prefs.avatar,
         selectedContext, selectedMode, roomDescription,
         auth.isTrial, auth.isTopPro, auth.userAccount
       );
@@ -680,14 +691,17 @@ function HomeInner() {
       roomContextRef.current = { contextId: selectedContext, contextPrompt: CONTEXTS.find(c => c.id === selectedContext)?.prompt || '', description: roomDescription };
       setView('lobby');
       setStatus('');
-    } catch (e) { setStatus('Error: ' + e.message); }
+    } catch (e) {
+      setStatus('');
+      toast.error(e.message || 'Impossibile creare la stanza. Riprova.');
+    }
   }
 
   async function startChatWithContact(contact) {
     try {
       setStatus('...');
       const room = await roomPolling.handleCreateRoom(
-        prefs.name, myLang, selectedMode, prefs.avatar,
+        prefs.name || 'Host', myLang, selectedMode, prefs.avatar,
         selectedContext, selectedMode, '',
         auth.isTrial, auth.isTopPro, auth.userAccount
       );
@@ -821,15 +835,26 @@ function HomeInner() {
       setMyLang={setMyLang} joinCode={joinCode} setJoinCode={setJoinCode}
       inviteMsgLang={inviteMsgLang} setInviteMsgLang={setInviteMsgLang}
       handleJoinRoom={handleJoinRoom} setView={setView} userToken={auth.userToken}
-      setAuthStep={auth.setAuthStep} status={status}  theme={theme} setTheme={setTheme} />
+      setAuthStep={auth.setAuthStep} status={status}  theme={theme} setTheme={setTheme}
+      unlockAudio={audio.unlockAudio} />
   );
 
-  // Define BottomNav for views that use it
-  const bottomNav = <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} />;
+  // Define BottomNav for views that use it (now with 5 tabs + FAB)
+  const bottomNav = <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} onCreateRoom={handleCreateRoom} />;
 
-  // Views with BottomNav
+  // ═══ AppProvider value — shared state for context consumers ═══
+  const appCtxValue = {
+    S, theme, setTheme, prefs, setPrefs, savePrefs,
+    myLang, setMyLang, view, setView, status, setStatus,
+    auth: {
+      userToken: auth.userToken, isTrial: auth.isTrial, isTopPro: auth.isTopPro,
+      creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
+    },
+  };
+
+  // Views with BottomNav — wrapped in AppProvider
   if (view === 'home') return (
-    <>
+    <AppProvider value={appCtxValue}>
       <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} setMyLang={setMyLang}
         selectedMode={selectedMode} setSelectedMode={setSelectedMode}
         selectedContext={selectedContext} setSelectedContext={setSelectedContext}
@@ -843,7 +868,7 @@ function HomeInner() {
           setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} theme={theme} />
       )}
       {bottomNav}
-    </>
+    </AppProvider>
   );
 
   if (view === 'account') return (
@@ -982,7 +1007,7 @@ function HomeInner() {
             setStatus('...');
             const langToUse = overrideLang || myLang;
             const room = await roomPolling.handleCreateRoom(
-              prefs.name, langToUse, selectedMode, prefs.avatar,
+              prefs.name || 'Host', langToUse, selectedMode, prefs.avatar,
               selectedContext, selectedMode, '',
               auth.isTrial, auth.isTopPro, auth.userAccount
             );
@@ -1030,6 +1055,8 @@ function HomeInner() {
           L={L} S={S} theme={theme} setView={setView}
           prefs={prefs} contacts={contactsHook.contacts}
           recentConversations={convHistory}
+          handleCreateRoom={handleCreateRoom}
+          setSelectedMode={setSelectedMode}
         />
       </Suspense>
       {bottomNav}

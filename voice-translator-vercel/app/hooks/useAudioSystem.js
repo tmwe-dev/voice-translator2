@@ -81,23 +81,55 @@ export default function useAudioSystem({
   // =============================================
 
   function unlockAudio() {
-    if (audioReady) return;
-    requestMicEarly();
+    // If context exists and is running, we're fully unlocked
+    const existingCtx = audioContextRef.current;
+    if (audioReady && existingCtx && existingCtx.state === 'running') return;
+
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
-      audioContextRef.current = ctx;
+      // Resume suspended context (key fix: user gesture can resume it)
+      if (existingCtx && existingCtx.state === 'suspended') {
+        existingCtx.resume().catch(() => {});
+      }
+
+      // Create new context only if none exists
+      if (!existingCtx) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        audioContextRef.current = ctx;
+        if (ctx.state === 'suspended') {
+          ctx.resume().catch(() => {});
+        }
+      }
+
+      const ctx = audioContextRef.current;
       const buf = ctx.createBuffer(1, 1, 22050);
       const src = ctx.createBufferSource();
       src.buffer = buf;
       src.connect(ctx.destination);
       src.start(0);
+
+      // Play silent audio to unlock HTML5 Audio on mobile
       const pa = getPersistentAudio();
       pa.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
       pa.play().catch(() => {});
       const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
       a.volume = 0.01;
       a.play().catch(() => {});
-      setAudioReady(true);
+
+      // Only mark ready if context is actually running (not suspended)
+      if (ctx.state === 'running') {
+        setAudioReady(true);
+      } else {
+        // Listen for state change → mark ready when it resumes
+        ctx.onstatechange = () => {
+          if (ctx.state === 'running') {
+            setAudioReady(true);
+            ctx.onstatechange = null;
+          }
+        };
+      }
+
+      // Request mic on first real unlock
+      if (!existingCtx) requestMicEarly();
     } catch (e) { /* cleanup */ }
   }
 
@@ -130,10 +162,26 @@ export default function useAudioSystem({
     } catch (e) { console.warn('[useAudioSystem] connectToDucking failed:', e?.message || e); return null; }
   }
 
-  // Auto-unlock on first touch/click
+  // When audio becomes ready, flush any queued items that arrived before unlock
   useEffect(() => {
-    if (audioReady) return;
-    const handler = () => unlockAudio();
+    if (audioReady && audioQueueRef.current.length > 0 && !isPlayingRef.current) {
+      processAudioQueue();
+    }
+  }, [audioReady]);
+
+  // Auto-unlock on touch/click — keep listening until AudioContext is actually running
+  useEffect(() => {
+    const handler = () => {
+      unlockAudio();
+      // Also try to resume if context exists but is suspended
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+    };
+    // Keep listener active until context is running (not just audioReady)
+    const ctx = audioContextRef.current;
+    if (audioReady && ctx && ctx.state === 'running') return;
     document.addEventListener('touchstart', handler, { passive: true });
     document.addEventListener('click', handler, { passive: true });
     return () => {
@@ -273,6 +321,8 @@ export default function useAudioSystem({
     setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
     if (!audioEnabledRef.current) { playNotifSound(); return; }
     audioQueueRef.current.push({ text, lang });
+    // If audio is not yet unlocked (e.g. auto-join without user gesture),
+    // the item stays in queue. processAudioQueue will be called when audio unlocks.
     processAudioQueue();
   }
 
@@ -291,6 +341,21 @@ export default function useAudioSystem({
   async function processAudioQueue() {
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
+
+    // Safety: ensure AudioContext is running before playback
+    const ctx = audioContextRef.current;
+    if (ctx && ctx.state === 'suspended') {
+      try { await ctx.resume(); } catch {}
+    }
+
+    // Ensure persistent audio element is ready (pre-warm it)
+    // On mobile, Audio elements need to be "touched" during a user gesture.
+    // The persistentAudio was created during unlockAudio (user gesture context),
+    // so it should be playable. But just in case, ensure volume is set.
+    try {
+      const pa = getPersistentAudio();
+      pa.volume = 1.0;
+    } catch {}
 
     while (audioQueueRef.current.length > 0) {
       const { text, lang } = audioQueueRef.current.shift();

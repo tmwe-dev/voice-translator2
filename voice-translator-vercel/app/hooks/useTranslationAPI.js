@@ -113,7 +113,7 @@ export default function useTranslationAPI({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId,
-        sender: roomSessionTokenRef?.current ? undefined : senderName,
+        sender: senderName,
         roomSessionToken: roomSessionTokenRef?.current || null,
         original,
         translated,
