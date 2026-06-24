@@ -87,36 +87,19 @@ export default function useAudioSystem({
   // =============================================
 
   function unlockAudio() {
-    // If context exists and is running, we're fully unlocked
-    const existingCtx = audioContextRef.current;
-    if (audioReady && existingCtx && existingCtx.state === 'running') return;
-
+    if (audioReady) return;
+    requestMicEarly();
     try {
-      // Resume suspended context (key fix: user gesture can resume it)
-      if (existingCtx && existingCtx.state === 'suspended') {
-        existingCtx.resume().then(() => {
-          console.log('[AUDIO] Context resumed successfully, state:', existingCtx.state);
-          if (existingCtx.state === 'running' && !audioReadyRef.current) {
-            setAudioReady(true);
-          }
-        }).catch(() => {});
-      }
-
-      // Create new context only if none exists
-      if (!existingCtx) {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // Create or resume AudioContext
+      let ctx = audioContextRef.current;
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = ctx;
-        if (ctx.state === 'suspended') {
-          ctx.resume().then(() => {
-            console.log('[AUDIO] New context resumed, state:', ctx.state);
-            if (ctx.state === 'running' && !audioReadyRef.current) {
-              setAudioReady(true);
-            }
-          }).catch(() => {});
-        }
+      }
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
       }
 
-      const ctx = audioContextRef.current;
       // Play silent buffer through AudioContext (unlocks WebAudio on iOS)
       try {
         const buf = ctx.createBuffer(1, 1, 22050);
@@ -130,9 +113,7 @@ export default function useAudioSystem({
       const pa = getPersistentAudio();
       pa.playsInline = true;
       pa.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-      pa.play().then(() => {
-        console.log('[AUDIO] Persistent audio play succeeded');
-      }).catch(() => {});
+      pa.play().catch(() => {});
 
       // Also try with a fresh element (some browsers need this)
       try {
@@ -142,29 +123,10 @@ export default function useAudioSystem({
         a.play().catch(() => {});
       } catch {}
 
-      // Only mark ready if context is actually running (not suspended)
-      if (ctx.state === 'running') {
-        setAudioReady(true);
-      } else {
-        // Listen for state change → mark ready when it resumes
-        ctx.onstatechange = () => {
-          if (ctx.state === 'running') {
-            console.log('[AUDIO] Context state changed to running');
-            setAudioReady(true);
-            ctx.onstatechange = null;
-          }
-        };
-        // Fallback: check after 500ms (onstatechange doesn't fire on all browsers)
-        setTimeout(() => {
-          if (ctx.state === 'running' && !audioReadyRef.current) {
-            console.log('[AUDIO] Fallback check: context is running');
-            setAudioReady(true);
-          }
-        }, 500);
-      }
-
-      // Request mic on first real unlock
-      if (!existingCtx) requestMicEarly();
+      // CRITICAL: set audioReady IMMEDIATELY (like b.41 that worked)
+      // Don't wait for ctx.state === 'running' — that blocks on mobile
+      // and prevents browserSpeak fallback from working
+      setAudioReady(true);
     } catch (e) { console.warn('[AUDIO] unlockAudio error:', e); }
   }
 
@@ -204,19 +166,10 @@ export default function useAudioSystem({
     }
   }, [audioReady]);
 
-  // Auto-unlock on touch/click — keep listening until AudioContext is actually running
+  // Auto-unlock on first touch/click (same as b.41)
   useEffect(() => {
-    const handler = () => {
-      unlockAudio();
-      // Also try to resume if context exists but is suspended
-      const ctx = audioContextRef.current;
-      if (ctx && ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
-      }
-    };
-    // Keep listener active until context is running (not just audioReady)
-    const ctx = audioContextRef.current;
-    if (audioReady && ctx && ctx.state === 'running') return;
+    if (audioReady) return;
+    const handler = () => unlockAudio();
     document.addEventListener('touchstart', handler, { passive: true });
     document.addEventListener('click', handler, { passive: true });
     return () => {
@@ -339,12 +292,19 @@ export default function useAudioSystem({
   // =============================================
 
   async function queueAudio(text, lang, msgId) {
-    if (msgId && playedMsgIdsRef.current.has(msgId)) { console.log('[AUDIO-TRACE] queueAudio skip: already played', msgId?.substring(0,20)); return; }
+    if (msgId && playedMsgIdsRef.current.has(msgId)) return;
     const contentKey = `${text?.substring(0, 60)}|${lang}`;
-    if (playedMsgIdsRef.current.has(contentKey)) { console.log('[AUDIO-TRACE] queueAudio skip: contentKey dup'); return; }
-    if (!audioEnabledRef.current) { console.log('[AUDIO-TRACE] queueAudio: audio disabled, notif only'); playNotifSound(); return; }
-    console.log('[AUDIO-TRACE] queueAudio: adding to queue. text=', text?.substring(0,30), 'lang=', lang, 'queueLen=', audioQueueRef.current.length, 'audioReady=', audioReadyRef.current);
-    audioQueueRef.current.push({ text, lang, msgId, contentKey });
+    if (playedMsgIdsRef.current.has(contentKey)) return;
+    // Mark as played IMMEDIATELY (like b.41) to prevent duplicates from multi-channel delivery
+    if (msgId) playedMsgIdsRef.current.add(msgId);
+    playedMsgIdsRef.current.add(contentKey);
+    if (playedMsgIdsRef.current.size > 500) {
+      const first = playedMsgIdsRef.current.values().next().value;
+      playedMsgIdsRef.current.delete(first);
+    }
+    setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
+    if (!audioEnabledRef.current) { playNotifSound(); return; }
+    audioQueueRef.current.push({ text, lang });
     processAudioQueue();
   }
 
@@ -379,20 +339,10 @@ export default function useAudioSystem({
     } catch {}
 
     while (audioQueueRef.current.length > 0) {
-      const item = audioQueueRef.current.shift();
+      const { text, lang } = audioQueueRef.current.shift();
       startDucking();
       try {
-        await playOneItem(item.text, item.lang);
-        // Mark as played ONLY after successful playback
-        if (item.msgId) playedMsgIdsRef.current.add(item.msgId);
-        if (item.contentKey) {
-          playedMsgIdsRef.current.add(item.contentKey);
-          setTimeout(() => { playedMsgIdsRef.current.delete(item.contentKey); }, 30000);
-        }
-        if (playedMsgIdsRef.current.size > 500) {
-          const first = playedMsgIdsRef.current.values().next().value;
-          playedMsgIdsRef.current.delete(first);
-        }
+        await playOneItem(text, lang);
       } catch (e) { console.error('[Audio] playback error:', e); }
       stopDucking();
     }
