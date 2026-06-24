@@ -200,8 +200,12 @@ export default function useTTSEngine({
 
   function playBlobNewAudio(blobUrl) {
     return new Promise((resolve) => {
+      // On iOS, new Audio() elements aren't activated by user gesture
+      // Try persistent audio first with a fresh src, then fall back to new element
       const a = new Audio(blobUrl);
       a.volume = 1.0;
+      a.playsInline = true;
+      a.setAttribute('playsinline', '');
       const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobNewAudio timeout'); a.pause(); resolve(false); }, 30000);
       a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
       a.onerror = (e) => { console.warn('[TTS] playBlobNewAudio error:', e?.type || e); clearTimeout(safetyTimer); resolve(false); };
@@ -217,6 +221,7 @@ export default function useTTSEngine({
     if (!played) await browserSpeak(text, lang);
     activeBlobUrlsRef.current.delete(url);
     URL.revokeObjectURL(url);
+    return played;
   }
 
   // ═══════════════════════════════════════════════
@@ -225,7 +230,7 @@ export default function useTTSEngine({
 
   async function fetchEdgeTTSBlob(text, langCode, gender) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     try {
       try {
         const res = await fetch('/api/tts-edge', {

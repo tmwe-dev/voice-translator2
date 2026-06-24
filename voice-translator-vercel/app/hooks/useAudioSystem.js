@@ -51,13 +51,19 @@ export default function useAudioSystem({
   const duckingLevelRef = useRef(0.2);
 
   // Sync refs
+  const audioReadyRef = useRef(false);
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { duckingLevelRef.current = duckingLevel; }, [duckingLevel]);
+  useEffect(() => { audioReadyRef.current = audioReady; }, [audioReady]);
 
   function getPersistentAudio() {
     if (!persistentAudioRef.current) {
       persistentAudioRef.current = new Audio();
       persistentAudioRef.current.volume = 1.0;
+      persistentAudioRef.current.playsInline = true;
+      // iOS: setAttribute also needed for some versions
+      persistentAudioRef.current.setAttribute('playsinline', '');
+      persistentAudioRef.current.setAttribute('webkit-playsinline', '');
     }
     return persistentAudioRef.current;
   }
@@ -88,7 +94,12 @@ export default function useAudioSystem({
     try {
       // Resume suspended context (key fix: user gesture can resume it)
       if (existingCtx && existingCtx.state === 'suspended') {
-        existingCtx.resume().catch(() => {});
+        existingCtx.resume().then(() => {
+          console.log('[AUDIO] Context resumed successfully, state:', existingCtx.state);
+          if (existingCtx.state === 'running' && !audioReadyRef.current) {
+            setAudioReady(true);
+          }
+        }).catch(() => {});
       }
 
       // Create new context only if none exists
@@ -96,24 +107,40 @@ export default function useAudioSystem({
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = ctx;
         if (ctx.state === 'suspended') {
-          ctx.resume().catch(() => {});
+          ctx.resume().then(() => {
+            console.log('[AUDIO] New context resumed, state:', ctx.state);
+            if (ctx.state === 'running' && !audioReadyRef.current) {
+              setAudioReady(true);
+            }
+          }).catch(() => {});
         }
       }
 
       const ctx = audioContextRef.current;
-      const buf = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(0);
+      // Play silent buffer through AudioContext (unlocks WebAudio on iOS)
+      try {
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start(0);
+      } catch {}
 
       // Play silent audio to unlock HTML5 Audio on mobile
       const pa = getPersistentAudio();
+      pa.playsInline = true;
       pa.src = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
-      pa.play().catch(() => {});
-      const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-      a.volume = 0.01;
-      a.play().catch(() => {});
+      pa.play().then(() => {
+        console.log('[AUDIO] Persistent audio play succeeded');
+      }).catch(() => {});
+
+      // Also try with a fresh element (some browsers need this)
+      try {
+        const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+        a.playsInline = true;
+        a.volume = 0.01;
+        a.play().catch(() => {});
+      } catch {}
 
       // Only mark ready if context is actually running (not suspended)
       if (ctx.state === 'running') {
@@ -122,15 +149,23 @@ export default function useAudioSystem({
         // Listen for state change → mark ready when it resumes
         ctx.onstatechange = () => {
           if (ctx.state === 'running') {
+            console.log('[AUDIO] Context state changed to running');
             setAudioReady(true);
             ctx.onstatechange = null;
           }
         };
+        // Fallback: check after 500ms (onstatechange doesn't fire on all browsers)
+        setTimeout(() => {
+          if (ctx.state === 'running' && !audioReadyRef.current) {
+            console.log('[AUDIO] Fallback check: context is running');
+            setAudioReady(true);
+          }
+        }, 500);
       }
 
       // Request mic on first real unlock
       if (!existingCtx) requestMicEarly();
-    } catch (e) { /* cleanup */ }
+    } catch (e) { console.warn('[AUDIO] unlockAudio error:', e); }
   }
 
   // =============================================
@@ -304,25 +339,12 @@ export default function useAudioSystem({
   // =============================================
 
   async function queueAudio(text, lang, msgId) {
-    if (msgId && playedMsgIdsRef.current.has(msgId)) return;
-    // Content-based dedup: same text should never play twice within 30s
-    // regardless of message ID (tmp_xxx vs msg_xxx can differ for same message)
+    if (msgId && playedMsgIdsRef.current.has(msgId)) { console.log('[AUDIO-TRACE] queueAudio skip: already played', msgId?.substring(0,20)); return; }
     const contentKey = `${text?.substring(0, 60)}|${lang}`;
-    if (playedMsgIdsRef.current.has(contentKey)) return;
-    if (msgId) {
-      playedMsgIdsRef.current.add(msgId);
-    }
-    playedMsgIdsRef.current.add(contentKey);
-    if (playedMsgIdsRef.current.size > 500) {
-      const first = playedMsgIdsRef.current.values().next().value;
-      playedMsgIdsRef.current.delete(first);
-    }
-    // Auto-expire content key after 30s to allow replaying same text later
-    setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
-    if (!audioEnabledRef.current) { playNotifSound(); return; }
-    audioQueueRef.current.push({ text, lang });
-    // If audio is not yet unlocked (e.g. auto-join without user gesture),
-    // the item stays in queue. processAudioQueue will be called when audio unlocks.
+    if (playedMsgIdsRef.current.has(contentKey)) { console.log('[AUDIO-TRACE] queueAudio skip: contentKey dup'); return; }
+    if (!audioEnabledRef.current) { console.log('[AUDIO-TRACE] queueAudio: audio disabled, notif only'); playNotifSound(); return; }
+    console.log('[AUDIO-TRACE] queueAudio: adding to queue. text=', text?.substring(0,30), 'lang=', lang, 'queueLen=', audioQueueRef.current.length, 'audioReady=', audioReadyRef.current);
+    audioQueueRef.current.push({ text, lang, msgId, contentKey });
     processAudioQueue();
   }
 
@@ -342,26 +364,35 @@ export default function useAudioSystem({
     if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
     isPlayingRef.current = true;
 
-    // Safety: ensure AudioContext is running before playback
+    // Aggressively try to unlock/resume audio context before playing
+    if (!audioReadyRef.current) {
+      try { unlockAudio(); } catch {}
+    }
     const ctx = audioContextRef.current;
     if (ctx && ctx.state === 'suspended') {
       try { await ctx.resume(); } catch {}
     }
 
-    // Ensure persistent audio element is ready (pre-warm it)
-    // On mobile, Audio elements need to be "touched" during a user gesture.
-    // The persistentAudio was created during unlockAudio (user gesture context),
-    // so it should be playable. But just in case, ensure volume is set.
     try {
       const pa = getPersistentAudio();
       pa.volume = 1.0;
     } catch {}
 
     while (audioQueueRef.current.length > 0) {
-      const { text, lang } = audioQueueRef.current.shift();
+      const item = audioQueueRef.current.shift();
       startDucking();
       try {
-        await playOneItem(text, lang);
+        await playOneItem(item.text, item.lang);
+        // Mark as played ONLY after successful playback
+        if (item.msgId) playedMsgIdsRef.current.add(item.msgId);
+        if (item.contentKey) {
+          playedMsgIdsRef.current.add(item.contentKey);
+          setTimeout(() => { playedMsgIdsRef.current.delete(item.contentKey); }, 30000);
+        }
+        if (playedMsgIdsRef.current.size > 500) {
+          const first = playedMsgIdsRef.current.values().next().value;
+          playedMsgIdsRef.current.delete(first);
+        }
       } catch (e) { console.error('[Audio] playback error:', e); }
       stopDucking();
     }

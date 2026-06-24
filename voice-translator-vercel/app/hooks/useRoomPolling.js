@@ -342,7 +342,7 @@ export default function useRoomPolling({
     const pollFn = async () => {
       try {
         const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
-        const nameParam = `&name=${encodeURIComponent(prefsRef.current.name)}`;
+        const nameParam = !roomSessionTokenRef.current ? `&name=${encodeURIComponent(prefsRef.current.name)}` : '';
         const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}${rstParam}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
@@ -433,7 +433,8 @@ export default function useRoomPolling({
         }
 
         // Heartbeat (always needed to keep room alive and detect members)
-        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current, name: prefsRef.current.name };
+        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current };
+        if (!roomSessionTokenRef.current) heartbeatBody.name = prefsRef.current.name;
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -529,9 +530,9 @@ export default function useRoomPolling({
         action: 'speaking',
         roomId: rid,
         roomSessionToken: roomSessionTokenRef.current,
-        name: prefsRef.current.name,
         speaking, liveText, typing
       };
+      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -581,9 +582,9 @@ export default function useRoomPolling({
         action: 'changeLang',
         roomId,
         roomSessionToken: roomSessionTokenRef.current,
-        name: prefsRef.current.name,
         lang: newLang,
       };
+      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -607,10 +608,10 @@ export default function useRoomPolling({
       action: 'speaking',
       roomId,
       roomSessionToken: roomSessionTokenRef.current,
-      name: prefsRef.current.name,
       speaking: false,
       typing: isTyping
     };
+    if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
     fetch('/api/room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -638,10 +639,7 @@ export default function useRoomPolling({
           hostEmail: userAccount?.email || null
         })
       });
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Errore server (${res.status})`);
-      }
+      if (!res.ok) throw new Error('Error');
       const data = await res.json();
       const { room, roomSessionToken: token } = data;
       if (token) roomSessionTokenRef.current = token;

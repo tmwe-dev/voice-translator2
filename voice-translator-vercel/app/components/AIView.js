@@ -17,8 +17,6 @@ const AIView = memo(function AIView({
   prefs = {},
   contacts = [],
   recentConversations = [],
-  handleCreateRoom,
-  setSelectedMode,
 }) {
   const [activeSection, setActiveSection] = useState(null);
   const [glossaryTerms, setGlossaryTerms] = useState([
@@ -35,7 +33,7 @@ const AIView = memo(function AIView({
   ]);
 
   const quickActions = [
-    { icon: '🎙️', label: 'Interprete', desc: 'Modalità interpretazione real-time', action: () => { if (setSelectedMode) setSelectedMode('interpreter'); if (handleCreateRoom) handleCreateRoom(); }, color: S.colors.accent1 },
+    { icon: '🎙️', label: 'Interprete', desc: 'Modalità interpretazione real-time', action: () => setView('home'), color: S.colors.accent1 },
     { icon: '📖', label: 'Glossario', desc: 'Gestisci termini personalizzati', action: () => setActiveSection(activeSection === 'glossary' ? null : 'glossary'), color: S.colors.accent2 },
     { icon: '⚡', label: 'Automazioni', desc: 'Regole AI automatiche', action: () => setActiveSection(activeSection === 'automations' ? null : 'automations'), color: S.colors.statusWarning },
     { icon: '🎨', label: 'Stile', desc: 'Preferenze di traduzione', action: () => setActiveSection(activeSection === 'style' ? null : 'style'), color: S.colors.accent4 },

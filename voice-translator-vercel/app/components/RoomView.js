@@ -15,7 +15,7 @@ import TaxiMode, { TaxiButton } from './TaxiMode.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
-  playingMsgId, audioEnabled, setAudioEnabled, isTrial, isTopPro, canUseElevenLabs,
+  playingMsgId, audioEnabled, setAudioEnabled, audioReady, isTrial, isTopPro, canUseElevenLabs,
   useOwnKeys, apiKeyInputs,
   elevenLabsVoices, selectedELVoice, setSelectedELVoice,
   showModeSelector,
@@ -210,6 +210,46 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         taxiVisible={taxiVisible} setTaxiVisible={setTaxiVisible} setTaxiData={setTaxiData}
         myName={myName} messages={messages}
       />
+
+      {/* ═══ Audio unlock — compact banner (does NOT block video call) ═══ */}
+      {!audioReady && (
+        <div
+          onClick={() => {
+            if (unlockAudio) unlockAudio();
+            try {
+              if (typeof speechSynthesis !== 'undefined') {
+                speechSynthesis.cancel();
+                const warmup = new SpeechSynthesisUtterance(' ');
+                warmup.volume = 0.01; warmup.rate = 10;
+                speechSynthesis.speak(warmup);
+                setTimeout(() => speechSynthesis.cancel(), 100);
+              }
+            } catch {}
+            try {
+              const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+              a.playsInline = true; a.volume = 0.01;
+              a.play().catch(() => {});
+            } catch {}
+          }}
+          style={{
+            position: 'fixed', bottom: 80, left: 16, right: 16,
+            zIndex: 50,
+            background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)',
+            borderRadius: 16, padding: '14px 20px',
+            display: 'flex', alignItems: 'center', gap: 12,
+            cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+          }}
+          aria-label="Activate audio"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+          <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>
+            Tocca per attivare l'audio / Tap to enable audio
+          </span>
+        </div>
+      )}
 
       {/* ═══ Voice Engine + Mode Bar ═══ */}
       <VoiceEngineBar

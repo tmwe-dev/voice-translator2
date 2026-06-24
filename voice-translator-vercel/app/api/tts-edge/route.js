@@ -5,50 +5,39 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 
 // ═══════════════════════════════════════════════
 // Edge TTS — FREE Neural Text-to-Speech
-//
-// Uses Microsoft Edge's neural TTS voices via @andresaya/edge-tts.
-// No API key needed, no cost, high quality neural voices for ALL 25 languages.
-//
-// Quality: ★★★★☆ (comparable to paid neural TTS)
-// Latency: ~100-300ms
-// Cost: FREE
-// Languages: ALL 25 supported languages
 // ═══════════════════════════════════════════════
 
 async function handlePost(req) {
   try {
-
     const { text, langCode, gender } = await req.json();
     if (!text?.trim()) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
     }
 
-    // Preprocess text for TTS quality
-    const lang2 = (langCode || '').replace(/-.*/, ''); // 'en-US' → 'en'
+    const lang2 = (langCode || '').replace(/-.*/, '');
     const cleanText = preprocessForTTS(text, lang2);
-
-    // Limit text length (Edge TTS handles up to ~5000 chars well)
     const trimmed = cleanText.substring(0, 5000);
-
-    // Get voice for language + gender preference
     const voiceName = getEdgeVoice(langCode || 'en', gender || 'female');
 
-    // ── Language-specific speech rate (from voiceDefaults.js) ──
     const { getEdgeRateForLang } = await import('../../lib/voiceDefaults.js');
     const speechRate = getEdgeRateForLang(lang2);
 
-    // Dynamic import for graceful fallback
+    // Dynamic import
     let EdgeTTS;
     try {
       const mod = await import('@andresaya/edge-tts');
       EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
     } catch (e) {
-      console.error('[EdgeTTS] @andresaya/edge-tts not available:', e.message);
-      return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
+      console.error('[EdgeTTS] import failed:', e.message, e.stack);
+      return NextResponse.json({ error: 'Edge TTS not available: ' + e.message }, { status: 503 });
     }
 
-    // Generate audio — @andresaya/edge-tts API:
-    // const tts = new EdgeTTS(); await tts.synthesize(text, voice, opts); tts.toBuffer()
+    if (!EdgeTTS) {
+      console.error('[EdgeTTS] EdgeTTS class is undefined after import');
+      return NextResponse.json({ error: 'EdgeTTS class undefined' }, { status: 503 });
+    }
+
+    // Generate audio
     let audioBuffer;
     try {
       const tts = new EdgeTTS();
@@ -59,8 +48,12 @@ async function handlePost(req) {
       });
       audioBuffer = tts.toBuffer();
     } catch (synthErr) {
-      console.error('[EdgeTTS] Synthesize error:', synthErr.message);
-      return NextResponse.json({ error: 'Edge TTS synthesis failed: ' + synthErr.message }, { status: 503 });
+      console.error('[EdgeTTS] Synthesize FULL error:', synthErr.message, '| Stack:', synthErr.stack);
+      return NextResponse.json({
+        error: 'Edge TTS synthesis failed',
+        detail: synthErr.message,
+        stack: synthErr.stack?.split('\n').slice(0, 5).join('\n')
+      }, { status: 503 });
     }
 
     if (!audioBuffer || audioBuffer.length === 0) {
@@ -71,13 +64,55 @@ async function handlePost(req) {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.length.toString(),
-        'Cache-Control': 'public, max-age=86400', // Cache for 24h
+        'Cache-Control': 'public, max-age=86400',
       }
     });
   } catch (e) {
-    console.error('[EdgeTTS] Error:', e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+    console.error('[EdgeTTS] Top-level error:', e.message, e.stack);
+    return NextResponse.json({ error: e.message, stack: e.stack?.split('\n').slice(0, 5).join('\n') }, { status: 500 });
   }
+}
+
+// GET /api/tts-edge?test=1 — diagnostic endpoint
+export async function GET(req) {
+  const checks = {
+    timestamp: new Date().toISOString(),
+    cryptoSubtle: typeof globalThis?.crypto?.subtle !== 'undefined',
+    cryptoAvailable: typeof globalThis?.crypto !== 'undefined',
+  };
+
+  try {
+    const mod = await import('@andresaya/edge-tts');
+    checks.importOk = true;
+    checks.exports = Object.keys(mod);
+    const EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
+    checks.edgeTTSClass = !!EdgeTTS;
+    checks.edgeTTSType = typeof EdgeTTS;
+
+    if (EdgeTTS) {
+      const tts = new EdgeTTS();
+      checks.instanceOk = true;
+      checks.methods = Object.getOwnPropertyNames(Object.getPrototypeOf(tts)).filter(m => m !== 'constructor');
+
+      // Quick synth test
+      try {
+        await tts.synthesize('test', 'en-US-AriaNeural', { rate: '+0%', volume: '+0%', pitch: '+0Hz' });
+        const buf = tts.toBuffer();
+        checks.synthOk = true;
+        checks.audioBytes = buf?.length || 0;
+      } catch (synthErr) {
+        checks.synthOk = false;
+        checks.synthError = synthErr.message;
+        checks.synthStack = synthErr.stack?.split('\n').slice(0, 5);
+      }
+    }
+  } catch (importErr) {
+    checks.importOk = false;
+    checks.importError = importErr.message;
+    checks.importStack = importErr.stack?.split('\n').slice(0, 5);
+  }
+
+  return NextResponse.json(checks, { status: checks.synthOk ? 200 : 503 });
 }
 
 export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'tts-edge' });

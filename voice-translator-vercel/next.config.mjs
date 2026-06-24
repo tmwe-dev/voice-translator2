@@ -2,6 +2,17 @@ import { withSentryConfig } from '@sentry/nextjs';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Prevent webpack from bundling ws + native addons (breaks in Vercel serverless)
+  experimental: {
+    serverComponentsExternalPackages: ['ws', 'bufferutil', 'utf-8-validate', '@andresaya/edge-tts'],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Mark native ws addons as external so webpack doesn't try to bundle them
+      config.externals = [...(config.externals || []), 'bufferutil', 'utf-8-validate'];
+    }
+    return config;
+  },
   async headers() {
     return [
       {

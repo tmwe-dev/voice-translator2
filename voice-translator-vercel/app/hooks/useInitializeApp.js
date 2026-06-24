@@ -34,37 +34,9 @@ export default function useInitializeApp({
         }
       }
 
-      // 2. URL language params
-      const langParam = urlParams.get('lang');   // host's language (for invite message display only)
-      const guestLangParam = urlParams.get('gl'); // guest's language (what we should set)
-      const guestNameParam = urlParams.get('gn');
-      const guestGenderParam = urlParams.get('gg');
-
-      // 3. Guest pre-fill from QR invite (gn=name, gg=gender, gl=language)
-      // gl= is the guest's language and takes priority over lang=
-      // lang= is only for invite message display, NOT for setting the guest's language
-      if (guestNameParam || guestGenderParam || guestLangParam) {
-        const effectiveLang = guestLangParam && LANGS.find(l => l.code === guestLangParam)
-          ? guestLangParam : null;
-        setPrefs(p => {
-          const updated = {
-            ...p,
-            autoPlay: true,
-            ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
-            ...(guestGenderParam ? { gender: guestGenderParam } : {}),
-            ...(effectiveLang ? { lang: effectiveLang } : {}),
-          };
-          localStorage.setItem('vt-prefs', JSON.stringify(updated));
-          return updated;
-        });
-        if (effectiveLang) {
-          setMyLang(effectiveLang);
-        }
-        // Set invite message display language (gl if valid, else lang param, else host lang)
-        setInviteMsgLang(effectiveLang || langParam || 'en');
-        if (typeof window !== 'undefined') window.__VT_GUEST_PREFILLED = true;
-      } else if (langParam && LANGS.find(l => l.code === langParam)) {
-        // No guest params — this is a direct lang= override (non-QR link)
+      // 2. URL language override
+      const langParam = urlParams.get('lang');
+      if (langParam && LANGS.find(l => l.code === langParam)) {
         setInviteMsgLang(langParam);
         setMyLang(langParam);
         setPrefs(p => {
@@ -72,6 +44,29 @@ export default function useInitializeApp({
           localStorage.setItem('vt-prefs', JSON.stringify(updated));
           return updated;
         });
+      }
+
+      // 3. Guest pre-fill from QR invite (gn=name, gg=gender, gl=language)
+      const guestNameParam = urlParams.get('gn');
+      const guestGenderParam = urlParams.get('gg');
+      const guestLangParam = urlParams.get('gl');
+      if (guestNameParam || guestGenderParam || guestLangParam) {
+        setPrefs(p => {
+          const updated = {
+            ...p,
+            autoPlay: true, // Ensure guests always have audio enabled
+            ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
+            ...(guestGenderParam ? { gender: guestGenderParam } : {}),
+            ...(guestLangParam ? { lang: guestLangParam } : {}),
+          };
+          localStorage.setItem('vt-prefs', JSON.stringify(updated));
+          return updated;
+        });
+        if (guestLangParam && LANGS.find(l => l.code === guestLangParam)) {
+          setMyLang(guestLangParam);
+          setInviteMsgLang(guestLangParam);
+        }
+        if (typeof window !== 'undefined') window.__VT_GUEST_PREFILLED = true;
       }
 
       // 4. Capture referral code

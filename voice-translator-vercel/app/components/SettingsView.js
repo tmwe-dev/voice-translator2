@@ -371,46 +371,6 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
         </div>
 
         {/* ══════════════════════════════════════════════════
-            SECTION: Accesso Rapido (Contatti + AI Hub)
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Accesso Rapido
-          </div>
-
-          {/* Row: Contatti */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setView('contacts')}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
-              <span style={{fontSize:16, flexShrink:0}}>👥</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Contatti</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: AI Hub */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <button onClick={() => setView('ai')}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:0}}>
-              <span style={{fontSize:16, flexShrink:0}}>✨</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>AI Hub</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════════════
             SECTION: Strumenti
            ══════════════════════════════════════════════════ */}
         <div style={{width:'100%', maxWidth:400}}>

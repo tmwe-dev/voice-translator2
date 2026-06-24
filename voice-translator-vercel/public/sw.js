@@ -1,5 +1,5 @@
 // Service Worker for VoiceTranslate — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 9;
+const CACHE_VERSION = 12;
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;

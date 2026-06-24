@@ -11,7 +11,7 @@ export default function SummaryView({ L, S, prefs, currentConv, summaryLoading, 
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => { setCurrentConv(null); setView('history'); }}>{'←'}</button>
+          <button style={S.backBtn} onClick={() => { setCurrentConv(null); setView('home'); }}>{'←'}</button>
           <span style={{fontWeight:600, fontSize:17}}>Report</span>
         </div>
 

@@ -14,7 +14,7 @@ import AvatarImg from './AvatarImg.js';
 
 export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, joinCode,
   setJoinCode, inviteMsgLang, setInviteMsgLang, handleJoinRoom, setView, userToken, setAuthStep,
-  status, theme, setTheme, unlockAudio }) {
+  status, theme, setTheme }) {
 
   const _S = getStyles(theme);
   const col = _S.colors || {};
@@ -173,7 +173,7 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
             </select>
           </div>
 
-          <PrimaryBtn onClick={() => { if (unlockAudio) unlockAudio(); savePrefs(prefs); handleJoinRoom(); }}
+          <PrimaryBtn onClick={() => { savePrefs(prefs); handleJoinRoom(); }}
             disabled={joinCode.length < 4 || !prefs.name.trim()}>
             {L('enterRoom')} →
           </PrimaryBtn>
@@ -232,7 +232,6 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
 
           {/* ONE BIG BUTTON — just "Chat" */}
           <button onClick={() => {
-            if (unlockAudio) unlockAudio();
             savePrefs(prefs);
             handleJoinRoom();
           }} style={{
@@ -270,7 +269,6 @@ export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, set
   }
 
   function handleJoin() {
-    if (unlockAudio) unlockAudio();
     setPrefs(p => ({ ...p, gender, autoPlay: audioAutoPlay, voice: selectedVoicePref }));
     savePrefs({ ...prefs, gender, autoPlay: audioAutoPlay, voice: selectedVoicePref });
     handleJoinRoom();

@@ -82,32 +82,23 @@ export async function redis(command, ...args) {
       }
     });
   } catch (err) {
-    // Fallback: for GET commands, try in-memory cache; return null if not found (don't crash)
-    if (command === 'GET') {
-      if (args[0]) {
-        const cached = fallbackGet(args[0]);
-        if (cached !== undefined) {
-          console.warn(`[Redis] Using fallback cache for ${args[0]}`);
-          return cached;
-        }
+    // Fallback: for GET commands, try in-memory cache
+    if (command === 'GET' && args[0]) {
+      const cached = fallbackGet(args[0]);
+      if (cached !== undefined) {
+        console.warn(`[Redis] Using fallback cache for ${args[0]}`);
+        return cached;
       }
-      console.warn(`[Redis] Fail-open for GET ${args[0]} (no cache)`);
-      return null;
     }
-    // For SET commands, cache locally and return OK so app keeps working
+    // For SET commands, cache locally so subsequent GETs work
     if (command === 'SET' && args[0] && args[1]) {
-      console.warn(`[Redis] Fail-open for SET ${args[0]}`);
       fallbackSet(args[0], args[1]);
-      return 'OK';
     }
     // For INCR (rate limiting), fail-open so app keeps working
     if (command === 'INCR') {
       console.warn(`[Redis] Fail-open for INCR ${args[0]}`);
       return 1; // Return low count so rate limit passes
     }
-    // For EXPIRE and TTL, fail-open with safe defaults
-    if (command === 'EXPIRE') return 1;
-    if (command === 'TTL') return -1;
 
     throw err;
   }

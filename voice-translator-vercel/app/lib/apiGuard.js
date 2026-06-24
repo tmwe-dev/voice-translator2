@@ -131,10 +131,13 @@ export function withApiGuard(handler, opts = {}) {
     }
 
     // 6. Add rate limit headers to response (use the more restrictive remaining count)
+    // Wrapped in try/catch: NextResponse headers can be immutable (e.g. redirect responses)
     if (response?.headers) {
-      const effectiveRemaining = Math.min(ipRl.remaining, userRl.remaining);
-      response.headers.set('X-RateLimit-Limit', String(maxRequests));
-      response.headers.set('X-RateLimit-Remaining', String(effectiveRemaining));
+      try {
+        const effectiveRemaining = Math.min(ipRl.remaining, userRl.remaining);
+        response.headers.set('X-RateLimit-Limit', String(maxRequests));
+        response.headers.set('X-RateLimit-Remaining', String(effectiveRemaining));
+      } catch {}
     }
 
     return response;
