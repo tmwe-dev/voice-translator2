@@ -20,6 +20,21 @@ const MODE_LABELS = {
   simultaneous: { label: 'Live', icon: '⚡', color: '#EF4444' },
 };
 
+const ROOM_TYPE_ICONS = {
+  public: '🌍',
+  protected: '🔒',
+  private: '🔐',
+  temporary: '⏱️',
+};
+
+const ROLE_BADGES = {
+  owner: { label: 'Host', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  moderator: { label: 'Mod', color: '#8B5CF6', bg: 'rgba(139,106,255,0.12)' },
+  participant: null,
+  listener: { label: '👁', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
+  invited: { label: 'Invitato', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+};
+
 const LANG_FILTERS = [
   { code: 'all', flag: '🌍', name: 'Tutte' },
   { code: 'it', flag: '🇮🇹', name: 'IT' },
@@ -35,7 +50,7 @@ const LANG_FILTERS = [
   { code: 'th', flag: '🇹🇭', name: 'TH' },
 ];
 
-function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
+function MondoView({ L, S, prefs, setView, onJoinRoom, onCreateRoom, theme }) {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -124,7 +139,7 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        <button onClick={() => setView('home')} style={{
+        <button onClick={() => setView('home')} aria-label="Torna indietro" style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -135,13 +150,13 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-            🌍 Mondo
+            🌍 Community
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-            {rooms.length} {rooms.length === 1 ? 'stanza attiva' : 'stanze attive'}
+            {rooms.length} {rooms.length === 1 ? 'BarTalk attivo' : 'BarTalk attivi'}
           </div>
         </div>
-        <button onClick={handleRefresh} style={{
+        <button onClick={handleRefresh} aria-label="Aggiorna stanze" style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: `${C.accent}12`, border: `1px solid ${C.accent}20`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -152,6 +167,19 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
         }}>
           {'↻'}
         </button>
+        {onCreateRoom && (
+          <button onClick={onCreateRoom} aria-label="Crea un BarTalk" style={{
+            width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+            border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 18, color: '#fff',
+            WebkitTapHighlightColor: 'transparent',
+            boxShadow: `0 2px 12px ${C.accent}30`,
+          }}>
+            +
+          </button>
+        )}
       </header>
 
       {/* ═══ SEARCH BAR ═══ */}
@@ -274,13 +302,13 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
               Crea una stanza pubblica per farti trovare da persone in tutto il mondo!
             </div>
-            <button onClick={() => setView('home')} style={{
+            <button onClick={onCreateRoom || (() => setView('home'))} style={{
               padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
-              💬 Crea stanza pubblica
+              🌍 Crea un BarTalk
             </button>
           </div>
         )}
@@ -328,10 +356,26 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, theme }) {
 
               {/* Info */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, fontSize: 14, color: C.textPrimary }}>
                     {room.host}
                   </span>
+                  {/* Room type icon */}
+                  {room.roomType && room.roomType !== 'public' && (
+                    <span style={{ fontSize: 12 }} title={room.roomType}>
+                      {ROOM_TYPE_ICONS[room.roomType] || ''}
+                    </span>
+                  )}
+                  {/* Host role badge */}
+                  {room.myRole && ROLE_BADGES[room.myRole] && (
+                    <span style={{
+                      padding: '1px 6px', borderRadius: 4, fontSize: 8, fontWeight: 700,
+                      background: ROLE_BADGES[room.myRole].bg,
+                      color: ROLE_BADGES[room.myRole].color,
+                    }}>
+                      {ROLE_BADGES[room.myRole].label}
+                    </span>
+                  )}
                   <span style={{
                     padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
                     background: `${modeInfo.color}18`, color: modeInfo.color,

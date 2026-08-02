@@ -49,6 +49,8 @@ const MondoView = lazy(() => import('./components/MondoView.js'));
 const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
 const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
 const HelpView = lazy(() => import('./components/HelpView.js'));
+const TaxiDriverView = lazy(() => import('./components/TaxiDriverView.js'));
+const CreateRoomSheet = lazy(() => import('./components/CreateRoomSheet.js'));
 
 // ═══ Always-imported (lightweight, used within RoomView) ═══
 import ProviderBadge from './components/ProviderBadge.js';
@@ -104,6 +106,8 @@ function HomeInner() {
   const [inviteMsgLang, setInviteMsgLang] = useState(null);
   // [Removed dead code: showShareApp, shareAppLang — unused]
   const [showNewConversation, setShowNewConversation] = useState(false);
+  const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [taxiDestId, setTaxiDestId] = useState(null);
 
   // FREE tier usage tracking (extracted hook)
   const freeTier = useFreeTierTracking();
@@ -321,7 +325,7 @@ function HomeInner() {
   // =============================================
   useInitializeApp({
     setView, setPrefs, setMyLang, setJoinCode, setInviteMsgLang,
-    setAutoJoinTriggered, auth, initMonitoring,
+    setAutoJoinTriggered, setTaxiDestId, auth, initMonitoring,
   });
 
   // PWA + Notifications (extracted hooks)
@@ -1003,11 +1007,36 @@ function HomeInner() {
     </>
   );
 
+  if (view === 'taxi-driver') return (
+    <Suspense fallback={<LazyFallback />}>
+      <TaxiDriverView destId={taxiDestId} setView={setView} theme={theme} L={L} />
+    </Suspense>
+  );
+
   if (view === 'mondo') return (
     <>
       <Suspense fallback={<LazyFallback />}>
       <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
-        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }} />
+        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }}
+        onCreateRoom={() => setShowCreateRoom(true)} />
+      </Suspense>
+      <Suspense fallback={null}>
+        <CreateRoomSheet
+          open={showCreateRoom}
+          onClose={() => setShowCreateRoom(false)}
+          onCreate={async (roomConfig) => {
+            const room = await roomPolling.handleCreateRoom(
+              prefs.name || 'Host', roomConfig.lang || myLang,
+              roomConfig.mode || selectedMode, prefs.avatar,
+              selectedContext, roomConfig.mode || selectedMode,
+              roomConfig.description || '',
+              auth.isTrial, auth.isTopPro, auth.userAccount
+            );
+            roomInfoRef.current = room;
+            setView('lobby');
+          }}
+          S={S}
+        />
       </Suspense>
       {bottomNav}
     </>

@@ -3,6 +3,8 @@ import { memo, useState, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import AvatarImg from './AvatarImg.js';
+import PageHeader from './ui/PageHeader.js';
+import EmptyState from './ui/EmptyState.js';
 
 // ═══════════════════════════════════════════════
 // HistoryView — Archivio (P4 Archive)
@@ -15,16 +17,18 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: S?.bg || col.bg || '#060810',
-    textPrimary: S?.textPrimary || col.textPrimary || '#F2F4F7',
-    textSecondary: S?.textSecondary || col.textSecondary || 'rgba(242,244,247,0.90)',
-    textMuted: S?.textMuted || col.textMuted || 'rgba(242,244,247,0.60)',
-    card: S?.card || col.glassCard || 'rgba(12,16,30,0.65)',
-    cardBorder: S?.cardBorder || col.cardBorder || 'rgba(255,255,255,0.05)',
-    input: S?.input || col.inputBg || 'rgba(14,18,32,0.6)',
-    inputBorder: S?.inputBorder || col.inputBorder || 'rgba(255,255,255,0.07)',
-    accent: S?.accent || col.accent1 || '#26D9B0',
-    purple: S?.purple || col.accent2 || '#8B6AFF',
+    bg: col.bg || '#09090b',
+    textPrimary: col.textPrimary || '#fafafa',
+    textSecondary: col.textSecondary || 'rgba(250,250,250,0.90)',
+    textMuted: col.textMuted || 'rgba(250,250,250,0.60)',
+    card: col.glassCard || 'rgba(17,17,19,0.65)',
+    cardBorder: col.cardBorder || 'rgba(250,250,250,0.05)',
+    input: col.inputBg || 'rgba(17,17,19,0.6)',
+    inputBorder: col.inputBorder || 'rgba(250,250,250,0.07)',
+    accent: col.accent1 || '#8b5cf6',
+    purple: col.accent2 || '#06b6d4',
+    headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
+    headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
   };
 
   const [search, setSearch] = useState('');
@@ -239,68 +243,12 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
       />
 
       {/* ═══ HEADER ═══ */}
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          padding: '16px 16px 8px',
-          flexShrink: 0,
-          position: 'relative',
-          zIndex: 5,
-        }}
-      >
-        <button
-          onClick={() => setView('home')}
-          style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            cursor: 'pointer',
-            background: C.card,
-            border: `1px solid ${C.cardBorder}`,
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: C.textMuted,
-            fontSize: 16,
-            fontWeight: 700,
-            WebkitTapHighlightColor: 'transparent',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = C.textPrimary)}
-          onMouseLeave={(e) => (e.currentTarget.style.color = C.textMuted)}
-        >
-          ‹
-        </button>
-        <h1
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: C.textPrimary,
-            margin: 0,
-            letterSpacing: -0.5,
-          }}
-        >
-          Archivio
-        </h1>
-        <div style={{ flex: 1 }} />
-        {convHistory.length > 0 && (
-          <span
-            style={{
-              fontSize: 11,
-              color: C.textMuted,
-              padding: '4px 8px',
-              borderRadius: 6,
-              background: `${C.accent}10`,
-            }}
-          >
-            {filtered.length} / {convHistory.length}
-          </span>
-        )}
-      </header>
+      <PageHeader
+        title="Archivio"
+        subtitle={convHistory.length > 0 ? `${filtered.length} / ${convHistory.length}` : undefined}
+        onBack={() => setView('home')}
+        S={{ colors: C }}
+      />
 
       {/* ═══ SEARCH BAR ═══ */}
       <div style={{ padding: '0 16px 12px', flexShrink: 0 }}>
@@ -483,71 +431,21 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
         }}
       >
         {convHistory.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '50px 20px' }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 24,
-                margin: '0 auto 16px',
-                background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
-                border: `1px solid ${C.accent}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 36,
-              }}
-            >
-              📋
-            </div>
-            <div
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                color: C.textPrimary,
-                marginBottom: 6,
-              }}
-            >
-              Nessuna conversazione
-            </div>
-            <div
-              style={{
-                fontSize: 12,
-                color: C.textMuted,
-                lineHeight: 1.6,
-                maxWidth: 260,
-                margin: '0 auto 20px',
-              }}
-            >
-              Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!
-            </div>
-            <button
-              onClick={() => setView('home')}
-              style={{
-                padding: '12px 28px',
-                borderRadius: 14,
-                cursor: 'pointer',
-                background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-                border: 'none',
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                fontFamily: FONT,
-                boxShadow: `0 4px 20px ${C.accent}35`,
-              }}
-            >
-              🎙️ Inizia a parlare
-            </button>
-          </div>
+          <EmptyState
+            icon="📋"
+            title="Nessuna conversazione"
+            desc="Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!"
+            actionLabel="Inizia a parlare"
+            onAction={() => setView('home')}
+            S={{ colors: C }}
+          />
         ) : filtered.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}>
-              🔍
-            </div>
-            <div style={{ fontSize: 13, color: C.textMuted }}>
-              Nessun risultato
-            </div>
-          </div>
+          <EmptyState
+            icon="🔍"
+            title="Nessun risultato"
+            desc="Prova a cercare con parole diverse"
+            S={{ colors: C }}
+          />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {filtered.map((c, i) => renderConversationCard(c, i))}

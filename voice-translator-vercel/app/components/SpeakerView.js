@@ -4,6 +4,8 @@ import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import Icon from './Icon.js';
 import { toast } from './Toast.js';
+import TaxiDestinationPanel from './TaxiDestinationPanel.js';
+import TaxiQRView from './TaxiQRView.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -57,6 +59,9 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
   const [showRouteSteps, setShowRouteSteps] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [showDestPanel, setShowDestPanel] = useState(false);
+  const [showStructuredDest, setShowStructuredDest] = useState(false);
+  const [structuredDestination, setStructuredDestination] = useState(null);
+  const [showQRView, setShowQRView] = useState(false);
 
   // ── Refs ──
   const recorderRef = useRef(null);
@@ -762,19 +767,32 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
           </div>
         </div>
       ) : (
-        <button onClick={() => setShowDestPanel(!showDestPanel)} style={{
-          margin: '0 16px 8px', padding: '8px 14px', borderRadius: 12,
-          background: showDestPanel ? `${C.accent}10` : C.card,
-          border: `1px solid ${showDestPanel ? `${C.accent}25` : C.cardBorder}`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          cursor: 'pointer', fontFamily: FONT,
-          display: 'flex', alignItems: 'center', gap: 8,
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          <span style={{ fontSize: 14 }}>📍</span>
-          <span style={{ fontSize: 11, color: C.textMuted, flex: 1, textAlign: 'left' }}>Aggiungi destinazione</span>
-          <span style={{ fontSize: 12, color: C.textMuted }}>{showDestPanel ? '▼' : '+'}</span>
-        </button>
+        <div style={{ margin: '0 16px 8px', display: 'flex', gap: 6 }}>
+          <button onClick={() => setShowDestPanel(!showDestPanel)} style={{
+            flex: 1, padding: '8px 14px', borderRadius: 12,
+            background: showDestPanel ? `${C.accent}10` : C.card,
+            border: `1px solid ${showDestPanel ? `${C.accent}25` : C.cardBorder}`,
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            cursor: 'pointer', fontFamily: FONT,
+            display: 'flex', alignItems: 'center', gap: 8,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <span style={{ fontSize: 14 }}>📍</span>
+            <span style={{ fontSize: 11, color: C.textMuted, flex: 1, textAlign: 'left' }}>Destinazione rapida</span>
+            <span style={{ fontSize: 12, color: C.textMuted }}>{showDestPanel ? '▼' : '+'}</span>
+          </button>
+          <button onClick={() => { vibrate(15); setShowStructuredDest(true); }} style={{
+            padding: '8px 14px', borderRadius: 12,
+            background: `linear-gradient(135deg, ${C.accent}12, ${C.purple}08)`,
+            border: `1px solid ${C.accent}20`,
+            cursor: 'pointer', fontFamily: FONT,
+            display: 'flex', alignItems: 'center', gap: 6,
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+            <span style={{ fontSize: 14 }}>🚕</span>
+            <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>QR Taxi</span>
+          </button>
+        </div>
       )}
 
       {/* Destination search panel */}
@@ -1023,6 +1041,36 @@ function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
           </div>
         )}
       </div>
+
+      {/* ═══ STRUCTURED DESTINATION PANEL ═══ */}
+      {showStructuredDest && (
+        <TaxiDestinationPanel
+          onDestinationReady={(dest) => {
+            setStructuredDestination(dest);
+            setShowStructuredDest(false);
+            setShowQRView(true);
+            // Also set the simple destination coords for map/mirror
+            setDestCoords({ lat: dest.lat, lon: dest.lng, displayName: dest.normalizedAddress });
+          }}
+          onClose={() => setShowStructuredDest(false)}
+          targetLang={targetLang}
+          S={_S}
+        />
+      )}
+
+      {/* ═══ QR VIEW FOR TAXI DRIVER ═══ */}
+      {showQRView && structuredDestination && (
+        <TaxiQRView
+          destination={structuredDestination}
+          onClose={() => setShowQRView(false)}
+          onStartConversation={() => {
+            setShowQRView(false);
+            vibrate(15);
+            setMirrorMode(true);
+          }}
+          S={_S}
+        />
+      )}
 
       {/* ═══ CSS ANIMATIONS ═══ */}
       <style>{`

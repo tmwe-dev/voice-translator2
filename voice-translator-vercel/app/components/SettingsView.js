@@ -4,6 +4,7 @@ import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DA
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 import { IconMic, IconSettings, IconGlobe, IconKey, IconStar, IconMusic, IconZap, IconUser, IconCheckCircle } from './Icons.js';
+import PageHeader from './ui/PageHeader.js';
 
 const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
@@ -139,19 +140,8 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
     <div style={S.page}>
       <div style={{...S.scrollCenter, gap: 12}}>
         {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 400,
-          padding: '16px 0 8px',
-        }}>
-          <button onClick={() => setView('home')}
-            style={{ background: 'none', border: 'none', color: S.colors.textPrimary, cursor: 'pointer', padding: 4, fontSize: 20 }}>
-            {'←'}
-          </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 700, color: S.colors.textPrimary, fontFamily: FONT }}>
-              <IconSettings size={20} style={{display:'inline-block', marginRight:8, verticalAlign:'middle'}} /> {L('settings')}
-            </div>
-          </div>
+        <div style={{ width: '100%', maxWidth: 400 }}>
+          <PageHeader title={L('settings')} onBack={() => setView('home')} S={S} />
         </div>
 
         {/* ══════════════════════════════════════════════════
@@ -450,25 +440,41 @@ const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePre
 
           {/* Row: Glossario */}
           <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>📖</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Glossario personale</div>
-            </div>
-            <span style={{fontSize:10, color:S.colors.textMuted}}>Presto</span>
+            borderRight:'1px solid ' + S.colors.cardBorder, padding:0}}>
+            <button onClick={() => setView('ai')}
+              style={{width:'100%', background:'none', border:'none',
+                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:'12px 14px'}}>
+              <span style={{fontSize:16, flexShrink:0}}>📖</span>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontSize:12, color:S.colors.textSecondary}}>Glossario personale</div>
+              </div>
+              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
+            </button>
           </div>
 
           {/* Row: Esporta dati */}
           <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
             borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>📤</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Esporta dati</div>
-            </div>
-            <span style={{fontSize:10, color:S.colors.textMuted}}>Presto</span>
+            borderBottom:'1px solid ' + S.colors.cardBorder, padding:0}}>
+            <button onClick={() => {
+              try {
+                const history = localStorage.getItem('vt-convHistory');
+                const prefs = localStorage.getItem('vt-prefs');
+                const data = { exportedAt: new Date().toISOString(), preferences: prefs ? JSON.parse(prefs) : null, conversations: history ? JSON.parse(history) : [] };
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `bartalk-export-${new Date().toISOString().slice(0,10)}.json`;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+              } catch (e) { console.warn('[SettingsView] Export failed:', e?.message); }
+            }}
+              style={{width:'100%', background:'none', border:'none',
+                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:'12px 14px'}}>
+              <span style={{fontSize:16, flexShrink:0}}>📤</span>
+              <div style={{flex:1, minWidth:0}}>
+                <div style={{fontSize:12, color:S.colors.textSecondary}}>Esporta dati</div>
+              </div>
+              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
+            </button>
           </div>
         </div>
 

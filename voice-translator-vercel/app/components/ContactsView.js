@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
+import PageHeader from './ui/PageHeader.js';
 
 // ═══════════════════════════════════════════════
 // ContactsView — Redesigned with glassmorphism
@@ -19,18 +20,20 @@ export default function ContactsView({
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: '#060810',
-    textPrimary: col.textPrimary || '#F2F4F7',
-    textSecondary: col.textSecondary || 'rgba(242,244,247,0.90)',
-    textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
-    card: col.glassCard || 'rgba(12,16,30,0.65)',
-    cardBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
-    input: col.inputBg || 'rgba(14,18,32,0.6)',
-    inputBorder: col.inputBorder || 'rgba(255,255,255,0.07)',
-    accent: col.accent1 || '#26D9B0',
-    purple: col.accent2 || '#8B6AFF',
-    red: col.accent3 || '#FF6B6B',
-    green: '#22c55e',
+    bg: col.bg || '#09090b',
+    textPrimary: col.textPrimary || '#fafafa',
+    textSecondary: col.textSecondary || 'rgba(250,250,250,0.90)',
+    textMuted: col.textMuted || 'rgba(250,250,250,0.60)',
+    card: col.glassCard || 'rgba(17,17,19,0.65)',
+    cardBorder: col.cardBorder || 'rgba(250,250,250,0.05)',
+    input: col.inputBg || 'rgba(17,17,19,0.6)',
+    inputBorder: col.inputBorder || 'rgba(250,250,250,0.07)',
+    accent: col.accent1 || '#8b5cf6',
+    purple: col.accent2 || '#06b6d4',
+    red: col.accent3 || '#ef4444',
+    green: col.onlineColor || col.accent4 || '#22c55e',
+    headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
+    headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
   };
 
   const [addEmail, setAddEmail] = useState('');
@@ -144,38 +147,23 @@ export default function ContactsView({
       }} />
 
       {/* ═══ HEADER ═══ */}
-      <header style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
-      }}>
-        <button onClick={() => setView('home')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-          background: C.card, border: `1px solid ${C.cardBorder}`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: C.textMuted, fontSize: 18, WebkitTapHighlightColor: 'transparent',
-        }}>‹</button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-            👥 Contatti
-          </div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
-            {onlineCount > 0 && <><span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 3, background: C.green }} />{onlineCount} online · </>}
-            {contacts.length} contatti
-          </div>
-        </div>
-        <button onClick={() => setShowAddSection(!showAddSection)} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-          background: showAddSection ? `${C.accent}15` : C.card,
-          border: `1px solid ${showAddSection ? `${C.accent}25` : C.cardBorder}`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          color: showAddSection ? C.accent : C.textMuted, fontSize: 20,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          {showAddSection ? '×' : '+'}
-        </button>
-      </header>
+      <PageHeader
+        title="Contatti"
+        subtitle={`${contacts.length} contatti${onlineCount > 0 ? ` · ${onlineCount} online` : ''}`}
+        onBack={() => setView('home')}
+        S={{ colors: C }}
+        rightAction={
+          <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? 'Chiudi' : 'Aggiungi contatto'} style={{
+            width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
+            background: showAddSection ? `${C.accent}15` : C.card,
+            border: `1px solid ${showAddSection ? `${C.accent}25` : C.cardBorder}`,
+            color: showAddSection ? C.accent : C.textMuted, fontSize: 20,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {showAddSection ? '×' : '+'}
+          </button>
+        }
+      />
 
       {/* ═══ SEARCH ═══ */}
       {contacts.length > 3 && (

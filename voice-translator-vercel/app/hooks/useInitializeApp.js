@@ -13,7 +13,7 @@ import { LANGS, AVATARS } from '../lib/constants.js';
  */
 export default function useInitializeApp({
   setView, setPrefs, setMyLang, setJoinCode, setInviteMsgLang,
-  setAutoJoinTriggered, auth, initMonitoring,
+  setAutoJoinTriggered, setTaxiDestId, auth, initMonitoring,
 }) {
   // ── Main initialization ──
   useEffect(() => {
@@ -109,8 +109,18 @@ export default function useInitializeApp({
         window.history.replaceState({}, '', window.location.pathname);
       }
 
+      // 6b. Taxi destination from URL (/taxi/DEST_ID or ?taxi=DEST_ID)
+      const taxiParam = urlParams.get('taxi');
+      const pathMatch = window.location.pathname.match(/^\/taxi\/([a-z0-9]+)$/i);
+      const taxiId = taxiParam || pathMatch?.[1];
+      if (taxiId) {
+        setTaxiDestId(taxiId);
+        window.history.replaceState({}, '', window.location.pathname === '/' ? '/' : window.location.pathname);
+      }
+
       // 7. Determine initial view
       const pickView = (hasSaved) => {
+        if (taxiId) return 'taxi-driver';
         if (roomParam) return 'join';
         if (!hasSaved) {
           const testMode = typeof window !== 'undefined' && window.__VT_TESTING_MODE;
