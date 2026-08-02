@@ -1,7 +1,10 @@
+import { createLogger } from './logger.js';
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { apiCircuitBreaker } from './circuitBreaker.js';
+
+const log = createLogger('llm');
 
 const DEFAULT_TIMEOUT_MS = 10000; // 10s max per LLM call
 
@@ -121,7 +124,7 @@ export async function callLLMWithFallback(primaryOpts, fallbacks = [], timeoutMs
     const result = await callLLM({ ...primaryOpts, timeoutMs });
     return { ...result, provider: primaryOpts.provider, model: primaryOpts.model, wasFallback: false };
   } catch (primaryErr) {
-    console.warn(`[LLM] Primary ${primaryOpts.provider}/${primaryOpts.model} failed: ${primaryErr.message}`);
+    log.warn(`Primary ${primaryOpts.provider}/${primaryOpts.model} failed: ${primaryErr.message}`);
   }
 
   // Try fallbacks in order
@@ -130,10 +133,10 @@ export async function callLLMWithFallback(primaryOpts, fallbacks = [], timeoutMs
     try {
       const opts = { ...primaryOpts, ...fb, timeoutMs };
       const result = await callLLM(opts);
-      console.log(`[LLM] Fallback ${i + 1} succeeded: ${fb.provider}/${fb.model}`);
+      log.info(`Fallback ${i + 1} succeeded: ${fb.provider}/${fb.model}`);
       return { ...result, provider: fb.provider, model: fb.model, wasFallback: true };
     } catch (fbErr) {
-      console.warn(`[LLM] Fallback ${i + 1} ${fb.provider}/${fb.model} failed: ${fbErr.message}`);
+      log.warn(`Fallback ${i + 1} ${fb.provider}/${fb.model} failed: ${fbErr.message}`);
     }
   }
 

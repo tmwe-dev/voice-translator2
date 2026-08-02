@@ -4,6 +4,9 @@ import { addCredits, addPaymentRecord } from '../../../lib/users.js';
 import { getSupabaseAdmin } from '../../../lib/supabase.js';
 import { addCreditsDB, savePayment as savePaymentDB, logAudit } from '../../../lib/supabaseAPI.js';
 import { redis } from '../../../lib/redis.js';
+import { createLogger } from '../../../lib/logger.js';
+
+const log = createLogger('stripeWebhook');
 
 // ═══════════════════════════════════════════════
 // Stripe Webhook Handler
@@ -36,7 +39,7 @@ export async function POST(req) {
 
     let event;
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.error('[Webhook] STRIPE_WEBHOOK_SECRET not configured — rejecting all webhooks');
+      log.error('STRIPE_WEBHOOK_SECRET not configured — rejecting all webhooks');
       return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
     }
     if (!sig) {
@@ -45,7 +48,7 @@ export async function POST(req) {
     try {
       event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET);
     } catch (err) {
-      console.error('Webhook signature verification failed:', err.message);
+      log.error('Webhook signature verification failed:', err.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -60,7 +63,7 @@ export async function POST(req) {
       await redis('SET', idempotencyKey, '1', 'EX', 172800);
     } catch (e) {
       // If Redis is down, proceed anyway (better to double-process than miss)
-      console.warn('[Webhook] Idempotency check failed:', e.message);
+      log.warn('Idempotency check failed:', e.message);
     }
 
     const sb = getSupabaseAdmin();
@@ -106,7 +109,7 @@ export async function POST(req) {
           await logAudit(userId, 'subscription_created', 'subscription', { plan, subscriptionId });
         }
 
-        console.log(`[Webhook] Subscription ${plan} created for ${email || userId}`);
+        log.info(`Subscription ${plan} created for ${email || userId}`);
       } else {
         // One-time credit purchase (existing flow)
         const credits = parseInt(session.metadata?.credits || '0');
@@ -141,7 +144,7 @@ export async function POST(req) {
             await logAudit(userId, 'credits_purchased', 'payment', { credits, packageId });
           }
 
-          console.log(`[Webhook] Added ${credits} credits to ${email}`);
+          log.info(`Added ${credits} credits to ${email}`);
         }
       }
     }
@@ -187,10 +190,10 @@ export async function POST(req) {
                 subscription_status: 'active',
                 updated_at: new Date().toISOString(),
               }).eq('id', profile.id);
-            } catch (e) { console.error('Subscription retrieve error:', e.message); }
+            } catch (e) { log.error('Subscription retrieve error:', e.message); }
 
             await logAudit(profile.id, 'subscription_renewed', 'subscription', { plan, bonusCredits });
-            console.log(`[Webhook] Subscription renewed for ${profile.id}: +${bonusCredits} credits`);
+            log.info(`Subscription renewed for ${profile.id}: +${bonusCredits} credits`);
           }
         }
       }
@@ -251,14 +254,14 @@ export async function POST(req) {
           }).eq('id', profile.id);
 
           await logAudit(profile.id, 'subscription_ended', 'subscription', {});
-          console.log(`[Webhook] Subscription ended for ${profile.id} — downgraded to free`);
+          log.info(`Subscription ended for ${profile.id} — downgraded to free`);
         }
       }
     }
 
     return NextResponse.json({ received: true });
   } catch (e) {
-    console.error('Webhook error:', e.message);
+    log.error('Webhook error:', e.message);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'stripe-webhook' } });
     }).catch(() => {});

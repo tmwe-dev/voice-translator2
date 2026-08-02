@@ -5,7 +5,10 @@
 // Keys NEVER return to the client after initial save
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
 import { getSupabaseAdmin } from './supabase.js';
+
+const log = createLogger('keyVault');
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32; // 256 bits
@@ -105,7 +108,7 @@ export async function saveApiKeys(email, keys) {
   const supabase = getSupabaseAdmin();
   const userId = await resolveUserId(supabase, email);
   if (!userId) {
-    console.error('[KeyVault] No profile found for email:', email);
+    log.error('No profile found for email:', email);
     return false;
   }
 
@@ -122,7 +125,7 @@ export async function saveApiKeys(email, keys) {
         }, { onConflict: 'user_id,provider' });
 
       if (error) {
-        console.error(`[KeyVault] Save error for ${provider}:`, error);
+        log.error(`Save error for ${provider}:`, error);
         return false;
       }
     }
@@ -156,7 +159,7 @@ export async function getDecryptedKey(email, provider) {
   try {
     return decryptKey(data.encrypted_key);
   } catch (e) {
-    console.error('[KeyVault] Decrypt error:', e);
+    log.error('Decrypt error:', e);
     return null;
   }
 }

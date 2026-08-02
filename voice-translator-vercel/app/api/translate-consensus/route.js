@@ -4,6 +4,9 @@ import { redis } from '../../lib/redis.js';
 import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('translateConsensus');
 
 // ═══════════════════════════════════════════════
 // Consensus Translation — "Guaranteed" mode
@@ -62,7 +65,7 @@ async function handlePost(req) {
           return NextResponse.json({ ...parsed, cached: true }, { headers: cors });
         }
       }
-    } catch (e) { console.warn('[translate-consensus] Cache JSON parse error:', e?.message); }
+    } catch (e) { log.warn('Cache JSON parse error:', e?.message); }
 
     // ── Get top 3 providers for this language ──
     const chain = getProviderChain(targetLang);
@@ -110,12 +113,12 @@ async function handlePost(req) {
     if (consensus.guaranteed) {
       try {
         await redis('SET', cacheKey, JSON.stringify(response), 'EX', 86400);
-      } catch (e) { console.warn('[translate-consensus] Cache set failed:', e?.message); }
+      } catch (e) { log.warn('Cache set failed:', e?.message); }
     }
 
     return NextResponse.json(response, { headers: cors });
   } catch (e) {
-    console.error('Consensus translate error:', e);
+    log.error('Consensus translate error:', e);
     return NextResponse.json(
       { translated: '', guaranteed: false, error: e.message },
       { headers: cors }

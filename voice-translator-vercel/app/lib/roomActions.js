@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking } from './store.js';
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
+import { createLogger } from './logger.js';
+const log = createLogger('roomActions');
 
 // ── Helper: resolve identity from token or fallback to name ──
 export async function resolveIdentity(roomSessionToken, name, roomId) {
@@ -139,7 +141,7 @@ export async function handleWebrtcSignal({ roomId, signal, identity }) {
     await redis('LTRIM', key, -50, -1);
     await redis('EXPIRE', key, 300);
   } catch (e) {
-    console.error('[WebRTC] Signal store error:', e);
+    log.error('WebRTC signal store error:', e);
   }
   return NextResponse.json({ ok: true });
 }

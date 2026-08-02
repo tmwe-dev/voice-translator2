@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('sttToken');
 
 // ═══════════════════════════════════════════════
 // STT Token endpoint — generates temporary Deepgram API key
@@ -45,7 +48,7 @@ async function handler(req) {
     });
 
     if (!res.ok) {
-      console.warn('[STT-Token] Temporary key creation failed:', res.status);
+      log.warn('Temporary key creation failed:', res.status);
       return NextResponse.json(
         { error: 'Temporary STT key creation failed. Streaming STT unavailable.' },
         { status: 503 }
@@ -65,7 +68,7 @@ async function handler(req) {
       expiresIn: 60,
     });
   } catch (e) {
-    console.error('[STT-Token] Error:', e.message);
+    log.error('Error:', e.message);
     return NextResponse.json(
       { error: 'STT token generation failed.' },
       { status: 503 }

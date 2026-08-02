@@ -12,6 +12,9 @@
 // - Server restart (Vercel cold start)
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('messageQueue');
 const MAX_QUEUE_SIZE = 50;
 const RETRY_INTERVAL = 3000; // 3s between retry attempts
 const MAX_RETRIES = 10;
@@ -44,7 +47,7 @@ class MessageQueue {
       try {
         const sent = await this.onSendCallback(message);
         if (sent) return true;
-      } catch (e) { console.warn('[messageQueue] immediate send failed:', e?.message || e); }
+      } catch (e) { log.warn('immediate send failed:', e?.message || e); }
     }
 
     // Failed or offline — queue it
@@ -85,11 +88,11 @@ class MessageQueue {
           if (item.retries < MAX_RETRIES) {
             toRetry.push(item);
           } else {
-            console.warn('[MessageQueue] Dropping message after max retries:', item.message?.id);
+            log.warn('Dropping message after max retries:', item.message?.id);
           }
         }
       } catch (e) {
-        console.warn('[messageQueue] send failed:', e?.message || e);
+        log.warn('send failed:', e?.message || e);
         item.retries++;
         if (item.retries < MAX_RETRIES) toRetry.push(item);
       }
@@ -135,7 +138,7 @@ class MessageQueue {
   _setupNetworkListeners() {
     if (typeof window === 'undefined') return;
     window.addEventListener('online', () => {
-      console.log('[MessageQueue] Network back online — flushing queue');
+      log.info('Network back online — flushing queue');
       setTimeout(() => this.flush(), 500); // Small delay for network to stabilize
     });
   }
@@ -150,7 +153,7 @@ class MessageQueue {
           sessionStorage.removeItem('vt_msg_queue');
         }
       }
-    } catch (e) { console.warn('[messageQueue] persist error:', e?.message); }
+    } catch (e) { log.warn('persist error:', e?.message); }
   }
 
   restoreQueue() {
@@ -165,12 +168,12 @@ class MessageQueue {
             this.queue = items.filter(item => item.queuedAt > cutoff);
           }
           if (this.queue.length > 0) {
-            console.log(`[MessageQueue] Restored ${this.queue.length} queued messages`);
+            log.info(`Restored ${this.queue.length} queued messages`);
             this._scheduleRetry();
           }
         }
       }
-    } catch (e) { console.warn('[messageQueue] restore error:', e?.message); }
+    } catch (e) { log.warn('restore error:', e?.message); }
   }
 }
 

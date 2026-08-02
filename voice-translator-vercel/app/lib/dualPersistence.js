@@ -8,6 +8,9 @@
 // - Background sync is non-blocking
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('dualPersist');
 const PREFS_KEY = 'vt-prefs';
 const SYNC_KEY = 'vt-last-sync';
 
@@ -24,13 +27,13 @@ export function savePrefs(prefs, userToken = null) {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
     localStorage.setItem(SYNC_KEY, new Date().toISOString());
   } catch (e) {
-    console.warn('[DualPersist] localStorage write failed:', e.message);
+    log.warn('localStorage write failed:', e.message);
   }
 
   // 2. Sync to Supabase in background (non-blocking)
   if (userToken) {
     syncToCloud(prefs, userToken).catch(e => {
-      console.warn('[DualPersist] Cloud sync failed (will retry):', e.message);
+      log.warn('Cloud sync failed (will retry):', e.message);
     });
   }
 }
@@ -44,7 +47,7 @@ export function loadPrefs() {
     const raw = localStorage.getItem(PREFS_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
-    console.warn('[dualPersistence] JSON parse error:', e?.message);
+    log.warn('JSON parse error:', e?.message);
     return null;
   }
 }
@@ -83,11 +86,11 @@ async function syncToCloud(prefs, userToken) {
     });
 
     if (!response.ok) {
-      console.warn('[DualPersist] Cloud sync returned', response.status);
+      log.warn('Cloud sync returned', response.status);
     }
   } catch (e) {
     // Silently fail — localStorage is the source of truth
-    console.warn('[DualPersist] Cloud sync error:', e.message);
+    log.warn('Cloud sync error:', e.message);
   }
 }
 
@@ -118,7 +121,7 @@ export async function mergeOnLogin(userToken) {
 
     return merged;
   } catch (e) {
-    console.warn('[dualPersistence] mergeOnLogin failed:', e?.message || e);
+    log.warn('mergeOnLogin failed:', e?.message || e);
     return localPrefs;
   }
 }
@@ -130,5 +133,5 @@ export function clearPrefs() {
   try {
     localStorage.removeItem(PREFS_KEY);
     localStorage.removeItem(SYNC_KEY);
-  } catch (e) { console.warn('[dualPersistence] localStorage error:', e?.message); }
+  } catch (e) { log.warn('localStorage error:', e?.message); }
 }

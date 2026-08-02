@@ -2,6 +2,9 @@
 // CLOSED → OPEN (after N failures) → HALF_OPEN (after cooldown) → CLOSED (on success)
 // Now with: TTL auto-cleanup, maxCircuits limit, metrics
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('circuitBreaker');
 const STATE = { CLOSED: 'CLOSED', OPEN: 'OPEN', HALF_OPEN: 'HALF_OPEN' };
 
 const MAX_CIRCUITS = 100;
@@ -88,7 +91,7 @@ class CircuitBreaker {
       c.lastFailure = Date.now();
       if (c.failures >= this.failureThreshold) {
         c.state = STATE.OPEN;
-        console.warn(`[CircuitBreaker] ${key} OPEN after ${c.failures} failures`);
+        log.warn(`${key} OPEN after ${c.failures} failures`);
       }
       throw err;
     }

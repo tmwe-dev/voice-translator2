@@ -13,7 +13,7 @@ import getStyles from '../lib/styles.js';
 const FAQ_ITEMS = [
   {
     q: 'Come funziona la traduzione?',
-    a: 'Parla o scrivi nella tua lingua. BarChat traduce automaticamente il testo e lo legge ad alta voce nella lingua del destinatario usando voci neurali di alta qualità.',
+    a: 'Parla o scrivi nella tua lingua. BarTalk traduce automaticamente il testo e lo legge ad alta voce nella lingua del destinatario usando voci neurali di alta qualità.',
     icon: '🌐',
   },
   {
@@ -22,7 +22,7 @@ const FAQ_ITEMS = [
     icon: '🚕',
   },
   {
-    q: 'Posso usare BarChat gratis?',
+    q: 'Posso usare BarTalk gratis?',
     a: 'Sì! Tutte le funzionalità sono gratuite: traduzione, voci neurali, stanze multilingue, TaxiTalk, e contatti. Nessun abbonamento richiesto.',
     icon: '🆓',
   },
@@ -33,7 +33,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Quante lingue sono supportate?',
-    a: 'BarChat supporta 25+ lingue con traduzione e voci neurali: italiano, inglese, spagnolo, francese, tedesco, portoghese, cinese, giapponese, coreano, arabo, hindi, russo, turco, tailandese, vietnamita e altre.',
+    a: 'BarTalk supporta 25+ lingue con traduzione e voci neurali: italiano, inglese, spagnolo, francese, tedesco, portoghese, cinese, giapponese, coreano, arabo, hindi, russo, turco, tailandese, vietnamita e altre.',
     icon: '🗣️',
   },
   {
@@ -202,7 +202,7 @@ function HelpView({ L, S, prefs, setView, theme }) {
           textAlign: 'center', padding: '16px 0',
           fontSize: 10, color: C.textMuted, opacity: 0.5,
         }}>
-          BarChat v2.0 — Traduzione vocale universale
+          BarTalk — Traduzione vocale universale
         </div>
       </div>
 

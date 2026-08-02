@@ -15,6 +15,9 @@ import { callLLM, callLLMWithFallback } from '../../lib/llmCaller.js';
 import { routeProvider } from '../../lib/providerRouter.js';
 import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('translate');
 
 async function handlePost(req) {
   try {
@@ -49,7 +52,7 @@ async function handlePost(req) {
       try {
         cachedTranslation = await redis('GET', cacheKey);
       } catch (e) {
-        console.error('Cache lookup error:', e);
+        log.error('Cache lookup error:', e);
         // Continue without cache on error
       }
     }
@@ -90,7 +93,7 @@ async function handlePost(req) {
           }
         }
       } catch (asiaErr) {
-        console.warn('[Translate] Asia provider failed, falling back to global:', asiaErr.message);
+        log.warn('Asia provider failed, falling back to global:', asiaErr.message);
       }
     }
 
@@ -156,7 +159,7 @@ async function handlePost(req) {
     // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
     const validation = validateOutput(text, translated, targetLang);
     if (!validation.valid) {
-      console.warn(`[Translate] Output validation failed: reason=${validation.reason}, target=${targetLang}, output="${translated?.substring(0, 60)}"`);
+      log.warn(`Output validation failed: reason=${validation.reason}, target=${targetLang}, output="${translated?.substring(0, 60)}"`);
       // Strip common LLM meta-text prefixes and retry validation
       if (validation.reason === 'meta_text') {
         translated = translated.replace(/^(Translation:|Here is|Note:)\s*/i, '').trim();
@@ -166,7 +169,7 @@ async function handlePost(req) {
       if (!recheck.valid) {
         if (modelInfo.actual !== 'gpt-4o') {
           try {
-            console.log(`[Translate] Retrying with gpt-4o for ${targetLang}`);
+            log.info(`Retrying with gpt-4o for ${targetLang}`);
             // Need OpenAI key for retry — resolve if using different provider
             let retryKey = apiKey;
             if (modelInfo.provider !== 'openai') {
@@ -192,7 +195,7 @@ async function handlePost(req) {
               usage = retryCompletion.usage;
             }
           } catch (retryErr) {
-            console.error('[Translate] Retry with gpt-4o failed:', retryErr.message);
+            log.error('Retry with gpt-4o failed:', retryErr.message);
           }
         }
         // Final check — if still invalid, return original
@@ -223,7 +226,7 @@ async function handlePost(req) {
         const charge = Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents);
         const updatedUser = await deductCredits(billingEmail, charge);
         if (updatedUser) remainingCredits = updatedUser.credits;
-      } catch (e) { console.error('Credit deduct error:', e); }
+      } catch (e) { log.error('Credit deduct error:', e); }
     }
 
     // Calculate confidence score
@@ -271,7 +274,7 @@ async function handlePost(req) {
             }).catch(() => {})
         );
       }
-    } catch (e) { console.warn('[translate] Supabase tracking setup failed:', e?.message); }
+    } catch (e) { log.warn('Supabase tracking setup failed:', e?.message); }
     // Fire all background tasks without awaiting
     if (bgTasks.length > 0) Promise.allSettled(bgTasks).catch(() => {});
 
@@ -285,7 +288,7 @@ async function handlePost(req) {
   } catch (e) {
     // resolveAuth throws NextResponse objects on auth failure
     if (e instanceof NextResponse) return e;
-    console.error('Translate error:', e);
+    log.error('Translate error:', e);
     // Report to Sentry
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'translate', source: 'api' } });

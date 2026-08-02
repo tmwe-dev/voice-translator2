@@ -3,6 +3,10 @@
 // Privacy-first: no cookies, no personal data, GDPR compliant
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+
+const log = createLogger('analytics');
+
 /**
  * Track a custom event in Plausible
  * @param {string} name - Event name (e.g., 'Signup', 'Room Created', 'Translation')
@@ -15,7 +19,7 @@ export function trackEvent(name, props = {}) {
     }
   } catch (e) {
     // Silent fail — analytics should never break the app
-    console.warn('[analytics] trackEvent failed:', e?.message || e);
+    log.warn('trackEvent failed:', e?.message || e);
   }
 }
 
@@ -27,7 +31,7 @@ export function trackPageView(url) {
     if (typeof window !== 'undefined' && window.plausible) {
       window.plausible('pageview', { u: url });
     }
-  } catch (e) { console.warn('[analytics] trackPageView failed:', e?.message || e); }
+  } catch (e) { log.warn('trackPageView failed:', e?.message || e); }
 }
 
 // Pre-defined events for BarTalk

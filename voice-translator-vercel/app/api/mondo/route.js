@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
 import { getClientIP } from '../../lib/validate.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('mondo');
 
 const MONDO_KEY = 'mondo:rooms';
 const MONDO_TTL = 3600; // 1 hour
@@ -26,7 +29,7 @@ export async function GET(req) {
 
     return NextResponse.json({ rooms: active });
   } catch (e) {
-    console.error('[Mondo] GET error:', e);
+    log.error('GET error:', e);
     return NextResponse.json({ rooms: [] });
   }
 }
@@ -64,7 +67,7 @@ export async function POST(req) {
           if (parsed.roomId === roomId) {
             await redis('LREM', MONDO_KEY, 1, raw);
           }
-        } catch (e) { console.warn('[mondo] JSON parse error:', e?.message); }
+        } catch (e) { log.warn('JSON parse error:', e?.message); }
       }
     }
 
@@ -75,7 +78,7 @@ export async function POST(req) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error('[Mondo] POST error:', e);
+    log.error('POST error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

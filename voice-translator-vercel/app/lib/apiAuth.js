@@ -3,7 +3,10 @@
 //
 // Returns: { apiKey, isOwnKey, billingEmail } or throws a Response
 
+import { createLogger } from './logger.js';
 import { NextResponse } from 'next/server';
+
+const log = createLogger('auth');
 import { getSession, getUser, validateLending } from './users.js';
 import { getRoom } from './store.js';
 import { ERRORS, DAILY_LIMITS } from './config.js';
@@ -44,7 +47,7 @@ export async function resolveAuth({
   // Security: DEV_MODE is NOT allowed in production environments
   if (process.env.DEV_MODE === 'true') {
     if (process.env.VERCEL_ENV === 'production') {
-      console.error('[SECURITY] DEV_MODE cannot be enabled in production!');
+      log.error('DEV_MODE cannot be enabled in production!');
       // Don't bypass auth in production - proceed with normal auth checks
     } else {
       // DEV_MODE allowed in preview/development
@@ -86,7 +89,7 @@ export async function resolveAuth({
                 isOwnKey = true;
               }
             } catch (e) {
-              console.error('[Auth] KeyVault fallback error:', e);
+              log.error('KeyVault fallback error:', e);
             }
           }
         }
@@ -122,7 +125,7 @@ export async function resolveAuth({
               isOwnKey = true;
             }
           } catch (e) {
-            console.error('[Auth] KeyVault fallback error:', e);
+            log.error('KeyVault fallback error:', e);
           }
         }
       }
@@ -169,7 +172,7 @@ export async function resolveAuth({
                 isOwnKey = true;
               }
             } catch (e) {
-              console.error('[Auth] KeyVault fallback error:', e);
+              log.error('KeyVault fallback error:', e);
             }
           }
         }
@@ -217,7 +220,7 @@ export async function resolveAuth({
       // If it's a NextResponse (our own error), re-throw it
       if (e instanceof Response || e?.status) throw e;
       // Otherwise log and continue (fail-open for Redis errors)
-      console.error('Daily limit check error:', e);
+      log.error('Daily limit check error:', e);
     }
   }
 
@@ -247,6 +250,6 @@ export async function trackDailySpend(email, amountCents) {
       await redis('EXPIRE', platformKey, 90000);
     }
   } catch (e) {
-    console.error('Daily spend tracking error:', e);
+    log.error('Daily spend tracking error:', e);
   }
 }

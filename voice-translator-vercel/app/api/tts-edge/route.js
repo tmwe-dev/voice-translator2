@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('ttsEdge');
 
 // ═══════════════════════════════════════════════
 // Edge TTS — FREE Neural Text-to-Speech
@@ -28,12 +31,12 @@ async function handlePost(req) {
       const mod = await import('@andresaya/edge-tts');
       EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
     } catch (e) {
-      console.error('[EdgeTTS] import failed:', e.message, e.stack);
+      log.error('Import failed:', e.message, e.stack);
       return NextResponse.json({ error: 'Edge TTS not available: ' + e.message }, { status: 503 });
     }
 
     if (!EdgeTTS) {
-      console.error('[EdgeTTS] EdgeTTS class is undefined after import');
+      log.error('EdgeTTS class is undefined after import');
       return NextResponse.json({ error: 'EdgeTTS class undefined' }, { status: 503 });
     }
 
@@ -48,7 +51,7 @@ async function handlePost(req) {
       });
       audioBuffer = tts.toBuffer();
     } catch (synthErr) {
-      console.error('[EdgeTTS] Synthesize FULL error:', synthErr.message, '| Stack:', synthErr.stack);
+      log.error('Synthesize FULL error:', synthErr.message, '| Stack:', synthErr.stack);
       return NextResponse.json({
         error: 'Edge TTS synthesis failed',
         detail: synthErr.message,
@@ -68,7 +71,7 @@ async function handlePost(req) {
       }
     });
   } catch (e) {
-    console.error('[EdgeTTS] Top-level error:', e.message, e.stack);
+    log.error('Top-level error:', e.message, e.stack);
     return NextResponse.json({ error: e.message, stack: e.stack?.split('\n').slice(0, 5).join('\n') }, { status: 500 });
   }
 }

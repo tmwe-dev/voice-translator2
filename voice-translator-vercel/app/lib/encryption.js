@@ -2,7 +2,10 @@
 // AES-256-GCM Encryption for API Keys
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
 import crypto from 'crypto';
+
+const log = createLogger('encryption');
 
 /**
  * Derive encryption key from environment or fallback.
@@ -21,7 +24,7 @@ function getEncryptionKey() {
   if (process.env.UPSTASH_REDIS_REST_TOKEN) {
     // Warn in production — dedicated ENCRYPTION_KEY is strongly recommended
     if (process.env.NODE_ENV === 'production') {
-      console.warn('⚠️ [Encryption] Using UPSTASH token fallback for encryption key. Set ENCRYPTION_KEY env var for production!');
+      log.warn('Using UPSTASH token fallback for encryption key. Set ENCRYPTION_KEY env var for production!');
     }
     // PBKDF2 instead of raw SHA256 — proper key derivation
     const salt = 'barchat-v2-encryption-salt'; // static salt (rotated with key)
@@ -77,10 +80,10 @@ export function decryptKeys(encryptedData) {
   try {
     const parsed = JSON.parse(decrypted);
     if (typeof parsed === 'object' && parsed !== null) return parsed;
-    console.warn('[Encryption] Decrypted data is not an object, returning empty');
+    log.warn('Decrypted data is not an object, returning empty');
     return {};
   } catch {
-    console.warn('[Encryption] Failed to parse decrypted data as JSON');
+    log.warn('Failed to parse decrypted data as JSON');
     return {};
   }
 }

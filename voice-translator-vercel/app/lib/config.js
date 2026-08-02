@@ -2,10 +2,28 @@
 // Single source of truth for all API routes
 
 // =============================================
-// TESTING MODE — set to false before production launch
+// TESTING MODE — "fail closed" design
+// NEVER active in Vercel production, even if env vars leak.
 // When true: skips login, unlocks all features, no credit checks
 // =============================================
-export const TESTING_MODE = process.env.TESTING_MODE === 'true';
+export const TESTING_MODE =
+  process.env.VERCEL_ENV !== 'production' &&
+  (process.env.TESTING_MODE === 'true' || process.env.NEXT_PUBLIC_TESTING_MODE === 'true');
+
+/**
+ * Central guard for test-only endpoints. Call at top of any test route handler.
+ * Returns a Response if blocked, or null if allowed.
+ * Usage: const blocked = isTestBlocked(); if (blocked) return blocked;
+ */
+export function isTestBlocked() {
+  if (process.env.VERCEL_ENV === 'production') {
+    return Response.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+  }
+  if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
+    return Response.json({ error: 'Test endpoint disabled' }, { status: 403 });
+  }
+  return null; // allowed
+}
 
 // =============================================
 // OpenAI Pricing (USD)

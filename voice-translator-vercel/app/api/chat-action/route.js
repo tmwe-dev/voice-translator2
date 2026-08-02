@@ -4,6 +4,9 @@ import { resolveAuth } from '../../lib/apiAuth.js';
 import { checkRateLimit } from '../../lib/rateLimit.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('chatAction');
 
 // Lazy import for Asia provider (only loaded when needed)
 let _callQwen = null;
@@ -106,7 +109,7 @@ async function handlePost(request) {
       usage: result.usage,
     });
   } catch (err) {
-    console.error('[chat-action] Error:', err);
+    log.error('Error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

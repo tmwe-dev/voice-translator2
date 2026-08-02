@@ -3,6 +3,9 @@
  * Automatically registers for background sync and flushes when connection returns
  */
 
+import { createLogger } from './logger.js';
+const log = createLogger('offlineQueue');
+
 const DB_NAME = 'vt-offline-queue';
 const STORE_NAME = 'pending-messages';
 
@@ -21,7 +24,7 @@ class OfflineQueue {
       this.db = await this.openDB();
       this.setupEventListeners();
     } catch (e) {
-      console.warn('[OfflineQueue] Failed to initialize:', e);
+      log.warn('Failed to initialize:', e);
     }
   }
 
@@ -52,20 +55,20 @@ class OfflineQueue {
 
     window.addEventListener('online', () => {
       this.isOnline = true;
-      console.log('[OfflineQueue] Back online, flushing queue');
+      log.info('Back online, flushing queue');
       this.flush();
     });
 
     window.addEventListener('offline', () => {
       this.isOnline = false;
-      console.log('[OfflineQueue] Connection lost');
+      log.info('Connection lost');
     });
 
     // Listen for SW flush message (background sync trigger)
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data?.type === 'FLUSH_OFFLINE_QUEUE') {
-          console.log('[OfflineQueue] SW triggered flush');
+          log.info('SW triggered flush');
           this.flush();
         }
       });
@@ -98,7 +101,7 @@ class OfflineQueue {
 
       return new Promise((resolve, reject) => {
         req.onsuccess = () => {
-          console.log(`[OfflineQueue] Queued message ${req.result}`);
+          log.info(`Queued message ${req.result}`);
           // Register for background sync
           this.registerBackgroundSync();
           resolve(req.result);
@@ -106,7 +109,7 @@ class OfflineQueue {
         req.onerror = () => reject(req.error);
       });
     } catch (e) {
-      console.error('[OfflineQueue] Enqueue failed:', e);
+      log.error('Enqueue failed:', e);
       throw e;
     }
   }
@@ -138,7 +141,7 @@ class OfflineQueue {
         req.onerror = () => reject(req.error);
       });
     } catch (e) {
-      console.error('[OfflineQueue] Dequeue failed:', e);
+      log.error('Dequeue failed:', e);
       return null;
     }
   }
@@ -160,7 +163,7 @@ class OfflineQueue {
         req.onerror = () => reject(req.error);
       });
     } catch (e) {
-      console.error('[OfflineQueue] PeekAll failed:', e);
+      log.error('PeekAll failed:', e);
       return [];
     }
   }
@@ -182,7 +185,7 @@ class OfflineQueue {
         req.onerror = () => reject(req.error);
       });
     } catch (e) {
-      console.error('[OfflineQueue] GetCount failed:', e);
+      log.error('GetCount failed:', e);
       return 0;
     }
   }
@@ -210,11 +213,11 @@ class OfflineQueue {
 
     const count = await this.getCount();
     if (count === 0) {
-      console.log('[OfflineQueue] Queue is empty, nothing to flush');
+      log.debug('Queue is empty, nothing to flush');
       return;
     }
 
-    console.log(`[OfflineQueue] Flushing ${count} pending messages...`);
+    log.info(`Flushing ${count} pending messages...`);
     let flushed = 0;
     let failed = 0;
 
@@ -225,25 +228,25 @@ class OfflineQueue {
       try {
         await sendFn(msg.body);
         flushed++;
-        console.log(`[OfflineQueue] Sent message ${msg.id}`);
+        log.debug(`Sent message ${msg.id}`);
       } catch (e) {
         failed++;
-        console.warn(`[OfflineQueue] Failed to send message ${msg.id}, re-queueing:`, e);
+        log.warn(`Failed to send message ${msg.id}, re-queueing:`, e);
         // Re-queue the message for retry
         msg.retries = (msg.retries || 0) + 1;
         if (msg.retries < 3) {
           try {
             await this.enqueue(msg.body);
           } catch (reqErr) {
-            console.error('[OfflineQueue] Failed to re-queue message:', reqErr);
+            log.error('Failed to re-queue message:', reqErr);
           }
         } else {
-          console.error(`[OfflineQueue] Message ${msg.id} exceeded max retries (3), discarding`);
+          log.error(`Message ${msg.id} exceeded max retries (3), discarding`);
         }
       }
     }
 
-    console.log(`[OfflineQueue] Flush complete: ${flushed} sent, ${failed} failed`);
+    log.info(`Flush complete: ${flushed} sent, ${failed} failed`);
   }
 
   /**
@@ -251,16 +254,16 @@ class OfflineQueue {
    */
   async registerBackgroundSync() {
     if (!('serviceWorker' in navigator) || !('SyncManager' in window)) {
-      console.warn('[OfflineQueue] Background Sync API not supported');
+      log.warn('Background Sync API not supported');
       return;
     }
 
     try {
       const registration = await navigator.serviceWorker.ready;
       await registration.sync.register('flush-offline-queue');
-      console.log('[OfflineQueue] Background sync registered');
+      log.debug('Background sync registered');
     } catch (e) {
-      console.warn('[OfflineQueue] Failed to register background sync:', e);
+      log.warn('Failed to register background sync:', e);
     }
   }
 
@@ -278,13 +281,13 @@ class OfflineQueue {
 
       return new Promise((resolve, reject) => {
         req.onsuccess = () => {
-          console.log('[OfflineQueue] Queue cleared');
+          log.info('Queue cleared');
           resolve();
         };
         req.onerror = () => reject(req.error);
       });
     } catch (e) {
-      console.error('[OfflineQueue] Clear failed:', e);
+      log.error('Clear failed:', e);
     }
   }
 }

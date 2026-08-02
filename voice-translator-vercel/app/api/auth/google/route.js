@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
+import { createLogger } from '../../../lib/logger.js';
+
+const log = createLogger('authGoogle');
 
 // Google OAuth: verify ID token and create/login user
 // Uses Google's tokeninfo endpoint (no extra npm packages needed)
@@ -44,7 +47,7 @@ async function handler(req) {
 
       if (!tokenRes.ok) {
         const err = await tokenRes.text();
-        console.error('Google token exchange failed:', err);
+        log.error('Google token exchange failed:', err);
         return NextResponse.json({ error: 'Google token exchange failed' }, { status: 401 });
       }
 
@@ -79,7 +82,7 @@ async function handler(req) {
       // SECURITY: aud check is MANDATORY — reject if GOOGLE_CLIENT_ID not configured
       const expectedClientId = process.env.GOOGLE_CLIENT_ID;
       if (!expectedClientId) {
-        console.error('[Auth/Google] GOOGLE_CLIENT_ID not configured — rejecting token');
+        log.error('GOOGLE_CLIENT_ID not configured — rejecting token');
         return NextResponse.json({ error: 'Google auth not properly configured' }, { status: 500 });
       }
       if (googleUser.aud !== expectedClientId) {
@@ -111,7 +114,7 @@ async function handler(req) {
           referralInfo = { applied: true, referrerEmail: referralResult.referrerEmail };
         }
       } catch (e) {
-        console.error('Referral error:', e);
+        log.error('Referral error:', e);
       }
     }
 
@@ -133,7 +136,7 @@ async function handler(req) {
     });
 
   } catch (e) {
-    console.error('Google auth error:', e);
+    log.error('Google auth error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

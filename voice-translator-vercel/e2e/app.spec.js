@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 // ═══════════════════════════════════════════════
-// E2E Tests for VoiceTranslate
+// E2E Tests for BarTalk
 //
 // Tests the core user flows:
 // 1. Homepage loads correctly

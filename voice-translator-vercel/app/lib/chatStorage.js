@@ -216,7 +216,7 @@ export async function exportChat(chatId, format = 'json') {
   const messages = await getMessages(chatId);
 
   if (format === 'txt') {
-    const header = `BarChat — ${chat?.members?.map(m => m.name).join(', ') || chatId}\n`;
+    const header = `BarTalk — ${chat?.members?.map(m => m.name).join(', ') || chatId}\n`;
     const divider = '═'.repeat(50) + '\n';
     const lines = messages.map(m => {
       const time = new Date(m.timestamp).toLocaleString();

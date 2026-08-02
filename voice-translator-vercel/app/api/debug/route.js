@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard, safeCompare } from '../../lib/apiGuard.js';
 import { getSession, getUser } from '../../lib/users.js';
+import { isTestBlocked } from '../../lib/config.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('debug');
 
 // OpenAI pricing (USD) - SAME AS translate/process endpoints
 const WHISPER_PER_MINUTE = 0.006;
@@ -29,13 +33,8 @@ function buildSystemPrompt(sourceLangName, targetLangName, domainContext, descri
 
 async function handlePost(req) {
   try {
-    // Production guard: NEVER in Vercel production, even if TESTING_MODE leaks
-    if (process.env.VERCEL_ENV === 'production') {
-      return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
-    }
-    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
-      return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
-    }
+    const blocked = isTestBlocked();
+    if (blocked) return blocked;
 
     // SECURITY: ADMIN_PASS is MANDATORY for debug endpoints — block if not configured
     const adminPass = process.env.ADMIN_PASS;
@@ -177,7 +176,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('Debug error:', e);
+    log.error('Debug error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

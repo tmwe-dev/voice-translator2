@@ -1,6 +1,9 @@
 // Lightweight client-side monitoring module for BarTalk
 // Tracks errors, metrics, Web Vitals, and system health
 
+import { createLogger } from './logger.js';
+const log = createLogger('monitor');
+
 let errorStore = [];
 let metricsStore = {};
 let startTime = Date.now();
@@ -36,7 +39,7 @@ export const reportError = async (error, context = {}) => {
   };
 
   // Log to console
-  console.error('[VT Monitor]', errorRecord.message, context);
+  log.error(errorRecord.message, context);
 
   // Store in memory
   errorStore.push(errorRecord);
@@ -65,7 +68,7 @@ export const reportError = async (error, context = {}) => {
       }
     };
   } catch (e) {
-    console.warn('[VT Monitor] IndexedDB unavailable:', e.message);
+    log.warn('IndexedDB unavailable:', e.message);
   }
 
   // Send to analytics endpoint (optional, fire-and-forget)
@@ -116,7 +119,7 @@ export const getErrorLog = async () => {
       request.onerror = () => reject(request.error);
     });
   } catch (e) {
-    console.warn('[VT Monitor] Could not retrieve error log:', e.message);
+    log.warn('Could not retrieve error log:', e.message);
     return errorStore;
   }
 };
@@ -180,7 +183,7 @@ const initWebVitalsTracking = () => {
     });
     lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
   } catch (e) {
-    console.warn('[VT Monitor] LCP observer failed:', e.message);
+    log.warn('LCP observer failed:', e.message);
   }
 
   // Cumulative Layout Shift (CLS)
@@ -196,7 +199,7 @@ const initWebVitalsTracking = () => {
     });
     clsObserver.observe({ entryTypes: ['layout-shift'] });
   } catch (e) {
-    console.warn('[VT Monitor] CLS observer failed:', e.message);
+    log.warn('CLS observer failed:', e.message);
   }
 
   // First Input Delay (FID) - deprecated but still tracked
@@ -209,7 +212,7 @@ const initWebVitalsTracking = () => {
     });
     fidObserver.observe({ entryTypes: ['first-input'] });
   } catch (e) {
-    console.warn('[VT Monitor] FID observer failed:', e.message);
+    log.warn('FID observer failed:', e.message);
   }
 
   // Time to First Byte (TTFB)
@@ -224,7 +227,7 @@ const initWebVitalsTracking = () => {
     });
     ttfbObserver.observe({ entryTypes: ['navigation'] });
   } catch (e) {
-    console.warn('[VT Monitor] TTFB observer failed:', e.message);
+    log.warn('TTFB observer failed:', e.message);
   }
 };
 
@@ -273,7 +276,7 @@ export const initMonitoring = () => {
     return;
   }
 
-  console.log('[VT Monitor] Initializing monitoring system');
+  log.info('Initializing monitoring system');
 
   // Set up error handlers
   initErrorHandlers();
@@ -289,10 +292,10 @@ export const initMonitoring = () => {
     try {
       const health = await getHealthReport();
       if (health.errorCount > 10) {
-        console.warn('[VT Monitor] High error count detected:', health.errorCount);
+        log.warn('High error count detected:', health.errorCount);
       }
       if (health.memoryUsage > 100) {
-        console.warn('[VT Monitor] High memory usage:', health.memoryUsage, 'MB');
+        log.warn('High memory usage:', health.memoryUsage, 'MB');
       }
     } catch (e) {
       // Silently fail

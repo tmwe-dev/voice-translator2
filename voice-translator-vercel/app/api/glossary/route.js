@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('glossary');
 
 // ═══════════════════════════════════════════════
 // Glossary API — Domain-specific translation rules
@@ -136,7 +139,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e) {
-    console.error('Glossary error:', e);
+    log.error('Glossary error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

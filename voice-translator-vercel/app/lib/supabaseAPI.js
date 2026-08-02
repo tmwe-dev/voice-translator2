@@ -7,6 +7,8 @@
 // ═══════════════════════════════════════════════
 
 import { getSupabaseAdmin, isSupabaseEnabled } from './supabase.js';
+import { createLogger } from './logger.js';
+const log = createLogger('supabaseAPI');
 
 // ── Profile ──
 
@@ -18,7 +20,7 @@ export async function getProfile(userId) {
     .select('*')
     .eq('id', userId)
     .single();
-  if (error) { console.error('[Supabase] getProfile error:', error.message); return null; }
+  if (error) { log.error('getProfile error:', error.message); return null; }
   return data;
 }
 
@@ -43,7 +45,7 @@ export async function updateProfile(userId, updates) {
     .eq('id', userId)
     .select()
     .single();
-  if (error) { console.error('[Supabase] updateProfile error:', error.message); return null; }
+  if (error) { log.error('updateProfile error:', error.message); return null; }
   return data;
 }
 
@@ -69,7 +71,7 @@ export async function saveUserSettings(userId, settings) {
     .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() })
     .select()
     .single();
-  if (error) { console.error('[Supabase] saveSettings error:', error.message); return null; }
+  if (error) { log.error('saveSettings error:', error.message); return null; }
   return data;
 }
 
@@ -100,7 +102,7 @@ export async function saveVaultKey(userId, provider, encryptedKey, model) {
     })
     .select()
     .single();
-  if (error) { console.error('[Supabase] saveVaultKey error:', error.message); return null; }
+  if (error) { log.error('saveVaultKey error:', error.message); return null; }
   return data;
 }
 
@@ -138,7 +140,7 @@ export async function saveTranslation(translation) {
     .insert(translation)
     .select()
     .single();
-  if (error) { console.error('[Supabase] saveTranslation error:', error.message); return null; }
+  if (error) { log.error('saveTranslation error:', error.message); return null; }
   return data;
 }
 
@@ -165,7 +167,7 @@ export async function saveConversation(conversation) {
     .insert(conversation)
     .select()
     .single();
-  if (error) { console.error('[Supabase] saveConversation error:', error.message); return null; }
+  if (error) { log.error('saveConversation error:', error.message); return null; }
   return data;
 }
 
@@ -216,7 +218,7 @@ export async function saveGlossary(glossary) {
     .upsert({ ...glossary, updated_at: new Date().toISOString() })
     .select()
     .single();
-  if (error) { console.error('[Supabase] saveGlossary error:', error.message); return null; }
+  if (error) { log.error('saveGlossary error:', error.message); return null; }
   return data;
 }
 
@@ -253,7 +255,7 @@ export async function savePayment(payment) {
     .insert(payment)
     .select()
     .single();
-  if (error) { console.error('[Supabase] savePayment error:', error.message); return null; }
+  if (error) { log.error('savePayment error:', error.message); return null; }
   return data;
 }
 
@@ -285,7 +287,7 @@ export async function trackUsage(userId, stats) {
       p_tokens: stats.tokens || 0,
     });
   } catch (e) {
-    console.error('[Supabase] trackUsage error:', e.message);
+    log.error('trackUsage error:', e.message);
   }
 }
 
@@ -322,7 +324,7 @@ export async function deductCreditsDB(userId, amount) {
     p_user_id: userId,
     p_amount: amount,
   });
-  if (error) { console.error('[Supabase] deductCredits error:', error.message); return -1; }
+  if (error) { log.error('deductCredits error:', error.message); return -1; }
   return data;
 }
 
@@ -333,7 +335,7 @@ export async function addCreditsDB(userId, amount) {
     p_user_id: userId,
     p_amount: amount,
   });
-  if (error) { console.error('[Supabase] addCredits error:', error.message); return 0; }
+  if (error) { log.error('addCredits error:', error.message); return 0; }
   return data;
 }
 
@@ -351,7 +353,7 @@ export async function logAudit(userId, action, resource, details, ipAddress) {
       ip_address: ipAddress,
     });
   } catch (e) {
-    console.error('[Supabase] logAudit error:', e.message);
+    log.error('logAudit error:', e.message);
   }
 }
 
@@ -376,7 +378,7 @@ export async function deleteAllUserData(userId) {
     // Finally delete from auth
     await sb.auth.admin.deleteUser(userId); deleted.push('auth');
   } catch (e) {
-    console.error('[Supabase] deleteAllUserData error:', e.message);
+    log.error('deleteAllUserData error:', e.message);
   }
   return { deleted };
 }
@@ -417,7 +419,7 @@ export async function getPlatformStats() {
       todayRevenueCents: todayPayments.data?.reduce((s, r) => s + (r.amount_eur_cents || 0), 0) || 0,
     };
   } catch (e) {
-    console.error('[Supabase] getPlatformStats error:', e.message);
+    log.error('getPlatformStats error:', e.message);
     return null;
   }
 }

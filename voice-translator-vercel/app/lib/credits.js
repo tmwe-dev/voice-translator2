@@ -1,84 +1,41 @@
 // ═══════════════════════════════════════════════
 // Credits System — Purchase, Deduct, Query
-// Atomic operations via optimistic locking (version field)
+// Truly atomic operations via Redis Lua scripts.
 // ═══════════════════════════════════════════════
 
 import { redis } from './redis.js';
+import { CREDIT_ADD, CREDIT_DEDUCT } from './redisLua.js';
 
 /**
- * Atomic read-modify-write with optimistic locking + tight CAS window.
- * Uses versioned updates with immediate write after version check.
- * Retries up to 5 times on version conflict with exponential backoff.
- */
-async function atomicUpdate(email, updateFn) {
-  const key = `user:${email.toLowerCase()}`;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    // Add jitter backoff on retry to reduce contention
-    if (attempt > 0) {
-      await new Promise(r => setTimeout(r, Math.random() * 50 * (1 << attempt)));
-    }
-
-    const data = await redis('GET', key);
-    if (!data) return null;
-    let user;
-    try { user = JSON.parse(data); } catch { return null; }
-
-    const version = user._v || 0;
-    // Clone user to avoid mutating before confirming version
-    const updated = JSON.parse(JSON.stringify(user));
-    const result = updateFn(updated);
-    if (result === null) return null; // updateFn signals failure (e.g. insufficient credits)
-
-    updated._v = version + 1;
-    updated._lastMod = Date.now();
-
-    // CAS: re-read and write in tight succession (minimizes race window)
-    const recheck = await redis('GET', key);
-    if (recheck) {
-      try {
-        const current = JSON.parse(recheck);
-        if ((current._v || 0) !== version) {
-          // Version changed — another write happened, retry
-          console.warn(`[Credits] CAS conflict attempt ${attempt + 1} for ${email}, retrying`);
-          continue;
-        }
-      } catch { /* parse fail = proceed with write */ }
-    }
-
-    await redis('SET', key, JSON.stringify(updated));
-    return updated;
-  }
-  console.error('[Credits] Atomic update failed after 5 attempts for', email);
-  return null;
-}
-
-/**
- * Add credits to a user account.
+ * Add credits to a user account (atomic via Lua).
  * @param {string} email
- * @param {number} amount - credits in euro-cents
- * @returns {Object|null} updated user or null
+ * @param {number} amount - credits to add
+ * @returns {Object|null} updated user or null if user doesn't exist
  */
 export async function addCredits(email, amount) {
-  return atomicUpdate(email, (user) => {
-    user.credits = (user.credits || 0) + amount;
-    return user;
-  });
+  const key = `user:${email.toLowerCase()}`;
+  const result = await redis('EVAL', CREDIT_ADD, 1, key, amount.toString(), Date.now().toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch { return null; }
 }
 
 /**
- * Deduct credits from a user account.
+ * Deduct credits from a user account (atomic via Lua).
  * Skips deduction if user has own API keys.
- * @returns {Object|null} updated user, or null if insufficient credits
+ * @returns {Object|null} updated user, or null if insufficient credits or user not found
  */
 export async function deductCredits(email, amount) {
-  return atomicUpdate(email, (user) => {
-    if (user.useOwnKeys) return user;
-    if ((user.credits || 0) < amount) return null; // insufficient
-    user.credits = Math.max(0, (user.credits || 0) - amount);
-    user.totalSpent = (user.totalSpent || 0) + amount;
-    user.totalMessages = (user.totalMessages || 0) + 1;
-    return user;
-  });
+  const key = `user:${email.toLowerCase()}`;
+  const result = await redis('EVAL', CREDIT_DEDUCT, 1, key, amount.toString(), Date.now().toString());
+  if (!result) return null;
+  if (result === 'INSUFFICIENT') return null;
+  if (result === 'OWN_KEYS') {
+    // User has own keys — return current user without deduction
+    const data = await redis('GET', key);
+    if (!data) return null;
+    try { return JSON.parse(data); } catch { return null; }
+  }
+  try { return JSON.parse(result); } catch { return null; }
 }
 
 /**

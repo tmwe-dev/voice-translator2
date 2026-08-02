@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('admin');
 
 // ═══════════════════════════════════════════════
 // Admin Dashboard API
@@ -173,7 +176,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e) {
-    console.error('Admin API error:', e);
+    log.error('Admin API error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

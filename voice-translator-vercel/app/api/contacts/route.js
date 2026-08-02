@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, createGiftInvite, acceptGiftInvite, getGiftInfo } from '../../lib/users.js';
 import { redis } from '../../lib/redis.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('contacts');
 
 // Contact list & presence system
 // Redis keys:
@@ -106,7 +109,7 @@ async function handlePost(req) {
             const p = JSON.parse(presenceData);
             online = p.online || false;
             lastSeen = p.lastSeen || 0;
-          } catch (e) { console.warn('[contacts] JSON parse error:', e?.message); }
+          } catch (e) { log.warn('JSON parse error:', e?.message); }
         }
 
         contacts.push({
@@ -203,7 +206,7 @@ async function handlePost(req) {
             await redis('SET', inviteKey, JSON.stringify(updatedInviteData), 'EX', INVITE_TTL);
           }
         } catch (e) {
-          console.error('Gift acceptance error:', e);
+          log.error('Gift acceptance error:', e);
           // Gift claim failed, but contact addition succeeded
         }
       }
@@ -253,7 +256,7 @@ async function handlePost(req) {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (e) {
-    console.error('Contacts error:', e);
+    log.error('Contacts error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

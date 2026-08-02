@@ -4,6 +4,9 @@
 // Each provider is tried in sequence; on failure, falls through to next
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+const log = createLogger('ttsFallback');
+
 /**
  * Try TTS with multiple providers in fallback order
  * @param {string} text - Text to speak
@@ -30,7 +33,7 @@ export async function ttsFallback(text, langCode, opts = {}) {
         return { blob, engine };
       }
     } catch (e) {
-      console.warn(`[TTS Fallback] ${engine} failed:`, e.message);
+      log.warn(`${engine} failed:`, e.message);
       // Continue to next engine
     }
   }

@@ -9,6 +9,9 @@ import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDef
 import { routeTTS } from '../../lib/ttsRouter.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { validateTTSInput } from '../../lib/schemas.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('tts');
 
 // ═══════════════════════════════════════════════
 // TTS with gpt-4o-mini-tts — TRUE STREAMING
@@ -85,7 +88,7 @@ async function handlePost(req) {
           });
         }
       } catch (cosyErr) {
-        console.warn('[TTS] CosyVoice failed, falling back to OpenAI:', cosyErr.message);
+        log.warn('CosyVoice failed, falling back to OpenAI:', cosyErr.message);
       }
     }
 
@@ -105,7 +108,7 @@ async function handlePost(req) {
         const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
         await deductCredits(billingEmail, charge);
         trackDailySpend(billingEmail, charge).catch(() => {});
-      } catch (e) { console.error('TTS credit deduct error:', e); }
+      } catch (e) { log.error('TTS credit deduct error:', e); }
     }
 
     const response = await openai.audio.speech.create({
@@ -131,7 +134,7 @@ async function handlePost(req) {
           }
         });
       } catch (streamErr) {
-        console.warn('[TTS] Streaming failed, falling back to buffer:', streamErr.message);
+        log.warn('Streaming failed, falling back to buffer:', streamErr.message);
       }
     }
 
@@ -147,7 +150,7 @@ async function handlePost(req) {
     });
   } catch (e) {
     if (e instanceof NextResponse) return e;
-    console.error('TTS error:', e);
+    log.error('TTS error:', e);
     return apiError(ErrorCode.TTS_FAILED, e.message);
   }
 }

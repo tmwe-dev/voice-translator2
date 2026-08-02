@@ -10,11 +10,58 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mock Redis ──
 const store = {};
+
+// Simulate Lua EVAL for credit scripts
+function handleEval(script, numkeys, ...rest) {
+  const keys = rest.slice(0, numkeys);
+  const argv = rest.slice(numkeys);
+  const key = keys[0];
+
+  // CREDIT_ADD
+  if (script.includes('user.credits = (user.credits or 0) + tonumber(ARGV[1])')) {
+    const data = store[key];
+    if (!data) return null;
+    const user = JSON.parse(data);
+    user.credits = (user.credits || 0) + Number(argv[0]);
+    user._v = (user._v || 0) + 1;
+    user._lastMod = Number(argv[1]);
+    const encoded = JSON.stringify(user);
+    store[key] = encoded;
+    return encoded;
+  }
+
+  // CREDIT_DEDUCT
+  if (script.includes('if user.useOwnKeys then')) {
+    const data = store[key];
+    if (!data) return null;
+    const user = JSON.parse(data);
+    if (user.useOwnKeys) return 'OWN_KEYS';
+    const current = user.credits || 0;
+    const amount = Number(argv[0]);
+    if (current < amount) return 'INSUFFICIENT';
+    user.credits = current - amount;
+    if (user.credits < 0) user.credits = 0;
+    user.totalSpent = (user.totalSpent || 0) + amount;
+    user.totalMessages = (user.totalMessages || 0) + 1;
+    user._v = (user._v || 0) + 1;
+    user._lastMod = Number(argv[1]);
+    const encoded = JSON.stringify(user);
+    store[key] = encoded;
+    return encoded;
+  }
+
+  // Other Lua scripts
+  const data = store[key];
+  if (!data) return null;
+  return store[key];
+}
+
 const mockRedis = vi.fn(async (cmd, ...args) => {
   switch (cmd) {
     case 'GET': return store[args[0]] ?? null;
     case 'SET': { store[args[0]] = args[1]; return 'OK'; }
     case 'DEL': { delete store[args[0]]; return 1; }
+    case 'EVAL': return handleEval(...args);
     case 'INCR': {
       store[args[0]] = String((parseInt(store[args[0]] || '0')) + 1);
       return parseInt(store[args[0]]);

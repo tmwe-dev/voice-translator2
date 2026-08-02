@@ -4,6 +4,9 @@ import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { t } from '../../lib/i18n.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('auth');
 
 // POST /api/auth - Handle auth actions
 async function handler(req) {
@@ -51,7 +54,7 @@ async function handler(req) {
           });
           emailSent = res.ok;
         } catch (e) {
-          console.error('Email send error:', e);
+          log.error('Email send error:', e);
         }
       }
 
@@ -89,7 +92,7 @@ async function handler(req) {
             referralInfo = { applied: true, referrerEmail: referralResult.referrerEmail };
           }
         } catch (e) {
-          console.error('Referral error:', e);
+          log.error('Referral error:', e);
         }
       }
 
@@ -139,7 +142,7 @@ async function handler(req) {
             // User still works fully via Redis — Supabase sync happens later
           }
         }
-      } catch (e) { console.error('Supabase profile sync error:', e.message); }
+      } catch (e) { log.error('Supabase profile sync error:', e.message); }
 
       // Get referral code for this user
       const userReferralCode = await getReferralCode(email);
@@ -186,7 +189,7 @@ async function handler(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('Auth error:', e);
+    log.error('Auth error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

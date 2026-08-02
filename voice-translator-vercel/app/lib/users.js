@@ -13,6 +13,8 @@
 import { redis } from './redis.js';
 import crypto from 'crypto';
 import { encryptKeys, decryptKeys } from './encryption.js';
+import { createLogger } from './logger.js';
+const log = createLogger('users');
 
 // Re-export all sub-modules for backward compatibility
 export { encryptKeys, decryptKeys } from './encryption.js';
@@ -67,7 +69,7 @@ export async function getUser(email) {
     try {
       user.apiKeys = decryptKeys(user.apiKeys);
     } catch (error) {
-      console.error('Failed to decrypt keys for', email, ':', error);
+      log.error('Failed to decrypt keys for', email, ':', error);
       user.apiKeys = {};
     }
   }

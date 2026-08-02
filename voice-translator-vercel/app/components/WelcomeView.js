@@ -505,7 +505,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
             {/* Start Button */}
             <div style={{ width: '100%', ...stagger(4) }}>
               <CTAButton onClick={finishWelcome}>
-                {Lf('startUsing', 'Inizia ad usare BarChat')} {'🚀'}
+                {Lf('startUsing', 'Inizia ad usare BarTalk')} {'🚀'}
               </CTAButton>
             </div>
           </div>

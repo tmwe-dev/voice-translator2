@@ -2,8 +2,11 @@
 // Uses shared Redis client from redis.js
 // All read-modify-write operations use Lua scripts for atomicity (no race conditions)
 
+import { createLogger } from './logger.js';
 import { redis } from './redis.js';
 import { randomUUID, randomBytes } from 'crypto';
+
+const log = createLogger('store');
 import {
   JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
   CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
@@ -36,7 +39,7 @@ export async function verifyRoomSession(token) {
   if (!token || typeof token !== 'string') return null;
   const data = await redis('GET', `rsess:${token}`);
   if (!data) return null;
-  let parsed; try { parsed = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room session:', e.message); return null; } return parsed;
+  let parsed; try { parsed = JSON.parse(data); } catch (e) { log.warn('Failed to parse room session:', e.message); return null; } return parsed;
 }
 
 /**
@@ -85,14 +88,14 @@ export async function getRoom(id) {
   if (!id) return null;
   const data = await redis('GET', `room:${id.toUpperCase()}`);
   if (!data) return null;
-  let parsed; try { parsed = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room:', e.message); return null; } return parsed;
+  let parsed; try { parsed = JSON.parse(data); } catch (e) { log.warn('Failed to parse room:', e.message); return null; } return parsed;
 }
 
 export async function joinRoom(id, name, lang, avatar = null) {
   const key = `room:${id.toUpperCase()}`;
   const result = await redis('EVAL', JOIN_ROOM, 1, key, name, lang, avatar || '', Date.now().toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse joinRoom result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse joinRoom result:', e.message); return null; }
 }
 
 export async function setSpeaking(roomId, memberName, speaking, liveText = null, typing = false) {
@@ -101,14 +104,14 @@ export async function setSpeaking(roomId, memberName, speaking, liveText = null,
   const result = await redis('EVAL', SET_SPEAKING, 1, key,
     memberName, speaking ? '1' : '0', liveText || '', typing ? '1' : '0', now, liveText !== null ? '1' : '0');
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse setSpeaking result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse setSpeaking result:', e.message); return null; }
 }
 
 export async function updateHeartbeat(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
   const data = await redis('GET', key);
   if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in updateHeartbeat:', e.message); return null; }
+  let room; try { room = JSON.parse(data); } catch (e) { log.warn('Failed to parse room in updateHeartbeat:', e.message); return null; }
   // READ-ONLY heartbeat: just refresh TTL without writing room data back.
   // This prevents race conditions where heartbeat overwrites a concurrent
   // joinRoom operation, effectively removing the guest from the room.
@@ -120,21 +123,21 @@ export async function addCost(roomId, amount) {
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', ADD_COST, 1, key, amount.toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse addCost result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse addCost result:', e.message); return null; }
 }
 
 export async function updateRoomMode(roomId, newMode) {
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', UPDATE_ROOM_MODE, 1, key, newMode);
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateRoomMode result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateRoomMode result:', e.message); return null; }
 }
 
 export async function changeMemberLang(roomId, memberName, newLang) {
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', CHANGE_MEMBER_LANG, 1, key, memberName, newLang, Date.now().toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse changeMemberLang result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse changeMemberLang result:', e.message); return null; }
 }
 
 // =============================================
@@ -152,7 +155,7 @@ export async function setHandRaised(roomId, memberName, raised) {
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', SET_HAND_RAISED, 1, key, memberName, raised ? '1' : '0', Date.now().toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse setHandRaised result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse setHandRaised result:', e.message); return null; }
 }
 
 /**
@@ -166,7 +169,7 @@ export async function grantSpeaking(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', GRANT_SPEAKING, 1, key, memberName, Date.now().toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse grantSpeaking result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse grantSpeaking result:', e.message); return null; }
 }
 
 // =============================================
@@ -180,7 +183,7 @@ export async function addMessage(roomId, msg) {
   const msgJson = JSON.stringify(msg);
   const result = await redis('EVAL', ADD_MESSAGE, 2, `room:${id}`, `msgs:${id}`, msgJson, msgId, now.toString());
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse addMessage result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse addMessage result:', e.message); return null; }
 }
 
 /**
@@ -195,7 +198,7 @@ export async function updateMessage(roomId, sender, original, updates) {
     updates.translated || '', updates.targetLang || '',
     updates.translations ? JSON.stringify(updates.translations) : '');
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateMessage result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateMessage result:', e.message); return null; }
 }
 
 export async function getMessages(roomId, after = 0) {
@@ -205,7 +208,7 @@ export async function getMessages(roomId, after = 0) {
   // FASE 6A: Use >= to avoid missing messages at exact timestamp boundary
   // Client-side dedup by message ID handles duplicates
   return allMsgs
-    .map(m => { try { return JSON.parse(m); } catch (e) { console.warn('[Store] Failed to parse message in getMessages:', e.message); return null; } }).filter(Boolean)
+    .map(m => { try { return JSON.parse(m); } catch (e) { log.warn('Failed to parse message in getMessages:', e.message); return null; } }).filter(Boolean)
     .filter(m => m.timestamp >= after);
 }
 
@@ -213,7 +216,7 @@ export async function getAllMessages(roomId) {
   const key = `msgs:${roomId.toUpperCase()}`;
   const allMsgs = await redis('LRANGE', key, 0, -1);
   if (!allMsgs || !Array.isArray(allMsgs)) return [];
-  return allMsgs.map(m => { try { return JSON.parse(m); } catch (e) { console.warn('[Store] Failed to parse message in getAllMessages:', e.message); return null; } }).filter(Boolean);
+  return allMsgs.map(m => { try { return JSON.parse(m); } catch (e) { log.warn('Failed to parse message in getAllMessages:', e.message); return null; } }).filter(Boolean);
 }
 
 // =============================================
@@ -269,19 +272,19 @@ export async function saveConversation(roomId) {
 export async function getConversation(convId) {
   const data = await redis('GET', `conv:${convId.toUpperCase()}`);
   if (!data) return null;
-  let parsed; try { parsed = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse conversation:', e.message); return null; } return parsed;
+  let parsed; try { parsed = JSON.parse(data); } catch (e) { log.warn('Failed to parse conversation:', e.message); return null; } return parsed;
 }
 
 export async function updateConversationSummary(convId, summary) {
   const key = `conv:${convId.toUpperCase()}`;
   const result = await redis('EVAL', UPDATE_CONV_SUMMARY, 1, key, typeof summary === 'string' ? summary : JSON.stringify(summary));
   if (!result) return null;
-  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateConversationSummary result:', e.message); return null; }
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateConversationSummary result:', e.message); return null; }
 }
 
 export async function getUserConversations(userName) {
   const listKey = `convlist:${userName}`;
   const entries = await redis('LRANGE', listKey, 0, -1);
   if (!entries || !Array.isArray(entries)) return [];
-  return entries.map(e => { try { return JSON.parse(e); } catch (err) { console.warn('[Store] Failed to parse conversation entry:', err.message); return null; } }).filter(Boolean).reverse(); // newest first
+  return entries.map(e => { try { return JSON.parse(e); } catch (err) { log.warn('Failed to parse conversation entry:', err.message); return null; } }).filter(Boolean).reverse(); // newest first
 }

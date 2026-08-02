@@ -2,6 +2,10 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
 import { safeCompare } from '../../lib/apiGuard.js';
+import { isTestBlocked } from '../../lib/config.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('ttsTest');
 
 // ═══════════════════════════════════════════════
 // TTS Test Endpoint — test any TTS engine without auth
@@ -64,13 +68,8 @@ const TTS_INSTRUCTIONS = {
 
 export async function POST(req) {
   try {
-    // Production guard: NEVER in Vercel production, even if TESTING_MODE leaks
-    if (process.env.VERCEL_ENV === 'production') {
-      return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
-    }
-    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
-      return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
-    }
+    const blocked = isTestBlocked();
+    if (blocked) return blocked;
 
     // SECURITY: ADMIN_PASS is MANDATORY for test endpoints — block if not configured
     const adminPass = process.env.ADMIN_PASS;
@@ -178,7 +177,7 @@ export async function POST(req) {
 
     return NextResponse.json({ error: 'Invalid engine. Use: elevenlabs, openai, edge' }, { status: 400 });
   } catch (e) {
-    console.error('TTS test error:', e);
+    log.error('TTS test error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

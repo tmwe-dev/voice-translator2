@@ -6,6 +6,9 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('ttsElevenlabs');
 
 // ═══════════════════════════════════════════════
 // FASE 4: ElevenLabs Flash v2.5 + adaptive stability
@@ -174,7 +177,7 @@ async function handlePost(req) {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
-      console.error('ElevenLabs TTS error:', response.status, errText);
+      log.error('ElevenLabs TTS error:', response.status, errText);
 
       // Fallback chain: flash_v2_5 → multilingual_v2 → v3, or v3 → multilingual_v2
       const fallbackModel = modelId === 'eleven_v3' ? 'eleven_multilingual_v2'
@@ -182,7 +185,7 @@ async function handlePost(req) {
         : null;
 
       if (fallbackModel) {
-        console.log(`${modelId} failed, trying ${fallbackModel} fallback`);
+        log.info(`${modelId} failed, trying ${fallbackModel} fallback`);
         const fallback = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
           method: 'POST',
           headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
@@ -197,7 +200,7 @@ async function handlePost(req) {
           if (billingEmail && !isOwnKey) {
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
-            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch (e) { console.warn('[tts-elevenlabs] Fallback credit deduct failed:', e?.message); }
+            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback credit deduct failed:', e?.message); }
           }
           return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString() } });
         }
@@ -218,7 +221,7 @@ async function handlePost(req) {
         const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
         await deductCredits(billingEmail, charge);
         await trackDailySpend(billingEmail, charge);
-      } catch (e) { console.error('ElevenLabs credit deduct error:', e); }
+      } catch (e) { log.error('ElevenLabs credit deduct error:', e); }
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
@@ -230,7 +233,7 @@ async function handlePost(req) {
     });
   } catch (e) {
     if (e instanceof NextResponse) return e;
-    console.error('ElevenLabs TTS error:', e);
+    log.error('ElevenLabs TTS error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -293,7 +296,7 @@ async function handleGet(req) {
     // Also return our avatar mapping for the frontend
     return NextResponse.json({ voices, avatarVoiceMap: AVATAR_VOICE_MAP });
   } catch (e) {
-    console.error('ElevenLabs voices error:', e);
+    log.error('ElevenLabs voices error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import Stripe from 'stripe';
 import { getSession } from '../../lib/users.js';
 import { CREDIT_PACKAGES } from '../../lib/users.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('stripe');
 
 // Allowed origins for Stripe redirect URLs — same whitelist as /api/subscription
 const ALLOWED_ORIGINS = [
@@ -68,7 +71,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('Stripe error:', e);
+    log.error('Stripe error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

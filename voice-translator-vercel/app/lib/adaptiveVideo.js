@@ -1,3 +1,6 @@
+import { createLogger } from './logger.js';
+const log = createLogger('adaptiveVideo');
+
 // ═══════════════════════════════════════════════
 // Adaptive Video Quality — Network-aware resolution scaling
 //
@@ -76,7 +79,7 @@ export function startAdaptiveVideo(pc, senders, onQualityChange) {
 
       lastBytesSent = bytesSent;
       lastTimestamp = timestamp;
-    } catch (e) { console.warn('[adaptiveVideo] stats check failed:', e?.message || e); }
+    } catch (e) { log.warn('stats check failed:', e?.message || e); }
   }, 5000); // Check every 5s
 
   return () => clearInterval(interval);
@@ -101,8 +104,8 @@ function applyQuality(senders, quality) {
     try {
       sender.setParameters(params);
     } catch (e) {
-      console.warn('[AdaptiveVideo] Failed to set parameters:', e);
+      log.warn('Failed to set parameters:', e);
     }
   }
-  console.log(`[AdaptiveVideo] Quality: ${quality.label} (${quality.width}x${quality.height}@${quality.frameRate}fps)`);
+  log.info(`Quality: ${quality.label} (${quality.width}x${quality.height}@${quality.frameRate}fps)`);
 }

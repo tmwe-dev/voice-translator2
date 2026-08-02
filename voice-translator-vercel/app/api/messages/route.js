@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getClientIP } from '../../lib/validate.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('messages');
 
 // POST /api/messages - Send a translation to the room
 // Supports multi-language: `translations` field contains per-language translations
@@ -46,7 +49,7 @@ async function handlePost(req) {
     if (!msg) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ message: msg });
   } catch (e) {
-    console.error('Messages error:', e);
+    log.error('Messages error:', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -88,7 +91,7 @@ async function handlePatch(req) {
 
     return NextResponse.json({ message: updated });
   } catch (e) {
-    console.error('Messages PATCH error:', e);
+    log.error('Messages PATCH error:', e);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -118,7 +121,7 @@ async function handleGet(req) {
     const msgs = await getMessages(roomId, after);
     return NextResponse.json({ messages: msgs });
   } catch (e) {
-    console.error('Messages GET error:', e.message);
+    log.error('Messages GET error:', e.message);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'messages', action: 'get' } });
     }).catch(() => {});

@@ -10,7 +10,7 @@ import Icon from './Icon.js';
 const STEPS = [
   {
     iconName: 'doorOpen',
-    title: 'Benvenuto in BarChat',
+    title: 'Benvenuto in BarTalk',
     desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, il tuo interlocutore sente nella sua.',
     accent: '#26D9B0',
   },

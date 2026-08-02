@@ -9,6 +9,9 @@ import {
   handleChangeMode, handleChangeLang, handleWebrtcSignal, handleWebrtcPoll, handleCheck,
   handleRaiseHand, handleGrantSpeak
 } from '../../lib/roomActions.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('room');
 
 // POST /api/room - Create, join, or manage a room
 async function handlePostRoom(req) {
@@ -75,7 +78,7 @@ async function handlePostRoom(req) {
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
   } catch (e) {
-    console.error('Room error:', e);
+    log.error('Room error:', e);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'room', source: 'api' } });
     }).catch(() => {});
@@ -93,7 +96,7 @@ async function handleGetRoom(req) {
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ room });
   } catch (e) {
-    console.error('Room GET error:', e.message);
+    log.error('Room GET error:', e.message);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'room', action: 'get' } });
     }).catch(() => {});

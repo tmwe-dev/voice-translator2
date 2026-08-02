@@ -12,6 +12,9 @@
 // Uses Performance API for high-resolution timestamps.
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+const log = createLogger('perf');
+
 const PERF_LOG_SIZE = 50; // Keep last 50 measurements per metric
 
 class PerfTelemetry {
@@ -46,7 +49,7 @@ class PerfTelemetry {
 
     // Log significant measurements
     if (elapsed > 100) {
-      console.log(`[Perf] ${name}: ${elapsed}ms`);
+      log.debug(`${name}: ${elapsed}ms`);
     }
 
     return elapsed;

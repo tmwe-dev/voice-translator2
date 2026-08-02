@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
 import { safeCompare } from '../../lib/apiGuard.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('startrek');
 
 // Admin passphrase — MUST be set in environment variables
 const ADMIN_PASS = process.env.ADMIN_PASS;
 if (!ADMIN_PASS) {
-  console.warn('⚠️ ADMIN_PASS not set — admin endpoints will be disabled');
+  log.warn('ADMIN_PASS not set — admin endpoints will be disabled');
 }
 
 export async function POST(req) {
@@ -57,7 +60,7 @@ export async function POST(req) {
                 lastLogin: user.lastLogin || 0,
               });
             }
-          } catch (e) { console.warn('[startrek] User JSON parse error:', e?.message); }
+          } catch (e) { log.warn('User JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -94,7 +97,7 @@ export async function POST(req) {
                 ended: room.ended || false,
               });
             }
-          } catch (e) { console.warn('[startrek] Room JSON parse error:', e?.message); }
+          } catch (e) { log.warn('Room JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -120,7 +123,7 @@ export async function POST(req) {
                 created: session.created || 0,
               });
             }
-          } catch (e) { console.warn('[startrek] Session JSON parse error:', e?.message); }
+          } catch (e) { log.warn('Session JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -149,7 +152,7 @@ export async function POST(req) {
               totalSpent += u.totalSpent || 0;
               totalMessages += u.totalMessages || 0;
             }
-          } catch (e) { console.warn('[startrek] Stats user JSON parse error:', e?.message); }
+          } catch (e) { log.warn('Stats user JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -271,7 +274,7 @@ export async function POST(req) {
                 created: u.created || 0,
               });
             }
-          } catch (e) { console.warn('[startrek] Leaderboard user JSON parse error:', e?.message); }
+          } catch (e) { log.warn('Leaderboard user JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -310,7 +313,7 @@ export async function POST(req) {
                 totalRevenue += p.amount || p.euros || 0;
               }
             }
-          } catch (e) { console.warn('[startrek] Revenue JSON parse error:', e?.message); }
+          } catch (e) { log.warn('Revenue JSON parse error:', e?.message); }
         }
       } while (cursor !== '0');
 
@@ -344,7 +347,7 @@ export async function POST(req) {
 
     return NextResponse.json({ error: 'Unknown command, Captain.' }, { status: 400 });
   } catch (e) {
-    console.error('Startrek error:', e);
+    log.error('Startrek error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

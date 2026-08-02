@@ -6,6 +6,9 @@ import { createReadStream } from 'fs';
 import { join } from 'path';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS } from '../../lib/config.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('transcribe');
 
 /**
  * /api/transcribe — STT-only endpoint (no translation)
@@ -76,7 +79,7 @@ async function handlePost(req) {
     return NextResponse.json({ original });
   } catch (e) {
     if (e instanceof NextResponse) return e;
-    console.error('[Transcribe] Error:', e);
+    log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

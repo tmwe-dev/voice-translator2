@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { redis } from '../../../lib/redis.js';
+import { createLogger } from '../../../lib/logger.js';
 import crypto from 'crypto';
+
+const log = createLogger('authGoogleCallback');
 
 // Force dynamic rendering — this route uses req.url and query params
 export const dynamic = 'force-dynamic';
@@ -94,7 +97,7 @@ export async function GET(req) {
 
     if (!tokenRes.ok) {
       const err = await tokenRes.text();
-      console.error('Google token exchange failed:', err);
+      log.error('Google token exchange failed:', err);
       return new Response(closePopupHTML('Errore nello scambio del token Google'), {
         headers: { 'Content-Type': 'text/html' },
       });
@@ -150,7 +153,7 @@ export async function GET(req) {
     });
 
   } catch (e) {
-    console.error('Google callback error:', e);
+    log.error('Google callback error:', e);
     return new Response(closePopupHTML('Errore interno'), {
       headers: { 'Content-Type': 'text/html' },
     });

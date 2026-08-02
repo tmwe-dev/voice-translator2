@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity, verifyRoomSession } from '../../lib/store.js';
 import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('conversation');
 
 // POST /api/conversation - End room and save conversation
 async function handlePost(req) {
@@ -50,7 +53,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('Conversation error:', e.message);
+    log.error('Conversation error:', e.message);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'conversation', action: 'post' } });
     }).catch(() => {});
@@ -99,7 +102,7 @@ async function handleGet(req) {
 
     return NextResponse.json({ conversation: conv });
   } catch (e) {
-    console.error('Conversation GET error:', e.message);
+    log.error('Conversation GET error:', e.message);
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'conversation', action: 'get' } });
     }).catch(() => {});

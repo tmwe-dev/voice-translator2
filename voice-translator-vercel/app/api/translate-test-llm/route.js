@@ -3,6 +3,10 @@ import { validateOutput, MODEL_MAP } from '../../lib/translateValidation.js';
 import { buildSystemPrompt } from '../../lib/translatePrompt.js';
 import { callLLM } from '../../lib/llmCaller.js';
 import { safeCompare } from '../../lib/apiGuard.js';
+import { isTestBlocked } from '../../lib/config.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('translateTestLlm');
 
 // ═══════════════════════════════════════════════
 // LLM Translation Test Endpoint — runs ALL paid models in parallel
@@ -125,13 +129,8 @@ async function testModel(modelId, text, sourceLang, targetLang, systemPrompt, me
 
 export async function POST(req) {
   try {
-    // Production guard: NEVER in Vercel production, even if TESTING_MODE leaks
-    if (process.env.VERCEL_ENV === 'production') {
-      return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
-    }
-    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
-      return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
-    }
+    const blocked = isTestBlocked();
+    if (blocked) return blocked;
 
     // SECURITY: ADMIN_PASS is MANDATORY for test endpoints — block if not configured
     const adminPass = process.env.ADMIN_PASS;
@@ -197,7 +196,7 @@ export async function POST(req) {
       targetLang,
     });
   } catch (e) {
-    console.error('LLM test error:', e);
+    log.error('LLM test error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

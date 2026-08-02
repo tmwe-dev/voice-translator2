@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { runProviderChain, validateTranslation } from '../../lib/providers.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('translateFree');
 
 // ═══════════════════════════════════════════════
 // FREE Translation — Multi-provider with dynamic routing
@@ -82,7 +85,7 @@ async function handlePost(req) {
     try {
       cachedResult = await redis('GET', cacheKey);
     } catch (e) {
-      console.error('Cache lookup error:', e);
+      log.error('Cache lookup error:', e);
     }
 
     if (cachedResult) {
@@ -116,7 +119,7 @@ async function handlePost(req) {
         redis('INCRBY', todayKey, charsUsed).catch(() => {});
         if (!current) redis('EXPIRE', todayKey, 86400).catch(() => {});
       } catch (e) {
-        console.error('Daily limit check error:', e);
+        log.error('Daily limit check error:', e);
       }
     }
 
@@ -145,7 +148,7 @@ async function handlePost(req) {
 
     return NextResponse.json(response, { headers: cors });
   } catch (e) {
-    console.error('Free translate error:', e);
+    log.error('Free translate error:', e);
     return NextResponse.json(
       { translated: '', fallback: true, error: e.message, charsUsed: 0 },
       { headers: cors }

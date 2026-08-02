@@ -2,7 +2,10 @@
 // Credit Gifting — Escrow-based gift invite system
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
 import { redis } from './redis.js';
+
+const log = createLogger('gifting');
 import { addCredits, deductCredits } from './credits.js';
 import { randomBytes } from 'crypto';
 
@@ -160,7 +163,7 @@ export async function refundExpiredGifts() {
       await redis('SREM', 'expiring-gifts', code);
       continue;
     }
-    let invite; try { invite = JSON.parse(data); } catch { console.warn('[Gifting] Failed to parse invite:', code); continue; }
+    let invite; try { invite = JSON.parse(data); } catch { log.warn('Failed to parse invite:', code); continue; }
     if (invite.giftStatus === 'pending' && invite.expires && Date.now() > invite.expires) {
       await refundGift(code, invite);
       refunded++; totalAmount += invite.giftAmount;

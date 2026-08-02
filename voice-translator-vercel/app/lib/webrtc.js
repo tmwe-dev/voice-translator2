@@ -1,3 +1,6 @@
+import { createLogger } from './logger.js';
+const log = createLogger('webrtc');
+
 // ═══════════════════════════════════════════════
 // WebRTC Helper — Direct phone-to-phone connection
 //
@@ -67,12 +70,12 @@ export function createPeerConnection(onMessage, onStateChange, onRemoteTrack) {
   const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
 
   pc.oniceconnectionstatechange = () => {
-    console.log('[WebRTC] ICE state:', pc.iceConnectionState);
+    log.debug('ICE state:', pc.iceConnectionState);
     onStateChange?.({ source: 'ice', state: pc.iceConnectionState });
   };
 
   pc.onconnectionstatechange = () => {
-    console.log('[WebRTC] Connection state:', pc.connectionState);
+    log.debug('Connection state:', pc.connectionState);
     onStateChange?.({ source: 'connection', state: pc.connectionState });
   };
 
@@ -182,10 +185,10 @@ export async function acceptAnswer(pc, answerSdpStr) {
  */
 export async function addIceCandidate(pc, candidateStr) {
   try {
-    let candidate; try { candidate = JSON.parse(candidateStr); } catch { console.warn('[WebRTC] Invalid ICE candidate JSON'); return; }
+    let candidate; try { candidate = JSON.parse(candidateStr); } catch { log.warn('Invalid ICE candidate JSON'); return; }
     await pc.addIceCandidate(new RTCIceCandidate(candidate));
   } catch (e) {
-    console.error('[WebRTC] ICE candidate error:', e);
+    log.error('ICE candidate error:', e);
   }
 }
 
@@ -201,7 +204,7 @@ export function sendViaDataChannel(dc, data) {
       dc.send(payload);
       return true;
     } catch (e) {
-      console.warn('[DC] send failed:', e.message, '| payload size:', JSON.stringify(data).length);
+      log.warn('DC send failed:', e.message, '| payload size:', JSON.stringify(data).length);
       return false;
     }
   }

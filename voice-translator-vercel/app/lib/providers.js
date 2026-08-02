@@ -10,6 +10,9 @@
 // provider chain based on quality testing results.
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+const log = createLogger('providers');
+
 // Unicode script ranges for output validation
 const SCRIPT_RANGES = {
   'th': /[\u0E00-\u0E7F]/,
@@ -169,7 +172,7 @@ export async function tryGoogleTranslate(text, sourceLang, targetLang) {
     }
     return null;
   } catch (e) {
-    console.error('[Google] Error:', e.message);
+    log.error('Google error:', e.message);
     return null;
   }
 }
@@ -237,7 +240,7 @@ export async function tryMyMemoryTranslate(text, sourceLang, targetLang, userEma
     const match = data.responseData?.match || 0;
     return { text: translated?.trim() || null, match };
   } catch (e) {
-    console.error('[MyMemory] Error:', e.message);
+    log.error('MyMemory error:', e.message);
     return { text: null, match: 0 };
   }
 }
@@ -303,7 +306,7 @@ export async function tryProvider(providerId, text, sourceLang, targetLang, user
     }
   } catch (e) {
     errorDetail = e.message || 'Unknown error';
-    console.error(`[${providerId}] tryProvider error:`, e.message);
+    log.error(`tryProvider error [${providerId}]:`, e.message);
   }
 
   const elapsed = Date.now() - start;
@@ -353,7 +356,7 @@ export async function runProviderChain(text, sourceLang, targetLang, opts = {}) 
           fallback: false,
         };
       } else {
-        console.log(`[${providerId}] Rejected: reason=${validation.reason}`);
+        log.debug(`Rejected by ${providerId}: reason=${validation.reason}`);
       }
     }
 

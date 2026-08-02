@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, deductCredits } from '../../lib/users.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('voiceClone');
 
 const CLONE_COST_CREDITS = 500; // 500 cents = €5.00
 
@@ -67,7 +70,7 @@ async function handlePost(req) {
           method: 'DELETE',
           headers: { 'xi-api-key': apiKey }
         });
-      } catch (e) { console.warn('[voice-clone] ElevenLabs cleanup failed:', e?.message); }
+      } catch (e) { log.warn('ElevenLabs cleanup failed:', e?.message); }
     }
 
     // Call ElevenLabs voice clone API
@@ -90,7 +93,7 @@ async function handlePost(req) {
 
     if (!elRes.ok) {
       const errBody = await elRes.text();
-      console.error('[VoiceClone] ElevenLabs error:', elRes.status, errBody);
+      log.error('ElevenLabs error:', elRes.status, errBody);
       return NextResponse.json({
         error: `Voice cloning failed: ${elRes.status}`,
         details: errBody
@@ -124,7 +127,7 @@ async function handlePost(req) {
     });
 
   } catch (e) {
-    console.error('[VoiceClone] Error:', e);
+    log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -193,7 +196,7 @@ async function handleDelete(userToken) {
           headers: { 'xi-api-key': apiKey }
         });
       } catch (e) {
-        console.error('[VoiceClone] Delete from EL error:', e);
+        log.error('Delete from EL error:', e);
       }
     }
 

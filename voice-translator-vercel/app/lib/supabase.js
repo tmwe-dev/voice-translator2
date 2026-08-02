@@ -5,6 +5,8 @@
 // ═══════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { createLogger } from './logger.js';
+const log = createLogger('supabase');
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -16,10 +18,10 @@ export function getSupabaseClient() {
   if (typeof window === 'undefined') return null;
   if (_clientInstance) return _clientInstance;
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn('[Supabase] Client NOT created — URL:', !!SUPABASE_URL, 'ANON_KEY:', !!SUPABASE_ANON_KEY);
+    log.warn('Client NOT created — URL:', !!SUPABASE_URL, 'ANON_KEY:', !!SUPABASE_ANON_KEY);
     return null;
   }
-  console.log('[Supabase] Creating client for:', SUPABASE_URL);
+  log.info('Creating client for:', SUPABASE_URL);
   _clientInstance = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,

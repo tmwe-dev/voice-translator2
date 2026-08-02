@@ -3,6 +3,9 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import Stripe from 'stripe';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('subscription');
 
 // SECURITY: Validate returnUrl against allowed origins to prevent open redirect
 const ALLOWED_ORIGINS = [
@@ -196,7 +199,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e) {
-    console.error('Subscription error:', e);
+    log.error('Subscription error:', e);
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

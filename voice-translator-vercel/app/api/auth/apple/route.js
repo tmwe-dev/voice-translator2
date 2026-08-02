@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
+import { createLogger } from '../../../lib/logger.js';
 import crypto from 'crypto';
+
+const log = createLogger('authApple');
 
 // ── Apple JWKS cache (refresh every 24h) ──
 let _appleKeys = null;
@@ -68,7 +71,7 @@ async function appleHandler(req) {
     try {
       payload = await verifyAppleJWT(id_token);
     } catch (e) {
-      console.error('Apple JWT verification failed:', e.message);
+      log.error('Apple JWT verification failed:', e.message);
       return NextResponse.json({ error: 'Invalid or tampered token' }, { status: 401 });
     }
 
@@ -80,7 +83,7 @@ async function appleHandler(req) {
     // SECURITY: aud check is MANDATORY — reject if APPLE_CLIENT_ID not configured
     const expectedClientId = process.env.APPLE_CLIENT_ID;
     if (!expectedClientId) {
-      console.error('[Auth/Apple] APPLE_CLIENT_ID not configured — rejecting token');
+      log.error('APPLE_CLIENT_ID not configured — rejecting token');
       return NextResponse.json({ error: 'Apple auth not properly configured' }, { status: 500 });
     }
     if (payload.aud !== expectedClientId) {
@@ -127,7 +130,7 @@ async function appleHandler(req) {
       try {
         const u = typeof appleUser === 'string' ? JSON.parse(appleUser) : appleUser;
         name = [u.name?.firstName, u.name?.lastName].filter(Boolean).join(' ');
-      } catch (e) { console.warn('[Apple Auth] Failed to parse user name:', e.message); }
+      } catch (e) { log.warn('Failed to parse user name:', e.message); }
     }
 
     // Create or get user
@@ -147,7 +150,7 @@ async function appleHandler(req) {
           referralInfo = { applied: true, referrerEmail: referralResult.referrerEmail };
         }
       } catch (e) {
-        console.error('Referral error:', e);
+        log.error('Referral error:', e);
       }
     }
 
@@ -168,7 +171,7 @@ async function appleHandler(req) {
     });
 
   } catch (e) {
-    console.error('Apple auth error:', e);
+    log.error('Apple auth error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

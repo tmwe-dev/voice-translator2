@@ -1,4 +1,7 @@
 import { NextResponse } from 'next/server';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('health');
 
 // ═══════════════════════════════════════════════
 // Health Check endpoint — for uptime monitoring
@@ -73,7 +76,7 @@ export async function GET() {
     const { apiCircuitBreaker } = await import('../../lib/circuitBreaker.js');
     checks.circuitBreakers = apiCircuitBreaker.getMetrics();
     checks.openCircuits = apiCircuitBreaker.openCount;
-  } catch (e) { console.warn('[health] Circuit breaker metrics fetch failed:', e?.message); }
+  } catch (e) { log.warn('Circuit breaker metrics fetch failed:', e?.message); }
 
   // Overall status
   const hasErrors = Object.values(checks.services).some(v => v.status === 'error');

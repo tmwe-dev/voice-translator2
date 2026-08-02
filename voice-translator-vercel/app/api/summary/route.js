@@ -5,6 +5,9 @@ import { getConversation, updateConversationSummary } from '../../lib/store.js';
 import { getSession, getUser, deductCredits } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('summary');
 
 async function handlePost(req) {
   try {
@@ -95,7 +98,7 @@ Output ONLY valid JSON, no markdown, no code blocks.`
         const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
         await deductCredits(billingEmail, charge);
         await trackDailySpend(billingEmail, charge);
-      } catch (e) { console.error('Summary credit deduct error:', e); }
+      } catch (e) { log.error('Summary credit deduct error:', e); }
     }
 
     let summary;
@@ -104,7 +107,7 @@ Output ONLY valid JSON, no markdown, no code blocks.`
       const cleaned = raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
       summary = JSON.parse(cleaned);
     } catch (parseErr) {
-      console.error('Summary parse error:', parseErr);
+      log.error('Summary parse error:', parseErr);
       summary = {
         title: 'Conversazione',
         summary: completion.choices[0].message.content.trim().substring(0, 200),
@@ -123,7 +126,7 @@ Output ONLY valid JSON, no markdown, no code blocks.`
     return NextResponse.json({ summary });
   } catch (e) {
     if (e instanceof NextResponse) return e;
-    console.error('Summary error:', e);
+    log.error('Summary error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

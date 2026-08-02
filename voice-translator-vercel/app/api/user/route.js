@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
 import { saveUserSettings, getUserSettings, getProfileByEmail } from '../../lib/supabaseAPI.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('user');
 
 // POST /api/user - User profile actions
 async function handlePost(req) {
@@ -72,7 +75,7 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('User error:', e);
+    log.error('User error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -138,14 +141,14 @@ async function handleGet(req) {
         };
         return NextResponse.json({ prefs });
       } catch (e) {
-        console.warn('[API] get-prefs error:', e.message);
+        log.warn('get-prefs error:', e.message);
         return NextResponse.json({ prefs: {} });
       }
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('User GET error:', e);
+    log.error('User GET error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -172,7 +175,7 @@ async function handlePut(req) {
         // Resolve email → Supabase profile UUID
         const profile = await getProfileByEmail(session.email);
         if (!profile?.id) {
-          console.warn('[API] sync-prefs: no Supabase profile for', session.email);
+          log.warn('sync-prefs: no Supabase profile for', session.email);
           return NextResponse.json({ ok: true, message: 'No Supabase profile yet — sync skipped' });
         }
 
@@ -198,13 +201,13 @@ async function handlePut(req) {
         const result = await saveUserSettings(profile.id, settingsToSave);
 
         if (!result) {
-          console.warn('[API] saveUserSettings returned null');
+          log.warn('saveUserSettings returned null');
           return NextResponse.json({ ok: false, message: 'Failed to save settings' }, { status: 500 });
         }
 
         return NextResponse.json({ ok: true, message: 'Preferences synced' });
       } catch (e) {
-        console.warn('[API] sync-prefs error:', e.message);
+        log.warn('sync-prefs error:', e.message);
         // Don't fail hard - sync errors are non-blocking
         return NextResponse.json({ ok: true, message: 'Sync queued (will retry)' });
       }
@@ -212,7 +215,7 @@ async function handlePut(req) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
-    console.error('User PUT error:', e);
+    log.error('User PUT error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

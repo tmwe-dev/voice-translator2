@@ -1,7 +1,10 @@
 // Lightweight i18n — loads language packs on demand
 // Fallback languages (en, it) are loaded eagerly; others lazy-loaded
 // Total: 15 languages, 284 keys each
+import { createLogger } from './logger.js';
 import en from './locales/en.js';
+
+const log = createLogger('i18n');
 import it from './locales/it.js';
 
 const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
@@ -41,7 +44,7 @@ export async function preloadLang(code) {
     T[code] = mod.default;
     return true;
   } catch (e) {
-    console.warn('[i18n] Failed to load', code, e.message);
+    log.warn('Failed to load', code, e.message);
     return false;
   }
 }

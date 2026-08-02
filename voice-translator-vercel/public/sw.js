@@ -1,4 +1,4 @@
-// Service Worker for VoiceTranslate — Offline + Push + Badge + Background Sync
+// Service Worker for BarTalk — Offline + Push + Badge + Background Sync
 const CACHE_VERSION = 12;
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
@@ -22,7 +22,7 @@ const STATIC_ASSETS = [
 // Offline fallback page (inline HTML)
 const OFFLINE_HTML = `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>VoiceTranslate — Offline</title>
+<title>BarTalk — Offline</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0c29;color:#fff;
@@ -37,7 +37,7 @@ button:active{transform:scale(0.96)}
 <div class="container">
 <div class="icon">📡</div>
 <h1>You're Offline</h1>
-<p>VoiceTranslate needs an internet connection for real-time translation. Please check your connection and try again.</p>
+<p>BarTalk needs an internet connection for real-time translation. Please check your connection and try again.</p>
 <button onclick="location.reload()">Retry</button>
 </div></body></html>`;
 
@@ -83,7 +83,7 @@ self.addEventListener('activate', (event) => {
 // PUSH NOTIFICATIONS
 // =============================================
 self.addEventListener('push', (event) => {
-  let data = { title: 'VoiceTranslate', body: 'New message', icon: '/icons/icon-192x192.png' };
+  let data = { title: 'BarTalk', body: 'New message', icon: '/icons/icon-192x192.png' };
   if (event.data) {
     try { data = { ...data, ...event.data.json() }; }
     catch (e) { data.body = event.data.text(); }
@@ -151,7 +151,7 @@ self.addEventListener('message', (event) => {
       break;
     case 'SHOW_LOCAL_NOTIFICATION': {
       const nd = event.data;
-      self.registration.showNotification(nd.title || 'VoiceTranslate', {
+      self.registration.showNotification(nd.title || 'BarTalk', {
         body: nd.body || '',
         icon: '/icons/icon-192x192.png',
         badge: '/icons/icon-96x96.png',

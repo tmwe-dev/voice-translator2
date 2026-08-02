@@ -3,6 +3,8 @@
 // Works across Vercel serverless instances
 
 import { redis } from './redis.js';
+import { createLogger } from './logger.js';
+const log = createLogger('rateLimit');
 
 const WINDOW_MS = 60 * 1000; // 1 minute window (default)
 
@@ -39,7 +41,7 @@ export async function checkRateLimit(key, maxRequests = 30, windowMs = WINDOW_MS
   } catch (error) {
     // Fail-open: if Redis fails, ALLOW the request
     // Better to serve users than block everyone when Redis is down
-    console.warn('[RateLimit] Redis error, fail-open:', error?.message);
+    log.warn('Redis error, fail-open:', error?.message);
     return { allowed: true, remaining: maxRequests, retryAfterMs: 0 };
   }
 }

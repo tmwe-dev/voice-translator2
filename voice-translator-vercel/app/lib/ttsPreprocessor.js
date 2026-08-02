@@ -5,6 +5,9 @@
 // Pipeline: stripMarkdown → stripEmoji → normalizePunctuation → cleanWhitespace
 // ═══════════════════════════════════════════════
 
+import { createLogger } from './logger.js';
+const log = createLogger('ttsPreprocessor');
+
 /**
  * Strip markdown formatting for TTS readability
  */
@@ -94,7 +97,7 @@ export function preprocessForTTS(text, lang) {
     const latinChars = (cleaned.match(/[a-zA-Z]/g) || []).length;
     if (thaiChars === 0 && latinChars > 0) {
       // Text is pure Latin but should be Thai — flag it
-      console.warn('[TTS Preprocessor] Thai text appears to be Latin transliteration');
+      log.warn('Thai text appears to be Latin transliteration');
     }
   }
 

@@ -226,6 +226,50 @@ return encoded
 `;
 
 /**
+ * Atomic addCredits: add amount to user credits in a single operation.
+ * KEYS[1] = user key (user:email)
+ * ARGV[1] = amount (number as string)
+ * Returns: updated user JSON, or nil if user doesn't exist
+ */
+export const CREDIT_ADD = `
+local data = redis.call('GET', KEYS[1])
+if not data then return nil end
+local user = cjson.decode(data)
+user.credits = (user.credits or 0) + tonumber(ARGV[1])
+user._v = (user._v or 0) + 1
+user._lastMod = tonumber(ARGV[2])
+local encoded = cjson.encode(user)
+redis.call('SET', KEYS[1], encoded)
+return encoded
+`;
+
+/**
+ * Atomic deductCredits: deduct amount, checking sufficient balance.
+ * KEYS[1] = user key (user:email)
+ * ARGV[1] = amount, ARGV[2] = now timestamp
+ * Returns: updated user JSON, 'OWN_KEYS' if user has own keys (skip deduction),
+ *          'INSUFFICIENT' if balance too low, nil if user doesn't exist
+ */
+export const CREDIT_DEDUCT = `
+local data = redis.call('GET', KEYS[1])
+if not data then return nil end
+local user = cjson.decode(data)
+if user.useOwnKeys then return 'OWN_KEYS' end
+local current = user.credits or 0
+local amount = tonumber(ARGV[1])
+if current < amount then return 'INSUFFICIENT' end
+user.credits = current - amount
+if user.credits < 0 then user.credits = 0 end
+user.totalSpent = (user.totalSpent or 0) + amount
+user.totalMessages = (user.totalMessages or 0) + 1
+user._v = (user._v or 0) + 1
+user._lastMod = tonumber(ARGV[2])
+local encoded = cjson.encode(user)
+redis.call('SET', KEYS[1], encoded)
+return encoded
+`;
+
+/**
  * Atomic updateConversationSummary.
  * KEYS[1] = conv key, ARGV[1] = summary JSON
  */

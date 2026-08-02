@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession, getUser } from '../../../lib/users.js';
 import { getSupabaseAdmin } from '../../../lib/supabase.js';
+import { createLogger } from '../../../lib/logger.js';
+
+const log = createLogger('userExport');
 
 /**
  * GET /api/user/export
@@ -180,7 +183,7 @@ export async function GET(req) {
     } catch (supabaseError) {
       // Supabase might not be configured or accessible
       // This is okay - we still return the user data from Redis
-      console.warn('Supabase fetch failed during export:', supabaseError.message);
+      log.warn('Supabase fetch failed during export:', supabaseError.message);
       exportData.supabase_data = {
         error: 'Supabase data unavailable',
       };
@@ -199,7 +202,7 @@ export async function GET(req) {
       },
     });
   } catch (error) {
-    console.error('Data export error:', error);
+    log.error('Data export error:', error);
     return NextResponse.json(
       { error: 'Internal server error during data export' },
       { status: 500 }
@@ -318,7 +321,7 @@ export async function POST(req) {
         };
       }
     } catch (supabaseError) {
-      console.warn('Supabase fetch failed:', supabaseError.message);
+      log.warn('Supabase fetch failed:', supabaseError.message);
       exportData.supabase_data = {
         error: 'Supabase data unavailable',
       };
@@ -326,7 +329,7 @@ export async function POST(req) {
 
     return NextResponse.json(exportData, { status: 200 });
   } catch (error) {
-    console.error('Data export error:', error);
+    log.error('Data export error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, saveApiKeys } from '../../lib/users.js';
+import { isTestBlocked } from '../../lib/config.js';
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('testLogin');
 
 const TEST_EMAIL = 'test@bartalk.dev';
 
 // POST /api/test-login — Creates or restores a test account with full access
 // SECURITY: requires BOTH TESTING_MODE=true AND correct ADMIN_PASS
 export async function POST(req) {
-  // Production guard: NEVER allow test login in Vercel production, even if TESTING_MODE leaks
-  if (process.env.VERCEL_ENV === 'production') {
-    return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
-  }
-  if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
-    return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
-  }
+  const blocked = isTestBlocked();
+  if (blocked) return blocked;
 
   // SECURITY: ADMIN_PASS is MANDATORY for test login — if not configured, block entirely
   const adminPass = process.env.ADMIN_PASS;
@@ -61,7 +60,7 @@ export async function POST(req) {
       platformHasElevenLabs: !!process.env.ELEVENLABS_API_KEY,
     });
   } catch (e) {
-    console.error('[test-login] Error:', e);
+    log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

@@ -1,6 +1,8 @@
 'use client';
 // ═══════════════════════════════════════════════
 // Push Manager — Web Push subscription management
+import { createLogger } from './logger.js';
+const log = createLogger('push');
 //
 // Handles VAPID key fetching, subscription creation,
 // and server-side registration.
@@ -101,7 +103,7 @@ export async function subscribeToPush(userId, roomId) {
 
     return subscription;
   } catch (e) {
-    console.warn('[Push] Subscribe failed:', e);
+    log.warn('Subscribe failed:', e);
     return null;
   }
 }

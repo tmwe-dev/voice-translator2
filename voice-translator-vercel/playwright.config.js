@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright E2E test config for VoiceTranslate
+ * Playwright E2E test config for BarTalk
  *
  * Run: npx playwright test
  * UI:  npx playwright test --ui

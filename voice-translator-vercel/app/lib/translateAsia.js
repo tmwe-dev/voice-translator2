@@ -5,6 +5,8 @@
 
 import { translateQwenMT, callQwen, isDashScopeAvailable } from './llmAsia.js';
 import { QWEN_MODELS } from './asiaConstants.js';
+import { createLogger } from './logger.js';
+const log = createLogger('translateAsia');
 
 /**
  * Translate text using Asia providers.
@@ -35,7 +37,7 @@ export async function translateAsia(text, sourceLang, targetLang, opts = {}) {
       };
     }
   } catch (mtErr) {
-    console.warn('[translateAsia] Qwen-MT failed, falling back to LLM:', mtErr.message);
+    log.warn('Qwen-MT failed, falling back to LLM:', mtErr.message);
   }
 
   // Fallback: Qwen LLM with translation prompt

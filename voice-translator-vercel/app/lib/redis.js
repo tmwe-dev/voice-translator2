@@ -2,13 +2,16 @@
 // Single source of truth - used by store.js and users.js
 // Now with: circuit breaker, timeout, in-memory fallback
 
+import { createLogger } from './logger.js';
 import { apiCircuitBreaker } from './circuitBreaker.js';
+
+const log = createLogger('redis');
 
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
 if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-  console.error('[Redis] UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — Redis calls will use fallback cache only');
+  log.error('UPSTASH_REDIS_REST_URL or UPSTASH_REDIS_REST_TOKEN not set — Redis calls will use fallback cache only');
 }
 
 const REDIS_TIMEOUT_MS = 3000; // 3s max for Redis calls
@@ -87,22 +90,22 @@ export async function redis(command, ...args) {
       if (args[0]) {
         const cached = fallbackGet(args[0]);
         if (cached !== undefined) {
-          console.warn(`[Redis] Using fallback cache for ${args[0]}`);
+          log.warn(`Using fallback cache for ${args[0]}`);
           return cached;
         }
       }
-      console.warn(`[Redis] Fail-open for GET ${args[0]} (no cache)`);
+      log.warn(`Fail-open for GET ${args[0]} (no cache)`);
       return null;
     }
     // For SET commands, cache locally and return OK so app keeps working
     if (command === 'SET' && args[0] && args[1]) {
-      console.warn(`[Redis] Fail-open for SET ${args[0]}`);
+      log.warn(`Fail-open for SET ${args[0]}`);
       fallbackSet(args[0], args[1]);
       return 'OK';
     }
     // For INCR (rate limiting), fail-open so app keeps working
     if (command === 'INCR') {
-      console.warn(`[Redis] Fail-open for INCR ${args[0]}`);
+      log.warn(`Fail-open for INCR ${args[0]}`);
       return 1; // Return low count so rate limit passes
     }
     // For EXPIRE and TTL, fail-open with safe defaults
