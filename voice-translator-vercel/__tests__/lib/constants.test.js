@@ -19,8 +19,8 @@ describe('LANGS', () => {
       expect(lang).toHaveProperty('name');
       expect(lang).toHaveProperty('flag');
       expect(lang).toHaveProperty('speech');
-      expect(lang.code).toMatch(/^[a-z]{2}$/);
-      expect(lang.speech).toMatch(/^[a-z]{2}-[A-Z]{2}$/);
+      expect(lang.code).toMatch(/^[a-z]{2,3}(-[A-Z]{2})?$/);
+      expect(lang.speech).toMatch(/^[a-z]{2,3}-[A-Z]{2}$/);
     }
   });
 
@@ -46,7 +46,7 @@ describe('getLang', () => {
   it('returns correct lang object', () => {
     const en = getLang('en');
     expect(en.code).toBe('en');
-    expect(en.name).toBe('English');
+    expect(en.name).toBe('English (US)');
     expect(en.speech).toBe('en-US');
   });
 
@@ -62,8 +62,12 @@ describe('getLang', () => {
 });
 
 describe('isWhisperPrimaryLang', () => {
-  it('returns true for Thai', () => {
-    expect(isWhisperPrimaryLang('th')).toBe(true);
+  it('returns false for Thai (removed from Whisper primary)', () => {
+    expect(isWhisperPrimaryLang('th')).toBe(false);
+  });
+
+  it('returns true for Arabic', () => {
+    expect(isWhisperPrimaryLang('ar')).toBe(true);
   });
 
   it('returns true for Chinese', () => {

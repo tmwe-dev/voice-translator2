@@ -39,7 +39,7 @@ beforeEach(() => {
 describe('Room Management', () => {
   it('creates a room with correct structure', async () => {
     const room = await createRoom('Luca', 'it', 'conversation', null, null, null, null, 'PRO', 'luca@test.com');
-    expect(room.id).toHaveLength(6);
+    expect(room.id).toHaveLength(8);
     expect(room.host).toBe('Luca');
     expect(room.mode).toBe('conversation');
     expect(room.hostTier).toBe('PRO');
@@ -132,7 +132,7 @@ describe('Room Operations', () => {
     const room = await createRoom('Luca', 'it');
     const result = await updateHeartbeat(room.id, 'Luca');
     expect(result).toBeTruthy();
-    expect(mockRedis).toHaveBeenCalledWith('EXPIRE', expect.any(String), 7200);
+    expect(mockRedis).toHaveBeenCalledWith('EXPIRE', expect.any(String), 3600);
   });
 
   it('addCost increments totalCost and msgCount', async () => {

@@ -35,12 +35,19 @@ vi.mock('../../app/lib/edgeVoices.js', () => ({
   getEdgeVoice: vi.fn((lang, gender) => `${lang}-${gender}-voice`),
 }));
 
-// Mock edge-tts-universal
-vi.mock('edge-tts-universal', () => ({
-  default: class {
+// Mock @andresaya/edge-tts (used by tts-test route)
+vi.mock('@andresaya/edge-tts', () => ({
+  EdgeTTS: class {
     constructor() {}
     async synthesize() {}
-    async toBuffer() { return Buffer.from('fake-audio-data'); }
+    toBuffer() { return Buffer.from('fake-audio-data'); }
+  },
+  default: {
+    EdgeTTS: class {
+      constructor() {}
+      async synthesize() {}
+      toBuffer() { return Buffer.from('fake-audio-data'); }
+    }
   }
 }));
 
@@ -62,6 +69,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   process.env.OPENAI_API_KEY = 'test-openai-key';
   process.env.ELEVENLABS_API_KEY = 'test-elevenlabs-key';
+  process.env.NEXT_PUBLIC_TESTING_MODE = 'true';
   delete process.env.ADMIN_PASS;
   delete process.env.NODE_ENV;
 });

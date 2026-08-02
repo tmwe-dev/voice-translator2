@@ -43,6 +43,7 @@ beforeEach(() => {
   process.env.OPENAI_API_KEY = 'test-openai';
   process.env.ANTHROPIC_API_KEY = 'test-anthropic';
   process.env.GEMINI_API_KEY = 'test-gemini';
+  process.env.NEXT_PUBLIC_TESTING_MODE = 'true';
   delete process.env.ADMIN_PASS;
   delete process.env.NODE_ENV;
 });

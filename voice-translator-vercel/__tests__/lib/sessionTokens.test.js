@@ -62,7 +62,7 @@ describe('createRoomSession', () => {
       `rsess:${token}`,
       expect.any(String),
       'EX',
-      7200
+      86400
     );
   });
 
@@ -118,19 +118,16 @@ describe('resolveRoomIdentity', () => {
     expect(identity.verified).toBe(true);
   });
 
-  it('rejects token for wrong room', async () => {
+  it('rejects token for wrong room (returns null, no fallback)', async () => {
     const { token } = await createRoomSession('ROOM1', 'Luca', 'host');
-    // Using token for a different room should fall back to name
+    // Using token for a different room should return null (no name-only fallback)
     const identity = await resolveRoomIdentity(token, 'Luca', 'ROOM2');
-    expect(identity.verified).toBe(false);
-    expect(identity.role).toBe('unknown');
+    expect(identity).toBeNull();
   });
 
-  it('falls back to name when no token', async () => {
+  it('returns null when no token (security: no name-only fallback)', async () => {
     const identity = await resolveRoomIdentity(null, 'Luca', 'ROOM1');
-    expect(identity.name).toBe('Luca');
-    expect(identity.role).toBe('unknown');
-    expect(identity.verified).toBe(false);
+    expect(identity).toBeNull();
   });
 
   it('returns null when no token and no name', async () => {
@@ -138,10 +135,9 @@ describe('resolveRoomIdentity', () => {
     expect(identity).toBeNull();
   });
 
-  it('falls back to name when token is invalid', async () => {
+  it('returns null when token is invalid (security: no name-only fallback)', async () => {
     const identity = await resolveRoomIdentity('bad-token', 'Luca', 'ROOM1');
-    expect(identity.name).toBe('Luca');
-    expect(identity.verified).toBe(false);
+    expect(identity).toBeNull();
   });
 
   it('is case-insensitive on roomId', async () => {

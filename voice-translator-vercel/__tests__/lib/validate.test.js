@@ -6,7 +6,6 @@ import {
   sanitizeName,
   isValidEmail,
   sanitizeText,
-  rateLimit,
   getClientIP,
   sanitizeTranslations,
 } from '../../app/lib/validate.js';
@@ -171,47 +170,7 @@ describe('sanitizeText', () => {
   });
 });
 
-describe('rateLimit', () => {
-  beforeEach(() => {
-    // Clear the rate limit store between tests
-    // We'll rely on the fact that different IPs have different stores
-  });
-
-  it('allows requests within limit', () => {
-    const result = rateLimit('test-ip-1', { maxRequests: 5 });
-    expect(result.allowed).toBe(true);
-    expect(result.remaining).toBe(4);
-  });
-
-  it('decrements remaining correctly', () => {
-    const r1 = rateLimit('test-ip-2', { maxRequests: 5 });
-    expect(r1.remaining).toBe(4);
-    const r2 = rateLimit('test-ip-2', { maxRequests: 5 });
-    expect(r2.remaining).toBe(3);
-  });
-
-  it('blocks after limit exceeded', () => {
-    for (let i = 0; i < 5; i++) rateLimit('test-ip-3', { maxRequests: 5 });
-    const result = rateLimit('test-ip-3', { maxRequests: 5 });
-    expect(result.allowed).toBe(false);
-    expect(result.remaining).toBe(0);
-  });
-
-  it('returns resetIn time', () => {
-    const result = rateLimit('test-ip-4', { maxRequests: 5, windowMs: 60000 });
-    expect(result.resetIn).toBeGreaterThan(0);
-    expect(result.resetIn).toBeLessThanOrEqual(60000);
-  });
-
-  it('treats null IP as "unknown"', () => {
-    const r1 = rateLimit(null, { maxRequests: 2 });
-    expect(r1.allowed).toBe(true);
-    const r2 = rateLimit(null, { maxRequests: 2 });
-    expect(r2.allowed).toBe(true);
-    const r3 = rateLimit(null, { maxRequests: 2 });
-    expect(r3.allowed).toBe(false);
-  });
-});
+// rateLimit tests removed — function moved to app/lib/rateLimit.js (async Redis-based)
 
 describe('getClientIP', () => {
   it('extracts IP from x-forwarded-for header', () => {

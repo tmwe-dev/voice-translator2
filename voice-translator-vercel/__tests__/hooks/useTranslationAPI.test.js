@@ -45,7 +45,7 @@ beforeEach(() => {
 
 describe('useTranslationAPI', () => {
   describe('sendMessage', () => {
-    it('sends message with token-first identity', async () => {
+    it('sends message with instant delivery and fire-and-forget server save', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
         json: () => Promise.resolve({ message: { id: 'msg-1' } }),
@@ -58,14 +58,18 @@ describe('useTranslationAPI', () => {
         response = await result.current.sendMessage('Hello', 'Ciao', 'en', 'it', { it: 'Ciao' });
       });
 
-      expect(response).toEqual({ message: { id: 'msg-1' } });
+      // Now returns instant message + server save promise
+      expect(response.message).toBeTruthy();
+      expect(response.message._status).toBe('sent');
+      expect(response.message.original).toBe('Hello');
+      expect(response.message.translated).toBe('Ciao');
+      expect(response.serverSave).toBeInstanceOf(Promise);
+
       expect(mockFetch).toHaveBeenCalledWith('/api/messages', expect.objectContaining({
         method: 'POST',
       }));
 
-      // Verify token-first: no sender name when roomSessionToken is present
       const body = JSON.parse(mockFetch.mock.calls[0][1].body);
-      expect(body.sender).toBeUndefined();
       expect(body.roomSessionToken).toBe('rst-123');
       expect(body.translations).toEqual({ it: 'Ciao' });
     });
@@ -180,10 +184,15 @@ describe('useTranslationAPI', () => {
       expect(mockFetch).toHaveBeenCalledWith('/api/translate-consensus', expect.anything());
     });
 
-    it('returns original text when free limit exceeded', async () => {
+    it('trial users translate without daily limit (FREE FOR ALL)', async () => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ translated: 'Ciao', charsUsed: 5 }),
+      });
+
       const props = defaultProps();
       props.isTrialRef = { current: true };
-      props.freeCharsRef = { current: 6000 }; // Over FREE_DAILY_LIMIT
+      props.freeCharsRef = { current: 6000 }; // Even over old limit — no cap anymore
       const { result } = renderHook(() => useTranslationAPI(props));
 
       let data;
@@ -191,22 +200,30 @@ describe('useTranslationAPI', () => {
         data = await result.current.translateUniversal('Hello', 'en', 'it', 'English', 'Italian');
       });
 
-      expect(data.translated).toBe('Hello'); // Returns original
-      expect(data.limitExceeded).toBe(true);
+      expect(data.translated).toBe('Ciao'); // Translates normally, no limit
     });
 
-    it('throws on 402 payment error', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 402,
-        json: () => Promise.resolve({ error: 'Insufficient credits' }),
-      });
+    it('falls back to free translation on 402 payment error', async () => {
+      // First call (paid) returns 402, second call (free fallback) succeeds
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 402,
+          json: () => Promise.resolve({ error: 'Insufficient credits' }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve({ translated: 'Ciao' }),
+        });
 
       const { result } = renderHook(() => useTranslationAPI(defaultProps()));
 
-      await expect(
-        act(() => result.current.translateUniversal('Hello', 'en', 'it', 'English', 'Italian'))
-      ).rejects.toThrow('Insufficient credits');
+      let data;
+      await act(async () => {
+        data = await result.current.translateUniversal('Hello', 'en', 'it', 'English', 'Italian');
+      });
+
+      expect(data.translated).toBe('Ciao'); // Falls back to free, doesn't throw
     });
   });
 
