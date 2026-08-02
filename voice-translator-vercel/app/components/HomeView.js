@@ -4,186 +4,107 @@ import { VOICES, CONTEXTS, FONT, getLang, LANGS, vibrate, APP_VERSION } from '..
 import AvatarImg from './AvatarImg.js';
 
 // ═══════════════════════════════════════
-// Theme-aware color palette for HomeView
+// Minimalist theme palette
 // ═══════════════════════════════════════
 function getHomeColors(theme) {
   const palettes = {
     dark: {
-      // Primary accent
-      accent: '#26D9B0', accentLight: '#B8B3FF', accentDark: '#4A40E0', accentMid: '#26D9B0',
-      accent2: '#8B6AFF', accent3: '#FF6B6B', accent4: '#26D9B0',
-      // Door SVG
-      doorBody: ['#9B93FF', '#26D9B0', '#4A40E0'],
-      doorFace: ['#B8B3FF', '#8B83FF', '#5A50F0'],
-      doorArch: ['#C4BFFF', '#D4D0FF', '#A8A0FF'],
-      doorFloor: 'rgba(38,217,176,0.15)',
-      doorHandle: ['#FFE066', '#FFB800'],
-      doorHandleGlow: 'rgba(255,215,0,0.35)',
-      doorHandleStroke: 'rgba(255,200,0,0.3)',
-      doorPanel1: ['rgba(255,255,255,0.18)', 'rgba(255,255,255,0.04)'],
-      doorPanel2: ['rgba(255,255,255,0.12)', 'rgba(255,255,255,0.02)'],
-      doorPanelStroke1: 'rgba(255,255,255,0.12)', doorPanelStroke2: 'rgba(255,255,255,0.08)',
-      doorShine: ['rgba(255,255,255,0.30)', 'rgba(255,255,255,0)'],
-      doorShadow: 'rgba(0,0,0,0.12)',
-      doorGlowShadow: ['rgba(38,217,176,0.30)', 'rgba(38,217,176,0.45)'],
-      // Title gradient
-      titleGrad: 'linear-gradient(135deg, #B8B3FF 0%, #26D9B0 40%, #8B6AFF 100%)',
-      // Top bar
-      topBarBg: 'rgba(38,217,176,0.06)', topBarBorder: 'rgba(38,217,176,0.1)',
-      // Texts
-      textPrimary: '#FFFFFF', textSecondary: 'rgba(255,255,255,0.72)',
-      textTertiary: 'rgba(255,255,255,0.55)', textMuted: 'rgba(255,255,255,0.40)',
-      // Buttons
-      btnBg: 'rgba(255,255,255,0.04)', btnBorder: 'rgba(255,255,255,0.08)',
-      btnIconColor: 'rgba(255,255,255,0.65)',
-      settingsBtnBg: 'rgba(38,217,176,0.06)', settingsBtnBorder: 'rgba(38,217,176,0.12)',
-      settingsIconColor: 'rgba(255,255,255,0.80)',
-      contactsBtnBg: 'rgba(0,210,255,0.06)', contactsBtnBorder: 'rgba(0,210,255,0.15)',
-      // Popup
-      popupBg: 'linear-gradient(160deg, rgba(20,22,50,0.98) 0%, rgba(15,17,40,0.98) 100%)',
-      popupBorder: 'rgba(38,217,176,0.2)', popupShadow: 'rgba(38,217,176,0.08)',
-      popupCloseBg: 'rgba(255,255,255,0.06)', popupCloseBorder: 'rgba(255,255,255,0.1)',
-      popupCloseColor: 'rgba(255,255,255,0.55)',
-      createBtnGrad: 'linear-gradient(135deg, #26D9B0 0%, #8B6AFF 100%)',
-      createBtnShadow: '0 6px 24px rgba(38,217,176,0.4), 0 2px 8px rgba(0,0,0,0.2)',
-      // Tabs
-      tabBg: 'rgba(38,217,176,0.04)', tabBorder: 'rgba(38,217,176,0.1)',
-      tabActiveBg: 'rgba(38,217,176,0.1)', tabActiveBorder: 'rgba(38,217,176,0.25)',
-      tabActiveColor: '#26D9B0',
-      // Online friends
-      onlineStatusBg: 'rgba(0,255,148,0.15)', onlineStatusColor: '#26D9B0',
-      chataBtnBg: 'rgba(0,210,255,0.1)', chataBtnBorder: 'rgba(0,210,255,0.25)', chataBtnColor: '#8B6AFF',
+      accent: '#8b5cf6', accent2: '#06b6d4', accent3: '#f59e0b',
+      textPrimary: '#fafafa', textSecondary: 'rgba(250,250,250,0.60)',
+      textMuted: 'rgba(250,250,250,0.35)',
+      cardBg: 'rgba(255,255,255,0.03)', cardBorder: 'rgba(255,255,255,0.06)',
+      iconTaxi: '#f59e0b', iconMondo: '#06b6d4', iconContatti: '#8b5cf6',
     },
     light: {
-      accent: '#5A52E0', accentLight: '#26D9B0', accentDark: '#3D35B0', accentMid: '#26D9B0',
-      accent2: '#00A3C4', accent3: '#E0527A', accent4: '#00AA6B',
-      doorBody: ['#8B83F0', '#26D9B0', '#4A40D0'],
-      doorFace: ['#A8A0FF', '#26D9B0', '#5A50E8'],
-      doorArch: ['#B0A8FF', '#C0B8FF', '#9088F0'],
-      doorFloor: 'rgba(90,82,224,0.12)',
-      doorHandle: ['#FFD84D', '#F0A800'],
-      doorHandleGlow: 'rgba(255,200,0,0.30)',
-      doorHandleStroke: 'rgba(200,160,0,0.25)',
-      doorPanel1: ['rgba(255,255,255,0.30)', 'rgba(255,255,255,0.10)'],
-      doorPanel2: ['rgba(255,255,255,0.22)', 'rgba(255,255,255,0.06)'],
-      doorPanelStroke1: 'rgba(255,255,255,0.25)', doorPanelStroke2: 'rgba(255,255,255,0.15)',
-      doorShine: ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0)'],
-      doorShadow: 'rgba(0,0,0,0.08)',
-      doorGlowShadow: ['rgba(90,82,224,0.25)', 'rgba(90,82,224,0.40)'],
-      titleGrad: 'linear-gradient(135deg, #5A52E0 0%, #26D9B0 40%, #00A3C4 100%)',
-      topBarBg: 'rgba(90,82,224,0.06)', topBarBorder: 'rgba(90,82,224,0.12)',
-      textPrimary: '#1A1D3A', textSecondary: 'rgba(26,29,58,0.72)',
-      textTertiary: 'rgba(26,29,58,0.52)', textMuted: 'rgba(26,29,58,0.38)',
-      btnBg: 'rgba(26,29,58,0.04)', btnBorder: 'rgba(26,29,58,0.10)',
-      btnIconColor: 'rgba(26,29,58,0.55)',
-      settingsBtnBg: 'rgba(90,82,224,0.06)', settingsBtnBorder: 'rgba(90,82,224,0.14)',
-      settingsIconColor: 'rgba(26,29,58,0.70)',
-      contactsBtnBg: 'rgba(0,163,196,0.06)', contactsBtnBorder: 'rgba(0,163,196,0.14)',
-      popupBg: 'linear-gradient(160deg, rgba(245,246,255,0.99) 0%, rgba(240,242,255,0.99) 100%)',
-      popupBorder: 'rgba(90,82,224,0.18)', popupShadow: 'rgba(90,82,224,0.08)',
-      popupCloseBg: 'rgba(26,29,58,0.05)', popupCloseBorder: 'rgba(26,29,58,0.10)',
-      popupCloseColor: 'rgba(26,29,58,0.45)',
-      createBtnGrad: 'linear-gradient(135deg, #26D9B0 0%, #00A3C4 100%)',
-      createBtnShadow: '0 6px 24px rgba(90,82,224,0.25), 0 2px 8px rgba(0,0,0,0.08)',
-      tabBg: 'rgba(90,82,224,0.04)', tabBorder: 'rgba(90,82,224,0.08)',
-      tabActiveBg: 'rgba(90,82,224,0.08)', tabActiveBorder: 'rgba(90,82,224,0.2)',
-      tabActiveColor: '#5A52E0',
-      onlineStatusBg: 'rgba(0,170,107,0.15)', onlineStatusColor: '#00AA6B',
-      chataBtnBg: 'rgba(0,163,196,0.08)', chataBtnBorder: 'rgba(0,163,196,0.2)', chataBtnColor: '#00A3C4',
+      accent: '#7c3aed', accent2: '#0891b2', accent3: '#d97706',
+      textPrimary: '#18181b', textSecondary: 'rgba(24,24,27,0.60)',
+      textMuted: 'rgba(24,24,27,0.35)',
+      cardBg: 'rgba(0,0,0,0.02)', cardBorder: 'rgba(0,0,0,0.06)',
+      iconTaxi: '#d97706', iconMondo: '#0891b2', iconContatti: '#7c3aed',
     },
     brown: {
-      accent: '#D4A06A', accentLight: '#E8C8A0', accentDark: '#9C7040', accentMid: '#C4944E',
-      accent2: '#E8B87A', accent3: '#FF8A65', accent4: '#A5D6A7',
-      doorBody: ['#E8C8A0', '#D4A06A', '#9C7040'],
-      doorFace: ['#F0D8B0', '#D4A878', '#B88850'],
-      doorArch: ['#E8D0B0', '#F0DCC0', '#D4B890'],
-      doorFloor: 'rgba(212,160,106,0.15)',
-      doorHandle: ['#FFE066', '#D4A020'],
-      doorHandleGlow: 'rgba(255,215,0,0.30)',
-      doorHandleStroke: 'rgba(200,160,50,0.3)',
-      doorPanel1: ['rgba(255,245,232,0.18)', 'rgba(255,245,232,0.04)'],
-      doorPanel2: ['rgba(255,245,232,0.12)', 'rgba(255,245,232,0.02)'],
-      doorPanelStroke1: 'rgba(255,245,232,0.12)', doorPanelStroke2: 'rgba(255,245,232,0.08)',
-      doorShine: ['rgba(255,245,232,0.28)', 'rgba(255,245,232,0)'],
-      doorShadow: 'rgba(0,0,0,0.15)',
-      doorGlowShadow: ['rgba(212,160,106,0.30)', 'rgba(212,160,106,0.45)'],
-      titleGrad: 'linear-gradient(135deg, #E8C8A0 0%, #D4A06A 40%, #E8B87A 100%)',
-      topBarBg: 'rgba(212,160,106,0.06)', topBarBorder: 'rgba(212,160,106,0.12)',
-      textPrimary: '#FFF5E8', textSecondary: 'rgba(255,245,232,0.72)',
-      textTertiary: 'rgba(255,245,232,0.55)', textMuted: 'rgba(255,245,232,0.40)',
-      btnBg: 'rgba(255,245,232,0.04)', btnBorder: 'rgba(255,245,232,0.08)',
-      btnIconColor: 'rgba(255,245,232,0.60)',
-      settingsBtnBg: 'rgba(212,160,106,0.06)', settingsBtnBorder: 'rgba(212,160,106,0.14)',
-      settingsIconColor: 'rgba(255,245,232,0.75)',
-      contactsBtnBg: 'rgba(232,184,122,0.06)', contactsBtnBorder: 'rgba(232,184,122,0.14)',
-      popupBg: 'linear-gradient(160deg, rgba(30,20,12,0.98) 0%, rgba(24,16,10,0.98) 100%)',
-      popupBorder: 'rgba(212,160,106,0.2)', popupShadow: 'rgba(212,160,106,0.08)',
-      popupCloseBg: 'rgba(255,245,232,0.06)', popupCloseBorder: 'rgba(255,245,232,0.1)',
-      popupCloseColor: 'rgba(255,245,232,0.50)',
-      createBtnGrad: 'linear-gradient(135deg, #D4A06A 0%, #E8B87A 100%)',
-      createBtnShadow: '0 6px 24px rgba(212,160,106,0.35), 0 2px 8px rgba(0,0,0,0.2)',
-      tabBg: 'rgba(212,160,106,0.04)', tabBorder: 'rgba(212,160,106,0.08)',
-      tabActiveBg: 'rgba(212,160,106,0.1)', tabActiveBorder: 'rgba(212,160,106,0.2)',
-      tabActiveColor: '#D4A06A',
-      onlineStatusBg: 'rgba(165,214,167,0.15)', onlineStatusColor: '#A5D6A7',
-      chataBtnBg: 'rgba(232,184,122,0.1)', chataBtnBorder: 'rgba(232,184,122,0.2)', chataBtnColor: '#E8B87A',
+      accent: '#D4A06A', accent2: '#A5D6A7', accent3: '#FF8A65',
+      textPrimary: '#FFF8F0', textSecondary: 'rgba(255,248,240,0.60)',
+      textMuted: 'rgba(255,248,240,0.35)',
+      cardBg: 'rgba(255,255,255,0.03)', cardBorder: 'rgba(255,255,255,0.06)',
+      iconTaxi: '#FF8A65', iconMondo: '#A5D6A7', iconContatti: '#D4A06A',
     },
-    orange: {
-      accent: '#FF8C00', accentLight: '#FFB347', accentDark: '#CC6C00', accentMid: '#FF9A20',
-      accent2: '#FFB347', accent3: '#FF6347', accent4: '#7CFC00',
-      doorBody: ['#FFB347', '#FF8C00', '#CC6C00'],
-      doorFace: ['#FFC870', '#FFA030', '#E07800'],
-      doorArch: ['#FFD080', '#FFE0A0', '#FFB060'],
-      doorFloor: 'rgba(255,140,0,0.15)',
-      doorHandle: ['#FFE066', '#CC8800'],
-      doorHandleGlow: 'rgba(255,200,0,0.35)',
-      doorHandleStroke: 'rgba(200,160,0,0.3)',
-      doorPanel1: ['rgba(255,248,240,0.18)', 'rgba(255,248,240,0.04)'],
-      doorPanel2: ['rgba(255,248,240,0.12)', 'rgba(255,248,240,0.02)'],
-      doorPanelStroke1: 'rgba(255,248,240,0.12)', doorPanelStroke2: 'rgba(255,248,240,0.08)',
-      doorShine: ['rgba(255,248,240,0.30)', 'rgba(255,248,240,0)'],
-      doorShadow: 'rgba(0,0,0,0.15)',
-      doorGlowShadow: ['rgba(255,140,0,0.30)', 'rgba(255,140,0,0.45)'],
-      titleGrad: 'linear-gradient(135deg, #FFB347 0%, #FF8C00 40%, #FFD080 100%)',
-      topBarBg: 'rgba(255,140,0,0.06)', topBarBorder: 'rgba(255,140,0,0.12)',
-      textPrimary: '#FFF8F0', textSecondary: 'rgba(255,248,240,0.72)',
-      textTertiary: 'rgba(255,248,240,0.55)', textMuted: 'rgba(255,248,240,0.40)',
-      btnBg: 'rgba(255,248,240,0.04)', btnBorder: 'rgba(255,248,240,0.08)',
-      btnIconColor: 'rgba(255,248,240,0.60)',
-      settingsBtnBg: 'rgba(255,140,0,0.06)', settingsBtnBorder: 'rgba(255,140,0,0.14)',
-      settingsIconColor: 'rgba(255,248,240,0.75)',
-      contactsBtnBg: 'rgba(255,179,71,0.06)', contactsBtnBorder: 'rgba(255,179,71,0.14)',
-      popupBg: 'linear-gradient(160deg, rgba(30,14,5,0.98) 0%, rgba(24,10,3,0.98) 100%)',
-      popupBorder: 'rgba(255,140,0,0.2)', popupShadow: 'rgba(255,140,0,0.08)',
-      popupCloseBg: 'rgba(255,248,240,0.06)', popupCloseBorder: 'rgba(255,248,240,0.1)',
-      popupCloseColor: 'rgba(255,248,240,0.50)',
-      createBtnGrad: 'linear-gradient(135deg, #FF8C00 0%, #FFB347 100%)',
-      createBtnShadow: '0 6px 24px rgba(255,140,0,0.4), 0 2px 8px rgba(0,0,0,0.2)',
-      tabBg: 'rgba(255,140,0,0.04)', tabBorder: 'rgba(255,140,0,0.08)',
-      tabActiveBg: 'rgba(255,140,0,0.1)', tabActiveBorder: 'rgba(255,140,0,0.2)',
-      tabActiveColor: '#FF8C00',
-      onlineStatusBg: 'rgba(124,252,0,0.15)', onlineStatusColor: '#7CFC00',
-      chataBtnBg: 'rgba(255,179,71,0.1)', chataBtnBorder: 'rgba(255,179,71,0.2)', chataBtnColor: '#FFB347',
+    midnight: {
+      accent: '#818cf8', accent2: '#22d3ee', accent3: '#fbbf24',
+      textPrimary: '#e2e8f0', textSecondary: 'rgba(226,232,240,0.60)',
+      textMuted: 'rgba(226,232,240,0.35)',
+      cardBg: 'rgba(255,255,255,0.03)', cardBorder: 'rgba(255,255,255,0.06)',
+      iconTaxi: '#fbbf24', iconMondo: '#22d3ee', iconContatti: '#818cf8',
     },
   };
   return palettes[theme] || palettes.dark;
 }
 
+// ═══════════════════════════════════════
+// SVG Icons — modern, minimal line style
+// ═══════════════════════════════════════
+const TaxiIcon = ({ color, size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Car body */}
+    <path d="M8 30V32C8 33.1 8.9 34 10 34H12C12 36.2 13.8 38 16 38C18.2 38 20 36.2 20 34H28C28 36.2 29.8 38 32 38C34.2 38 36 36.2 36 34H38C39.1 34 40 33.1 40 32V30" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    {/* Roof line */}
+    <path d="M12 22L16 14H32L36 22" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+    {/* Body bottom */}
+    <path d="M8 30H40L38 24H36L32 22H16L12 22H10L8 24V30Z" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill={color + '15'}/>
+    {/* Windshield */}
+    <path d="M16 22L18 16H30L32 22" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
+    {/* Taxi sign on roof */}
+    <rect x="20" y="10" width="8" height="4" rx="2" stroke={color} strokeWidth="1.8" fill={color + '25'}/>
+    {/* Headlights */}
+    <circle cx="11" cy="27" r="1.5" fill={color} opacity="0.7"/>
+    <circle cx="37" cy="27" r="1.5" fill={color} opacity="0.7"/>
+    {/* Wheels */}
+    <circle cx="16" cy="34" r="2.5" stroke={color} strokeWidth="1.8" fill="none"/>
+    <circle cx="32" cy="34" r="2.5" stroke={color} strokeWidth="1.8" fill="none"/>
+  </svg>
+);
+
+const MondoIcon = ({ color, size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Main circle */}
+    <circle cx="24" cy="24" r="16" stroke={color} strokeWidth="2.2" fill={color + '08'}/>
+    {/* Vertical meridian */}
+    <ellipse cx="24" cy="24" rx="8" ry="16" stroke={color} strokeWidth="1.5" opacity="0.5" fill="none"/>
+    {/* Horizontal lines */}
+    <path d="M9 18H39" stroke={color} strokeWidth="1.3" opacity="0.35" strokeLinecap="round"/>
+    <path d="M8 24H40" stroke={color} strokeWidth="1.5" opacity="0.5" strokeLinecap="round"/>
+    <path d="M9 30H39" stroke={color} strokeWidth="1.3" opacity="0.35" strokeLinecap="round"/>
+    {/* Translation pulse - small waves */}
+    <path d="M38 12C40 10 43 11 43 14" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.6"/>
+    <path d="M40 10C42 8 45 9 45 12" stroke={color} strokeWidth="1.2" strokeLinecap="round" opacity="0.35"/>
+  </svg>
+);
+
+const ContattiIcon = ({ color, size = 48 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    {/* Main person */}
+    <circle cx="24" cy="16" r="6" stroke={color} strokeWidth="2.2" fill={color + '10'}/>
+    <path d="M14 36C14 30.5 18.5 26 24 26C29.5 26 34 30.5 34 36" stroke={color} strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+    {/* Left person (smaller) */}
+    <circle cx="12" cy="20" r="3.5" stroke={color} strokeWidth="1.5" opacity="0.45" fill="none"/>
+    <path d="M5 34C5 30 8 27 12 27" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.35"/>
+    {/* Right person (smaller) */}
+    <circle cx="36" cy="20" r="3.5" stroke={color} strokeWidth="1.5" opacity="0.45" fill="none"/>
+    <path d="M43 34C43 30 40 27 36 27" stroke={color} strokeWidth="1.5" strokeLinecap="round" opacity="0.35"/>
+  </svg>
+);
+
 const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView,
-  theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact }) {
+  theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact, unlockAudio }) {
 
   const langInfo = getLang(prefs.lang);
-  const [showCreatePopup, setShowCreatePopup] = useState(false);
   const [activeRooms, setActiveRooms] = useState([]);
-  const [selectedTab, setSelectedTab] = useState(0); // 0 = Le mie, 1 = Mondo
-  const [showVoicePicker, setShowVoicePicker] = useState(false);
-  const [showLangPicker, setShowLangPicker] = useState(null); // null | 'my' | 'partner'
+  const [showLangPicker, setShowLangPicker] = useState(null);
 
-  // Theme-aware colors
   const C = useMemo(() => getHomeColors(theme), [theme]);
 
-  // Load and validate active rooms on mount
+  // Check active rooms on mount
   useEffect(() => {
     async function checkActiveRooms() {
       try {
@@ -193,380 +114,294 @@ const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLa
         for (const room of saved) {
           try {
             const res = await fetch('/api/room', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'check', roomId: room.roomId })
             });
             const data = await res.json();
             if (data.exists && !data.ended) checked.push(room);
-          } catch (e) { console.warn('[HomeView] Room check failed:', e?.message); }
+          } catch {}
         }
         localStorage.setItem('vt-active-rooms', JSON.stringify(checked));
         setActiveRooms(checked);
-      } catch (e) { console.warn('[HomeView] Active rooms check failed:', e?.message); }
+      } catch {}
     }
     checkActiveRooms();
   }, []);
 
-  // Filter online contacts
   const onlineContacts = useMemo(() => {
     if (!contacts || !Array.isArray(contacts)) return [];
     return contacts.filter(c => c.online === true);
   }, [contacts]);
 
+  // Greeting based on time of day
+  const greeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Buongiorno';
+    if (h < 18) return 'Buon pomeriggio';
+    return 'Buonasera';
+  }, []);
+
   return (
-    <main style={S.page} aria-label="BarChat Home P4">
-      <div style={S.scrollCenter}>
+    <main style={S.page} aria-label="BarTalk Home">
+      <div style={{
+        ...S.scrollCenter,
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'space-between', minHeight: '100dvh',
+        paddingTop: 'max(16px, env(safe-area-inset-top))',
+        paddingBottom: 100, boxSizing: 'border-box',
+      }}>
 
-        {/* ═══════════════════════════════════════
-            1. GREETING AREA (top)
-           ═══════════════════════════════════════ */}
-        <header style={{
-          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-          maxWidth: 400, marginBottom: 28, paddingTop: 8
-        }} role="banner">
-          <div style={{ position: 'relative' }}>
-            <AvatarImg src={prefs.avatar} size={56} style={{ borderRadius: 14 }} />
-            <span style={{
-              position: 'absolute', bottom: -4, right: -8,
-              fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.5)',
-              background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '1px 4px',
-              fontFamily: 'monospace', letterSpacing: 0.3, whiteSpace: 'nowrap'
-            }}>{APP_VERSION}</span>
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{
-              fontSize: 18, fontWeight: 900, letterSpacing: -0.5,
-              color: C.textPrimary, fontFamily: FONT
-            }}>
-              Buongiorno, {prefs.name} 👋
-            </div>
-            <button onClick={() => setView('settings')}
-              style={{
-                fontSize: 12, color: C.textSecondary, marginTop: 4,
-                background: 'none', border: 'none', cursor: 'pointer',
-                padding: 0, textDecoration: 'none', fontFamily: FONT,
-                WebkitTapHighlightColor: 'transparent'
-              }}>
-              ✏️ Modifica profilo
-            </button>
-          </div>
-        </header>
-
-        {/* ═══════════════════════════════════════
-            2. BIG CTA BUTTON (center, huge)
-           ═══════════════════════════════════════ */}
-        <button
-          onClick={() => {
-            vibrate();
-            handleCreateRoom();
-          }}
-          style={{
-            width: '100%', maxWidth: 400, padding: '48px 24px',
-            marginBottom: 32, borderRadius: 24, border: 'none',
-            background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #5b21b6 100%)',
-            cursor: 'pointer', display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center', gap: 12,
-            position: 'relative', overflow: 'hidden',
-            boxShadow: '0 12px 48px rgba(139, 92, 246, 0.4)',
-            transition: 'all 0.3s ease', WebkitTapHighlightColor: 'transparent',
-            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%)',
-            backgroundSize: '200% 200%'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'scale(1.02)';
-            e.currentTarget.style.boxShadow = '0 16px 56px rgba(139, 92, 246, 0.5)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-            e.currentTarget.style.boxShadow = '0 12px 48px rgba(139, 92, 246, 0.4)';
-          }}>
-          <span style={{ fontSize: 44 }}>🎤</span>
+        {/* ═══ TOP: Greeting ═══ */}
+        <div style={{ width: '100%', maxWidth: 400, textAlign: 'center', paddingTop: 24 }}>
           <div style={{
-            fontSize: 28, fontWeight: 900, color: '#FFFFFF',
-            letterSpacing: -0.8, fontFamily: FONT
+            fontSize: 14, fontWeight: 500, color: C.textMuted,
+            fontFamily: FONT, letterSpacing: 0.5, marginBottom: 4,
           }}>
-            Parla e Traduci
+            {greeting}{prefs.name ? `, ${prefs.name}` : ''}
           </div>
           <div style={{
-            fontSize: 13, color: 'rgba(255,255,255,0.8)',
-            fontWeight: 500, fontFamily: FONT, letterSpacing: 0.3
+            fontSize: 28, fontWeight: 800, letterSpacing: -1,
+            background: `linear-gradient(135deg, ${C.accent} 0%, ${C.accent2} 100%)`,
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            fontFamily: FONT, marginBottom: 8,
           }}>
-            Comunicare nel tuo linguaggio
+            BarTalk
           </div>
-        </button>
-
-        {/* ═══════════════════════════════════════
-            3. LANGUAGE BAR (pills + swap button)
-           ═══════════════════════════════════════ */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-          maxWidth: 400, marginBottom: 28, justifyContent: 'center', position: 'relative'
-        }}>
-          {/* My language button */}
-          <button
-            style={{
-              padding: '10px 16px', borderRadius: 20,
-              background: showLangPicker === 'my' ? C.accent + '40' : C.accent + '20',
-              border: `1px solid ${C.accent}40`,
-              color: C.accent, fontSize: 12, fontWeight: 700,
-              cursor: 'pointer', fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}
-            onClick={() => { vibrate(); setShowLangPicker(showLangPicker === 'my' ? null : 'my'); }}>
-            {langInfo.flag} {langInfo.name}
-          </button>
-
-          {/* Arrow */}
-          <div style={{ fontSize: 18, color: C.textSecondary }}>→</div>
-
-          {/* Target: auto (determined by partner in room) */}
           <div style={{
-            padding: '10px 16px', borderRadius: 20,
-            background: C.accent2 + '15', border: `1px solid ${C.accent2}25`,
-            color: C.accent2, fontSize: 12, fontWeight: 600,
-            fontFamily: FONT, opacity: 0.7
+            fontSize: 11, color: C.textMuted, fontFamily: 'monospace',
+            letterSpacing: 0.5, opacity: 0.5,
           }}>
-            🌐 Auto
+            {APP_VERSION}
           </div>
-
-          {/* Language picker dropdown */}
-          {showLangPicker && (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowLangPicker(null)} />
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 8, zIndex: 100,
-                background: theme === 'dark' ? '#1a1a2e' : '#fff',
-                border: `1px solid ${C.accent}30`, borderRadius: 16,
-                maxHeight: 280, overflowY: 'auto', padding: 8,
-                boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
-              }}>
-                {LANGS.map(l => {
-                  const isSelected = l.code === prefs.lang;
-                  return (
-                    <button key={l.code}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                        padding: '10px 12px', border: 'none', borderRadius: 10,
-                        background: isSelected ? (C.accent + '25') : 'transparent',
-                        color: isSelected ? C.accent : C.textPrimary,
-                        fontSize: 13, fontWeight: isSelected ? 700 : 400,
-                        cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
-                        transition: 'background 0.15s'
-                      }}
-                      onClick={() => {
-                        vibrate();
-                        savePrefs({ ...prefs, lang: l.code });
-                        setShowLangPicker(null);
-                      }}>
-                      <span style={{ fontSize: 20 }}>{l.flag}</span>
-                      <span>{l.name}</span>
-                      {isSelected && <span style={{ marginLeft: 'auto' }}>✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
         </div>
 
-        {/* ═══════════════════════════════════════
-            4. QUICK ACTIONS ROW (horizontal scroll)
-           ═══════════════════════════════════════ */}
+        {/* ═══ CENTER: Main CTA + Language ═══ */}
         <div style={{
-          display: 'flex', gap: 10, width: '100%', maxWidth: 400,
-          marginBottom: 28, overflowX: 'auto', paddingBottom: 4,
-          scrollBehavior: 'smooth'
+          display: 'flex', flexDirection: 'column', alignItems: 'center',
+          gap: 32, width: '100%', maxWidth: 400, flex: 1,
+          justifyContent: 'center', padding: '0 16px',
         }}>
+
+          {/* Big Talk Button — clean circle */}
+          <button
+            onClick={() => { vibrate(); if (unlockAudio) unlockAudio(); handleCreateRoom(); }}
+            style={{
+              width: 120, height: 120, borderRadius: '50%', border: 'none',
+              background: `linear-gradient(145deg, ${C.accent}, ${C.accent2})`,
+              cursor: 'pointer', display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', gap: 4,
+              boxShadow: `0 8px 40px ${C.accent}50, 0 0 80px ${C.accent}15`,
+              transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
+              WebkitTapHighlightColor: 'transparent',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.06)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
+          >
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'white', fontFamily: FONT, letterSpacing: 0.5 }}>
+              PARLA
+            </span>
+          </button>
+
+          {/* Language selector — allowed to have border */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            position: 'relative',
+          }}>
+            <button
+              style={{
+                padding: '8px 16px', borderRadius: 24,
+                background: showLangPicker === 'my' ? C.accent + '20' : 'transparent',
+                border: `1px solid ${C.accent}40`,
+                color: C.accent, fontSize: 13, fontWeight: 600,
+                cursor: 'pointer', fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s',
+              }}
+              onClick={() => { vibrate(); setShowLangPicker(showLangPicker === 'my' ? null : 'my'); }}
+            >
+              {langInfo.flag} {langInfo.name}
+            </button>
+
+            <span style={{ fontSize: 16, color: C.textMuted }}>→</span>
+
+            <div style={{
+              padding: '8px 16px', borderRadius: 24,
+              border: `1px solid ${C.accent2}30`,
+              color: C.accent2, fontSize: 13, fontWeight: 500,
+              fontFamily: FONT, opacity: 0.6,
+            }}>
+              🌐 Auto
+            </div>
+
+            {/* Language picker dropdown */}
+            {showLangPicker && (
+              <>
+                <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowLangPicker(null)} />
+                <div style={{
+                  position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
+                  marginTop: 8, zIndex: 100, width: 260,
+                  background: theme === 'light' ? '#fff' : '#1a1a2e',
+                  border: `1px solid ${C.accent}25`, borderRadius: 16,
+                  maxHeight: 280, overflowY: 'auto', padding: 6,
+                  boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+                }}>
+                  {LANGS.map(l => {
+                    const isSelected = l.code === prefs.lang;
+                    return (
+                      <button key={l.code}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                          padding: '10px 12px', border: 'none', borderRadius: 10,
+                          background: isSelected ? C.accent + '20' : 'transparent',
+                          color: isSelected ? C.accent : C.textPrimary,
+                          fontSize: 13, fontWeight: isSelected ? 700 : 400,
+                          cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+                        }}
+                        onClick={() => {
+                          vibrate(); savePrefs({ ...prefs, lang: l.code }); setShowLangPicker(null);
+                        }}
+                      >
+                        <span style={{ fontSize: 18 }}>{l.flag}</span>
+                        <span>{l.name}</span>
+                        {isSelected && <span style={{ marginLeft: 'auto', fontSize: 12 }}>✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* ═══ BOTTOM: Navigation Icons — large, borderless ═══ */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-around', alignItems: 'center',
+          width: '100%', maxWidth: 400, padding: '0 8px', marginBottom: 8,
+        }}>
+          {/* TaxiTalk */}
+          <button
+            onClick={() => { vibrate(); setView('speaker'); }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: 12, WebkitTapHighlightColor: 'transparent',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <TaxiIcon color={C.iconTaxi} size={44} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, fontFamily: FONT }}>
+              TaxiTalk
+            </span>
+          </button>
+
+          {/* Mondo */}
+          <button
+            onClick={() => { vibrate(); setView('mondo'); }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: 12, WebkitTapHighlightColor: 'transparent',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <MondoIcon color={C.iconMondo} size={44} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, fontFamily: FONT }}>
+              Mondo
+            </span>
+          </button>
+
+          {/* Contatti */}
+          <button
+            onClick={() => { vibrate(); setView('contacts'); }}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: 12, WebkitTapHighlightColor: 'transparent',
+              transition: 'opacity 0.2s',
+            }}
+          >
+            <ContattiIcon color={C.iconContatti} size={44} />
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, fontFamily: FONT }}>
+              Contatti
+            </span>
+          </button>
+
           {/* Invita QR */}
           <button
             onClick={() => { vibrate(); setView('quickinvite'); }}
             style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>🔗</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Invita QR</span>
-          </button>
-
-          {/* Chat */}
-          <button
-            onClick={() => {
-              vibrate();
-              handleCreateRoom();
+              background: 'none', border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: 12, WebkitTapHighlightColor: 'transparent',
+              transition: 'opacity 0.2s',
             }}
-            style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>💬</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Chat</span>
-          </button>
-
-          {/* Video */}
-          <button
-            onClick={() => {
-              vibrate();
-              setSelectedMode('classroom');
-              handleCreateRoom();
-            }}
-            style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>📹</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Video</span>
-          </button>
-
-          {/* Call */}
-          <button
-            onClick={() => {
-              vibrate();
-              setSelectedMode('call');
-              handleCreateRoom();
-            }}
-            style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>📞</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Chiama</span>
-          </button>
-
-          {/* Interpreter */}
-          <button
-            onClick={() => { vibrate(); setSelectedMode('interpreter'); handleCreateRoom(); }}
-            style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>🎙️</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Interprete</span>
-          </button>
-
-          {/* Taxi */}
-          <button
-            onClick={() => { vibrate(); setSelectedMode('conversation'); handleCreateRoom(); }}
-            style={{
-              flex: '0 0 auto', padding: '14px 16px',
-              borderRadius: 16, background: C.btnBg, border: `1px solid ${C.btnBorder}`,
-              cursor: 'pointer', display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: 6, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent', transition: 'all 0.2s'
-            }}>
-            <span style={{ fontSize: 22 }}>🚕</span>
-            <span style={{ fontSize: 10, color: C.textSecondary, fontWeight: 600 }}>Taxi</span>
+          >
+            <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="8" y="8" width="12" height="12" rx="2" stroke={C.textSecondary} strokeWidth="2" fill="none"/>
+              <rect x="28" y="8" width="12" height="12" rx="2" stroke={C.textSecondary} strokeWidth="2" fill="none"/>
+              <rect x="8" y="28" width="12" height="12" rx="2" stroke={C.textSecondary} strokeWidth="2" fill="none"/>
+              <rect x="11" y="11" width="6" height="6" rx="1" fill={C.textSecondary} opacity="0.4"/>
+              <rect x="31" y="11" width="6" height="6" rx="1" fill={C.textSecondary} opacity="0.4"/>
+              <rect x="11" y="31" width="6" height="6" rx="1" fill={C.textSecondary} opacity="0.4"/>
+              <path d="M28 28H32V32" stroke={C.textSecondary} strokeWidth="2" strokeLinecap="round"/>
+              <path d="M36 28V32H40V40H36" stroke={C.textSecondary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M28 36H32V40" stroke={C.textSecondary} strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontSize: 11, fontWeight: 600, color: C.textSecondary, fontFamily: FONT }}>
+              Invita
+            </span>
           </button>
         </div>
 
-        {/* ═══════════════════════════════════════
-            5. RECENT CONVERSATIONS LIST
-           ═══════════════════════════════════════ */}
-        {/* Active Rooms */}
+        {/* ═══ Active Rooms (only if any) ═══ */}
         {activeRooms.length > 0 && (
-          <div style={{ width: '100%', maxWidth: 400, marginBottom: 24 }}>
+          <div style={{ width: '100%', maxWidth: 400, padding: '0 16px' }}>
             <div style={{
-              fontSize: 11, fontWeight: 700, color: C.textTertiary, marginBottom: 12,
-              letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: FONT
+              fontSize: 10, fontWeight: 700, color: C.textMuted,
+              letterSpacing: 1, textTransform: 'uppercase', fontFamily: FONT, marginBottom: 10,
             }}>
-              Chat Attive
+              Chat attive
             </div>
             {activeRooms.map((room) => {
               const timeAgo = Math.floor((Date.now() - room.leftAt) / 60000);
-              const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo} min fa` : `${Math.floor(timeAgo / 60)}h fa`;
+              const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo}m` : `${Math.floor(timeAgo / 60)}h`;
               return (
-                <div
-                  key={room.roomId}
-                  onClick={() => {
-                    vibrate();
-                    if (rejoinRoom) rejoinRoom(room.roomId);
-                  }}
+                <div key={room.roomId}
+                  onClick={() => { vibrate(); if (rejoinRoom) rejoinRoom(room.roomId); }}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-                    marginBottom: 10, borderRadius: 16, background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
-                    cursor: 'pointer', transition: 'all 0.2s', fontFamily: FONT
-                  }}>
-                  <div style={{ display: 'flex', gap: 6, fontSize: 18 }}>
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                    marginBottom: 8, borderRadius: 14,
+                    background: C.cardBg, cursor: 'pointer',
+                    transition: 'all 0.2s', fontFamily: FONT,
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: 4, fontSize: 16 }}>
                     {[...new Set(room.members?.map(m => getLang(m.lang).flag) || [])].map((flag, i) => (
                       <span key={i}>{flag}</span>
                     ))}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{
-                      fontSize: 13, fontWeight: 700, color: C.textPrimary,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                      fontSize: 13, fontWeight: 600, color: C.textPrimary,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     }}>
                       {room.members?.map(m => m.name).join(', ') || room.roomId}
                     </div>
-                    <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                      {room.mode === 'conversation' ? '💬' : room.mode === 'classroom' ? '🎓' : '🎧'} {timeStr}
-                    </div>
                   </div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{timeStr}</div>
                 </div>
               );
             })}
           </div>
         )}
 
-        {/* Online Contacts / Recent Conversations */}
-        {onlineContacts.length > 0 && (
-          <div style={{ width: '100%', maxWidth: 400, marginBottom: 24 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, color: C.textTertiary, marginBottom: 12,
-              letterSpacing: 0.5, textTransform: 'uppercase', fontFamily: FONT
-            }}>
-              Contatti Online
-            </div>
-            {onlineContacts.map((contact) => (
-              <div
-                key={contact.id}
-                onClick={() => {
-                  vibrate();
-                  if (startChatWithContact) startChatWithContact(contact);
-                }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
-                  marginBottom: 10, borderRadius: 16, background: C.topBarBg, border: `1px solid ${C.topBarBorder}`,
-                  cursor: 'pointer', transition: 'all 0.2s', fontFamily: FONT
-                }}>
-                <div style={{ position: 'relative' }}>
-                  <AvatarImg src={contact.avatar} size={44} style={{ borderRadius: 12 }} />
-                  <div style={{
-                    position: 'absolute', bottom: 0, right: 0, width: 12, height: 12,
-                    borderRadius: 6, background: C.onlineStatusColor, border: `2px solid ${C.topBarBg}`
-                  }} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>
-                    {contact.name}
-                  </div>
-                  <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>
-                    Online
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
       </div>
 
-      {/* Theme-aware animations & styles */}
       <style>{`
         @media (prefers-reduced-motion: reduce) {
           * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

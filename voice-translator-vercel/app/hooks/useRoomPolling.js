@@ -66,27 +66,18 @@ export default function useRoomPolling({
   // ALWAYS checks content fingerprint to prevent TTS replay.
   // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
   const processIncomingMessage = useCallback((msg) => {
-    if (!msg || !msg.id) return;
-    // Skip messages sent by me
-    if (sentByMeRef.current.has(msg.id)) return;
+    if (!msg || !msg.id) { console.log('[TTS-TRACE] skip: no msg/id'); return; }
+    if (sentByMeRef.current.has(msg.id)) { console.log('[TTS-TRACE] skip: sentByMe', msg.id); return; }
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
-    if (msg.sender === myVerifiedName) return;
+    if (msg.sender === myVerifiedName) { console.log('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
 
-    // ── Unified TTS dedup: check fingerprint BEFORE playing ──
-    // Purpose: prevent TTS replay when the SAME message is delivered via multiple channels
-    // (P2P ~50ms, Realtime ~100ms, Polling ~2-10s) — all with different IDs but same content.
-    //
-    // Uses sender + original text + coarse timestamp (30s window):
-    // - Different channels for the SAME message arrive within seconds → same window → deduped
-    // - Same person sending the SAME text again (e.g. "ok" twice) → different window → TTS plays
-    // - Without the time window, "ok" sent twice would be blocked by the first fingerprint
-    const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000); // 30-second buckets
-    const contentFingerprint = `${msg.sender}|${msg.original}|${timeWindow}`;
+    const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000);
+    const contentFingerprint = `${msg.sender}|${msg.original?.substring(0,20)}|${timeWindow}`;
     if (processedForTTSRef.current.has(contentFingerprint)) {
-      return; // Already played TTS for this exact content in this time window
+      console.log('[TTS-TRACE] skip: fingerprint dup', contentFingerprint);
+      return;
     }
 
-    // Queue audio for the translation in MY language
     const myLang = myLangRef.current;
     let textToPlay = '';
     let speechLang = '';
@@ -101,18 +92,26 @@ export default function useRoomPolling({
       speechLang = getLang(myLang).speech;
     }
 
-    // IMPORTANT: Only add fingerprint when we actually play TTS.
-    // Phase 1 messages arrive with NO translation → no TTS → don't add fingerprint.
-    // Phase 2 update arrives WITH translation → TTS plays → add fingerprint.
-    // This ensures Phase 2 isn't blocked by Phase 1's empty arrival.
+    console.log('[TTS-TRACE] processIncoming:', {
+      id: msg.id?.substring(0,20), sender: msg.sender,
+      myLang, myName: myVerifiedName,
+      hasTranslations: !!msg.translations, translationKeys: msg.translations ? Object.keys(msg.translations) : [],
+      sourceLang: msg.sourceLang, targetLang: msg.targetLang,
+      hasTranslated: !!msg.translated,
+      textToPlay: textToPlay?.substring(0,30) || '(empty)',
+      autoPlay: prefsRef.current.autoPlay,
+    });
+
     if (textToPlay && prefsRef.current.autoPlay !== false) {
       processedForTTSRef.current.add(contentFingerprint);
-      // LRU cap: prevent unbounded growth
       if (processedForTTSRef.current.size > 500) {
         const first = processedForTTSRef.current.values().next().value;
         processedForTTSRef.current.delete(first);
       }
+      console.log('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
       queueAudio(textToPlay, speechLang, msg.id);
+    } else {
+      console.log('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
     }
 
     // ── Feed incoming message to conversation context (knowledge base) ──
@@ -342,7 +341,7 @@ export default function useRoomPolling({
     const pollFn = async () => {
       try {
         const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
-        const nameParam = !roomSessionTokenRef.current ? `&name=${encodeURIComponent(prefsRef.current.name)}` : '';
+        const nameParam = `&name=${encodeURIComponent(prefsRef.current.name)}`;
         const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}${rstParam}`);
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
@@ -433,8 +432,7 @@ export default function useRoomPolling({
         }
 
         // Heartbeat (always needed to keep room alive and detect members)
-        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current };
-        if (!roomSessionTokenRef.current) heartbeatBody.name = prefsRef.current.name;
+        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current, name: prefsRef.current.name };
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -530,9 +528,9 @@ export default function useRoomPolling({
         action: 'speaking',
         roomId: rid,
         roomSessionToken: roomSessionTokenRef.current,
+        name: prefsRef.current.name,
         speaking, liveText, typing
       };
-      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -582,9 +580,9 @@ export default function useRoomPolling({
         action: 'changeLang',
         roomId,
         roomSessionToken: roomSessionTokenRef.current,
+        name: prefsRef.current.name,
         lang: newLang,
       };
-      if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -608,10 +606,10 @@ export default function useRoomPolling({
       action: 'speaking',
       roomId,
       roomSessionToken: roomSessionTokenRef.current,
+      name: prefsRef.current.name,
       speaking: false,
       typing: isTyping
     };
-    if (!roomSessionTokenRef.current) body.name = prefsRef.current.name;
     fetch('/api/room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -639,7 +637,10 @@ export default function useRoomPolling({
           hostEmail: userAccount?.email || null
         })
       });
-      if (!res.ok) throw new Error('Error');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Errore server (${res.status})`);
+      }
       const data = await res.json();
       const { room, roomSessionToken: token } = data;
       if (token) roomSessionTokenRef.current = token;

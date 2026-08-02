@@ -352,6 +352,7 @@ export default function useTranslation({
       }
     }
     setStreamingMsg(null);
+    setTextInput('');  // Clear input after classic recording send
   }
 
   // ── FreeTalk VAD hook ──
@@ -621,6 +622,7 @@ export default function useTranslation({
       }
       setStreamingMsg(null);
       allWordsRef.current = '';
+      setTextInput('');  // Clear input after successful voice send
     } catch (e) {
       console.error('[stopStreaming] Translation error:', e);
       setStreamingMsg(null);

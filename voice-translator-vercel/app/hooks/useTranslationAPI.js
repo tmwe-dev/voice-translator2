@@ -113,7 +113,7 @@ export default function useTranslationAPI({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         roomId,
-        sender: roomSessionTokenRef?.current ? undefined : senderName,
+        sender: senderName,
         roomSessionToken: roomSessionTokenRef?.current || null,
         original,
         translated,
@@ -152,7 +152,7 @@ export default function useTranslationAPI({
   const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return;
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
-    const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations };
+    const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations, timestamp: Date.now() };
 
     // Update local message immediately (sender sees translation)
     if (updateLocalMessage) {

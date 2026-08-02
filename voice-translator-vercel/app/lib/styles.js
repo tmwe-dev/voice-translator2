@@ -382,6 +382,16 @@ export default function getStyles(theme = 'dark') {
       background:`${colors.accent3}14`,
       boxShadow:`0 0 0 7px ${colors.accent3}14, 0 0 36px ${colors.accent3}1A` },
 
+    // ── Shared UI tokens for new IA ──
+    // These replace local C objects in HomeView, HistoryView, etc.
+    createBtnGrad: colors.btnGradient,
+    createBtnGlow: colors.btnGlow,
+    tabBg: `${colors.accent1}08`,
+    tabBorder: `${colors.accent1}15`,
+    tabActiveBg: `${colors.accent1}14`,
+    tabActiveBorder: `${colors.accent1}30`,
+    tabActiveColor: colors.accent1,
+
     // Expose colors for components that need direct access
     colors,
   };
