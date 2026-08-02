@@ -61,8 +61,9 @@ const LazyFallback = () => (
   </div>
 );
 
-// ═══ P4 Manifesto integration ═══
+// ═══ Navigation ═══
 import BottomNav from './components/BottomNav.js';
+import NewConversationSheet from './components/NewConversationSheet.js';
 // TaxiMode is used inside RoomView, not standalone
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
@@ -102,6 +103,7 @@ function HomeInner() {
   const [inviteLang, setInviteLang] = useState('en');
   const [inviteMsgLang, setInviteMsgLang] = useState(null);
   // [Removed dead code: showShareApp, shareAppLang — unused]
+  const [showNewConversation, setShowNewConversation] = useState(false);
 
   // FREE tier usage tracking (extracted hook)
   const freeTier = useFreeTierTracking();
@@ -697,6 +699,24 @@ function HomeInner() {
     }
   }
 
+  // Handler for NewConversationSheet selections
+  function handleNewConversationSelect(optionId) {
+    switch (optionId) {
+      case 'face-to-face':
+        handleCreateRoom();
+        break;
+      case 'invite':
+        setView('quickinvite');
+        break;
+      case 'videocall':
+        handleCreateRoom(); // Creates room, user activates video from within
+        break;
+      case 'taxitalk':
+        setView('speaker');
+        break;
+    }
+  }
+
   async function startChatWithContact(contact) {
     try {
       setStatus('...');
@@ -840,7 +860,12 @@ function HomeInner() {
   );
 
   // Define BottomNav for views that use it (now with 5 tabs + FAB)
-  const bottomNav = <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} onCreateRoom={handleCreateRoom} />;
+  const bottomNav = (
+    <>
+      <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} onNewConversation={() => setShowNewConversation(true)} />
+      <NewConversationSheet open={showNewConversation} onClose={() => setShowNewConversation(false)} onSelect={handleNewConversationSelect} S={S} />
+    </>
+  );
 
   // ═══ AppProvider value — shared state for context consumers ═══
   const appCtxValue = {

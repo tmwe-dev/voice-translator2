@@ -28,6 +28,12 @@ export const tokens = {
   blur: { none: 'none', sm: 'blur(4px)', md: 'blur(12px)', lg: 'blur(24px)', xl: 'blur(40px)' },
   spacing: { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 48 },
   radius: { xs: 6, sm: 10, md: 14, lg: 18, xl: 24, full: 999 },
+  // z-index scale — consistent layering across the app
+  zIndex: { base: 0, card: 10, header: 20, dropdown: 30, modal: 40, nav: 50, sheet: 60, overlay: 70, toast: 80, max: 100 },
+  // Touch targets — WCAG 2.2 minimum 44×44px, preferred 48×48px
+  touch: { min: 44, preferred: 48, large: 56 },
+  // Breakpoints — mobile-first
+  breakpoint: { sm: 480, md: 768, lg: 1024, xl: 1280 },
   focus: (color) => ({
     ring: `0 0 0 2px ${color}40`,
     outline: `2px solid ${color}60`,
