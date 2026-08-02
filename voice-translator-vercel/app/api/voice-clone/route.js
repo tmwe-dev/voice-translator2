@@ -134,9 +134,10 @@ async function handlePost(req) {
 // ═══════════════════════════════════════
 async function handleGet(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const token = searchParams.get('token');
-    if (!token) return NextResponse.json({ error: 'token required' }, { status: 400 });
+    // SECURITY: tokens ONLY via Authorization header — never from query string
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return NextResponse.json({ error: 'Authorization header required' }, { status: 401 });
 
     const session = await getSession(token);
     if (!session?.email) return NextResponse.json({ error: 'Invalid token' }, { status: 401 });

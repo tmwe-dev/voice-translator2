@@ -82,9 +82,9 @@ async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
-    // SECURITY: prefer Authorization header, fallback to query param (deprecated)
+    // SECURITY: tokens ONLY via Authorization header — never from query string (logged by proxies/CDNs)
     const authHeader = req.headers.get('authorization');
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : searchParams.get('token');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
     // Authenticate
     if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });

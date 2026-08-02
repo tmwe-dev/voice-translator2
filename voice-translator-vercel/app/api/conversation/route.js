@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity } from '../../lib/store.js';
+import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity, verifyRoomSession } from '../../lib/store.js';
 import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 
@@ -64,9 +64,9 @@ async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    // SECURITY: prefer headers over query params (deprecated)
+    // SECURITY: tokens ONLY via Authorization header — never from query string
     const authHeader = req.headers.get('authorization');
-    const ut = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (searchParams.get('userToken') || '');
+    const ut = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
     const rst = req.headers.get('x-room-session') || searchParams.get('rst') || '';
     const nameParam = sanitizeName(searchParams.get('name') || '');
 
@@ -79,11 +79,14 @@ async function handleGet(req) {
       if (session) resolvedName = session.name || session.email;
     }
     if (!resolvedName && rst) {
-      const identity = await resolveRoomIdentity(rst, null, '');
-      if (identity) resolvedName = identity.name;
+      // For conversation retrieval, verify the token is valid but don't check room ID
+      // (the conversation may be from an archived room). Participant check below handles access control.
+      const session = await verifyRoomSession(rst);
+      if (session?.name) resolvedName = session.name;
     }
-    if (!resolvedName) resolvedName = nameParam;
-    if (!resolvedName) return NextResponse.json({ error: 'Identity required' }, { status: 401 });
+    // SECURITY: name-only access removed — conversations require a verified session
+    // (userToken from login or room session token). Name parameter alone is not sufficient.
+    if (!resolvedName) return NextResponse.json({ error: 'Verified session required' }, { status: 401 });
 
     const conv = await getConversation(id);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });

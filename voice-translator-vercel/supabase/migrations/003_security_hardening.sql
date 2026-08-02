@@ -1,6 +1,11 @@
 -- =============================================
 -- Migration 003: Security Hardening
 -- Fixes: open RPC functions, public INSERT policies
+--
+-- STATUS: NOT APPLIED — Supabase public schema has 0 tables.
+-- All data lives in Redis (Upstash). This migration is a safety net
+-- for when/if tables are created in Supabase. Apply BEFORE creating tables.
+-- Last verified: 2026-08-02 (list_tables returned empty)
 -- =============================================
 
 -- ═══════════════════════════════════════════════
@@ -34,10 +39,12 @@ DROP POLICY IF EXISTS "translations_insert" ON translations;
 CREATE POLICY "translations_insert" ON translations FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
--- payments: only service_role should insert payments (via server-side Stripe webhook)
+-- payments: ONLY service_role should insert payments (via server-side Stripe webhook)
+-- WITH CHECK (false) blocks all authenticated users; service_role bypasses RLS entirely
 DROP POLICY IF EXISTS "payments_insert" ON payments;
+DROP POLICY IF EXISTS "payments_insert_service" ON payments;
 CREATE POLICY "payments_insert_service" ON payments FOR INSERT
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (false);
 
 -- audit_logs: only service_role should insert audit entries
 DROP POLICY IF EXISTS "audit_insert" ON audit_logs;

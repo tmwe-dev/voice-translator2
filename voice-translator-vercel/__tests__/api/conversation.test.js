@@ -12,6 +12,10 @@ const mockResolveRoomIdentity = vi.fn(async (token, name, roomId) => {
   if (name) return { name, role: 'unknown', verified: false };
   return null;
 });
+const mockVerifyRoomSession = vi.fn(async (token) => {
+  if (token === 'valid-rst') return { roomId: 'ABC', name: 'Luca', role: 'host' };
+  return null;
+});
 
 vi.mock('../../app/lib/store.js', () => ({
   saveConversation: (...args) => mockSaveConversation(...args),
@@ -19,6 +23,7 @@ vi.mock('../../app/lib/store.js', () => ({
   getUserConversations: (...args) => mockGetUserConversations(...args),
   getRoom: (...args) => mockGetRoom(...args),
   resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
+  verifyRoomSession: (...args) => mockVerifyRoomSession(...args),
 }));
 
 // Mock users (for userToken-based identity)
@@ -45,10 +50,10 @@ const { POST, GET } = await import('../../app/api/conversation/route.js');
 function makeReq(body) {
   return { json: async () => body, headers: new Headers() };
 }
-function makeGetReq(params) {
+function makeGetReq(params, headers = {}) {
   const url = new URL('http://localhost/api/conversation');
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  return { url: url.toString(), headers: new Headers() };
+  return { url: url.toString(), headers: new Headers(headers) };
 }
 
 beforeEach(() => {
@@ -147,37 +152,44 @@ describe('POST /api/conversation', () => {
 });
 
 describe('GET /api/conversation', () => {
-  it('returns conversation for participant (name param)', async () => {
+  it('returns conversation with userToken via Authorization header', async () => {
+    mockGetSession.mockResolvedValue({ email: 'luca@test.com', name: 'Luca' });
     mockGetConversation.mockResolvedValue({
-      id: 'conv1', members: [{ name: 'Luca' }, { name: 'Guest' }]
+      id: 'conv1', members: [{ name: 'Luca' }]
     });
-    const res = await GET(makeGetReq({ id: 'conv1', name: 'Luca' }));
+    const res = await GET(makeGetReq({ id: 'conv1' }, { 'authorization': 'Bearer valid-token' }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.conversation.id).toBe('conv1');
   });
 
-  it('returns conversation with userToken', async () => {
-    mockGetSession.mockResolvedValue({ email: 'luca@test.com', name: 'Luca' });
+  it('returns conversation with room session token', async () => {
     mockGetConversation.mockResolvedValue({
-      id: 'conv1', members: [{ name: 'Luca' }]
+      id: 'conv1', members: [{ name: 'Luca' }, { name: 'Guest' }]
     });
-    const res = await GET(makeGetReq({ id: 'conv1', userToken: 'valid-token' }));
+    const res = await GET(makeGetReq({ id: 'conv1' }, { 'x-room-session': 'valid-rst' }));
     expect(res.status).toBe(200);
   });
 
-  it('returns 403 for non-participant', async () => {
+  it('returns 403 for non-participant (verified user)', async () => {
+    mockGetSession.mockResolvedValue({ email: 'hacker@test.com', name: 'Hacker' });
     mockGetConversation.mockResolvedValue({
       id: 'conv1', members: [{ name: 'Luca' }]
     });
-    const res = await GET(makeGetReq({ id: 'conv1', name: 'Hacker' }));
+    const res = await GET(makeGetReq({ id: 'conv1' }, { 'authorization': 'Bearer hacker-token' }));
     expect(res.status).toBe(403);
   });
 
   it('returns 404 for nonexistent conversation', async () => {
+    mockGetSession.mockResolvedValue({ email: 'luca@test.com', name: 'Luca' });
     mockGetConversation.mockResolvedValue(null);
-    const res = await GET(makeGetReq({ id: 'nope', name: 'Luca' }));
+    const res = await GET(makeGetReq({ id: 'nope' }, { 'authorization': 'Bearer valid-token' }));
     expect(res.status).toBe(404);
+  });
+
+  it('rejects name-only access (security: requires verified session)', async () => {
+    const res = await GET(makeGetReq({ id: 'conv1', name: 'Luca' }));
+    expect(res.status).toBe(401);
   });
 
   it('returns 400 without id', async () => {

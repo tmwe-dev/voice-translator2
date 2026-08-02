@@ -240,9 +240,9 @@ async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
-    // SECURITY: prefer Authorization header, fallback to query param (deprecated)
+    // SECURITY: tokens ONLY via Authorization header — never from query string (logged by proxies/CDNs)
     const authHeader = req.headers.get('authorization');
-    const userToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : searchParams.get('token');
+    const userToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
     if (action !== 'voices') {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

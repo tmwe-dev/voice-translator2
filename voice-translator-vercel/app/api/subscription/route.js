@@ -4,6 +4,25 @@ import Stripe from 'stripe';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
 
+// SECURITY: Validate returnUrl against allowed origins to prevent open redirect
+const ALLOWED_ORIGINS = [
+  'https://voice-translator2.vercel.app',
+  'https://bartalk.app',
+  process.env.NEXT_PUBLIC_URL,
+].filter(Boolean);
+
+function sanitizeReturnUrl(url) {
+  if (!url) return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+  try {
+    const parsed = new URL(url);
+    if (ALLOWED_ORIGINS.some(origin => parsed.origin === new URL(origin).origin)) {
+      return url;
+    }
+  } catch {}
+  // Reject unrecognized domains — fall back to app URL
+  return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+}
+
 // ═══════════════════════════════════════════════
 // Subscription Management API
 //
@@ -121,8 +140,8 @@ async function handlePost(req) {
         mode: 'subscription',
         payment_method_types: ['card'],
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'}/?subscription=success`,
-        cancel_url: `${returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'}/?subscription=cancel`,
+        success_url: `${sanitizeReturnUrl(returnUrl)}/?subscription=success`,
+        cancel_url: `${sanitizeReturnUrl(returnUrl)}/?subscription=cancel`,
         metadata: { userId: verifiedUserId || '', plan, period: billingPeriod },
         subscription_data: {
           metadata: { userId: verifiedUserId || '', plan },
@@ -144,7 +163,7 @@ async function handlePost(req) {
 
       const portalSession = await getStripe().billingPortal.sessions.create({
         customer: customerId,
-        return_url: returnUrl || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app',
+        return_url: sanitizeReturnUrl(returnUrl),
       });
       return NextResponse.json({ url: portalSession.url });
     }

@@ -11,14 +11,15 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
   }
 
-  // SECURITY: require admin password even in test mode
+  // SECURITY: ADMIN_PASS is MANDATORY for test login — if not configured, block entirely
   const adminPass = process.env.ADMIN_PASS;
-  if (adminPass) {
-    let body;
-    try { body = await req.clone().json(); } catch { body = {}; }
-    if (body.adminPass !== adminPass) {
-      return NextResponse.json({ error: 'Admin password required for test login' }, { status: 403 });
-    }
+  if (!adminPass) {
+    return NextResponse.json({ error: 'ADMIN_PASS not configured — test login disabled' }, { status: 403 });
+  }
+  let body;
+  try { body = await req.clone().json(); } catch { body = {}; }
+  if (body.adminPass !== adminPass) {
+    return NextResponse.json({ error: 'Admin password required for test login' }, { status: 403 });
   }
 
   try {

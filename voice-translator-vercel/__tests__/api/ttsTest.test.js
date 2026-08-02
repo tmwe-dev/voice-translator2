@@ -59,6 +59,7 @@ function makeRequest(body, headers = {}) {
     headers: new Map(Object.entries({
       'x-forwarded-for': '10.0.0.1',
       'content-type': 'application/json',
+      'x-admin-key': 'test-admin-pass',
       ...headers,
     })),
     url: 'http://localhost:3000/api/tts-test',
@@ -70,7 +71,7 @@ beforeEach(() => {
   process.env.OPENAI_API_KEY = 'test-openai-key';
   process.env.ELEVENLABS_API_KEY = 'test-elevenlabs-key';
   process.env.NEXT_PUBLIC_TESTING_MODE = 'true';
-  delete process.env.ADMIN_PASS;
+  process.env.ADMIN_PASS = 'test-admin-pass';
   delete process.env.NODE_ENV;
 });
 

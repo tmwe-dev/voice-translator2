@@ -130,13 +130,15 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
     }
 
-    // Require admin pass in production to prevent abuse of platform API keys
-    if (process.env.NODE_ENV === 'production' && process.env.ADMIN_PASS) {
-      const { searchParams } = new URL(req.url);
-      const pass = searchParams.get('key') || req.headers.get('x-admin-key');
-      if (!safeCompare(pass, process.env.ADMIN_PASS)) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    // SECURITY: ADMIN_PASS is MANDATORY for test endpoints — block if not configured
+    const adminPass = process.env.ADMIN_PASS;
+    if (!adminPass) {
+      return NextResponse.json({ error: 'ADMIN_PASS not configured — test endpoint disabled' }, { status: 403 });
+    }
+    const { searchParams } = new URL(req.url);
+    const pass = searchParams.get('key') || req.headers.get('x-admin-key');
+    if (!safeCompare(pass, adminPass)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     // Rate limit
     const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';

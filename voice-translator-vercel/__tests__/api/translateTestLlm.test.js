@@ -31,6 +31,7 @@ function makeRequest(body, headers = {}) {
     headers: new Map(Object.entries({
       'x-forwarded-for': '127.0.0.1',
       'content-type': 'application/json',
+      'x-admin-key': 'test-admin-pass',
       ...headers,
     })),
     url: 'http://localhost:3000/api/translate-test-llm',
@@ -44,7 +45,7 @@ beforeEach(() => {
   process.env.ANTHROPIC_API_KEY = 'test-anthropic';
   process.env.GEMINI_API_KEY = 'test-gemini';
   process.env.NEXT_PUBLIC_TESTING_MODE = 'true';
-  delete process.env.ADMIN_PASS;
+  process.env.ADMIN_PASS = 'test-admin-pass';
   delete process.env.NODE_ENV;
 });
 

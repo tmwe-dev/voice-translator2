@@ -36,12 +36,23 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
   }, [loginWithGoogle, pendingReferralCode]);
 
   // Fallback: open Google OAuth in popup when One Tap SDK fails
-  const googleOAuthPopup = useCallback(() => {
+  const googleOAuthPopup = useCallback(async () => {
     const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
     if (!clientId) return false;
+    // SECURITY: Fetch CSRF state token before opening OAuth popup
+    let state;
+    try {
+      const stateRes = await fetch('/api/auth/oauth-state');
+      const stateData = await stateRes.json();
+      state = stateData.state;
+    } catch (e) {
+      console.error('Failed to get OAuth state:', e);
+      return false;
+    }
+    if (!state) return false;
     const redirectUri = `${window.location.origin}/api/auth/google-callback`;
     const scope = 'email profile openid';
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account`;
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account&state=${encodeURIComponent(state)}`;
     const w = 500, h = 600;
     const left = (screen.width - w) / 2, top = (screen.height - h) / 2;
     window.open(url, 'googleOAuth', `width=${w},height=${h},left=${left},top=${top}`);
