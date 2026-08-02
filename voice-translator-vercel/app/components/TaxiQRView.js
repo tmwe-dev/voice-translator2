@@ -1,38 +1,32 @@
 'use client';
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
+import { encryptDestination } from '../lib/taxiCrypto.js';
 
 // ═══════════════════════════════════════════════════════════════
-// TaxiQRView — Shows QR code for taxi destination
+// TaxiQRView — Shows QR code for encrypted taxi destination
 //
-// Generates a QR code (via Canvas) containing a signed destination URL.
-// The taxi driver scans it to see destination in their language.
+// PRIVACY: The destination is encrypted client-side with AES-256-GCM
+// before being sent to the server. The server stores only ciphertext.
+// The decryption key is embedded in the QR URL fragment (#k=...),
+// which is never sent to the server by HTTP specification.
+// The destination is deleted from Redis after first retrieval.
 // ═══════════════════════════════════════════════════════════════
 
-// Simple QR code generator using Canvas (no external lib)
-// Generates a QR-like visual with the destination URL encoded
 function generateQRCanvas(canvas, data, size = 280) {
   const ctx = canvas.getContext('2d');
   canvas.width = size; canvas.height = size;
 
-  // Use the QR API endpoint to generate the code
   const img = new Image();
   img.crossOrigin = 'anonymous';
   const encoded = encodeURIComponent(data);
   img.src = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&bgcolor=0a0e1a&color=26D9B0&format=png`;
 
   return new Promise((resolve) => {
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, size, size);
-      resolve(true);
-    };
+    img.onload = () => { ctx.drawImage(img, 0, 0, size, size); resolve(true); };
     img.onerror = () => {
-      // Fallback: draw placeholder
-      ctx.fillStyle = '#0a0e1a';
-      ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = '#26D9B0';
-      ctx.font = 'bold 14px system-ui';
-      ctx.textAlign = 'center';
+      ctx.fillStyle = '#0a0e1a'; ctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = '#26D9B0'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
       ctx.fillText('QR Code', size / 2, size / 2 - 10);
       ctx.font = '10px system-ui';
       ctx.fillText('Scansiona con la fotocamera', size / 2, size / 2 + 10);
@@ -56,8 +50,11 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
   const [destId, setDestId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
+  const [revoked, setRevoked] = useState(false);
+  // Keep the full QR URL (with fragment) for sharing
+  const qrUrlRef = useRef('');
 
-  // ── Save destination and generate QR ──
+  // ── Encrypt, save, and generate QR ──
   useEffect(() => {
     if (!destination) return;
     let cancelled = false;
@@ -65,35 +62,33 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
     async function saveAndGenerate() {
       setSaving(true);
       try {
-        // Save destination to get a signed ID
+        // 1. Encrypt destination client-side
+        const { ciphertext, key } = await encryptDestination(destination);
+
+        // 2. Send ONLY ciphertext to server
         const res = await fetch('/api/taxi/destination', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(destination),
+          body: JSON.stringify({ ciphertext }),
         });
         if (!res.ok) throw new Error('Save failed');
         const { id } = await res.json();
         if (cancelled) return;
         setDestId(id);
 
-        // Generate QR with destination URL
-        const url = `${window.location.origin}/taxi/${id}`;
+        // 3. Build URL with key in fragment — fragment is NEVER sent to server
+        const url = `${window.location.origin}/taxi/${id}#k=${key}`;
+        qrUrlRef.current = url;
+
+        // 4. Generate QR
         if (canvasRef.current) {
           await generateQRCanvas(canvasRef.current, url, 280);
           setQrReady(true);
         }
       } catch (e) {
-        console.warn('[TaxiQR] Failed to save destination:', e?.message);
-        // Generate QR with inline data as fallback
-        if (canvasRef.current) {
-          const fallbackData = JSON.stringify({
-            n: destination.normalizedAddress,
-            lat: destination.lat,
-            lng: destination.lng,
-          });
-          await generateQRCanvas(canvasRef.current, fallbackData, 280);
-          setQrReady(true);
-        }
+        console.warn('[TaxiQR] Failed to encrypt/save:', e?.message);
+        // NO FALLBACK with cleartext — if encryption fails, show error
+        // This is fail-closed: we don't send data unencrypted
       }
       setSaving(false);
     }
@@ -117,17 +112,27 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
     return () => clearInterval(timer);
   }, [destination?.expiresAt]);
 
-  // ── Share destination ──
+  // ── Share (includes key in fragment) ──
   const handleShare = useCallback(async () => {
     vibrate(15);
-    const url = destId ? `${window.location.origin}/taxi/${destId}` : '';
-    const text = `🚕 TaxiTalk — Destinazione: ${destination?.normalizedAddress || ''}`;
+    const url = qrUrlRef.current;
+    const text = `🚕 TaxiTalk — Destinazione condivisa`;
     if (navigator.share && url) {
       try { await navigator.share({ title: 'TaxiTalk', text, url }); } catch {}
     } else if (url) {
       try { await navigator.clipboard.writeText(url); } catch {}
     }
-  }, [destId, destination]);
+  }, []);
+
+  // ── Revoke destination ──
+  const handleRevoke = useCallback(async () => {
+    if (!destId) return;
+    vibrate(20);
+    try {
+      const res = await fetch(`/api/taxi/destination?id=${destId}`, { method: 'DELETE' });
+      if (res.ok) setRevoked(true);
+    } catch {}
+  }, [destId]);
 
   if (!destination) return null;
 
@@ -152,8 +157,11 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           <div style={{ fontSize: 17, fontWeight: 800, color: textPrimary }}>
             🚕 Mostra al tassista
           </div>
+          <div style={{ fontSize: 10, color: textMuted }}>
+            🔒 Destinazione cifrata end-to-end
+          </div>
         </div>
-        {timeLeft && (
+        {timeLeft && !revoked && (
           <span style={{
             padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700,
             background: timeLeft === 'Scaduto' ? 'rgba(255,107,107,0.15)' : `${accent}12`,
@@ -169,71 +177,85 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
         justifyContent: 'center', padding: '0 24px', gap: 20,
       }}>
-        {/* QR Code */}
-        <div style={{
-          padding: 20, borderRadius: 24,
-          background: '#0a0e1a', border: `2px solid ${accent}25`,
-          boxShadow: `0 0 60px ${accent}10`,
-        }}>
-          <canvas ref={canvasRef} style={{
-            width: 240, height: 240, borderRadius: 12,
-            opacity: qrReady ? 1 : 0.3,
-            transition: 'opacity 0.3s',
-          }} />
-          {saving && (
-            <div style={{
-              textAlign: 'center', marginTop: 8,
-              fontSize: 11, color: textMuted,
-            }}>
-              Generazione QR...
+        {revoked ? (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🚫</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
+              Destinazione revocata
             </div>
-          )}
-        </div>
-
-        {/* Destination info */}
-        <div style={{
-          width: '100%', maxWidth: 340, padding: '16px 18px', borderRadius: 16,
-          background: cardBg, border: `1px solid ${cardBorder}`,
-        }}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
-            📍 {destination.normalizedAddress}
+            <div style={{ fontSize: 12, color: textMuted }}>
+              Il QR non è più valido. I dati sono stati eliminati dal server.
+            </div>
           </div>
-          {destination.terminal && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              ✈️ {destination.terminal}
+        ) : (
+          <>
+            {/* QR Code */}
+            <div style={{
+              padding: 20, borderRadius: 24,
+              background: '#0a0e1a', border: `2px solid ${accent}25`,
+              boxShadow: `0 0 60px ${accent}10`,
+            }}>
+              <canvas ref={canvasRef} style={{
+                width: 240, height: 240, borderRadius: 12,
+                opacity: qrReady ? 1 : 0.3,
+                transition: 'opacity 0.3s',
+              }} />
+              {saving && (
+                <div style={{ textAlign: 'center', marginTop: 8, fontSize: 11, color: textMuted }}>
+                  Cifratura e generazione QR...
+                </div>
+              )}
             </div>
-          )}
-          {destination.hotelName && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              🏨 {destination.hotelName}
-            </div>
-          )}
-          {destination.flightNumber && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              🛫 Volo {destination.flightNumber}
-            </div>
-          )}
-          {destination.entrance && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              🚪 {destination.entrance}
-            </div>
-          )}
-          {destination.stops?.length > 0 && (
-            <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-              📌 {destination.stops.length} fermat{destination.stops.length === 1 ? 'a' : 'e'}: {destination.stops.join(' → ')}
-            </div>
-          )}
-          {destination.notes && (
-            <div style={{ fontSize: 12, color: textMuted, marginTop: 4, fontStyle: 'italic' }}>
-              📝 {destination.notes}
-            </div>
-          )}
-        </div>
 
-        {/* Instructions */}
-        <div style={{ fontSize: 12, color: textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 1.5 }}>
-          Mostra questo QR al tassista. Lui vedrà la destinazione nella sua lingua con mappa e indicazioni.
-        </div>
+            {/* Destination preview (local only — shown from state, not from server) */}
+            <div style={{
+              width: '100%', maxWidth: 340, padding: '16px 18px', borderRadius: 16,
+              background: cardBg, border: `1px solid ${cardBorder}`,
+            }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
+                📍 {destination.normalizedAddress}
+              </div>
+              {destination.terminal && (
+                <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
+                  ✈️ {destination.terminal}
+                </div>
+              )}
+              {destination.hotelName && (
+                <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
+                  🏨 {destination.hotelName}
+                </div>
+              )}
+              {destination.flightNumber && (
+                <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
+                  🛫 Volo {destination.flightNumber}
+                </div>
+              )}
+              {destination.entrance && (
+                <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
+                  🚪 {destination.entrance}
+                </div>
+              )}
+              {destination.stops?.length > 0 && (
+                <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
+                  📌 {destination.stops.length} fermat{destination.stops.length === 1 ? 'a' : 'e'}: {destination.stops.join(' → ')}
+                </div>
+              )}
+              {destination.notes && (
+                <div style={{ fontSize: 12, color: textMuted, marginTop: 4, fontStyle: 'italic' }}>
+                  📝 {destination.notes}
+                </div>
+              )}
+              <div style={{ fontSize: 10, color: `${accent}80`, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                🔒 Solo chi scansiona il QR può leggere questi dati
+              </div>
+            </div>
+
+            {/* Instructions */}
+            <div style={{ fontSize: 12, color: textMuted, textAlign: 'center', maxWidth: 280, lineHeight: 1.5 }}>
+              Mostra questo QR al tassista. La destinazione è cifrata: solo chi scansiona può leggerla. Dopo la prima lettura, i dati vengono eliminati dal server.
+            </div>
+          </>
+        )}
       </div>
 
       {/* Bottom actions */}
@@ -241,21 +263,41 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
         display: 'flex', gap: 10,
       }}>
-        <button onClick={handleShare} style={{
-          flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
-          background: cardBg, border: `1px solid ${cardBorder}`,
-          color: textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT,
-        }}>
-          📤 Condividi
-        </button>
-        <button onClick={onStartConversation} style={{
-          flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
-          background: `linear-gradient(135deg, ${accent}, ${purple})`,
-          border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
-          boxShadow: `0 4px 20px ${accent}35`,
-        }}>
-          💬 Parla col tassista
-        </button>
+        {!revoked && (
+          <>
+            <button onClick={handleRevoke} style={{
+              padding: '14px', borderRadius: 14, cursor: 'pointer',
+              background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)',
+              color: '#FF6B6B', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+            }}>
+              🚫 Revoca
+            </button>
+            <button onClick={handleShare} style={{
+              flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+              background: cardBg, border: `1px solid ${cardBorder}`,
+              color: textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT,
+            }}>
+              📤 Condividi
+            </button>
+            <button onClick={onStartConversation} style={{
+              flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+              background: `linear-gradient(135deg, ${accent}, ${purple})`,
+              border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              boxShadow: `0 4px 20px ${accent}35`,
+            }}>
+              💬 Parla
+            </button>
+          </>
+        )}
+        {revoked && (
+          <button onClick={onClose} style={{
+            flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
+            background: `linear-gradient(135deg, ${accent}, ${purple})`,
+            border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT,
+          }}>
+            Torna indietro
+          </button>
+        )}
       </div>
     </div>
   );

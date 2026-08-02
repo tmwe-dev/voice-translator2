@@ -77,9 +77,21 @@ import { AppProvider } from './contexts/AppContext.js';
 export default function Home() {
   return (
     <ErrorBoundary>
+      {/* Skip-to-content for keyboard/screen reader users */}
+      <a href="#main-content" style={{
+        position: 'absolute', top: -40, left: 0, zIndex: 9999,
+        background: '#8b5cf6', color: '#fff', padding: '8px 16px',
+        fontSize: 14, fontWeight: 600, textDecoration: 'none',
+        borderRadius: '0 0 8px 0',
+      }} onFocus={(e) => { e.currentTarget.style.top = '0'; }}
+         onBlur={(e) => { e.currentTarget.style.top = '-40px'; }}>
+        Vai al contenuto
+      </a>
       <NetworkStatus />
       <ToastContainer />
-      <HomeInner />
+      <div id="main-content" role="main">
+        <HomeInner />
+      </div>
     </ErrorBoundary>
   );
 }
@@ -108,6 +120,7 @@ function HomeInner() {
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
   const [taxiDestId, setTaxiDestId] = useState(null);
+  const [taxiKey, setTaxiKey] = useState(null);
 
   // FREE tier usage tracking (extracted hook)
   const freeTier = useFreeTierTracking();
@@ -132,6 +145,11 @@ function HomeInner() {
   const roomInfoRef = useRef(null);
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
   const roomIdRef = useRef(null);
+
+  // ── Session mode: 'direct' | 'translate' ──
+  // Direct mode: E2E only, no server processing. Translate mode: full cloud pipeline.
+  // Currently defaults to 'translate'. Will be set based on room/user choice.
+  const sessionModeRef = useRef('translate');
 
   // ── Stable ref for P2P DataChannel message sending ──
   // Declared before hooks so useTranslation can reference it via callback wrapper
@@ -198,6 +216,7 @@ function HomeInner() {
     addLocalMessage: roomPolling.addLocalMessage,
     updateLocalMessage: roomPolling.updateLocalMessage,
     conversationContext: convContext, // Rolling knowledge base for context-aware translation
+    sessionModeRef,
   });
   const contactsHook = useContacts({ userTokenRef: auth.userTokenRef });
 
@@ -263,6 +282,7 @@ function HomeInner() {
     myName: roomPolling.verifiedNameRef?.current || prefs.name,
     onDirectMessage: handleDirectMessage,
     roomSessionTokenRef: roomPolling.roomSessionTokenRef,
+    sessionModeRef,
   });
 
   // Interpreter mode — bidirectional STT → Translate → TTS
@@ -325,7 +345,7 @@ function HomeInner() {
   // =============================================
   useInitializeApp({
     setView, setPrefs, setMyLang, setJoinCode, setInviteMsgLang,
-    setAutoJoinTriggered, setTaxiDestId, auth, initMonitoring,
+    setAutoJoinTriggered, setTaxiDestId, setTaxiKey, auth, initMonitoring,
   });
 
   // PWA + Notifications (extracted hooks)
@@ -1009,7 +1029,7 @@ function HomeInner() {
 
   if (view === 'taxi-driver') return (
     <Suspense fallback={<LazyFallback />}>
-      <TaxiDriverView destId={taxiDestId} setView={setView} theme={theme} L={L} />
+      <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} setView={setView} theme={theme} L={L} />
     </Suspense>
   );
 

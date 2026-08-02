@@ -73,7 +73,7 @@ export default class ErrorBoundary extends Component {
         <div style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           minHeight: '100vh', padding: 32, textAlign: 'center',
-          background: 'linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%)',
+          background: 'linear-gradient(160deg, #09090b 0%, #111113 30%, #18181b 60%, #09090b 100%)',
           color: '#e0e0e0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</div>
@@ -102,7 +102,7 @@ export default class ErrorBoundary extends Component {
             </button>
             <button onClick={this.handleReload} style={{
               padding: '10px 24px', borderRadius: 12, border: 'none',
-              background: 'linear-gradient(135deg, #26D9B0, #8B6AFF)', color: '#fff',
+              background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', color: '#fff',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
             }}>
               {this.getErrorText('reload')}

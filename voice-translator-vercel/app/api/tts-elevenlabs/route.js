@@ -7,6 +7,7 @@ import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../.
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('ttsElevenlabs');
 
@@ -102,6 +103,12 @@ const NATIVE_VOICES_BY_LANG = {
 
 async function handlePost(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { text, voiceId, langCode, userToken, roomId, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 

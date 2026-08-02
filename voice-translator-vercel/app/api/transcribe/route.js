@@ -7,6 +7,7 @@ import { join } from 'path';
 import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('transcribe');
 
@@ -30,6 +31,12 @@ const log = createLogger('transcribe');
  */
 async function handlePost(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const formData = await req.formData();
     const audioFile = formData.get('audio');
     const sourceLang = formData.get('sourceLang');

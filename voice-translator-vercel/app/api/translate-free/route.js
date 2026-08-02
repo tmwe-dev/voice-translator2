@@ -4,6 +4,7 @@ import { redis } from '../../lib/redis.js';
 import { runProviderChain, validateTranslation } from '../../lib/providers.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('translateFree');
 
@@ -54,6 +55,12 @@ async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     // ── Rate limit: 30 req/min per IP (bypassed in DEV_MODE) ──
     if (process.env.DEV_MODE !== 'true') {
       const rlKey = getRateLimitKey(req, 'free-translate');

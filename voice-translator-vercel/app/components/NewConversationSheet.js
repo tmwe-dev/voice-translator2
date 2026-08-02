@@ -1,7 +1,8 @@
 'use client';
 
-import { memo, useEffect, useRef } from 'react';
+import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
+import useSheetA11y from '../hooks/useSheetA11y.js';
 
 // ═══════════════════════════════════════════════════════════════
 // NewConversationSheet — bottom sheet with 4 conversation options
@@ -37,20 +38,7 @@ const OPTIONS = [
 
 const NewConversationSheet = ({ open, onClose, onSelect, S }) => {
   const C = S?.colors || {};
-  const overlayRef = useRef(null);
-
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [open, onClose]);
-
-  // Close on overlay click
-  const handleOverlayClick = (e) => {
-    if (e.target === overlayRef.current) onClose();
-  };
+  const sheetRef = useSheetA11y(open, onClose);
 
   if (!open) return null;
 
@@ -58,8 +46,7 @@ const NewConversationSheet = ({ open, onClose, onSelect, S }) => {
 
   return (
     <div
-      ref={overlayRef}
-      onClick={handleOverlayClick}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
         backgroundColor: 'rgba(0,0,0,0.5)',
@@ -71,7 +58,7 @@ const NewConversationSheet = ({ open, onClose, onSelect, S }) => {
       aria-modal="true"
       aria-label="Nuova conversazione"
     >
-      <div style={{
+      <div ref={sheetRef} style={{
         width: '100%', maxWidth: '480px',
         backgroundColor: C.cardBg || 'rgba(15, 15, 25, 0.98)',
         borderRadius: '20px 20px 0 0',

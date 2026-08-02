@@ -5,6 +5,7 @@ import { checkRateLimit } from '../../lib/rateLimit.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('chatAction');
 
@@ -35,6 +36,11 @@ async function getCallQwen() {
  */
 async function handlePost(request) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(request); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
 
     const body = await request.json();
     const { action, messages, members, mode, domain, userToken, lendingCode } = body;

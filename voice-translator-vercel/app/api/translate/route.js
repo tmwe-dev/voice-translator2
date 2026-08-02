@@ -16,11 +16,18 @@ import { routeProvider } from '../../lib/providerRouter.js';
 import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('translate');
 
 async function handlePost(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     // Rate limit: 30 requests/minute per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'translate'), 30);
     if (!rl.allowed) {

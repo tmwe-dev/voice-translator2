@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
+import { isDirectMode } from '../lib/sessionGuard.js';
 
 /**
  * Translation API hook — handles all translation calls with caching and multi-target support.
@@ -35,6 +36,7 @@ export default function useTranslationAPI({
   verifiedNameRef,
   addLocalMessage,    // Callback to add message to local messages[] immediately
   updateLocalMessage, // Callback to update existing message (add translation)
+  sessionModeRef,     // 'direct' | 'translate' — controls server-side processing
 }) {
   // ── Translation cache: avoid re-translating identical text ──
   // Key: `${text}|${srcLang}|${tgtLang}` → { translated, ts }
@@ -74,16 +76,18 @@ export default function useTranslationAPI({
       _status: 'sent', // ✓ sent → ✓✓ delivered (updated when partner acks)
     };
 
-    // ── Instant delivery: P2P + Realtime broadcast IMMEDIATELY (don't wait for server) ──
-    // Priority 1: WebRTC DataChannel (P2P, ~50ms)
+    const isDirect = isDirectMode(sessionModeRef?.current);
+
+    // ── Instant delivery: P2P (always) + Realtime broadcast (only in Translate mode) ──
+    // Priority 1: WebRTC DataChannel (P2P, ~50ms) — ALWAYS, in both modes
     if (sendDirectMessage) {
       try {
         sendDirectMessage({ type: 'chat-message', message: instantMsg });
       } catch {}
     }
-    // Priority 2: Supabase Realtime broadcast (~100ms) — ALWAYS send, even if P2P worked
-    // Other clients may not have P2P, and DataChannel can fail silently
-    if (broadcastMessage) {
+    // Priority 2: Supabase Realtime broadcast (~100ms)
+    // BLOCKED in Direct mode — no message content through Supabase
+    if (broadcastMessage && !isDirect) {
       broadcastMessage(instantMsg);
     }
 
@@ -104,9 +108,13 @@ export default function useTranslationAPI({
       addLocalMessage(instantMsg);
     }
 
-    // ── Server save: fire-and-forget (don't block the UI) ──
-    // The message is already delivered via P2P + Realtime.
-    // Server save is just for persistence and polling fallback.
+    // ── Server save: BLOCKED in Direct mode (no server persistence) ──
+    // In Translate mode: fire-and-forget for persistence and polling fallback.
+    if (isDirect) {
+      lastServerSaveRef.current = Promise.resolve(null);
+      return { message: instantMsg, serverSave: Promise.resolve(null) };
+    }
+
     // IMPORTANT: Store the promise so Phase 2 PATCH can await it before updating.
     const serverSavePromise = fetch('/api/messages', {
       method: 'POST',
@@ -159,14 +167,19 @@ export default function useTranslationAPI({
       updateLocalMessage(original, senderName, { translated, targetLang, translations });
     }
 
-    // Broadcast to partner via P2P (fastest)
+    const isDirect = isDirectMode(sessionModeRef?.current);
+
+    // Broadcast to partner via P2P (fastest) — always
     if (sendDirectMessage) {
       try { sendDirectMessage({ type: 'message-update', ...updatePayload }); } catch {}
     }
-    // Broadcast to partner via Realtime
-    if (broadcastMessageUpdate) {
+    // Broadcast to partner via Realtime — BLOCKED in Direct mode
+    if (broadcastMessageUpdate && !isDirect) {
       broadcastMessageUpdate(updatePayload);
     }
+
+    // ── Server update: BLOCKED in Direct mode ──
+    if (isDirect) return;
 
     // ── Server update: PATCH with smart retry ──
     // Strategy: Try PATCH immediately (Phase 1 POST is usually done by now).
@@ -206,6 +219,11 @@ export default function useTranslationAPI({
    * Includes in-memory cache with 5 min TTL and LRU eviction.
    */
   const translateUniversal = useCallback(async (text, sourceLang, targetLang, sourceLangName, targetLangName, options = {}) => {
+    // ── Direct mode: NO translation — messages stay in original language ──
+    if (isDirectMode(sessionModeRef?.current)) {
+      return { translated: text, cached: false, directMode: true };
+    }
+
     // ── Cache lookup: exact match avoids redundant API calls ──
     const cacheKey = `${text}|${sourceLang}|${targetLang}`;
     const cached = translationCacheRef.current.get(cacheKey);

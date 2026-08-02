@@ -4,12 +4,19 @@ import { saveConversation, getConversation, getUserConversations, getRoom, resol
 import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('conversation');
 
 // POST /api/conversation - End room and save conversation
 async function handlePost(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { action, roomId, userName, roomSessionToken, userToken } = await req.json();
 
     if (action === 'end') {
@@ -65,6 +72,12 @@ async function handlePost(req) {
 // Tokens ONLY via headers: Authorization (Bearer) or X-Room-Session
 async function handleGet(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     // SECURITY: tokens ONLY via headers — never from query string

@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
+import useSheetA11y from '../hooks/useSheetA11y.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDestinationPanel — Structured destination form for TaxiTalk
@@ -41,6 +42,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
   const [newStop, setNewStop] = useState('');
   const [showDetails, setShowDetails] = useState(false);
   const searchTimerRef = useRef(null);
+  const sheetRef = useSheetA11y(true, onClose);
 
   // ── Debounced search ──
   const doSearch = useCallback(async (q) => {
@@ -125,9 +127,10 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
       position: 'fixed', inset: 0, zIndex: 70,
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+       role="dialog" aria-modal="true" aria-label="Destinazione taxi">
 
-      <div style={{
+      <div ref={sheetRef} style={{
         background: C.bg || '#060810', borderRadius: '20px 20px 0 0',
         maxHeight: '85dvh', display: 'flex', flexDirection: 'column',
         animation: 'tdpSlideUp 0.3s ease-out',

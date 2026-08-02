@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
+import useSheetA11y from '../hooks/useSheetA11y.js';
 
 // ═══════════════════════════════════════════════════════════════
 // CreateRoomSheet — Create a Community BarTalk room
@@ -43,6 +44,7 @@ function CreateRoomSheet({ open, onClose, onCreate, S }) {
   const [description, setDescription] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [creating, setCreating] = useState(false);
+  const sheetRef = useSheetA11y(open, onClose);
 
   const handleCreate = useCallback(async () => {
     vibrate(20);
@@ -76,9 +78,10 @@ function CreateRoomSheet({ open, onClose, onCreate, S }) {
       position: 'fixed', inset: 0, zIndex: 70,
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
-    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+       role="dialog" aria-modal="true" aria-label="Crea un BarTalk">
 
-      <div style={{
+      <div ref={sheetRef} style={{
         background: C.bg || '#060810', borderRadius: '20px 20px 0 0',
         maxHeight: '90dvh', display: 'flex', flexDirection: 'column',
         animation: 'crsSlideUp 0.3s ease-out',

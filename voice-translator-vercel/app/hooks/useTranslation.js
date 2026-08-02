@@ -56,6 +56,7 @@ export default function useTranslation({
   addLocalMessage,    // Add sender's own message to local list immediately
   updateLocalMessage, // Update existing message (add translation)
   conversationContext, // { addMessage, getContext } from useConversationContext
+  sessionModeRef,     // 'direct' | 'translate' — controls server-side processing
 }) {
   const [recording, setRecording] = useState(false);
   const [streamingMsg, setStreamingMsg] = useState(null);
@@ -146,6 +147,7 @@ export default function useTranslation({
     verifiedNameRef,
     addLocalMessage,
     updateLocalMessage,
+    sessionModeRef,
   });
 
   // ── Shared helpers ──

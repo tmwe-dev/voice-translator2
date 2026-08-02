@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
+import { decryptDestination } from '../lib/taxiCrypto.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDriverView — Dedicated page for taxi drivers
@@ -31,7 +32,7 @@ const DRIVER_LANGS = [
   { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
 ];
 
-function TaxiDriverView({ destId, setView, theme, L }) {
+function TaxiDriverView({ destId, decryptionKey, setView, theme, L }) {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -56,29 +57,45 @@ function TaxiDriverView({ destId, setView, theme, L }) {
   const [userPos, setUserPos] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
 
-  // ── Fetch destination ──
+  // ── Fetch + decrypt destination ──
   useEffect(() => {
     if (!destId) return;
     async function load() {
       try {
+        // Check for decryption key — without it, we cannot read the destination
+        if (!decryptionKey) {
+          setError('Chiave di decifratura mancante. Scansiona di nuovo il QR completo.');
+          setLoading(false);
+          return;
+        }
+
         const res = await fetch(`/api/taxi/destination?id=${destId}`);
         if (!res.ok) {
-          if (res.status === 404) setError('Destinazione scaduta o non trovata');
+          if (res.status === 404) setError('Destinazione scaduta, già letta o non trovata');
           else setError('Errore nel caricamento');
           setLoading(false); return;
         }
-        const { destination: dest } = await res.json();
+        const { ciphertext } = await res.json();
+
+        // Decrypt client-side — the server never saw the cleartext
+        const dest = await decryptDestination(ciphertext, decryptionKey);
         setDestination(dest);
 
         // Try to detect driver's language from browser
         const browserLang = navigator.language?.split('-')[0] || 'en';
         const matched = DRIVER_LANGS.find(l => l.code === browserLang);
         if (matched) setDriverLang(matched.code);
-      } catch { setError('Errore di rete'); }
+      } catch (e) {
+        if (e?.message?.includes('decrypt') || e?.name === 'OperationError') {
+          setError('Impossibile decifrare la destinazione. Il link potrebbe essere incompleto.');
+        } else {
+          setError('Errore di rete');
+        }
+      }
       setLoading(false);
     }
     load();
-  }, [destId]);
+  }, [destId, decryptionKey]);
 
   // ── Translate when driver selects language ──
   useEffect(() => {

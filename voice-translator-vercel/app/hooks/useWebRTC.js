@@ -22,7 +22,7 @@ import useE2EEncryption from './useE2EEncryption.js';
 
 const CONNECTION_TIMEOUT = 30000;
 
-export default function useWebRTC({ roomId, myName, onDirectMessage, roomSessionTokenRef }) {
+export default function useWebRTC({ roomId, myName, onDirectMessage, roomSessionTokenRef, sessionModeRef }) {
   const [webrtcState, setWebrtcState] = useState('idle');
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -55,7 +55,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const lastPongRef = useRef(0);
 
   // ── E2E Encryption (extracted hook) ──
-  const e2e = useE2EEncryption();
+  const e2e = useE2EEncryption({ sessionModeRef });
 
   // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
   // Without this, dc.onmessage captures the initial handleDCMessage which closes
@@ -739,6 +739,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     videoEnabled,
     audioEnabled,
     remoteVideoActive,
+    e2eReadyRef: e2e.readyRef, // Exposes E2E readiness for UI (Direct mode: block send until true)
     incomingCall,          // { from: string, withVideo: boolean } or null
     initiateConnection,    // (withVideo?: boolean) => Promise<void>
     acceptIncomingCall,    // Accept incoming call (voice or video)

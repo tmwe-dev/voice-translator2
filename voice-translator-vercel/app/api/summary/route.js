@@ -6,11 +6,18 @@ import { getSession, getUser, deductCredits } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('summary');
 
 async function handlePost(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { convId, userToken } = await req.json();
 
     if (!convId) return NextResponse.json({ error: 'convId required' }, { status: 400 });

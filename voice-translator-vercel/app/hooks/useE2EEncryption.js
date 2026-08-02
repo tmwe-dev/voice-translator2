@@ -5,6 +5,7 @@ import {
   deriveSharedKey, encryptMessage, decryptMessage, isE2EAvailable,
 } from '../lib/e2eCrypto.js';
 import { sendViaDataChannel } from '../lib/webrtc.js';
+import { isDirectMode } from '../lib/sessionGuard.js';
 
 /**
  * useE2EEncryption — Manages E2E encryption for WebRTC DataChannel.
@@ -15,9 +16,17 @@ import { sendViaDataChannel } from '../lib/webrtc.js';
  * - Shared secret derivation
  * - Message encryption/decryption
  *
- * Returns refs + handlers to integrate with useWebRTC.
+ * In Direct mode: FAIL-CLOSED — content messages are BLOCKED if E2E
+ * is not ready or encryption fails. No cleartext fallback ever.
+ * Control messages (ping/pong/toggle/pubkey) bypass encryption in all modes.
+ *
+ * In Translate mode: fail-open (legacy behavior) — if E2E not ready,
+ * messages are sent in cleartext (server handles translation anyway).
+ *
+ * @param {Object} opts
+ * @param {React.MutableRefObject<string>} opts.sessionModeRef - 'direct' | 'translate'
  */
-export default function useE2EEncryption() {
+export default function useE2EEncryption({ sessionModeRef } = {}) {
   const keyPairRef = useRef(null);
   const sharedKeyRef = useRef(null);
   const readyRef = useRef(false);
@@ -53,23 +62,57 @@ export default function useE2EEncryption() {
     }
   }, []);
 
-  /** Send message via DataChannel with E2E encryption if available */
+  /**
+   * Send message via DataChannel with E2E encryption.
+   *
+   * FAIL-CLOSED in Direct mode:
+   * - Content messages BLOCKED if E2E not ready → throws E2ENotReadyError
+   * - Encryption failure → throws, message NOT sent in cleartext
+   *
+   * FAIL-OPEN in Translate mode (legacy):
+   * - Messages sent in cleartext if E2E not ready
+   */
   const sendEncrypted = useCallback(async (dc, msg) => {
     if (!dc || dc.readyState !== 'open') return false;
-    // Control messages bypass encryption for low latency
+
+    const isDirect = isDirectMode(sessionModeRef?.current);
+
+    // Control messages bypass encryption for low latency (both modes)
     const isControlMsg = msg?.type === 'ping' || msg?.type === 'pong' || msg?.type === 'e2e-pubkey'
       || msg?.type === 'video-toggle' || msg?.type === 'audio-toggle';
-    if (readyRef.current && sharedKeyRef.current && !isControlMsg) {
+
+    if (isControlMsg) {
+      return sendViaDataChannel(dc, msg);
+    }
+
+    // ── Content message: encrypt or block ──
+    if (readyRef.current && sharedKeyRef.current) {
       try {
         const plaintext = JSON.stringify(msg);
         const encrypted = await encryptMessage(sharedKeyRef.current, plaintext);
         return sendViaDataChannel(dc, { type: 'e2e-encrypted', data: encrypted });
-      } catch {
+      } catch (e) {
+        // FAIL-CLOSED in Direct mode: encryption failed → block message
+        if (isDirect) {
+          console.error('[E2E] Encryption failed in Direct mode — message BLOCKED:', e);
+          throw new E2EEncryptionError('Encryption failed — message not sent');
+        }
+        // Translate mode: fall back to cleartext (server processes anyway)
+        console.warn('[E2E] Encryption failed, falling back to cleartext:', e);
         return sendViaDataChannel(dc, msg);
       }
     }
+
+    // E2E not ready (no shared key yet)
+    if (isDirect) {
+      // FAIL-CLOSED: block the message entirely
+      console.error('[E2E] E2E not ready in Direct mode — message BLOCKED');
+      throw new E2ENotReadyError('E2E encryption not ready — message not sent');
+    }
+
+    // Translate mode: send cleartext (legacy behavior)
     return sendViaDataChannel(dc, msg);
-  }, []);
+  }, [sessionModeRef]);
 
   /** Decrypt an E2E-encrypted message */
   const decryptMsg = useCallback(async (encryptedData) => {
@@ -100,4 +143,26 @@ export default function useE2EEncryption() {
     decryptMsg,
     reset,
   };
+}
+
+/**
+ * Error thrown when E2E encryption is not yet established.
+ * UI should show "waiting for encryption" and block sending.
+ */
+export class E2ENotReadyError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'E2ENotReadyError';
+  }
+}
+
+/**
+ * Error thrown when E2E encryption fails mid-send.
+ * In Direct mode, the message is NOT sent.
+ */
+export class E2EEncryptionError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'E2EEncryptionError';
+  }
 }

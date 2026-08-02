@@ -4,14 +4,20 @@ import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } 
 import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getClientIP } from '../../lib/validate.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('messages');
 
 // POST /api/messages - Send a translation to the room
-// Supports multi-language: `translations` field contains per-language translations
-// Backward compatible: also accepts single `translated` + `targetLang`
+// BLOCKED in Direct mode — no server-side message storage
 async function handlePost(req) {
   try {
+    // ── Direct mode guard: no message storage ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const rl = await checkRateLimit(getRateLimitKey(req, 'messages'), 120);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
 
@@ -57,6 +63,12 @@ async function handlePost(req) {
 // PATCH /api/messages - Update existing message with translation (Phase 2 of two-phase send)
 async function handlePatch(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const rl = await checkRateLimit(getRateLimitKey(req, 'messages-patch'), 120);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
 
@@ -100,6 +112,12 @@ async function handlePatch(req) {
 // Room session token via X-Room-Session header (NEVER in query string)
 async function handleGet(req) {
   try {
+    // ── Direct mode guard ──
+    try { assertCloudProcessingAllowed(req); } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     const { searchParams } = new URL(req.url);
     const roomId = sanitizeRoomId(searchParams.get('room') || '');
     const name = sanitizeName(searchParams.get('name') || '');

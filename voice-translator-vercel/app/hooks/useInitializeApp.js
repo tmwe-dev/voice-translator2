@@ -13,7 +13,7 @@ import { LANGS, AVATARS } from '../lib/constants.js';
  */
 export default function useInitializeApp({
   setView, setPrefs, setMyLang, setJoinCode, setInviteMsgLang,
-  setAutoJoinTriggered, setTaxiDestId, auth, initMonitoring,
+  setAutoJoinTriggered, setTaxiDestId, setTaxiKey, auth, initMonitoring,
 }) {
   // ── Main initialization ──
   useEffect(() => {
@@ -109,13 +109,19 @@ export default function useInitializeApp({
         window.history.replaceState({}, '', window.location.pathname);
       }
 
-      // 6b. Taxi destination from URL (/taxi/DEST_ID or ?taxi=DEST_ID)
+      // 6b. Taxi destination from URL (/taxi/DEST_ID#k=KEY or ?taxi=DEST_ID)
+      // The decryption key is in the URL fragment (#k=...) — never sent to server
       const taxiParam = urlParams.get('taxi');
       const pathMatch = window.location.pathname.match(/^\/taxi\/([a-z0-9]+)$/i);
       const taxiId = taxiParam || pathMatch?.[1];
       if (taxiId) {
         setTaxiDestId(taxiId);
-        window.history.replaceState({}, '', window.location.pathname === '/' ? '/' : window.location.pathname);
+        // Extract encryption key from fragment
+        const hash = window.location.hash;
+        const keyMatch = hash.match(/[#&]k=([A-Za-z0-9_-]+)/);
+        if (keyMatch?.[1]) setTaxiKey(keyMatch[1]);
+        // Clean URL — remove query params and fragment (key must not persist in history)
+        window.history.replaceState({}, '', '/');
       }
 
       // 7. Determine initial view
