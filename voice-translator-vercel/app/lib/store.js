@@ -34,23 +34,18 @@ export async function verifyRoomSession(token) {
 }
 
 /**
- * Resolve identity from request: prefer room session token, fall back to name.
+ * Resolve identity from request: REQUIRES valid room session token.
+ * Name-only fallback has been REMOVED (security: prevents impersonation).
  * @param {string} token - Room session token (from header or body)
- * @param {string} name - Fallback name
+ * @param {string} name - Ignored (kept for API compat, not used)
  * @param {string} roomId - Expected room ID
  * @returns {{ name: string, role: string, verified: boolean } | null}
  */
 export async function resolveRoomIdentity(token, name, roomId) {
-  // Try token first (strong identity)
-  if (token) {
-    const session = await verifyRoomSession(token);
-    if (session && session.roomId === roomId.toUpperCase()) {
-      return { name: session.name, role: session.role, verified: true };
-    }
-  }
-  // Fall back to name (weak identity, backward compatible)
-  if (name) {
-    return { name, role: 'unknown', verified: false };
+  if (!token) return null;
+  const session = await verifyRoomSession(token);
+  if (session && session.roomId === roomId.toUpperCase()) {
+    return { name: session.name, role: session.role, verified: true };
   }
   return null;
 }

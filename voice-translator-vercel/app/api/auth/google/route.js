@@ -76,8 +76,13 @@ async function handler(req) {
 
       const googleUser = await googleRes.json();
 
+      // SECURITY: aud check is MANDATORY — reject if GOOGLE_CLIENT_ID not configured
       const expectedClientId = process.env.GOOGLE_CLIENT_ID;
-      if (expectedClientId && googleUser.aud !== expectedClientId) {
+      if (!expectedClientId) {
+        console.error('[Auth/Google] GOOGLE_CLIENT_ID not configured — rejecting token');
+        return NextResponse.json({ error: 'Google auth not properly configured' }, { status: 500 });
+      }
+      if (googleUser.aud !== expectedClientId) {
         return NextResponse.json({ error: 'Token not issued for this app' }, { status: 401 });
       }
 

@@ -9,7 +9,7 @@ export default function useElevenLabsSync(auth) {
   useEffect(() => {
     if (auth.canUseElevenLabs && auth.elevenLabsVoices.length === 0) {
       const token = auth.userTokenRef.current || '';
-      fetch(`/api/tts-elevenlabs?action=voices&token=${token}`)
+      fetch('/api/tts-elevenlabs?action=voices', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => r.json())
         .then(data => { if (data.voices) auth.setElevenLabsVoices(data.voices); })
         .catch(e => console.warn('[useElevenLabsSync] fetch voices failed:', e?.message || e));

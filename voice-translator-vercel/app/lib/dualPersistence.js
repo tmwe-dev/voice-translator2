@@ -103,7 +103,7 @@ export async function mergeOnLogin(userToken) {
   const localPrefs = loadPrefs() || {};
 
   try {
-    const response = await fetch(`/api/user?action=get-prefs&token=${encodeURIComponent(userToken)}`);
+    const response = await fetch('/api/user?action=get-prefs', { headers: { 'Authorization': `Bearer ${userToken}` } });
 
     if (!response.ok) return localPrefs;
 

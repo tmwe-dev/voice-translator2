@@ -64,8 +64,10 @@ async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    const rst = searchParams.get('rst') || '';
-    const ut = searchParams.get('userToken') || '';
+    // SECURITY: prefer headers over query params (deprecated)
+    const authHeader = req.headers.get('authorization');
+    const ut = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : (searchParams.get('userToken') || '');
+    const rst = req.headers.get('x-room-session') || searchParams.get('rst') || '';
     const nameParam = sanitizeName(searchParams.get('name') || '');
 
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });

@@ -44,10 +44,13 @@ export async function applyReferral(newUserEmail, referralCode) {
   if (!referrerEmail) return { success: false, error: 'Invalid referral code' };
   if (referrerEmail === lowerEmail) return { success: false, error: 'Cannot use your own referral code' };
 
-  const alreadyUsed = await redis('GET', `ref:used:${lowerEmail}`);
-  if (alreadyUsed) return { success: false, error: 'You have already used a referral code' };
+  // SECURITY: use SETNX (SET if Not eXists) to prevent double-apply race condition
+  const lockKey = `ref:used:${lowerEmail}`;
+  const wasSet = await redis('SET', lockKey, referrerEmail, 'NX');
+  if (!wasSet || wasSet === null) {
+    return { success: false, error: 'You have already used a referral code' };
+  }
 
-  await redis('SET', `ref:used:${lowerEmail}`, referrerEmail);
   await addCredits(lowerEmail, 50);
   await addCredits(referrerEmail, 100);
   await redis('INCR', `ref:stats:${referrerEmail}`);

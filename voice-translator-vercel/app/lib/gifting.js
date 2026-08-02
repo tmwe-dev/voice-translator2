@@ -50,16 +50,22 @@ export async function createGiftInvite(senderEmail, senderName, giftAmount, user
  * Accept a gift invite — transfer credits to recipient
  */
 export async function acceptGiftInvite(recipientEmail, inviteCode) {
+  // SECURITY: acquire lock to prevent double-accept race condition
+  const lockKey = `gift-lock:${inviteCode}`;
+  const lockAcquired = await redis('SET', lockKey, '1', 'NX', 'EX', 30);
+  if (!lockAcquired || lockAcquired === null) return null; // another request is processing
+
   const inviteKey = `invite:${inviteCode}`;
   const data = await redis('GET', inviteKey);
-  if (!data) return null;
+  if (!data) { await redis('DEL', lockKey); return null; }
 
-  let invite; try { invite = JSON.parse(data); } catch { return null; }
-  if (!invite.giftAmount || invite.giftAmount <= 0) return null;
-  if (invite.giftStatus !== 'pending') return null;
+  let invite; try { invite = JSON.parse(data); } catch { await redis('DEL', lockKey); return null; }
+  if (!invite.giftAmount || invite.giftAmount <= 0) { await redis('DEL', lockKey); return null; }
+  if (invite.giftStatus !== 'pending') { await redis('DEL', lockKey); return null; }
 
   if (invite.expires && Date.now() > invite.expires) {
     await refundGift(inviteCode, invite);
+    await redis('DEL', lockKey);
     return null;
   }
 

@@ -86,7 +86,7 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
   const loadELVoices = useCallback(async () => {
     setLoadingEL(true);
     try {
-      const res = await fetch(`/api/tts-elevenlabs?action=voices&token=${userTokenRef?.current || ''}`);
+      const res = await fetch('/api/tts-elevenlabs?action=voices', { headers: { 'Authorization': `Bearer ${userTokenRef?.current || ''}` } });
       if (res.ok) {
         const data = await res.json();
         setElevenLabsVoices(data.voices || []);

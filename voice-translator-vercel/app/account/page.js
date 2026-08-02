@@ -17,7 +17,7 @@ export default function AccountPage() {
     // Fetch user data if authenticated
     const token = localStorage.getItem('vt-token');
     if (token) {
-      fetch(`/api/user?action=profile&token=${token}`)
+      fetch('/api/user?action=profile', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null)
         .then(data => { if (data) setUser(data); })
         .catch(() => {})

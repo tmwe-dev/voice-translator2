@@ -362,17 +362,12 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // ── TTS Edge POST caching: same input text+lang = same audio (deterministic) ──
-  if (request.method === 'POST' && url.pathname === '/api/tts-edge') {
-    event.respondWith(handleTTSEdgeCache(request));
-    return;
-  }
-
-  // ── Translate POST caching: same request = same translation (deterministic) ──
-  if (request.method === 'POST' && url.pathname === '/api/translate') {
-    event.respondWith(handleTranslateCache(request));
-    return;
-  }
+  // SECURITY: TTS and translate caching DISABLED
+  // These endpoints handle private user data (conversation text, tokens, room context).
+  // Caching them in the SW creates: user data persistence after logout, cross-account
+  // data leaks, and 32-bit hash collisions returning wrong translations/audio.
+  // if (request.method === 'POST' && url.pathname === '/api/tts-edge') { ... }
+  // if (request.method === 'POST' && url.pathname === '/api/translate') { ... }
 
   // Skip non-GET, extensions, chrome internals
   if (request.method !== 'GET') return;

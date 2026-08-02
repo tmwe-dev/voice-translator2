@@ -77,8 +77,13 @@ async function appleHandler(req) {
       return NextResponse.json({ error: 'Invalid token issuer' }, { status: 401 });
     }
 
+    // SECURITY: aud check is MANDATORY — reject if APPLE_CLIENT_ID not configured
     const expectedClientId = process.env.APPLE_CLIENT_ID;
-    if (expectedClientId && payload.aud !== expectedClientId) {
+    if (!expectedClientId) {
+      console.error('[Auth/Apple] APPLE_CLIENT_ID not configured — rejecting token');
+      return NextResponse.json({ error: 'Apple auth not properly configured' }, { status: 500 });
+    }
+    if (payload.aud !== expectedClientId) {
       return NextResponse.json({ error: 'Token not issued for this app' }, { status: 401 });
     }
 

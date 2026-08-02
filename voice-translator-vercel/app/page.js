@@ -625,10 +625,10 @@ function HomeInner() {
   async function viewConversation(convId) {
     setStatus('...');
     try {
-      const rstParam = roomPolling.roomSessionTokenRef?.current ? `&rst=${encodeURIComponent(roomPolling.roomSessionTokenRef.current)}` : '';
-      const utParam = auth.userTokenRef?.current ? `&userToken=${encodeURIComponent(auth.userTokenRef.current)}` : '';
-      const nameParam = (!rstParam && !utParam) ? `&name=${encodeURIComponent(prefs.name)}` : '';
-      const res = await fetch(`/api/conversation?id=${convId}${nameParam}${rstParam}${utParam}`);
+      const convHeaders = { 'Content-Type': 'application/json' };
+      if (auth.userTokenRef?.current) convHeaders['Authorization'] = `Bearer ${auth.userTokenRef.current}`;
+      if (roomPolling.roomSessionTokenRef?.current) convHeaders['X-Room-Session'] = roomPolling.roomSessionTokenRef.current;
+      const res = await fetch(`/api/conversation?id=${convId}`, { headers: convHeaders });
       if (res.ok) {
         const { conversation } = await res.json();
         if (conversation) {

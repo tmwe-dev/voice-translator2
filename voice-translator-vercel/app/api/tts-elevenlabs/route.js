@@ -240,7 +240,9 @@ async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const action = searchParams.get('action');
-    const userToken = searchParams.get('token');
+    // SECURITY: prefer Authorization header, fallback to query param (deprecated)
+    const authHeader = req.headers.get('authorization');
+    const userToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : searchParams.get('token');
 
     if (action !== 'voices') {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

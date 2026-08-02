@@ -104,8 +104,9 @@ export async function saveApiKeys(email, keys, useOwnKeys) {
 // =============================================
 
 export async function createAuthCode(email) {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await redis('SET', `authcode:${email.toLowerCase()}`, JSON.stringify({ code, created: Date.now() }), 'EX', 600);
+  // SECURITY: use cryptographically secure random instead of Math.random
+  const code = crypto.randomInt(100000, 999999).toString();
+  await redis('SET', `authcode:${email.toLowerCase()}`, JSON.stringify({ code, attempts: 0, created: Date.now() }), 'EX', 600);
   return code;
 }
 
@@ -114,7 +115,21 @@ export async function verifyAuthCode(email, code) {
   const data = await redis('GET', key);
   if (!data) return false;
   let stored; try { stored = JSON.parse(data); } catch { return false; }
-  if (stored.code !== code) return false;
+
+  // SECURITY: brute-force protection — max 5 attempts per code
+  if (stored.attempts >= 5) {
+    await redis('DEL', key);
+    return false;
+  }
+
+  if (stored.code !== code) {
+    // Increment attempt counter
+    stored.attempts = (stored.attempts || 0) + 1;
+    const ttl = await redis('TTL', key);
+    await redis('SET', key, JSON.stringify(stored), 'EX', ttl > 0 ? ttl : 600);
+    return false;
+  }
+
   await redis('DEL', key);
   return true;
 }

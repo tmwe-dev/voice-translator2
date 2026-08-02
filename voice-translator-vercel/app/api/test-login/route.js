@@ -4,11 +4,21 @@ import { createUser, getUser, createSession, saveApiKeys } from '../../lib/users
 const TEST_EMAIL = 'test@bartalk.dev';
 
 // POST /api/test-login — Creates or restores a test account with full access
-// Only works when TESTING_MODE is enabled (NEXT_PUBLIC_TESTING_MODE !== 'false')
+// SECURITY: requires BOTH TESTING_MODE=true AND correct ADMIN_PASS
 export async function POST(req) {
   // Production guard: test endpoints ONLY enabled when TESTING_MODE is explicitly 'true'
   if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
     return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
+  }
+
+  // SECURITY: require admin password even in test mode
+  const adminPass = process.env.ADMIN_PASS;
+  if (adminPass) {
+    let body;
+    try { body = await req.clone().json(); } catch { body = {}; }
+    if (body.adminPass !== adminPass) {
+      return NextResponse.json({ error: 'Admin password required for test login' }, { status: 403 });
+    }
   }
 
   try {

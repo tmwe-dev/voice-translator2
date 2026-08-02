@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
+import { redis } from '../../../lib/redis.js';
+import crypto from 'crypto';
 
 // Force dynamic rendering — this route uses req.url and query params
 export const dynamic = 'force-dynamic';
+
+/**
+ * Generate a CSRF state token for OAuth flow.
+ * Store in Redis with 10-min TTL, return the token to embed in the auth URL.
+ */
+export async function generateOAuthState() {
+  const state = crypto.randomBytes(32).toString('hex');
+  await redis('SET', `oauth_state:${state}`, '1', 'EX', 600);
+  return state;
+}
 
 // Google OAuth callback — exchanges authorization code for user info
 // Used as fallback when Google One Tap SDK doesn't load
@@ -20,6 +32,19 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get('code');
     const error = searchParams.get('error');
+    const state = searchParams.get('state');
+
+    // SECURITY: validate OAuth state to prevent CSRF
+    if (state) {
+      const stateKey = `oauth_state:${state}`;
+      const valid = await redis('GET', stateKey);
+      if (!valid) {
+        return new Response(closePopupHTML('Sessione OAuth scaduta o invalida. Riprova.'), {
+          headers: { 'Content-Type': 'text/html' },
+        });
+      }
+      await redis('DEL', stateKey); // one-time use
+    }
 
     if (error) {
       return new Response(closePopupHTML('Accesso annullato'), {
