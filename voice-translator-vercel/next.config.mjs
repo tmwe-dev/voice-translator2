@@ -3,9 +3,7 @@ import { withSentryConfig } from '@sentry/nextjs';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Prevent webpack from bundling ws + native addons (breaks in Vercel serverless)
-  experimental: {
-    serverComponentsExternalPackages: ['ws', 'bufferutil', 'utf-8-validate', '@andresaya/edge-tts'],
-  },
+  serverExternalPackages: ['ws', 'bufferutil', 'utf-8-validate', '@andresaya/edge-tts'],
   webpack: (config, { isServer }) => {
     if (isServer) {
       // Mark native ws addons as external so webpack doesn't try to bundle them
@@ -29,7 +27,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss: ws:",
+              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co",
               "media-src 'self' blob: data:",
               "frame-src https://js.stripe.com https://hooks.stripe.com",
               "worker-src 'self' blob:",

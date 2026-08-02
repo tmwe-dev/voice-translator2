@@ -6,7 +6,10 @@ const TEST_EMAIL = 'test@bartalk.dev';
 // POST /api/test-login — Creates or restores a test account with full access
 // SECURITY: requires BOTH TESTING_MODE=true AND correct ADMIN_PASS
 export async function POST(req) {
-  // Production guard: test endpoints ONLY enabled when TESTING_MODE is explicitly 'true'
+  // Production guard: NEVER allow test login in Vercel production, even if TESTING_MODE leaks
+  if (process.env.VERCEL_ENV === 'production') {
+    return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+  }
   if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
     return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
   }

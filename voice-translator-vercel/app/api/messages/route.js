@@ -93,14 +93,14 @@ async function handlePatch(req) {
   }
 }
 
-// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP&rst=Token - Poll for new messages
-// Supports room session token (rst) for server-verified identity, falls back to name
+// GET /api/messages?room=XXX&name=YYY&after=TIMESTAMP - Poll for new messages
+// Room session token via X-Room-Session header (NEVER in query string)
 async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const roomId = sanitizeRoomId(searchParams.get('room') || '');
     const name = sanitizeName(searchParams.get('name') || '');
-    const roomSessionToken = searchParams.get('rst') || null;
+    const roomSessionToken = req.headers.get('x-room-session') || null;
     const after = parseInt(searchParams.get('after') || '0', 10);
     if (!roomId) return NextResponse.json({ error: 'room required' }, { status: 400 });
     if (isNaN(after) || after < 0) return NextResponse.json({ error: 'invalid after' }, { status: 400 });

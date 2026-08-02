@@ -58,7 +58,7 @@ export default function useTranslationAPI({
     if (!roomId) return null;
 
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
-    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const tempId = `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 
     // Build a message object for instant delivery
     const instantMsg = {

@@ -1,8 +1,14 @@
 // Upstash Redis store for rooms, messages, and conversation history
 // Uses shared Redis client from redis.js
+// All read-modify-write operations use Lua scripts for atomicity (no race conditions)
 
 import { redis } from './redis.js';
 import { randomUUID, randomBytes } from 'crypto';
+import {
+  JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
+  CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
+  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+} from './redisLua.js';
 
 // =============================================
 // ROOM SESSION TOKENS — server-verified identity
@@ -84,48 +90,18 @@ export async function getRoom(id) {
 
 export async function joinRoom(id, name, lang, avatar = null) {
   const key = `room:${id.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in joinRoom:', e.message); return null; }
-
-  const existing = room.members.findIndex(m => m.name === name);
-  if (existing >= 0) {
-    room.members[existing].lang = lang;
-    room.members[existing].joined = Date.now();
-    room.members[existing].avatar = avatar;
-  } else {
-    // Allow up to 10 members for multi-language group chat
-    if (room.members.length < 10) {
-      room.members.push({ name, lang, joined: Date.now(), role: 'guest', avatar });
-    } else {
-      // Room full — replace oldest non-host member
-      const oldestGuest = room.members.findIndex(m => m.role !== 'host');
-      if (oldestGuest >= 0) {
-        room.members[oldestGuest] = { name, lang, joined: Date.now(), role: 'guest', avatar };
-      }
-    }
-  }
-
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', JOIN_ROOM, 1, key, name, lang, avatar || '', Date.now().toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse joinRoom result:', e.message); return null; }
 }
 
 export async function setSpeaking(roomId, memberName, speaking, liveText = null, typing = false) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in setSpeaking:', e.message); return null; }
-  const member = room.members.find(m => m.name === memberName);
-  if (member) {
-    member.speaking = speaking;
-    member.speakingAt = speaking ? Date.now() : 0;
-    if (liveText !== null) member.liveText = liveText;
-    else if (!speaking) member.liveText = '';
-    member.typing = typing;
-    member.typingAt = typing ? Date.now() : 0;
-  }
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const now = Date.now().toString();
+  const result = await redis('EVAL', SET_SPEAKING, 1, key,
+    memberName, speaking ? '1' : '0', liveText || '', typing ? '1' : '0', now, liveText !== null ? '1' : '0');
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse setSpeaking result:', e.message); return null; }
 }
 
 export async function updateHeartbeat(roomId, memberName) {
@@ -142,37 +118,23 @@ export async function updateHeartbeat(roomId, memberName) {
 
 export async function addCost(roomId, amount) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in addCost:', e.message); return null; }
-  room.totalCost = (room.totalCost || 0) + amount;
-  room.msgCount = (room.msgCount || 0) + 1;
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', ADD_COST, 1, key, amount.toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse addCost result:', e.message); return null; }
 }
 
 export async function updateRoomMode(roomId, newMode) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in updateRoomMode:', e.message); return null; }
-  room.mode = newMode;
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', UPDATE_ROOM_MODE, 1, key, newMode);
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateRoomMode result:', e.message); return null; }
 }
 
 export async function changeMemberLang(roomId, memberName, newLang) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in changeMemberLang:', e.message); return null; }
-  const member = room.members.find(m => m.name === memberName);
-  if (member) {
-    member.lang = newLang;
-    member.langChangedAt = Date.now(); // timestamp for sync detection
-  }
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', CHANGE_MEMBER_LANG, 1, key, memberName, newLang, Date.now().toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse changeMemberLang result:', e.message); return null; }
 }
 
 // =============================================
@@ -188,16 +150,9 @@ export async function changeMemberLang(roomId, memberName, newLang) {
  */
 export async function setHandRaised(roomId, memberName, raised) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in setHandRaised:', e.message); return null; }
-  const member = room.members.find(m => m.name === memberName);
-  if (member) {
-    member.handRaised = !!raised;
-    member.handRaisedAt = raised ? Date.now() : 0;
-  }
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', SET_HAND_RAISED, 1, key, memberName, raised ? '1' : '0', Date.now().toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse setHandRaised result:', e.message); return null; }
 }
 
 /**
@@ -209,27 +164,9 @@ export async function setHandRaised(roomId, memberName, raised) {
  */
 export async function grantSpeaking(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse room in grantSpeaking:', e.message); return null; }
-
-  for (const m of room.members) {
-    if (m.name === memberName) {
-      m.handRaised = false;
-      m.handRaisedAt = 0;
-      m.speaking = true;
-      m.speakingAt = Date.now();
-    } else {
-      // Lower all other hands and stop their speaking
-      m.handRaised = false;
-      m.handRaisedAt = 0;
-      m.speaking = false;
-      m.speakingAt = 0;
-    }
-  }
-
-  await redis('SET', key, JSON.stringify(room), 'EX', 3600);
-  return room;
+  const result = await redis('EVAL', GRANT_SPEAKING, 1, key, memberName, Date.now().toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse grantSpeaking result:', e.message); return null; }
 }
 
 // =============================================
@@ -238,20 +175,12 @@ export async function grantSpeaking(roomId, memberName) {
 
 export async function addMessage(roomId, msg) {
   const id = roomId.toUpperCase();
-  const roomData = await redis('GET', `room:${id}`);
-  if (!roomData) return null;
-
-  const m = {
-    ...msg,
-    id: Date.now().toString(36) + Math.random().toString(36).substr(2, 4),
-    timestamp: Date.now()
-  };
-
-  const key = `msgs:${id}`;
-  await redis('RPUSH', key, JSON.stringify(m));
-  await redis('LTRIM', key, -200, -1);
-  await redis('EXPIRE', key, 3600);
-  return m;
+  const now = Date.now();
+  const msgId = now.toString(36) + randomBytes(3).toString('hex');
+  const msgJson = JSON.stringify(msg);
+  const result = await redis('EVAL', ADD_MESSAGE, 2, `room:${id}`, `msgs:${id}`, msgJson, msgId, now.toString());
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse addMessage result:', e.message); return null; }
 }
 
 /**
@@ -261,33 +190,12 @@ export async function addMessage(roomId, msg) {
 export async function updateMessage(roomId, sender, original, updates) {
   const id = roomId.toUpperCase();
   const key = `msgs:${id}`;
-  const allMsgs = await redis('LRANGE', key, 0, -1);
-  if (!allMsgs || !Array.isArray(allMsgs)) return null;
-
-  // Find the message index by sender + original text (most recent match)
-  let targetIdx = -1;
-  let targetMsg = null;
-  for (let i = allMsgs.length - 1; i >= 0; i--) {
-    let m; try { m = JSON.parse(allMsgs[i]); } catch (e) { console.warn('[Store] Failed to parse message at index', i, e.message); continue; }
-    if (m.sender === sender && m.original === original) {
-      targetIdx = i;
-      targetMsg = m;
-      break;
-    }
-  }
-  if (targetIdx < 0 || !targetMsg) return null;
-
-  // Apply updates
-  const updated = {
-    ...targetMsg,
-    translated: updates.translated || targetMsg.translated,
-    targetLang: updates.targetLang || targetMsg.targetLang,
-    translations: updates.translations || targetMsg.translations,
-  };
-
-  // LSET replaces the element at index
-  await redis('LSET', key, targetIdx, JSON.stringify(updated));
-  return updated;
+  const result = await redis('EVAL', UPDATE_MESSAGE, 1, key,
+    sender, original,
+    updates.translated || '', updates.targetLang || '',
+    updates.translations ? JSON.stringify(updates.translations) : '');
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateMessage result:', e.message); return null; }
 }
 
 export async function getMessages(roomId, after = 0) {
@@ -366,12 +274,9 @@ export async function getConversation(convId) {
 
 export async function updateConversationSummary(convId, summary) {
   const key = `conv:${convId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let conv; try { conv = JSON.parse(data); } catch (e) { console.warn('[Store] Failed to parse conversation in updateSummary:', e.message); return null; }
-  conv.summary = summary;
-  await redis('SET', key, JSON.stringify(conv), 'EX', 86400);
-  return conv;
+  const result = await redis('EVAL', UPDATE_CONV_SUMMARY, 1, key, typeof summary === 'string' ? summary : JSON.stringify(summary));
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { console.warn('[Store] Failed to parse updateConversationSummary result:', e.message); return null; }
 }
 
 export async function getUserConversations(userName) {

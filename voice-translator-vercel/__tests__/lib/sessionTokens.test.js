@@ -1,8 +1,59 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
+  CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
+  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+} from '../../app/lib/redisLua.js';
 
-// Mock Redis with in-memory store
+// Mock Redis with in-memory store + EVAL support
 const redisStore = {};
+
+function handleEval(script, numKeys, ...rest) {
+  const keys = rest.slice(0, numKeys);
+  const argv = rest.slice(numKeys);
+  if (script === ADD_MESSAGE) {
+    const roomData = redisStore[keys[0]];
+    if (!roomData) return null;
+    const msg = JSON.parse(argv[0]);
+    msg.id = argv[1]; msg.timestamp = parseInt(argv[2]);
+    const encoded = JSON.stringify(msg);
+    if (!redisStore[keys[1]]) redisStore[keys[1]] = [];
+    redisStore[keys[1]].push(encoded);
+    return encoded;
+  }
+  if (script === ADD_COST) {
+    const data = redisStore[keys[0]]; if (!data) return null;
+    const room = JSON.parse(data);
+    room.totalCost = (room.totalCost || 0) + parseFloat(argv[0]);
+    room.msgCount = (room.msgCount || 0) + 1;
+    const encoded = JSON.stringify(room); redisStore[keys[0]] = encoded; return encoded;
+  }
+  if (script === JOIN_ROOM) {
+    const data = redisStore[keys[0]]; if (!data) return null;
+    const room = JSON.parse(data);
+    const [name, lang, avatarRaw, nowStr] = argv;
+    const avatar = avatarRaw !== '' ? avatarRaw : null;
+    const now = parseInt(nowStr);
+    const idx = room.members.findIndex(m => m.name === name);
+    if (idx >= 0) { room.members[idx].lang = lang; room.members[idx].joined = now; room.members[idx].avatar = avatar; }
+    else if (room.members.length < 10) { room.members.push({ name, lang, joined: now, role: 'guest', avatar }); }
+    const encoded = JSON.stringify(room); redisStore[keys[0]] = encoded; return encoded;
+  }
+  if (script === UPDATE_CONV_SUMMARY) {
+    const data = redisStore[keys[0]]; if (!data) return null;
+    const conv = JSON.parse(data); conv.summary = argv[0];
+    const encoded = JSON.stringify(conv); redisStore[keys[0]] = encoded; return encoded;
+  }
+  // For any other Lua scripts, do a generic GET-modify-SET
+  const data = redisStore[keys[0]]; if (!data) return null;
+  return data;
+}
+
 const mockRedis = vi.fn(async (cmd, ...args) => {
+  if (cmd === 'EVAL') {
+    const [script, numKeys, ...rest] = args;
+    return handleEval(script, numKeys, ...rest);
+  }
   const key = args[0];
   switch (cmd) {
     case 'SET':

@@ -10,9 +10,12 @@ import { findConsensus } from '../../lib/consensus.js';
 
 async function handlePost(req) {
   try {
-    // Production guard: test endpoints disabled unless TESTING_MODE active
-    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
+    // Production guard: NEVER in Vercel production, even if TESTING_MODE leaks
+    if (process.env.VERCEL_ENV === 'production') {
       return NextResponse.json({ error: 'Test endpoint disabled in production' }, { status: 403 });
+    }
+    if (process.env.NEXT_PUBLIC_TESTING_MODE !== 'true') {
+      return NextResponse.json({ error: 'Test endpoint disabled' }, { status: 403 });
     }
 
     // SECURITY: ADMIN_PASS is MANDATORY for test endpoints — block if not configured

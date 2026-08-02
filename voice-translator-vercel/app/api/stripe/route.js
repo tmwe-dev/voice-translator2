@@ -4,6 +4,22 @@ import Stripe from 'stripe';
 import { getSession } from '../../lib/users.js';
 import { CREDIT_PACKAGES } from '../../lib/users.js';
 
+// Allowed origins for Stripe redirect URLs — same whitelist as /api/subscription
+const ALLOWED_ORIGINS = [
+  'https://voice-translator2.vercel.app',
+  'https://bartalk.app',
+  process.env.NEXT_PUBLIC_URL,
+].filter(Boolean);
+
+function sanitizeOrigin(requestOrigin) {
+  if (!requestOrigin) return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+  try {
+    const parsed = new URL(requestOrigin);
+    if (ALLOWED_ORIGINS.some(o => parsed.origin === new URL(o).origin)) return requestOrigin;
+  } catch {}
+  return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+}
+
 // POST /api/stripe - Create checkout session
 async function handlePost(req) {
   try {
@@ -21,7 +37,7 @@ async function handlePost(req) {
       const pkg = CREDIT_PACKAGES.find(p => p.id === packageId);
       if (!pkg) return NextResponse.json({ error: 'Invalid package' }, { status: 400 });
 
-      const origin = req.headers.get('origin') || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
+      const origin = sanitizeOrigin(req.headers.get('origin'));
 
       const checkoutSession = await stripe.checkout.sessions.create({
         payment_method_types: ['card'],

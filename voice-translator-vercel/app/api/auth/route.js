@@ -56,7 +56,8 @@ async function handler(req) {
       }
 
       // Only return code in dev/test — NEVER in production
-      const isTestEnv = process.env.NEXT_PUBLIC_TESTING_MODE === 'true' || process.env.NODE_ENV === 'development';
+      const isVercelProd = process.env.VERCEL_ENV === 'production';
+      const isTestEnv = !isVercelProd && (process.env.NEXT_PUBLIC_TESTING_MODE === 'true' || process.env.NODE_ENV === 'development');
       const emailFailed = !process.env.RESEND_API_KEY || !emailSent;
       return NextResponse.json({
         ok: true,

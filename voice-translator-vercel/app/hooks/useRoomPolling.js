@@ -340,9 +340,10 @@ export default function useRoomPolling({
 
     const pollFn = async () => {
       try {
-        const rstParam = roomSessionTokenRef.current ? `&rst=${encodeURIComponent(roomSessionTokenRef.current)}` : '';
         const nameParam = `&name=${encodeURIComponent(prefsRef.current.name)}`;
-        const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}${rstParam}`);
+        const pollHeaders = {};
+        if (roomSessionTokenRef.current) pollHeaders['x-room-session'] = roomSessionTokenRef.current;
+        const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}`, { headers: pollHeaders });
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
           if (newMsgs && newMsgs.length > 0) {

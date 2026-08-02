@@ -261,10 +261,6 @@ async function handlePost(req) {
 export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'contacts' });
 
 function generateInviteCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let code = 'VT-';
-  for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+  const { randomBytes } = require('crypto');
+  return 'VT-' + randomBytes(6).toString('base64url').slice(0, 8);
 }

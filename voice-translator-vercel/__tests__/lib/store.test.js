@@ -1,8 +1,144 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
+  CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
+  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+} from '../../app/lib/redisLua.js';
 
-// Mock Redis
+// Mock Redis with EVAL support for Lua scripts
 const redisStore = {};
+
+// Simulate Lua scripts in JS (mirrors redisLua.js logic on in-memory store)
+function handleEval(script, numKeys, ...rest) {
+  const keys = rest.slice(0, numKeys);
+  const argv = rest.slice(numKeys);
+
+  if (script === JOIN_ROOM) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const [name, lang, avatarRaw, nowStr] = argv;
+    const avatar = avatarRaw !== '' ? avatarRaw : null;
+    const now = parseInt(nowStr);
+    const existing = room.members.findIndex(m => m.name === name);
+    if (existing >= 0) {
+      room.members[existing].lang = lang;
+      room.members[existing].joined = now;
+      room.members[existing].avatar = avatar;
+    } else if (room.members.length < 10) {
+      room.members.push({ name, lang, joined: now, role: 'guest', avatar });
+    } else {
+      const idx = room.members.findIndex(m => m.role !== 'host');
+      if (idx >= 0) room.members[idx] = { name, lang, joined: now, role: 'guest', avatar };
+    }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === SET_SPEAKING) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const [memberName, speakingStr, liveText, typingStr, nowStr, hasLiveTextStr] = argv;
+    const speaking = speakingStr === '1';
+    const typing = typingStr === '1';
+    const now = parseInt(nowStr);
+    const hasLiveText = hasLiveTextStr === '1';
+    const member = room.members.find(m => m.name === memberName);
+    if (member) {
+      member.speaking = speaking;
+      member.speakingAt = speaking ? now : 0;
+      if (hasLiveText) member.liveText = liveText;
+      else if (!speaking) member.liveText = '';
+      member.typing = typing;
+      member.typingAt = typing ? now : 0;
+    }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === ADD_COST) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    room.totalCost = (room.totalCost || 0) + parseFloat(argv[0]);
+    room.msgCount = (room.msgCount || 0) + 1;
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === UPDATE_ROOM_MODE) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    room.mode = argv[0];
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === CHANGE_MEMBER_LANG) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const member = room.members.find(m => m.name === argv[0]);
+    if (member) { member.lang = argv[1]; member.langChangedAt = parseInt(argv[2]); }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === ADD_MESSAGE) {
+    // KEYS[1]=room key, KEYS[2]=msgs key, ARGV[1]=msg JSON, ARGV[2]=id, ARGV[3]=now
+    const roomData = redisStore[keys[0]];
+    if (!roomData) return null;
+    const msg = JSON.parse(argv[0]);
+    msg.id = argv[1];
+    msg.timestamp = parseInt(argv[2]);
+    const encoded = JSON.stringify(msg);
+    if (!redisStore[keys[1]]) redisStore[keys[1]] = [];
+    redisStore[keys[1]].push(encoded);
+    return encoded;
+  }
+
+  if (script === UPDATE_MESSAGE) {
+    const msgs = redisStore[keys[0]] || [];
+    const [sender, original, translated, targetLang, translationsJson] = argv;
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = JSON.parse(msgs[i]);
+      if (m.sender === sender && m.original === original) {
+        if (translated) m.translated = translated;
+        if (targetLang) m.targetLang = targetLang;
+        if (translationsJson) m.translations = JSON.parse(translationsJson);
+        const encoded = JSON.stringify(m);
+        msgs[i] = encoded;
+        return encoded;
+      }
+    }
+    return null;
+  }
+
+  if (script === UPDATE_CONV_SUMMARY) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const conv = JSON.parse(data);
+    conv.summary = argv[0];
+    const encoded = JSON.stringify(conv);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  return null;
+}
+
 const mockRedis = vi.fn(async (cmd, ...args) => {
+  if (cmd === 'EVAL') {
+    const [script, numKeys, ...rest] = args;
+    return handleEval(script, numKeys, ...rest);
+  }
   const key = args[0];
   switch (cmd) {
     case 'SET':
@@ -18,6 +154,11 @@ const mockRedis = vi.fn(async (cmd, ...args) => {
       return redisStore[key] || [];
     case 'LTRIM':
       return 'OK';
+    case 'LSET': {
+      const idx = args[1];
+      if (redisStore[key] && idx < redisStore[key].length) redisStore[key][idx] = args[2];
+      return 'OK';
+    }
     case 'EXPIRE':
       return 1;
     default:

@@ -59,15 +59,15 @@ async function handlePost(req) {
 }
 
 // GET /api/conversation?id=XXX - Get full conversation with messages
-// Accepts rst (room session token) or userToken query param, fallback to name
+// Tokens ONLY via headers: Authorization (Bearer) or X-Room-Session
 async function handleGet(req) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    // SECURITY: tokens ONLY via Authorization header — never from query string
+    // SECURITY: tokens ONLY via headers — never from query string
     const authHeader = req.headers.get('authorization');
     const ut = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
-    const rst = req.headers.get('x-room-session') || searchParams.get('rst') || '';
+    const rst = req.headers.get('x-room-session') || '';
     const nameParam = sanitizeName(searchParams.get('name') || '');
 
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
