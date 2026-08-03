@@ -197,11 +197,22 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </div>
           )}
 
-          {/* Top bar: status + partner activity */}
+          {/* Top bar: torna alla chat + status + chiusura SEMPRE visibili */}
           <div style={{
-            position: 'absolute', top: 16, left: 16, right: 16,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+            position: 'absolute', top: 'max(16px, env(safe-area-inset-top))', left: 16, right: 16,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', zIndex: 7,
           }}>
+            {/* ← Torna alla chat (riduce la call, NON la chiude) */}
+            <button onClick={() => setVideoFullscreen(false)}
+              aria-label="Torna alla chat (la chiamata continua)"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '8px 14px', borderRadius: 24, border: 'none', cursor: 'pointer',
+                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+                color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+              }}>
+              {'←'} Chat
+            </button>
             {/* Connection status */}
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -217,11 +228,24 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 {webrtc.webrtcConnected ? 'Connesso' : 'Connessione...'}
               </span>
             </div>
-            {/* Recording / Partner activity indicators */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
-              <RecordingIndicator />
-              <PartnerActivityBadge />
-            </div>
+            {/* Chiudi chiamata — rosso, sempre raggiungibile anche se la
+                barra in basso finisce sotto la UI del browser */}
+            <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
+              aria-label="Termina la chiamata"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 40, height: 40, borderRadius: 20, border: 'none', cursor: 'pointer',
+                background: 'rgba(239,68,68,0.9)', color: '#fff',
+                boxShadow: '0 2px 12px rgba(239,68,68,0.45)',
+              }}>
+              <IconPhoneOff size={20}/>
+            </button>
+          </div>
+          {/* Recording / Partner activity, sotto la testata */}
+          <div style={{ position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', right: 16,
+            display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', zIndex: 6 }}>
+            <RecordingIndicator />
+            <PartnerActivityBadge />
           </div>
 
           {/* Volume control (tap speaker icon to show/hide slider) */}
@@ -311,9 +335,10 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           })()}
         </div>
 
-        {/* ── Bottom controls bar ── */}
+        {/* ── Bottom controls bar (safe-area: mai sotto la UI del browser) ── */}
         <div style={{
-          padding: '12px 16px 36px', display: 'flex', justifyContent: 'center', gap: 10,
+          padding: '12px 16px', paddingBottom: 'max(36px, env(safe-area-inset-bottom))',
+          display: 'flex', justifyContent: 'center', gap: 10,
           background: 'linear-gradient(to top, rgba(0,0,0,0.98), rgba(0,0,0,0.7))',
         }}>
           <ControlBtn

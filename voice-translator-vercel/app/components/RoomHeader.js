@@ -108,8 +108,8 @@ const RoomHeader = memo(function RoomHeader({
               {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:PALETTE.green}} />}
             </button>
           )}
-          {/* Taxi Mode toggle */}
-          {setTaxiVisible && (
+          {/* Taxi Mode toggle — solo in chat: durante una chiamata non ha senso */}
+          {setTaxiVisible && !showVideoCall && (
             <TaxiButton
               onClick={() => {
                 const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
