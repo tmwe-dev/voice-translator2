@@ -1,7 +1,7 @@
 'use client';
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
-import { IconMic, IconStop, IconRecord, IconLock, IconSparkles, IconHandRaise } from './Icons.js';
+import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend, IconWaveform } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 
 const TalkControls = memo(function TalkControls({
@@ -36,31 +36,41 @@ const TalkControls = memo(function TalkControls({
               <span style={{fontSize:7, fontWeight:700}}>ANNULLA</span>
             </button>
           )}
-          {/* Live mode button */}
-          <button onClick={async () => {
-            const next = !liveMode;
-            setLiveModeState(next);
-            if (setLiveMode) await setLiveMode(next);
-            vibrate(15);
-          }}
-            title={liveMode ? 'Riduzione rumore attiva' : 'Attiva riduzione rumore'}
-            style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-              width:52, height:52, borderRadius:14,
-              border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
-              background: liveMode ? 'rgba(34,197,94,0.12)' : S.colors.overlayBg,
-              color: liveMode ? PALETTE.green : S.colors.textMuted,
-              cursor:'pointer', justifyContent:'center',
-              WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-              boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
-            <span style={{fontSize:16, display:'flex'}}><IconMic size={16}/></span>
-            <span style={{fontSize:7, fontWeight:700}}>LIVE</span>
-          </button>
-          {/* MAIN record button */}
+          {/* Riduzione rumore: onde + RUMORE — non deve sembrare un microfono */}
+          {!recording && (
+            <button onClick={async () => {
+              const next = !liveMode;
+              setLiveModeState(next);
+              if (setLiveMode) await setLiveMode(next);
+              vibrate(15);
+            }}
+              title={liveMode ? 'Riduzione rumore attiva' : 'Attiva riduzione rumore'}
+              style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
+                width:52, height:52, borderRadius:14,
+                border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
+                background: liveMode ? 'rgba(34,197,94,0.12)' : S.colors.overlayBg,
+                color: liveMode ? PALETTE.green : S.colors.textMuted,
+                cursor:'pointer', justifyContent:'center',
+                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
+                boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
+              <span style={{fontSize:16, display:'flex'}}><IconWaveform size={16}/></span>
+              <span style={{fontSize:7, fontWeight:700}}>RUMORE</span>
+            </button>
+          )}
+          {/* TASTO UNICO: fermo = PARLA · in registrazione = INVIA (verde).
+              Toccarlo ferma E invia: una sola azione di conferma. */}
           <button onClick={() => { vibrate(25); toggleRecording(); }}
-            aria-label={recording ? 'Stop' : 'Registra'}
+            aria-label={recording ? 'Invia il messaggio vocale' : 'Parla'}
             style={{...S.talkBtn, width:72, height:72, fontSize:30,
-              ...(recording ? {...S.talkBtnRec, animation:'vtRecordPulse 1.5s ease-in-out infinite'} : {})}}>
-            {recording ? <IconStop size={28}/> : <IconMic size={28}/>}
+              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+              ...(recording ? {
+                background:'linear-gradient(90deg,#16a34a,#3ddc84)',
+                border:'none', color:'#fff',
+                boxShadow:'0 0 0 8px rgba(61,220,132,0.15), 0 0 24px rgba(61,220,132,0.35)',
+                animation:'vtRecordPulse 1.5s ease-in-out infinite',
+              } : {})}}>
+            {recording ? <IconSend size={24}/> : <IconMic size={28}/>}
+            <span style={{fontSize:8, fontWeight:800, letterSpacing:1}}>{recording ? 'INVIA' : 'PARLA'}</span>
           </button>
         </div>
       )}
