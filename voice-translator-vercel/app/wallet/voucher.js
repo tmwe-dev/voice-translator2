@@ -1,0 +1,41 @@
+// ═══════════════════════════════════════════════════════════════
+// VOUCHER — Codici promozionali.
+//
+// Tu crei i codici (da Supabase o dal pannello admin).
+// L'utente inserisce il codice → riceve i secondi → riga nel ledger.
+// Un codice può avere usi massimi e scadenza. Un utente può usare
+// lo stesso codice UNA volta sola (garantito dalla funzione SQL).
+// ═══════════════════════════════════════════════════════════════
+
+import { createClient } from '@supabase/supabase-js';
+import { registraMovimento } from './contabilita.js';
+
+function db() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  );
+}
+
+/**
+ * Riscatta un voucher per un utente.
+ * Ritorna { ok: true, secondi } oppure { ok: false, motivo }.
+ */
+export async function riscattaVoucher(utenteId, codice) {
+  const pulito = String(codice || '').trim().toUpperCase();
+  if (!pulito) return { ok: false, motivo: 'Codice vuoto' };
+
+  // La funzione SQL fa tutto in un colpo solo (atomico):
+  // verifica esistenza, scadenza, usi rimasti, doppio riscatto.
+  const { data, error } = await db()
+    .rpc('wallet_riscatta_voucher', { p_user_id: utenteId, p_codice: pulito });
+  if (error) return { ok: false, motivo: 'Errore: ' + error.message };
+  if (!data || data.length === 0 || !data[0].ok) {
+    return { ok: false, motivo: data?.[0]?.motivo || 'Codice non valido' };
+  }
+
+  const secondi = data[0].secondi;
+  await registraMovimento(utenteId, 'voucher', secondi, { codice: pulito });
+  return { ok: true, secondi };
+}
