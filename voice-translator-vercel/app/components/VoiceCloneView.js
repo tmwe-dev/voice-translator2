@@ -5,10 +5,12 @@ import { getVoiceScript } from '../lib/voiceScripts.js';
 import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 const MIN_DURATION = 30; // ElevenLabs requires at least 30s for instant voice cloning
 
-export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, setView, onVoiceCloned, creditBalance, theme }) {
+export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned, creditBalance }) {
+  const { L, S, prefs, setView, theme } = useApp();
   const isIT = L('createRoom') === 'Crea Stanza';
   const [step, setStep] = useState(0); // 0=mic, 1=record, 2=review
   const [cloning, setCloning] = useState(false);

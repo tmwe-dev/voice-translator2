@@ -3,13 +3,15 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { APP_URL, LANGS, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 const glass = {
   btn: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' },
   text: { primary: PALETTE.grayLight, secondary: 'rgba(242,244,247,0.75)', muted: 'rgba(242,244,247,0.50)' },
 };
 
-function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, setViewAfterCreate }) {
+function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
+  const { L, S, prefs, theme, setView } = useApp();
   const lang = prefs?.lang || 'it';
   const [guestLang, setGuestLang] = useState(lang === 'en' ? 'it' : 'en');
   const [creating, setCreating] = useState(false);

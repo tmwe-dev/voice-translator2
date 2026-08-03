@@ -13,8 +13,9 @@ import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
 import TaxiMode, { TaxiButton } from './TaxiMode.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
-const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
+const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
   playingMsgId, audioEnabled, setAudioEnabled, audioReady, isTrial, isTopPro, canUseElevenLabs,
   useOwnKeys, apiKeyInputs,
@@ -22,15 +23,16 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
   showModeSelector,
   setShowModeSelector, textInput, setTextInput, sendingText, sendTextMessage, sendTypingState,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk, endChatAndSave, leaveRoomTemporary, changeRoomMode, playMessage,
-  unlockAudio, exportConversation, status, msgsEndRef,
-  freeCharsUsed, freeLimitExceeded, freeResetTime, setView, setMyLang, savePrefs,
-  syncLangChange, retranslateForNewLang, theme, setTheme,
+  unlockAudio, exportConversation, msgsEndRef,
+  freeCharsUsed, freeLimitExceeded, freeResetTime,
+  syncLangChange, retranslateForNewLang,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
   setLiveMode, interpreter, onMessageRead,
   showChatActions, setShowChatActions, localChat, ProviderBadge }) {
+  const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);

@@ -4,6 +4,7 @@ import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { decryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDriverView — Dedicated page for taxi drivers
@@ -33,7 +34,8 @@ const DRIVER_LANGS = [
   { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
 ];
 
-function TaxiDriverView({ destId, decryptionKey, setView, theme, L }) {
+function TaxiDriverView({ destId, decryptionKey }) {
+  const { L, setView, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {

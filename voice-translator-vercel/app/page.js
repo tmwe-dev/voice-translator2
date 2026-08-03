@@ -826,7 +826,7 @@ function HomeInner() {
 
   if (view === 'room') return wrap(
     <Suspense fallback={<LazyFallback />}>
-    <RoomView L={L} S={S} prefs={prefs} myLang={myLang} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
+    <RoomView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
       isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
@@ -842,10 +842,10 @@ function HomeInner() {
       toggleRecording={translation.toggleRecording} cancelRecording={translation.cancelRecording}
       startFreeTalk={translation.startFreeTalk} stopFreeTalk={translation.stopFreeTalk}
       endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary} changeRoomMode={changeRoomMode} playMessage={audio.playMessage}
-      unlockAudio={audio.unlockAudio} exportConversation={exportConversation} status={status}
+      unlockAudio={audio.unlockAudio} exportConversation={exportConversation}
       msgsEndRef={msgsEndRef} freeCharsUsed={freeCharsUsed} freeLimitExceeded={freeLimitExceeded}
-      freeResetTime={freeResetTime} setView={setView} setMyLang={setMyLang} savePrefs={savePrefs}
-      syncLangChange={roomPolling.syncLangChange} retranslateForNewLang={retranslateForNewLang} theme={theme} setTheme={setTheme}
+      freeResetTime={freeResetTime}
+      syncLangChange={roomPolling.syncLangChange} retranslateForNewLang={retranslateForNewLang}
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
       vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}
@@ -1019,14 +1019,14 @@ function HomeInner() {
 
   if (view === 'taxi-driver') return wrap(
     <Suspense fallback={<LazyFallback />}>
-      <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} setView={setView} theme={theme} L={L} />
+      <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} />
     </Suspense>
   );
 
   if (view === 'mondo') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
+      <MondoView
         onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }}
         onCreateRoom={() => setShowCreateRoom(true)} />
       </Suspense>
@@ -1055,8 +1055,7 @@ function HomeInner() {
   if (view === 'speaker') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <SpeakerView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
-        userToken={auth.userToken} />
+      <SpeakerView userToken={auth.userToken} />
       </Suspense>
       {bottomNav}
     </>
@@ -1065,7 +1064,7 @@ function HomeInner() {
   if (view === 'quickinvite') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <QuickInvite L={L} S={S} prefs={prefs} theme={theme} setView={setView}
+      <QuickInvite
         handleCreateRoom={async (overrideLang) => {
           try {
             setStatus('...');
@@ -1090,9 +1089,9 @@ function HomeInner() {
   if (view === 'voice-clone') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <VoiceCloneView L={L} S={S} prefs={prefs}
+      <VoiceCloneView
         userToken={auth.userToken} userTokenRef={auth.userTokenRef}
-        setView={setView} creditBalance={auth.creditBalance} theme={theme}
+        creditBalance={auth.creditBalance}
         onVoiceCloned={(voiceId, name) => {
           auth.setClonedVoiceId(voiceId);
           auth.setClonedVoiceName(name);

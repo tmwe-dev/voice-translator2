@@ -12,6 +12,7 @@ import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
+import { useApp } from '../contexts/AppContext.js';
 
 const MODE_LABELS = {
   conversation: { label: 'Chat', icon: '💬', color: PALETTE.teal },
@@ -52,7 +53,8 @@ const LANG_FILTERS = [
   { code: 'th', flag: '🇹🇭', name: 'TH' },
 ];
 
-function MondoView({ L, S, prefs, setView, onJoinRoom, onCreateRoom, theme }) {
+function MondoView({ onJoinRoom, onCreateRoom }) {
+  const { L, S, prefs, setView, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {

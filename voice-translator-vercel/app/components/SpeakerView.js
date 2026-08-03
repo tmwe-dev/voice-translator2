@@ -7,6 +7,7 @@ import { toast } from './Toast.js';
 import TaxiDestinationPanel from './TaxiDestinationPanel.js';
 import TaxiQRView from './TaxiQRView.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -19,7 +20,8 @@ import { PALETTE } from '../lib/palette.js';
 
 const COMMON_LANGS = ['en','it','es','fr','de','pt','zh','ja','ko','ar','hi','ru','tr','th','vi'];
 
-function SpeakerView({ L, S, prefs, setView, theme, userToken }) {
+function SpeakerView({ userToken }) {
+  const { L, S, prefs, setView, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
