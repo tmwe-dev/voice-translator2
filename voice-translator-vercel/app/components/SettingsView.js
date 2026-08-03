@@ -1,558 +1,282 @@
 'use client';
-import { memo, useState, useRef, useCallback } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS, APP_VERSION } from '../lib/constants.js';
-import Carousel from './Carousel.js';
-import Icon from './Icon.js';
-import { IconMic, IconSettings, IconGlobe, IconKey, IconStar, IconMusic, IconZap, IconUser, IconCheckCircle } from './Icons.js';
+import { memo, useState } from 'react';
+import { LANGS, THEME_LIST, FONT, getLang, APP_VERSION } from '../lib/constants.js';
+import { IconMic, IconGlobe, IconKey, IconMusic, IconUser, IconVolume, IconCreditCard,
+  IconShield, IconExport, IconMessageCircle, IconWarning, IconCheck, IconChevronDown,
+  IconSparkles, IconSettings } from './Icons.js';
 import PageHeader from './ui/PageHeader.js';
+import AvatarImg from './AvatarImg.js';
 import { useApp } from '../contexts/AppContext.js';
 
-const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
-  setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
-  setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout,
-  creditBalance, refreshBalance, freeCharsUsed,
-  clonedVoiceId, clonedVoiceName, setClonedVoiceId, setClonedVoiceName }) {
-  const { L, S, prefs, setPrefs, savePrefs, setView, status, theme, setTheme } = useApp();
+// ═══════════════════════════════════════════════
+// SettingsView — riscritta: ogni riga FA qualcosa.
+//
+// Gruppi in ordine d'uso reale:
+//   1 PROFILO      chi sei (nome, avatar)
+//   2 VOCE E LINGUA la tua lingua, il motore voce, il timbro
+//   3 ASPETTO      i 6 temi
+//   4 ACCOUNT      credito, chiavi API
+//   5 PRIVACY      crittografia E2E
+//   6 STRUMENTI    test voce, voice clone, glossario, esporta
+//   7 INFO         guida, problema, versione, esci
+//
+// Icone: SOLO il set mono a filo sottile (Icons.js). Zero emoji.
+// ═══════════════════════════════════════════════
 
-  const [showLangDropdown, setShowLangDropdown] = useState(false);
-  const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [playingVoice, setPlayingVoice] = useState(null);
-  const [elLangFilter, setElLangFilter] = useState('all');
-  const [elGenderFilter, setElGenderFilter] = useState('all');
-  const [avatarVoiceMap, setAvatarVoiceMap] = useState({});
-  const audioRef = useRef(null);
+const MOTORI_VOCE = [
+  { id: 'auto', nome: 'Automatica', desc: 'Sceglie il meglio disponibile' },
+  { id: 'edge', nome: 'Standard', desc: 'Veloce, consumo normale' },
+  { id: 'openai', nome: 'OpenAI', desc: 'Naturale, richiede chiave propria' },
+  { id: 'elevenlabs', nome: 'Premium', desc: 'ElevenLabs — consuma 3×' },
+];
 
-  // Voice clone state
-  const [deletingVoice, setDeletingVoice] = useState(false);
-  const [previewingClone, setPreviewingClone] = useState(false);
+const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
+  const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
+  const c = S.colors;
+  const [apertoLingua, setApertoLingua] = useState(false);
+  const [apertoVoce, setApertoVoce] = useState(false);
 
-  // Auto-load ref for ElevenLabs voices
-  const loadVoicesTriggered = useRef(false);
+  const langInfo = getLang(prefs.lang);
+  const motore = MOTORI_VOCE.find(m => m.id === (prefs.voiceEngine || 'auto')) || MOTORI_VOCE[0];
 
-  const selectedAvatarIdx = AVATARS.indexOf(prefs.avatar);
-  const selectedLangIdx = LANGS.findIndex(l => l.code === prefs.lang);
+  // ── Mattoni condivisi ──
+  const Gruppo = ({ titolo, children }) => (
+    <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
+      <div style={{ fontSize: 9.5, fontWeight: 800, color: c.textMuted, letterSpacing: '0.35em',
+        textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{titolo}</div>
+      <div style={{ background: c.cardBg, border: `1px solid ${c.cardBorder}`,
+        borderRadius: 18, padding: '2px 14px' }}>{children}</div>
+    </div>
+  );
 
-  const isGuest = !userToken;
+  const Riga = ({ icona, titolo, sotto, valore, onClick, ultima, aperto, children }) => (
+    <>
+      <button onClick={onClick} disabled={!onClick}
+        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
+          padding: '13px 2px', background: 'none', border: 'none', fontFamily: FONT,
+          cursor: onClick ? 'pointer' : 'default',
+          borderBottom: ultima && !aperto ? 'none' : `1px solid ${c.cardBorder}`,
+          transition: 'opacity 0.2s' }}
+        onMouseOver={(e) => { if (onClick) e.currentTarget.style.opacity = 0.82; }}
+        onMouseOut={(e) => e.currentTarget.style.opacity = 1}>
+        <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: c.overlayBg, border: `1px solid ${c.cardBorder}`, color: c.textSecondary }}>
+          {icona}
+        </span>
+        <span style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>{titolo}</span>
+          {sotto && <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>{sotto}</span>}
+        </span>
+        {valore && <span style={{ fontSize: 12.5, fontWeight: 700, color: c.textSecondary, flexShrink: 0 }}>{valore}</span>}
+        {onClick && <span style={{ color: c.textMuted, flexShrink: 0, lineHeight: 0,
+          transform: aperto ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
+          <IconChevronDown size={15} /></span>}
+      </button>
+      {children}
+    </>
+  );
 
-  // Voice preview sample texts per language
-  const VOICE_SAMPLES = {
-    it:'Ciao! Sono la tua voce per la traduzione.',
-    en:'Hello! I am your translation voice.',
-    es:'Hola! Soy tu voz de traducción.',
-    fr:'Bonjour! Je suis votre voix de traduction.',
-    de:'Hallo! Ich bin Ihre Übersetzungsstimme.',
-    pt:'Olá! Eu sou sua voz de tradução.',
-    zh:'你好！我是你的翻译语音。',
-    ja:'こんにちは！翻訳音声です。',
-    ko:'안녕하세요! 번역 음성입니다.',
-    th:'สวัสดี! ฉันเป็นเสียงแปลของคุณ',
-    ar:'مرحبا! أنا صوت الترجمة الخاص بك.',
-    hi:'नमस्ते! मैं आपकी अनुवाद आवाज हूं।',
-    ru:'Привет! Я ваш голос для перевода.',
-    tr:'Merhaba! Ben çeviri sesinizim.',
-    vi:'Xin chào! Tôi là giọng dịch của bạn.',
-  };
-
-  // Stop any current audio
-  const stopAudio = useCallback(() => {
-    if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel();
-    setPlayingVoice(null);
-  }, []);
-
-  // Preview OpenAI voice via real TTS API
-  const previewVoice = useCallback(async (voiceName) => {
-    stopAudio();
-    if (playingVoice === voiceName) return; // was playing, now stopped
-
-    setPlayingVoice(voiceName);
-    const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
-
-    // Must have token + (own keys OR credits) to use OpenAI TTS
-    if (userToken && (useOwnKeys || creditBalance > 0)) {
-      try {
-        const res = await fetch('/api/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: sampleText, voice: voiceName, userToken: userTokenRef?.current })
-        });
-        if (res.ok) {
-          const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const audio = new Audio(url);
-          audioRef.current = audio;
-          audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
-          audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
-          await audio.play();
-          return;
-        }
-      } catch (e) { console.warn('[SettingsView] Voice preview failed:', e?.message); }
-    }
-    // No API available → show message
-    setPlayingVoice(null);
-  }, [playingVoice, prefs.lang, userToken, useOwnKeys, creditBalance, userTokenRef, stopAudio]);
-
-  // Preview ElevenLabs voice via preview_url or TTS API
-  const previewELVoice = useCallback(async (voice) => {
-    stopAudio();
-    if (playingVoice === `el_${voice.id}`) return;
-
-    setPlayingVoice(`el_${voice.id}`);
-    try {
-      // First try the preview_url from ElevenLabs API (free, no cost)
-      if (voice.preview) {
-        const audio = new Audio(voice.preview);
-        audioRef.current = audio;
-        audio.onended = () => setPlayingVoice(null);
-        audio.onerror = () => setPlayingVoice(null);
-        await audio.play();
-        return;
-      }
-      // Fallback: use our TTS API
-      const sampleText = VOICE_SAMPLES[prefs.lang] || VOICE_SAMPLES.en;
-      const res = await fetch('/api/tts-elevenlabs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: sampleText, voiceId: voice.id, langCode: prefs.lang, userToken: userTokenRef?.current })
-      });
-      if (res.ok) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.onended = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
-        audio.onerror = () => { setPlayingVoice(null); URL.revokeObjectURL(url); };
-        await audio.play();
-        return;
-      }
-    } catch (e) { console.warn('[SettingsView] ElevenLabs voice preview failed:', e?.message); }
-    setPlayingVoice(null);
-  }, [playingVoice, prefs.lang, userTokenRef, stopAudio]);
-
-  // Removed: API key status helpers, free usage counters (no longer needed in free-for-all mode)
-
-  async function handleRefresh() {
-    setRefreshing(true);
-    try { await refreshBalance?.(); } catch (e) { console.warn('[SettingsView] Refresh balance failed:', e?.message); }
-    setTimeout(() => setRefreshing(false), 800);
-  }
+  const Scelta = ({ attiva, titolo, sotto, onClick }) => (
+    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+      textAlign: 'left', padding: '10px 12px', marginBottom: 5, borderRadius: 12, cursor: 'pointer',
+      fontFamily: FONT, background: attiva ? c.accent1Bg : 'transparent',
+      border: `1px solid ${attiva ? c.accent1Border : 'transparent'}`, transition: 'all 0.2s' }}>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700,
+          color: attiva ? c.accent1 : c.textPrimary }}>{titolo}</span>
+        {sotto && <span style={{ display: 'block', fontSize: 11, color: c.textMuted, marginTop: 1 }}>{sotto}</span>}
+      </span>
+      {attiva && <span style={{ color: c.accent1, lineHeight: 0 }}><IconCheck size={15} /></span>}
+    </button>
+  );
 
   return (
     <div style={S.page}>
-      {/* paddingBottom: l'ultima voce non deve mai finire sotto la BottomNav */}
-      <div style={{...S.scrollCenter, gap: 12, paddingBottom: 'calc(110px + env(safe-area-inset-bottom))'}}>
-        {/* Header */}
-        <div style={{ width: '100%', maxWidth: 400 }}>
+      <div style={{ ...S.scrollCenter, gap: 0,
+        paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
+
+        <div style={{ width: '100%', maxWidth: 440 }}>
           <PageHeader title={L('settings')} onBack={() => setView('home')} S={S} />
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            PROFILE CARD — top
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400, borderRadius:16,
-          background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder,
-          padding:'16px', display:'flex', alignItems:'center', gap:14, marginBottom:4}}>
-          {/* Avatar */}
-          <div style={{width:52, height:52, borderRadius:'50%',
-            background: 'linear-gradient(135deg, ' + S.colors.accent1 + '40, ' + S.colors.accent2 + '40)',
-            border:'2px solid ' + S.colors.accent1,
-            display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0}}>
-            <img src={prefs.avatar} alt="avatar" style={{width:44, height:44, borderRadius:'50%', objectFit:'contain'}} />
-          </div>
-          {/* Name, email, badge */}
-          <div style={{flex:1}}>
-            <div style={{fontSize:14, fontWeight:700, color:S.colors.textPrimary}}>
-              {prefs.name || userAccount?.email?.split('@')[0] || 'User'}
-            </div>
-            <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:1}}>
-              {userAccount?.email || 'Piano Free'}
-            </div>
-          </div>
-          {/* Modifica link */}
+        {/* ═══ 1 · PROFILO ═══ */}
+        <div style={{ width: '100%', maxWidth: 440, marginBottom: 18 }}>
           <button onClick={() => setView('account')}
-            style={{background:'none', border:'none', color:S.colors.textSecondary, cursor:'pointer',
-              fontSize:14, fontWeight:600, padding:0}}>
-            Modifica ›
+            style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', textAlign: 'left',
+              padding: '14px 16px', borderRadius: 18, cursor: 'pointer', fontFamily: FONT,
+              background: c.cardBg, border: `1px solid ${c.cardBorder}` }}>
+            <AvatarImg src={prefs.avatar} size={52} />
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 17, fontWeight: 800, color: c.textPrimary }}>
+                {prefs.name || userAccount?.email?.split('@')[0] || 'Ospite'}
+              </span>
+              <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {userAccount?.email || 'Nessun account collegato'}
+              </span>
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: c.accent1 }}>Modifica</span>
           </button>
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            SECTION: Preferenze voce
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Preferenze voce
-          </div>
+        {/* ═══ 2 · VOCE E LINGUA ═══ */}
+        <Gruppo titolo="Voce e lingua">
+          <Riga icona={<IconGlobe size={17} />} titolo="La tua lingua"
+            sotto="Quella in cui parli e leggi le traduzioni"
+            valore={`${langInfo.flag} ${langInfo.name}`}
+            aperto={apertoLingua}
+            onClick={() => { setApertoLingua(!apertoLingua); setApertoVoce(false); }} />
+          {apertoLingua && (
+            <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0 10px',
+              borderBottom: `1px solid ${c.cardBorder}` }}>
+              {LANGS.map(l => (
+                <Scelta key={l.code} attiva={l.code === prefs.lang}
+                  titolo={`${l.flag}  ${l.name}`}
+                  onClick={() => { savePrefs({ ...prefs, lang: l.code }); setApertoLingua(false); }} />
+              ))}
+            </div>
+          )}
 
-          {/* Row: Lingua principale */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setShowLangDropdown(!showLangDropdown)}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left',
-                transition:'background 0.15s'}}>
-              <span style={{fontSize:16, flexShrink:0}}>🌐</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Lingua principale</div>
-              </div>
-              <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-                <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                  {LANGS.find(l => l.code === prefs.lang)?.name || 'Italiano'}
-                </span>
-                <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-              </div>
-            </button>
-            {showLangDropdown && (
-              <div style={{borderTop:'1px solid ' + S.colors.cardBorder, padding:'8px'}}>
-                {LANGS.map(l => (
-                  <button key={l.code} onClick={() => { setPrefs({...prefs, lang:l.code}); setShowLangDropdown(false); }}
-                    style={{width:'100%', padding:'8px 12px', background:'none', border:'none',
-                      cursor:'pointer', textAlign:'left', fontSize:12, color:S.colors.textPrimary,
-                      borderRadius:6}}>
-                    {l.flag} {l.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <Riga icona={<IconMusic size={17} />} titolo="Motore voce"
+            sotto="Come suona la traduzione parlata"
+            valore={motore.nome}
+            aperto={apertoVoce}
+            onClick={() => { setApertoVoce(!apertoVoce); setApertoLingua(false); }} />
+          {apertoVoce && (
+            <div style={{ padding: '4px 0 10px', borderBottom: `1px solid ${c.cardBorder}` }}>
+              {MOTORI_VOCE.map(m => (
+                <Scelta key={m.id} attiva={m.id === (prefs.voiceEngine || 'auto')}
+                  titolo={m.nome} sotto={m.desc}
+                  onClick={() => { savePrefs({ ...prefs, voiceEngine: m.id }); setApertoVoce(false); }} />
+              ))}
+            </div>
+          )}
 
-          {/* Row: Motore STT */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>🎤</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Motore STT</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>Auto (Deepgram)</span>
-            </div>
-          </div>
+          <Riga icona={<IconVolume size={17} />} titolo="Timbro"
+            sotto="Voce femminile o maschile"
+            valore={prefs.voiceGender === 'male' ? 'Maschile' : 'Femminile'}
+            onClick={() => savePrefs({ ...prefs, voiceGender: prefs.voiceGender === 'male' ? 'female' : 'male' })} />
 
-          {/* Row: Voce TTS */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>🔊</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Voce TTS</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                {prefs.ttsEngine === 'elevenlabs' ? 'ElevenLabs' : prefs.ttsEngine === 'openai' ? 'OpenAI' : 'Edge TTS'}
-              </span>
-            </div>
-          </div>
+          <Riga icona={<IconMic size={17} />} titolo="La tua voce clonata"
+            sotto="Parla con il tuo timbro in ogni lingua"
+            valore={clonedVoiceId ? 'Attiva' : 'Non configurata'}
+            onClick={() => setView('voice-clone')} ultima />
+        </Gruppo>
 
-          {/* Row: Voice Clone */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>🗣️</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Voice Clone</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                {clonedVoiceId ? 'Configurato' : 'Non configurato'}
-              </span>
-            </div>
-          </div>
-
-          {/* Row: E2E Encryption */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>🔒</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Crittografia E2E</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <button onClick={() => setPrefs({...prefs, e2eEncryption: !prefs.e2eEncryption})}
-                style={{...S.toggle, background:prefs.e2eEncryption ? S.colors.accent1 : S.colors.toggleOff,
-                  width:32, height:18}}>
-                <div style={{...S.toggleDot, transform:prefs.e2eEncryption ? 'translateX(14px)' : 'translateX(0)', width:14, height:14}} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════════════
-            SECTION: Tema — i 6 toni (5 sciame + Dawn chiaro)
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px'}}>
-            Tema
-          </div>
-          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8,
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder,
-            borderRadius:12, padding:10}}>
+        {/* ═══ 3 · ASPETTO ═══ */}
+        <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
+          <div style={{ fontSize: 9.5, fontWeight: 800, color: c.textMuted, letterSpacing: '0.35em',
+            textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>Aspetto</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+            background: c.cardBg, border: `1px solid ${c.cardBorder}`, borderRadius: 18, padding: 12 }}>
             {THEME_LIST.map(t => (
-              <button key={t.id} onClick={() => setTheme(t.id)}
-                aria-pressed={theme === t.id}
-                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:7,
-                  padding:'10px 4px 8px', borderRadius:10, cursor:'pointer', fontFamily:FONT,
-                  background: theme === t.id ? S.colors.accent1Bg : 'transparent',
-                  border: theme === t.id ? '1px solid ' + S.colors.accent1Border : '1px solid transparent',
-                  transition:'all 0.25s'}}>
-                <span style={{width:26, height:26, borderRadius:13,
-                  background: t.id === 'dawn'
-                    ? 'radial-gradient(circle at 35% 30%, #ffffff, #c9d2e8)'
+              <button key={t.id} onClick={() => setTheme(t.id)} aria-pressed={theme === t.id}
+                style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                  padding: '12px 4px 9px', borderRadius: 13, cursor: 'pointer', fontFamily: FONT,
+                  background: theme === t.id ? c.accent1Bg : 'transparent',
+                  border: `1px solid ${theme === t.id ? c.accent1Border : 'transparent'}`,
+                  transition: 'all 0.25s' }}>
+                <span style={{ width: 30, height: 30, borderRadius: 15,
+                  background: t.id === 'dawn' ? 'radial-gradient(circle at 35% 30%, #ffffff, #c9d2e8)'
                     : t.id === 'blubianco' ? 'linear-gradient(135deg, #f4f7fc 50%, #345caa 50%)'
                     : t.id === 'lilla' ? 'radial-gradient(circle at 35% 30%, #c9b8f5, #4d3a85)'
                     : t.id === 'avorio' ? 'radial-gradient(circle at 35% 30%, #f2efe8, #6a6758)'
                     : t.id === 'ember' ? 'radial-gradient(circle at 35% 30%, #ffc44d, #7a4a26)'
                     : 'radial-gradient(circle at 35% 30%, #97b7eb, #23417a)',
-                  border:'1px solid rgba(128,128,128,0.3)',
-                  boxShadow: theme === t.id ? `0 0 0 3px ${S.colors.accent1Bg}` : 'none'}} />
-                <span style={{fontSize:10.5, fontWeight:700,
-                  color: theme === t.id ? S.colors.textPrimary : S.colors.textMuted}}>{t.name}</span>
+                  border: '1px solid rgba(128,128,128,0.28)',
+                  boxShadow: theme === t.id ? `0 0 0 3px ${c.accent1Bg}, 0 6px 16px -6px rgba(0,0,0,0.6)` : '0 4px 10px -4px rgba(0,0,0,0.5)',
+                  transition: 'all 0.25s' }} />
+                <span style={{ fontSize: 10.5, fontWeight: 750,
+                  color: theme === t.id ? c.textPrimary : c.textMuted }}>{t.name}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            SECTION: Account
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Account
-          </div>
+        {/* ═══ 4 · ACCOUNT ═══ */}
+        <Gruppo titolo="Account">
+          <Riga icona={<IconCreditCard size={17} />} titolo="Credito"
+            sotto="Minuti, ricariche e voucher"
+            onClick={() => setView('credits')} />
+          <Riga icona={<IconKey size={17} />} titolo="Le tue chiavi API"
+            sotto="Con le tue chiavi l'uso è illimitato"
+            valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : 'Nessuna'}
+            onClick={() => setView('apikeys')} />
+          <Riga icona={<IconUser size={17} />} titolo="Contatti"
+            sotto="Le persone con cui parli spesso"
+            onClick={() => setView('contacts')} ultima />
+        </Gruppo>
 
-          {/* Row: Crediti */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setView('credits')}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left',
-                transition:'background 0.15s'}}>
-              <span style={{fontSize:16, flexShrink:0}}>💳</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Credito</div>
-              </div>
-              <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-                <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                  Minuti e ricariche
-                </span>
-                <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-              </div>
+        {/* ═══ 5 · PRIVACY ═══ */}
+        <Gruppo titolo="Privacy">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px' }}>
+            <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: c.overlayBg, border: `1px solid ${c.cardBorder}`, color: c.textSecondary }}>
+              <IconShield size={17} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>
+                Crittografia E2E
+              </span>
+              <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>
+                Nessuno può leggere i messaggi, nemmeno noi
+              </span>
+            </span>
+            <button onClick={() => setPrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
+              aria-pressed={!!prefs.e2eEncryption}
+              style={{ ...S.toggle, width: 40, height: 23, flexShrink: 0,
+                background: prefs.e2eEncryption ? c.accent1 : c.toggleOff }}>
+              <div style={{ ...S.toggleDot, width: 17, height: 17,
+                transform: prefs.e2eEncryption ? 'translateX(17px)' : 'translateX(0)' }} />
             </button>
           </div>
+        </Gruppo>
 
-          {/* Row: API Keys (ultima della card) */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <button onClick={() => setView('apikeys')}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:0}}>
-              <span style={{fontSize:16, flexShrink:0}}>🔑</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>API Keys</div>
-              </div>
-              <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-                <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                  {apiKeyInputs?.length || 0}
-                </span>
-                <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-              </div>
-            </button>
-          </div>
-          {/* Le righe 'Abbonamento' e 'Referral & Gift' sono state rimosse:
-              erano finti bottoni legacy (nessuna view esisteva, e il modello
-              ad abbonamento non esiste più — il credito è a minuti). */}
-        </div>
-
-        {/* ══════════════════════════════════════════════════
-            SECTION: Accesso Rapido (Contatti + AI Hub)
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Accesso Rapido
-          </div>
-
-          {/* Row: Contatti */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setView('contacts')}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
-              <span style={{fontSize:16, flexShrink:0}}>👥</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Contatti</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: AI Hub */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <button onClick={() => setView('ai')}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:0}}>
-              <span style={{fontSize:16, flexShrink:0}}>✨</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>AI Hub</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════════════
-            SECTION: Strumenti
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Strumenti
-          </div>
-
-          {/* Row: Test voce */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setView('voicetest')}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
-              <span style={{fontSize:16, flexShrink:0}}>🎙️</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Test voce</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: Voice Clone tool */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <button onClick={() => setView('voice-clone')}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:0}}>
-              <span style={{fontSize:16, flexShrink:0}}>🗣️</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Voice Clone</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: Glossario */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:0}}>
-            <button onClick={() => setView('ai')}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:'12px 14px'}}>
-              <span style={{fontSize:16, flexShrink:0}}>📖</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Glossario personale</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: Esporta dati */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:0}}>
-            <button onClick={() => {
+        {/* ═══ 6 · STRUMENTI ═══ */}
+        <Gruppo titolo="Strumenti">
+          <Riga icona={<IconMic size={17} />} titolo="Prova le voci"
+            sotto="Ascolta come suonano prima di usarle"
+            onClick={() => setView('voicetest')} />
+          <Riga icona={<IconSparkles size={17} />} titolo="AI Hub e glossario"
+            sotto="Modelli, contesti e parole tue"
+            onClick={() => setView('ai')} />
+          <Riga icona={<IconExport size={17} />} titolo="Esporta i tuoi dati"
+            sotto="Un file con preferenze e conversazioni"
+            onClick={() => {
               try {
-                const history = localStorage.getItem('vt-convHistory');
-                const prefs = localStorage.getItem('vt-prefs');
-                const data = { exportedAt: new Date().toISOString(), preferences: prefs ? JSON.parse(prefs) : null, conversations: history ? JSON.parse(history) : [] };
-                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = `bartalk-export-${new Date().toISOString().slice(0,10)}.json`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-              } catch (e) { console.warn('[SettingsView] Export failed:', e?.message); }
-            }}
-              style={{width:'100%', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left', padding:'12px 14px'}}>
-              <span style={{fontSize:16, flexShrink:0}}>📤</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Esporta dati</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
+                const dati = { prefs, esportato: new Date().toISOString(), versione: APP_VERSION };
+                const url = URL.createObjectURL(new Blob([JSON.stringify(dati, null, 2)], { type: 'application/json' }));
+                const a = document.createElement('a');
+                a.href = url; a.download = `bartalk-dati-${Date.now()}.json`; a.click();
+                URL.revokeObjectURL(url);
+              } catch (e) { console.warn('[Settings] export:', e?.message); }
+            }} ultima />
+        </Gruppo>
+
+        {/* ═══ 7 · INFO ═══ */}
+        <Gruppo titolo="Info">
+          <Riga icona={<IconMessageCircle size={17} />} titolo="Guida"
+            sotto="Come funziona, domande frequenti"
+            onClick={() => setView('help')} />
+          <Riga icona={<IconWarning size={17} />} titolo="Segnala un problema"
+            sotto="Scrivici: rispondiamo davvero"
+            onClick={() => window.open('mailto:support@bartalk.dev?subject=Problema BarTalk ' + APP_VERSION, '_blank')} />
+          <Riga icona={<IconSettings size={17} />} titolo="Versione"
+            valore={`BarTalk ${APP_VERSION}`} ultima />
+        </Gruppo>
+
+        {/* ═══ Azioni finali ═══ */}
+        <div style={{ width: '100%', maxWidth: 440, display: 'flex', gap: 10, marginTop: 4 }}>
+          <button onClick={() => { savePrefs(prefs); setView('home'); }}
+            style={{ ...S.btn, flex: 1 }}>Salva e torna</button>
+          <button onClick={() => { logout?.({ clearPrefs: true }); setView('welcome'); }}
+            style={{ padding: '13px 20px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
+              fontSize: 13.5, fontWeight: 700, background: 'transparent',
+              border: `1px solid ${c.cardBorder}`, color: c.textMuted }}>Esci</button>
         </div>
 
-        {/* ══════════════════════════════════════════════════
-            SECTION: Info
-           ══════════════════════════════════════════════════ */}
-        <div style={{width:'100%', maxWidth:400}}>
-          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
-            letterSpacing:1.2, padding:'12px 0 6px', marginBottom:0}}>
-            Info
-          </div>
-
-          {/* Row: Guida */}
-          <div style={{borderRadius:'12px 12px 0 0', overflow:'hidden',
-            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder}}>
-            <button onClick={() => setView('help')}
-              style={{width:'100%', padding:'12px 14px', background:'none', border:'none',
-                cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
-              <span style={{fontSize:16, flexShrink:0}}>📖</span>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Guida</div>
-              </div>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </button>
-          </div>
-
-          {/* Row: Segnala problema */}
-          <button onClick={() => { if (typeof window !== 'undefined') window.open('mailto:support@bartalk.dev?subject=Bug%20Report', '_blank'); }}
-            style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px', width:'100%', border:'none',
-            cursor:'pointer', display:'flex', alignItems:'center', gap:10, textAlign:'left'}}>
-            <span style={{fontSize:16, flexShrink:0}}>🐛</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Segnala problema</div>
-            </div>
-            <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-          </button>
-
-          {/* Row: Versione */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>ℹ️</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Versione</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>BarTalk {APP_VERSION}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Save preferences button */}
-        <button style={{...S.btn, marginTop:12, width:'100%', maxWidth:400}} onClick={() => { savePrefs(prefs); setView('home'); }}>
-          Salva modifiche
-        </button>
-          {userToken && (
-            <div style={{marginTop:20, paddingTop:16, borderTop:'1px solid ' + S.colors.cardBg}}>
-              <div style={{fontSize:11, color:S.colors.textTertiary, marginBottom:8}}>
-                Account: {userAccount?.email || ''}
-              </div>
-              <button style={{...S.settingsBtn, color:S.colors.accent3, borderColor:S.colors.accent3Border}}
-                onClick={() => { logout({ clearPrefs: true }); setPrefs({ name:'', lang:'it', avatar:'/avatars/1.png', voice:'nova', autoPlay:true }); setView('welcome'); }}>
-                {L('logoutAccount')}
-              </button>
-            </div>
-          )}
       </div>
     </div>
   );
