@@ -41,8 +41,8 @@ export default function PolvereBackdrop() {
     misura();
     window.addEventListener('resize', misura);
 
-    // Sfera di Fibonacci: 700 granelli, distribuzione uniforme
-    const NP = 700, FOV = 380;
+    // Sfera di Fibonacci: 1400 granelli, distribuzione uniforme
+    const NP = 1400, FOV = 380;
     const pts = Array.from({ length: NP }, (_, i) => {
       const k = 2 * (i / NP) - 1, r = Math.sqrt(1 - k * k), phi = i * 2.39996;
       return { x: Math.cos(phi) * r, y: k, z: Math.sin(phi) * r,
@@ -67,13 +67,13 @@ export default function PolvereBackdrop() {
         const s = FOV / (FOV + Z * 260);
         const px = W / 2 + X0 * R * s, py = H / 2 + Y0 * R * s;
         if (p.tipo === 2) {
-          g.beginPath(); g.arc(px, py, (0.3 + s * 0.4) * devicePixelRatio, 0, 7);
-          g.fillStyle = `rgba(${pol.acc},${0.18 + s * 0.25})`; g.fill();
+          g.beginPath(); g.arc(px, py, (0.4 + s * 0.55) * devicePixelRatio, 0, 7);
+          g.fillStyle = `rgba(${pol.acc},${0.28 + s * 0.35})`; g.fill();
         } else {
-          const dim = (0.22 + s * 0.36) * devicePixelRatio;
+          const dim = (0.35 + s * 0.55) * devicePixelRatio;
           const col = p.tipo === 1 ? pol.base2 : pol.base;
           const a = p.tipo === 1 ? (pol.alfa2 ?? pol.alfa) : pol.alfa;
-          g.fillStyle = `rgba(${col},${0.03 + s * a * 0.6})`;
+          g.fillStyle = `rgba(${col},${0.05 + s * a})`;
           g.fillRect(px - dim / 2, py - dim / 2, dim, dim);
         }
       }
@@ -86,7 +86,7 @@ export default function PolvereBackdrop() {
 
   return (
     <canvas ref={cvRef} aria-hidden="true" style={{
-      position: 'fixed', inset: 0, zIndex: 0, opacity: 0.4, pointerEvents: 'none',
+      position: 'fixed', inset: 0, zIndex: 0, opacity: 0.75, pointerEvents: 'none',
     }} />
   );
 }
