@@ -317,7 +317,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                         </span>
                       )}
                       <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
-                        {(partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
+                        {String(partner?.name || partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
                       </span>
                     </div>
                     {latest ? (
