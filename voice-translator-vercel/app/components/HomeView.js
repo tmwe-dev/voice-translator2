@@ -221,113 +221,85 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </div>
         </div>
 
-        {/* ═══ Le 4 azioni: card GEMELLE in griglia 2x2 ═══
-            Stessa geometria per tutte — la primaria si distingue solo
-            per il bordo acceso, mai per la larghezza. */}
+        {/* ═══ Le 4 azioni: righe in UNA card (spec sciame) ═══
+            Tile gradiente solo sulla primaria; le altre tenui.
+            Compatta, leggibile, zero card che dilagano. */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-          gap: 12, marginBottom: 12,
+          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
+          borderRadius: 18, padding: '2px 14px', marginBottom: 12,
         }}>
-          {ACTIONS.map(action => {
-            const hue = action.id === 'face-to-face' ? C.accent
-              : action.id === 'invite' ? C.accent2
-              : action.id === 'videocall' ? C.accent
-              : C.accent3;
-            const hue2 = action.id === 'videocall' ? C.accent3 : C.accent2;
+          {ACTIONS.map((action, idx) => {
+            const tilePieno = !!action.primary;
             return (
               <button
                 key={action.id}
                 onClick={() => handleAction(action.id)}
                 style={{
-                  padding: '18px 16px', borderRadius: 18, textAlign: 'left',
-                  background: action.primary
-                    ? `linear-gradient(145deg, ${C.accent}16, ${C.accent2}10)`
-                    : C.cardBg,
-                  border: action.primary
-                    ? `1.5px solid ${C.accent}45`
-                    : `1px solid ${C.cardBorder}`,
-                  cursor: 'pointer', display: 'flex', flexDirection: 'column',
-                  alignItems: 'flex-start', gap: 12, minHeight: 128,
-                  transition: 'transform 0.15s, background-color 0.15s, box-shadow 0.15s',
+                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  padding: '13px 2px', background: 'none', textAlign: 'left',
+                  border: 'none', cursor: 'pointer',
+                  borderBottom: idx < ACTIONS.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
+                  transition: 'opacity 0.2s',
                 }}
-                onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 10px 30px -12px ${hue}50`; }}
-                onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
-                onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
-                onMouseUp={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseOver={(e) => e.currentTarget.style.opacity = 0.82}
+                onMouseOut={(e) => e.currentTarget.style.opacity = 1}
               >
                 <span style={{
-                  width: 44, height: 44, borderRadius: 13, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: `linear-gradient(145deg, ${hue}, ${hue2})`,
-                  color: '#fff', boxShadow: `0 4px 16px ${hue}35`, lineHeight: 0,
+                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+                  background: tilePieno ? `linear-gradient(145deg, ${C.accent}, ${C.accent2})` : C.cardBg,
+                  border: tilePieno ? 'none' : `1px solid ${C.cardBorder}`,
+                  color: tilePieno ? '#fff' : C.textSecondary,
+                  boxShadow: tilePieno ? `0 4px 14px -4px ${C.accent}70` : 'none',
                 }}>
-                  {action.icon === 'qr' ? <IconQR size={22} /> : action.icon === 'mail' ? <IconMail size={22} /> : action.icon === 'video' ? <IconVideoCall size={22} /> : <IconCar size={22} />}
+                  {action.icon === 'qr' ? <IconQR size={20} /> : action.icon === 'mail' ? <IconMail size={20} /> : action.icon === 'video' ? <IconVideoCall size={20} /> : <IconCar size={20} />}
                 </span>
-                <span>
-                  <span style={{
-                    display: 'block', fontSize: 15, fontWeight: 700,
-                    color: C.textPrimary, fontFamily: FONT, marginBottom: 3,
-                  }}>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
                     {action.title}
                   </span>
-                  <span style={{
-                    display: 'block', fontSize: 12, color: C.textSecondary,
-                    fontFamily: FONT, lineHeight: 1.45,
-                  }}>
+                  <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
                     {action.desc}
                   </span>
                 </span>
+                <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
               </button>
             );
           })}
         </div>
 
-        {/* ═══ Community: stessa famiglia grafica delle card sopra ═══ */}
+        {/* ═══ Il mondo ora — la Community come riga viva ═══ */}
         <div style={{
-          padding: '18px 16px', borderRadius: 18,
           background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-          marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+          borderRadius: 18, padding: '2px 14px', marginBottom: 20,
         }}>
-          <span style={{
-            width: 44, height: 44, borderRadius: 13, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(145deg, ${C.accent2}, ${C.accent})`,
-            color: '#fff', boxShadow: `0 4px 16px ${C.accent2}35`, fontSize: 20,
-          }}>
-            🌐
-          </span>
-          <div style={{ flex: 1, minWidth: 180 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: FONT, marginBottom: 2 }}>
-              Community BarTalk
-            </div>
-            <div style={{ fontSize: 12, color: C.textSecondary, fontFamily: FONT, lineHeight: 1.45 }}>
-              Discussioni internazionali senza barriere linguistiche
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button
-              onClick={() => { vibrate(); setView('mondo'); }}
-              style={{
-                padding: '10px 18px', borderRadius: 12, border: 'none',
-                background: `linear-gradient(90deg, ${C.accent}, ${C.accent2})`,
-                color: '#fff', fontSize: 13, fontWeight: 700,
-                cursor: 'pointer', fontFamily: FONT,
-              }}
-            >
-              Scopri
-            </button>
-            <button
-              onClick={() => { vibrate(); setView('contacts'); }}
-              style={{
-                padding: '10px 18px', borderRadius: 12,
-                background: 'transparent', border: `1px solid ${C.cardBorder}`,
-                color: C.textSecondary, fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: FONT,
-              }}
-            >
-              Contatti
-            </button>
-          </div>
+          <button
+            onClick={() => { vibrate(); setView('mondo'); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+              padding: '13px 2px', background: 'none', textAlign: 'left',
+              border: 'none', cursor: 'pointer',
+            }}
+          >
+            <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0, width: 40, justifyContent: 'center' }}>
+              {[0, 1, 2].map(i => (
+                <span key={i} style={{
+                  width: 5, height: 5, borderRadius: 3, background: C.accent2,
+                  boxShadow: `0 0 6px ${C.accent2}80`,
+                  animation: `vtBattPulse 2.4s ${i * 0.3}s ease-in-out infinite`,
+                }} />
+              ))}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+                Il mondo ora
+              </span>
+              <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+                Stanze aperte, discussioni senza barriere
+              </span>
+            </span>
+            <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
+          </button>
         </div>
 
         {/* ═══ Active Rooms ═══ */}

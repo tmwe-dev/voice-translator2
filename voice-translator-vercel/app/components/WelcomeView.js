@@ -5,6 +5,7 @@ import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import SciameOnboarding from './SciameOnboarding.js';
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -213,26 +214,11 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
       color: D.text, fontFamily: FONT, overflow: 'hidden',
     }}>
 
-      {/* ═══ AMBIENT BACKGROUND ═══ */}
+      {/* ═══ LO SCIAME — il mondo di granelli che accoglie ═══
+          fase 0 = sfera (il mondo) · fase 1 = elica (il nome)
+          fase 2 = anello (la scelta). Sostituisce gli orb sfocati. */}
+      <SciameOnboarding fase={Math.min(phase, 2)} />
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', top: '-18%', right: '-20%',
-          width: '75vw', height: '75vw', maxWidth: 550, maxHeight: 550, borderRadius: '50%',
-          background: `radial-gradient(circle, ${D.neon1}25, ${D.neon2}10, transparent 65%)`,
-          filter: 'blur(80px)', animation: 'vtOrb1 9s ease-in-out infinite',
-        }} />
-        <div style={{
-          position: 'absolute', bottom: '-12%', left: '-18%',
-          width: '65vw', height: '65vw', maxWidth: 480, maxHeight: 480, borderRadius: '50%',
-          background: `radial-gradient(circle, ${D.neon4}18, ${D.neon3}0A, transparent 65%)`,
-          filter: 'blur(70px)', animation: 'vtOrb2 11s ease-in-out infinite',
-        }} />
-        <div style={{
-          position: 'absolute', top: '40%', left: '50%', transform: 'translateX(-50%)',
-          width: '45vw', height: '45vw', maxWidth: 350, maxHeight: 350, borderRadius: '50%',
-          background: `radial-gradient(circle, ${D.neon2}12, transparent 65%)`,
-          filter: 'blur(90px)', animation: 'vtOrb3 13s ease-in-out infinite',
-        }} />
         {/* Noise + Vignette */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.025,
           backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,

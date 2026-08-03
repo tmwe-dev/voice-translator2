@@ -281,6 +281,42 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
         </div>
 
         {/* ══════════════════════════════════════════════════
+            SECTION: Tema — i 6 toni (5 sciame + Dawn chiaro)
+           ══════════════════════════════════════════════════ */}
+        <div style={{width:'100%', maxWidth:400}}>
+          <div style={{fontSize:11, fontWeight:700, color:S.colors.textMuted, textTransform:'uppercase',
+            letterSpacing:1.2, padding:'12px 0 6px'}}>
+            Tema
+          </div>
+          <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:8,
+            background:S.colors.cardBg, border:'1px solid ' + S.colors.cardBorder,
+            borderRadius:12, padding:10}}>
+            {THEME_LIST.map(t => (
+              <button key={t.id} onClick={() => setTheme(t.id)}
+                aria-pressed={theme === t.id}
+                style={{display:'flex', flexDirection:'column', alignItems:'center', gap:7,
+                  padding:'10px 4px 8px', borderRadius:10, cursor:'pointer', fontFamily:FONT,
+                  background: theme === t.id ? S.colors.accent1Bg : 'transparent',
+                  border: theme === t.id ? '1px solid ' + S.colors.accent1Border : '1px solid transparent',
+                  transition:'all 0.25s'}}>
+                <span style={{width:26, height:26, borderRadius:13,
+                  background: t.id === 'dawn'
+                    ? 'radial-gradient(circle at 35% 30%, #ffffff, #c9d2e8)'
+                    : t.id === 'blubianco' ? 'linear-gradient(135deg, #f4f7fc 50%, #345caa 50%)'
+                    : t.id === 'lilla' ? 'radial-gradient(circle at 35% 30%, #c9b8f5, #4d3a85)'
+                    : t.id === 'avorio' ? 'radial-gradient(circle at 35% 30%, #f2efe8, #6a6758)'
+                    : t.id === 'ember' ? 'radial-gradient(circle at 35% 30%, #ffc44d, #7a4a26)'
+                    : 'radial-gradient(circle at 35% 30%, #97b7eb, #23417a)',
+                  border:'1px solid rgba(128,128,128,0.3)',
+                  boxShadow: theme === t.id ? `0 0 0 3px ${S.colors.accent1Bg}` : 'none'}} />
+                <span style={{fontSize:10.5, fontWeight:700,
+                  color: theme === t.id ? S.colors.textPrimary : S.colors.textMuted}}>{t.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════════════
             SECTION: Account
            ══════════════════════════════════════════════════ */}
         <div style={{width:'100%', maxWidth:400}}>

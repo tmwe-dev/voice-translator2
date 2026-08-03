@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.75';
+export const APP_VERSION = 'b.76';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -106,10 +106,13 @@ export const CONTEXTS = [
 export const FONT = "ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
 
 // \u2500\u2500 Spatial Design: 3 temi \u2500\u2500
-export const THEMES = { DEEP: 'deep', EMBER: 'ember', DAWN: 'dawn' };
+export const THEMES = { DEEP: 'deep', EMBER: 'ember', DAWN: 'dawn', AVORIO: 'avorio', LILLA: 'lilla', BLUBIANCO: 'blubianco' };
 export const THEME_LIST = [
-  { id:'deep', name:'Deep Space', icon:'\u{1F30C}', desc:'Blu notte, vetri e stelle' },
-  { id:'ember', name:'Ember', icon:'\u{1F525}', desc:'Scuro caldo, orange e ambra' },
+  { id:'deep', name:'Blu', icon:'\u{1F30C}', desc:'Blu notte, vetri e stelle' },
+  { id:'ember', name:'Terra', icon:'\u{1F525}', desc:'Scuro caldo, orange e marrone' },
+  { id:'avorio', name:'Avorio', icon:'\u{1FAB6}', desc:'Nero caldo, luce d\u2019ambra' },
+  { id:'lilla', name:'Lilla', icon:'\u{1F52E}', desc:'Viola notte, lavanda' },
+  { id:'blubianco', name:'Blu & Bianco', icon:'\u{2744}\uFE0F', desc:'Ghiaccio su blu profondo' },
   { id:'dawn', name:'Dawn', icon:'\u2600\uFE0F', desc:'Chiaro, aria e contrasto' },
 ];
 // Migrazione temi legacy salvati in localStorage \u2192 nuovi temi
