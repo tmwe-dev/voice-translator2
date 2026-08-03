@@ -4,6 +4,7 @@ import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
   IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import CostTicker from './CostTicker.js';
 
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
@@ -237,6 +238,11 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               }}>
               {partnerVolume < 0.01 ? <IconVolumeOff size={20}/> : <IconVolume size={20}/>}
             </button>
+          </div>
+
+          {/* Costo call in euro, tempo reale */}
+          <div style={{ position: 'absolute', top: 52, right: 106, zIndex: 6 }}>
+            <CostTicker attivo={true} vocePremium={false} />
           </div>
 
           {/* ═══ Pannello traduzione live (Spatial Design) ═══

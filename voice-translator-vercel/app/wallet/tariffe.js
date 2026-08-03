@@ -57,6 +57,17 @@ export function oreIncluse(pacchetto) {
   };
 }
 
+// ── Prezzo di VENDITA all'utente (per mostrare i costi in euro) ──
+// Derivato dal pacchetto medio: €11,99 / 480 min ≈ 2,5 cent/min standard.
+export const PREZZO_VENDITA_CENT_MIN = { standard: 2.5, premium: 7.5 };
+
+/** Da secondi consumati a euro (per il contatore live nelle call). */
+export function euroDaSecondi(secondi, vocePremium = false) {
+  const centMin = vocePremium ? PREZZO_VENDITA_CENT_MIN.premium : PREZZO_VENDITA_CENT_MIN.standard;
+  const euro = (secondi / 60) * centMin / 100;
+  return '\u20AC' + euro.toFixed(2).replace('.', ',');
+}
+
 /** Colore batteria: 'verde' | 'giallo' | 'rosso' in base al saldo. */
 export function coloreBatteria(saldoSecondi) {
   const frazione = saldoSecondi / BATTERIA.riferimentoSecondi;

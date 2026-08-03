@@ -9,12 +9,17 @@
 
 import { MOLTIPLICATORE_PREMIUM } from './tariffe.js';
 
-// ═══ REGOLA FONDAMENTALE: PAGA L'HOST ═══
-// Chi crea la stanza (host) paga TUTTA la conversazione, anche i
-// secondi parlati dagli invitati. L'invitato entra senza account e
-// senza credito. Quindi: ogni addebito va SEMPRE al wallet dell'host
-// della stanza, mai a chi sta parlando in quel momento.
-// → chiamare sempre: scalaSeDisponibile(hostId, ...) — MAI speakerId.
+// ═══ LE DUE REGOLE DI ADDEBITO ═══
+//
+// 1. CHAT E VIDEOCHIAMATE SU INVITO (1:1, "parla con chi hai davanti",
+//    link di invito): paga CHI HA APERTO la conversazione. L'invitato
+//    entra senza account e senza credito.
+//    → scalaSeDisponibile(chiHaInvitatoId, ...)
+//
+// 2. STANZE COMMUNITY (Mondo, stanze pubbliche, social): OGNUNO paga
+//    i PROPRI consumi. Chi apre la stanza non paga per gli altri —
+//    non inviti 100 persone a tavola e paghi tu.
+//    → scalaSeDisponibile(speakerId, ...) per ogni partecipante.
 
 /**
  * Un pezzo di conversazione vocale.
