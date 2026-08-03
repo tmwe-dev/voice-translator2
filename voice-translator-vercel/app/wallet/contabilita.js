@@ -10,6 +10,7 @@
 //   'voucher'   → +secondi (codice promozionale)
 //   'regalo_in' → +secondi (ricevuto da un amico)
 //   'regalo_out'→ -secondi (regalato a un amico)
+//   'omaggio'   → +secondi (regalo dell'admin dal pannello Sesamo)
 //   'uso'       → -secondi (conversazione, TTS, riassunto)
 //
 // Questo file parla SOLO con Supabase. Niente Stripe qui dentro.
@@ -71,7 +72,7 @@ export async function storicoAcquisti(utenteId, limite = 50) {
     .from('credit_ledger')
     .select('created_at, tipo, secondi, dettaglio')
     .eq('user_id', utenteId)
-    .in('tipo', ['acquisto', 'voucher', 'regalo_in', 'benvenuto'])
+    .in('tipo', ['acquisto', 'voucher', 'regalo_in', 'benvenuto', 'omaggio'])
     .order('created_at', { ascending: false })
     .limit(limite);
   if (error) throw new Error('Storico: ' + error.message);

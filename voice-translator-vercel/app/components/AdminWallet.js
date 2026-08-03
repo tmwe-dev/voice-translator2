@@ -19,6 +19,22 @@ const INPUT = { background: '#09090b', border: '1px solid #27272a', borderRadius
 const BTN = { background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14 };
 
 const fmtEuro = (n) => '€' + Number(n || 0).toFixed(2).replace('.', ',');
+const APP_URL = 'https://voice-translator2.vercel.app';
+
+// ── Testi pronti per WhatsApp / email ──
+function testoOmaggio(minuti) {
+  return `Ciao! Ti ho regalato ${minuti} minuti di conversazione su BarTalk \u{1F381} `
+    + `Apri ${APP_URL} ed entra con la tua email: trovi il credito nella batteria in alto.`;
+}
+function testoVoucher(codice, durata) {
+  return `Ecco il tuo voucher BarTalk: ${codice} (vale ${durata}). `
+    + `Apri ${APP_URL}, tocca la batteria in alto e inserisci il codice in "Hai un voucher?".`;
+}
+function linkWhatsApp(testo) { return 'https://wa.me/?text=' + encodeURIComponent(testo); }
+function linkMail(a, oggetto, testo) {
+  return `mailto:${a || ''}?subject=${encodeURIComponent(oggetto)}&body=${encodeURIComponent(testo)}`;
+}
+const BTN_MINI = { ...BTN, padding: '5px 10px', fontSize: 12, textDecoration: 'none', display: 'inline-block' };
 
 export default function AdminWallet() {
   const [pass, setPass] = useState('');
@@ -29,6 +45,10 @@ export default function AdminWallet() {
   const [vCodice, setVCodice] = useState('');
   const [vMinuti, setVMinuti] = useState(60);
   const [vUsi, setVUsi] = useState(100);
+  // Form regalo diretto
+  const [rUtente, setRUtente] = useState('');
+  const [rMinuti, setRMinuti] = useState(30);
+  const [regalato, setRegalato] = useState(null); // { utente, minuti } → mostra i tasti invio
 
   async function carica(passUsata = pass) {
     setCaricamento(true); setEsito('');
@@ -124,14 +144,42 @@ export default function AdminWallet() {
         ))}
       </div>
 
-      {/* ── 4. Uso per utente ── */}
+      {/* ── 4. Regala credito a un utente + invio WhatsApp/mail ── */}
+      <div style={CARD}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F381}'} Regala credito</h3>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input value={rUtente} onChange={e => { setRUtente(e.target.value); setRegalato(null); }}
+            placeholder="email utente" style={{ ...INPUT, width: 240 }} />
+          <input type="number" value={rMinuti} onChange={e => setRMinuti(+e.target.value)}
+            placeholder="Minuti" style={{ ...INPUT, width: 90 }} title="Minuti regalati" />
+          <button disabled={!rUtente || !rMinuti}
+            onClick={async () => {
+              if (await comanda({ azione: 'accredita', utente: rUtente, minuti: rMinuti })) {
+                setRegalato({ utente: rUtente, minuti: rMinuti });
+              }
+            }} style={BTN}>Accredita</button>
+        </div>
+        {regalato && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+            <span style={{ color: '#22c55e', fontSize: 13, fontWeight: 700 }}>
+              Fatto: +{regalato.minuti} min a {regalato.utente}. Avvisalo:
+            </span>
+            <a href={linkWhatsApp(testoOmaggio(regalato.minuti))} target="_blank" rel="noreferrer"
+              style={{ ...BTN_MINI, background: '#25d366' }}>WhatsApp</a>
+            <a href={linkMail(regalato.utente, 'Un regalo su BarTalk', testoOmaggio(regalato.minuti))}
+              style={{ ...BTN_MINI, background: '#3b82f6', color: '#fff' }}>Email</a>
+          </div>
+        )}
+      </div>
+
+      {/* ── 5. Uso per utente ── */}
       <div style={CARD}>
         <h3 style={{ margin: '0 0 12px', fontSize: 16 }}>{'\u{1F465}'} Per utente</h3>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead><tr>
               <th style={TH}>Utente</th><th style={TH}>Saldo</th><th style={TH}>Consumato</th>
-              <th style={TH}>Speso</th><th style={TH}>Costi provider</th><th style={TH}>Ultima attività</th>
+              <th style={TH}>Speso</th><th style={TH}>Costi provider</th><th style={TH}>Ultima attività</th><th style={TH}></th>
             </tr></thead>
             <tbody>{(dati.utenti || []).map(u => (
               <tr key={u.user_id}>
@@ -141,6 +189,12 @@ export default function AdminWallet() {
                 <td style={{ ...TD, color: '#22c55e' }}>{fmtEuro(u.euro_spesi)}</td>
                 <td style={{ ...TD, color: '#ef4444' }}>{fmtEuro(u.euro_costi_provider)}</td>
                 <td style={{ ...TD, color: '#71717a', fontSize: 12 }}>{String(u.ultima_attivita || '').slice(0, 16).replace('T', ' ')}</td>
+                <td style={TD}>
+                  <button onClick={() => { setRUtente(u.user_id); setRegalato(null); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    title="Prepara un regalo per questo utente" style={{ ...BTN_MINI, background: '#27272a', color: '#e4e4e7' }}>
+                    {'\u{1F381}'} Regala
+                  </button>
+                </td>
               </tr>
             ))}</tbody>
           </table>
@@ -159,7 +213,7 @@ export default function AdminWallet() {
         </div>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead><tr>
-            <th style={TH}>Codice</th><th style={TH}>Regala</th><th style={TH}>Usi</th><th style={TH}>Scade</th><th style={TH}>Campagna</th>
+            <th style={TH}>Codice</th><th style={TH}>Regala</th><th style={TH}>Usi</th><th style={TH}>Scade</th><th style={TH}>Campagna</th><th style={TH}>Invia</th>
           </tr></thead>
           <tbody>{(dati.voucher || []).map(v => (
             <tr key={v.codice}>
@@ -168,6 +222,12 @@ export default function AdminWallet() {
               <td style={TD}>{v.usi_fatti} / {v.usi_massimi}</td>
               <td style={{ ...TD, color: '#71717a' }}>{v.scade_il ? String(v.scade_il).slice(0, 10) : 'mai'}</td>
               <td style={{ ...TD, color: '#a1a1aa' }}>{v.campagna}</td>
+              <td style={{ ...TD, whiteSpace: 'nowrap' }}>
+                <a href={linkWhatsApp(testoVoucher(v.codice, formattaDurata(v.secondi)))} target="_blank" rel="noreferrer"
+                  style={{ ...BTN_MINI, background: '#25d366', marginRight: 6 }}>WhatsApp</a>
+                <a href={linkMail('', 'Il tuo voucher BarTalk', testoVoucher(v.codice, formattaDurata(v.secondi)))}
+                  style={{ ...BTN_MINI, background: '#3b82f6', color: '#fff' }}>Email</a>
+              </td>
             </tr>
           ))}</tbody>
         </table>

@@ -41,8 +41,23 @@ export async function GET(req) {
 }
 
 export async function POST(req) {
-  const { pass, azione, chiave, valore, attivo, codice, minuti, usi, scade } = await req.json();
+  const { pass, azione, chiave, valore, attivo, codice, minuti, usi, scade, utente, nota } = await req.json();
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
+
+  // ── Accredita minuti a un utente (regalo diretto dell'admin) ──
+  if (azione === 'accredita') {
+    if (!utente || !minuti || minuti <= 0) {
+      return NextResponse.json({ error: 'utente e minuti obbligatori' }, { status: 400 });
+    }
+    const { error } = await db().from('credit_ledger').insert({
+      user_id: String(utente).toLowerCase().trim(),
+      tipo: 'omaggio',
+      secondi: Math.round(minuti * 60),
+      dettaglio: { nota: nota || 'omaggio admin', da: 'sesamo' },
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
 
   // ── Crea un voucher promozionale ──
   if (azione === 'voucher') {
