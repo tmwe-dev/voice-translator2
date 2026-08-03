@@ -95,6 +95,7 @@ export default function useTranslation({
   // Classic recording refs
   const recRef = useRef(null);
   const chunksRef = useRef([]);
+  const recStartAtRef = useRef(0); // quando è partita la registrazione (per la durata → wallet)
 
   // Speaking state keepalive ref (refresh every 15s so partner sees dots)
   const speakingKeepAliveRef = useRef(null);
@@ -208,7 +209,7 @@ export default function useTranslation({
 
     // ── PHASE 2: Translate + update ──
     getPerf().mark(PERF.TRANSLATE_LATENCY);
-    const translateOpts = buildTranslateOpts();
+    const translateOpts = { ...buildTranslateOpts(), ...(opts.giaAddebitato && { giaAddebitato: true }) };
     let translations = {};
     let primaryTranslated = '';
     let finalTargetLang = primaryTargetLang;
@@ -331,13 +332,24 @@ export default function useTranslation({
     if (roomId) form.append('roomId', roomId);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
+    // Durata della registrazione: serve al wallet per l'addebito in secondi
+    if (recStartAtRef.current) {
+      form.append('durata', String((Date.now() - recStartAtRef.current) / 1000));
+      recStartAtRef.current = 0;
+    }
 
     const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+    if (res.status === 402) {
+      // Credito esaurito: fermiamo la sessione e mostriamo l'avviso batteria
+      window.dispatchEvent(new CustomEvent('wallet:esaurito'));
+      throw new Error('Credito esaurito');
+    }
     if (!res.ok) {
       console.error('[processAndSendAudio] Transcribe API error:', res.status);
       throw new Error(`Transcribe error ${res.status}`);
     }
-    const { original } = await res.json();
+    const { original, creditoEsaurito } = await res.json();
+    if (creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     getPerf().measure(PERF.STT_LATENCY);
     dbg.debug('[processAndSendAudio] STT result:', original?.substring(0, 50));
     if (!original?.trim() || !roomId) return;
@@ -347,7 +359,8 @@ export default function useTranslation({
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
     try {
-      await translateAndSend(original, { skipPhase1: true, myL, targetLangs });
+      // giaAddebitato: questo audio è già stato scalato da /api/transcribe
+      await translateAndSend(original, { skipPhase1: true, giaAddebitato: true, myL, targetLangs });
     } catch (e) {
       console.error('[processAndSendAudio] Translation failed:', e);
       if (updateLocalMessage) {
@@ -459,6 +472,7 @@ export default function useTranslation({
         backupStreamRef.current = stream;
         backupChunksRef.current = [];
         backupRecRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
+        recStartAtRef.current = Date.now();
         backupRecRef.current.ondataavailable = e => {
           if (e.data.size > 0) backupChunksRef.current.push(e.data);
         };
@@ -653,6 +667,7 @@ export default function useTranslation({
     try {
       const stream = await getMicStream();
       recRef.current = new MediaRecorder(stream, { mimeType: getRecorderMime() });
+      recStartAtRef.current = Date.now();
       recRef.current.ondataavailable = e => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };

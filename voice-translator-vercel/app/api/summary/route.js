@@ -7,6 +7,7 @@ import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { addebitaRiassunto } from '../../wallet/addebita.js';
 
 const log = createLogger('summary');
 
@@ -107,6 +108,9 @@ Output ONLY valid JSON, no markdown, no code blocks.`
         await trackDailySpend(billingEmail, charge);
       } catch (e) { log.error('Summary credit deduct error:', e); }
     }
+
+    // ── Wallet: riassunto = 10 secondi di credito, addebito dopo il lavoro ──
+    await addebitaRiassunto(isOwnKey ? null : billingEmail);
 
     let summary;
     try {

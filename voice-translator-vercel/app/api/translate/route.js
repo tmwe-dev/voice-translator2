@@ -17,6 +17,7 @@ import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { addebitaTesto } from '../../wallet/addebita.js';
 
 const log = createLogger('translate');
 
@@ -43,7 +44,7 @@ async function handlePost(req) {
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
-            roomMode, nativeLang, conversationContext } = { ...rawBody, ...inputValidation.data };
+            roomMode, nativeLang, conversationContext, giaAddebitato } = { ...rawBody, ...inputValidation.data };
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 
@@ -236,6 +237,13 @@ async function handlePost(req) {
       } catch (e) { log.error('Credit deduct error:', e); }
     }
 
+    // ── Wallet: addebito del messaggio (salvo fase 2 di un audio già pagato) ──
+    let creditoEsaurito = false;
+    if (billingEmail && !isOwnKey && !isReview && !giaAddebitato) {
+      const esito = await addebitaTesto(billingEmail, text.length);
+      creditoEsaurito = esito === 'esaurito';
+    }
+
     // Calculate confidence score
     const confidence = calcConfidence(text, translated, sourceLang, targetLang);
 
@@ -290,7 +298,8 @@ async function handlePost(req) {
       confidence,
       cost: roundCost(msgCostUsd),
       costEurCents: roundEurCents(msgCostEurCents),
-      ...(remainingCredits !== undefined ? { remainingCredits } : {})
+      ...(remainingCredits !== undefined ? { remainingCredits } : {}),
+      ...(creditoEsaurito && { creditoEsaurito: true })
     });
   } catch (e) {
     // resolveAuth throws NextResponse objects on auth failure

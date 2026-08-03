@@ -94,6 +94,8 @@ export function validateTranslateInput(body) {
       roomMode: body.roomMode || undefined,
       nativeLang: body.nativeLang || undefined,
       conversationContext: body.conversationContext ? clean(body.conversationContext, 3000) : undefined,
+      // true = fase 2 di un audio già addebitato da /api/transcribe (no doppio addebito)
+      giaAddebitato: !!body.giaAddebitato,
     },
   };
 }

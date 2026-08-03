@@ -31,6 +31,13 @@ export default function BatteryPill({ utente }) {
 
   useEffect(() => subscribeTick(60000, carica, { immediate: true }), [carica]);
 
+  // Credito esaurito durante una conversazione → aggiorna e apri il popup ricarica
+  useEffect(() => {
+    const suEsaurito = () => { carica(); setAperto(true); };
+    window.addEventListener('wallet:esaurito', suEsaurito);
+    return () => window.removeEventListener('wallet:esaurito', suEsaurito);
+  }, [carica]);
+
   if (!utente || !dati) return null;
   const colore = COLORI[dati.colore] || COLORI.verde;
 

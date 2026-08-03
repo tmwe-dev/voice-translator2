@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { FONT } from '../lib/constants.js';
 import { t, mapLang } from '../lib/i18n.js';
+import AdminWallet from '../components/AdminWallet.js';
 
 // ═══════════════════════════════════════════════
 // Admin Dashboard — i18n
@@ -19,6 +20,7 @@ const TAB_KEYS = [
   { id: 'users', labelKey: 'adminUsers', icon: '\u{1F465}' },
   { id: 'revenue', labelKey: 'adminRevenue', icon: '\u{1F4B0}' },
   { id: 'languages', labelKey: 'adminLanguages', icon: '\u{1F30D}' },
+  { id: 'wallet', label: 'Wallet', icon: '\u{1F4B6}' },
 ];
 
 export default function AdminPage() {
@@ -119,7 +121,7 @@ export default function AdminPage() {
               color: activeTab === tab.id ? '#000' : '#a1a1aa',
               fontWeight: activeTab === tab.id ? 700 : 500, fontSize: 14, cursor: 'pointer', fontFamily: FONT,
             }}>
-              {tab.icon} {L(tab.labelKey)}
+              {tab.icon} {tab.label || L(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -244,6 +246,9 @@ export default function AdminPage() {
             )}
           </div>
         )}
+
+        {/* ── Wallet Tab: economics reali, servizi AI, voucher ── */}
+        {activeTab === 'wallet' && <AdminWallet />}
 
         {/* ── Languages Tab ── */}
         {activeTab === 'languages' && (

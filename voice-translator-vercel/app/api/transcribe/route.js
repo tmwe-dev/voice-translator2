@@ -8,6 +8,7 @@ import { resolveAuth } from '../../lib/apiAuth.js';
 import { MIN_CREDITS } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { creditoFinito, addebitaVoce } from '../../wallet/addebita.js';
 
 const log = createLogger('transcribe');
 
@@ -43,6 +44,8 @@ async function handlePost(req) {
     const userToken = formData.get('userToken') || '';
     const roomId = formData.get('roomId') || '';
     const lendingCode = formData.get('lendingCode') || '';
+    // Durata della registrazione in secondi (la manda il client, che la conosce)
+    const durataSec = Math.min(120, Math.max(0, parseFloat(formData.get('durata')) || 0));
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 
@@ -58,13 +61,21 @@ async function handlePost(req) {
     }
 
     // Auth: need OpenAI for STT
-    const { apiKey } = await resolveAuth({
+    // billingEmail = chi paga: userToken → chi parla (Community),
+    // roomId → chi ha aperto la conversazione (inviti)
+    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken: userToken || undefined,
       roomId: roomId || undefined,
       lendingCode: lendingCode || undefined,
       provider: 'openai',
       minCredits: MIN_CREDITS.PROCESS,
     });
+
+    // ── Wallet: credito finito? Fermiamo PRIMA di lavorare ──
+    const pagante = isOwnKey ? null : billingEmail;
+    if (pagante && await creditoFinito(pagante)) {
+      return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
+    }
 
     const openai = new OpenAI({ apiKey });
 
@@ -83,7 +94,13 @@ async function handlePost(req) {
 
     const original = (transcription.text || '').trim();
 
-    return NextResponse.json({ original });
+    // ── Wallet: addebito DOPO il lavoro riuscito (mai per un errore) ──
+    // Durata dal client; se manca, stima prudente dal peso dell'audio (~4KB/s opus).
+    const secondi = durataSec || Math.min(120, buffer.length / 4000);
+    const esito = await addebitaVoce(pagante, secondi);
+
+    // esito 'esaurito' = questo era l'ultimo pezzo: il client ferma la sessione
+    return NextResponse.json({ original, ...(esito === 'esaurito' && { creditoEsaurito: true }) });
   } catch (e) {
     if (e instanceof NextResponse) return e;
     log.error('Error:', e);

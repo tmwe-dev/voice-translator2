@@ -8,6 +8,7 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { creditoFinito, addebitaVocePremium } from '../../wallet/addebita.js';
 
 const log = createLogger('ttsElevenlabs');
 
@@ -121,6 +122,12 @@ async function handlePost(req) {
       minCredits: MIN_CREDITS.TTS_ELEVENLABS,
     });
 
+    // ── Wallet: la voce premium costa 3x — blocco PRIMA di chiamare ElevenLabs ──
+    const pagante = isOwnKey ? null : billingEmail;
+    if (pagante && await creditoFinito(pagante)) {
+      return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
+    }
+
     // ── Voice selection priority ──
     // 1. Explicit voiceId (user chose a specific voice or cloned voice)
     // 2. Admin default for language (from voiceDefaults.js — Luca configures)
@@ -209,7 +216,8 @@ async function handlePost(req) {
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
             try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback credit deduct failed:', e?.message); }
           }
-          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString() } });
+          const esitoFb = await addebitaVocePremium(pagante, cleanText.length);
+          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), ...(esitoFb === 'esaurito' && { 'X-Credito-Esaurito': '1' }) } });
         }
       }
 
@@ -231,11 +239,16 @@ async function handlePost(req) {
       } catch (e) { log.error('ElevenLabs credit deduct error:', e); }
     }
 
+    // ── Wallet: addebito premium DOPO l'audio riuscito ──
+    const esito = await addebitaVocePremium(pagante, cleanText.length);
+
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Content-Length': buffer.length.toString()
+        'Content-Length': buffer.length.toString(),
+        // Era l'ultimo: il client passa alla voce standard e avvisa
+        ...(esito === 'esaurito' && { 'X-Credito-Esaurito': '1' })
       }
     });
   } catch (e) {

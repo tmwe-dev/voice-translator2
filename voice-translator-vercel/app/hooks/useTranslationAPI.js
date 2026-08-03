@@ -295,6 +295,8 @@ export default function useTranslationAPI({
         throw new Error('Translation error');
       }
       result = await res.json();
+      // Wallet: era l'ultimo messaggio col credito — avvisa la batteria
+      if (result.creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     } catch (paidErr) {
       // ── Fallback to free translation when paid fails ──
       // This ensures translation ALWAYS works even if credits are exhausted,
