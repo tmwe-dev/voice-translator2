@@ -515,18 +515,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       iceCandidateQueueRef.current = [];
 
       try {
-        // Il timer parte SUBITO, prima dei passi che possono bloccarsi
-        // (getUserMedia può non risolvere mai se la camera è occupata).
-        // Prima veniva impostato solo alla fine: se il media si bloccava,
-        // nessun timeout era attivo → schermata congelata.
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => {
-          if (stateRef.current !== 'connected') {
-            setWebrtcState('failed');
-            stateRef.current = 'failed';
-            cleanup();
-          }
-        }, CONNECTION_TIMEOUT);
+        // L'offer è arrivato: spegni il timer "aspetto l'offer" di acceptIncomingCall.
+        // NON armare qui il timer di connessione: getUserMedia può legittimamente
+        // aspettare il popup permessi (l'utente decide coi suoi tempi).
+        if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
 
         const newPc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
         pcRef.current = newPc;
@@ -541,6 +533,15 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         const answerStr = await createAnswer(newPc, data);
         await sendSignal('answer', answerStr);
         await flushIceCandidates(newPc);
+        // Ora sì il timer di connessione: media e answer sono fatti,
+        // se entro 30s non siamo connessi è un vero stallo ICE.
+        timeoutRef.current = setTimeout(() => {
+          if (stateRef.current !== 'connected') {
+            setWebrtcState('failed');
+            stateRef.current = 'failed';
+            cleanup();
+          }
+        }, CONNECTION_TIMEOUT);
       } catch (e) {
         console.error('[WebRTC] Accept error:', e);
         setWebrtcState('failed');

@@ -48,6 +48,9 @@ export default function useTranslationAPI({
   // Without this, the PATCH arrives before the POST completes → server can't find the message
   const lastServerSaveRef = useRef(null);
 
+  // ── Ultimo testo inviato (freno anti doppio invio VAD+tasto) ──
+  const lastSentTextRef = useRef({ testo: '', quando: 0 });
+
   /**
    * Send a translated message to the room.
    *
@@ -60,6 +63,17 @@ export default function useTranslationAPI({
    */
   const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return null;
+
+    // ── Freno anti doppio invio ──
+    // Parlando, l'auto-invio del VAD (silenzio) e il tocco sul tasto possono
+    // scattare quasi insieme: due invii VERI dello stesso testo → messaggio
+    // raddoppiato. Stesso testo entro 2,5s = un solo invio.
+    const ora = Date.now();
+    if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
+      dbg.debug('[sendMessage] Doppio invio bloccato:', original.slice(0, 30));
+      return null;
+    }
+    lastSentTextRef.current = { testo: original, quando: ora };
 
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
     const tempId = `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;

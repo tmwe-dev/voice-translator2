@@ -52,6 +52,18 @@ async function handlePost(req) {
     const clientId = (typeof body.clientId === 'string' && /^tmp_[\w-]{1,60}$/.test(body.clientId))
       ? body.clientId : null;
 
+    // ── Idempotenza: stesso mittente + stesso testo entro 8s = stesso messaggio ──
+    // Cintura di sicurezza server contro ogni doppio invio (doppio tap,
+    // VAD+tasto insieme, retry di rete): non salviamo un duplicato,
+    // rispondiamo con il messaggio già esistente.
+    try {
+      const recenti = await getMessages(roomId, Date.now() - 8000);
+      const gemello = recenti.find(m => m.sender === identity.name && m.original === original);
+      if (gemello) {
+        return NextResponse.json({ message: gemello, duplicato: true });
+      }
+    } catch { /* se la verifica fallisce, meglio salvare che perdere */ }
+
     const msg = await addMessage(roomId, {
       sender: identity.name, original, sourceLang,
       translated,
