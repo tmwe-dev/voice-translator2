@@ -11,6 +11,7 @@ import { getSession, getUser, validateLending } from './users.js';
 import { getRoom } from './store.js';
 import { ERRORS, DAILY_LIMITS } from './config.js';
 import { redis } from './redis.js';
+import { creditoFinito } from '../wallet/addebita.js';
 
 /**
  * Resolve API key and billing for a paid API route.
@@ -93,8 +94,10 @@ export async function resolveAuth({
             }
           }
         }
-        // Check credits for platform users
-        if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && user.credits < minCredits) {
+        // ── Credito: l'UNICA verità è il wallet (ledger Supabase) ──
+        // Il vecchio user.credits (Redis, centesimi) non decide più nulla:
+        // chi compra/riceve secondi nel wallet può usare il servizio.
+        if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
           throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
         }
       }
@@ -129,8 +132,8 @@ export async function resolveAuth({
           }
         }
       }
-      // Check credits for lender
-      if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && lenderUser.credits < minCredits) {
+      // Credito del prestatore: decide il wallet
+      if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
         throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
       }
     }
@@ -176,8 +179,8 @@ export async function resolveAuth({
             }
           }
         }
-        // Check credits for host
-        if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && hostUser.credits < minCredits) {
+        // Credito dell'host (regola inviti: paga chi apre): decide il wallet
+        if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
           throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
         }
       }

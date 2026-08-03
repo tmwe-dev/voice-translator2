@@ -74,10 +74,16 @@ export default function useAuth() {
       return;
     }
     const tier = userAccount.tier || userAccount.subscription_plan || 'free';
-    setIsTrial(tier === 'free');
+    // ── Unificazione crediti: chi è LOGGATO non è mai "trial" ──
+    // Il suo credito vive nel wallet (secondi): è il server a decidere
+    // con il saldo (402 se finito, con ripiego sui provider gratuiti).
+    // "Trial" resta solo per chi non ha un account.
+    setIsTrial(false);
     setIsTopPro(tier === 'business' || tier === 'top_pro');
     const hasOwnEL = userAccount.apiKeys?.elevenlabs?.trim?.();
-    setCanUseElevenLabs(tier !== 'free' || !!hasOwnEL || platformHasEL);
+    // ElevenLabs: disponibile se la piattaforma ha la chiave (il saldo
+    // wallet lo verifica il server a ogni sintesi) o se ha la chiave sua.
+    setCanUseElevenLabs(platformHasEL || !!hasOwnEL);
   }, [userAccount, platformHasEL]);
 
   function getEffectiveToken() {

@@ -12,6 +12,14 @@ import { subscribeTick } from '../lib/ticker.js';
 
 const COLORI = { verde: '#3ddc84', giallo: '#ffc44d', rosso: '#ff5470' };
 
+/** Slot: mostra la pila solo se conosciamo l'utente loggato. */
+export function BatteryPillSlot() {
+  const { auth } = useApp();
+  const utente = auth?.userAccount?.email || null;
+  if (!utente) return null;
+  return <BatteryPill utente={utente} />;
+}
+
 export default function BatteryPill({ utente }) {
   const { S } = useApp();
   const tc = S.colors || {};
@@ -177,6 +185,26 @@ export default function BatteryPill({ utente }) {
               }}>Usa</button>
             </div>
             {esito && <div style={{ fontSize: 12, marginTop: 6, color: esito.startsWith('Fatto') ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
+
+            {/* ── Storico ricariche ── */}
+            {dati.storico?.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px' }}>LE TUE RICARICHE</div>
+                <div style={{ maxHeight: 120, overflowY: 'auto' }}>
+                  {dati.storico.map((r, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 2px',
+                      fontSize: 11.5, borderBottom: `1px solid ${tc.cardBorder}` }}>
+                      <span style={{ color: tc.textMuted, minWidth: 68 }}>{r.quando}</span>
+                      <span style={{ flex: 1, color: tc.textSecondary, textTransform: 'capitalize' }}>
+                        {r.tipo === 'acquisto' ? 'Ricarica' : r.tipo === 'benvenuto' ? 'Benvenuto' : r.tipo === 'omaggio' ? 'Omaggio' : r.tipo === 'regalo_in' ? 'Regalo' : 'Voucher'}
+                      </span>
+                      <span style={{ fontWeight: 750, color: COLORI.verde }}>{r.testo}</span>
+                      {r.euro && <span style={{ color: tc.textMuted }}>{r.euro}</span>}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
 
             <button onClick={() => setAperto(false)} style={{
               width: '100%', marginTop: 14, padding: 11, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',

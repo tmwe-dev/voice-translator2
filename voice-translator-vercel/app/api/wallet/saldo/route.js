@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { saldo, usoOggiEMese } from '../../../wallet/contabilita.js';
+import { saldo, usoOggiEMese, storicoAcquisti } from '../../../wallet/contabilita.js';
 import { coloreBatteria, formattaDurata, BATTERIA } from '../../../wallet/tariffe.js';
 
 // GET /api/wallet/saldo?utente=email — legge saldo e uso.
@@ -11,8 +11,16 @@ export async function GET(req) {
 
     const secondi = await saldo(utente);
     const uso = await usoOggiEMese(utente);
+    // Storico ricariche (acquisti, voucher, regali, bonus) per il popup
+    const storico = (await storicoAcquisti(utente, 10)).map(r => ({
+      quando: String(r.created_at).slice(0, 10),
+      tipo: r.tipo,
+      testo: '+' + formattaDurata(r.secondi),
+      euro: r.dettaglio?.euro ? `€${Number(r.dettaglio.euro).toFixed(2).replace('.', ',')}` : null,
+    }));
 
     return NextResponse.json({
+      storico,
       secondi,
       testo: formattaDurata(secondi),
       colore: coloreBatteria(secondi),

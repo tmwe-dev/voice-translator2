@@ -6,6 +6,7 @@ import { TaxiButton } from './TaxiMode.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconChevronDown, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import { BatteryPillSlot } from './BatteryPill.js';
 
 const RoomHeader = memo(function RoomHeader({
   L, S, myLang, myL, otherL, otherMembers, partner,
@@ -125,6 +126,8 @@ const RoomHeader = memo(function RoomHeader({
               S={S}
             />
           )}
+          {/* Batteria credito: la vedi DOVE consumi */}
+          {!showVideoCall && <BatteryPillSlot />}
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
             title={audioEnabled ? 'Disattiva audio traduzioni' : 'Attiva audio traduzioni'}

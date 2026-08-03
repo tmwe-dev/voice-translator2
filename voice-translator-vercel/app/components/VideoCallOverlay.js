@@ -6,6 +6,7 @@ import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCa
 import { PALETTE } from '../lib/palette.js';
 import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
+import { useApp } from '../contexts/AppContext.js';
 
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
@@ -40,6 +41,9 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const [mostraTesto, setMostraTesto] = useState(true);
   const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
   const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
+  // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
+  const { prefs } = useApp();
+  const vocePremiumAttiva = prefs?.voiceEngine === 'elevenlabs';
 
   // Attach local video stream to BOTH fullscreen and inline elements
   useEffect(() => {
@@ -271,7 +275,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
 
           {/* Costo call in euro, tempo reale */}
           <div style={{ position: 'absolute', top: 52, right: 106, zIndex: 6 }}>
-            <CostTicker attivo={true} vocePremium={false} />
+            <CostTicker attivo={true} vocePremium={vocePremiumAttiva} />
           </div>
 
           {/* ═══ Pannello traduzione — SEMPRE visibile, dal primo secondo ═══ */}

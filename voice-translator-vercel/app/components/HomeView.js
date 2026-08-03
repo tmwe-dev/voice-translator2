@@ -4,7 +4,7 @@ import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
-import BatteryPill from './BatteryPill.js';
+import { BatteryPillSlot } from './BatteryPill.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -71,13 +71,6 @@ const ACTIONS = [
 ];
 
 
-// Slot batteria: mostra la pila solo se conosciamo l'utente
-function BatteryPillSlot() {
-  const { auth } = useApp();
-  const utente = auth?.userAccount?.email || null;
-  if (!utente) return <span />;
-  return <BatteryPill utente={utente} />;
-}
 
 const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom,
