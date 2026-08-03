@@ -94,10 +94,10 @@ export function middleware(request) {
     response.headers.delete('Access-Control-Allow-Origin');
   }
 
-  // ── Admin route protection ──
+  // ── Sesamo (backend admin) route protection ──
   // Note: actual auth check happens in the admin API endpoint itself,
   // but we add a basic cookie/header check as first line of defense
-  if (pathname.startsWith('/admin')) {
+  if (pathname.startsWith('/sesamo')) {
     // The admin page handles its own auth flow client-side
     // This middleware just ensures proper headers
     response.headers.set('X-Robots-Tag', 'noindex, nofollow');
