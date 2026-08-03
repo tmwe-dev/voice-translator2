@@ -62,12 +62,12 @@ const TaxiMode = memo(function TaxiMode({
 
   // Color defaults — use S.colors namespace
   const C = S.colors || {};
-  const bgColor = C.bgGradient || (theme === 'dark' ? '#1a1a2e' : '#f8f8f8');
-  const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
-  const textMuted = C.textMuted || (theme === 'dark' ? '#9ca3af' : '#666666');
+  const bgColor = C.bgGradient || ((theme === 'deep' || theme === 'ember') ? '#1a1a2e' : '#f8f8f8');
+  const textPrimary = C.textPrimary || ((theme === 'deep' || theme === 'ember') ? '#ffffff' : '#000000');
+  const textMuted = C.textMuted || ((theme === 'deep' || theme === 'ember') ? '#9ca3af' : '#666666');
   const accentGradient = C.accentGradient || 'linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%)';
   const statusWarning = C.statusWarning || PALETTE.amber;
-  const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
+  const borderColor = C.cardBorder || ((theme === 'deep' || theme === 'ember') ? '#374151' : '#e5e7eb');
 
   return (
     <div
@@ -309,8 +309,8 @@ const TaxiMode = memo(function TaxiMode({
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
   const C = S.colors || {};
   const statusWarning = C.statusWarning || PALETTE.amber;
-  const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
-  const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
+  const textPrimary = C.textPrimary || ((theme === 'deep' || theme === 'ember') ? '#ffffff' : '#000000');
+  const borderColor = C.cardBorder || ((theme === 'deep' || theme === 'ember') ? '#374151' : '#e5e7eb');
 
   return (
     <button

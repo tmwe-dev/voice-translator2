@@ -159,7 +159,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 <div style={{
                   position: 'absolute', top: '100%', left: 0,
                   marginTop: 6, zIndex: 100, width: 260,
-                  background: theme === 'light' ? '#fff' : '#1a1a2e',
+                  background: theme === 'dawn' ? '#fff' : '#0a0f1f',
                   border: `1px solid ${C.accent}25`, borderRadius: 14,
                   maxHeight: 280, overflowY: 'auto', padding: 6,
                   boxShadow: '0 12px 48px rgba(0,0,0,0.4)',

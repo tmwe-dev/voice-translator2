@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.61';
+export const APP_VERSION = 'b.62';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -102,15 +102,18 @@ export const CONTEXTS = [
     prompt:'This is an EMERGENCY conversation. Translate with maximum clarity and urgency. Use direct, unambiguous language. Include emergency-specific terms: location, danger, injury, police, ambulance, fire. Speed and clarity are paramount.' },
 ];
 
-export const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+// Apple rounded in testa: su iOS/macOS usa SF Pro Rounded, altrove fallback morbidi
+export const FONT = "ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
 
-export const THEMES = { DARK: 'dark', LIGHT: 'light', BROWN: 'brown', ORANGE: 'orange' };
+// \u2500\u2500 Spatial Design: 3 temi \u2500\u2500
+export const THEMES = { DEEP: 'deep', EMBER: 'ember', DAWN: 'dawn' };
 export const THEME_LIST = [
-  { id:'dark', name:'Ambient', icon:'\u2728', desc:'Dark ambient con teal e viola' },
-  { id:'light', name:'Light', icon:'\u2600\uFE0F', desc:'Tema chiaro e luminoso' },
-  { id:'brown', name:'Elegante', icon:'\u{1F33F}', desc:'Caldo e raffinato' },
-  { id:'orange', name:'Vivace', icon:'\u{1F525}', desc:'Energico e vibrante' },
+  { id:'deep', name:'Deep Space', icon:'\u{1F30C}', desc:'Blu notte, vetri e stelle' },
+  { id:'ember', name:'Ember', icon:'\u{1F525}', desc:'Scuro caldo, orange e ambra' },
+  { id:'dawn', name:'Dawn', icon:'\u2600\uFE0F', desc:'Chiaro, aria e contrasto' },
 ];
+// Migrazione temi legacy salvati in localStorage \u2192 nuovi temi
+export const THEME_MIGRATION = { dark:'deep', light:'dawn', brown:'ember', orange:'ember' };
 
 export const FREE_DAILY_LIMIT = 999999999; // No limit — free for all
 
