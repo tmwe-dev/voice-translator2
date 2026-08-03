@@ -4,6 +4,7 @@ import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
+import BatteryPill from './BatteryPill.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -68,6 +69,15 @@ const ACTIONS = [
     desc: 'Comunica la destinazione al tassista',
   },
 ];
+
+
+// Slot batteria: mostra la pila solo se conosciamo l'utente
+function BatteryPillSlot() {
+  const { auth } = useApp();
+  const utente = auth?.userAccount?.email || null;
+  if (!utente) return <span />;
+  return <BatteryPill utente={utente} />;
+}
 
 const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom,
@@ -137,8 +147,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
 
         {/* ═══ Header ═══ */}
         <div style={{ paddingTop: 'max(24px, env(safe-area-inset-top))', marginBottom: 28 }}>
-          {/* Language selector */}
-          <div style={{ position: 'relative', marginBottom: 20 }}>
+          {/* Language selector + batteria credito */}
+          <div style={{ position: 'relative', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <BatteryPillSlot />
             <button
               onClick={() => { vibrate(); setShowLangPicker(!showLangPicker); }}
               style={{
