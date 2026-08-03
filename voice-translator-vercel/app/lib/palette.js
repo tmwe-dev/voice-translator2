@@ -11,24 +11,24 @@
 
 export const PALETTE = {
   // ── P4 Manifesto (matches styles.js dark theme accents) ──
-  purple: '#8b5cf6',   // accent1 — primary actions
-  cyan: '#06b6d4',     // accent2 — secondary
-  red: '#ef4444',      // accent3 — recording, errors
-  green: '#22c55e',    // accent4 — success, online
-  amber: '#f59e0b',    // warnings, gold accents
-  blue: '#60a5fa',     // info, links
+  purple: '#5b8cff',   // accent1 — primary actions
+  cyan: '#38e1ff',     // accent2 — secondary
+  red: '#ff5470',      // accent3 — recording, errors
+  green: '#3ddc84',    // accent4 — success, online
+  amber: '#ffc44d',    // warnings, gold accents
+  blue: '#5b8cff',     // info, links
   orange: '#f97316',   // brand CTA (landing)
 
   // ── Legacy design system (pre-P4) — still used in older views ──
-  teal: '#26D9B0',     // legacy primary
-  coral: '#FF6B6B',    // legacy danger/record
-  violet: '#8B6AFF',   // legacy accent
-  bgDeep: '#060810',   // legacy deep background
-  grayLight: '#F2F4F7',// legacy light surface
+  teal: '#38e1ff',   // Spatial: cyan Deep Space (era teal legacy)     // legacy primary
+  coral: '#ff5470',    // legacy danger/record
+  violet: '#5b8cff',   // legacy accent
+  bgDeep: '#05070f',   // legacy deep background
+  grayLight: '#eef2ff',// legacy light surface
 
   // ── Neutrals ──
-  black: '#09090b',
-  white: '#fafafa',
+  black: '#05070f',
+  white: '#eef2ff',
 };
 
 export default PALETTE;
