@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS } from '../lib/constants.js';
+import { LANGS, VOICES, AVATARS, AVATAR_NAMES, THEMES, THEME_LIST, FONT, FREE_DAILY_LIMIT, formatCredits, getLang, AI_MODELS, APP_VERSION } from '../lib/constants.js';
 import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 import { IconMic, IconSettings, IconGlobe, IconKey, IconStar, IconMusic, IconZap, IconUser, IconCheckCircle } from './Icons.js';
@@ -140,7 +140,8 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
 
   return (
     <div style={S.page}>
-      <div style={{...S.scrollCenter, gap: 12}}>
+      {/* paddingBottom: l'ultima voce non deve mai finire sotto la BottomNav */}
+      <div style={{...S.scrollCenter, gap: 12, paddingBottom: 'calc(110px + env(safe-area-inset-bottom))'}}>
         {/* Header */}
         <div style={{ width: '100%', maxWidth: 400 }}>
           <PageHeader title={L('settings')} onBack={() => setView('home')} S={S} />
@@ -525,7 +526,7 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
               <div style={{fontSize:12, color:S.colors.textSecondary}}>Versione</div>
             </div>
             <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>BarTalk 2.0.0-P4</span>
+              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>BarTalk {APP_VERSION}</span>
               <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
             </div>
           </div>
