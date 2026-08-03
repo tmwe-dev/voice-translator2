@@ -151,9 +151,17 @@ export default function useRoomPolling({
       // Dedup by ID
       const ids = new Set(prev.map(m => m.id));
       if (ids.has(message.id)) return prev;
+      // Caso inverso: il polling ha GIÀ portato la versione server di questo
+      // messaggio (il suo clientId è il nostro tmp id) → il broadcast in ritardo
+      // non deve aggiungerlo di nuovo.
+      if (message.id?.startsWith('tmp_') && prev.some(m => m.clientId === message.id)) return prev;
       // Dedup: if a temp message (tmp_xxx) exists with same sender+original, replace it with server version
+      // (clientId first — esatto; testo come fallback per messaggi vecchi)
       const tempIdx = prev.findIndex(m =>
-        m.id?.startsWith('tmp_') && m.sender === message.sender && m.original === message.original
+        m.id?.startsWith('tmp_') && (
+          (message.clientId && m.id === message.clientId) ||
+          (m.sender === message.sender && m.original === message.original)
+        )
       );
       if (tempIdx >= 0) {
         // Replace temp with server version, but MERGE translations to avoid
@@ -379,9 +387,14 @@ export default function useRoomPolling({
                   }
                   continue;
                 }
-                // Replace temp message with server version (dedup broadcast vs poll)
+                // Replace temp message with server version (dedup broadcast vs poll).
+                // 1° criterio: clientId — esatto, immune da sanitizzazione/rinomina.
+                // 2° criterio (fallback per messaggi vecchi): sender + testo identico.
                 const tempIdx = updated.findIndex(t =>
-                  t.id?.startsWith('tmp_') && t.sender === m.sender && t.original === m.original
+                  t.id?.startsWith('tmp_') && (
+                    (m.clientId && t.id === m.clientId) ||
+                    (t.sender === m.sender && t.original === m.original)
+                  )
                 );
                 if (tempIdx >= 0) {
                   const tempMsg = updated[tempIdx];

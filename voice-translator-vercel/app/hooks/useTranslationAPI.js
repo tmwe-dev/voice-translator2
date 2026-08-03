@@ -130,6 +130,7 @@ export default function useTranslationAPI({
         sourceLang,
         targetLang,
         translations: translations || null,
+        clientId: tempId, // per il dedup lato ricevente (stesso messaggio, canali diversi)
       })
     }).then(res => {
       if (res.ok) {

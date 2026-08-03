@@ -46,11 +46,18 @@ async function handlePost(req) {
     const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
     const translations = sanitizeTranslations(body.translations);
 
+    // clientId: l'id temporaneo del mittente. Salvarlo permette al ricevente
+    // di riconoscere che broadcast istantaneo e polling sono LO STESSO messaggio
+    // (il confronto sul testo fallisce quando la sanitizzazione lo modifica → doppioni).
+    const clientId = (typeof body.clientId === 'string' && /^tmp_[\w-]{1,60}$/.test(body.clientId))
+      ? body.clientId : null;
+
     const msg = await addMessage(roomId, {
       sender: identity.name, original, sourceLang,
       translated,
       targetLang,
       translations,
+      ...(clientId && { clientId }),
     });
     if (!msg) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ message: msg });
