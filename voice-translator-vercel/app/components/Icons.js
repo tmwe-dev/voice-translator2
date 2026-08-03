@@ -97,3 +97,7 @@ export const IconShield = ({ size }) => <I size={size}><path d="M12 22s8-4 8-10V
 export const IconGlobe = ({ size }) => <I size={size}><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></I>;
 export const IconCheckCircle = ({ size }) => <I size={size}><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></I>;
 export const IconDoor = ({ size }) => <I size={size}><path d="M18 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2z"/><path d="M15 13h.01"/></I>;
+export const IconQR = ({ size }) => <I size={size}><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM21 15v6M15 21h4"/></I>;
+export const IconMail = ({ size }) => <I size={size}><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></I>;
+export const IconVideoCall = ({ size }) => <I size={size}><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></I>;
+export const IconCar = ({ size }) => <I size={size}><path d="M4 15l1.5-5.3A2 2 0 017.5 8.2h9a2 2 0 012 1.5L20 15"/><rect x="3" y="15" width="18" height="4" rx="1.5"/><circle cx="7.5" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/></I>;

@@ -1,6 +1,7 @@
 'use client';
 import { memo } from 'react';
 import { useApp } from '../contexts/AppContext.js';
+import { keyframes } from '../lib/styles.js';
 
 // ═══════════════════════════════════════════════
 // SpatialBackdrop — ambiente spaziale globale (Spatial Design)
@@ -44,7 +45,10 @@ const SpatialBackdrop = memo(function SpatialBackdrop() {
     <div aria-hidden="true" style={{
       position: 'fixed', inset: '-10%', zIndex: 0, pointerEvents: 'none', overflow: 'hidden',
     }}>
-      <style>{`
+      {/* Keyframes globali (vtWave, vtSlideUp, ecc.) — iniettate UNA volta qui,
+          il backdrop è montato in tutte le view. Bug pre-esistente: erano
+          iniettate solo nel TutorialOverlay. */}
+      <style>{keyframes}{`
         @keyframes sbDrift { to { transform: translate(-3%, 2.5%) scale(1.06) rotate(2deg); } }
         @keyframes sbTwinkle { to { opacity: 0.4; } }
       `}</style>

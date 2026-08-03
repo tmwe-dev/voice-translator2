@@ -3,6 +3,7 @@ import { memo, useState, useMemo, useEffect } from 'react';
 import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -43,26 +44,26 @@ function getHomeColors(theme) {
 const ACTIONS = [
   {
     id: 'face-to-face',
-    icon: '📱',
+    icon: 'qr',
     title: 'Parla con chi hai davanti',
     desc: 'Mostra il QR e parlate ciascuno nella propria lingua',
     primary: true,
   },
   {
     id: 'invite',
-    icon: '✉️',
+    icon: 'mail',
     title: 'Invita una persona',
     desc: 'Invia un link via WhatsApp, SMS o email',
   },
   {
     id: 'videocall',
-    icon: '📹',
+    icon: 'video',
     title: 'Videochiamata tradotta',
     desc: 'Chiamata video con sottotitoli e voce tradotta',
   },
   {
     id: 'taxitalk',
-    icon: '🚕',
+    icon: 'car',
     title: 'TaxiTalk',
     desc: 'Comunica la destinazione al tassista',
   },
@@ -255,7 +256,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               onMouseOver={(e) => e.currentTarget.style.backgroundColor = C.accent + '10'}
               onMouseOut={(e) => e.currentTarget.style.backgroundColor = C.cardBg}
             >
-              <span style={{ fontSize: 24, lineHeight: 1, flexShrink: 0 }}>{action.icon}</span>
+              <span style={{ lineHeight: 0, flexShrink: 0, color: action.primary ? '#fff' : C.accent2 || C.accent1 }}>
+                {action.icon === 'qr' ? <IconQR size={24} /> : action.icon === 'mail' ? <IconMail size={24} /> : action.icon === 'video' ? <IconVideoCall size={24} /> : <IconCar size={24} />}
+              </span>
               <div>
                 <div style={{
                   fontSize: 14, fontWeight: 600, color: C.textPrimary,

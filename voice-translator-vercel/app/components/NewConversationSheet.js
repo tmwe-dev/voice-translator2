@@ -5,6 +5,7 @@ import { vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 
 // ═══════════════════════════════════════════════════════════════
 // NewConversationSheet — bottom sheet with 4 conversation options
@@ -14,25 +15,25 @@ import { useApp } from '../contexts/AppContext.js';
 const OPTIONS = [
   {
     id: 'face-to-face',
-    icon: '📱',
+    icon: 'qr',
     title: 'Parla con chi hai davanti',
     desc: 'Mostra il QR e parlate ciascuno nella propria lingua',
   },
   {
     id: 'invite',
-    icon: '✉️',
+    icon: 'mail',
     title: 'Invita una persona',
     desc: 'Invia un link via WhatsApp, SMS o email',
   },
   {
     id: 'videocall',
-    icon: '📹',
+    icon: 'video',
     title: 'Videochiamata tradotta',
     desc: 'Chiamata video con traduzione in tempo reale',
   },
   {
     id: 'taxitalk',
-    icon: '🚕',
+    icon: 'car',
     title: 'TaxiTalk',
     desc: 'Comunica la destinazione al tassista',
   },
@@ -110,7 +111,9 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.98)'}
               onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
-              <span style={{ fontSize: '28px', lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
+              <span style={{ lineHeight: 0, flexShrink: 0, color: (S.colors?.accent2 || '#38e1ff') }}>
+                {opt.icon === 'qr' ? <IconQR size={26} /> : opt.icon === 'mail' ? <IconMail size={26} /> : opt.icon === 'video' ? <IconVideoCall size={26} /> : <IconCar size={26} />}
+              </span>
               <div>
                 <div style={{
                   fontSize: '15px', fontWeight: '600',

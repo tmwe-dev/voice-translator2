@@ -239,32 +239,70 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </button>
           </div>
 
-          {/* Translation subtitle queue (up to 2 stacked) */}
-          {lastTranslationSubtitle && (
-            <div style={{
-              position: 'absolute', bottom: 110, left: 16, right: 76,
-              display: 'flex', flexDirection: 'column', gap: 6,
-            }}>
-              {(Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle : [lastTranslationSubtitle]).map((sub, i) => (
-                <div key={sub.key || i} style={{
-                  background: 'rgba(255,255,255,0.95)',
-                  borderRadius: 14, padding: '10px 16px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.25)', backdropFilter: 'blur(12px)',
-                  animation: 'vtSlideUp 0.3s ease-out',
-                  opacity: i === 0 && (Array.isArray(lastTranslationSubtitle) && lastTranslationSubtitle.length > 1) ? 0.7 : 1,
-                }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: '#1e3a5f', lineHeight: 1.4 }}>
-                    {sub.text}
-                  </div>
-                  {sub.original && (
-                    <div style={{ fontSize: 10, color: '#64748b', marginTop: 3 }}>
-                      {sub.original}
-                    </div>
+          {/* ═══ Pannello traduzione live (Spatial Design) ═══
+              Chi parla · originale piccolo · TRADUZIONE GRANDE · ASCOLTI (audio partner) */}
+          {lastTranslationSubtitle && (() => {
+            const subs = Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle : [lastTranslationSubtitle];
+            const latest = subs[subs.length - 1];
+            const acc = S?.colors?.accent2 || '#38e1ff';
+            return (
+              <div style={{
+                position: 'absolute', bottom: 110, left: 14, right: 14,
+                background: 'rgba(5,7,15,0.82)', backdropFilter: 'blur(18px)',
+                border: '1px solid rgba(160,190,255,0.16)', borderRadius: 18,
+                padding: '11px 14px 9px', animation: 'vtSlideUp 0.35s ease-out',
+                boxShadow: '0 10px 40px -10px rgba(0,0,0,0.6)',
+              }}>
+                {/* Chi parla */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                  {partnerSpeaking && (
+                    <span style={{ display: 'inline-flex', gap: 2.5, alignItems: 'center', height: 11, color: acc }}>
+                      {[5,10,13,8,5].map((h, i) => (
+                        <i key={i} style={{ width: 2.5, height: h, borderRadius: 2, background: 'currentColor',
+                          display: 'block', animation: `vtWave 0.85s ${i * 0.12}s ease-in-out infinite` }} />
+                      ))}
+                    </span>
                   )}
+                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
+                    {(partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
+                  </span>
                 </div>
-              ))}
-            </div>
-          )}
+                {/* Originale piccolo, corsivo */}
+                {latest.original && (
+                  <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.45)', fontStyle: 'italic' }}>
+                    "{latest.original}"
+                  </div>
+                )}
+                {/* TRADUZIONE — grande, è quella che leggi */}
+                <div style={{ fontSize: 16.5, fontWeight: 800, color: '#eef2ff', lineHeight: 1.3, marginTop: 3, letterSpacing: -0.2 }}>
+                  {latest.text}
+                </div>
+                {/* ASCOLTI — audio del partner: tradotta (ducking) o originale + volume */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, paddingTop: 7,
+                  borderTop: '1px solid rgba(160,190,255,0.12)' }}>
+                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>ASCOLTI</span>
+                  <button onClick={() => setVideoDucking && setVideoDucking(true)} style={{
+                    padding: '4px 10px', borderRadius: 999, fontSize: 10.5, fontWeight: 750, cursor: 'pointer',
+                    fontFamily: 'inherit', border: 'none',
+                    background: videoDucking ? `linear-gradient(90deg, ${S?.colors?.accent1 || '#5b8cff'}, ${acc})` : 'transparent',
+                    color: videoDucking ? '#fff' : 'rgba(238,242,255,0.45)',
+                    boxShadow: videoDucking ? '0 4px 14px -4px rgba(91,140,255,0.5)' : 'none',
+                  }}>Voce tradotta</button>
+                  <button onClick={() => setVideoDucking && setVideoDucking(false)} style={{
+                    padding: '4px 10px', borderRadius: 999, fontSize: 10.5, fontWeight: 750, cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    border: videoDucking ? '1px solid rgba(160,190,255,0.2)' : 'none',
+                    background: !videoDucking ? `linear-gradient(90deg, ${S?.colors?.accent1 || '#5b8cff'}, ${acc})` : 'transparent',
+                    color: !videoDucking ? '#fff' : 'rgba(238,242,255,0.45)',
+                  }}>Originale</button>
+                  <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
+                    onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
+                    aria-label="Volume interlocutore"
+                    style={{ flex: 1, accentColor: acc, height: 3, minWidth: 60 }} />
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* ── Bottom controls bar ── */}
