@@ -16,6 +16,7 @@ export async function POST(req) {
       await registraMovimento(pagamento.utenteId, 'acquisto', pagamento.secondi, {
         pacchetto: pagamento.pacchettoId,
         stripe: pagamento.stripeSessionId,
+        euro: pagamento.euro, // incasso reale, letto dalle viste admin
       });
     }
     return NextResponse.json({ ricevuto: true });

@@ -68,5 +68,8 @@ export function estraiPagamento(evento) {
     pacchettoId: m.pacchetto_id,
     secondi: parseInt(m.secondi, 10),
     stripeSessionId: evento.data.object.id,
+    // Quanto ha pagato DAVVERO (Stripe lo dice in centesimi).
+    // Serve alla contabilità per calcolare gli incassi.
+    euro: (evento.data.object.amount_total || 0) / 100,
   };
 }
