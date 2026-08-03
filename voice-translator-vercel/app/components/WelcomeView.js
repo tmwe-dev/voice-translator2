@@ -26,6 +26,8 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
   const [entered, setEntered] = useState(false);
   const [authError, setAuthError] = useState('');
   const [showAllLangs, setShowAllLangs] = useState(false);
+  // Codice regalo/voucher: lo teniamo da parte e la batteria lo riscatta dopo il login
+  const [codicePromo, setCodicePromo] = useState('');
 
   // ── Palette derivata dal TEMA attivo (Spatial Design) — non più hardcoded ──
   const tc = S.colors || {};
@@ -512,8 +514,33 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               </div>
             </div>
 
+            {/* Hai un codice regalo? (voucher — riscattato appena entri) */}
+            <div style={{ width: '100%', marginBottom: 18, ...stagger(4) }}>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: D.textMuted, marginBottom: 6 }}>
+                {Lf('haveCode', 'HAI UN CODICE REGALO?')}
+              </div>
+              <input
+                value={codicePromo}
+                onChange={(e) => {
+                  const v = e.target.value.toUpperCase();
+                  setCodicePromo(v);
+                  try {
+                    if (v.trim()) localStorage.setItem('vt-voucher-pendente', v.trim());
+                    else localStorage.removeItem('vt-voucher-pendente');
+                  } catch {}
+                }}
+                placeholder={Lf('codePlaceholder', 'CODICE (facoltativo)')}
+                aria-label="Codice regalo"
+                style={{
+                  width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 14,
+                  fontFamily: 'inherit', fontSize: 14, fontWeight: 700, letterSpacing: 1,
+                  background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.glassBorder}`,
+                  color: D.text, outline: 'none',
+                }} />
+            </div>
+
             {/* Start Button */}
-            <div style={{ width: '100%', ...stagger(4) }}>
+            <div style={{ width: '100%', ...stagger(5) }}>
               <CTAButton onClick={finishWelcome}>
                 {Lf('startUsing', 'Inizia ad usare BarTalk')} {'🚀'}
               </CTAButton>

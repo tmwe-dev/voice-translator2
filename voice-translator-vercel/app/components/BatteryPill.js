@@ -38,6 +38,43 @@ export default function BatteryPill({ utente }) {
     return () => window.removeEventListener('wallet:esaurito', suEsaurito);
   }, [carica]);
 
+  // Primo accesso: chiedi il bonus benvenuto (il server lo da' UNA volta sola)
+  // e riscatta l'eventuale voucher inserito nella schermata di benvenuto.
+  useEffect(() => {
+    if (!utente) return;
+    (async () => {
+      try {
+        // Bonus benvenuto — una richiesta per dispositivo, il DB fa da guardiano
+        if (!localStorage.getItem('vt-benvenuto-chiesto')) {
+          const token = localStorage.getItem('vt-token');
+          if (token) {
+            const r = await fetch('/api/wallet/benvenuto', {
+              method: 'POST', headers: { Authorization: `Bearer ${token}` },
+            });
+            const d = await r.json().catch(() => ({}));
+            if (d.ok) {
+              localStorage.setItem('vt-benvenuto-chiesto', '1');
+              if (d.nuovo) { setEsito(`Benvenuto! ${d.testo} in regalo`); setAperto(true); }
+            }
+          }
+        }
+        // Voucher lasciato in attesa dall'onboarding
+        const pendente = localStorage.getItem('vt-voucher-pendente');
+        if (pendente) {
+          localStorage.removeItem('vt-voucher-pendente');
+          const r = await fetch('/api/wallet/voucher', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ utente, codice: pendente }),
+          });
+          const d = await r.json().catch(() => ({}));
+          setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
+          setAperto(true);
+        }
+        carica();
+      } catch { /* rete assente: riproveremo al prossimo avvio */ }
+    })();
+  }, [utente, carica]);
+
   if (!utente || !dati) return null;
   const colore = COLORI[dati.colore] || COLORI.verde;
 
