@@ -190,7 +190,9 @@ export default function BatteryPill({ utente }) {
                 background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
               }}>Usa</button>
             </div>
-            {esito && <div style={{ fontSize: 12, marginTop: 6, color: esito.startsWith('Fatto') ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
+            {/* verde per le buone notizie (Fatto!/Benvenuto!), rosso solo per i veri errori */}
+            {esito && <div style={{ fontSize: 12, marginTop: 6,
+              color: /^(Fatto|Benvenuto)/.test(esito) ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
 
             {/* ── Storico ricariche ── */}
             {dati.storico?.length > 0 && (

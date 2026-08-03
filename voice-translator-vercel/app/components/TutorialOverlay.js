@@ -4,6 +4,7 @@ import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import SciameOnboarding from './SciameOnboarding.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -13,38 +14,38 @@ const STEPS = [
   {
     iconName: 'doorOpen',
     title: 'Benvenuto in BarTalk',
-    desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, il tuo interlocutore sente nella sua.',
+    desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, chi hai davanti ti sente nella sua. In regalo: 30 minuti per provare tutto.',
     accent: PALETTE.teal,
-  },
-  {
-    iconName: 'link',
-    title: 'Crea o Entra in una Stanza',
-    desc: 'Condividi il codice stanza con chi vuoi. Si connette in P2P, senza server intermediari.',
-    accent: PALETTE.violet,
   },
   {
     iconName: 'mic',
     title: 'Parla e Traduci',
-    desc: 'Premi il microfono e parla. La traduzione appare istantaneamente con audio AI premium.',
+    desc: 'Tieni premuto PARLA e parla. La traduzione appare e si sente all\'istante, in più di 40 lingue.',
     accent: '#E8924A',
   },
   {
-    iconName: 'swap',
-    title: 'TaxiTalk Mode',
-    desc: 'Perfetto per conversazioni dal vivo. Lo schermo si divide in due: tu da un lato, l\'interlocutore dall\'altro.',
-    accent: PALETTE.teal,
-  },
-  {
-    iconName: 'refresh',
-    title: 'Mirror Automatico',
-    desc: 'Inclina il telefono oltre 120° e lo schermo si capovolge automaticamente per chi è di fronte a te.',
+    iconName: 'link',
+    title: 'Inviti e Videochiamate',
+    desc: 'Manda un link a chiunque: entra senza account e paga tutto chi invita. Nelle stanze Community, invece, ognuno usa i propri minuti.',
     accent: PALETTE.violet,
   },
   {
-    iconName: 'star',
-    title: 'Tutto Gratuito',
-    desc: 'Voci AI premium, ElevenLabs, traduzioni illimitate in 140+ lingue. Nessun limite, nessun abbonamento.',
+    iconName: 'swap',
+    title: 'TaxiTalk e Mirror',
+    desc: 'Dal vivo lo schermo si divide in due; inclina il telefono e si capovolge da solo per chi ti sta di fronte.',
     accent: PALETTE.teal,
+  },
+  {
+    iconName: 'battery',
+    title: 'I tuoi minuti, per sempre',
+    desc: 'La batteria in alto mostra il credito. Quando serve ricarichi da €4,99 — i minuti non scadono. La voce premium ElevenLabs consuma 3×.',
+    accent: '#E8924A',
+  },
+  {
+    iconName: 'key',
+    title: 'Con le TUE chiavi, illimitato',
+    desc: 'Hai una chiave OpenAI o ElevenLabs? Inseriscila in Profilo → API Keys: l\'uso diventa illimitato e paghi solo i provider.',
+    accent: PALETTE.violet,
   },
 ];
 
@@ -120,13 +121,17 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
         onTouchEnd={handleTouchEnd}
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          zIndex: 9999, background: 'rgba(4,6,14,0.92)',
-          backdropFilter: 'blur(20px)',
+          zIndex: 9999,
+          // Velo meno opaco: lo SCIAME dietro deve respirare (prima 0.92 = muro)
+          background: 'rgba(4,6,14,0.55)',
+          backdropFilter: 'blur(6px)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: 20, boxSizing: 'border-box', outline: 'none',
         }}
         onClick={() => setShowTutorial(false)}
       >
+        {/* Lo sciame vive anche dietro il tutorial: le forme cambiano coi passi */}
+        <SciameOnboarding fase={tutorialStep % 3} />
         <div
           key={tutorialStep}
           style={{
