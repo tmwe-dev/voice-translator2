@@ -27,17 +27,24 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
   const [authError, setAuthError] = useState('');
   const [showAllLangs, setShowAllLangs] = useState(false);
 
-  // ── Premium dark palette ──
+  // ── Palette derivata dal TEMA attivo (Spatial Design) — non più hardcoded ──
+  const tc = S.colors || {};
+  const isDawn = theme === 'dawn';
   const D = {
-    bg1: '#06080F', bg2: '#0A0E1F', bg3: '#0F1332',
-    surface: 'rgba(12,15,35,0.75)',
-    glass: 'rgba(255,255,255,0.03)',
-    glassBorder: 'rgba(255,255,255,0.06)',
-    neon1: PALETTE.teal, neon2: PALETTE.violet, neon3: PALETTE.coral, neon4: '#E8924A',
-    text: '#FFFFFF',
-    textSoft: 'rgba(255,255,255,0.75)',
-    textMuted: 'rgba(255,255,255,0.50)',
-    textDim: 'rgba(255,255,255,0.30)',
+    bg1: isDawn ? '#f7f8fc' : '#05070f',
+    bg2: isDawn ? '#eef0f7' : '#0a0f1f',
+    bg3: isDawn ? '#e9ecf4' : '#101730',
+    surface: isDawn ? 'rgba(255,255,255,0.75)' : 'rgba(10,15,31,0.75)',
+    glass: tc.cardBg || 'rgba(255,255,255,0.03)',
+    glassBorder: tc.cardBorder || 'rgba(255,255,255,0.06)',
+    neon1: tc.accent1 || PALETTE.teal,
+    neon2: tc.accent2 || PALETTE.violet,
+    neon3: tc.statusError || PALETTE.coral,
+    neon4: tc.goldAccent || '#E8924A',
+    text: tc.textPrimary || '#FFFFFF',
+    textSoft: tc.textSecondary || 'rgba(255,255,255,0.75)',
+    textMuted: tc.textTertiary || 'rgba(255,255,255,0.50)',
+    textDim: tc.textMuted || 'rgba(255,255,255,0.30)',
   };
 
   const Lf = (key, fallback) => { const v = L(key); return (v && v !== key) ? v : fallback; };
