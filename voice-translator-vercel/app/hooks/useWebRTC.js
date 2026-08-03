@@ -515,6 +515,19 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       iceCandidateQueueRef.current = [];
 
       try {
+        // Il timer parte SUBITO, prima dei passi che possono bloccarsi
+        // (getUserMedia può non risolvere mai se la camera è occupata).
+        // Prima veniva impostato solo alla fine: se il media si bloccava,
+        // nessun timeout era attivo → schermata congelata.
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => {
+          if (stateRef.current !== 'connected') {
+            setWebrtcState('failed');
+            stateRef.current = 'failed';
+            cleanup();
+          }
+        }, CONNECTION_TIMEOUT);
+
         const newPc = createPeerConnection(handleDCMessage, handleStateChange, handleRemoteTrack);
         pcRef.current = newPc;
         newPc.ondatachannel = (event) => setupDC(event.channel);
@@ -528,13 +541,6 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         const answerStr = await createAnswer(newPc, data);
         await sendSignal('answer', answerStr);
         await flushIceCandidates(newPc);
-        timeoutRef.current = setTimeout(() => {
-          if (stateRef.current !== 'connected') {
-            setWebrtcState('failed');
-            stateRef.current = 'failed';
-            cleanup();
-          }
-        }, CONNECTION_TIMEOUT);
       } catch (e) {
         console.error('[WebRTC] Accept error:', e);
         setWebrtcState('failed');
@@ -650,10 +656,26 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setIncomingCall(null);
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
+    // Rete di sicurezza per CHI RISPONDE: se l'offer del chiamante non arriva
+    // (segnale perso, chiamante uscito), senza questo timer si resta congelati
+    // in "Connessione..." per sempre. Il chiamante il suo timeout ce l'ha già.
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => {
+      if (stateRef.current === 'connecting') {
+        console.warn('[WebRTC] Offer mai arrivato dopo Accetta — torno idle');
+        setWebrtcState('failed');
+        stateRef.current = 'failed';
+        cleanup();
+      }
+    }, CONNECTION_TIMEOUT);
     try {
       await sendSignal('call-accepted', {});
     } catch (e) {
+      // Il chiamante non saprà mai che abbiamo accettato: inutile restare appesi
       console.error('[WebRTC] Accept signal error:', e);
+      setWebrtcState('failed');
+      stateRef.current = 'failed';
+      cleanup();
     }
   }, [incomingCall, sendSignal]);
 

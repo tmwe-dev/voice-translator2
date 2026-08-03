@@ -149,7 +149,15 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
       autoGainControl: true,
     } : false,
   };
-  return await navigator.mediaDevices.getUserMedia(constraints);
+  // Su alcuni telefoni getUserMedia non risolve MAI (camera occupata da
+  // un'altra app): senza questo timeout chi risponde resta congelato in
+  // "Connessione..." per sempre. 10s → errore gestito (fallback audio-only).
+  return await Promise.race([
+    navigator.mediaDevices.getUserMedia(constraints),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('getUserMedia timeout — camera/mic occupati o bloccati')), 10000)
+    ),
+  ]);
 }
 
 /**
