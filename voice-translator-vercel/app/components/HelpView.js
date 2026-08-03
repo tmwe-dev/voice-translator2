@@ -3,6 +3,7 @@ import { memo, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // HelpView — FAQ + Quick Tutorial
@@ -73,7 +74,8 @@ const FEATURES = [
   { icon: '🎭', title: 'Voice Clone', desc: 'Le traduzioni parlano con la tua voce' },
 ];
 
-function HelpView({ L, S, prefs, setView, theme }) {
+function HelpView() {
+  const { L, S, prefs, setView, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {

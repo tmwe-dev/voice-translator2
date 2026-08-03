@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { APP_URL } from '../lib/constants.js';
+import { subscribeTick } from '../lib/ticker.js';
 
 const HEARTBEAT_INTERVAL = 60000; // 60 seconds
 
@@ -24,8 +25,8 @@ export default function useContacts({ userTokenRef }) {
       } catch {}
     }
 
-    sendHeartbeat();
-    heartbeatRef.current = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    const unsubHeartbeat = subscribeTick(HEARTBEAT_INTERVAL, sendHeartbeat, { immediate: true });
+    heartbeatRef.current = unsubHeartbeat;
 
     // Go offline on unload
     const handleUnload = () => {
@@ -40,7 +41,7 @@ export default function useContacts({ userTokenRef }) {
     window.addEventListener('beforeunload', handleUnload);
 
     return () => {
-      clearInterval(heartbeatRef.current);
+      if (typeof heartbeatRef.current === 'function') heartbeatRef.current();
       window.removeEventListener('beforeunload', handleUnload);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- reads from ref
@@ -67,9 +68,8 @@ export default function useContacts({ userTokenRef }) {
 
   // Auto-refresh contacts every 30s when list is visible
   const startPolling = useCallback(() => {
-    fetchContacts();
-    const interval = setInterval(fetchContacts, 30000);
-    return () => clearInterval(interval);
+    // Shared ticker: pauses automatically when tab is hidden
+    return subscribeTick(30000, fetchContacts, { immediate: true });
   }, [fetchContacts]);
 
   // Add contact by email

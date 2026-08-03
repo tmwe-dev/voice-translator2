@@ -1,9 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
-export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveUserApiKeys, authLoading,
-  userAccount, setView, status, theme, setTheme }) {
+export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApiKeys, authLoading,
+  userAccount }) {
+  const { L, S, setView, status, theme, setTheme } = useApp();
   const [saveStatus, setSaveStatus] = useState(null);
   const [saveError, setSaveError] = useState('');
   const hasAnyKey = !!(apiKeyInputs.openai?.trim() || apiKeyInputs.anthropic?.trim() || apiKeyInputs.gemini?.trim() || apiKeyInputs.elevenlabs?.trim());

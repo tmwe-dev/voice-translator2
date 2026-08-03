@@ -6,6 +6,7 @@ import AvatarImg from './AvatarImg.js';
 import PageHeader from './ui/PageHeader.js';
 import EmptyState from './ui/EmptyState.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // HistoryView — Archivio (P4 Archive)
@@ -14,7 +15,8 @@ import { PALETTE } from '../lib/palette.js';
 // filter chips, conversation list with avatars
 // ═══════════════════════════════════════════════
 
-function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, status, theme, setTheme, verifiedName }) {
+function HistoryView({ convHistory, viewConversation, verifiedName }) {
+  const { L, S, prefs, setView, status, theme, setTheme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {

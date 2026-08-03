@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FREE_DAILY_LIMIT } from '../lib/constants.js';
+import { subscribeTick } from '../lib/ticker.js';
 
 /**
  * useFreeTierTracking — Manages free tier character usage with daily reset.
@@ -56,9 +57,7 @@ export default function useFreeTierTracking() {
         setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
       }
     }
-    updateCountdown();
-    const timer = setInterval(updateCountdown, 60000);
-    return () => clearInterval(timer);
+    return subscribeTick(60000, updateCountdown, { immediate: true });
   }, []);
 
   const trackFreeChars = useCallback((chars) => {

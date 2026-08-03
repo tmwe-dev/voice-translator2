@@ -1,6 +1,7 @@
 'use client';
 import { CREDIT_PACKAGES, FONT, formatCredits } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // Inline perk descriptions (IT + EN fallback)
 const PERKS = {
@@ -54,7 +55,8 @@ function getPerk(lang, key) {
   return PERKS[lang]?.[key] || PERKS.en[key] || key;
 }
 
-export default function CreditsView({ L, S, creditBalance, buyCredits, authLoading, userAccount, setView, status, theme, setTheme }) {
+export default function CreditsView({ creditBalance, buyCredits, authLoading, userAccount }) {
+  const { L, S, setView, status, theme, setTheme } = useApp();
   // Direct language detection from L function
   const pLang = L('createRoom') === 'Crea Stanza' ? 'it' : 'en';
   const colors = S.colors;

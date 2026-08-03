@@ -786,11 +786,22 @@ function HomeInner() {
   useEffect(() => { if (prefs.lang) preloadLang(prefs.lang); }, [prefs.lang]);
   const L = (key) => t(prefs.lang, key);
 
+  // ═══ AppProvider — EVERY view is wrapped so useApp() works anywhere ═══
+  const appCtxValue = {
+    S, theme, setTheme, prefs, setPrefs, savePrefs,
+    myLang, setMyLang, view, setView, status, setStatus,
+    auth: {
+      userToken: auth.userToken, isTrial: auth.isTrial, isTopPro: auth.isTopPro,
+      creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
+    },
+  };
+  const wrap = (node) => <AppProvider value={appCtxValue}>{node}</AppProvider>;
+
   // =============================================
   // RENDER
   // =============================================
   // Full-screen views (no BottomNav)
-  if (view === 'loading') return (
+  if (view === 'loading') return wrap(
     <div style={S.page}>
       <style>{`@keyframes vtSpin { to { transform: rotate(360deg); } }`}</style>
       <div style={S.center}>
@@ -803,7 +814,7 @@ function HomeInner() {
     </div>
   );
 
-  if (view === 'welcome') return (
+  if (view === 'welcome') return wrap(
     <WelcomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs}
       joinCode={joinCode} userToken={auth.userToken} setView={setView} setAuthStep={auth.setAuthStep} theme={theme} setTheme={setTheme}
       sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
@@ -813,7 +824,7 @@ function HomeInner() {
       authTestCode={auth.authTestCode} pendingReferralCode={auth.pendingReferralCode} />
   );
 
-  if (view === 'room') return (
+  if (view === 'room') return wrap(
     <Suspense fallback={<LazyFallback />}>
     <RoomView L={L} S={S} prefs={prefs} myLang={myLang} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
@@ -857,7 +868,7 @@ function HomeInner() {
     </Suspense>
   );
 
-  if (view === 'lobby') return (
+  if (view === 'lobby') return wrap(
     <Suspense fallback={<LazyFallback />}>
     <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
@@ -865,7 +876,7 @@ function HomeInner() {
     </Suspense>
   );
 
-  if (view === 'join') return (
+  if (view === 'join') return wrap(
     <JoinView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
       setMyLang={setMyLang} joinCode={joinCode} setJoinCode={setJoinCode}
       inviteMsgLang={inviteMsgLang} setInviteMsgLang={setInviteMsgLang}
@@ -882,19 +893,9 @@ function HomeInner() {
     </>
   );
 
-  // ═══ AppProvider value — shared state for context consumers ═══
-  const appCtxValue = {
-    S, theme, setTheme, prefs, setPrefs, savePrefs,
-    myLang, setMyLang, view, setView, status, setStatus,
-    auth: {
-      userToken: auth.userToken, isTrial: auth.isTrial, isTopPro: auth.isTopPro,
-      creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
-    },
-  };
-
-  // Views with BottomNav — wrapped in AppProvider
-  if (view === 'home') return (
-    <AppProvider value={appCtxValue}>
+  // Views with BottomNav
+  if (view === 'home') return wrap(
+    <>
       <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} setMyLang={setMyLang}
         selectedMode={selectedMode} setSelectedMode={setSelectedMode}
         selectedContext={selectedContext} setSelectedContext={setSelectedContext}
@@ -908,45 +909,44 @@ function HomeInner() {
           setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} theme={theme} />
       )}
       {bottomNav}
-    </AppProvider>
+    </>
   );
 
-  if (view === 'account') return (
+  if (view === 'account') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <AccountView L={L} S={S} authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
+      <AccountView authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
         authCode={auth.authCode} setAuthCode={auth.setAuthCode} authLoading={auth.authLoading}
         authTestCode={auth.authTestCode} sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
         loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
         pendingReferralCode={auth.pendingReferralCode}
-        setAuthStep={auth.setAuthStep} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+        setAuthStep={auth.setAuthStep} />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'credits') return (
+  if (view === 'credits') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <CreditsView L={L} S={S} creditBalance={auth.creditBalance} buyCredits={auth.buyCredits}
-        authLoading={auth.authLoading} userAccount={auth.userAccount} setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      <CreditsView creditBalance={auth.creditBalance} buyCredits={auth.buyCredits}
+        authLoading={auth.authLoading} userAccount={auth.userAccount} />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'apikeys') return (
+  if (view === 'apikeys') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <ApiKeysView L={L} S={S} apiKeyInputs={auth.apiKeyInputs} setApiKeyInputs={auth.setApiKeyInputs}
-        saveUserApiKeys={auth.saveUserApiKeys} authLoading={auth.authLoading} userAccount={auth.userAccount}
-        setView={setView} status={status}  theme={theme} setTheme={setTheme} />
+      <ApiKeysView apiKeyInputs={auth.apiKeyInputs} setApiKeyInputs={auth.setApiKeyInputs}
+        saveUserApiKeys={auth.saveUserApiKeys} authLoading={auth.authLoading} userAccount={auth.userAccount} />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'settings') return (
+  if (view === 'settings') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <SettingsView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} setView={setView}
@@ -963,29 +963,28 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'history' || view === 'archive') return (
+  if (view === 'history' || view === 'archive') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <HistoryView L={L} S={S} prefs={prefs} convHistory={convHistory}
-        viewConversation={viewConversation} setView={setView} status={status} theme={theme} setTheme={setTheme}
+      <HistoryView convHistory={convHistory} viewConversation={viewConversation}
         verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'summary') return (
+  if (view === 'summary') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <SummaryView L={L} S={S} prefs={prefs} currentConv={currentConv} summaryLoading={summaryLoading}
-        shareSummary={shareSummary} setCurrentConv={setCurrentConv} setView={setView} status={status} theme={theme} setTheme={setTheme}
+      <SummaryView currentConv={currentConv} summaryLoading={summaryLoading}
+        shareSummary={shareSummary} setCurrentConv={setCurrentConv}
         verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'voicetest') return (
+  if (view === 'voicetest') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
@@ -999,7 +998,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'contacts') return (
+  if (view === 'contacts') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <ContactsView L={L} S={S} prefs={prefs}
@@ -1018,13 +1017,13 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'taxi-driver') return (
+  if (view === 'taxi-driver') return wrap(
     <Suspense fallback={<LazyFallback />}>
       <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} setView={setView} theme={theme} L={L} />
     </Suspense>
   );
 
-  if (view === 'mondo') return (
+  if (view === 'mondo') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <MondoView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
@@ -1053,7 +1052,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'speaker') return (
+  if (view === 'speaker') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <SpeakerView L={L} S={S} prefs={prefs} setView={setView} theme={theme}
@@ -1063,7 +1062,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'quickinvite') return (
+  if (view === 'quickinvite') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <QuickInvite L={L} S={S} prefs={prefs} theme={theme} setView={setView}
@@ -1088,7 +1087,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'voice-clone') return (
+  if (view === 'voice-clone') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <VoiceCloneView L={L} S={S} prefs={prefs}
@@ -1104,16 +1103,16 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'help') return (
+  if (view === 'help') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <HelpView L={L} S={S} prefs={prefs} setView={setView} theme={theme} />
+      <HelpView />
       </Suspense>
       {bottomNav}
     </>
   );
 
-  if (view === 'ai') return (
+  if (view === 'ai') return wrap(
     <>
       <Suspense fallback={null}>
         <AIView
@@ -1128,7 +1127,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'detail') return (
+  if (view === 'detail') return wrap(
     <>
       <Suspense fallback={null}>
         <DetailView

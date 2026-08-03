@@ -4,11 +4,13 @@ import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { createLogger } from '../lib/logger.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 const dbg = createLogger('account');
 
-export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, authCode, setAuthCode,
+export default function AccountView({ authStep, authEmail, setAuthEmail, authCode, setAuthCode,
   authLoading, authTestCode, sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
-  pendingReferralCode, setAuthStep, setView, status, theme, setTheme }) {
+  pendingReferralCode, setAuthStep }) {
+  const { L, S, setView, status, theme, setTheme } = useApp();
 
   // Auto-redirect to home after successful auth (skip tier choose page)
   useEffect(() => {

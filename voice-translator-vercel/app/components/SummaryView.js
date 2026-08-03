@@ -1,7 +1,9 @@
 'use client';
+import { useApp } from '../contexts/AppContext.js';
 
-export default function SummaryView({ L, S, prefs, currentConv, summaryLoading, shareSummary,
-  setCurrentConv, setView, status, theme, setTheme, verifiedName }) {
+export default function SummaryView({ currentConv, summaryLoading, shareSummary,
+  setCurrentConv, verifiedName }) {
+  const { L, S, prefs, setView, status, theme, setTheme } = useApp();
   if (!currentConv) return null;
   const s = currentConv.summary;
   const isHost = currentConv.host === (verifiedName || prefs.name);

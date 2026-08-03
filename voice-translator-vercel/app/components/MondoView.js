@@ -11,6 +11,7 @@ import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
+import { subscribeTick } from '../lib/ticker.js';
 
 const MODE_LABELS = {
   conversation: { label: 'Chat', icon: '💬', color: PALETTE.teal },
@@ -87,9 +88,7 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, onCreateRoom, theme }) {
   }, []);
 
   useEffect(() => {
-    fetchRooms();
-    const timer = setInterval(fetchRooms, 30000);
-    return () => clearInterval(timer);
+    return subscribeTick(30000, fetchRooms, { immediate: true });
   }, [fetchRooms]);
 
   const handleRefresh = useCallback(() => {

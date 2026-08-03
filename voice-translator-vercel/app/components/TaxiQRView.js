@@ -3,6 +3,7 @@ import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { encryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
+import { subscribeTick } from '../lib/ticker.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiQRView — Shows QR code for encrypted taxi destination
@@ -108,9 +109,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
       const m = Math.floor((diff % 3600000) / 60000);
       setTimeLeft(`${h}h ${m}m`);
     };
-    update();
-    const timer = setInterval(update, 60000);
-    return () => clearInterval(timer);
+    return subscribeTick(60000, update, { immediate: true });
   }, [destination?.expiresAt]);
 
   // ── Share (includes key in fragment) ──
