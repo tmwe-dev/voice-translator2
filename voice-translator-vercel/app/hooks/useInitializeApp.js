@@ -1,6 +1,8 @@
 'use client';
 import { useEffect } from 'react';
 import { LANGS, AVATARS } from '../lib/constants.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('init');
 
 /**
  * useInitializeApp — Handles the complex app initialization:
@@ -138,7 +140,7 @@ export default function useInitializeApp({
 
       // 8. TESTING_MODE auto-login
       if (typeof window !== 'undefined' && window.__VT_TESTING_MODE && !savedToken) {
-        console.log('[TESTING_MODE] Auto-login with test account...');
+        dbg.debug('[TESTING_MODE] Auto-login with test account...');
         fetch('/api/test-login', { method: 'POST' })
           .then(r => r.json())
           .then(data => {
@@ -161,7 +163,7 @@ export default function useInitializeApp({
                   elevenlabs: data.user.apiKeys.elevenlabs || '',
                 });
               }
-              console.log('[TESTING_MODE] Logged in as test@bartalk.dev');
+              dbg.debug('[TESTING_MODE] Logged in as test@bartalk.dev');
             }
           })
           .catch(e => console.warn('[TESTING_MODE] Auto-login failed:', e.message));

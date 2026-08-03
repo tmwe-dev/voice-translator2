@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { PALETTE } from '../lib/palette.js';
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -65,7 +66,7 @@ export default function CookieConsent() {
 
   const acceptButtonStyle = {
     padding: '10px 16px',
-    background: '#f97316',
+    background: PALETTE.orange,
     color: 'white',
     border: 'none',
     borderRadius: '8px',
@@ -92,7 +93,7 @@ export default function CookieConsent() {
   };
 
   const linkStyle = {
-    color: '#f97316',
+    color: PALETTE.orange,
     textDecoration: 'none',
     cursor: 'pointer',
     borderBottom: '1px solid #f97316',
@@ -143,7 +144,7 @@ export default function CookieConsent() {
                 e.target.style.background = '#ea580c';
               }}
               onMouseLeave={(e) => {
-                e.target.style.background = '#f97316';
+                e.target.style.background = PALETTE.orange;
               }}
             >
               Accept All

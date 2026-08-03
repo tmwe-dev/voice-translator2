@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
+import { PALETTE } from '../lib/palette.js';
 
 // Haptic feedback helper (mobile)
 function haptic(ms = 10) {
@@ -177,7 +178,7 @@ const MessageList = memo(function MessageList({
                 {/* Delivery status: ✓ sent → ✓✓ delivered → ✓✓ green (read) */}
                 {isMine && (
                   <span style={{
-                    color: m._status === 'read' ? '#22c55e' : m._status === 'delivered' ? '#60a5fa' : S.colors.textMuted,
+                    color: m._status === 'read' ? PALETTE.green : m._status === 'delivered' ? PALETTE.blue : S.colors.textMuted,
                     marginLeft:'auto', display:'flex', alignItems:'center',
                   }}>
                     {m._status === 'read' || m._status === 'delivered'

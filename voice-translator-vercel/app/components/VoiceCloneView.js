@@ -4,6 +4,7 @@ import { FONT } from '../lib/constants.js';
 import { getVoiceScript } from '../lib/voiceScripts.js';
 import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 const MIN_DURATION = 30; // ElevenLabs requires at least 30s for instant voice cloning
 
@@ -128,7 +129,7 @@ export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, s
             </div>
 
             {recorder.hasPermission === false && (
-              <div style={{fontSize:12, color:C.accent3 || '#FF6B6B', marginBottom:12, padding:'8px 12px',
+              <div style={{fontSize:12, color:C.accent3 || PALETTE.coral, marginBottom:12, padding:'8px 12px',
                 borderRadius:10, background:C.accent3Bg || 'rgba(255,107,107,0.1)'}}>
                 {isIT ? 'Permesso microfono negato. Controlla le impostazioni del browser.' : 'Microphone permission denied. Check browser settings.'}
               </div>
@@ -165,7 +166,7 @@ export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, s
               {Array.from({length:20}).map((_, i) => {
                 const threshold = i / 20;
                 const active = recorder.audioLevel > threshold;
-                const color = i > 16 ? (C.accent3 || '#FF6B6B') : i > 10 ? (C.accent1) : (C.accent4 || C.onlineColor);
+                const color = i > 16 ? (C.accent3 || PALETTE.coral) : i > 10 ? (C.accent1) : (C.accent4 || C.onlineColor);
                 return (
                   <div key={i} style={{width:8, borderRadius:2, transition:'background 0.05s',
                     background: active ? color : (C.overlayBg || 'rgba(255,255,255,0.05)')}} />
@@ -201,10 +202,10 @@ export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, s
               <button onClick={handleToggleRecord}
                 style={{width:72, height:72, borderRadius:36, border:'none', cursor:'pointer',
                   background: recorder.isRecording
-                    ? `linear-gradient(135deg, ${C.accent3 || '#FF6B6B'}, ${C.accent3 || '#FF4444'})`
+                    ? `linear-gradient(135deg, ${C.accent3 || PALETTE.coral}, ${C.accent3 || '#FF4444'})`
                     : `linear-gradient(135deg, ${C.accent1}, ${C.accent2 || C.accent1})`,
                   display:'flex', alignItems:'center', justifyContent:'center',
-                  boxShadow: recorder.isRecording ? `0 0 20px ${C.accent3 || '#FF6B6B'}40` : `0 0 20px ${C.accent1}40`,
+                  boxShadow: recorder.isRecording ? `0 0 20px ${C.accent3 || PALETTE.coral}40` : `0 0 20px ${C.accent1}40`,
                   transition:'all 0.2s'}}>
                 <span style={{fontSize:28}}>{recorder.isRecording ? '\u23F9' : '\u{1F3A4}'}</span>
               </button>
@@ -212,7 +213,7 @@ export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, s
 
             {/* Current segment timer */}
             {recorder.isRecording && (
-              <div style={{textAlign:'center', fontSize:20, fontWeight:700, color:C.accent3 || '#FF6B6B', marginBottom:8, fontFamily:'monospace'}}>
+              <div style={{textAlign:'center', fontSize:20, fontWeight:700, color:C.accent3 || PALETTE.coral, marginBottom:8, fontFamily:'monospace'}}>
                 {Math.floor(recorder.duration)}s
               </div>
             )}
@@ -346,7 +347,7 @@ export default function VoiceCloneView({ L, S, prefs, userToken, userTokenRef, s
             </div>
 
             {cloneError && (
-              <div style={{marginTop:12, fontSize:12, color:C.accent3 || '#FF6B6B', padding:'10px 14px',
+              <div style={{marginTop:12, fontSize:12, color:C.accent3 || PALETTE.coral, padding:'10px 14px',
                 borderRadius:10, background:C.accent3Bg || 'rgba(255,107,107,0.1)', textAlign:'center'}}>
                 {cloneError}
               </div>

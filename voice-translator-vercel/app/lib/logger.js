@@ -33,7 +33,7 @@ function formatMsg(level, tag, message, data) {
     const prefix = `[${tag}]`;
     if (level === 'error') console.error(prefix, message, data || '');
     else if (level === 'warn') console.warn(prefix, message, data || '');
-    else console.log(prefix, message, data || '');
+    else console.log(prefix, message, data || ''); // eslint-disable-line no-console -- logger sink
     return;
   }
 
@@ -41,7 +41,7 @@ function formatMsg(level, tag, message, data) {
   const out = JSON.stringify(entry);
   if (level === 'error') console.error(out);
   else if (level === 'warn') console.warn(out);
-  else console.log(out);
+  else console.log(out); // eslint-disable-line no-console -- logger sink
 }
 
 /**

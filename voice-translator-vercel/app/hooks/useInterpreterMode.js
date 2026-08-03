@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { createNoiseGate } from '../lib/noiseGate.js';
 import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 import useStreamingInterpreter from './useStreamingInterpreter.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('interpreter');
 
 // ═══════════════════════════════════════
 // useInterpreterMode — Bidirectional real-time STT → Translate → TTS
@@ -297,7 +299,7 @@ export default function useInterpreterMode({
 
       recorder.start(CHUNK_DURATION);
       setActive(true);
-      console.log('[Interpreter] Started');
+      dbg.debug('[Interpreter] Started');
     } catch (e) {
       console.error('[Interpreter] Failed to start:', e);
       setActive(false);
@@ -319,7 +321,7 @@ export default function useInterpreterMode({
       streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
       streamRef.current = null;
     }
-    console.log('[Interpreter] Stopped');
+    dbg.debug('[Interpreter] Stopped');
   }, []);
 
   // Cleanup on unmount
@@ -356,11 +358,11 @@ export default function useInterpreterMode({
   const startUnified = useCallback(async () => {
     const streamingOk = await streaming.start();
     if (streamingOk) {
-      console.log('[Interpreter] Using streaming pipeline (subtitle-first)');
+      dbg.debug('[Interpreter] Using streaming pipeline (subtitle-first)');
       return;
     }
     // Fallback to legacy chunk-based pipeline
-    console.log('[Interpreter] Streaming unavailable, using legacy 3s chunks');
+    dbg.debug('[Interpreter] Streaming unavailable, using legacy 3s chunks');
     startInterpreter();
   }, [streaming.start, startInterpreter]);
 

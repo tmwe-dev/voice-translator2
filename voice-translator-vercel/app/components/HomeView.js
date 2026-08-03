@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
 import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -8,7 +9,7 @@ import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 function getHomeColors(theme) {
   const palettes = {
     dark: {
-      accent: '#8b5cf6', accent2: '#06b6d4', accent3: '#f59e0b',
+      accent: PALETTE.purple, accent2: PALETTE.cyan, accent3: PALETTE.amber,
       textPrimary: '#fafafa', textSecondary: 'rgba(250,250,250,0.60)',
       textMuted: 'rgba(250,250,250,0.35)',
       cardBg: 'rgba(255,255,255,0.04)', cardBorder: 'rgba(255,255,255,0.08)',

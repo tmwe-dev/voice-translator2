@@ -1,4 +1,5 @@
 'use client';
+import { PALETTE } from '../lib/palette.js';
 
 export default function SkipToContent() {
   return (
@@ -8,7 +9,7 @@ export default function SkipToContent() {
         position: 'absolute',
         top: -100,
         left: 0,
-        background: '#f97316',
+        background: PALETTE.orange,
         color: '#fff',
         padding: '8px 16px',
         zIndex: 10000,

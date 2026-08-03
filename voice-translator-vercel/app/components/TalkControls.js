@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconStop, IconRecord, IconLock, IconSparkles, IconHandRaise } from './Icons.js';
+import { PALETTE } from '../lib/palette.js';
 
 const TalkControls = memo(function TalkControls({
   L, S, roomMode, roomId, isHost, canTalk, modeInfo, isTrial,
@@ -47,7 +48,7 @@ const TalkControls = memo(function TalkControls({
               width:52, height:52, borderRadius:14,
               border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
               background: liveMode ? 'rgba(34,197,94,0.12)' : S.colors.overlayBg,
-              color: liveMode ? '#22c55e' : S.colors.textMuted,
+              color: liveMode ? PALETTE.green : S.colors.textMuted,
               cursor:'pointer', justifyContent:'center',
               WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
               boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
@@ -95,7 +96,7 @@ const TalkControls = memo(function TalkControls({
               padding: '10px 20px', borderRadius: 14,
               background: handRaised ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
               border: handRaised ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,165,0,0.3)',
-              color: handRaised ? '#22c55e' : '#FFA500',
+              color: handRaised ? PALETTE.green : '#FFA500',
               fontSize: 14, fontWeight: 600, cursor: handRaised ? 'default' : 'pointer',
               fontFamily: FONT, transition: 'all 0.2s',
               opacity: handRaising ? 0.6 : 1,
@@ -139,7 +140,7 @@ const TalkControls = memo(function TalkControls({
               style={{
                 padding: '3px 10px', borderRadius: 8,
                 background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.3)',
-                color: '#22c55e', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                color: PALETTE.green, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 fontFamily: FONT,
               }}
             >

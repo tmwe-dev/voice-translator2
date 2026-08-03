@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 export default function AccountPage() {
   const [prefs, setPrefs] = useState(null);
@@ -42,9 +43,9 @@ export default function AccountPage() {
       padding: '20px', maxWidth: 480, margin: '0 auto',
     }}>
       {/* Back button */}
-      <a href="/" style={{ color: '#71717a', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24 }}>
+      <Link href="/" style={{ color: '#71717a', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24 }}>
         ← Back
-      </a>
+      </Link>
 
       {/* Avatar + Name */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>

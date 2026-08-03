@@ -303,10 +303,11 @@ export const initMonitoring = () => {
   }, 300000); // 5 minutes
 };
 
-export default {
+const monitorApi = {
   initMonitoring,
   reportError,
   reportMetric,
   getErrorLog,
   getHealthReport,
 };
+export default monitorApi;

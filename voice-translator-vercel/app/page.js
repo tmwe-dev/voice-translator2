@@ -77,16 +77,7 @@ import { AppProvider } from './contexts/AppContext.js';
 export default function Home() {
   return (
     <ErrorBoundary>
-      {/* Skip-to-content for keyboard/screen reader users */}
-      <a href="#main-content" style={{
-        position: 'absolute', top: -40, left: 0, zIndex: 9999,
-        background: '#8b5cf6', color: '#fff', padding: '8px 16px',
-        fontSize: 14, fontWeight: 600, textDecoration: 'none',
-        borderRadius: '0 0 8px 0',
-      }} onFocus={(e) => { e.currentTarget.style.top = '0'; }}
-         onBlur={(e) => { e.currentTarget.style.top = '-40px'; }}>
-        Vai al contenuto
-      </a>
+      {/* Skip-to-content link lives in layout.js (<SkipToContent />) — do not duplicate here */}
       <NetworkStatus />
       <ToastContainer />
       <div id="main-content" role="main">

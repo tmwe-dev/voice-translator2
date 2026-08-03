@@ -15,7 +15,7 @@ test.describe('Homepage', () => {
   test('loads and shows app title', async ({ page }) => {
     await page.goto('/');
     // App should load without errors
-    await expect(page).toHaveTitle(/Voice/i);
+    await expect(page).toHaveTitle(/BarTalk/i);
     // Should show the main UI
     await expect(page.locator('body')).toBeVisible();
   });

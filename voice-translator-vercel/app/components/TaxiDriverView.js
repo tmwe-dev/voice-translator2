@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { decryptDestination } from '../lib/taxiCrypto.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDriverView — Dedicated page for taxi drivers
@@ -36,13 +37,13 @@ function TaxiDriverView({ destId, decryptionKey, setView, theme, L }) {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: '#060810',
-    textPrimary: col.textPrimary || '#F2F4F7',
+    bg: PALETTE.bgDeep,
+    textPrimary: col.textPrimary || PALETTE.grayLight,
     textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
     card: col.glassCard || 'rgba(12,16,30,0.65)',
     cardBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
-    accent: col.accent1 || '#26D9B0',
-    purple: col.accent2 || '#8B6AFF',
+    accent: col.accent1 || PALETTE.teal,
+    purple: col.accent2 || PALETTE.violet,
   };
 
   const [destination, setDestination] = useState(null);

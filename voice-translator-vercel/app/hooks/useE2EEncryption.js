@@ -6,6 +6,8 @@ import {
 } from '../lib/e2eCrypto.js';
 import { sendViaDataChannel } from '../lib/webrtc.js';
 import { isDirectMode } from '../lib/sessionGuard.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('e2e');
 
 /**
  * useE2EEncryption — Manages E2E encryption for WebRTC DataChannel.
@@ -55,7 +57,7 @@ export default function useE2EEncryption({ sessionModeRef } = {}) {
       const sharedKey = await deriveSharedKey(keyPairRef.current.privateKey, partnerPubKey);
       sharedKeyRef.current = sharedKey;
       readyRef.current = true;
-      console.log('[E2E] Shared key derived — messages are now encrypted');
+      dbg.debug('[E2E] Shared key derived — messages are now encrypted');
     } catch (e) {
       console.warn('[E2E] Key derivation failed:', e);
       readyRef.current = false;

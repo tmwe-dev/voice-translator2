@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { createLogger } from '../lib/logger.js';
+import { PALETTE } from '../lib/palette.js';
+const dbg = createLogger('account');
 
 export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, authCode, setAuthCode,
   authLoading, authTestCode, sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
@@ -113,12 +116,12 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
                 if (window.google?.accounts?.id) {
                   window.google.accounts.id.prompt((notification) => {
                     if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                      console.log('[Auth] One Tap unavailable, using OAuth popup');
+                      dbg.debug('[Auth] One Tap unavailable, using OAuth popup');
                       googleOAuthPopup();
                     }
                   });
                 } else {
-                  console.log('[Auth] Google SDK not loaded, using OAuth popup');
+                  dbg.debug('[Auth] Google SDK not loaded, using OAuth popup');
                   if (!googleOAuthPopup()) {
                     setAuthError(isIT ? 'Google Sign-In non disponibile. Usa il login con email.' : 'Google Sign-In unavailable. Use email login.');
                   }
@@ -133,7 +136,7 @@ export default function AccountView({ L, S, authStep, authEmail, setAuthEmail, a
               <span>{L('loginGoogle')}</span>
             </button>
             {authError && (
-              <div style={{color:S.colors.statusError || '#FF6B6B', fontSize:12, textAlign:'center',
+              <div style={{color:S.colors.statusError || PALETTE.coral, fontSize:12, textAlign:'center',
                 padding:'6px 12px', marginBottom:8, borderRadius:8,
                 background:S.colors.accent3Bg || 'rgba(255,107,107,0.1)',
                 border:`1px solid ${S.colors.accent3Border || 'rgba(255,107,107,0.2)'}`}}>

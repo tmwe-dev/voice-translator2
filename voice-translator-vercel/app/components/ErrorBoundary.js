@@ -1,6 +1,7 @@
 'use client';
 import { Component } from 'react';
 import { t, mapLang } from '../lib/i18n.js';
+import { PALETTE } from '../lib/palette.js';
 
 /**
  * ErrorBoundary — catches React render errors gracefully
@@ -85,7 +86,7 @@ export default class ErrorBoundary extends Component {
           </p>
           {this.state.error && (
             <pre style={{
-              fontSize: 11, color: '#FF6B6B', background: 'rgba(255,107,107,0.1)',
+              fontSize: 11, color: PALETTE.coral, background: 'rgba(255,107,107,0.1)',
               padding: '8px 16px', borderRadius: 8, maxWidth: '90vw', overflow: 'auto',
               marginBottom: 24, textAlign: 'left', maxHeight: 120,
             }}>

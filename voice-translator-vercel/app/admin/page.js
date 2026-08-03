@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { FONT } from '../lib/constants.js';
 import { t, mapLang } from '../lib/i18n.js';
 
@@ -104,7 +105,7 @@ export default function AdminPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <a href="/" style={{ color: '#71717a', textDecoration: 'none', fontSize: 14 }}>← App</a>
+          <Link href="/" style={{ color: '#71717a', textDecoration: 'none', fontSize: 14 }}>← App</Link>
           <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, flex: 1 }}>{'\u{1F4CA}'} {L('adminTitle')}</h1>
           <span style={{ fontSize: 13, color: '#71717a' }}>{adminEmail}</span>
         </div>

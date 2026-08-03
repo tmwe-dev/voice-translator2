@@ -2,10 +2,11 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import { APP_URL, LANGS, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 const glass = {
   btn: { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' },
-  text: { primary: '#F2F4F7', secondary: 'rgba(242,244,247,0.75)', muted: 'rgba(242,244,247,0.50)' },
+  text: { primary: PALETTE.grayLight, secondary: 'rgba(242,244,247,0.75)', muted: 'rgba(242,244,247,0.50)' },
 };
 
 function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, setViewAfterCreate }) {
@@ -42,7 +43,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
       if (cancelled) return;
       QRCode.toCanvas(canvasRef.current, url, {
         width: 260, margin: 2,
-        color: { dark: '#060810', light: '#ffffff' },
+        color: { dark: PALETTE.bgDeep, light: '#ffffff' },
         errorCorrectionLevel: 'M',
       }, () => {});
     }).catch(() => {});
@@ -109,7 +110,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
           <div style={{ textAlign: 'center' }}>
             <div style={{
               width: 36, height: 36, borderRadius: '50%', margin: '0 auto 12px',
-              border: '3px solid rgba(38,217,176,0.15)', borderTopColor: '#26D9B0',
+              border: '3px solid rgba(38,217,176,0.15)', borderTopColor: PALETTE.teal,
               animation: 'vtSpin 0.8s linear infinite',
             }} />
             <div style={{ fontSize: 13, color: glass.text.muted }}>Preparazione invito...</div>
@@ -119,7 +120,7 @@ function QuickInvite({ L, S, prefs, theme, setView, handleCreateRoom, roomId, se
         {/* ERRORE */}
         {error && !creating && !createdRoomId && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 14, color: '#FF6B6B', marginBottom: 16 }}>{error}</div>
+            <div style={{ fontSize: 14, color: PALETTE.coral, marginBottom: 16 }}>{error}</div>
             <button onClick={doCreateRoom}
               style={{
                 padding: '14px 32px', borderRadius: 14, cursor: 'pointer', border: 'none',

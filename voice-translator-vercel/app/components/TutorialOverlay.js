@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -12,13 +13,13 @@ const STEPS = [
     iconName: 'doorOpen',
     title: 'Benvenuto in BarTalk',
     desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, il tuo interlocutore sente nella sua.',
-    accent: '#26D9B0',
+    accent: PALETTE.teal,
   },
   {
     iconName: 'link',
     title: 'Crea o Entra in una Stanza',
     desc: 'Condividi il codice stanza con chi vuoi. Si connette in P2P, senza server intermediari.',
-    accent: '#8B6AFF',
+    accent: PALETTE.violet,
   },
   {
     iconName: 'mic',
@@ -30,19 +31,19 @@ const STEPS = [
     iconName: 'swap',
     title: 'TaxiTalk Mode',
     desc: 'Perfetto per conversazioni dal vivo. Lo schermo si divide in due: tu da un lato, l\'interlocutore dall\'altro.',
-    accent: '#26D9B0',
+    accent: PALETTE.teal,
   },
   {
     iconName: 'refresh',
     title: 'Mirror Automatico',
     desc: 'Inclina il telefono oltre 120° e lo schermo si capovolge automaticamente per chi è di fronte a te.',
-    accent: '#8B6AFF',
+    accent: PALETTE.violet,
   },
   {
     iconName: 'star',
     title: 'Tutto Gratuito',
     desc: 'Voci AI premium, ElevenLabs, traduzioni illimitate in 140+ lingue. Nessun limite, nessun abbonamento.',
-    accent: '#26D9B0',
+    accent: PALETTE.teal,
   },
 ];
 

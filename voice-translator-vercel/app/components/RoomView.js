@@ -12,6 +12,7 @@ import RoomHeader from './RoomHeader.js';
 import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
 import TaxiMode, { TaxiButton } from './TaxiMode.js';
+import { PALETTE } from '../lib/palette.js';
 
 const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -208,7 +209,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
         freeLimitExceeded={freeLimitExceeded} freeResetTime={freeResetTime}
         endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary}
         taxiVisible={taxiVisible} setTaxiVisible={setTaxiVisible} setTaxiData={setTaxiData}
-        myName={myName} messages={messages}
+        myName={myName}
       />
 
       {/* ═══ Audio unlock — compact banner (does NOT block video call) ═══ */}
@@ -300,7 +301,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
             <div style={{display:'flex', gap:10}}>
               <button onClick={() => webrtc.declineIncomingCall()}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                  background:'#ef4444', color:'#fff', fontSize:13, fontWeight:600}}>
+                  background:PALETTE.red, color:'#fff', fontSize:13, fontWeight:600}}>
                 Rifiuta
               </button>
               <button onClick={() => {
@@ -308,7 +309,7 @@ const RoomView = memo(function RoomView({ L, S, prefs, myLang, roomId, roomInfo,
                 if (isVideo) { setShowVideoCall(true); setVideoFullscreen(true); }
               }}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
-                  background:'#22c55e', color:'#fff', fontSize:13, fontWeight:600}}>
+                  background:PALETTE.green, color:'#fff', fontSize:13, fontWeight:600}}>
                 Accetta
               </button>
             </div>

@@ -6,6 +6,8 @@ import useDeepgramSTT from './useDeepgramSTT.js';
 import useTranslationAPI from './useTranslationAPI.js';
 import useFreeTalkVAD from './useFreeTalkVAD.js';
 import { getPerf, PERF } from '../lib/perfTelemetry.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('translation');
 
 // ═══════════════════════════════════════════════════════════════
 // FASE 10: Simplified Translation Pipeline
@@ -282,7 +284,7 @@ export default function useTranslation({
         if (typeof confidence === 'number' && confidence > 0) {
           if (confidence < STT_CONFIDENCE_THRESHOLD) {
             lowConfidenceCountRef.current++;
-            console.log(`[STT] Low confidence: ${confidence.toFixed(2)} (${lowConfidenceCountRef.current}/${STT_LOW_CONFIDENCE_COUNT})`);
+            dbg.debug(`[STT] Low confidence: ${confidence.toFixed(2)} (${lowConfidenceCountRef.current}/${STT_LOW_CONFIDENCE_COUNT})`);
             if (lowConfidenceCountRef.current >= STT_LOW_CONFIDENCE_COUNT) {
               console.warn(`[STT] Auto-switching to Whisper-only mode — ${STT_LOW_CONFIDENCE_COUNT} consecutive low-confidence results`);
               whisperOnlyRef.current = true;
@@ -337,7 +339,7 @@ export default function useTranslation({
     }
     const { original } = await res.json();
     getPerf().measure(PERF.STT_LATENCY);
-    console.log('[processAndSendAudio] STT result:', original?.substring(0, 50));
+    dbg.debug('[processAndSendAudio] STT result:', original?.substring(0, 50));
     if (!original?.trim() || !roomId) return;
 
     // ── Step 2: Phase 1 send + Phase 2 translate via unified helper ──
@@ -415,7 +417,7 @@ export default function useTranslation({
     // Reset whisper-only mode on each new recording attempt — give browser STT another chance
     // (the flag was set because of previous bad results, but conditions may have improved)
     if (whisperOnlyRef.current && !isWhisperPrimaryLang(currentLang)) {
-      console.log('[STT] Resetting whisper-only mode for new recording attempt');
+      dbg.debug('[STT] Resetting whisper-only mode for new recording attempt');
       whisperOnlyRef.current = false;
       lowConfidenceCountRef.current = 0;
     }
@@ -461,7 +463,7 @@ export default function useTranslation({
           if (e.data.size > 0) backupChunksRef.current.push(e.data);
         };
         backupRecRef.current.start(100);
-        console.log('[STT] Backup recording started (STT fallback)');
+        dbg.debug('[STT] Backup recording started (STT fallback)');
       } catch (e) {
         console.warn('[STT] Backup mic access failed:', e.name, e.message);
       }
@@ -599,7 +601,7 @@ export default function useTranslation({
     backupStreamRef.current = null;
 
     if (!allOriginal) {
-      console.log('[stopStreaming] No text accumulated (finals + interims), nothing to send');
+      dbg.debug('[stopStreaming] No text accumulated (finals + interims), nothing to send');
       setRecording(false);
       stoppingRef.current = false;
       if (roomId) setSpeakingState(roomId, false);
@@ -607,7 +609,7 @@ export default function useTranslation({
       return;
     }
 
-    console.log(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
+    dbg.debug(`[stopStreaming] Sending text: "${allOriginal}" (interim included: ${interimText ? 'yes' : 'no'})`);
 
     // ── Translate and send using DRY helper ──
     // Also populate textInput so user can see/edit the dictated text in the textarea

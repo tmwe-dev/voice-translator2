@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { CONTEXTS, getLang, LIVE_TEXT_THROTTLE, TYPING_TIMEOUT, SPEAKING_TIMEOUT } from '../lib/constants.js';
 import useRealtimeRoom from './useRealtimeRoom.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('polling');
 
 // ═══════════════════════════════════════════════════════════════
 // POLLING_INTERVAL: With Supabase Realtime active, polling is just
@@ -66,15 +68,15 @@ export default function useRoomPolling({
   // ALWAYS checks content fingerprint to prevent TTS replay.
   // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
   const processIncomingMessage = useCallback((msg) => {
-    if (!msg || !msg.id) { console.log('[TTS-TRACE] skip: no msg/id'); return; }
-    if (sentByMeRef.current.has(msg.id)) { console.log('[TTS-TRACE] skip: sentByMe', msg.id); return; }
+    if (!msg || !msg.id) { dbg.debug('[TTS-TRACE] skip: no msg/id'); return; }
+    if (sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
-    if (msg.sender === myVerifiedName) { console.log('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
+    if (msg.sender === myVerifiedName) { dbg.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
 
     const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000);
     const contentFingerprint = `${msg.sender}|${msg.original?.substring(0,20)}|${timeWindow}`;
     if (processedForTTSRef.current.has(contentFingerprint)) {
-      console.log('[TTS-TRACE] skip: fingerprint dup', contentFingerprint);
+      dbg.debug('[TTS-TRACE] skip: fingerprint dup', contentFingerprint);
       return;
     }
 
@@ -92,7 +94,7 @@ export default function useRoomPolling({
       speechLang = getLang(myLang).speech;
     }
 
-    console.log('[TTS-TRACE] processIncoming:', {
+    dbg.debug('[TTS-TRACE] processIncoming:', {
       id: msg.id?.substring(0,20), sender: msg.sender,
       myLang, myName: myVerifiedName,
       hasTranslations: !!msg.translations, translationKeys: msg.translations ? Object.keys(msg.translations) : [],
@@ -108,10 +110,10 @@ export default function useRoomPolling({
         const first = processedForTTSRef.current.values().next().value;
         processedForTTSRef.current.delete(first);
       }
-      console.log('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
+      dbg.debug('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
       queueAudio(textToPlay, speechLang, msg.id);
     } else {
-      console.log('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
+      dbg.debug('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
     }
 
     // ── Feed incoming message to conversation context (knowledge base) ──
@@ -491,7 +493,7 @@ export default function useRoomPolling({
     if (pollRef.current) clearInterval(pollRef.current);
     const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
     pollRef.current = setInterval(pollFnRef.current, interval);
-    console.log(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
+    dbg.debug(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
   }, [realtimeConnected, roomId]);
 
   const stopPolling = useCallback(() => {

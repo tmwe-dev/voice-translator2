@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════
 // VoiceCallOverlay — Full-screen audio-only call UI
@@ -45,7 +46,7 @@ function VoiceCallOverlay({
       }}>
         <Icon name="phone" size={16} color="rgba(255,255,255,0.5)" />
         <span>Chiamata vocale</span>
-        <span style={{ marginLeft: 8, color: '#26D9B0', fontWeight: 600 }}>
+        <span style={{ marginLeft: 8, color: PALETTE.teal, fontWeight: 600 }}>
           {formatTime(duration)}
         </span>
       </div>
@@ -121,7 +122,7 @@ function VoiceCallOverlay({
           onChange={e => setPartnerVolume(parseFloat(e.target.value))}
           style={{
             writingMode: 'vertical-lr', direction: 'rtl',
-            width: 28, height: 100, accentColor: '#26D9B0',
+            width: 28, height: 100, accentColor: PALETTE.teal,
           }}
         />
         <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 10 }}>
@@ -152,7 +153,7 @@ function VoiceCallOverlay({
           border: `1px solid ${interpreterActive ? 'rgba(38,217,176,0.4)' : 'rgba(255,255,255,0.12)'}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
         }}>
-          <Icon name="globe" size={22} color={interpreterActive ? '#26D9B0' : '#fff'} />
+          <Icon name="globe" size={22} color={interpreterActive ? PALETTE.teal : '#fff'} />
         </button>
 
         {/* Upgrade to video */}

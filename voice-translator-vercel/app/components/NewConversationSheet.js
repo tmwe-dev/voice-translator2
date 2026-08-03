@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // NewConversationSheet — bottom sheet with 4 conversation options
@@ -42,7 +43,7 @@ const NewConversationSheet = ({ open, onClose, onSelect, S }) => {
 
   if (!open) return null;
 
-  const accentColor = C.accent1 || '#8b5cf6';
+  const accentColor = C.accent1 || PALETTE.purple;
 
   return (
     <div

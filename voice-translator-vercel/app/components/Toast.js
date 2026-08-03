@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════
 // Toast Notification System
@@ -62,7 +63,7 @@ export const toast = {
 };
 
 const COLORS = {
-  info: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa', icon: 'ℹ️' },
+  info: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: PALETTE.blue, icon: 'ℹ️' },
   error: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', text: '#f87171', icon: '⚠️' },
   success: { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', text: '#4ade80', icon: '✓' },
   warning: { bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)', text: '#facc15', icon: '⚡' },

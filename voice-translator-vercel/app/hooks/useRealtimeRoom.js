@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { getSupabaseClient } from '../lib/supabase.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('realtime');
 
 /**
  * useRealtimeRoom — Supabase Realtime Channels for room communication.
@@ -48,7 +50,7 @@ export default function useRealtimeRoom({
     }
 
     const supabase = getSupabaseClient();
-    console.log('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
+    dbg.debug('[Realtime] subscribe() called, rid:', rid, 'supabase:', !!supabase);
     if (!supabase || !rid) {
       console.warn('[Realtime] Cannot subscribe — supabase:', !!supabase, 'rid:', rid);
       return;
@@ -93,7 +95,7 @@ export default function useRealtimeRoom({
       if (status === 'SUBSCRIBED') {
         readyRef.current = true;
         setConnected(true);
-        console.log(`[Realtime] Connected to room:${rid}`);
+        dbg.debug(`[Realtime] Connected to room:${rid}`);
       } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
         readyRef.current = false;
         setConnected(false);

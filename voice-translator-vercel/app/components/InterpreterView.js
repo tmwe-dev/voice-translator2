@@ -10,6 +10,7 @@
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import getStyles from '../lib/styles.js';
 import { FONT } from '../lib/constants.js';
+import { PALETTE } from '../lib/palette.js';
 
 const CONTROLS_HIDE_DELAY = 5000;
 
@@ -135,7 +136,7 @@ function InterpreterView({
         }}>
           <span style={{
             width: 6, height: 6, borderRadius: '50%',
-            background: '#26D9B0',
+            background: PALETTE.teal,
             animation: 'vtSubtitlePulse 1.5s ease-in-out infinite',
           }} />
           LIVE

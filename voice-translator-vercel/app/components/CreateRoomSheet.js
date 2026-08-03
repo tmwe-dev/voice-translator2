@@ -2,6 +2,7 @@
 import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // CreateRoomSheet — Create a Community BarTalk room
@@ -19,7 +20,7 @@ const ROOM_TYPES = [
 ];
 
 const CATEGORIES = [
-  { id: 'conversation', icon: '💬', label: 'Conversazione', color: '#26D9B0' },
+  { id: 'conversation', icon: '💬', label: 'Conversazione', color: PALETTE.teal },
   { id: 'classroom', icon: '🏫', label: 'Classroom', color: '#10B981' },
   { id: 'interview', icon: '🎤', label: 'Intervista', color: '#F59E0B' },
   { id: 'conference', icon: '🏛️', label: 'Conferenza', color: '#8B5CF6' },
@@ -30,11 +31,11 @@ const POPULAR_LANGS = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'ar
 
 function CreateRoomSheet({ open, onClose, onCreate, S }) {
   const C = S?.colors || {};
-  const accent = C.accent1 || '#26D9B0';
-  const purple = C.accent2 || '#8B6AFF';
+  const accent = C.accent1 || PALETTE.teal;
+  const purple = C.accent2 || PALETTE.violet;
   const cardBg = C.glassCard || 'rgba(12,16,30,0.65)';
   const cardBorder = C.cardBorder || 'rgba(255,255,255,0.05)';
-  const textPrimary = C.textPrimary || '#F2F4F7';
+  const textPrimary = C.textPrimary || PALETTE.grayLight;
   const textMuted = C.textMuted || 'rgba(242,244,247,0.60)';
   const inputBg = C.inputBg || 'rgba(14,18,32,0.6)';
 
@@ -82,7 +83,7 @@ function CreateRoomSheet({ open, onClose, onCreate, S }) {
        role="dialog" aria-modal="true" aria-label="Crea un BarTalk">
 
       <div ref={sheetRef} style={{
-        background: C.bg || '#060810', borderRadius: '20px 20px 0 0',
+        background: C.bg || PALETTE.bgDeep, borderRadius: '20px 20px 0 0',
         maxHeight: '90dvh', display: 'flex', flexDirection: 'column',
         animation: 'crsSlideUp 0.3s ease-out',
       }}>

@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getLang } from '../lib/constants.js';
 import { createNoiseGate } from '../lib/noiseGate.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
 // useStreamingInterpreter — Subtitle-First + TTS a Frase
@@ -327,7 +329,7 @@ export default function useStreamingInterpreter({
 
       return new Promise((resolve) => {
         ws.onopen = () => {
-          console.log('[StreamInterp] Connected to Deepgram');
+          dbg.debug('[StreamInterp] Connected to Deepgram');
 
           // Audio capture → PCM16 → WebSocket
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
@@ -371,7 +373,7 @@ export default function useStreamingInterpreter({
         };
 
         ws.onerror = () => { console.warn('[StreamInterp] WS error'); resolve(false); };
-        ws.onclose = () => { console.log('[StreamInterp] WS closed'); };
+        ws.onclose = () => { dbg.debug('[StreamInterp] WS closed'); };
         setTimeout(() => resolve(false), 4000);
       });
     } catch (e) {

@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { PALETTE } from '../lib/palette.js';
 
 export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveUserApiKeys, authLoading,
   userAccount, setView, status, theme, setTheme }) {
@@ -93,12 +94,12 @@ export default function ApiKeysView({ L, S, apiKeyInputs, setApiKeyInputs, saveU
             {authLoading ? L('saving') : L('saveUseMyKeys')}
           </button>
           {saveStatus === 'ok' && (
-            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(34,197,94,0.15)', color:'#22c55e', fontSize:13, textAlign:'center'}}>
+            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(34,197,94,0.15)', color:PALETTE.green, fontSize:13, textAlign:'center'}}>
               Chiavi salvate con successo!
             </div>
           )}
           {saveStatus === 'error' && (
-            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(239,68,68,0.15)', color:'#ef4444', fontSize:13, textAlign:'center'}}>
+            <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(239,68,68,0.15)', color:PALETTE.red, fontSize:13, textAlign:'center'}}>
               {saveError || 'Salvataggio fallito'}
             </div>
           )}

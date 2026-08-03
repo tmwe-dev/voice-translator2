@@ -43,7 +43,7 @@ export default function useContacts({ userTokenRef }) {
       clearInterval(heartbeatRef.current);
       window.removeEventListener('beforeunload', handleUnload);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps — reads from ref
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- reads from ref
 
   // Fetch contacts list
   const fetchContacts = useCallback(async () => {

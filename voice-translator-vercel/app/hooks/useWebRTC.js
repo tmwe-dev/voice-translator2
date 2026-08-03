@@ -9,6 +9,8 @@ import {
   setVideoEnabled, switchCamera,
 } from '../lib/webrtc.js';
 import useE2EEncryption from './useE2EEncryption.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('webrtc');
 
 // ═══════════════════════════════════════════════
 // useWebRTC — P2P video call with accept/decline + Supabase Realtime signaling
@@ -144,7 +146,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Handle incoming remote tracks ──
   const handleRemoteTrack = useCallback((track, stream) => {
-    console.log('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
+    dbg.debug('[WebRTC] Remote track received:', track.kind, 'readyState:', track.readyState);
     // Always update the ref with the latest stream/tracks
     if (stream) {
       // Remove old tracks of same kind to prevent accumulation & leaked handlers
@@ -207,7 +209,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       return false;
     }
     iceRestartAttemptRef.current++;
-    console.log(`[WebRTC] ICE restart attempt ${iceRestartAttemptRef.current}/${MAX_ICE_RESTARTS}`);
+    dbg.debug(`[WebRTC] ICE restart attempt ${iceRestartAttemptRef.current}/${MAX_ICE_RESTARTS}`);
     try {
       // Modern approach: restartIce() + createOffer
       if (pc.restartIce) pc.restartIce();
@@ -224,7 +226,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Connection state handler ──
   const handleStateChange = useCallback((info) => {
     const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
-    console.log(`[WebRTC] State change: ${source}=${state}`);
+    dbg.debug(`[WebRTC] State change: ${source}=${state}`);
 
     if (state === 'connected' || state === 'completed') {
       if (disconnectTimerRef.current) {
@@ -294,7 +296,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
     autoReconnectAttemptRef.current++;
     const delay = 3000 * autoReconnectAttemptRef.current; // 3s, 6s
-    console.log(`[WebRTC] Auto-reconnect attempt ${autoReconnectAttemptRef.current}/${MAX_AUTO_RECONNECTS} in ${delay}ms`);
+    dbg.debug(`[WebRTC] Auto-reconnect attempt ${autoReconnectAttemptRef.current}/${MAX_AUTO_RECONNECTS} in ${delay}ms`);
 
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
@@ -422,7 +424,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const handleIncomingSignal = useCallback(async (payload) => {
     if (!payload || payload.from === myName) return;
     const { type, data } = payload;
-    console.log('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
+    dbg.debug('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
 
     // ── NEW: Call request/response flow ──
     if (type === 'call-request') {
@@ -496,7 +498,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       }
 
       if (stateRef.current === 'connected') {
-        console.log('[WebRTC] Already connected, ignoring offer');
+        dbg.debug('[WebRTC] Already connected, ignoring offer');
         return;
       }
 

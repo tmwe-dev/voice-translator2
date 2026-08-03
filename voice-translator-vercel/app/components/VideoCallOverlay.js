@@ -3,6 +3,7 @@ import { memo, useRef, useEffect, useState } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
   IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord } from './Icons.js';
+import { PALETTE } from '../lib/palette.js';
 
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
@@ -65,7 +66,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
       alignItems: 'center', justifyContent: 'center', gap: 3,
       borderRadius: 16, border: 'none', cursor: 'pointer',
       background: active ? (activeColor || 'rgba(34,197,94,0.2)') : 'rgba(255,255,255,0.1)',
-      color: active ? (color || '#22c55e') : '#94a3b8',
+      color: active ? (color || PALETTE.green) : '#94a3b8',
       transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
     }}>
       <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeof icon === 'string' ? icon : icon}</span>
@@ -131,7 +132,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
         onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
         style={{
           width: compact ? 90 : 120, height: compact ? 6 : 8,
-          accentColor: '#60a5fa', borderRadius: 4,
+          accentColor: PALETTE.blue, borderRadius: 4,
         }} />
       <span style={{
         fontSize: compact ? 10 : 12, color: '#94a3b8',
@@ -172,7 +173,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   background: 'rgba(255,255,255,0.1)', overflow: 'hidden',
                 }}>
                   <div style={{
-                    width: '60%', height: '100%', borderRadius: 2, background: '#60a5fa',
+                    width: '60%', height: '100%', borderRadius: 2, background: PALETTE.blue,
                     animation: 'vtConnecting 1.5s ease-in-out infinite',
                   }} />
                 </div>
@@ -208,7 +209,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             }}>
               <div style={{
                 width: 8, height: 8, borderRadius: 4,
-                background: webrtc.webrtcConnected ? '#4ade80' : '#f59e0b',
+                background: webrtc.webrtcConnected ? '#4ade80' : PALETTE.amber,
                 animation: webrtc.webrtcConnected ? 'none' : 'vtBattPulse 1.5s infinite',
               }} />
               <span style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
@@ -366,7 +367,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           <div style={{
             width: 8, height: 8, borderRadius: 4,
             background: webrtc.webrtcConnected ? '#4ade80'
-              : webrtc.webrtcState === 'connecting' ? '#f59e0b' : '#ef4444',
+              : webrtc.webrtcState === 'connecting' ? PALETTE.amber : PALETTE.red,
           }} />
           <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>
             {webrtc.webrtcConnected ? 'P2P' : webrtc.webrtcState === 'connecting' ? '...' : 'OFF'}
@@ -397,7 +398,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           <input type="range" min="0" max="100" step="5"
             value={Math.round(partnerVolume * 100)}
             onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
-            style={{ flex: 1, accentColor: '#60a5fa', height: 6 }} />
+            style={{ flex: 1, accentColor: PALETTE.blue, height: 6 }} />
           <span style={{
             fontSize: 11, color: '#94a3b8', fontFamily: 'monospace',
             minWidth: 32, textAlign: 'right', fontWeight: 600,

@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import PageHeader from './ui/PageHeader.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════
 // ContactsView — Redesigned with glassmorphism
@@ -28,10 +29,10 @@ export default function ContactsView({
     cardBorder: col.cardBorder || 'rgba(250,250,250,0.05)',
     input: col.inputBg || 'rgba(17,17,19,0.6)',
     inputBorder: col.inputBorder || 'rgba(250,250,250,0.07)',
-    accent: col.accent1 || '#8b5cf6',
-    purple: col.accent2 || '#06b6d4',
-    red: col.accent3 || '#ef4444',
-    green: col.onlineColor || col.accent4 || '#22c55e',
+    accent: col.accent1 || PALETTE.purple,
+    purple: col.accent2 || PALETTE.cyan,
+    red: col.accent3 || PALETTE.red,
+    green: col.onlineColor || col.accent4 || PALETTE.green,
     headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
     headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
   };

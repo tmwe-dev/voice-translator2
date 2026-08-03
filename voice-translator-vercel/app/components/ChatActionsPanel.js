@@ -10,6 +10,7 @@ import { memo, useState, useCallback } from 'react';
 import { CHAT_ACTIONS } from '../lib/chatActions.js';
 import getStyles from '../lib/styles.js';
 import { FONT } from '../lib/constants.js';
+import { PALETTE } from '../lib/palette.js';
 
 function ChatActionsPanel({
   theme = 'dark',
@@ -25,12 +26,12 @@ function ChatActionsPanel({
   const _s = getStyles(theme);
   const _c = _s.colors || {};
   const s = {
-    textPrimary: _c.textPrimary || '#F2F4F7',
+    textPrimary: _c.textPrimary || PALETTE.grayLight,
     textSecondary: _c.textSecondary || 'rgba(242,244,247,0.90)',
     textTertiary: _c.textTertiary || 'rgba(242,244,247,0.75)',
     cardBg: _c.glassCard || 'rgba(12,16,30,0.65)',
     cardBorder: _c.cardBorder || 'rgba(255,255,255,0.05)',
-    accent1: _c.accent1 || '#26D9B0',
+    accent1: _c.accent1 || PALETTE.teal,
     inputBg: _c.inputBg || 'rgba(14,18,32,0.6)',
     inputBorder: _c.inputBorder || 'rgba(255,255,255,0.07)',
   };
@@ -159,7 +160,7 @@ function ChatActionsPanel({
                 onClick={shareResult}
                 style={{
                   padding: '8px 16px',
-                  background: 'rgba(34,197,94,0.15)', color: '#22c55e',
+                  background: 'rgba(34,197,94,0.15)', color: PALETTE.green,
                   border: '1px solid rgba(34,197,94,0.3)',
                   borderRadius: 10, fontSize: 14, cursor: 'pointer',
                 }}

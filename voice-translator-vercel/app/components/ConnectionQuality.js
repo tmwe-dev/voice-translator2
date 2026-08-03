@@ -1,5 +1,6 @@
 'use client';
 import { memo } from 'react';
+import { PALETTE } from '../lib/palette.js';
 
 /**
  * ConnectionQuality — Glassmorphism signal bars indicator
@@ -14,7 +15,7 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
   // Determine quality level (0-4)
   let level = 0;
   let label = 'Offline';
-  let color = '#FF6B6B';
+  let color = PALETTE.coral;
 
   if (!partnerConnected) {
     level = 0;

@@ -2,6 +2,7 @@
 
 import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // SVG Nav Icons — clean, modern, 2px stroke
@@ -58,7 +59,7 @@ const BottomNav = ({ currentView, setView, S, L, theme, onNewConversation }) => 
   const handleTabClick = (viewId) => { vibrate(15); setView(viewId); };
   const handleFabClick = () => { vibrate(20); onNewConversation ? onNewConversation() : setView('home'); };
 
-  const accentColor = C.accent1 || '#8b5cf6';
+  const accentColor = C.accent1 || PALETTE.purple;
   const hexToRgb = (hex) => {
     if (!hex || hex[0] !== '#') return '139,92,246';
     const r = parseInt(hex.slice(1,3), 16);
@@ -109,7 +110,7 @@ const BottomNav = ({ currentView, setView, S, L, theme, onNewConversation }) => 
           style={{
             position: 'absolute', top: '-28px', width: '52px', height: '52px',
             borderRadius: '50%',
-            background: `linear-gradient(135deg, ${accentColor}, ${C.accent2 || '#06b6d4'})`,
+            background: `linear-gradient(135deg, ${accentColor}, ${C.accent2 || PALETTE.cyan})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'white', border: '3px solid rgba(9,9,11,0.95)',
             boxShadow: `0 4px 20px rgba(${hexToRgb(accentColor)}, 0.40)`,

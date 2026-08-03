@@ -5,6 +5,7 @@ import ConnectionQuality from './ConnectionQuality.js';
 import { TaxiButton } from './TaxiMode.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconChevronDown, IconBrainAI } from './Icons.js';
+import { PALETTE } from '../lib/palette.js';
 
 const RoomHeader = memo(function RoomHeader({
   L, S, myLang, myL, otherL, otherMembers, partner,
@@ -77,9 +78,9 @@ const RoomHeader = memo(function RoomHeader({
                 background: (webrtc.webrtcConnected && webrtc.callType === 'voice')
                   ? 'rgba(34,197,94,0.2)' : S.colors.overlayBg,
                 color: (webrtc.webrtcConnected && webrtc.callType === 'voice')
-                  ? '#22c55e' : S.colors.textMuted}}>
+                  ? PALETTE.green : S.colors.textMuted}}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              {webrtc.webrtcConnected && webrtc.callType === 'voice' && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
+              {webrtc.webrtcConnected && webrtc.callType === 'voice' && <div style={{width:6, height:6, borderRadius:3, background:PALETTE.green}} />}
             </button>
           )}
           {/* Video call button */}
@@ -100,11 +101,11 @@ const RoomHeader = memo(function RoomHeader({
                   ? (webrtc.webrtcConnected ? 'rgba(34,197,94,0.2)' : S.colors.accent4Bg)
                   : S.colors.overlayBg,
                 color: showVideoCall
-                  ? (webrtc.webrtcConnected ? '#22c55e' : S.colors.textPrimary)
+                  ? (webrtc.webrtcConnected ? PALETTE.green : S.colors.textPrimary)
                   : S.colors.textMuted,
                 boxShadow: webrtc.webrtcConnected && showVideoCall ? '0 0 8px rgba(34,197,94,0.3)' : 'none'}}>
               <IconCamera size={18}/>
-              {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:'#22c55e'}} />}
+              {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:PALETTE.green}} />}
             </button>
           )}
           {/* Taxi Mode toggle */}
@@ -131,7 +132,7 @@ const RoomHeader = memo(function RoomHeader({
               width:36, height:36, borderRadius:18, fontSize:16, cursor:'pointer',
               border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
               background: audioEnabled ? S.colors.accent4Bg : 'rgba(239,68,68,0.15)',
-              color: audioEnabled ? S.colors.statusOk : '#ef4444'}}>
+              color: audioEnabled ? S.colors.statusOk : PALETTE.red}}>
             {audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}
           </button>
           {/* More menu button */}
@@ -145,7 +146,7 @@ const RoomHeader = memo(function RoomHeader({
                 color: S.colors.textPrimary, position:'relative'}}>
               <IconSettings size={18}/>
               <div style={{position:'absolute', top:2, right:2, width:8, height:8, borderRadius:4,
-                background: partnerConnected ? '#22c55e' : '#ef4444',
+                background: partnerConnected ? PALETTE.green : PALETTE.red,
                 border:'2px solid rgba(0,0,0,0.4)'}} />
             </button>
             {/* ── Overflow menu dropdown ── */}
@@ -214,7 +215,7 @@ const RoomHeader = memo(function RoomHeader({
                 <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
                   style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
                     background:'none', border:'none', cursor:'pointer', borderRadius:8,
-                    color: S.colors.statusError || '#FF6B6B',
+                    color: S.colors.statusError || PALETTE.coral,
                     fontSize:13, fontWeight:600, textAlign:'left',
                     borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconArchive size={15}/>}</span>

@@ -10,9 +10,10 @@
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
+import { PALETTE } from '../lib/palette.js';
 
 const MODE_LABELS = {
-  conversation: { label: 'Chat', icon: '💬', color: '#26D9B0' },
+  conversation: { label: 'Chat', icon: '💬', color: PALETTE.teal },
   classroom:    { label: 'Classroom', icon: '🏫', color: '#10B981' },
   interview:    { label: 'Interview', icon: '🎤', color: '#F59E0B' },
   conference:   { label: 'Conference', icon: '🏛️', color: '#8B5CF6' },
@@ -54,17 +55,17 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, onCreateRoom, theme }) {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: '#060810',
-    textPrimary: col.textPrimary || '#F2F4F7',
+    bg: PALETTE.bgDeep,
+    textPrimary: col.textPrimary || PALETTE.grayLight,
     textSecondary: col.textSecondary || 'rgba(242,244,247,0.90)',
     textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
     card: col.glassCard || 'rgba(12,16,30,0.65)',
     cardBorder: col.cardBorder || 'rgba(255,255,255,0.05)',
     input: col.inputBg || 'rgba(14,18,32,0.6)',
     inputBorder: col.inputBorder || 'rgba(255,255,255,0.07)',
-    accent: col.accent1 || '#26D9B0',
-    purple: col.accent2 || '#8B6AFF',
-    red: col.accent3 || '#FF6B6B',
+    accent: col.accent1 || PALETTE.teal,
+    purple: col.accent2 || PALETTE.violet,
+    red: col.accent3 || PALETTE.coral,
     divider: col.dividerColor || 'rgba(255,255,255,0.04)',
   };
 
@@ -332,7 +333,7 @@ function MondoView({ L, S, prefs, setView, onJoinRoom, onCreateRoom, theme }) {
 
         {/* Room cards */}
         {filteredRooms.map((room, idx) => {
-          const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '💬', color: '#26D9B0' };
+          const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '💬', color: PALETTE.teal };
           return (
             <button key={room.roomId} onClick={() => onJoinRoom(room.roomId)}
               style={{

@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useEffect, useCallback } from 'react';
 import { getLang } from '../lib/constants.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('deepgram');
 
 /**
  * Deepgram Streaming STT hook — server-grade WebSocket speech recognition.
@@ -40,7 +42,7 @@ export default function useDeepgramSTT({
           if (data.key) {
             deepgramAvailableRef.current = true;
             deepgramKeyRef.current = data.key;
-            console.log('[DeepgramSTT] Available, key obtained');
+            dbg.debug('[DeepgramSTT] Available, key obtained');
             return;
           }
         }
@@ -96,7 +98,7 @@ export default function useDeepgramSTT({
       let resolved = false;
 
       ws.onopen = () => {
-        console.log('[STT-Deepgram] WebSocket connected');
+        dbg.debug('[STT-Deepgram] WebSocket connected');
         // Start audio capture
         try {
           const audioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
@@ -160,7 +162,7 @@ export default function useDeepgramSTT({
       };
 
       ws.onclose = () => {
-        console.log('[STT-Deepgram] WebSocket closed');
+        dbg.debug('[STT-Deepgram] WebSocket closed');
       };
 
       // Timeout: if WebSocket doesn't connect in 3s, fall back

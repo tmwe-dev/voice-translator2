@@ -2,6 +2,8 @@
 import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import { isDirectMode } from '../lib/sessionGuard.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('translation-api');
 
 /**
  * Translation API hook — handles all translation calls with caching and multi-target support.
@@ -298,7 +300,7 @@ export default function useTranslationAPI({
       // This ensures translation ALWAYS works even if credits are exhausted,
       // auth is broken, or the paid API has issues. Quality may be lower
       // (Microsoft/Google vs LLM) but the message gets translated.
-      console.log('[translateUniversal] Falling back to free translation:', paidErr.message);
+      dbg.debug('[translateUniversal] Falling back to free translation:', paidErr.message);
       try {
         const freeRes = await fetch('/api/translate-free', {
           method: 'POST',

@@ -2,6 +2,7 @@
 
 import { memo, useEffect, useRef, useCallback } from 'react';
 import { getLang } from '../lib/constants';
+import { PALETTE } from '../lib/palette.js';
 
 /**
  * TaxiMode Component
@@ -65,7 +66,7 @@ const TaxiMode = memo(function TaxiMode({
   const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
   const textMuted = C.textMuted || (theme === 'dark' ? '#9ca3af' : '#666666');
   const accentGradient = C.accentGradient || 'linear-gradient(135deg, #a78bfa 0%, #06b6d4 100%)';
-  const statusWarning = C.statusWarning || '#f59e0b';
+  const statusWarning = C.statusWarning || PALETTE.amber;
   const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
 
   return (
@@ -307,7 +308,7 @@ const TaxiMode = memo(function TaxiMode({
  */
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
   const C = S.colors || {};
-  const statusWarning = C.statusWarning || '#f59e0b';
+  const statusWarning = C.statusWarning || PALETTE.amber;
   const textPrimary = C.textPrimary || (theme === 'dark' ? '#ffffff' : '#000000');
   const borderColor = C.cardBorder || (theme === 'dark' ? '#374151' : '#e5e7eb');
 

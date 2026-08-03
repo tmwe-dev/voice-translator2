@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { LANGS, FONT } from '../lib/constants.js';
 import { TEST_STRINGS, PRIORITY_PAIRS, SCENARIOS } from '../lib/testStrings.js';
 import { PROVIDERS, LLM_MODELS, TTS_ENGINES, AVATAR_NAMES } from '../lib/provider-meta.js';
@@ -56,7 +57,7 @@ export default function TestCenterPage() {
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-          <a href="/" style={{ color: '#71717a', textDecoration: 'none', fontSize: 14 }}>← Torna all'app</a>
+          <Link href="/" style={{ color: '#71717a', textDecoration: 'none', fontSize: 14 }}>← Torna all'app</Link>
           <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0, flex: 1 }}>
             🧪 Test Center
           </h1>

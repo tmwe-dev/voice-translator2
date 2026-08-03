@@ -2,6 +2,7 @@
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { encryptDestination } from '../lib/taxiCrypto.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiQRView — Shows QR code for encrypted taxi destination
@@ -26,7 +27,7 @@ function generateQRCanvas(canvas, data, size = 280) {
     img.onload = () => { ctx.drawImage(img, 0, 0, size, size); resolve(true); };
     img.onerror = () => {
       ctx.fillStyle = '#0a0e1a'; ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = '#26D9B0'; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
+      ctx.fillStyle = PALETTE.teal; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
       ctx.fillText('QR Code', size / 2, size / 2 - 10);
       ctx.font = '10px system-ui';
       ctx.fillText('Scansiona con la fotocamera', size / 2, size / 2 + 10);
@@ -37,13 +38,13 @@ function generateQRCanvas(canvas, data, size = 280) {
 
 function TaxiQRView({ destination, onClose, onStartConversation, S }) {
   const C = S?.colors || {};
-  const accent = C.accent1 || '#26D9B0';
-  const purple = C.accent2 || '#8B6AFF';
+  const accent = C.accent1 || PALETTE.teal;
+  const purple = C.accent2 || PALETTE.violet;
   const cardBg = C.glassCard || 'rgba(12,16,30,0.65)';
   const cardBorder = C.cardBorder || 'rgba(255,255,255,0.05)';
-  const textPrimary = C.textPrimary || '#F2F4F7';
+  const textPrimary = C.textPrimary || PALETTE.grayLight;
   const textMuted = C.textMuted || 'rgba(242,244,247,0.60)';
-  const bg = C.bg || '#060810';
+  const bg = C.bg || PALETTE.bgDeep;
 
   const canvasRef = useRef(null);
   const [qrReady, setQrReady] = useState(false);
@@ -165,7 +166,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           <span style={{
             padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700,
             background: timeLeft === 'Scaduto' ? 'rgba(255,107,107,0.15)' : `${accent}12`,
-            color: timeLeft === 'Scaduto' ? '#FF6B6B' : accent,
+            color: timeLeft === 'Scaduto' ? PALETTE.coral : accent,
           }}>
             ⏱ {timeLeft}
           </span>
@@ -268,7 +269,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
             <button onClick={handleRevoke} style={{
               padding: '14px', borderRadius: 14, cursor: 'pointer',
               background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)',
-              color: '#FF6B6B', fontSize: 13, fontWeight: 600, fontFamily: FONT,
+              color: PALETTE.coral, fontSize: 13, fontWeight: 600, fontFamily: FONT,
             }}>
               🚫 Revoca
             </button>

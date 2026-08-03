@@ -1,6 +1,8 @@
 'use client';
 import { useState, useRef, useCallback } from 'react';
 import { getLang, SILENCE_DELAY, VAD_THRESHOLD, VAD_PRESETS, isWhisperPrimaryLang } from '../lib/constants.js';
+import { createLogger } from '../lib/logger.js';
+const dbg = createLogger('vad');
 
 /**
  * FreeTalk VAD (Voice Activity Detection) hook.
@@ -149,7 +151,7 @@ export default function useFreeTalkVAD({
         };
         recognition.start();
       } else if (useWhisperOnly) {
-        console.log(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
+        dbg.debug(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
       }
 
       function check() {

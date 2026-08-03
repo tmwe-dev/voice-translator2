@@ -10,7 +10,9 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "lint": "eslint app/ middleware.js",
+    "lint:fix": "eslint app/ middleware.js --fix"
   },
   "dependencies": {
     "@andresaya/edge-tts": "^1.0.0",
@@ -32,6 +34,8 @@
     "@testing-library/react": "^16.3.2",
     "acorn": "^8.16.0",
     "acorn-jsx": "^5.3.2",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^15.5.22",
     "jsdom": "^28.1.0",
     "vitest": "^4.0.18"
   }

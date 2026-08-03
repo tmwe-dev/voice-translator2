@@ -5,6 +5,7 @@ import getStyles from '../lib/styles.js';
 import AvatarImg from './AvatarImg.js';
 import PageHeader from './ui/PageHeader.js';
 import EmptyState from './ui/EmptyState.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════
 // HistoryView — Archivio (P4 Archive)
@@ -25,8 +26,8 @@ function HistoryView({ L, S, prefs, convHistory, viewConversation, setView, stat
     cardBorder: col.cardBorder || 'rgba(250,250,250,0.05)',
     input: col.inputBg || 'rgba(17,17,19,0.6)',
     inputBorder: col.inputBorder || 'rgba(250,250,250,0.07)',
-    accent: col.accent1 || '#8b5cf6',
-    purple: col.accent2 || '#06b6d4',
+    accent: col.accent1 || PALETTE.purple,
+    purple: col.accent2 || PALETTE.cyan,
     headerBg: col.headerBg || 'rgba(9,9,11,0.85)',
     headerBorder: col.headerBorder || 'rgba(250,250,250,0.04)',
   };

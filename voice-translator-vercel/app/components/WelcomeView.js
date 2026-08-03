@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -30,7 +31,7 @@ export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode
     surface: 'rgba(12,15,35,0.75)',
     glass: 'rgba(255,255,255,0.03)',
     glassBorder: 'rgba(255,255,255,0.06)',
-    neon1: '#26D9B0', neon2: '#8B6AFF', neon3: '#FF6B6B', neon4: '#E8924A',
+    neon1: PALETTE.teal, neon2: PALETTE.violet, neon3: PALETTE.coral, neon4: '#E8924A',
     text: '#FFFFFF',
     textSoft: 'rgba(255,255,255,0.75)',
     textMuted: 'rgba(255,255,255,0.50)',

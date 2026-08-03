@@ -2,6 +2,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { VOICES, FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // VoiceTestView — Premium ElevenLabs Voice Studio
@@ -60,8 +61,8 @@ const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTria
   // Palette
   const gold = '#F5A623';
   const goldGlow = 'rgba(245,166,35,0.25)';
-  const teal = '#26D9B0';
-  const purple = '#8B6AFF';
+  const teal = PALETTE.teal;
+  const purple = PALETTE.violet;
 
   const langInfo = getLang(prefs.lang);
   const hasApiAccess = userToken && (useOwnKeys || creditBalance > 0);

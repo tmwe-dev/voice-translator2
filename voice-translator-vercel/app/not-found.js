@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 export default function NotFound() {
   const [countdown, setCountdown] = useState(5);
@@ -38,8 +39,7 @@ export default function NotFound() {
         <p style={{ fontSize: 16, color: '#a1a1aa', marginBottom: 24 }}>
           This page doesn&apos;t exist. Maybe a translation got lost?
         </p>
-        <a
-          href="/"
+        <Link href="/"
           style={{
             display: 'inline-block',
             padding: '12px 28px',
@@ -54,7 +54,7 @@ export default function NotFound() {
           aria-label="Go back to home page"
         >
           Go Home
-        </a>
+        </Link>
         <p style={{ fontSize: 12, color: '#52525b', marginTop: 16 }}>
           Redirecting in {countdown}s...
         </p>

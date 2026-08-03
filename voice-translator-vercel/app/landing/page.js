@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { FONT, LANGS } from '../lib/constants.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 
@@ -127,9 +128,9 @@ export default function LandingPage() {
             )}
           </div>
 
-          <a href="/" style={{ background: '#f97316', color: '#000', padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
+          <Link href="/" style={{ background: '#f97316', color: '#000', padding: '8px 20px', borderRadius: 8, textDecoration: 'none', fontWeight: 700, fontSize: 14 }}>
             {L('landingOpenApp')}
-          </a>
+          </Link>
         </div>
       </nav>
 
@@ -142,9 +143,9 @@ export default function LandingPage() {
           {L('landingHeroSubtitle')}
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <a href="/" style={{ background: '#f97316', color: '#000', padding: '14px 32px', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>
+          <Link href="/" style={{ background: '#f97316', color: '#000', padding: '14px 32px', borderRadius: 12, textDecoration: 'none', fontWeight: 700, fontSize: 16 }}>
             {L('landingStartFree')}
-          </a>
+          </Link>
           <a href="#pricing" style={{ background: '#27272a', color: '#e4e4e7', padding: '14px 32px', borderRadius: 12, textDecoration: 'none', fontWeight: 600, fontSize: 16 }}>
             {L('landingPricing')}
           </a>
@@ -230,14 +231,14 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <a href="/" style={{
+                <Link href="/" style={{
                   display: 'block', textAlign: 'center', padding: '12px 20px', borderRadius: 10,
                   background: plan.highlight ? '#f97316' : '#27272a',
                   color: plan.highlight ? '#000' : '#e4e4e7',
                   textDecoration: 'none', fontWeight: 700, fontSize: 15,
                 }}>
                   {L(plan.ctaKey)}
-                </a>
+                </Link>
               </div>
             );
           })}

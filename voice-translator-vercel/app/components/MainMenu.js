@@ -2,6 +2,7 @@
 import { memo, useState, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { PALETTE } from '../lib/palette.js';
 
 // ═══════════════════════════════════════════════════════════════
 // MainMenu — Premium Dark Ambient Glassmorphism
@@ -13,42 +14,42 @@ const MENU_ITEMS = [
     id: 'speaker', iconName: 'swap', label: 'TaxiTalk',
     descIT: 'Traduci faccia a faccia',
     descEN: 'Face-to-face translation',
-    accentFrom: '#26D9B0', accentTo: '#0FA88A', accentGlow: 'rgba(38,217,176,0.35)',
+    accentFrom: PALETTE.teal, accentTo: '#0FA88A', accentGlow: 'rgba(38,217,176,0.35)',
     size: 'hero',
   },
   {
     id: 'create', iconName: 'doorCreate', label: 'Chat',
     descIT: 'Crea una stanza',
     descEN: 'Create a room',
-    accentFrom: '#8B6AFF', accentTo: '#6B4ADF', accentGlow: 'rgba(139,106,255,0.35)',
+    accentFrom: PALETTE.violet, accentTo: '#6B4ADF', accentGlow: 'rgba(139,106,255,0.35)',
     size: 'hero',
   },
   {
     id: 'quickinvite', iconName: 'share', label: 'Invita',
     descIT: 'QR code istantaneo',
     descEN: 'Instant QR code',
-    accentFrom: '#26D9B0', accentTo: '#3B82F6', accentGlow: 'rgba(38,217,176,0.25)',
+    accentFrom: PALETTE.teal, accentTo: '#3B82F6', accentGlow: 'rgba(38,217,176,0.25)',
     size: 'feature', badge: 'New',
   },
   {
     id: 'mondo', iconName: 'globe', label: 'Mondo',
     descIT: 'Stanze pubbliche',
     descEN: 'Public rooms',
-    accentFrom: '#06B6D4', accentTo: '#26D9B0', accentGlow: 'rgba(6,182,212,0.25)',
+    accentFrom: '#06B6D4', accentTo: PALETTE.teal, accentGlow: 'rgba(6,182,212,0.25)',
     size: 'feature',
   },
   {
     id: 'history', iconName: 'history', label: 'Cronologia',
     descIT: 'Le tue conversazioni',
     descEN: 'Your conversations',
-    accentFrom: '#8B6AFF', accentTo: '#26D9B0', accentGlow: 'rgba(139,106,255,0.2)',
+    accentFrom: PALETTE.violet, accentTo: PALETTE.teal, accentGlow: 'rgba(139,106,255,0.2)',
     size: 'util',
   },
   {
     id: 'contacts', iconName: 'user', label: 'Contatti',
     descIT: 'Gestisci contatti',
     descEN: 'Manage contacts',
-    accentFrom: '#A78BFA', accentTo: '#8B6AFF', accentGlow: 'rgba(167,139,250,0.2)',
+    accentFrom: '#A78BFA', accentTo: PALETTE.violet, accentGlow: 'rgba(167,139,250,0.2)',
     size: 'util',
   },
   {
