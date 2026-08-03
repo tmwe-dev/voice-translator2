@@ -5,6 +5,7 @@ import getStyles from '../lib/styles.js';
 import { decryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import TaxiMap from './TaxiMap.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDriverView — Dedicated page for taxi drivers
@@ -406,26 +407,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
           </div>
         )}
 
-        {/* Map */}
+        {/* Mappa vettoriale MapLibre: tema scuro/chiaro, pinch, doppio tap, bottoni zoom */}
         {destination && (
-          <div style={{
-            borderRadius: 16, overflow: 'hidden', height: 200, marginBottom: 12,
-            border: `1px solid ${C.cardBorder}`,
-          }}>
-            {(() => {
-              const lat = destination.lat;
-              const lon = destination.lng;
-              const pad = userPos ? 0.015 : 0.008;
-              const minLat = userPos ? Math.min(userPos.lat, lat) - pad : lat - pad;
-              const maxLat = userPos ? Math.max(userPos.lat, lat) + pad : lat + pad;
-              const minLon = userPos ? Math.min(userPos.lon, lon) - pad : lon - pad;
-              const maxLon = userPos ? Math.max(userPos.lon, lon) + pad : lon + pad;
-              return (
-                <iframe title="Map"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${minLon}%2C${minLat}%2C${maxLon}%2C${maxLat}&layer=mapnik&marker=${lat}%2C${lon}`}
-                  style={{ width: '100%', height: '100%', border: 'none' }} />
-              );
-            })()}
+          <div style={{ marginBottom: 12 }}>
+            <TaxiMap lat={destination.lat} lng={destination.lng} altezza={340} />
           </div>
         )}
 
