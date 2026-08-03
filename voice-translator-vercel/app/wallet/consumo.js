@@ -9,6 +9,13 @@
 
 import { MOLTIPLICATORE_PREMIUM } from './tariffe.js';
 
+// ═══ REGOLA FONDAMENTALE: PAGA L'HOST ═══
+// Chi crea la stanza (host) paga TUTTA la conversazione, anche i
+// secondi parlati dagli invitati. L'invitato entra senza account e
+// senza credito. Quindi: ogni addebito va SEMPRE al wallet dell'host
+// della stanza, mai a chi sta parlando in quel momento.
+// → chiamare sempre: scalaSeDisponibile(hostId, ...) — MAI speakerId.
+
 /**
  * Un pezzo di conversazione vocale.
  * @param {number} secondiParlato - durata dell'audio processato

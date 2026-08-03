@@ -55,3 +55,17 @@ CREATE TABLE IF NOT EXISTS provider_snapshots (
 );
 CREATE INDEX IF NOT EXISTS idx_snapshots ON provider_snapshots (provider, created_at DESC);
 ALTER TABLE provider_snapshots ENABLE ROW LEVEL SECURITY;
+
+-- ── Utilizzo per singolo utente (per il monitor admin) ──
+CREATE OR REPLACE VIEW wallet_per_utente AS
+SELECT
+  user_id,
+  COALESCE(SUM(secondi), 0) AS saldo_secondi,
+  COALESCE(SUM(CASE WHEN tipo = 'uso' THEN -secondi END), 0) AS consumati_secondi,
+  COALESCE(SUM(CASE WHEN tipo = 'acquisto' THEN (dettaglio->>'euro')::numeric END), 0) AS euro_spesi,
+  COALESCE(SUM(CASE WHEN tipo = 'uso' THEN (dettaglio->>'costo_cent')::numeric END), 0) / 100 AS euro_costi_provider,
+  MAX(created_at) AS ultima_attivita,
+  COUNT(*) FILTER (WHERE tipo = 'uso') AS numero_usi
+FROM credit_ledger
+GROUP BY user_id
+ORDER BY consumati_secondi DESC;

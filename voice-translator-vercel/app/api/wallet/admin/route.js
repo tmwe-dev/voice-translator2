@@ -17,10 +17,11 @@ export async function GET(req) {
   const pass = req.headers.get('x-admin-pass');
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
 
-  const [economia, totali, config] = await Promise.all([
+  const [economia, totali, config, utenti] = await Promise.all([
     db().from('wallet_economics').select('*').limit(31),
     db().from('wallet_totali').select('*').single(),
     db().from('ai_config').select('*').order('chiave'),
+    db().from('wallet_per_utente').select('*').limit(100), // top 100 per consumo
   ]);
 
   const t = totali.data || {};
@@ -33,6 +34,7 @@ export async function GET(req) {
     consumato_secondi: t.secondi_consumati_totale || 0,
     per_giorno: economia.data || [],
     servizi: config.data || [],
+    utenti: utenti.data || [],   // per-utente: saldo, consumato, speso, costi, ultima attività
   });
 }
 
