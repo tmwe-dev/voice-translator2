@@ -261,7 +261,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               color: D.neon1, marginBottom: 16,
               ...stagger(0),
             }}>
-              BARCHAT
+              BARTALK
             </div>
 
             {/* Hero Title with gradient */}
