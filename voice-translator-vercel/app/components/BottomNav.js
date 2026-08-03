@@ -3,6 +3,7 @@
 import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // SVG Nav Icons — clean, modern, 2px stroke
@@ -43,7 +44,8 @@ const NavIcon = ({ id, color, size = 22 }) => {
 // BottomNav — 5 tabs + central FAB
 // ═══════════════════════════════════════════════════════════════
 
-const BottomNav = ({ currentView, setView, S, L, theme, onNewConversation }) => {
+const BottomNav = ({ currentView, onNewConversation }) => {
+  const { setView, S, L, theme } = useApp();
   const C = S.colors || {};
 
   const navItems = [

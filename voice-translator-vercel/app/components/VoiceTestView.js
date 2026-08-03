@@ -3,6 +3,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { VOICES, FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // VoiceTestView — Premium ElevenLabs Voice Studio
@@ -40,9 +41,10 @@ const GENDER_FILTERS = [
   { id: 'female', label: 'F', labelEN: 'F' },
 ];
 
-const VoiceTestView = memo(function VoiceTestView({ L, S, prefs, setView, isTrial, isTopPro,
+const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
-  setElevenLabsVoices, userToken, userTokenRef, creditBalance, theme }) {
+  setElevenLabsVoices, userToken, userTokenRef, creditBalance }) {
+  const { L, S, prefs, setView, theme } = useApp();
 
   if (typeof document !== 'undefined') injectVTVKeyframes();
 

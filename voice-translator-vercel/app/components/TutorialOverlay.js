@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -47,7 +48,8 @@ const STEPS = [
   },
 ];
 
-export default function TutorialOverlay({ L, tutorialStep, setTutorialStep, setShowTutorial, theme }) {
+export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShowTutorial }) {
+  const { L, theme } = useApp();
   const [direction, setDirection] = useState(0);
   const touchStartX = useRef(null);
 

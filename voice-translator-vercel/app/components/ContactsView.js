@@ -4,6 +4,7 @@ import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import PageHeader from './ui/PageHeader.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // ContactsView — Redesigned with glassmorphism
@@ -13,11 +14,12 @@ import { PALETTE } from '../lib/palette.js';
 // ═══════════════════════════════════════════════
 
 export default function ContactsView({
-  L, S, prefs, contacts, contactsLoading, inviteCode, creditBalance = 0,
+  contacts, contactsLoading, inviteCode, creditBalance = 0,
   fetchContacts, addContact, removeContact, createInvite, shareInvite,
-  acceptInvite, startPolling, handleStartChat, setView, status, theme,
+  acceptInvite, startPolling, handleStartChat,
   pickDeviceContacts, hasDeviceContacts
 }) {
+  const { L, S, prefs, setView, status, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {

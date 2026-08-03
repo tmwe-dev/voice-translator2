@@ -815,8 +815,8 @@ function HomeInner() {
   );
 
   if (view === 'welcome') return wrap(
-    <WelcomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs}
-      joinCode={joinCode} userToken={auth.userToken} setView={setView} setAuthStep={auth.setAuthStep} theme={theme} setTheme={setTheme}
+    <WelcomeView
+      joinCode={joinCode} userToken={auth.userToken} setAuthStep={auth.setAuthStep}
       sendAuthCode={auth.sendAuthCode} verifyAuthCodeFn={() => auth.verifyAuthCodeFn(auth.pendingReferralCode)}
       loginWithGoogle={auth.loginWithGoogle} loginWithApple={auth.loginWithApple}
       authStep={auth.authStep} authEmail={auth.authEmail} setAuthEmail={auth.setAuthEmail}
@@ -870,43 +870,42 @@ function HomeInner() {
 
   if (view === 'lobby') return wrap(
     <Suspense fallback={<LazyFallback />}>
-    <LobbyView L={L} S={S} roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
+    <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio} setView={setView}  theme={theme} setTheme={setTheme} />
+      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}  />
     </Suspense>
   );
 
   if (view === 'join') return wrap(
-    <JoinView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang}
-      setMyLang={setMyLang} joinCode={joinCode} setJoinCode={setJoinCode}
+    <JoinView
+      joinCode={joinCode} setJoinCode={setJoinCode}
       inviteMsgLang={inviteMsgLang} setInviteMsgLang={setInviteMsgLang}
-      handleJoinRoom={handleJoinRoom} setView={setView} userToken={auth.userToken}
-      setAuthStep={auth.setAuthStep} status={status}  theme={theme} setTheme={setTheme}
+      handleJoinRoom={handleJoinRoom} userToken={auth.userToken}
+      setAuthStep={auth.setAuthStep} 
       unlockAudio={audio.unlockAudio} />
   );
 
   // Define BottomNav for views that use it (now with 5 tabs + FAB)
   const bottomNav = (
     <>
-      <BottomNav currentView={view} setView={setView} S={S} L={L} theme={theme} onNewConversation={() => setShowNewConversation(true)} />
-      <NewConversationSheet open={showNewConversation} onClose={() => setShowNewConversation(false)} onSelect={handleNewConversationSelect} S={S} />
+      <BottomNav currentView={view} onNewConversation={() => setShowNewConversation(true)} />
+      <NewConversationSheet open={showNewConversation} onClose={() => setShowNewConversation(false)} onSelect={handleNewConversationSelect} />
     </>
   );
 
   // Views with BottomNav
   if (view === 'home') return wrap(
     <>
-      <HomeView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} myLang={myLang} setMyLang={setMyLang}
+      <HomeView
         selectedMode={selectedMode} setSelectedMode={setSelectedMode}
         selectedContext={selectedContext} setSelectedContext={setSelectedContext}
         roomDescription={roomDescription} setRoomDescription={setRoomDescription}
-        handleCreateRoom={handleCreateRoom} setView={setView}
-        theme={theme} setTheme={setTheme}
+        handleCreateRoom={handleCreateRoom}
         contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
         rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact} />
       {showTutorial && (
-        <TutorialOverlay L={L} tutorialStep={tutorialStep}
-          setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} theme={theme} />
+        <TutorialOverlay tutorialStep={tutorialStep}
+          setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} />
       )}
       {bottomNav}
     </>
@@ -949,12 +948,12 @@ function HomeInner() {
   if (view === 'settings') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <SettingsView L={L} S={S} prefs={prefs} setPrefs={setPrefs} savePrefs={savePrefs} setView={setView}
+      <SettingsView
         isTrial={auth.isTrial} isTopPro={auth.isTopPro} setIsTopPro={auth.setIsTopPro} useOwnKeys={auth.useOwnKeys}
         apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL} elevenLabsVoices={auth.elevenLabsVoices}
         selectedELVoice={auth.selectedELVoice} setSelectedELVoice={auth.setSelectedELVoice}
         setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken} userTokenRef={auth.userTokenRef}
-        userAccount={auth.userAccount} logout={auth.logout} status={status}  theme={theme} setTheme={setTheme}
+        userAccount={auth.userAccount} logout={auth.logout} 
         creditBalance={auth.creditBalance} refreshBalance={auth.refreshBalance} freeCharsUsed={freeCharsUsed}
         clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
         setClonedVoiceId={auth.setClonedVoiceId} setClonedVoiceName={auth.setClonedVoiceName} />
@@ -987,12 +986,12 @@ function HomeInner() {
   if (view === 'voicetest') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <VoiceTestView L={L} S={S} prefs={prefs} setView={setView}
+      <VoiceTestView
         isTrial={auth.isTrial} isTopPro={auth.isTopPro} useOwnKeys={auth.useOwnKeys}
         apiKeyInputs={auth.apiKeyInputs} platformHasEL={auth.platformHasEL}
         elevenLabsVoices={auth.elevenLabsVoices} selectedELVoice={auth.selectedELVoice}
         setElevenLabsVoices={auth.setElevenLabsVoices} userToken={auth.userToken}
-        userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} theme={theme} />
+        userTokenRef={auth.userTokenRef} creditBalance={auth.creditBalance} />
       </Suspense>
       {bottomNav}
     </>
@@ -1001,7 +1000,7 @@ function HomeInner() {
   if (view === 'contacts') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <ContactsView L={L} S={S} prefs={prefs}
+      <ContactsView
         contacts={contactsHook.contacts} contactsLoading={contactsHook.contactsLoading}
         inviteCode={contactsHook.inviteCode} creditBalance={auth.creditBalance}
         fetchContacts={contactsHook.fetchContacts} addContact={contactsHook.addContact}
@@ -1011,7 +1010,7 @@ function HomeInner() {
         handleStartChat={handleStartChatWithContact}
         pickDeviceContacts={contactsHook.pickDeviceContacts}
         hasDeviceContacts={contactsHook.hasDeviceContacts}
-        setView={setView} status={status} theme={theme} />
+        />
       </Suspense>
       {bottomNav}
     </>
@@ -1045,7 +1044,6 @@ function HomeInner() {
             roomInfoRef.current = room;
             setView('lobby');
           }}
-          S={S}
         />
       </Suspense>
       {bottomNav}
@@ -1115,8 +1113,7 @@ function HomeInner() {
     <>
       <Suspense fallback={null}>
         <AIView
-          L={L} S={S} theme={theme} setView={setView}
-          prefs={prefs} contacts={contactsHook.contacts}
+          contacts={contactsHook.contacts}
           recentConversations={convHistory}
           handleCreateRoom={handleCreateRoom}
           setSelectedMode={setSelectedMode}
@@ -1130,7 +1127,6 @@ function HomeInner() {
     <>
       <Suspense fallback={null}>
         <DetailView
-          L={L} S={S} theme={theme}
           conversation={detailConversation || {}}
           messages={detailMessages || []}
           onBack={() => setView('history')}
@@ -1165,7 +1161,6 @@ function HomeInner() {
           }}
           onPlayMessage={(msg) => audio.playMessage(msg)}
           playingMsgId={audio.playingMsgId}
-          prefs={prefs}
         />
       </Suspense>
       {bottomNav}

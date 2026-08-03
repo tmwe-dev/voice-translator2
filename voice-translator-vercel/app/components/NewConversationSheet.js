@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // NewConversationSheet — bottom sheet with 4 conversation options
@@ -37,7 +38,8 @@ const OPTIONS = [
   },
 ];
 
-const NewConversationSheet = ({ open, onClose, onSelect, S }) => {
+const NewConversationSheet = ({ open, onClose, onSelect }) => {
+  const { S } = useApp();
   const C = S?.colors || {};
   const sheetRef = useSheetA11y(open, onClose);
 

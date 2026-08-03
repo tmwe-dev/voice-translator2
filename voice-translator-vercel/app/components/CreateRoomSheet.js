@@ -3,6 +3,7 @@ import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // CreateRoomSheet — Create a Community BarTalk room
@@ -29,7 +30,8 @@ const CATEGORIES = [
 
 const POPULAR_LANGS = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'ar'];
 
-function CreateRoomSheet({ open, onClose, onCreate, S }) {
+function CreateRoomSheet({ open, onClose, onCreate }) {
+  const { S } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
   const purple = C.accent2 || PALETTE.violet;

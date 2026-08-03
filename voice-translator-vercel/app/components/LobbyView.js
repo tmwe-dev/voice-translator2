@@ -1,9 +1,11 @@
 'use client';
 import { memo, useState, useEffect, useRef } from 'react';
 import { LANGS, APP_URL } from '../lib/constants.js';
+import { useApp } from '../contexts/AppContext.js';
 
-const LobbyView = memo(function LobbyView({ L, S, roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
-  shareRoom, leaveRoom, unlockAudio, setView, theme, setTheme }) {
+const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
+  shareRoom, leaveRoom, unlockAudio }) {
+  const { L, S, setView, theme, setTheme } = useApp();
 
   const canvasRef = useRef(null);
   const [qrReady, setQrReady] = useState(false);

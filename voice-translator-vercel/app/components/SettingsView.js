@@ -5,12 +5,14 @@ import Carousel from './Carousel.js';
 import Icon from './Icon.js';
 import { IconMic, IconSettings, IconGlobe, IconKey, IconStar, IconMusic, IconZap, IconUser, IconCheckCircle } from './Icons.js';
 import PageHeader from './ui/PageHeader.js';
+import { useApp } from '../contexts/AppContext.js';
 
-const SettingsView = memo(function SettingsView({ L, S, prefs, setPrefs, savePrefs, setView, isTrial, isTopPro,
+const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
   setIsTopPro, useOwnKeys, apiKeyInputs, platformHasEL, elevenLabsVoices, selectedELVoice,
-  setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout, status,
-  theme, setTheme, creditBalance, refreshBalance, freeCharsUsed,
+  setSelectedELVoice, setElevenLabsVoices, userToken, userTokenRef, userAccount, logout,
+  creditBalance, refreshBalance, freeCharsUsed,
   clonedVoiceId, clonedVoiceName, setClonedVoiceId, setClonedVoiceName }) {
+  const { L, S, prefs, setPrefs, savePrefs, setView, status, theme, setTheme } = useApp();
 
   const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [showAvatarDropdown, setShowAvatarDropdown] = useState(false);

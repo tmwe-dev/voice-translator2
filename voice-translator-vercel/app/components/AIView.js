@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState } from 'react';
 import { FONT } from '../lib/constants.js';
+import { useApp } from '../contexts/AppContext.js';
 
 /**
  * AIView — P4 Schermata 6: AI & Automazioni
@@ -13,13 +14,12 @@ import { FONT } from '../lib/constants.js';
  * - Interpreter mode shortcut
  */
 const AIView = memo(function AIView({
-  L, S, theme, setView,
-  prefs = {},
   contacts = [],
   recentConversations = [],
   handleCreateRoom,
   setSelectedMode,
 }) {
+  const { L, S, theme, setView, prefs } = useApp();
   const [activeSection, setActiveSection] = useState(null);
   const [glossaryTerms, setGlossaryTerms] = useState([
     { from: 'Buongiorno', to: 'Good morning', note: 'formale' },

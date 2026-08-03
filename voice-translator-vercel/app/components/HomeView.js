@@ -2,6 +2,7 @@
 import { memo, useState, useMemo, useEffect } from 'react';
 import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -67,9 +68,10 @@ const ACTIONS = [
   },
 ];
 
-const HomeView = memo(function HomeView({ L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, selectedMode, setSelectedMode,
-  selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom, setView,
-  theme, setTheme, contacts, fetchContacts, rejoinRoom, startChatWithContact, unlockAudio }) {
+const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
+  selectedContext, setSelectedContext, roomDescription, setRoomDescription, handleCreateRoom,
+  contacts, fetchContacts, rejoinRoom, startChatWithContact, unlockAudio }) {
+  const { L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, setView, theme, setTheme } = useApp();
 
   const langInfo = getLang(prefs.lang);
   const [activeRooms, setActiveRooms] = useState([]);

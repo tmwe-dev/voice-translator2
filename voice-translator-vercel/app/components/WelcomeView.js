@@ -4,6 +4,7 @@ import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js'
 import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -17,9 +18,10 @@ import { PALETTE } from '../lib/palette.js';
 //         gradient text, staggered animations
 // ═══════════════════════════════════════════════════════════
 
-export default function WelcomeView({ L, S, prefs, setPrefs, savePrefs, joinCode, userToken, setView, setAuthStep, theme, setTheme,
+export default function WelcomeView({ joinCode, userToken, setAuthStep,
   sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
   authStep, authEmail, setAuthEmail, authCode, setAuthCode, authLoading, authTestCode, pendingReferralCode }) {
+  const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
   const [phase, setPhase] = useState(0);
   const [entered, setEntered] = useState(false);
   const [authError, setAuthError] = useState('');

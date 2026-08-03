@@ -5,6 +5,7 @@ import { t } from '../lib/i18n.js';
 import getStyles from '../lib/styles.js';
 import AvatarImg from './AvatarImg.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // JOIN VIEW — Redesigned with glassmorphism
@@ -13,9 +14,10 @@ import { PALETTE } from '../lib/palette.js';
 // Manual join: single card with room code input
 // ═══════════════════════════════════════════════
 
-export default function JoinView({ L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, joinCode,
-  setJoinCode, inviteMsgLang, setInviteMsgLang, handleJoinRoom, setView, userToken, setAuthStep,
-  status, theme, setTheme, unlockAudio }) {
+export default function JoinView({ joinCode,
+  setJoinCode, inviteMsgLang, setInviteMsgLang, handleJoinRoom, userToken, setAuthStep,
+  unlockAudio }) {
+  const { L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, setView, status, theme, setTheme } = useApp();
 
   const _S = getStyles(theme);
   const col = _S.colors || {};

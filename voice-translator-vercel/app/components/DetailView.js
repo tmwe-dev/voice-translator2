@@ -2,6 +2,7 @@
 import { memo, useState, useMemo } from 'react';
 import { getLang, FONT } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
+import { useApp } from '../contexts/AppContext.js';
 
 /**
  * DetailView — P4 Schermata 5: Conversation Command Center
@@ -14,15 +15,14 @@ import AvatarImg from './AvatarImg.js';
  * - Quick-resume: rejoin the same room
  */
 const DetailView = memo(function DetailView({
-  L, S, theme,
   conversation = {},
   messages = [],
   onBack,
   onResume, onExport, onDelete, onShare,
   onPlayMessage,
   playingMsgId,
-  prefs = {},
 }) {
+  const { L, S, theme, prefs } = useApp();
   const [activeTab, setActiveTab] = useState('messages');
   const [searchQuery, setSearchQuery] = useState('');
 
