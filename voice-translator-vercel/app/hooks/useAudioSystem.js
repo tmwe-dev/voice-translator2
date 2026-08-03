@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang } from '../lib/constants.js';
 import useTTSEngine from './useTTSEngine.js';
+import { getVolumeTTS } from '../lib/audioPrefs.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -55,6 +56,14 @@ export default function useAudioSystem({
   useEffect(() => { audioEnabledRef.current = audioEnabled; }, [audioEnabled]);
   useEffect(() => { duckingLevelRef.current = duckingLevel; }, [duckingLevel]);
   useEffect(() => { audioReadyRef.current = audioReady; }, [audioReady]);
+
+  // ── Semaforo TTS: vero mentre la voce sintetica locale sta parlando ──
+  function segnalaTTS(attivo) {
+    try {
+      window.__bartalkTTS = attivo;
+      window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo } }));
+    } catch { /* SSR */ }
+  }
 
   function getPersistentAudio() {
     if (!persistentAudioRef.current) {
@@ -335,9 +344,13 @@ export default function useAudioSystem({
 
     try {
       const pa = getPersistentAudio();
-      pa.volume = 1.0;
+      pa.volume = getVolumeTTS(); // manopola "voce tradotta" (audioPrefs)
     } catch {}
 
+    // Avvisa il resto dell'app: sta parlando la TTS locale.
+    // Chi ascolta: RoomView (attenua la voce del partner, iOS-safe) e
+    // il riconoscimento vocale (scarta l'audio: anti-eco).
+    segnalaTTS(true);
     while (audioQueueRef.current.length > 0) {
       const { text, lang } = audioQueueRef.current.shift();
       startDucking();
@@ -346,6 +359,7 @@ export default function useAudioSystem({
       } catch (e) { console.error('[Audio] playback error:', e); }
       stopDucking();
     }
+    segnalaTTS(false);
 
     isPlayingRef.current = false;
   }

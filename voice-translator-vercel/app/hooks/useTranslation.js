@@ -275,6 +275,10 @@ export default function useTranslation({
   // Speech result handler
   // =============================================
   function handleSpeechResult(event, processedFinals) {
+    // ── Anti-eco: mentre la TTS locale parla, il microfono la sente ──
+    // e la ritrascriverebbe (il partner riceverebbe la propria traduzione
+    // rimbalzata). Scartiamo i risultati finché la voce sintetica suona.
+    if (typeof window !== 'undefined' && window.__bartalkTTS) return;
     let interimTranscript = '';
     for (let i = 0; i < event.results.length; i++) {
       if (event.results[i].isFinal) {

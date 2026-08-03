@@ -14,6 +14,7 @@ import TalkControls from './TalkControls.js';
 import TaxiMode, { TaxiButton } from './TaxiMode.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { getAttenuazione } from '../lib/audioPrefs.js';
 
 const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -154,6 +155,22 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       remoteAudioRef.current.srcObject = null;
     }
   }, [webrtc?.remoteStream]);
+
+  // ── Attenuazione REALE della voce del partner mentre parla la traduzione ──
+  // Usa element.volume (funziona ovunque, iPhone compreso). Il livello lo
+  // decide l'utente dai preset in chiamata (audioPrefs.getAttenuazione):
+  // 0 = solo tradotta · 0.2 = originale attenuata · 0.55 = entrambe.
+  useEffect(() => {
+    const suTTS = (e) => {
+      const el = remoteAudioRef.current;
+      if (!el) return;
+      el.volume = e.detail?.attivo
+        ? partnerVolume * getAttenuazione()
+        : partnerVolume;
+    };
+    window.addEventListener('bartalk:tts', suTTS);
+    return () => window.removeEventListener('bartalk:tts', suTTS);
+  }, [partnerVolume]);
 
   useEffect(() => {
     if (remoteAudioRef.current) remoteAudioRef.current.volume = partnerVolume;

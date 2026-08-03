@@ -5,6 +5,7 @@ import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCa
   IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import CostTicker from './CostTicker.js';
+import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
@@ -35,6 +36,10 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const remoteVideoRef = useRef(null);
   const remoteVideoInlineRef = useRef(null);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  // Comandi del pannello traduzione (persistenti tra le chiamate)
+  const [mostraTesto, setMostraTesto] = useState(true);
+  const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
+  const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
 
   // Attach local video stream to BOTH fullscreen and inline elements
   useEffect(() => {
@@ -269,114 +274,165 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             <CostTicker attivo={true} vocePremium={false} />
           </div>
 
-          {/* ═══ Pannello traduzione live (Spatial Design) ═══
-              Chi parla · originale piccolo · TRADUZIONE GRANDE · ASCOLTI (audio partner) */}
-          {lastTranslationSubtitle && (() => {
-            const subs = Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle : [lastTranslationSubtitle];
-            const latest = subs[subs.length - 1];
+          {/* ═══ Pannello traduzione — SEMPRE visibile, dal primo secondo ═══ */}
+          {(() => {
+            const subs = Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle
+              : lastTranslationSubtitle ? [lastTranslationSubtitle] : [];
+            const latest = subs.length > 0 ? subs[subs.length - 1] : null;
             const acc = S?.colors?.accent2 || '#38e1ff';
+            const acc1 = S?.colors?.accent1 || '#5b8cff';
+            const pillOn = {
+              padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 750, cursor: 'pointer',
+              fontFamily: 'inherit', border: 'none', color: '#fff',
+              background: `linear-gradient(90deg, ${acc1}, ${acc})`,
+              boxShadow: '0 4px 14px -4px rgba(91,140,255,0.5)',
+            };
+            const pillOff = {
+              padding: '5px 12px', borderRadius: 999, fontSize: 11, fontWeight: 750, cursor: 'pointer',
+              fontFamily: 'inherit', border: '1px solid rgba(160,190,255,0.2)',
+              background: 'transparent', color: 'rgba(238,242,255,0.5)',
+            };
             return (
               <div style={{
-                position: 'absolute', bottom: 110, left: 14, right: 14,
-                background: 'rgba(5,7,15,0.82)', backdropFilter: 'blur(18px)',
-                border: '1px solid rgba(160,190,255,0.16)', borderRadius: 18,
-                padding: '11px 14px 9px', animation: 'vtSlideUp 0.35s ease-out',
+                position: 'absolute', bottom: 128, left: 14, right: 14,
+                background: 'rgba(5,7,15,0.84)', backdropFilter: 'blur(18px)',
+                border: '1px solid rgba(160,190,255,0.16)', borderRadius: 20,
+                padding: '12px 14px 10px',
                 boxShadow: '0 10px 40px -10px rgba(0,0,0,0.6)',
               }}>
-                {/* Chi parla */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-                  {partnerSpeaking && (
-                    <span style={{ display: 'inline-flex', gap: 2.5, alignItems: 'center', height: 11, color: acc }}>
-                      {[5,10,13,8,5].map((h, i) => (
-                        <i key={i} style={{ width: 2.5, height: h, borderRadius: 2, background: 'currentColor',
-                          display: 'block', animation: `vtWave 0.85s ${i * 0.12}s ease-in-out infinite` }} />
-                      ))}
-                    </span>
-                  )}
-                  <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
-                    {(partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
-                  </span>
-                </div>
-                {/* Originale piccolo, corsivo */}
-                {latest.original && (
-                  <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.45)', fontStyle: 'italic' }}>
-                    "{latest.original}"
+                {/* ── Sottotitoli (spegnibili) ── */}
+                {mostraTesto && (
+                  <div style={{ marginBottom: 9 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+                      {partnerSpeaking && (
+                        <span style={{ display: 'inline-flex', gap: 2.5, alignItems: 'center', height: 11, color: acc }}>
+                          {[5,10,13,8,5].map((h, i) => (
+                            <i key={i} style={{ width: 2.5, height: h, borderRadius: 2, background: 'currentColor',
+                              display: 'block', animation: `vtWave 0.85s ${i * 0.12}s ease-in-out infinite` }} />
+                          ))}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: 1.6, color: 'rgba(238,242,255,0.5)' }}>
+                        {(partner || 'PARTNER').toUpperCase()}{partnerSpeaking ? ' · STA PARLANDO' : ''}
+                      </span>
+                    </div>
+                    {latest ? (
+                      <>
+                        {latest.original && (
+                          <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.45)', fontStyle: 'italic' }}>
+                            "{latest.original}"
+                          </div>
+                        )}
+                        <div style={{ fontSize: 16.5, fontWeight: 800, color: '#eef2ff', lineHeight: 1.3, marginTop: 3, letterSpacing: -0.2 }}>
+                          {latest.text}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 12.5, color: 'rgba(238,242,255,0.35)', fontStyle: 'italic' }}>
+                        Le traduzioni appariranno qui appena parlate…
+                      </div>
+                    )}
                   </div>
                 )}
-                {/* TRADUZIONE — grande, è quella che leggi */}
-                <div style={{ fontSize: 16.5, fontWeight: 800, color: '#eef2ff', lineHeight: 1.3, marginTop: 3, letterSpacing: -0.2 }}>
-                  {latest.text}
+
+                {/* ── Comandi: cosa VEDI e cosa SENTI ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+                  paddingTop: 8, borderTop: '1px solid rgba(160,190,255,0.12)' }}>
+                  <button onClick={() => setMostraTesto(v => !v)}
+                    aria-pressed={mostraTesto} style={mostraTesto ? pillOn : pillOff}>
+                    {'\u{1F4AC}'} Testo
+                  </button>
+                  <span style={{ width: 1, height: 16, background: 'rgba(160,190,255,0.15)' }} />
+                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>SENTI</span>
+                  {PRESET_ATTENUAZIONE.map(p => (
+                    <button key={p.id}
+                      onClick={() => { setAttenuazione(p.valore); setLivelloAtt(p.valore); if (setVideoDucking) setVideoDucking(p.valore < 0.5); }}
+                      aria-pressed={livelloAtt === p.valore}
+                      style={livelloAtt === p.valore ? pillOn : pillOff}>
+                      {p.nome}
+                    </button>
+                  ))}
                 </div>
-                {/* ASCOLTI — audio del partner: tradotta (ducking) o originale + volume */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, paddingTop: 7,
-                  borderTop: '1px solid rgba(160,190,255,0.12)' }}>
-                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>ASCOLTI</span>
-                  <button onClick={() => setVideoDucking && setVideoDucking(true)} style={{
-                    padding: '4px 10px', borderRadius: 999, fontSize: 10.5, fontWeight: 750, cursor: 'pointer',
-                    fontFamily: 'inherit', border: 'none',
-                    background: videoDucking ? `linear-gradient(90deg, ${S?.colors?.accent1 || '#5b8cff'}, ${acc})` : 'transparent',
-                    color: videoDucking ? '#fff' : 'rgba(238,242,255,0.45)',
-                    boxShadow: videoDucking ? '0 4px 14px -4px rgba(91,140,255,0.5)' : 'none',
-                  }}>Voce tradotta</button>
-                  <button onClick={() => setVideoDucking && setVideoDucking(false)} style={{
-                    padding: '4px 10px', borderRadius: 999, fontSize: 10.5, fontWeight: 750, cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    border: videoDucking ? '1px solid rgba(160,190,255,0.2)' : 'none',
-                    background: !videoDucking ? `linear-gradient(90deg, ${S?.colors?.accent1 || '#5b8cff'}, ${acc})` : 'transparent',
-                    color: !videoDucking ? '#fff' : 'rgba(238,242,255,0.45)',
-                  }}>Originale</button>
+
+                {/* ── Due volumi separati: partner e voce tradotta ── */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                  <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>PARTNER</span>
                   <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
                     onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
-                    aria-label="Volume interlocutore"
-                    style={{ flex: 1, accentColor: acc, height: 3, minWidth: 60 }} />
+                    aria-label="Volume voce del partner"
+                    style={{ flex: 1, accentColor: acc, height: 3 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 5 }}>
+                  <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>TRADOTTA</span>
+                  <input type="range" min="0" max="1" step="0.05" value={volTTS}
+                    onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
+                    aria-label="Volume voce tradotta"
+                    style={{ flex: 1, accentColor: acc1, height: 3 }} />
                 </div>
               </div>
             );
           })()}
         </div>
 
-        {/* ── Bottom controls bar (safe-area: mai sotto la UI del browser) ── */}
+        {/* ── Barra comandi con GERARCHIA ──
+            Al centro, grande e rosso: TERMINA (l'azione irreversibile).
+            A sinistra i toggle del TUO segnale (camera, micro).
+            A destra le utilità (ruota, riduci). Nessun dubbio su cosa fa cosa. */}
         <div style={{
-          padding: '12px 16px', paddingBottom: 'max(36px, env(safe-area-inset-bottom))',
-          display: 'flex', justifyContent: 'center', gap: 10,
+          padding: '14px 16px', paddingBottom: 'max(36px, env(safe-area-inset-bottom))',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18,
           background: 'linear-gradient(to top, rgba(0,0,0,0.98), rgba(0,0,0,0.7))',
         }}>
-          <ControlBtn
-            onClick={() => webrtc.toggleVideo()}
-            active={webrtc.videoEnabled}
-            icon={webrtc.videoEnabled ? <IconCamera size={24}/> : <IconCameraOff size={24}/>}
-            label={webrtc.videoEnabled ? 'Camera' : 'Camera OFF'}
-            color="#22c55e" activeColor="rgba(34,197,94,0.2)"
-          />
-          <ControlBtn
-            onClick={() => webrtc.toggleAudio()}
-            active={webrtc.audioEnabled}
-            icon={webrtc.audioEnabled ? <IconMic size={24}/> : <IconVolumeOff size={24}/>}
-            label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
-            color="#22c55e" activeColor="rgba(34,197,94,0.2)"
-          />
-          <ControlBtn
-            onClick={() => webrtc.flipCamera()}
-            active={true}
-            icon={<IconFlipCamera size={24}/>}
-            label="Ruota"
-            color="#60a5fa" activeColor="rgba(96,165,250,0.15)"
-          />
-          <ControlBtn
-            onClick={() => setVideoFullscreen(false)}
-            active={true}
-            icon={<IconMinimize size={24}/>}
-            label="Riduci"
-            color="#f59e0b" activeColor="rgba(245,158,11,0.15)"
-          />
-          <ControlBtn
+          {/* Il tuo segnale */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <ControlBtn
+              onClick={() => webrtc.toggleVideo()}
+              active={webrtc.videoEnabled}
+              icon={webrtc.videoEnabled ? <IconCamera size={22}/> : <IconCameraOff size={22}/>}
+              label={webrtc.videoEnabled ? 'Camera' : 'Spenta'}
+              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
+            />
+            <ControlBtn
+              onClick={() => webrtc.toggleAudio()}
+              active={webrtc.audioEnabled}
+              icon={webrtc.audioEnabled ? <IconMic size={22}/> : <IconVolumeOff size={22}/>}
+              label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
+              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
+            />
+          </div>
+
+          {/* TERMINA — il protagonista, impossibile sbagliarsi */}
+          <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
-            active={false}
-            icon={<IconPhoneOff size={24}/>}
-            label="Chiudi"
-            color="#ef4444" activeColor="rgba(239,68,68,0.3)"
-            size={56}
-          />
+            aria-label="Termina la chiamata"
+            style={{
+              width: 72, height: 72, borderRadius: 36, border: 'none', cursor: 'pointer',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+              background: 'linear-gradient(145deg, #ef4444, #dc2626)', color: '#fff',
+              boxShadow: '0 6px 24px rgba(239,68,68,0.5), 0 0 0 6px rgba(239,68,68,0.12)',
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            <IconPhoneOff size={26}/>
+            <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1 }}>TERMINA</span>
+          </button>
+
+          {/* Utilità */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <ControlBtn
+              onClick={() => webrtc.flipCamera()}
+              active={false}
+              icon={<IconFlipCamera size={20}/>}
+              label="Ruota"
+              color="#94a3b8" size={46}
+            />
+            <ControlBtn
+              onClick={() => setVideoFullscreen(false)}
+              active={false}
+              icon={<IconMinimize size={20}/>}
+              label="Chat"
+              color="#94a3b8" size={46}
+            />
+          </div>
         </div>
       </div>
     );
