@@ -75,7 +75,9 @@ export default function SciameOnboarding({ fase = 0 }) {
       t++;
       const M = morfRef.current; if (M.m < DURATA) M.m++;
       g.fillStyle = `rgba(${TINTE.bg},0.32)`; g.fillRect(0, 0, W, H);
-      const R = Math.min(W, H) * 0.5, RAG = 150 * devicePixelRatio;
+      // RAG = raggio della "bolla" attorno al dito. Stretto = l'effetto
+      // nasce sotto al cursore, non a mezzo schermo di distanza.
+      const R = Math.min(W, H) * 0.5, RAG = 78 * devicePixelRatio;
       const ry = t * 0.0011, rx = 0.35 + Math.sin(t * 0.0005) * 0.10;
 
       for (const p of punti) {
@@ -93,8 +95,8 @@ export default function SciameOnboarding({ fase = 0 }) {
         const dx = X - mx, dy = Y2 - my, d2 = dx * dx + dy * dy;
         let sb = sbuffi.get(p.i) || 0;
         if (d2 < RAG * RAG) {
-          const d = Math.sqrt(d2) || 1, spinta = Math.pow(1 - d / RAG, 2) * 20 * devicePixelRatio;
-          sb += (spinta - sb) * 0.10;
+          const d = Math.sqrt(d2) || 1, spinta = Math.pow(1 - d / RAG, 2) * 22 * devicePixelRatio;
+          sb += (spinta - sb) * 0.16;   // reagisce più svelto: la bolla segue il dito
         } else sb *= 0.93;
         if (sb > 0.05) { const d = Math.sqrt(d2) || 1; X += dx / d * sb; Y2 += dy / d * sb; sbuffi.set(p.i, sb); }
         else sbuffi.delete(p.i);
