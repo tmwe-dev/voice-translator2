@@ -149,27 +149,7 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
       autoGainControl: true,
     } : false,
   };
-  // Su alcuni telefoni getUserMedia non risolve MAI (camera occupata da
-  // un'altra app). MA il timeout va applicato SOLO se il permesso è già
-  // concesso: se il browser sta mostrando il popup "Consenti camera?",
-  // l'utente ha tutto il tempo che vuole — tagliare a 10s uccideva la
-  // prima chiamata di chiunque.
-  let giaConcesso = false;
-  try {
-    const nome = opts.video ? 'camera' : 'microphone';
-    const p = await navigator.permissions.query({ name: nome });
-    giaConcesso = p.state === 'granted';
-  } catch { /* browser senza permissions API: niente timeout, aspettiamo l'utente */ }
-
-  if (!giaConcesso) {
-    return await navigator.mediaDevices.getUserMedia(constraints);
-  }
-  return await Promise.race([
-    navigator.mediaDevices.getUserMedia(constraints),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('getUserMedia timeout — camera/mic occupati o bloccati')), 10000)
-    ),
-  ]);
+  return await navigator.mediaDevices.getUserMedia(constraints);
 }
 
 /**
