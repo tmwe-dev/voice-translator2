@@ -104,5 +104,7 @@ async function handleGetRoom(req) {
   }
 }
 
-export const POST = withApiGuard(handlePostRoom, { maxRequests: 120, prefix: 'room' });
-export const GET = withApiGuard(handleGetRoom, { maxRequests: 120, prefix: 'room' });
+// 420/min: il presence fa più POST per ciclo di poll (1,5s) e più tab/persone
+// possono condividere lo stesso IP (NAT, famiglie). 120 causava 429 già con 2 tab.
+export const POST = withApiGuard(handlePostRoom, { maxRequests: 420, prefix: 'room' });
+export const GET = withApiGuard(handleGetRoom, { maxRequests: 420, prefix: 'room' });
