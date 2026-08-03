@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 import { getSession } from '../../../lib/users.js';
 import { BONUS_BENVENUTO_SECONDI, formattaDurata } from '../../../wallet/tariffe.js';
 
@@ -8,7 +9,7 @@ import { BONUS_BENVENUTO_SECONDI, formattaDurata } from '../../../wallet/tariffe
 // Sicurezza: l'email NON arriva dal client — arriva dalla SESSIONE
 // verificata (token). Nessuno puo' farmare bonus con email inventate.
 // Il "una volta sola" lo garantisce il DB (indice unico su tipo=benvenuto).
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const auth = req.headers.get('authorization');
     const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
@@ -40,3 +41,5 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'wallet-benvenuto' });

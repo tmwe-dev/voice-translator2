@@ -228,7 +228,6 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
             </div>
             <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
               <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>Auto (Deepgram)</span>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
             </div>
           </div>
 
@@ -244,7 +243,6 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
               <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
                 {prefs.ttsEngine === 'elevenlabs' ? 'ElevenLabs' : prefs.ttsEngine === 'openai' ? 'OpenAI' : 'Edge TTS'}
               </span>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
             </div>
           </div>
 
@@ -260,7 +258,6 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
               <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
                 {clonedVoiceId ? 'Configurato' : 'Non configurato'}
               </span>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
             </div>
           </div>
 
@@ -301,20 +298,21 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
                 transition:'background 0.15s'}}>
               <span style={{fontSize:16, flexShrink:0}}>💳</span>
               <div style={{flex:1, minWidth:0}}>
-                <div style={{fontSize:12, color:S.colors.textSecondary}}>Crediti</div>
+                <div style={{fontSize:12, color:S.colors.textSecondary}}>Credito</div>
               </div>
               <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
                 <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                  {creditBalance !== undefined ? formatCredits(creditBalance) : 'Caricamento...'}
+                  Minuti e ricariche
                 </span>
                 <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
               </div>
             </button>
           </div>
 
-          {/* Row: API Keys */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
+          {/* Row: API Keys (ultima della card) */}
+          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
+            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
+            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
             display:'flex', alignItems:'center', gap:10}}>
             <button onClick={() => setView('apikeys')}
               style={{width:'100%', background:'none', border:'none',
@@ -331,36 +329,9 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
               </div>
             </button>
           </div>
-
-          {/* Row: Abbonamento */}
-          <div style={{borderTop:'none', background:S.colors.cardBg, borderLeft:'1px solid ' + S.colors.cardBorder,
-            borderRight:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>📊</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Abbonamento</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>
-                {isTrial ? 'Trial' : isTopPro ? 'Pro' : 'Free'}
-              </span>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </div>
-          </div>
-
-          {/* Row: Referral & Gift */}
-          <div style={{borderTop:'none', borderRadius:'0 0 12px 12px', background:S.colors.cardBg,
-            borderLeft:'1px solid ' + S.colors.cardBorder, borderRight:'1px solid ' + S.colors.cardBorder,
-            borderBottom:'1px solid ' + S.colors.cardBorder, padding:'12px 14px',
-            display:'flex', alignItems:'center', gap:10}}>
-            <span style={{fontSize:16, flexShrink:0}}>🎁</span>
-            <div style={{flex:1, minWidth:0}}>
-              <div style={{fontSize:12, color:S.colors.textSecondary}}>Referral & Gift</div>
-            </div>
-            <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
-            </div>
-          </div>
+          {/* Le righe 'Abbonamento' e 'Referral & Gift' sono state rimosse:
+              erano finti bottoni legacy (nessuna view esisteva, e il modello
+              ad abbonamento non esiste più — il credito è a minuti). */}
         </div>
 
         {/* ══════════════════════════════════════════════════
@@ -527,7 +498,6 @@ const SettingsView = memo(function SettingsView({ isTrial, isTopPro,
             </div>
             <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
               <span style={{fontSize:12, fontWeight:600, color:S.colors.textPrimary}}>BarTalk {APP_VERSION}</span>
-              <span style={{fontSize:14, color:S.colors.textTertiary}}>›</span>
             </div>
           </div>
         </div>

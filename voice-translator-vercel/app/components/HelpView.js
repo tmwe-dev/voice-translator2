@@ -24,8 +24,8 @@ const FAQ_ITEMS = [
     icon: '🚕',
   },
   {
-    q: 'Posso usare BarTalk gratis?',
-    a: 'Sì! Tutte le funzionalità sono gratuite: traduzione, voci neurali, stanze multilingue, TaxiTalk, e contatti. Nessun abbonamento richiesto.',
+    q: 'Quanto costa BarTalk?',
+    a: 'Provi gratis: ogni nuovo account riceve 30 minuti di conversazione in regalo. Poi ricarichi solo quello che usi (da €4,99 per 3 ore) — nessun abbonamento, i minuti restano tuoi. Con le tue chiavi API personali l’uso è illimitato.',
     icon: '🆓',
   },
   {

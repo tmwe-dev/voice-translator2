@@ -248,7 +248,10 @@ export default function useTranslation({
       getPerf().mark(PERF.PHASE2_SEND);
       if (primaryTranslated && roomId) {
         sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
-        if (!opts.skipRefresh && !isTrialRef.current && !useOwnKeys) refreshBalance();
+        // Niente refreshBalance qui: era il contatore LEGACY (centesimi Redis)
+        // e con l'unificazione scattava a OGNI messaggio → tempesta di POST
+        // /api/user → 429 anche sul login. Il saldo vero (wallet) lo aggiorna
+        // già la batteria ogni 60s.
       }
       getPerf().measure(PERF.PHASE2_SEND);
 
@@ -682,7 +685,7 @@ export default function useTranslation({
         try { await processAndSendAudio(blob); } catch {}
         setRecording(false);
         setStreamingMsg(null);
-        if (!isTrialRef.current && !useOwnKeys) refreshBalance();
+        // (refreshBalance legacy rimosso — vedi nota sopra: causa 429)
       };
       recRef.current.start(100);
     } catch (err) {

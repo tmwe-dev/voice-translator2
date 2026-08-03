@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../../lib/apiGuard.js';
+import { getSession } from '../../../lib/users.js';
 import { saldo, usoOggiEMese, storicoAcquisti } from '../../../wallet/contabilita.js';
 import { coloreBatteria, formattaDurata, BATTERIA } from '../../../wallet/tariffe.js';
 
-// GET /api/wallet/saldo?utente=email — legge saldo e uso.
-// Non modifica niente: si puo' chiamare quanto si vuole.
-export async function GET(req) {
+// GET /api/wallet/saldo — saldo, uso e storico DELL'UTENTE LOGGATO.
+// L'identità arriva dalla SESSIONE (Bearer token), mai da un parametro:
+// nessuno può leggere il saldo di un altro indovinandone l'email.
+async function handleGet(req) {
   try {
-    const utente = new URL(req.url).searchParams.get('utente');
-    if (!utente) return NextResponse.json({ error: 'utente mancante' }, { status: 400 });
+    const auth = req.headers.get('authorization');
+    const token = auth?.startsWith('Bearer ') ? auth.slice(7) : null;
+    if (!token) return NextResponse.json({ error: 'token mancante' }, { status: 401 });
+    const sessione = await getSession(token);
+    if (!sessione?.email) return NextResponse.json({ error: 'sessione non valida' }, { status: 401 });
+    const utente = sessione.email.toLowerCase();
 
     const secondi = await saldo(utente);
     const uso = await usoOggiEMese(utente);
@@ -32,3 +39,5 @@ export async function GET(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+export const GET = withApiGuard(handleGet, { maxRequests: 60, prefix: 'wallet-saldo', skipBodyCheck: true });

@@ -28,14 +28,20 @@ export default function BatteryPill({ utente }) {
   const [codice, setCodice] = useState('');
   const [esito, setEsito] = useState('');
 
+  // Il wallet riconosce l'utente dalla SESSIONE (Bearer), mai da un parametro
+  const conToken = useCallback((extra = {}) => {
+    const token = localStorage.getItem('vt-token');
+    return { ...extra, ...(token && { Authorization: `Bearer ${token}` }) };
+  }, []);
+
   // Carica il saldo ora e poi ogni 60s (si ferma se l'app è in background)
   const carica = useCallback(async () => {
     if (!utente) return;
     try {
-      const r = await fetch(`/api/wallet/saldo?utente=${encodeURIComponent(utente)}`);
+      const r = await fetch('/api/wallet/saldo', { headers: conToken() });
       if (r.ok) setDati(await r.json());
     } catch { /* offline: teniamo l'ultimo dato */ }
-  }, [utente]);
+  }, [utente, conToken]);
 
   useEffect(() => subscribeTick(60000, carica, { immediate: true }), [carica]);
 
@@ -71,8 +77,8 @@ export default function BatteryPill({ utente }) {
         if (pendente) {
           localStorage.removeItem('vt-voucher-pendente');
           const r = await fetch('/api/wallet/voucher', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ utente, codice: pendente }),
+            method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ codice: pendente }),
           });
           const d = await r.json().catch(() => ({}));
           setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
@@ -89,8 +95,8 @@ export default function BatteryPill({ utente }) {
   // Ricarica: chiedi il link a Stripe e vai
   async function ricarica(pacchettoId) {
     const r = await fetch('/api/wallet/ricarica', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ utente, pacchetto: pacchettoId }),
+      method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ pacchetto: pacchettoId }),
     });
     const { url } = await r.json();
     if (url) window.location.href = url;
@@ -100,8 +106,8 @@ export default function BatteryPill({ utente }) {
   async function usaVoucher() {
     setEsito('...');
     const r = await fetch('/api/wallet/voucher', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ utente, codice }),
+      method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ codice }),
     });
     const d = await r.json();
     setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));

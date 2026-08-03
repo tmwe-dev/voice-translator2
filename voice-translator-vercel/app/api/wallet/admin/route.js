@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 
 // ═══ MONITOR ADMIN — protetto da ADMIN_PASS ═══
 // GET  ?pass=... → economics (oggi/mese/totali) + config servizi
@@ -13,7 +14,7 @@ function autorizzato(pass) {
   return process.env.ADMIN_PASS && pass === process.env.ADMIN_PASS;
 }
 
-export async function GET(req) {
+async function handleGet(req) {
   const pass = req.headers.get('x-admin-pass');
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
 
@@ -40,7 +41,7 @@ export async function GET(req) {
   });
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   const { pass, azione, chiave, valore, attivo, codice, minuti, usi, scade, utente, nota } = await req.json();
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
 
@@ -79,3 +80,6 @@ export async function POST(req) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withApiGuard(handleGet, { maxRequests: 30, prefix: 'wallet-admin', skipBodyCheck: true });
+export const POST = withApiGuard(handlePost, { maxRequests: 30, prefix: 'wallet-admin' });

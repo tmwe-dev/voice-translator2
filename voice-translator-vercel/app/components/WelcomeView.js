@@ -156,7 +156,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
   const features = [
     { icon: '🌍', text: Lf('featureTranslate', 'Traduzione AI istantanea'), color: D.neon1 },
     { icon: '🎙️', text: Lf('featureVoices', 'Voci premium ElevenLabs'), color: D.neon2 },
-    { icon: '⚡', text: Lf('featureFree', 'Tutto gratuito'), color: D.neon4 },
+    { icon: '⚡', text: Lf('featureFree', '30 min gratis'), color: D.neon4 },
   ];
 
   // Progress indicator
@@ -290,7 +290,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               marginBottom: 32, maxWidth: 320,
               ...stagger(2),
             }}>
-              {Lf('heroSubtitle', 'Traduci conversazioni in tempo reale con voci AI premium. Gratis.')}
+              {Lf('heroSubtitle', 'Traduci conversazioni in tempo reale con voci AI premium. 30 minuti in regalo.')}
             </div>
 
             {/* Feature pills */}

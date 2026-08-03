@@ -13,9 +13,11 @@ async function handler(req) {
   try {
     const { action, email, code, name, lang, avatar, token, referralCode } = await req.json();
 
-    // Rate limit auth actions (stricter: 10/min for send-code/verify)
+    // Rate limit OTP (prefix DEDICATO: prima usava 'auth' — lo stesso del
+    // guard esterno — così ogni chiamata contava DOPPIO e il limite reale
+    // per il login era ~5/min: bastava riprovare due volte per il 429)
     if (action === 'send-code' || action === 'verify') {
-      const rl = await checkRateLimit(getRateLimitKey(req, 'auth'), 10);
+      const rl = await checkRateLimit(getRateLimitKey(req, 'auth-otp'), 12);
       if (!rl.allowed) {
         return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
       }
