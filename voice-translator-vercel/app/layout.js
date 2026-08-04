@@ -1,66 +1,115 @@
 import CookieConsent from './components/CookieConsent.js';
 import SkipToContent from './components/SkipToContent.js';
+import { LANGS } from './lib/constants.js';
+
+// ═══════════════════════════════════════════════════════════════
+// LAYOUT — una sola fonte per i tag della testata.
+//
+// Prima gli stessi 14 meta erano scritti DUE volte: una dall'oggetto
+// `metadata` (che Next inserisce da solo) e una a mano dentro <head>.
+// React 19 sposta da solo meta, link e title nella testata, e il doppio
+// elenco arrivava in ordine diverso fra server e browser: da lì l'errore
+// di idratazione #418 ad ogni avvio, che costringeva React a buttare via
+// l'albero e ridisegnare tutto da capo.
+//
+// Regola: i meta stanno SOLO in `metadata` e `viewport`. Dentro <head>
+// restano solo gli script e i preconnect, che quell'API non copre.
+// ═══════════════════════════════════════════════════════════════
+
+const DESCRIZIONE = `Traduzione vocale in tempo reale con l'IA: parli nella tua lingua, l'altro ti sente nella sua. ${LANGS.length} lingue, voci naturali, 30 minuti in regalo.`;
+const SITO = 'https://voice-translator2.vercel.app';
 
 export const metadata = {
-  title: 'BarTalk — Real-time AI Voice Translation',
-  description: 'Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start.',
+  metadataBase: new URL(SITO),
+  title: 'BarTalk — Traduzione vocale in tempo reale',
+  description: DESCRIZIONE,
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icons/icon-96x96.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-72x72.png', sizes: '16x16', type: 'image/png' },
+    ],
+    apple: '/icons/apple-touch-icon.png',
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'BarTalk',
   },
   openGraph: {
-    title: 'BarTalk — Real-time Voice Translation',
-    description: 'Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages.',
+    title: 'BarTalk — Traduzione vocale in tempo reale',
+    description: DESCRIZIONE,
     type: 'website',
-    url: 'https://voice-translator2.vercel.app',
-    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'BarTalk — Real-time AI Voice Translation' }],
+    url: SITO,
+    images: [{ url: '/api/og', width: 1200, height: 630, alt: 'BarTalk — traduzione vocale in tempo reale' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'BarTalk — Real-time Voice Translation',
-    description: 'AI-powered voice translation for 15+ languages. Free to start.',
+    title: 'BarTalk — Traduzione vocale in tempo reale',
+    description: DESCRIZIONE,
     images: ['/api/og'],
   },
+  // I meta di Apple Sign-In non hanno un posto dedicato nell'API: vanno qui,
+  // non a mano nel <head>, altrimenti si torna al doppio elenco.
+  ...(process.env.NEXT_PUBLIC_APPLE_CLIENT_ID ? {
+    other: {
+      'appleid-signin-client-id': process.env.NEXT_PUBLIC_APPLE_CLIENT_ID,
+      'appleid-signin-scope': 'name email',
+      'appleid-signin-redirect-uri': process.env.NEXT_PUBLIC_URL || SITO,
+      'appleid-signin-use-popup': 'true',
+    },
+  } : {}),
 };
+
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#060810' },
+    { media: '(prefers-color-scheme: light)', color: '#F0F4F8' },
+  ],
 };
+
+// Dati strutturati per i motori di ricerca: descrivono il modello VERO
+// (ricariche prepagate + regalo di benvenuto), non un piano gratuito.
+const DATI_STRUTTURATI = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'BarTalk',
+  description: DESCRIZIONE,
+  url: SITO,
+  applicationCategory: 'CommunicationApplication',
+  operatingSystem: 'Any',
+  offers: {
+    '@type': 'Offer',
+    price: '4.99',
+    priceCurrency: 'EUR',
+    description: 'Ricariche prepagate di minuti, senza abbonamento. 30 minuti in regalo alla registrazione.',
+  },
+  featureList: [
+    'Traduzione vocale in tempo reale',
+    `${LANGS.length} lingue`,
+    'Voci naturali di sintesi',
+    'Clonazione della voce',
+    'Modalità aula',
+    'Videochiamate dirette fra i due dispositivi',
+  ],
+};
+
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="it">
       <head>
-        <meta name="theme-color" content="#060810" media="(prefers-color-scheme: dark)" />
-        <meta name="theme-color" content="#F0F4F8" media="(prefers-color-scheme: light)" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        {/* Preconnect to critical external APIs for faster first request */}
+        {/* Solo cose che l'API dei metadati non copre: script e preconnect. */}
         <link rel="preconnect" href="https://api.openai.com" />
         <link rel="dns-prefetch" href="https://api.openai.com" />
         <link rel="preconnect" href="https://api.deepgram.com" />
         <link rel="dns-prefetch" href="https://api.deepgram.com" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-96x96.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png" />
-        {/* Enhanced SEO Meta Tags */}
-        <meta name="description" content="Real-time voice translation with AI. Speak in your language, hear in theirs. 15+ languages, voice cloning, classroom mode. Free to start." />
-        <meta property="og:title" content="BarTalk — Real-time Voice Translation" />
-        <meta property="og:description" content="Speak in your language, hear in theirs. AI-powered voice translation for 15+ languages." />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://voice-translator2.vercel.app" />
-        <meta property="og:image" content="/api/og" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="BarTalk — Real-time Voice Translation" />
-        <meta name="twitter:description" content="AI-powered voice translation for 15+ languages. Free to start." />
-        <meta name="twitter:image" content="/api/og" />
-        {/* OAuth: inject client IDs from env vars + preload SDKs */}
+
+        {/* Identificativi OAuth dalle variabili d'ambiente */}
         <script dangerouslySetInnerHTML={{__html: `
           window.__VT_GOOGLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''}";
           window.__VT_APPLE_CLIENT_ID = "${process.env.NEXT_PUBLIC_APPLE_CLIENT_ID || ''}";
@@ -69,16 +118,6 @@ export default function RootLayout({ children }) {
         {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
           <script src="https://accounts.google.com/gsi/client" async defer />
         )}
-        {/* Apple Sign-In meta tags — only rendered when Apple client ID is configured */}
-        {process.env.NEXT_PUBLIC_APPLE_CLIENT_ID && (
-          <>
-            <meta name="appleid-signin-client-id" content={process.env.NEXT_PUBLIC_APPLE_CLIENT_ID} />
-            <meta name="appleid-signin-scope" content="name email" />
-            <meta name="appleid-signin-redirect-uri" content={process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app'} />
-            <meta name="appleid-signin-use-popup" content="true" />
-          </>
-        )}
-        {/* Plausible Analytics — privacy-first, no cookies, GDPR compliant */}
         {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
           <script
             defer
@@ -86,34 +125,9 @@ export default function RootLayout({ children }) {
             src="https://plausible.io/js/script.js"
           />
         )}
-        {/* JSON-LD Structured Data for SEO */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'WebApplication',
-              name: 'BarTalk',
-              description: 'Real-time voice translation app with AI-powered speech recognition and synthesis in 15+ languages',
-              url: 'https://voice-translator2.vercel.app',
-              applicationCategory: 'CommunicationApplication',
-              operatingSystem: 'Any',
-              offers: {
-                '@type': 'Offer',
-                price: '0',
-                priceCurrency: 'EUR',
-                description: 'Free tier with basic translation features',
-              },
-              featureList: [
-                'Real-time voice translation',
-                'Support for 15+ languages',
-                'AI-powered speech synthesis',
-                'Voice cloning',
-                'Classroom mode',
-                'P2P video calls',
-              ],
-            }),
-          }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(DATI_STRUTTURATI) }}
         />
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
