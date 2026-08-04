@@ -23,6 +23,11 @@ import { useApp } from '../contexts/AppContext.js';
 // Icone: SOLO il set mono a filo sottile (Icons.js). Zero emoji.
 // ═══════════════════════════════════════════════
 
+// b.89 — un indirizzo solo. Prima le impostazioni scrivevano a
+// support@bartalk.dev e la pagina pubblica a support@voicetranslate.app.
+// TODO Luca: metti qui la casella vera, e sara quella ovunque.
+const EMAIL_ASSISTENZA = 'support@voicetranslate.app';
+
 const MOTORI_VOCE = [
   { id: 'auto', nome: 'Automatica', desc: 'Sceglie il meglio disponibile' },
   { id: 'edge', nome: 'Standard', desc: 'Veloce, consumo normale' },
@@ -246,7 +251,18 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             sotto="Un file con preferenze e conversazioni"
             onClick={() => {
               try {
-                const dati = { prefs, esportato: new Date().toISOString(), versione: APP_VERSION };
+                // b.89 — la riga prometteva "preferenze E CONVERSAZIONI" ma
+                // esportava solo le preferenze. Ora prende tutto quello che
+                // l'app tiene sul telefono, chiavi API escluse.
+                const suTelefono = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                  const k = localStorage.key(i);
+                  if (!k?.startsWith('vt-')) continue;
+                  if (/token|key|chiav/i.test(k)) continue; // mai esportare credenziali
+                  try { suTelefono[k] = JSON.parse(localStorage.getItem(k)); }
+                  catch { suTelefono[k] = localStorage.getItem(k); }
+                }
+                const dati = { prefs, datiLocali: suTelefono, esportato: new Date().toISOString(), versione: APP_VERSION };
                 const url = URL.createObjectURL(new Blob([JSON.stringify(dati, null, 2)], { type: 'application/json' }));
                 const a = document.createElement('a');
                 a.href = url; a.download = `bartalk-dati-${Date.now()}.json`; a.click();
@@ -262,7 +278,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             onClick={() => setView('help')} />
           <Riga icona={<IconWarning size={17} />} titolo="Segnala un problema"
             sotto="Scrivici: rispondiamo davvero"
-            onClick={() => window.open('mailto:support@bartalk.dev?subject=Problema BarTalk ' + APP_VERSION, '_blank')} />
+            onClick={() => window.open(`mailto:${EMAIL_ASSISTENZA}?subject=Problema BarTalk ${APP_VERSION}`, '_blank')} />
           <Riga icona={<IconSettings size={17} />} titolo="Versione"
             valore={`BarTalk ${APP_VERSION}`} ultima />
         </Gruppo>

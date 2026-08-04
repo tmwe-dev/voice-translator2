@@ -153,7 +153,7 @@ export default function ContactsView({
       <PageHeader
         title="Contatti"
         subtitle={`${contacts.length} contatti${onlineCount > 0 ? ` · ${onlineCount} online` : ''}`}
-        onBack={() => setView('home')}
+        onBack={() => setView('settings')}
         S={{ colors: C }}
         rightAction={
           <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? 'Chiudi' : 'Aggiungi contatto'} style={{

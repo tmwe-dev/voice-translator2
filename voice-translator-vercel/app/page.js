@@ -1113,7 +1113,7 @@ function HomeInner() {
 
   if (view === 'ai') return wrap(
     <>
-      <Suspense fallback={null}>
+      <Suspense fallback={<LazyFallback />}>
         <AIView
           contacts={contactsHook.contacts}
           recentConversations={convHistory}
@@ -1127,7 +1127,7 @@ function HomeInner() {
 
   if (view === 'detail') return wrap(
     <>
-      <Suspense fallback={null}>
+      <Suspense fallback={<LazyFallback />}>
         <DetailView
           conversation={detailConversation || {}}
           messages={detailMessages || []}

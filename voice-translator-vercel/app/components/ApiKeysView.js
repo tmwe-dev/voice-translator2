@@ -31,7 +31,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
       <div style={S.page}>
         <div style={S.scrollCenter}>
           <div style={S.topBar}>
-            <button style={S.backBtn} onClick={() => setView('home')}>{'←'}</button>
+            <button style={S.backBtn} onClick={() => setView('settings')}>{'←'}</button>
             <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
           </div>
           <div style={S.card}>
@@ -55,7 +55,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
     <div style={S.page}>
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
-          <button style={S.backBtn} onClick={() => setView('home')}>{'←'}</button>
+          <button style={S.backBtn} onClick={() => setView('settings')}>{'←'}</button>
           <span style={{fontWeight:600, fontSize:17}}>{L('yourApiKeys')}</span>
         </div>
         <div style={S.card}>

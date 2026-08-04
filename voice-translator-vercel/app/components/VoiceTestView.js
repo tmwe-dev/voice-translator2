@@ -286,6 +286,76 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           }} />
         </div>
 
+        {/* ── INIZIO b.89 — si possono provare anche le voci GRATUITE ──
+            Prima questa pagina si chiamava "Prova le voci" ma senza una
+            chiave ElevenLabs non si poteva ascoltare nulla: eppure la voce
+            standard (Edge) e quella che usa il 99% delle persone. */}
+        <div style={{
+          width: '100%', maxWidth: 400, marginBottom: 16, borderRadius: 20,
+          padding: '18px 18px 16px', background: 'rgba(10,13,26,0.8)',
+          border: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
+            <Icon name="speaker" size={17} color={teal} />
+            <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
+              {isIT ? 'Voce standard — gratuita' : 'Standard voice — free'}
+            </span>
+          </div>
+          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 12 }}>
+            {isIT
+              ? 'È la voce che senti di norma. Tocca una lingua per ascoltarla.'
+              : 'This is the voice you normally hear. Tap a language to listen.'}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            {['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja'].map(codice => {
+              const l = getLang(codice);
+              const inCorso = playingVoice === 'edge-' + codice;
+              return (
+                <button key={codice} disabled={inCorso}
+                  onClick={async () => {
+                    setPlayingVoice('edge-' + codice);
+                    try {
+                      const frase = {
+                        it: 'Buongiorno, questa è la voce standard di BarTalk.',
+                        en: 'Hello, this is the standard BarTalk voice.',
+                        es: 'Hola, esta es la voz estándar de BarTalk.',
+                        fr: 'Bonjour, voici la voix standard de BarTalk.',
+                        de: 'Guten Tag, das ist die Standardstimme von BarTalk.',
+                        pt: 'Olá, esta é a voz padrão do BarTalk.',
+                        zh: '你好，这是 BarTalk 的标准语音。',
+                        ja: 'こんにちは。これはBarTalkの標準音声です。',
+                      }[codice];
+                      const r = await fetch('/api/tts-edge', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: frase, langCode: l?.speech || codice, gender: 'female' }),
+                      });
+                      if (!r.ok) { setPlayingVoice(null); return; }
+                      const blob = await r.blob();
+                      const url = URL.createObjectURL(blob);
+                      const audio = new Audio(url);
+                      audio.onended = () => { URL.revokeObjectURL(url); setPlayingVoice(null); };
+                      audio.onerror = () => setPlayingVoice(null);
+                      audio.play().catch(() => setPlayingVoice(null));
+                    } catch { setPlayingVoice(null); }
+                  }}
+                  style={{
+                    padding: '9px 13px', borderRadius: 12, cursor: inCorso ? 'default' : 'pointer',
+                    background: inCorso ? `${teal}22` : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${inCorso ? `${teal}55` : 'rgba(255,255,255,0.10)'}`,
+                    color: inCorso ? teal : 'rgba(255,255,255,0.75)',
+                    fontSize: 12.5, fontWeight: 700, fontFamily: FONT,
+                    display: 'flex', alignItems: 'center', gap: 6,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}>
+                  <Icon name={inCorso ? 'refresh' : 'play'} size={11} color={inCorso ? teal : 'rgba(255,255,255,0.6)'} />
+                  {l?.name || codice}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {/* ── FINE b.89 ── */}
+
         {/* ── Not available state ── */}
         {!elAvailable && (
           <div style={{

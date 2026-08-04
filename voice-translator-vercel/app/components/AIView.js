@@ -1,7 +1,24 @@
 'use client';
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
+import Icon from './Icon.js';
+import PageHeader from './ui/PageHeader.js';
+
+// ── INIZIO b.89 — questa pagina prometteva e non manteneva ──
+// Il glossario e le automazioni vivevano SOLO in useState: aggiungevi un
+// termine, uscivi, era sparito. E non c'era nessun tasto per tornare
+// indietro. Ora il glossario si salva sul telefono e la pagina dice la
+// verita su cosa e gia attivo e cosa e ancora in lavorazione.
+const CHIAVE_GLOSSARIO = 'vt-glossario';
+
+function leggiGlossario() {
+  try {
+    const g = JSON.parse(localStorage.getItem(CHIAVE_GLOSSARIO) || 'null');
+    return Array.isArray(g) ? g : null;
+  } catch { return null; }
+}
+// ── FINE b.89 ──
 
 /**
  * AIView — P4 Schermata 6: AI & Automazioni
@@ -21,10 +38,13 @@ const AIView = memo(function AIView({
 }) {
   const { L, S, theme, setView, prefs } = useApp();
   const [activeSection, setActiveSection] = useState(null);
-  const [glossaryTerms, setGlossaryTerms] = useState([
-    { from: 'Buongiorno', to: 'Good morning', note: 'formale' },
-    { from: 'Grazie mille', to: 'Thank you very much', note: 'cortesia' },
-  ]);
+  // b.89 — parte da quello salvato, non da esempi finti
+  const [glossaryTerms, setGlossaryTerms] = useState([]);
+  useEffect(() => { const g = leggiGlossario(); if (g) setGlossaryTerms(g); }, []);
+  useEffect(() => {
+    try { localStorage.setItem(CHIAVE_GLOSSARIO, JSON.stringify(glossaryTerms)); }
+    catch (e) { console.warn('[AIView] glossario non salvato:', e?.message); }
+  }, [glossaryTerms]);
   const [newTermFrom, setNewTermFrom] = useState('');
   const [newTermTo, setNewTermTo] = useState('');
   const [automations, setAutomations] = useState([
@@ -35,10 +55,10 @@ const AIView = memo(function AIView({
   ]);
 
   const quickActions = [
-    { icon: '🎙️', label: 'Interprete', desc: 'Modalità interpretazione real-time', action: () => { if (setSelectedMode) setSelectedMode('interpreter'); if (handleCreateRoom) handleCreateRoom(); }, color: S.colors.accent1 },
-    { icon: '📖', label: 'Glossario', desc: 'Gestisci termini personalizzati', action: () => setActiveSection(activeSection === 'glossary' ? null : 'glossary'), color: S.colors.accent2 },
-    { icon: '⚡', label: 'Automazioni', desc: 'Regole AI automatiche', action: () => setActiveSection(activeSection === 'automations' ? null : 'automations'), color: S.colors.statusWarning },
-    { icon: '🎨', label: 'Stile', desc: 'Preferenze di traduzione', action: () => setActiveSection(activeSection === 'style' ? null : 'style'), color: S.colors.accent4 },
+    { icona: 'mic', label: 'Interprete', desc: 'Modalità interpretazione real-time', action: () => { if (setSelectedMode) setSelectedMode('interpreter'); if (handleCreateRoom) handleCreateRoom(); }, color: S.colors.accent1 },
+    { icona: 'graduation', label: 'Glossario', desc: 'Gestisci termini personalizzati', action: () => setActiveSection(activeSection === 'glossary' ? null : 'glossary'), color: S.colors.accent2 },
+    { icona: 'zap', label: 'Automazioni', desc: 'Regole AI automatiche', action: () => setActiveSection(activeSection === 'automations' ? null : 'automations'), color: S.colors.statusWarning },
+    { icona: 'star', label: 'Stile', desc: 'Preferenze di traduzione', action: () => setActiveSection(activeSection === 'style' ? null : 'style'), color: S.colors.accent4 },
   ];
 
   const translationStyles = [
@@ -67,13 +87,16 @@ const AIView = memo(function AIView({
       ...S.page, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 16,
       minHeight: '100vh', boxSizing: 'border-box', overflowY: 'auto', paddingBottom: 100,
     }}>
-      {/* Header */}
+      {/* ── INIZIO b.89 — intestazione con il ritorno a Impostazioni ──
+          Prima questa pagina non aveva NESSUN modo di uscire: si restava
+          dentro finche non si toccava la barra in basso. */}
+      <PageHeader title="AI e glossario" onBack={() => setView('settings')} S={S} />
+      {/* ── FINE b.89 ── */}
       <div style={{ marginTop: 8 }}>
         <h2 style={{
           color: S.colors.textPrimary, fontSize: 22, fontWeight: 800, margin: 0,
-          background: S.colors.accentGradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
         }}>
-          ✨ AI & Automazioni
+          AI e Automazioni
         </h2>
         <p style={{ color: S.colors.textMuted, fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>
           Potenzia le traduzioni con intelligenza artificiale
@@ -93,7 +116,7 @@ const AIView = memo(function AIView({
                 ? `${qa.color}40` : S.colors.cardBorder}`,
               transition: 'all 0.2s', position: 'relative', overflow: 'hidden',
             }}>
-            <span style={{ fontSize: 28 }}>{qa.icon}</span>
+            <Icon name={qa.icona} size={26} color={qa.color} />
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: S.colors.textPrimary }}>{qa.label}</div>
               <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{qa.desc}</div>

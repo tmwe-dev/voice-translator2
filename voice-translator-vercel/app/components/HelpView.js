@@ -109,7 +109,7 @@ function HelpView() {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        <button onClick={() => setView('home')} style={{
+        <button onClick={() => setView('settings')} style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
