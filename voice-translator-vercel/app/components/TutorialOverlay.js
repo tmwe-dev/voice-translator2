@@ -1,10 +1,9 @@
 'use client';
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
-import SciameOnboarding from './SciameOnboarding.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -50,9 +49,16 @@ const STEPS = [
 ];
 
 export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShowTutorial }) {
-  const { L, theme } = useApp();
+  const { L, theme, S } = useApp();
+  const chiaro = theme === 'dawn';
   const [direction, setDirection] = useState(0);
   const touchStartX = useRef(null);
+
+  // Mentre il tutorial è aperto, l'ambiente resta VIVO (sciame pieno)
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('bartalk:ambiente', { detail: { vivo: true } }));
+    return () => window.dispatchEvent(new CustomEvent('bartalk:ambiente', { detail: { vivo: false } }));
+  }, []);
 
   const totalSteps = STEPS.length;
   const current = STEPS[tutorialStep];
@@ -106,8 +112,8 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes tutorialGlow {
-      0%, 100% { box-shadow: 0 0 40px ${current.accent}15, 0 24px 64px rgba(0,0,0,0.5); }
-      50% { box-shadow: 0 0 60px ${current.accent}25, 0 24px 64px rgba(0,0,0,0.5); }
+      0%, 100% { box-shadow: 0 0 40px ${current.accent}15, 0 24px 64px rgba(0,0,0,${chiaro ? 0.14 : 0.5}); }
+      50% { box-shadow: 0 0 60px ${current.accent}25, 0 24px 64px rgba(0,0,0,${chiaro ? 0.14 : 0.5}); }
     }
   `;
 
@@ -123,21 +129,21 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           zIndex: 9999,
           // Velo meno opaco: lo SCIAME dietro deve respirare (prima 0.92 = muro)
-          background: 'rgba(4,6,14,0.55)',
+          background: chiaro ? 'rgba(247,248,252,0.62)' : 'rgba(4,6,14,0.55)',
           backdropFilter: 'blur(6px)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           padding: 20, boxSizing: 'border-box', outline: 'none',
         }}
         onClick={() => setShowTutorial(false)}
       >
-        {/* Lo sciame vive anche dietro il tutorial: le forme cambiano coi passi */}
-        <SciameOnboarding fase={tutorialStep % 3} />
         <div
           key={tutorialStep}
           style={{
             maxWidth: 380, width: '100%', textAlign: 'center',
             borderRadius: 28, padding: '44px 32px 36px',
-            background: `linear-gradient(160deg, rgba(14,18,35,0.90) 0%, rgba(10,14,28,0.95) 50%, ${current.accent}08 100%)`,
+            background: chiaro
+              ? `linear-gradient(160deg, rgba(255,255,255,0.94) 0%, rgba(250,251,254,0.97) 50%, ${current.accent}0C 100%)`
+              : `linear-gradient(160deg, rgba(14,18,35,0.90) 0%, rgba(10,14,28,0.95) 50%, ${current.accent}08 100%)`,
             border: `1px solid ${current.accent}18`,
             backdropFilter: 'blur(40px) saturate(1.1)',
             WebkitBackdropFilter: 'blur(40px) saturate(1.1)',
@@ -161,7 +167,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
                 onClick={(e) => { e.stopPropagation(); setTutorialStep(i); }}
                 style={{
                   width: tutorialStep === i ? 28 : 10, height: 10, borderRadius: 5,
-                  background: tutorialStep === i ? current.accent : (i < tutorialStep ? `${current.accent}80` : 'rgba(255,255,255,0.12)'),
+                  background: tutorialStep === i ? current.accent : (i < tutorialStep ? `${current.accent}80` : (chiaro ? 'rgba(16,19,28,0.14)' : 'rgba(255,255,255,0.12)')),
                   transition: 'all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
                   cursor: 'pointer',
                   boxShadow: tutorialStep === i ? `0 0 12px ${current.accent}40` : 'none',
@@ -182,7 +188,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
           {/* Title */}
           <div style={{
             fontSize: 22, fontWeight: 300, marginBottom: 14, letterSpacing: -0.5,
-            background: `linear-gradient(135deg, #fff 0%, ${current.accent} 100%)`,
+            background: `linear-gradient(135deg, ${chiaro ? '#10131c' : '#fff'} 0%, ${current.accent} 100%)`,
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text', fontFamily: FONT,
           }}>
@@ -191,7 +197,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
 
           {/* Description */}
           <div style={{
-            fontSize: 14, color: 'rgba(255,255,255,0.72)',
+            fontSize: 14, color: S.colors.textSecondary,
             lineHeight: 1.7, marginBottom: 36,
             fontFamily: FONT, fontWeight: 300,
           }}>
@@ -204,9 +210,9 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
               <button onClick={goBack}
                 style={{
                   padding: '12px 18px', borderRadius: 12,
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 500,
+                  background: S.colors.cardBg,
+                  border: `1px solid ${S.colors.cardBorder}`,
+                  color: S.colors.textSecondary, fontSize: 13, fontWeight: 500,
                   cursor: 'pointer', fontFamily: FONT, transition: 'all 0.3s',
                   backdropFilter: 'blur(12px)',
                 }}>
@@ -217,9 +223,9 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
             <button onClick={() => setShowTutorial(false)}
               style={{
                 padding: '12px 20px', borderRadius: 12,
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                color: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 500,
+                background: S.colors.cardBg,
+                border: `1px solid ${S.colors.cardBorder}`,
+                color: S.colors.textMuted, fontSize: 13, fontWeight: 500,
                 cursor: 'pointer', fontFamily: FONT, transition: 'all 0.3s',
                 backdropFilter: 'blur(12px)',
               }}>

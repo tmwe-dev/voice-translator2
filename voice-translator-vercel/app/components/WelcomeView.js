@@ -5,7 +5,6 @@ import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
-import SciameOnboarding from './SciameOnboarding.js';
 import { IconGlobe, IconMic, IconBattery } from './Icons.js';
 
 // ═══════════════════════════════════════════════════════════
@@ -215,10 +214,9 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
       color: D.text, fontFamily: FONT, overflow: 'hidden',
     }}>
 
-      {/* ═══ LO SCIAME — il mondo di granelli che accoglie ═══
-          fase 0 = sfera (il mondo) · fase 1 = elica (il nome)
-          fase 2 = anello (la scelta). Sostituisce gli orb sfocati. */}
-      <SciameOnboarding fase={Math.min(phase, 2)} />
+      {/* Lo sciame vive in AmbienteVivo (montato una volta sola in page.js):
+          qui non creiamo un secondo canvas, così passando alla Home
+          l'animazione non muore ma si trasforma. */}
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
         {/* Noise + Vignette */}
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.025,

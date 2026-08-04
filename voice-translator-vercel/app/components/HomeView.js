@@ -9,36 +9,6 @@ import { BatteryPillSlot } from './BatteryPill.js';
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
 // ═══════════════════════════════════════
-function getHomeColors(theme) {
-  const palettes = {
-    dark: {
-      accent: PALETTE.purple, accent2: PALETTE.cyan, accent3: PALETTE.amber,
-      textPrimary: '#fafafa', textSecondary: 'rgba(250,250,250,0.60)',
-      textMuted: 'rgba(250,250,250,0.35)',
-      cardBg: 'rgba(255,255,255,0.04)', cardBorder: 'rgba(255,255,255,0.08)',
-    },
-    light: {
-      accent: '#7c3aed', accent2: '#0891b2', accent3: '#d97706',
-      textPrimary: '#18181b', textSecondary: 'rgba(24,24,27,0.60)',
-      textMuted: 'rgba(24,24,27,0.35)',
-      cardBg: 'rgba(0,0,0,0.02)', cardBorder: 'rgba(0,0,0,0.08)',
-    },
-    brown: {
-      accent: '#D4A06A', accent2: '#A5D6A7', accent3: '#FF8A65',
-      textPrimary: '#FFF8F0', textSecondary: 'rgba(255,248,240,0.60)',
-      textMuted: 'rgba(255,248,240,0.35)',
-      cardBg: 'rgba(255,255,255,0.04)', cardBorder: 'rgba(255,255,255,0.08)',
-    },
-    midnight: {
-      accent: '#818cf8', accent2: '#22d3ee', accent3: '#fbbf24',
-      textPrimary: '#e2e8f0', textSecondary: 'rgba(226,232,240,0.60)',
-      textMuted: 'rgba(226,232,240,0.35)',
-      cardBg: 'rgba(255,255,255,0.04)', cardBorder: 'rgba(255,255,255,0.08)',
-    },
-  };
-  return palettes[theme] || palettes.dark;
-}
-
 // ═══════════════════════════════════════
 // Action card data
 // ═══════════════════════════════════════
@@ -81,7 +51,12 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   const [activeRooms, setActiveRooms] = useState([]);
   const [showLangPicker, setShowLangPicker] = useState(false);
 
-  const C = useMemo(() => getHomeColors(theme), [theme]);
+  // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
+  const C = useMemo(() => ({
+    accent: S.colors.accent1, accent2: S.colors.accent2, accent3: S.colors.accent3,
+    textPrimary: S.colors.textPrimary, textSecondary: S.colors.textSecondary,
+    textMuted: S.colors.textMuted, cardBg: S.colors.cardBg, cardBorder: S.colors.cardBorder,
+  }), [S]);
 
   // Check active rooms on mount
   useEffect(() => {

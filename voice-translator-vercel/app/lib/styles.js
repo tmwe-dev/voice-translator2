@@ -45,6 +45,9 @@ export const keyframes = `
   @keyframes vtSpin { to { transform: rotate(360deg); } }
   @keyframes vtPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
   @keyframes vtFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  /* Dissolvenza fra le pagine: il contenuto entra, l'ambiente resta */
+  @keyframes vtPagina { from { opacity: 0; transform: translateY(7px) scale(0.995); }
+                        to { opacity: 1; transform: none; } }
   @keyframes vtSlideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes vtScaleIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
   @keyframes vtGlow { 0%,100% { box-shadow: 0 0 5px currentColor; } 50% { box-shadow: 0 0 20px currentColor; } }
@@ -66,7 +69,9 @@ export default function getStyles(theme = 'deep') {
   // Legacy ids → nuovi temi (chiamate dirette con vecchi id non devono rompersi)
   const LEGACY = { dark: 'deep', light: 'dawn', brown: 'ember', orange: 'ember' };
   if (LEGACY[theme]) theme = LEGACY[theme];
-  const isDark = theme === 'deep' || theme === 'ember';
+  // Scuri: tutti tranne Dawn. (Prima avorio/lilla/blubianco cadevano nel ramo
+  // 'chiaro' e prendevano bordi/ombre sbagliati: contrasto rotto.)
+  const isDark = theme !== 'dawn';
 
   // ── COLOR PALETTES ──
   const palettes = {
