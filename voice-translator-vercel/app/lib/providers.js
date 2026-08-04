@@ -37,6 +37,13 @@ export const PROVIDERS = {
   mymemory:  { name: 'MyMemory',         quality: 3, latency: 700,  free: true },
 };
 
+// ── INIZIO b.91 — Microsoft e ROTTO, non piu primario ──
+// Nei log di produzione: 35 errori "tryProvider error [microsoft]" e 13
+// "Failed to fetch auth token ... Received undefined". La libreria non
+// ufficiale non riesce piu a ottenere il token da Microsoft.
+// Google (senza chiave) funziona: verificato dal vivo, traduce bene.
+// Microsoft resta in coda come ultima possibilita, non come primo.
+// ── FINE b.91 ──
 // Microsoft scored 10/10 across ALL tested languages — it's the best provider
 const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja', 'en', 'es', 'fr', 'de', 'it', 'pt']);
 
@@ -44,14 +51,14 @@ const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja', 
 // Based on Test Center results: Microsoft is primary for ALL languages
 // Google is a reliable secondary. MyMemory only as emergency fallback.
 const PROVIDER_CHAINS = {
-  // ALL languages: Microsoft first (10/10 quality, 75ms avg), Google fallback
-  '*': ['microsoft', 'google'],
+  // b.91 — Google primo perche funziona davvero; Microsoft in fondo.
+  '*': ['google', 'mymemory', 'microsoft'],
 };
 
 // Fastest provider per target language (for superfast mode)
 // Microsoft is now fastest AND highest quality
 export const FASTEST_PROVIDER = {
-  '*': 'microsoft',
+  '*': 'google', // b.91 — era microsoft, che oggi fallisce sempre
 };
 
 /**
@@ -188,7 +195,11 @@ const MS_LANG_MAP = {
  * Best for: ar, hi, ru, tr, and generally good for all
  */
 export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
-  // Don't catch errors here — let them bubble up to tryProvider for error reporting
+  // b.91 — prima gli errori venivano lasciati risalire "per poterli
+  // segnalare": risultato, 48 errori in produzione per una libreria che
+  // oggi non funziona piu. Ora fallisce in silenzio e si passa al
+  // prossimo della catena, che e' quello che serve davvero all'utente.
+  try {
   const { translate } = await import('microsoft-translate-api');
   // Map our language codes to Microsoft's codes
   const msFrom = MS_LANG_MAP[sourceLang] || sourceLang;
@@ -207,6 +218,10 @@ export async function tryMicrosoftTranslate(text, sourceLang, targetLang) {
   if (result?.translation) return result.translation.trim();
   if (result?.text) return result.text.trim();
   throw new Error('MS: unexpected response: ' + JSON.stringify(result).slice(0, 200));
+  } catch (e) {
+    log.warn('Microsoft non disponibile, passo al prossimo:', e?.message);
+    return null;
+  }
 }
 
 /**
