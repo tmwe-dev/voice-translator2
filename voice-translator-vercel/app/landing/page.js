@@ -3,22 +3,34 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FONT, LANGS } from '../lib/constants.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
+import Icon from '../components/Icon.js';
+import { PACCHETTI, MOLTIPLICATORE_PREMIUM, BONUS_BENVENUTO_SECONDI, formattaDurata } from '../wallet/tariffe.js';
 
 // ═══════════════════════════════════════════════
-// BarTalk Landing Page — Fully i18n
-// Detects language from: localStorage → navigator → defaults to 'en'
+// BarTalk — pagina pubblica.
+//
+// REGOLA: i prezzi NON si scrivono qui. Arrivano da wallet/tariffe.js,
+// lo stesso file che alimenta Stripe e il portafoglio. Così la pagina
+// non può mai vendere un listino diverso da quello che l'utente paga.
 // ═══════════════════════════════════════════════
 
+// Icone MONO a filo sottile (mai emoji).
 const FEATURE_KEYS = [
-  { icon: '\u{1F3A4}', titleKey: 'landingFeat1Title', descKey: 'landingFeat1Desc' },
-  { icon: '\u{1F916}', titleKey: 'landingFeat2Title', descKey: 'landingFeat2Desc' },
-  { icon: '\u{1F30D}', titleKey: 'landingFeat3Title', descKey: 'landingFeat3Desc' },
-  { icon: '\u{1F50A}', titleKey: 'landingFeat4Title', descKey: 'landingFeat4Desc' },
-  { icon: '\u{1F3AD}', titleKey: 'landingFeat5Title', descKey: 'landingFeat5Desc' },
-  { icon: '\u{1F4DA}', titleKey: 'landingFeat6Title', descKey: 'landingFeat6Desc' },
-  { icon: '\u{1F512}', titleKey: 'landingFeat7Title', descKey: 'landingFeat7Desc' },
-  { icon: '\u{1F4CA}', titleKey: 'landingFeat8Title', descKey: 'landingFeat8Desc' },
+  { icona: 'mic', titleKey: 'landingFeat1Title', descKey: 'landingFeat1Desc' },
+  { icona: 'zap', titleKey: 'landingFeat2Title', descKey: 'landingFeat2Desc' },
+  { icona: 'globe', titleKey: 'landingFeat3Title', descKey: 'landingFeat3Desc' },
+  { icona: 'speaker', titleKey: 'landingFeat4Title', descKey: 'landingFeat4Desc' },
+  { icona: 'wave', titleKey: 'landingFeat5Title', descKey: 'landingFeat5Desc' },
+  { icona: 'graduation', titleKey: 'landingFeat6Title', descKey: 'landingFeat6Desc' },
+  { icona: 'lock', titleKey: 'landingFeat7Title', descKey: 'landingFeat7Desc' },
+  { icona: 'battery', titleKey: 'landingFeat8Title', descKey: 'landingFeat8Desc' },
 ];
+
+// I tre pacchetti veri, con il nome tradotto e il consigliato in evidenza.
+const NOMI_PACCHETTO = { pack_s: 'landingPackStart', pack_m: 'landingPackTravel', pack_l: 'landingPackWorld' };
+
+// TODO Luca: sostituire con l'indirizzo di assistenza reale.
+const EMAIL_CONTATTO = 'support@voicetranslate.app';
 
 function detectLang() {
   if (typeof window === 'undefined') return 'en';
@@ -38,7 +50,6 @@ function detectLang() {
 
 export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState(null);
-  const [billingPeriod, setBillingPeriod] = useState('monthly');
   const [lang, setLang] = useState('en');
   const [showLangPicker, setShowLangPicker] = useState(false);
 
@@ -58,23 +69,16 @@ export default function LandingPage() {
   const L = (key) => t(lang, key);
   const currentFlag = LANGS.find(l => l.code === lang)?.flag || '\u{1F30D}';
 
-  const PLAN_DATA = [
-    {
-      id: 'free', nameKey: 'landingPlanFree', price: '0', periodKey: '',
-      featureKeys: ['landingFreeF1','landingFreeF2','landingFreeF3','landingFreeF4','landingFreeF5'],
-      ctaKey: 'landingStartFree', highlight: false,
-    },
-    {
-      id: 'pro', nameKey: 'landingPlanPro', price: '9.90', periodKey: 'landingPerMonth',
-      featureKeys: ['landingProF1','landingProF2','landingProF3','landingProF4','landingProF5','landingProF6','landingProF7','landingProF8','landingProF9'],
-      ctaKey: 'landingTryPro', highlight: true, badgeKey: 'landingMostPopular',
-    },
-    {
-      id: 'business', nameKey: 'landingPlanBusiness', price: '29.90', periodKey: 'landingPerMonth',
-      featureKeys: ['landingBizF1','landingBizF2','landingBizF3','landingBizF4','landingBizF5','landingBizF6','landingBizF7','landingBizF8','landingBizF9'],
-      ctaKey: 'landingContactUs', highlight: false,
-    },
-  ];
+  // Le schede prezzo sono generate dai pacchetti reali: prezzo, ore standard
+  // e ore con voce premium sono tutti calcolati, mai scritti a mano.
+  const SCHEDE = PACCHETTI.map(p => ({
+    id: p.id,
+    nome: L(NOMI_PACCHETTO[p.id]) || p.nome,
+    euro: p.euro.toFixed(2).replace('.', ','),
+    ore: formattaDurata(p.secondi),
+    orePremium: formattaDurata(Math.floor(p.secondi / MOLTIPLICATORE_PREMIUM)),
+    inRilievo: !!p.consigliato,
+  }));
 
   const FAQ_KEYS = [
     { qKey: 'landingFaq1Q', aKey: 'landingFaq1A' },
@@ -90,8 +94,8 @@ export default function LandingPage() {
 
       {/* ── Navbar ── */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ fontSize: 20, fontWeight: 800 }}>
-          <span style={{ color: '#f97316' }}>Voice</span>Translate
+        <div style={{ fontSize: 20, fontWeight: 800, letterSpacing: -0.3 }}>
+          <span style={{ color: '#f97316' }}>Bar</span>Talk
         </div>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <a href="#features" style={{ color: '#a1a1aa', textDecoration: 'none', fontSize: 14 }}>{L('landingFeatures')}</a>
@@ -151,13 +155,13 @@ export default function LandingPage() {
           </a>
         </div>
 
-        {/* Stats */}
+        {/* Numeri veri, nessuna promessa non verificabile (via "99,9% uptime") */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 48, marginTop: 48, flexWrap: 'wrap' }}>
           {[
-            { num: '31', label: L('landingFeat3Title').replace(/[^0-9]/g, '') ? L('landingFeat3Title').split(' ').pop() : 'Languages' },
-            { num: '<500ms', label: 'Latency' },
-            { num: '6', label: 'AI Models' },
-            { num: '99.9%', label: 'Uptime' },
+            { num: String(LANGS.length), label: L('landingStatLangs') },
+            { num: formattaDurata(BONUS_BENVENUTO_SECONDI), label: L('landingStatGift') },
+            { num: '0', label: L('landingStatNoSub') },
+            { num: '<500ms', label: L('landingStatLatency') },
           ].map(s => (
             <div key={s.num} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 28, fontWeight: 800, color: '#f97316' }}>{s.num}</div>
@@ -173,7 +177,9 @@ export default function LandingPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
           {FEATURE_KEYS.map(f => (
             <div key={f.titleKey} style={{ background: '#18181b', borderRadius: 16, padding: 24, border: '1px solid #27272a' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>{f.icon}</div>
+              <div style={{ marginBottom: 14, opacity: 0.9 }}>
+                <Icon name={f.icona} size={26} color="#f97316" />
+              </div>
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>{L(f.titleKey)}</h3>
               <p style={{ fontSize: 14, color: '#a1a1aa', margin: 0, lineHeight: 1.5 }}>{L(f.descKey)}</p>
             </div>
@@ -183,65 +189,73 @@ export default function LandingPage() {
 
       {/* ── Pricing ── */}
       <section id="pricing" style={{ padding: '60px 24px', maxWidth: 1100, margin: '0 auto' }}>
-        <h2 style={{ textAlign: 'center', fontSize: 32, fontWeight: 700, marginBottom: 32 }}>{L('landingPricing')}</h2>
+        <h2 style={{ textAlign: 'center', fontSize: 32, fontWeight: 700, marginBottom: 10 }}>{L('landingPlansTitle')}</h2>
+        <p style={{ textAlign: 'center', fontSize: 16, color: '#a1a1aa', maxWidth: 520, margin: '0 auto 28px', lineHeight: 1.6 }}>
+          {L('landingPlansSub')}
+        </p>
 
-        {/* Billing toggle */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
-          <div style={{ background: '#18181b', borderRadius: 10, padding: 4, display: 'flex', gap: 4 }}>
-            {['monthly', 'yearly'].map(p => (
-              <button key={p} onClick={() => setBillingPeriod(p)} style={{
-                background: billingPeriod === p ? '#f97316' : 'transparent',
-                color: billingPeriod === p ? '#000' : '#a1a1aa',
-                border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer',
-                fontWeight: billingPeriod === p ? 700 : 500, fontSize: 14, fontFamily: FONT,
-              }}>
-                {p === 'monthly' ? L('landingBillingMonthly') : `${L('landingBillingYearly')} (${L('landingSave20')})`}
-              </button>
-            ))}
-          </div>
+        {/* Il regalo di benvenuto, che \u00E8 la vera porta d'ingresso */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          background: 'linear-gradient(135deg, #1a0f00, #18181b)', border: '1px solid #f9731640',
+          borderRadius: 14, padding: '14px 20px', maxWidth: 460, margin: '0 auto 36px',
+        }}>
+          <Icon name="gift" size={20} color="#f97316" />
+          <span style={{ fontSize: 15, fontWeight: 600 }}>{L('landingGiftBanner')}</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20 }}>
-          {PLAN_DATA.map(plan => {
-            const displayPrice = billingPeriod === 'yearly' && plan.price !== '0'
-              ? (parseFloat(plan.price.replace(',', '.')) * 10 / 12).toFixed(2).replace('.', ',')
-              : plan.price;
-            return (
-              <div key={plan.id} style={{
-                background: plan.highlight ? 'linear-gradient(135deg, #1a0f00, #18181b)' : '#18181b',
-                borderRadius: 16, padding: 28, position: 'relative',
-                border: plan.highlight ? '2px solid #f97316' : '1px solid #27272a',
-              }}>
-                {plan.badgeKey && (
-                  <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
-                    background: '#f97316', color: '#000', padding: '4px 16px', borderRadius: 20,
-                    fontSize: 12, fontWeight: 700 }}>
-                    {L(plan.badgeKey)}
-                  </div>
-                )}
-                <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>{L(plan.nameKey)}</h3>
-                <div style={{ marginBottom: 20 }}>
-                  <span style={{ fontSize: 36, fontWeight: 800 }}>{'\u20AC'}{displayPrice}</span>
-                  {plan.periodKey && <span style={{ color: '#71717a', fontSize: 14 }}>{L(plan.periodKey)}</span>}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+          {SCHEDE.map(s => (
+            <div key={s.id} style={{
+              background: s.inRilievo ? 'linear-gradient(135deg, #1a0f00, #18181b)' : '#18181b',
+              borderRadius: 16, padding: 28, position: 'relative',
+              border: s.inRilievo ? '2px solid #f97316' : '1px solid #27272a',
+            }}>
+              {s.inRilievo && (
+                <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
+                  background: '#f97316', color: '#000', padding: '4px 16px', borderRadius: 20,
+                  fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                  {L('landingMostPopular')}
                 </div>
-                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px' }}>
-                  {plan.featureKeys.map(fk => (
-                    <li key={fk} style={{ padding: '6px 0', fontSize: 14, color: '#d4d4d8', display: 'flex', gap: 8 }}>
-                      <span style={{ color: '#22c55e' }}>{'\u2713'}</span> {L(fk)}
-                    </li>
-                  ))}
-                </ul>
-                <Link href="/" style={{
-                  display: 'block', textAlign: 'center', padding: '12px 20px', borderRadius: 10,
-                  background: plan.highlight ? '#f97316' : '#27272a',
-                  color: plan.highlight ? '#000' : '#e4e4e7',
-                  textDecoration: 'none', fontWeight: 700, fontSize: 15,
-                }}>
-                  {L(plan.ctaKey)}
-                </Link>
+              )}
+              <h3 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 8px' }}>{s.nome}</h3>
+              <div style={{ marginBottom: 6 }}>
+                <span style={{ fontSize: 36, fontWeight: 800 }}>{'\u20AC'}{s.euro}</span>
               </div>
-            );
-          })}
+              {/* Quello che compri davvero: TEMPO, non un abbonamento */}
+              <div style={{ fontSize: 22, fontWeight: 700, color: '#f97316', marginBottom: 2 }}>{s.ore}</div>
+              <div style={{ fontSize: 14, color: '#a1a1aa', marginBottom: 18 }}>{L('landingOfTalk')}</div>
+
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 24px' }}>
+                {[
+                  `${s.orePremium} ${L('landingWithPremium')}`,
+                  L('landingNoExpiry'),
+                  L('landingNoSubscription'),
+                ].map(riga => (
+                  <li key={riga} style={{ padding: '6px 0', fontSize: 14, color: '#d4d4d8', display: 'flex', gap: 8 }}>
+                    <span style={{ color: '#22c55e' }}>{'\u2713'}</span> {riga}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/" style={{
+                display: 'block', textAlign: 'center', padding: '12px 20px', borderRadius: 10,
+                background: s.inRilievo ? '#f97316' : '#27272a',
+                color: s.inRilievo ? '#000' : '#e4e4e7',
+                textDecoration: 'none', fontWeight: 700, fontSize: 15,
+              }}>
+                {L('landingRecharge')}
+              </Link>
+            </div>
+          ))}
+        </div>
+
+        {/* La via d'uscita gratuita: chiavi proprie */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+          marginTop: 28, fontSize: 14, color: '#a1a1aa',
+        }}>
+          <Icon name="key" size={18} color="#71717a" />
+          {L('landingOwnKeysFree')}
         </div>
       </section>
 
@@ -275,7 +289,7 @@ export default function LandingPage() {
         <div style={{ fontSize: 13, color: '#3f3f46', marginTop: 8 }}>
           <a href="/privacy" style={{ color: '#3f3f46', marginRight: 16 }}>{L('landingFooterPrivacy')}</a>
           <a href="/terms" style={{ color: '#3f3f46', marginRight: 16 }}>{L('landingFooterTerms')}</a>
-          <a href="mailto:support@voicetranslate.app" style={{ color: '#3f3f46' }}>{L('landingFooterContact')}</a>
+          <a href={`mailto:${EMAIL_CONTATTO}`} style={{ color: '#3f3f46' }}>{L('landingFooterContact')}</a>
         </div>
       </footer>
     </div>
