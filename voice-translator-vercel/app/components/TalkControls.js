@@ -238,8 +238,10 @@ const TalkControls = memo(function TalkControls({
         )}
       </div>
 
+      {/* Non esiste nessun piano "Pro": esistono ricariche di minuti.
+          Prima questo tasto prometteva un abbonamento e portava al profilo. */}
       {isTrial && isHost && (
-        <button onClick={() => { endChatAndSave(); setTimeout(() => setView('account'), 300); }}
+        <button onClick={() => { endChatAndSave(); setTimeout(() => setView('credits'), 300); }}
           style={{marginTop:6, padding:'6px 16px', borderRadius:12, border:`1px solid ${S.colors.accent3Border}`,
             background:S.colors.accent3Bg, color:S.colors.textMuted, fontSize:11,
             cursor:'pointer', fontFamily:FONT, WebkitTapHighlightColor:'transparent'}}>

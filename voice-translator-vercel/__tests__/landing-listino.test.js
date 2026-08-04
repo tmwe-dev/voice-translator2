@@ -61,6 +61,34 @@ describe('listino pubblico', () => {
   });
 });
 
+describe('dentro l\'app', () => {
+  // Il listino falso non viveva solo su /landing: le stesse promesse
+  // ("Pro 14,99/mese", "500 traduzioni/giorno") erano nei file di lingua
+  // dell'app, e un tasto in chat prometteva un abbonamento inesistente.
+  it('nessuna lingua parla piu di piani mensili inesistenti', () => {
+    const finte = ['welcomeTierProDesc', 'welcomeTierStarterDesc', 'welcomeActivatePro',
+      'welcomeActivateStarter', 'welcomeUnlockPro', 'welcomePlan', 'signInPro',
+      'starterPackDesc', 'proMode', 'topProMode', 'freeLimitReached', 'upgradeForMore'];
+    for (const lingua of LINGUE) {
+      const k = chiavi(lingua);
+      for (const f of finte) expect(k[f], `${lingua}.${f}`).toBeUndefined();
+    }
+  });
+
+  it('nessun testo visibile promette un abbonamento al mese', () => {
+    for (const lingua of ['it', 'en', 'es', 'fr', 'de', 'pt']) {
+      const testi = Object.values(chiavi(lingua)).join(' ');
+      expect(testi, `${lingua}: c'è ancora un prezzo mensile`).not.toMatch(/\d+[.,]\d{2}\s*\/?\s*(mese|month|mes|mois|Monat)/i);
+    }
+  });
+
+  it('il numero di lingue non è scritto a mano nella Home', () => {
+    const home = fs.readFileSync(path.join(RADICE, 'app/components/HomeView.js'), 'utf8');
+    expect(home, 'usa LANGS.length, non un numero fisso').not.toMatch(/'\d+ lingue'/);
+    expect(home).toMatch(/LANGS\.length.*lingue/);
+  });
+});
+
 describe('file di lingua', () => {
   it('nessuna lingua conserva le chiavi degli abbonamenti inesistenti', () => {
     const morte = ['landingPlanFree','landingPlanPro','landingPlanBusiness','landingPerMonth',

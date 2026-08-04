@@ -184,7 +184,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
 
           {/* Striscia dei fatti: arricchisce senza appesantire */}
           <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
-            {['32 lingue', 'Crittografia E2E', 'Voce naturale'].map(f => (
+            {/* Il numero si conta, non si scrive: diceva 32 quando erano 44. */}
+            {[`${LANGS.length} lingue`, 'Crittografia E2E', 'Voce naturale'].map(f => (
               <span key={f} style={{
                 fontSize: 11, fontWeight: 650, color: C.textMuted, fontFamily: FONT,
                 display: 'inline-flex', alignItems: 'center', gap: 5,
