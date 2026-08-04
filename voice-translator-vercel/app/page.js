@@ -804,7 +804,13 @@ function HomeInner() {
     <AppProvider value={appCtxValue}>
       <SpatialBackdrop />
       <AmbienteVivo />
-      <div key={view} style={{ animation: 'vtPagina 0.42s cubic-bezier(0.33,0,0.2,1) both' }}>
+      {/* Contenitore a tutto schermo: le pagine usano position:fixed, quindi
+          NIENTE transform qui (creerebbe un contenitore alto zero e le
+          nasconderebbe). Dissolvenza di sola opacità, z-index sopra l'ambiente. */}
+      <div key={view} style={{
+        position: 'fixed', inset: 0, zIndex: 1,
+        animation: 'vtFadeIn 0.4s cubic-bezier(0.33,0,0.2,1) both',
+      }}>
         {node}
       </div>
     </AppProvider>
