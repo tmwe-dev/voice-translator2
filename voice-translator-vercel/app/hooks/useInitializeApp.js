@@ -80,6 +80,15 @@ export default function useInitializeApp({
       const refParam = urlParams.get('ref');
       if (refParam) auth.setPendingReferralCode(refParam);
 
+      // 4-bis. Regalo di minuti ricevuto da un amico (?regalo=GIFT-XXXX).
+      // Lo mettiamo nella stessa casella dei voucher: la batteria lo
+      // riscatta da sola appena c'è una sessione valida.
+      const regaloParam = urlParams.get('regalo');
+      if (regaloParam) {
+        localStorage.setItem('vt-voucher-pendente', regaloParam.toUpperCase());
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+
       // 5. Capture invite code (contacts system)
       const inviteParam = urlParams.get('invite');
       if (inviteParam) {

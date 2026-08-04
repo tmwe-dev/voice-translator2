@@ -79,7 +79,8 @@ function HelpView() {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: PALETTE.bgDeep,
+    // Fondo dal TEMA: prima era fisso e il tema chiaro restava nero.
+    bg: col.bg || PALETTE.bgDeep,
     textPrimary: col.textPrimary || PALETTE.grayLight,
     textSecondary: col.textSecondary || 'rgba(242,244,247,0.90)',
     textMuted: col.textMuted || 'rgba(242,244,247,0.60)',

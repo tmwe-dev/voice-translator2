@@ -62,12 +62,16 @@ export const toast = {
   }),
 };
 
+// Colori dalla tavolozza centrale, non inventati qui. Segni tipografici
+// al posto delle emoji: nell'app non entrano emoji, in nessun punto.
 const COLORS = {
-  info: { bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.3)', text: PALETTE.blue, icon: 'ℹ️' },
-  error: { bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.3)', text: '#f87171', icon: '⚠️' },
-  success: { bg: 'rgba(34,197,94,0.15)', border: 'rgba(34,197,94,0.3)', text: '#4ade80', icon: '✓' },
-  warning: { bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.3)', text: '#facc15', icon: '⚡' },
+  info: { tinta: PALETTE.blue, icon: 'i' },
+  error: { tinta: PALETTE.red, icon: '!' },
+  success: { tinta: PALETTE.green, icon: '✓' },
+  warning: { tinta: PALETTE.amber, icon: '!' },
 };
+// Da un colore pieno ricavo fondo e bordo trasparenti, senza riscrivere rgba a mano.
+const velo = (tinta, opacita) => `${tinta}${Math.round(opacita * 255).toString(16).padStart(2, '0')}`;
 
 const ToastContainer = memo(function ToastContainer() {
   const [toasts, setToasts] = useState([]);
@@ -88,7 +92,8 @@ const ToastContainer = memo(function ToastContainer() {
       pointerEvents: 'none',
     }} role="alert" aria-live="assertive">
       {toasts.map(t => {
-        const c = COLORS[t.type] || COLORS.info;
+        const base = COLORS[t.type] || COLORS.info;
+        const c = { ...base, bg: velo(base.tinta, 0.15), border: velo(base.tinta, 0.35), text: base.tinta };
         return (
           <div key={t.id} style={{
             display: 'flex', alignItems: 'center', gap: 8,
@@ -98,7 +103,11 @@ const ToastContainer = memo(function ToastContainer() {
             animation: 'vtSlideIn 0.2s ease-out',
             pointerEvents: 'auto',
           }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>{c.icon}</span>
+            <span style={{
+              flexShrink: 0, width: 20, height: 20, borderRadius: 999,
+              display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 800,
+              color: c.text, border: `1px solid ${c.border}`,
+            }}>{c.icon}</span>
             <span style={{ flex: 1, fontSize: 13, color: c.text, lineHeight: 1.4 }}>
               {t.message}
             </span>

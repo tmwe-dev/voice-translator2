@@ -77,6 +77,10 @@ export default function getStyles(theme = 'deep') {
   const palettes = {
     // ═══ DEEP SPACE — blu notte, vetri, stelle ═══
     deep: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#05070f',
       bgGradient: 'linear-gradient(168deg, #05070f 0%, #0a0f1f 45%, #101730 80%, #05070f 100%)',
       roomGradient: 'linear-gradient(168deg, #05070f 0%, #090e1d 45%, #0e1428 80%, #05070f 100%)',
       textPrimary: '#eef2ff',
@@ -120,6 +124,10 @@ export default function getStyles(theme = 'deep') {
     },
     // ═══ EMBER — scuro caldo, orange e ambra ═══
     ember: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#0d0805',
       bgGradient: 'linear-gradient(168deg, #0d0805 0%, #170e08 45%, #241409 80%, #0d0805 100%)',
       roomGradient: 'linear-gradient(168deg, #0d0805 0%, #150d07 45%, #201207 80%, #0d0805 100%)',
       textPrimary: '#fff4ea',
@@ -163,6 +171,10 @@ export default function getStyles(theme = 'deep') {
     },
     // ═══ AVORIO — nero caldo, luce d'ambra (tono A dello sciame) ═══
     avorio: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#070706',
       bgGradient: 'linear-gradient(168deg, #070706 0%, #0c0b09 45%, #12100c 80%, #070706 100%)',
       roomGradient: 'linear-gradient(168deg, #070706 0%, #0b0a08 45%, #100e0b 80%, #070706 100%)',
       textPrimary: '#f2efe8',
@@ -206,6 +218,10 @@ export default function getStyles(theme = 'deep') {
     },
     // ═══ LILLA — viola notte, lavanda (tono C dello sciame) ═══
     lilla: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#070510',
       bgGradient: 'linear-gradient(168deg, #070510 0%, #0c081c 45%, #130d2a 80%, #070510 100%)',
       roomGradient: 'linear-gradient(168deg, #070510 0%, #0b0719 45%, #100b24 80%, #070510 100%)',
       textPrimary: '#ece8f8',
@@ -249,6 +265,10 @@ export default function getStyles(theme = 'deep') {
     },
     // ═══ BLU & BIANCO — ghiaccio su blu profondo (tono E dello sciame) ═══
     blubianco: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#05070d',
       bgGradient: 'linear-gradient(168deg, #05070d 0%, #090e1a 45%, #0d1526 80%, #05070d 100%)',
       roomGradient: 'linear-gradient(168deg, #05070d 0%, #080d17 45%, #0b1220 80%, #05070d 100%)',
       textPrimary: '#f4f7fc',
@@ -292,6 +312,10 @@ export default function getStyles(theme = 'deep') {
     },
     // ═══ DAWN — chiaro, aria e contrasto ═══
     dawn: {
+      // Tinta piena del tema. Serve ai pannelli e alle pagine che non
+      // possono usare il gradiente: prima non esisteva, e ogni componente
+      // ripiegava su un nero fisso ignorando il tema chiaro.
+      bg: '#f7f8fc',
       bgGradient: 'linear-gradient(168deg, #f7f8fc 0%, #eef0f7 45%, #e9ecf4 80%, #f4f5f9 100%)',
       roomGradient: 'linear-gradient(168deg, #fafbfe 0%, #f1f3f9 60%, #eceef6 100%)',
       textPrimary: '#10131c',

@@ -40,7 +40,8 @@ function TaxiDriverView({ destId, decryptionKey }) {
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
-    bg: PALETTE.bgDeep,
+    // Fondo dal TEMA: prima era fisso e il tema chiaro restava nero.
+    bg: col.bg || PALETTE.bgDeep,
     textPrimary: col.textPrimary || PALETTE.grayLight,
     textMuted: col.textMuted || 'rgba(242,244,247,0.60)',
     card: col.glassCard || 'rgba(12,16,30,0.65)',

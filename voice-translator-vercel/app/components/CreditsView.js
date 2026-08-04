@@ -21,6 +21,9 @@ export default function CreditsView({ userAccount }) {
   const [codice, setCodice] = useState('');
   const [esito, setEsito] = useState('');
   const [caricando, setCaricando] = useState(false);
+  const [minutiRegalo, setMinutiRegalo] = useState(30);
+  const [esitoRegalo, setEsitoRegalo] = useState('');
+  const [regaloFatto, setRegaloFatto] = useState(null);
 
   const conToken = useCallback((extra = {}) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('vt-token') : null;
@@ -48,15 +51,46 @@ export default function CreditsView({ userAccount }) {
     } finally { setCaricando(false); }
   }
 
-  async function usaVoucher() {
+  // Un solo campo per due cose: i codici che iniziano con GIFT- sono
+  // regali di un altro utente, gli altri sono voucher promozionali.
+  async function usaCodice() {
     setEsito('...');
-    const r = await fetch('/api/wallet/voucher', {
+    const pulito = codice.trim().toUpperCase();
+    const eRegalo = pulito.startsWith('GIFT-');
+    const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ codice }),
+      body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
     });
     const d = await r.json();
     setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
     if (d.ok) { setCodice(''); carica(); }
+  }
+
+  // ── Regalare minuti a qualcuno ──
+  async function creaRegalo() {
+    const minuti = Math.floor(Number(minutiRegalo));
+    if (!minuti) return;
+    setEsitoRegalo('...');
+    try {
+      const r = await fetch('/api/wallet/regalo', {
+        method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ azione: 'invia', minuti }),
+      });
+      const d = await r.json();
+      if (!d.ok) { setEsitoRegalo(d.motivo || 'Non riuscito'); return; }
+      setRegaloFatto(d);
+      setEsitoRegalo('');
+      carica();
+    } catch {
+      setEsitoRegalo('Connessione assente');
+    }
+  }
+
+  function condividiRegalo() {
+    if (!regaloFatto) return;
+    const testo = `Ti regalo ${regaloFatto.testo} di conversazione tradotta su BarTalk: ${regaloFatto.link || regaloFatto.codice}`;
+    if (navigator.share) navigator.share({ text: testo }).catch(() => {});
+    else navigator.clipboard?.writeText(testo).then(() => setEsitoRegalo('Link copiato'), () => {});
   }
 
   const colore = COLORI[dati?.colore] || COLORI.verde;
@@ -135,19 +169,64 @@ export default function CreditsView({ userAccount }) {
             );
           })}
 
-          {/* Voucher */}
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px' }}>HAI UN VOUCHER?</div>
+          {/* Voucher o regalo ricevuto — un campo solo */}
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px' }}>HAI UN CODICE?</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <input value={codice} onChange={(e) => setCodice(e.target.value.toUpperCase())} placeholder="CODICE"
+            <input value={codice} onChange={(e) => setCodice(e.target.value.toUpperCase())} placeholder="VOUCHER O REGALO"
               style={{ flex: 1, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14,
                 background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
-            <button onClick={usaVoucher} disabled={!codice} style={{
+            <button onClick={usaCodice} disabled={!codice} style={{
               padding: '12px 18px', borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: FONT,
               fontSize: 14, fontWeight: 800, color: '#fff',
               background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
             }}>Usa</button>
           </div>
           {esito && <div style={{ fontSize: 12, marginTop: 6, fontFamily: FONT, color: esito.startsWith('Fatto') ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
+
+          {/* Regala minuti a qualcuno */}
+          {userAccount && (
+            <>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '18px 0 8px' }}>REGALA MINUTI</div>
+              {!regaloFatto ? (
+                <div style={card}>
+                  <div style={{ fontSize: 12.5, color: tc.textSecondary, fontFamily: FONT, lineHeight: 1.5, marginBottom: 10 }}>
+                    I minuti si scalano subito dal tuo credito. Se nessuno li riscatta entro 30 giorni, tornano a te.
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input type="number" min={1} max={600} value={minutiRegalo}
+                      onChange={(e) => setMinutiRegalo(e.target.value)}
+                      style={{ width: 92, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14,
+                        background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
+                    <span style={{ fontSize: 13, color: tc.textMuted, fontFamily: FONT, flex: 1 }}>minuti</span>
+                    <button onClick={creaRegalo} style={{
+                      padding: '12px 18px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: tc.textPrimary, background: 'transparent',
+                    }}>Crea regalo</button>
+                  </div>
+                  {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.rosso }}>{esitoRegalo}</div>}
+                </div>
+              ) : (
+                <div style={card}>
+                  <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT }}>REGALO PRONTO {'·'} {regaloFatto.testo}</div>
+                  <div style={{ fontSize: 20, fontWeight: 850, color: tc.accent2 || '#38e1ff', fontFamily: FONT, letterSpacing: 1, margin: '4px 0 10px' }}>
+                    {regaloFatto.codice}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={condividiRegalo} style={{
+                      flex: 1, padding: '12px 16px', borderRadius: 13, border: 'none', cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff',
+                      background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
+                    }}>Invia il regalo</button>
+                    <button onClick={() => { setRegaloFatto(null); setEsitoRegalo(''); }} style={{
+                      padding: '12px 16px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 700, color: tc.textSecondary, background: 'transparent',
+                    }}>Chiudi</button>
+                  </div>
+                  {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.verde }}>{esitoRegalo}</div>}
+                </div>
+              )}
+            </>
+          )}
 
           {/* Storico */}
           {dati?.storico?.length > 0 && (

@@ -72,13 +72,15 @@ export default function BatteryPill({ utente }) {
             }
           }
         }
-        // Voucher lasciato in attesa dall'onboarding
+        // Codice lasciato in attesa: dall'onboarding (voucher) o da un
+        // link di regalo (?regalo=GIFT-...). Il prefisso dice dove va.
         const pendente = localStorage.getItem('vt-voucher-pendente');
         if (pendente) {
           localStorage.removeItem('vt-voucher-pendente');
-          const r = await fetch('/api/wallet/voucher', {
+          const eRegalo = pendente.startsWith('GIFT-');
+          const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
             method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
-            body: JSON.stringify({ codice: pendente }),
+            body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pendente } : { codice: pendente }),
           });
           const d = await r.json().catch(() => ({}));
           setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));

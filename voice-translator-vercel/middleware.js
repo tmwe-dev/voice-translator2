@@ -45,9 +45,22 @@ const SECURITY_HEADERS = {
   'X-DNS-Prefetch-Control': 'on',
 };
 
+// ── Pagine di collaudo: utili in sviluppo, invisibili al pubblico ──
+// /testcenter, /debug e /startrek sono 2.168 righe di strumenti interni.
+// Le API dietro chiedono gia ADMIN_PASS, ma le pagine erano raggiungibili
+// da chiunque conoscesse l'indirizzo. Ora esistono solo se qualcuno
+// accende STRUMENTI_COLLAUDO=1 fra le variabili d'ambiente.
+const PAGINE_COLLAUDO = ['/testcenter', '/debug', '/startrek'];
+const COLLAUDO_ACCESO = process.env.STRUMENTI_COLLAUDO === '1' || process.env.NODE_ENV === 'development';
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
   const origin = request.headers.get('origin');
+
+  if (!COLLAUDO_ACCESO && PAGINE_COLLAUDO.some(p => pathname === p || pathname.startsWith(p + '/'))) {
+    // Response nativa: funziona sia nel runtime Edge sia nei test.
+    return new Response(null, { status: 404 });
+  }
 
   // ── Handle CORS preflight ──
   if (request.method === 'OPTIONS') {
