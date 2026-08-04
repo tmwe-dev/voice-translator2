@@ -17,7 +17,15 @@ const STILI = {
   chiaro: 'https://tiles.openfreemap.org/styles/positron',
 };
 
-export default function TaxiMap({ lat, lng, altezza = 340 }) {
+// ── INIZIO b.88 — la mappa serve in due misure ──
+// Oltre al riquadro grande del tassista serve una MINIATURA quadrata
+// dentro la barra destinazione. Due proprietà nuove, entrambe con il
+// valore di prima come predefinito: la pagina del tassista non cambia.
+//   comandi     = mostra i tasti +/−/centra (inutili in miniatura)
+//   interattiva = si può trascinare e zoomare
+// `altezza` accetta anche '100%' per riempire il contenitore.
+// ── FINE b.88 ──
+export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, interattiva = true, raggio = 20 }) {
   const { theme, S } = useApp();
   const boxRef = useRef(null);
   const mapRef = useRef(null);
@@ -45,9 +53,12 @@ export default function TaxiMap({ lat, lng, altezza = 340 }) {
         center: [lng, lat],
         zoom: 14.5,
         attributionControl: { compact: true },
-        doubleClickZoom: true,      // doppio tap/click = zoom in
-        touchZoomRotate: true,      // pinch
-        dragRotate: false,          // niente rotazioni accidentali col drag
+        // ── INIZIO b.88 — in miniatura la mappa è un'immagine, non un attrezzo ──
+        interactive: interattiva,
+        doubleClickZoom: interattiva,  // doppio tap/click = zoom in
+        touchZoomRotate: interattiva,  // pinch
+        dragRotate: false,             // niente rotazioni accidentali col drag
+        // ── FINE b.88 ──
       });
       mapRef.current = mappa;
 
@@ -91,22 +102,24 @@ export default function TaxiMap({ lat, lng, altezza = 340 }) {
   };
 
   return (
-    <div style={{ position: 'relative', height: altezza, borderRadius: 20, overflow: 'hidden',
+    <div style={{ position: 'relative', height: altezza, width: '100%', borderRadius: raggio, overflow: 'hidden',
       border: `1px solid ${S.colors?.cardBorder || 'rgba(160,190,255,0.14)'}` }}>
       <div ref={boxRef} style={{ position: 'absolute', inset: 0 }} />
       {!pronta && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', color: S.colors?.textMuted, fontSize: 13 }}>
-          Carico la mappa…
+          {comandi ? 'Carico la mappa…' : ''}
         </div>
       )}
-      {/* Bottoni zoom grandi (per chi non usa i gesti) */}
-      <div style={{ position: 'absolute', right: 10, bottom: 12, display: 'flex',
-        flexDirection: 'column', gap: 7, zIndex: 5 }}>
-        <button style={btn} onClick={() => zoom(1)} aria-label="Avvicina">+</button>
-        <button style={btn} onClick={() => zoom(-1)} aria-label="Allontana">−</button>
-        <button style={{ ...btn, fontSize: 15 }} onClick={centra} aria-label="Centra sulla destinazione">◎</button>
-      </div>
+      {/* Bottoni zoom grandi (per chi non usa i gesti) — non in miniatura */}
+      {comandi && (
+        <div style={{ position: 'absolute', right: 10, bottom: 12, display: 'flex',
+          flexDirection: 'column', gap: 7, zIndex: 5 }}>
+          <button style={btn} onClick={() => zoom(1)} aria-label="Avvicina">+</button>
+          <button style={btn} onClick={() => zoom(-1)} aria-label="Allontana">−</button>
+          <button style={{ ...btn, fontSize: 15 }} onClick={centra} aria-label="Centra sulla destinazione">◎</button>
+        </div>
+      )}
     </div>
   );
 }

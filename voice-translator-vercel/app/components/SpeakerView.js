@@ -6,6 +6,10 @@ import Icon from './Icon.js';
 import { toast } from './Toast.js';
 import TaxiDestinationPanel from './TaxiDestinationPanel.js';
 import TaxiQRView from './TaxiQRView.js';
+// ── INIZIO b.88 — mappa vettoriale anche qui, non solo dal tassista ──
+import TaxiMap from './TaxiMap.js';
+import { IconClose } from './Icons.js';
+// ── FINE b.88 ──
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 
@@ -52,6 +56,8 @@ function SpeakerView({ userToken }) {
   const [showLangPicker, setShowLangPicker] = useState(null);
   const [playing, setPlaying] = useState(false);
   const [mirrorMode, setMirrorMode] = useState(false);
+  // b.88 — la schermata per il tassista ha due schede affiancate
+  const [schedaTassista, setSchedaTassista] = useState('mappa'); // 'mappa' | 'testo'
   const [destination, setDestination] = useState('');
   const [destCoords, setDestCoords] = useState(null);
   const [destLoading, setDestLoading] = useState(false);
@@ -445,96 +451,146 @@ function SpeakerView({ userToken }) {
   // ═══════════════════════════════════════════════
   // MIRROR MODE — fullscreen split for face-to-face
   // ═══════════════════════════════════════════════
+  // ── INIZIO b.88 — schermata per il tassista, rifatta a DUE SCHEDE ──
+  // Prima: schermo diviso a metà, il mio testo sotto e la mappa schiacciata
+  // sopra a testa in giù, dentro un iframe raster chiaro. Illeggibile.
+  // Ora: due schede affiancate.
+  //   MAPPA → mappa vettoriale a tutto schermo, indirizzo sotto in grande
+  //   TESTO → il messaggio girato di 180° per chi sta di fronte, caratteri
+  //           da leggere a mezzo metro, scelta rapida della lingua e
+  //           riproduzione vocale nella lingua dell'autista
   if (mirrorMode) {
+    // Cosa deve leggere l'autista: l'ultima traduzione, o l'indirizzo.
+    const indirizzo = destCoords?.displayName?.split(',').slice(0, 4).join(', ') || '';
+    const testoAutista = translatedText || indirizzo;
+    // Caratteri: si legge da ~50 cm, quindi grande davvero. Scende solo
+    // se il testo è lungo, mai sotto una misura comoda.
+    const corpo = testoAutista.length > 120 ? 30 : testoAutista.length > 60 ? 40 : testoAutista.length > 25 ? 52 : 64;
+
+    const scheda = (id, etichetta) => (
+      <button key={id} onClick={() => { vibrate(10); setSchedaTassista(id); }} style={{
+        flex: 1, padding: '13px 10px', borderRadius: 13, border: 'none', cursor: 'pointer',
+        fontFamily: FONT, fontSize: 15, fontWeight: 800,
+        background: schedaTassista === id ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'rgba(255,255,255,0.06)',
+        color: schedaTassista === id ? '#fff' : 'rgba(255,255,255,0.55)',
+        WebkitTapHighlightColor: 'transparent',
+      }}>{etichetta}</button>
+    );
+
     return (
       <div style={{
         position: 'fixed', inset: 0, zIndex: 9999,
         background: '#000', display: 'flex', flexDirection: 'column',
         fontFamily: FONT, overflow: 'hidden',
-      }}
-        onClick={(e) => { if (e.clientY < 60) setMirrorMode(false); }}>
-
-        {/* Exit hint */}
-        <div style={{
-          position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)',
-          padding: '4px 16px', borderRadius: 20,
-          background: 'rgba(255,255,255,0.08)',
-          color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: 600, zIndex: 10,
-        }}>
-          tap per uscire
-        </div>
-
-        {/* MY TEXT (bottom half, normal orientation) */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          justifyContent: 'center', alignItems: 'center', padding: '20px 24px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}>
-          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.5)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>
-            {srcInfo?.flag} {srcInfo?.name}
-          </div>
-          <div style={{
-            fontSize: liveText.length > 80 ? 18 : liveText.length > 40 ? 26 : 34,
-            fontWeight: 700, color: 'rgba(255,255,255,0.6)',
-            textAlign: 'center', lineHeight: 1.4, maxWidth: '100%', wordBreak: 'break-word',
+      }}>
+        {/* Barra: le due schede affiancate + chiusura esplicita */}
+        <div style={{ display: 'flex', gap: 8, padding: '10px 12px 8px', alignItems: 'center' }}>
+          {scheda('mappa', 'Mappa')}
+          {scheda('testo', 'Testo')}
+          <button onClick={() => { vibrate(); setMirrorMode(false); }} aria-label="Chiudi" style={{
+            width: 46, height: 46, borderRadius: 13, flexShrink: 0,
+            background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.75)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            WebkitTapHighlightColor: 'transparent',
           }}>
-            {liveText || (recording ? '...' : 'Parla al microfono')}
-          </div>
+            <IconClose size={20} />
+          </button>
         </div>
 
-        {/* THEIR TEXT (top half, mirrored for person across) */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          justifyContent: 'center', alignItems: 'center', padding: '20px 24px',
-          transform: 'scaleX(-1) scaleY(-1)', overflow: 'hidden',
-        }}>
-          {destCoords ? (
-            <>
-              <div style={{ fontSize: 10, color: 'rgba(38,217,176,0.5)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 1 }}>
-                {destCoords.displayName?.split(',').slice(0, 2).join(',')}
-              </div>
-              {routeInfo && (
+        {schedaTassista === 'mappa' ? (
+          <>
+            {/* Mappa a tutto schermo — vettoriale, col tema, con i comandi */}
+            <div style={{ flex: 1, minHeight: 0, padding: '0 12px' }}>
+              {destCoords ? (
+                <TaxiMap lat={destCoords.lat} lng={destCoords.lon} altezza="100%" raggio={16} />
+              ) : (
                 <div style={{
-                  fontSize: 26, fontWeight: 800, color: C.accent, marginBottom: 12,
-                  textAlign: 'center', textShadow: `0 0 20px ${C.accent}40`,
+                  height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: 16, border: '1px dashed rgba(255,255,255,0.14)',
+                  color: 'rgba(255,255,255,0.45)', fontSize: 16, textAlign: 'center', padding: 24,
                 }}>
-                  {routeInfo.distKm} km &middot; {routeInfo.durationMin} min
+                  Nessuna destinazione impostata
                 </div>
               )}
-              <div style={{
-                flex: 1, width: '100%', borderRadius: 16, overflow: 'hidden',
-                border: `2px solid ${C.accent}30`, position: 'relative', minHeight: 0,
-              }}>
-                {(() => {
-                  const bbox = userPos ? computeBbox(userPos, destCoords, 0.015) : computeBbox(destCoords, destCoords, 0.008);
-                  const b = bbox || { minLon: destCoords.lon - 0.008, minLat: destCoords.lat - 0.006, maxLon: destCoords.lon + 0.008, maxLat: destCoords.lat + 0.006 };
+            </div>
+
+            {/* L'indirizzo sotto la mappa, leggibile */}
+            {destCoords && (
+              <div style={{ padding: '14px 20px 96px', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>
+                  {indirizzo}
+                </div>
+                {routeInfo && (
+                  <div style={{ fontSize: 17, fontWeight: 700, color: C.accent, marginTop: 6 }}>
+                    {routeInfo.distKm} km &middot; ~{routeInfo.durationMin} min
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Lingua dell'autista: scelta in un tocco */}
+            <div style={{ padding: '0 12px 8px' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', marginBottom: 7 }}>
+                LINGUA DELL{'’'}AUTISTA
+              </div>
+              <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+                {COMMON_LANGS.map(codice => {
+                  const l = getLang(codice);
+                  const scelta = targetLang === codice;
                   return (
-                    <iframe title="Map" src={`https://www.openstreetmap.org/export/embed.html?bbox=${b.minLon}%2C${b.minLat}%2C${b.maxLon}%2C${b.maxLat}&layer=mapnik&marker=${destCoords.lat}%2C${destCoords.lon}`}
-                      style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', inset: 0 }} />
+                    <button key={codice} onClick={() => { vibrate(10); setTargetLang(codice); }} style={{
+                      flexShrink: 0, padding: '9px 15px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
+                      background: scelta ? `${C.accent}22` : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${scelta ? `${C.accent}70` : 'rgba(255,255,255,0.10)'}`,
+                      color: scelta ? '#fff' : 'rgba(255,255,255,0.65)',
+                      fontSize: 15, fontWeight: scelta ? 800 : 600, whiteSpace: 'nowrap',
+                      WebkitTapHighlightColor: 'transparent',
+                    }}>
+                      {l?.flag} {l?.name || codice}
+                    </button>
                   );
-                })()}
+                })}
               </div>
-              {translatedText && (
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginTop: 8, textAlign: 'center', textShadow: `0 0 20px ${C.accent}30` }}>
-                  {translatedText}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 10, color: `${C.accent}80`, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>
-                {tgtInfo?.flag} {tgtInfo?.name}
-              </div>
+            </div>
+
+            {/* Il testo girato di 180°: lo legge chi sta di fronte */}
+            <div style={{
+              flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '10px 22px', overflow: 'hidden',
+            }}>
               <div style={{
-                fontSize: translatedText.length > 80 ? 20 : translatedText.length > 40 ? 30 : 42,
-                fontWeight: 800, color: '#fff', textAlign: 'center', lineHeight: 1.3,
-                maxWidth: '100%', wordBreak: 'break-word', textShadow: `0 0 30px ${C.accent}30`,
+                transform: 'rotate(180deg)',
+                fontSize: corpo, fontWeight: 800, color: '#fff',
+                textAlign: 'center', lineHeight: 1.25, letterSpacing: -0.5,
+                maxHeight: '100%', overflowY: 'auto', wordBreak: 'break-word',
+                textShadow: `0 0 34px ${C.accent}35`,
               }}>
-                {translatedText || (processing ? 'Traduzione...' : '')}
+                {testoAutista || (processing ? 'Traduco…' : 'Parla o scrivi: qui compare il messaggio per l’autista')}
               </div>
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Ascolto ad alta voce nella lingua dell'autista */}
+            {testoAutista && (
+              <div style={{ padding: '0 20px 96px', display: 'flex', justifyContent: 'center' }}>
+                <button onClick={() => { vibrate(); playTTS(testoAutista, targetLang); }} disabled={playing} style={{
+                  padding: '15px 30px', borderRadius: 16, cursor: playing ? 'default' : 'pointer',
+                  background: playing ? 'rgba(255,255,255,0.10)' : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+                  border: 'none', color: '#fff', fontSize: 17, fontWeight: 800, fontFamily: FONT,
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  boxShadow: playing ? 'none' : `0 10px 30px -8px ${C.accent}70`,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>
+                  <Icon name="speaker" size={20} color="#fff" />
+                  {playing ? 'Sto leggendo…' : `Leggi in ${tgtInfo?.name || targetLang}`}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+        {/* ── FINE b.88 ── */}
 
         {/* Bottom mic controls */}
         <div style={{
@@ -555,7 +611,8 @@ function SpeakerView({ userToken }) {
               animation: recording ? 'vtMirrorPulse 1.5s ease-in-out infinite' : 'none',
               WebkitTapHighlightColor: 'transparent',
             }}>
-            <span style={{ fontSize: 24, filter: 'brightness(2)' }}>{recording ? '⏹' : '🎤'}</span>
+            {/* b.88 — icone mono al posto delle emoji */}
+            <Icon name={recording ? 'stop' : 'mic'} size={26} color="#fff" />
           </button>
         </div>
 
@@ -624,7 +681,8 @@ function SpeakerView({ userToken }) {
             color: C.textMuted, WebkitTapHighlightColor: 'transparent',
             display: 'flex', alignItems: 'center', gap: 5,
           }}>
-          <span style={{ fontSize: 12 }}>{mode === 'batch' ? '⚡' : '🔴'}</span>
+          {/* b.88 — icone mono */}
+          <Icon name={mode === 'batch' ? 'zap' : 'stop'} size={12} color={C.textMuted} />
           {mode === 'batch' ? 'Live' : 'Batch'}
         </button>
 
@@ -635,9 +693,11 @@ function SpeakerView({ userToken }) {
             background: C.card, border: `1px solid ${C.cardBorder}`,
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            WebkitTapHighlightColor: 'transparent', fontSize: 16,
-          }}>
-          {'🪞'}
+            WebkitTapHighlightColor: 'transparent',
+          }}
+          aria-label="Mostra al tassista">
+          {/* b.88 — icona mono: due frecce, "gira lo schermo verso l'altro" */}
+          <Icon name="swap" size={17} color={C.accent} />
         </button>
       </header>
 
@@ -727,49 +787,62 @@ function SpeakerView({ userToken }) {
         </div>
       )}
 
-      {/* ═══ DESTINATION BAR (collapsible) ═══ */}
+      {/* ═══ BARRA DESTINAZIONE ═══ */}
+      {/* ── INIZIO b.88 — da fascia a riga compatta ──
+          Prima: <iframe> raster di openstreetmap.org alto 100px a tutta
+          larghezza. Su schermo largo diventava un lenzuolo chiaro con la
+          scritta OSM, fuori dal tema. Ora: miniatura quadrata di 76px con
+          la mappa VETTORIALE che segue il tema (TaxiMap, gia usata dal
+          tassista), indirizzo e distanza accanto, azioni a destra.
+          Nessuna funzione persa: "Mostra" e la X fanno esattamente
+          quello che facevano prima. */}
       {destCoords ? (
         <div style={{
-          margin: '0 16px 8px', borderRadius: 14, overflow: 'hidden',
+          margin: '0 16px 8px', padding: 8, borderRadius: 16,
+          display: 'flex', alignItems: 'center', gap: 12,
           background: C.card, border: `1px solid ${C.accent}20`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
         }}>
-          {/* Map preview */}
-          <div style={{ height: 100, position: 'relative' }}>
-            {(() => {
-              const bbox = userPos ? computeBbox(userPos, destCoords, 0.015) : computeBbox(destCoords, destCoords, 0.008);
-              const b = bbox || { minLon: destCoords.lon - 0.008, minLat: destCoords.lat - 0.006, maxLon: destCoords.lon + 0.008, maxLat: destCoords.lat + 0.006 };
-              return <iframe title="Map" src={`https://www.openstreetmap.org/export/embed.html?bbox=${b.minLon}%2C${b.minLat}%2C${b.maxLon}%2C${b.maxLat}&layer=mapnik&marker=${destCoords.lat}%2C${destCoords.lon}`}
-                style={{ width: '100%', height: '100%', border: 'none' }} />;
-            })()}
+          {/* Miniatura: immagine, non attrezzo — niente comandi, niente trascinamento */}
+          <div style={{ width: 76, height: 76, flexShrink: 0 }}>
+            <TaxiMap lat={destCoords.lat} lng={destCoords.lon}
+              altezza={76} comandi={false} interattiva={false} raggio={12} />
           </div>
-          <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: C.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {destCoords.displayName?.split(',').slice(0, 3).join(',')}
-              </div>
-              {routeInfo && (
-                <div style={{ fontSize: 10, color: C.accent, fontWeight: 700, marginTop: 2 }}>
-                  {routeInfo.distKm} km &middot; ~{routeInfo.durationMin} min
-                </div>
-              )}
+
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, marginBottom: 3 }}>
+              DESTINAZIONE
             </div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.3,
+              display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {destCoords.displayName?.split(',').slice(0, 3).join(',')}
+            </div>
+            {routeInfo && (
+              <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginTop: 3 }}>
+                {routeInfo.distKm} km &middot; ~{routeInfo.durationMin} min
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
             <button onClick={() => { vibrate(); setMirrorMode(true); }} style={{
-              padding: '5px 10px', borderRadius: 8,
+              padding: '8px 14px', borderRadius: 11,
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-              border: 'none', cursor: 'pointer', fontSize: 10, color: '#fff', fontWeight: 700, fontFamily: FONT,
+              border: 'none', cursor: 'pointer', fontSize: 12, color: '#fff', fontWeight: 700, fontFamily: FONT,
             }}>
               Mostra
             </button>
-            <button onClick={clearDestination} style={{
-              padding: '5px 8px', borderRadius: 8,
-              background: `${C.red}15`, border: `1px solid ${C.red}25`,
-              cursor: 'pointer', fontSize: 11, color: C.red, fontFamily: FONT,
+            <button onClick={clearDestination} aria-label="Togli la destinazione" style={{
+              padding: '7px 14px', borderRadius: 11,
+              background: 'transparent', border: `1px solid ${C.cardBorder}`,
+              cursor: 'pointer', fontSize: 11, color: C.textMuted, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             }}>
-              ✕
+              <IconClose size={12} /> Togli
             </button>
           </div>
         </div>
+      /* ── FINE b.88 ── */
       ) : (
         <div style={{ margin: '0 16px 8px', display: 'flex', gap: 6 }}>
           <button onClick={() => setShowDestPanel(!showDestPanel)} style={{
@@ -781,7 +854,8 @@ function SpeakerView({ userToken }) {
             display: 'flex', alignItems: 'center', gap: 8,
             WebkitTapHighlightColor: 'transparent',
           }}>
-            <span style={{ fontSize: 14 }}>📍</span>
+            {/* b.88 — icone mono */}
+            <Icon name="globe" size={14} color={C.textMuted} />
             <span style={{ fontSize: 11, color: C.textMuted, flex: 1, textAlign: 'left' }}>Destinazione rapida</span>
             <span style={{ fontSize: 12, color: C.textMuted }}>{showDestPanel ? '▼' : '+'}</span>
           </button>
@@ -793,7 +867,7 @@ function SpeakerView({ userToken }) {
             display: 'flex', alignItems: 'center', gap: 6,
             WebkitTapHighlightColor: 'transparent',
           }}>
-            <span style={{ fontSize: 14 }}>🚕</span>
+            <Icon name="doorCreate" size={14} color={C.accent} />
             <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>QR Taxi</span>
           </button>
         </div>
@@ -895,7 +969,11 @@ function SpeakerView({ userToken }) {
                     opacity: playing ? 0.5 : 1,
                     boxShadow: playing ? 'none' : `0 2px 12px ${C.accent}25`,
                   }}>
-                  {playing ? '⏳ ...' : '🔊 Ascolta'}
+                  {/* b.88 — icone mono */}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name={playing ? 'refresh' : 'speaker'} size={13} color="#fff" />
+                    {playing ? '...' : 'Ascolta'}
+                  </span>
                 </button>
                 <button onClick={() => { vibrate(); setMirrorMode(true); }}
                   style={{
@@ -903,7 +981,9 @@ function SpeakerView({ userToken }) {
                     background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
                     cursor: 'pointer', color: C.accent, fontFamily: FONT, fontSize: 11, fontWeight: 700,
                   }}>
-                  🪞 Mostra
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <Icon name="swap" size={13} color={C.accent} /> Mostra
+                  </span>
                 </button>
               </div>
             )}
@@ -922,7 +1002,7 @@ function SpeakerView({ userToken }) {
             }}>
             {item.destination && (
               <div style={{ fontSize: 9, color: C.accent, fontWeight: 700, marginBottom: 3 }}>
-                📍 {item.destination}
+                {item.destination}
               </div>
             )}
             <div style={{ fontSize: 12, color: C.textMuted }}>{getLang(item.sourceLang)?.flag} {item.original}</div>
@@ -958,17 +1038,18 @@ function SpeakerView({ userToken }) {
             <div style={{
               marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap',
             }}>
+              {/* b.88 — icone mono al posto delle emoji */}
               {[
-                { icon: '🎤', label: mode === 'batch' ? 'Tieni premuto' : 'Tap per parlare' },
-                { icon: '⌨️', label: 'Scrivi messaggio' },
-                { icon: '🪞', label: 'Mostra al tassista' },
+                { icona: 'mic', label: mode === 'batch' ? 'Tieni premuto' : 'Tap per parlare' },
+                { icona: 'send', label: 'Scrivi messaggio' },
+                { icona: 'swap', label: 'Mostra al tassista' },
               ].map((tip, i) => (
                 <div key={i} style={{
                   padding: '6px 12px', borderRadius: 10,
                   background: `${C.accent}08`, border: `1px solid ${C.accent}10`,
-                  fontSize: 10, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 5,
+                  fontSize: 10, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 6,
                 }}>
-                  <span>{tip.icon}</span> {tip.label}
+                  <Icon name={tip.icona} size={13} color={C.textMuted} /> {tip.label}
                 </div>
               ))}
             </div>
@@ -1007,7 +1088,8 @@ function SpeakerView({ userToken }) {
               WebkitTapHighlightColor: 'transparent', flexShrink: 0,
               boxShadow: `0 4px 16px ${C.accent}30`,
             }}>
-              <span style={{ fontSize: 18, filter: 'brightness(2)' }}>{processing ? '⏳' : '➤'}</span>
+              {/* b.88 — icone mono al posto delle emoji */}
+              <Icon name={processing ? 'refresh' : 'send'} size={19} color="#fff" />
             </button>
           ) : (
             <button
@@ -1027,9 +1109,8 @@ function SpeakerView({ userToken }) {
                 WebkitTapHighlightColor: 'transparent',
                 boxShadow: recording ? '0 0 30px rgba(255,59,48,0.4)' : `0 4px 16px ${C.accent}30`,
               }}>
-              <span style={{ fontSize: 18, filter: 'brightness(2)' }}>
-                {processing ? '⏳' : recording ? '⏹' : '🎤'}
-              </span>
+              {/* b.88 — icone mono al posto delle emoji */}
+              <Icon name={processing ? 'refresh' : recording ? 'stop' : 'mic'} size={19} color="#fff" />
             </button>
           )}
         </div>
