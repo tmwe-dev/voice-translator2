@@ -6,6 +6,7 @@ import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import SciameOnboarding from './SciameOnboarding.js';
+import { IconGlobe, IconMic, IconBattery } from './Icons.js';
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -153,11 +154,11 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
   const popularLangs = ['it', 'en', 'es', 'fr', 'de', 'th', 'zh', 'ja', 'pt', 'ar', 'ko', 'ru'].map(c => LANGS.find(l => l.code === c)).filter(Boolean);
   const displayLangs = showAllLangs ? LANGS : popularLangs;
 
-  // Feature pills data
+  // Feature pills — icone MONO a filo sottile, mai emoji
   const features = [
-    { icon: '🌍', text: Lf('featureTranslate', 'Traduzione AI istantanea'), color: D.neon1 },
-    { icon: '🎙️', text: Lf('featureVoices', 'Voci premium ElevenLabs'), color: D.neon2 },
-    { icon: '⚡', text: Lf('featureFree', '30 min gratis'), color: D.neon4 },
+    { icon: <IconGlobe size={19} />, text: Lf('featureTranslate', 'Traduzione AI istantanea'), color: D.neon1 },
+    { icon: <IconMic size={19} />, text: Lf('featureVoices', 'Voci premium ElevenLabs'), color: D.neon2 },
+    { icon: <IconBattery size={19} />, text: Lf('featureFree', '30 minuti in regalo'), color: D.neon4 },
   ];
 
   // Progress indicator
@@ -289,7 +290,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                   border: `1px solid ${f.color}18`,
                   ...stagger(3 + i),
                 }}>
-                  <span style={{ fontSize: 20 }}>{f.icon}</span>
+                  <span style={{ lineHeight: 0, color: f.color, display: 'flex' }}>{f.icon}</span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: D.textSoft }}>{f.text}</span>
                 </div>
               ))}
@@ -322,15 +323,20 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               </CTAButton>
             </div>
 
-            {/* Language flags ticker */}
+            {/* Le lingue: i NOMI, non le bandierine — sobrio e leggibile */}
             <div style={{
-              display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap',
-              marginTop: 32, opacity: 0.4,
-              ...stagger(8),
+              display: 'flex', gap: '7px 14px', justifyContent: 'center', flexWrap: 'wrap',
+              marginTop: 34, maxWidth: 400, ...stagger(8),
             }}>
-              {['🇮🇹','🇬🇧','🇪🇸','🇫🇷','🇩🇪','🇹🇭','🇨🇳','🇯🇵','🇰🇷','🇧🇷','🇸🇦','🇷🇺','🇹🇷','🇻🇳','🇮🇳'].map((f, i) => (
-                <span key={i} style={{ fontSize: 16 }}>{f}</span>
+              {['Italiano','English','Español','Français','Deutsch','ไทย','中文','日本語','한국어','Português','العربية','Русский'].map((nome, i) => (
+                <span key={i} style={{
+                  fontSize: 11.5, fontWeight: 600, color: D.textDim, letterSpacing: 0.2,
+                  opacity: 0.55,
+                }}>{nome}</span>
               ))}
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: D.neon2, opacity: 0.8 }}>
+                +33 altre
+              </span>
             </div>
           </div>
         )}
