@@ -22,6 +22,23 @@ const MESH = {
     'radial-gradient(36% 42% at 82% 16%, rgba(200,80,30,0.18), transparent 70%)',
     'radial-gradient(50% 44% at 60% 88%, rgba(255,180,60,0.12), transparent 70%)',
   ].join(','),
+  // Avorio, lilla e blubianco mancavano: ricadevano sul mesh BLU di deep,
+  // quindi tre temi su sei avevano lo sfondo di un altro tema.
+  avorio: [
+    'radial-gradient(42% 38% at 18% 22%, rgba(255,180,84,0.16), transparent 70%)',
+    'radial-gradient(36% 42% at 82% 16%, rgba(210,214,225,0.12), transparent 70%)',
+    'radial-gradient(50% 44% at 60% 88%, rgba(242,239,232,0.10), transparent 70%)',
+  ].join(','),
+  lilla: [
+    'radial-gradient(42% 38% at 18% 22%, rgba(167,139,250,0.26), transparent 70%)',
+    'radial-gradient(36% 42% at 82% 16%, rgba(120,80,255,0.18), transparent 70%)',
+    'radial-gradient(50% 44% at 60% 88%, rgba(201,184,245,0.13), transparent 70%)',
+  ].join(','),
+  blubianco: [
+    'radial-gradient(42% 38% at 18% 22%, rgba(130,175,255,0.24), transparent 70%)',
+    'radial-gradient(36% 42% at 82% 16%, rgba(52,92,170,0.20), transparent 70%)',
+    'radial-gradient(50% 44% at 60% 88%, rgba(244,247,252,0.10), transparent 70%)',
+  ].join(','),
   dawn: [
     'radial-gradient(42% 38% at 18% 22%, rgba(61,99,232,0.14), transparent 70%)',
     'radial-gradient(36% 42% at 82% 16%, rgba(150,110,255,0.10), transparent 70%)',

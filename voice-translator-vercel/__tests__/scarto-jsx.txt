@@ -1,0 +1,70 @@
+// ═══════════════════════════════════════════════════════════════
+// GUARDIA CONTRO IL BUG DI b.80 — "non si vede alcun menu"
+//
+// In b.80 avevo avvolto le pagine in un contenitore con una
+// TRASFORMAZIONE. In CSS una trasformazione su un antenato diventa il
+// riferimento per i figli position:fixed — e quel contenitore era alto
+// ZERO, quindi tutte le pagine collassavano a zero pixel: schermo con
+// il solo sciame.
+//
+// Questi test montano davvero i componenti di sfondo e controllano la
+// geometria: devono coprire lo schermo, stare DIETRO (z-index 0) e non
+// intercettare i clic.
+// ═══════════════════════════════════════════════════════════════
+import React from 'react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { render, cleanup } from '@testing-library/react';
+import fs from 'fs';
+import path from 'path';
+import Sciame from '../app/components/Sciame.js';
+import SpatialBackdrop from '../app/components/SpatialBackdrop.js';
+import { AppProvider } from '../app/contexts/AppContext.js';
+import getStyles from '../app/lib/styles.js';
+
+// jsdom non disegna: basta che il contesto 2D esista.
+HTMLCanvasElement.prototype.getContext = vi.fn(() => ({
+  fillRect: vi.fn(), clearRect: vi.fn(), beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(),
+}));
+
+const conTema = (nodo, tema = 'deep') => render(
+  <AppProvider value={{ theme: tema, S: getStyles(tema), L: (k) => k }}>{nodo}</AppProvider>
+);
+
+afterEach(cleanup);
+
+describe('sfondi', () => {
+  it('lo sciame copre lo schermo, sta dietro e non ruba i clic', () => {
+    const { container } = conTema(<Sciame modo="velo" />);
+    const tela = container.querySelector('canvas');
+    expect(tela, 'il canvas dello sciame non è stato montato').toBeTruthy();
+    expect(tela.style.position).toBe('fixed');
+    expect(tela.style.inset).toBe('0px');
+    expect(tela.style.zIndex).toBe('0');
+    expect(tela.style.pointerEvents).toBe('none');
+  });
+
+  it('lo sciame si monta in entrambi i modi e in tutti i temi', () => {
+    for (const tema of ['deep', 'ember', 'avorio', 'lilla', 'blubianco', 'dawn']) {
+      for (const modo of ['vivo', 'velo']) {
+        const { container } = conTema(<Sciame modo={modo} fase={1} />, tema);
+        expect(container.querySelector('canvas'), `${tema}/${modo}`).toBeTruthy();
+        cleanup();
+      }
+    }
+  });
+
+  it('lo sfondo spaziale sta dietro e non ruba i clic', () => {
+    const { container } = conTema(<SpatialBackdrop />);
+    const sfondo = container.firstChild;
+    expect(sfondo.style.position).toBe('fixed');
+    expect(sfondo.style.zIndex).toBe('0');
+    expect(sfondo.style.pointerEvents).toBe('none');
+  });
+
+  it('nessuna trasformazione avvolge le pagine in page.js (il bug di b.80)', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'app', 'page.js'), 'utf8');
+    const wrap = src.slice(src.indexOf('const wrap ='), src.indexOf('const wrap =') + 600);
+    expect(wrap, 'un transform qui rende invisibili le pagine position:fixed')
+      .not.toMatch(/transform|scale\(|translateY/);
+  });
+});

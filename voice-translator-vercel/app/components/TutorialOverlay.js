@@ -4,7 +4,7 @@ import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
-import SciameOnboarding from './SciameOnboarding.js';
+import Sciame from './Sciame.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -131,7 +131,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
         onClick={() => setShowTutorial(false)}
       >
         {/* Lo sciame vive anche dietro il tutorial: le forme cambiano coi passi */}
-        <SciameOnboarding fase={tutorialStep % 3} />
+        <Sciame modo="vivo" fase={tutorialStep % 3} />
         <div
           key={tutorialStep}
           style={{

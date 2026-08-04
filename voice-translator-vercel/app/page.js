@@ -73,7 +73,7 @@ const DetailView = lazy(() => import('./components/DetailView.js'));
 // ═══ Context provider for prop drilling elimination ═══
 import { AppProvider } from './contexts/AppContext.js';
 import SpatialBackdrop from './components/SpatialBackdrop.js';
-import PolvereBackdrop from './components/PolvereBackdrop.js';
+import Sciame from './components/Sciame.js';
 
 
 export default function Home() {
@@ -797,7 +797,7 @@ function HomeInner() {
       creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
     },
   };
-  const wrap = (node) => <AppProvider value={appCtxValue}><SpatialBackdrop /><PolvereBackdrop />{node}</AppProvider>;
+  const wrap = (node) => <AppProvider value={appCtxValue}><SpatialBackdrop /><Sciame modo="velo" />{node}</AppProvider>;
 
   // =============================================
   // RENDER
