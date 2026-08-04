@@ -16,12 +16,12 @@ const FAQ_ITEMS = [
   {
     q: 'Come funziona la traduzione?',
     a: 'Parla o scrivi nella tua lingua. BarTalk traduce automaticamente il testo e lo legge ad alta voce nella lingua del destinatario usando voci neurali di alta qualità.',
-    icon: '🌐',
+    icon: '',
   },
   {
     q: 'TaxiTalk — come si usa?',
-    a: 'Apri TaxiTalk dalla home. Seleziona le lingue, tieni premuto il microfono per parlare, rilascia per tradurre. Usa 🪞 per mostrare la traduzione specchiata al tassista. Puoi anche aggiungere una destinazione con mappa.',
-    icon: '🚕',
+    a: 'Apri TaxiTalk dalla home. Seleziona le lingue, tieni premuto il microfono per parlare, rilascia per tradurre. Usa per mostrare la traduzione specchiata al tassista. Puoi anche aggiungere una destinazione con mappa.',
+    icon: '',
   },
   {
     q: 'Quanto costa BarTalk?',
@@ -31,47 +31,47 @@ const FAQ_ITEMS = [
   {
     q: 'Come creo una stanza?',
     a: 'Dalla home, tocca "Crea Stanza". Scegli la lingua principale, la modalità (Chat, Classroom, Conference...) e condividi il codice o il QR con gli invitati.',
-    icon: '🏠',
+    icon: '',
   },
   {
     q: 'Quante lingue sono supportate?',
     a: 'BarTalk supporta 25+ lingue con traduzione e voci neurali: italiano, inglese, spagnolo, francese, tedesco, portoghese, cinese, giapponese, coreano, arabo, hindi, russo, turco, tailandese, vietnamita e altre.',
-    icon: '🗣️',
+    icon: '',
   },
   {
     q: 'La modalità Live è diversa dalla Batch?',
     a: 'Batch: tieni premuto il mic, parla, rilascia → traduzione completa. Live: tap per attivare traduzione continua in tempo reale con Deepgram. La Live è ideale per conversazioni fluide faccia-a-faccia.',
-    icon: '⚡',
+    icon: '',
   },
   {
     q: 'Come funziona la modalità Mirror?',
-    a: 'In TaxiTalk, tocca 🪞 per mostrare lo schermo specchiato. Il testo tradotto appare capovolto così la persona di fronte può leggerlo. Si attiva anche automaticamente capovolgendo il telefono.',
-    icon: '🪞',
+    a: 'In TaxiTalk, tocca per mostrare lo schermo specchiato. Il testo tradotto appare capovolto così la persona di fronte può leggerlo. Si attiva anche automaticamente capovolgendo il telefono.',
+    icon: '',
   },
   {
     q: 'Posso clonare la mia voce?',
     a: 'Sì! Vai in Impostazioni → Voice Clone. Registra 30 secondi della tua voce e le traduzioni verranno lette con un timbro simile al tuo. Funziona con ElevenLabs.',
-    icon: '🎭',
+    icon: '',
   },
   {
     q: 'Come invito qualcuno?',
     a: 'Dopo aver creato una stanza, usa il pulsante "Invita" per generare un link. Condividilo via WhatsApp, Telegram, SMS o email. L\'invitato si unirà con un click, senza bisogno di account.',
-    icon: '📨',
+    icon: '',
   },
   {
     q: 'I messaggi sono privati?',
     a: 'I messaggi nelle stanze sono crittografati in transito. Le stanze si cancellano automaticamente dopo l\'inattività. Nessun messaggio viene conservato sui nostri server a lungo termine.',
-    icon: '🔒',
+    icon: '',
   },
 ];
 
 const FEATURES = [
-  { icon: '🎙️', title: 'Traduzione vocale', desc: 'Parla e ascolta traduzioni in tempo reale' },
-  { icon: '🚕', title: 'TaxiTalk', desc: 'Comunica con tassisti e stranieri faccia a faccia' },
-  { icon: '👥', title: 'Stanze multilingue', desc: 'Chat di gruppo con traduzione automatica' },
-  { icon: '🌍', title: 'Mondo', desc: 'Scopri stanze pubbliche da tutto il mondo' },
-  { icon: '🪞', title: 'Modalità Mirror', desc: 'Mostra la traduzione specchiata a chi hai davanti' },
-  { icon: '🎭', title: 'Voice Clone', desc: 'Le traduzioni parlano con la tua voce' },
+  { icon: '', title: 'Traduzione vocale', desc: 'Parla e ascolta traduzioni in tempo reale' },
+  { icon: '', title: 'TaxiTalk', desc: 'Comunica con tassisti e stranieri faccia a faccia' },
+  { icon: '', title: 'Stanze multilingue', desc: 'Chat di gruppo con traduzione automatica' },
+  { icon: '', title: 'Mondo', desc: 'Scopri stanze pubbliche da tutto il mondo' },
+  { icon: '', title: 'Modalità Mirror', desc: 'Mostra la traduzione specchiata a chi hai davanti' },
+  { icon: '', title: 'Voice Clone', desc: 'Le traduzioni parlano con la tua voce' },
 ];
 
 function HelpView() {

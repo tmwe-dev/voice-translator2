@@ -36,7 +36,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
           </div>
           <div style={S.card}>
             <div style={{textAlign:'center', padding:'24px 0'}}>
-              <div style={{fontSize:40, marginBottom:12}}>{'🔑'}</div>
+              <div style={{fontSize:40, marginBottom:12}}>{''}</div>
               <div style={{fontSize:15, fontWeight:600, marginBottom:8}}>Login richiesto</div>
               <div style={{fontSize:13, color:'rgba(255,255,255,0.6)', marginBottom:20, lineHeight:1.5}}>
                 Per salvare le tue chiavi API devi prima accedere al tuo account.

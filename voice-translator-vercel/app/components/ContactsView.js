@@ -177,7 +177,7 @@ export default function ContactsView({
             backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             borderRadius: 14, padding: '10px 14px',
           }}>
-            <span style={{ fontSize: 14, opacity: 0.4 }}>🔍</span>
+            <span style={{ fontSize: 14, opacity: 0.4 }}></span>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Cerca contatti..."
               style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: C.textPrimary, fontSize: 13, fontFamily: FONT }} />
@@ -222,7 +222,7 @@ export default function ContactsView({
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 opacity: deviceImporting ? 0.5 : 1,
               }}>
-                📖 {deviceImporting ? '...' : 'Rubrica'}
+                {deviceImporting ? '...' : 'Rubrica'}
               </button>
             )}
             <button onClick={handleCreateInvite} style={{
@@ -231,7 +231,7 @@ export default function ContactsView({
               color: C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             }}>
-              📨 Invita amico
+              Invita amico
             </button>
           </div>
 
@@ -259,10 +259,10 @@ export default function ContactsView({
           <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>Chi riceve il link diventa tuo contatto</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
             {[
-              { id: 'whatsapp', icon: '💬', label: 'WhatsApp', color: '#25D366' },
-              { id: 'telegram', icon: '✈️', label: 'Telegram', color: '#0088cc' },
-              { id: 'sms', icon: '📱', label: 'SMS', color: '#FF9500' },
-              { id: 'email', icon: '📧', label: 'Email', color: C.accent },
+              { id: 'whatsapp', icon: '', label: 'WhatsApp', color: '#25D366' },
+              { id: 'telegram', icon: '', label: 'Telegram', color: '#0088cc' },
+              { id: 'sms', icon: '', label: 'SMS', color: '#FF9500' },
+              { id: 'email', icon: '', label: 'Email', color: C.accent },
             ].map(ch => (
               <button key={ch.id} onClick={() => handleShare(ch.id)} style={{
                 padding: '9px 8px', borderRadius: 12, cursor: 'pointer',
@@ -282,7 +282,7 @@ export default function ContactsView({
               color: linkCopied ? C.green : C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
-              {linkCopied ? '✓ Copiato!' : '🔗 Copia link'}
+              {linkCopied ? '✓ Copiato!' : 'Copia link'}
             </button>
             {typeof navigator !== 'undefined' && navigator.share && (
               <button onClick={() => handleShare('native')} style={{
@@ -291,7 +291,7 @@ export default function ContactsView({
                 color: C.textPrimary, fontSize: 11, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               }}>
-                📤 Altro...
+                Altro...
               </button>
             )}
           </div>
@@ -313,7 +313,7 @@ export default function ContactsView({
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
-            }}>👥</div>
+            }}></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>Nessun contatto</div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
               Aggiungi amici per email o invitali con un link!
@@ -329,7 +329,7 @@ export default function ContactsView({
                 padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `${C.purple}12`, border: `1px solid ${C.purple}20`,
                 color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
-              }}>📨 Invita</button>
+              }}>Invita</button>
             </div>
           </div>
         ) : (
@@ -362,7 +362,7 @@ export default function ContactsView({
                     <span style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {contact.name || contact.email.split('@')[0]}
                     </span>
-                    <span style={{ fontSize: 15, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.flag || '🌍'}</span>
+                    <span style={{ fontSize: 15, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.flag || ''}</span>
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
                     {contact.online ? 'Online' : contact.lastSeen ? `Visto ${formatLastSeen(contact.lastSeen)} fa` : 'Offline'}
@@ -377,7 +377,7 @@ export default function ContactsView({
                     border: `1px solid ${contact.online ? `${C.green}25` : `${C.accent}18`}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                     WebkitTapHighlightColor: 'transparent',
-                  }}>💬</button>
+                  }}></button>
                   {confirmRemove === contact.email ? (
                     <button onClick={async () => { await removeContact(contact.email); setConfirmRemove(null); }} style={{
                       width: 38, height: 38, borderRadius: 12, cursor: 'pointer',

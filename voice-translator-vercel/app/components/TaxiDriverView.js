@@ -203,7 +203,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🚕</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}></div>
           <div style={{ fontSize: 14, color: C.textMuted }}>Caricamento destinazione...</div>
         </div>
       </div>
@@ -214,7 +214,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}></div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
           <button onClick={() => setView('home')} style={{
             padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
@@ -237,7 +237,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🚕</div>
+          <div style={{ fontSize: 56, marginBottom: 16 }}></div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
             TaxiTalk
           </div>
@@ -286,7 +286,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 8 }}>
-            🚕 TaxiTalk
+            TaxiTalk
             <span style={{
               fontSize: 9, fontWeight: 700, padding: '2px 8px', borderRadius: 6,
               background: `${C.accent}12`, color: C.accent,
@@ -300,7 +300,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           background: C.card, border: `1px solid ${C.cardBorder}`,
           color: C.textMuted, fontSize: 10, fontWeight: 600, fontFamily: FONT,
         }}>
-          🌐 Lingua
+          Lingua
         </button>
       </header>
 
@@ -320,7 +320,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           ) : (
             <>
               <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-                📍 Destinazione
+                Destinazione
               </div>
               <div style={{
                 fontSize: 22, fontWeight: 800, color: C.textPrimary, lineHeight: 1.3, marginBottom: 8,
@@ -332,22 +332,22 @@ function TaxiDriverView({ destId, decryptionKey }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {destination.terminal && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>✈️</span> <strong>{destination.terminal}</strong>
+                    <span></span> <strong>{destination.terminal}</strong>
                   </div>
                 )}
                 {destination.hotelName && (
                   <div style={{ fontSize: 14, color: C.textPrimary, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🏨</span> <strong>{destination.hotelName}</strong>
+                    <span></span> <strong>{destination.hotelName}</strong>
                   </div>
                 )}
                 {destination.entrance && (
                   <div style={{ fontSize: 13, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🚪</span> {destination.entrance}
+                    <span></span> {destination.entrance}
                   </div>
                 )}
                 {destination.flightNumber && (
                   <div style={{ fontSize: 13, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span>🛫</span> {destination.flightNumber}
+                    <span></span> {destination.flightNumber}
                   </div>
                 )}
               </div>
@@ -356,7 +356,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               {destination.stops?.length > 0 && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 4 }}>
-                    📌 Fermate intermedie
+                    Fermate intermedie
                   </div>
                   {destination.stops.map((stop, i) => (
                     <div key={i} style={{
@@ -379,7 +379,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
                   background: 'rgba(255,255,255,0.03)',
                   fontSize: 13, color: C.textMuted, fontStyle: 'italic', lineHeight: 1.5,
                 }}>
-                  📝 {translatedNotes || destination.notes}
+                  {translatedNotes || destination.notes}
                 </div>
               )}
             </>
@@ -450,7 +450,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
               color: C.accent, fontSize: 13, fontWeight: 700, fontFamily: FONT,
             }}>
-              🗺️ Navigatore
+              Navigatore
             </button>
             <button onClick={() => setView('speaker')} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
@@ -458,7 +458,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
-              💬 Parla con passeggero
+              Parla con passeggero
             </button>
           </>
         )}

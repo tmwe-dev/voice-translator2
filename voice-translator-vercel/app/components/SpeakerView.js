@@ -87,6 +87,7 @@ function SpeakerView({ userToken }) {
   const scrollRef = useRef(null);
   const speechRecRef = useRef(null);
   const fetchRouteRef = useRef(null);
+  const campoTestoRef = useRef(null); // b.90 — per mettere a fuoco il campo
 
   // ── Fetch Deepgram key on mount ──
   useEffect(() => {
@@ -630,6 +631,13 @@ function SpeakerView({ userToken }) {
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100dvh',
       background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+      // ── INIZIO b.90 — spazio per la barra di navigazione ──
+      // Prima il campo di scrittura finiva SOTTO il menu fisso (alto 76px)
+      // e diventava invisibile: si vedeva il suggerimento "Scrivi
+      // messaggio" ma non c'era modo di scrivere.
+      boxSizing: 'border-box',
+      paddingBottom: 'calc(76px + env(safe-area-inset-bottom))',
+      // ── FINE b.90 ──
     }}>
 
       {/* ── Ambient background orb ── */}
@@ -717,7 +725,7 @@ function SpeakerView({ userToken }) {
             display: 'flex', alignItems: 'center', gap: 8,
             WebkitTapHighlightColor: 'transparent',
           }}>
-          <span style={{ fontSize: 22 }}>{srcInfo?.flag || '🌐'}</span>
+          <span style={{ fontSize: 22 }}>{srcInfo?.flag || ''}</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{srcInfo?.name || sourceLang}</div>
             <div style={{ fontSize: 9, color: C.textMuted }}>Parlo in</div>
@@ -748,7 +756,7 @@ function SpeakerView({ userToken }) {
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{tgtInfo?.name || targetLang}</div>
             <div style={{ fontSize: 9, color: C.textMuted }}>Traduci in</div>
           </div>
-          <span style={{ fontSize: 22 }}>{tgtInfo?.flag || '🌐'}</span>
+          <span style={{ fontSize: 22 }}>{tgtInfo?.flag || ''}</span>
         </button>
       </div>
 
@@ -1025,7 +1033,7 @@ function SpeakerView({ userToken }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 36,
             }}>
-              🗣️
+            
             </div>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
               Parla o scrivi
@@ -1038,20 +1046,28 @@ function SpeakerView({ userToken }) {
             <div style={{
               marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap',
             }}>
-              {/* b.88 — icone mono al posto delle emoji */}
+              {/* ── INIZIO b.90 — erano finti pulsanti ──
+                  Avevano icona, bordo e aria da tasto, ma erano <div>:
+                  ci cliccavi sopra e non succedeva niente. Ora sono
+                  pulsanti veri, e quello che è solo un'istruzione ("tieni
+                  premuto") è scritto come istruzione, non come tasto. */}
               {[
-                { icona: 'mic', label: mode === 'batch' ? 'Tieni premuto' : 'Tap per parlare' },
-                { icona: 'send', label: 'Scrivi messaggio' },
-                { icona: 'swap', label: 'Mostra al tassista' },
-              ].map((tip, i) => (
-                <div key={i} style={{
-                  padding: '6px 12px', borderRadius: 10,
-                  background: `${C.accent}08`, border: `1px solid ${C.accent}10`,
-                  fontSize: 10, color: C.textMuted, display: 'flex', alignItems: 'center', gap: 6,
+                { icona: 'send', label: 'Scrivi messaggio',
+                  azione: () => { vibrate(); campoTestoRef.current?.focus(); } },
+                { icona: 'swap', label: 'Mostra al tassista',
+                  azione: () => { vibrate(); setMirrorMode(true); } },
+              ].map((tasto, i) => (
+                <button key={i} onClick={tasto.azione} style={{
+                  padding: '9px 15px', borderRadius: 11, cursor: 'pointer', fontFamily: FONT,
+                  background: `${C.accent}12`, border: `1px solid ${C.accent}28`,
+                  fontSize: 12, fontWeight: 600, color: C.accent,
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  WebkitTapHighlightColor: 'transparent',
                 }}>
-                  <Icon name={tip.icona} size={13} color={C.textMuted} /> {tip.label}
-                </div>
+                  <Icon name={tasto.icona} size={14} color={C.accent} /> {tasto.label}
+                </button>
               ))}
+              {/* ── FINE b.90 ── */}
             </div>
           </div>
         )}
@@ -1065,7 +1081,7 @@ function SpeakerView({ userToken }) {
         backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <input type="text" value={textMessage}
+          <input type="text" ref={campoTestoRef} value={textMessage}
             onChange={(e) => setTextMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') sendTextMessage(); }}
             placeholder={recording ? (mode === 'batch' ? 'Rilascia per tradurre...' : 'Sto ascoltando...') : 'Scrivi messaggio...'}

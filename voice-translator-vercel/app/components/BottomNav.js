@@ -96,7 +96,12 @@ const BottomNav = ({ currentView, onNewConversation }) => {
   return (
     <div style={{
       position: 'fixed', bottom: 0, left: 0, right: 0, height: '76px',
-      backgroundColor: 'rgba(9, 9, 11, 0.95)',
+      // ── INIZIO b.90 — la barra segue il TEMA ──
+      // Prima era nera fissa: nel tema chiaro restava scura e le voci
+      // Home, Chat e Community sparivano, nero su nero. Tre pulsanti su
+      // quattro invisibili per chi sceglie Dawn.
+      backgroundColor: C.headerBg || 'rgba(9, 9, 11, 0.95)',
+      // ── FINE b.90 ──
       backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
       borderTop: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.06)'}`,
       display: 'flex', justifyContent: 'space-around', alignItems: 'center',
@@ -114,7 +119,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
             borderRadius: '50%',
             background: `linear-gradient(135deg, ${accentColor}, ${C.accent2 || PALETTE.cyan})`,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'white', border: '3px solid rgba(9,9,11,0.95)',
+            color: 'white', border: `3px solid ${C.headerBg || 'rgba(9,9,11,0.95)'}`,
             boxShadow: `0 4px 20px rgba(${hexToRgb(accentColor)}, 0.40)`,
             cursor: 'pointer', transition: 'transform 0.15s', zIndex: 51,
           }}

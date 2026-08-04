@@ -37,7 +37,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName }) {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
 
-  const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '🌍';
+  const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '';
   const getLangName = (code) => LANGS.find(l => l.code === code)?.name || code;
 
   // Extract language filters from conversations
@@ -268,7 +268,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName }) {
             padding: '10px 14px',
           }}
         >
-          <span style={{ fontSize: 14, opacity: 0.5 }}>🔍</span>
+          <span style={{ fontSize: 14, opacity: 0.5 }}></span>
           <input
             type="text"
             value={search}
@@ -435,7 +435,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName }) {
       >
         {convHistory.length === 0 ? (
           <EmptyState
-            icon="📋"
+            icon=""
             title="Nessuna conversazione"
             desc="Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!"
             actionLabel="Inizia a parlare"
@@ -444,7 +444,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName }) {
           />
         ) : filtered.length === 0 ? (
           <EmptyState
-            icon="🔍"
+            icon=""
             title="Nessun risultato"
             desc="Prova a cercare con parole diverse"
             S={{ colors: C }}

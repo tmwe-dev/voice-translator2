@@ -37,6 +37,9 @@ async function handlePost(req) {
 
     // Validate and sanitize input
     const rawBody = await req.json();
+    // b.90 — copia da parte: se qualcosa esplode più avanti, la rete di
+    // sicurezza ha ancora il testo da tradurre (lo stream è già consumato).
+    req._corpoBartalk = rawBody;
     const inputValidation = validateTranslateInput(rawBody);
     if (!inputValidation.valid) {
       return apiError(ErrorCode.INVALID_INPUT, inputValidation.error);
@@ -309,8 +312,45 @@ async function handlePost(req) {
     import('@sentry/nextjs').then(S => {
       S.captureException(e, { tags: { endpoint: 'translate', source: 'api' } });
     }).catch(() => {});
+
+    // ── INIZIO b.90 — RETE DI SICUREZZA: se l'IA cade, traduci lo stesso ──
+    // Trovato dal vivo: con la chiave OpenAI scaduta ogni traduzione
+    // rispondeva 502 e l'app restava MUTA, pur avendo un traduttore
+    // gratuito (Google, senza chiave) che funzionava benissimo a fianco.
+    // Ora quello diventa l'ultima rete: si traduce comunque, si dichiara
+    // che è una traduzione di riserva, e NON si addebita nulla.
+    try {
+      const { text, sourceLang, targetLang } = await leggiCorpoPerRipiego(req);
+      if (text && sourceLang && targetLang) {
+        const { tryGoogleTranslate } = await import('../../lib/providers.js');
+        const ripiego = await tryGoogleTranslate(text, sourceLang, targetLang);
+        if (ripiego) {
+          log.warn('Traduzione servita dalla rete di sicurezza (IA non disponibile)');
+          return NextResponse.json({
+            translated: ripiego,
+            confidence: calcConfidence(text, ripiego, sourceLang, targetLang),
+            cost: 0, costEurCents: 0,
+            ripiego: true,           // la UI può dirlo all'utente
+            motivo: 'ai_non_disponibile',
+          });
+        }
+      }
+    } catch (e2) {
+      log.error('Anche la rete di sicurezza ha ceduto:', e2?.message);
+    }
+    // ── FINE b.90 ──
+
     return apiError(ErrorCode.TRANSLATION_FAILED, 'Translation service temporarily unavailable');
   }
+}
+
+// Rilegge il corpo della richiesta per il ripiego: a questo punto lo
+// stream è già consumato, quindi si usa la copia messa da parte.
+async function leggiCorpoPerRipiego(req) {
+  try {
+    if (req._corpoBartalk) return req._corpoBartalk;
+    return await req.clone().json();
+  } catch { return {}; }
 }
 
 export const POST = withApiGuard(handlePost, { maxRequests: 120, prefix: 'translate' });

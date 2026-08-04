@@ -534,7 +534,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Start Button */}
             <div style={{ width: '100%', ...stagger(5) }}>
               <CTAButton onClick={finishWelcome}>
-                {Lf('startUsing', 'Inizia ad usare BarTalk')} {'🚀'}
+                {Lf('startUsing', 'Inizia ad usare BarTalk')} {''}
               </CTAButton>
             </div>
           </div>

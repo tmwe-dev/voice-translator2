@@ -4,7 +4,7 @@ import { LANGS, APP_URL } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
-  shareRoom, leaveRoom, unlockAudio }) {
+  shareRoom, leaveRoom, unlockAudio, perVideo = false }) {
   const { L, S, setView, theme, setTheme } = useApp();
 
   const canvasRef = useRef(null);
@@ -44,12 +44,20 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
         <div style={S.card}>
           <div style={{textAlign:'center', marginBottom:16}}>
             <div style={S.label}>{L('code')}</div>
-            <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:S.colors.accent3}}>{roomId}</div>
+            <div style={{fontSize:30, fontWeight:700, letterSpacing:8, color:S.colors.accent2}}>{roomId}</div>
           </div>
-          <div style={{textAlign:'center', marginBottom:14}}>
+          <div style={{textAlign:'center', marginBottom:14, position:'relative'}}>
             <canvas ref={canvasRef}
               style={{borderRadius:14, background:'#fff', padding:8, display:'block', margin:'0 auto',
-                maxWidth:180, maxHeight:180}} />
+                maxWidth:180, maxHeight:180, opacity: qrReady ? 1 : 0, transition:'opacity .25s'}} />
+            {/* b.90 — prima si vedeva un rettangolo BIANCO vuoto finche il
+                codice non era disegnato: sembrava un QR rotto. */}
+            {!qrReady && (
+              <div style={{position:'absolute', inset:0, display:'grid', placeItems:'center',
+                color:S.colors.textMuted, fontSize:12}}>
+                Preparo il codice…
+              </div>
+            )}
             {!qrReady && (
               <div style={{fontSize:11, color:S.colors.textMuted, marginTop:6}}>
                 {`${APP_URL}?room=${roomId}`}
@@ -65,6 +73,20 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
           <div style={{textAlign:'center', marginBottom:12}}>
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
           </div>
+          {/* ── INIZIO b.90 — "Videochiamata" apriva questa identica schermata ──
+              Due voci diverse in Home portavano allo stesso posto, senza una
+              parola sul video. Ora almeno si dice cosa succede dopo. */}
+          {perVideo && !partnerConnected && (
+            <div style={{
+              textAlign:'center', fontSize:12.5, lineHeight:1.5, marginBottom:12,
+              padding:'10px 12px', borderRadius:12,
+              background:`${S.colors.accent1}12`, border:`1px solid ${S.colors.accent1}25`,
+              color:S.colors.textSecondary,
+            }}>
+              Appena il tuo invitato entra, potrai avviare la <b>videochiamata</b> dalla chat.
+            </div>
+          )}
+          {/* ── FINE b.90 ── */}
           <div style={{textAlign:'center', color:S.colors.textMuted, fontSize:13, marginBottom:12}}>
             {partnerConnected
               ? <span style={{color:S.colors.accent2}}>{roomInfo?.members?.[1]?.name} {'\u2714'}</span>

@@ -14,18 +14,18 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 
 const ROOM_TYPES = [
-  { id: 'public', icon: '🌍', label: 'Pubblico', desc: 'Chiunque può entrare e partecipare' },
-  { id: 'protected', icon: '🔒', label: 'Protetto', desc: 'Richiede approvazione per entrare' },
-  { id: 'private', icon: '🔐', label: 'Privato', desc: 'Solo su invito diretto' },
-  { id: 'temporary', icon: '⏱️', label: 'Temporaneo', desc: 'Si chiude automaticamente dopo 1 ora' },
+  { id: 'public', icon: '', label: 'Pubblico', desc: 'Chiunque può entrare e partecipare' },
+  { id: 'protected', icon: '', label: 'Protetto', desc: 'Richiede approvazione per entrare' },
+  { id: 'private', icon: '', label: 'Privato', desc: 'Solo su invito diretto' },
+  { id: 'temporary', icon: '', label: 'Temporaneo', desc: 'Si chiude automaticamente dopo 1 ora' },
 ];
 
 const CATEGORIES = [
-  { id: 'conversation', icon: '💬', label: 'Conversazione', color: PALETTE.teal },
-  { id: 'classroom', icon: '🏫', label: 'Classroom', color: '#10B981' },
-  { id: 'interview', icon: '🎤', label: 'Intervista', color: '#F59E0B' },
-  { id: 'conference', icon: '🏛️', label: 'Conferenza', color: '#8B5CF6' },
-  { id: 'freetalk', icon: '🎉', label: 'Free Talk', color: '#EC4899' },
+  { id: 'conversation', icon: '', label: 'Conversazione', color: PALETTE.teal },
+  { id: 'classroom', icon: '', label: 'Classroom', color: '#10B981' },
+  { id: 'interview', icon: '', label: 'Intervista', color: '#F59E0B' },
+  { id: 'conference', icon: '', label: 'Conferenza', color: '#8B5CF6' },
+  { id: 'freetalk', icon: '', label: 'Free Talk', color: '#EC4899' },
 ];
 
 const POPULAR_LANGS = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'ar'];
@@ -98,7 +98,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
-              🌍 Crea un BarTalk
+              Crea un BarTalk
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
               Un tavolo virtuale internazionale
@@ -241,7 +241,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
             boxShadow: `0 4px 20px ${accent}35`,
             opacity: creating ? 0.7 : 1,
           }}>
-            {creating ? 'Creazione...' : '🌍 Crea BarTalk'}
+            {creating ? 'Creazione...' : 'Crea BarTalk'}
           </button>
         </div>
       </div>

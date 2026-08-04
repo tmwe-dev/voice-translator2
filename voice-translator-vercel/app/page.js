@@ -112,6 +112,7 @@ function HomeInner() {
   // [Removed dead code: showShareApp, shareAppLang — unused]
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  const [intentoVideo, setIntentoVideo] = useState(false); // b.90 — si e scelta la videochiamata
   const [taxiDestId, setTaxiDestId] = useState(null);
   const [taxiKey, setTaxiKey] = useState(null);
 
@@ -720,13 +721,18 @@ function HomeInner() {
   function handleNewConversationSelect(optionId) {
     switch (optionId) {
       case 'face-to-face':
+        setIntentoVideo(false);
         handleCreateRoom();
         break;
       case 'invite':
         setView('quickinvite');
         break;
       case 'videocall':
-        handleCreateRoom(); // Creates room, user activates video from within
+        // b.90 — prima era identico a 'face-to-face' e la stanza non
+        // faceva parola del video: ora la scelta viene ricordata e la
+        // sala d'attesa lo dice.
+        setIntentoVideo(true);
+        handleCreateRoom();
         break;
       case 'taxitalk':
         setView('speaker');
@@ -874,7 +880,8 @@ function HomeInner() {
     <Suspense fallback={<LazyFallback />}>
     <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}  />
+      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
+      perVideo={intentoVideo} />
     </Suspense>
   );
 

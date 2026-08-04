@@ -13,11 +13,11 @@ import { PALETTE } from '../lib/palette.js';
 // ═══════════════════════════════════════════════════════════════
 
 const FIELD_CONFIG = [
-  { key: 'terminal', icon: '✈️', label: 'Terminal / Gate', placeholder: 'es. Terminal 2, Gate B12' },
-  { key: 'entrance', icon: '🚪', label: 'Ingresso', placeholder: 'es. Ingresso principale, lato nord' },
-  { key: 'hotelName', icon: '🏨', label: 'Hotel / Struttura', placeholder: 'es. Hotel Milano Central' },
-  { key: 'flightNumber', icon: '🛫', label: 'Numero volo', placeholder: 'es. AZ1234' },
-  { key: 'notes', icon: '📝', label: 'Note per il tassista', placeholder: 'es. Bagaglio grande, 2 persone' },
+  { key: 'terminal', icon: '', label: 'Terminal / Gate', placeholder: 'es. Terminal 2, Gate B12' },
+  { key: 'entrance', icon: '', label: 'Ingresso', placeholder: 'es. Ingresso principale, lato nord' },
+  { key: 'hotelName', icon: '', label: 'Hotel / Struttura', placeholder: 'es. Hotel Milano Central' },
+  { key: 'flightNumber', icon: '', label: 'Numero volo', placeholder: 'es. AZ1234' },
+  { key: 'notes', icon: '', label: 'Note per il tassista', placeholder: 'es. Bagaglio grande, 2 persone' },
 ];
 
 function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
@@ -145,7 +145,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
-              🚕 Dove vai?
+              Dove vai?
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
               Inserisci la destinazione per il tassista
@@ -164,7 +164,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
           {/* Address search */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 4, display: 'block' }}>
-              📍 Indirizzo destinazione
+              Indirizzo destinazione
             </label>
             <div style={{ position: 'relative' }}>
               <input type="text" value={query} onChange={e => handleQueryChange(e.target.value)}
@@ -217,7 +217,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               background: `${accent}08`, border: `1px solid ${accent}20`,
               display: 'flex', alignItems: 'center', gap: 10,
             }}>
-              <span style={{ fontSize: 20 }}>📍</span>
+              <span style={{ fontSize: 20 }}></span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: textPrimary }}>
                   {selectedPlace.displayName.split(',').slice(0, 2).join(',')}
@@ -261,7 +261,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {/* Stops */}
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span>📌</span> Fermate intermedie
+                  <span></span> Fermate intermedie
                 </label>
                 {stops.map((stop, i) => (
                   <div key={i} style={{
@@ -306,7 +306,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             fontSize: 15, fontWeight: 700, fontFamily: FONT,
             boxShadow: selectedPlace ? `0 4px 20px ${accent}35` : 'none',
           }}>
-            {selectedPlace ? '🚕 Genera QR Destinazione' : 'Seleziona una destinazione'}
+            {selectedPlace ? 'Genera QR Destinazione' : 'Seleziona una destinazione'}
           </button>
         </div>
       </div>

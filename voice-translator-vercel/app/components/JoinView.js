@@ -220,7 +220,7 @@ export default function JoinView({ joinCode,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48,
             boxShadow: `0 12px 40px ${C.accent}15`,
           }}>
-            🌍🎙️
+          
           </div>
 
           {/* Minimal welcome — just name and big Chat button */}
@@ -252,7 +252,7 @@ export default function JoinView({ joinCode,
             onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
             onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            💬 Chat
+            Chat
           </button>
 
           {status && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: C.red }}>{status}</div>}
@@ -319,7 +319,7 @@ export default function JoinView({ joinCode,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
             }}>
-              🌍🎙️
+            
             </div>
             <div style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, marginBottom: 4 }}>
               {tI('inviteWelcome')}
@@ -347,9 +347,9 @@ export default function JoinView({ joinCode,
             <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tx('gender')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { key: 'male', icon: '♂️', label: tx('male') },
-                { key: 'female', icon: '♀️', label: tx('female') },
-                { key: 'other', icon: '⚧️', label: tx('other') },
+                { key: 'male', icon: '♂', label: tx('male') },
+                { key: 'female', icon: '♀', label: tx('female') },
+                { key: 'other', icon: '⚧', label: tx('other') },
               ].map(g => (
                 <button key={g.key} onClick={() => setGender(g.key)} style={{
                   flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
@@ -485,7 +485,7 @@ export default function JoinView({ joinCode,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
                   <div style={{ fontSize: 16, marginBottom: 2 }}>
-                    {v === 'nova' || v === 'shimmer' || v === 'fable' ? '♀️' : '♂️'}
+                    {v === 'nova' || v === 'shimmer' || v === 'fable' ? '♀' : '♂'}
                   </div>
                   <div style={{ textTransform: 'capitalize' }}>{v}</div>
                 </button>
@@ -510,7 +510,7 @@ export default function JoinView({ joinCode,
                   color: (prefs.edgeTtsVoiceGender || 'female') === g ? '#fff' : C.textMuted,
                   fontWeight: (prefs.edgeTtsVoiceGender || 'female') === g ? 600 : 400,
                 }}>
-                  {g === 'female' ? '♀️' : '♂️'} {g === 'female' ? tx('female') : tx('male')}
+                  {g === 'female' ? '♀' : '♂'} {g === 'female' ? tx('female') : tx('male')}
                 </button>
               ))}
             </div>
@@ -529,7 +529,7 @@ export default function JoinView({ joinCode,
                 <div style={{ fontSize: 14, fontWeight: 700, color: C.textPrimary }}>{prefs.name || '...'}</div>
                 <div style={{ fontSize: 11, color: C.textSecondary }}>
                   {LANGS.find(l => l.code === myLang)?.flag} {LANGS.find(l => l.code === myLang)?.name}
-                  {gender && ` · ${gender === 'male' ? '♂️' : gender === 'female' ? '♀️' : '⚧️'}`}
+                  {gender && ` · ${gender === 'male' ? '♂' : gender === 'female' ? '♀' : '⚧'}`}
                 </div>
               </div>
               <div style={{ fontSize: 10, color: C.accent, fontWeight: 600 }}>
@@ -546,7 +546,7 @@ export default function JoinView({ joinCode,
               WebkitTapHighlightColor: 'transparent',
             }}>←</button>
             <PrimaryBtn onClick={handleJoin} disabled={!canJoin} style={{ flex: 1 }}>
-              {tI('inviteJoinBtn') || tx('joinChat')} 🎙️
+              {tI('inviteJoinBtn') || tx('joinChat')}
             </PrimaryBtn>
           </div>
 
@@ -581,7 +581,7 @@ export default function JoinView({ joinCode,
               width: 56, height: 56, borderRadius: 18, margin: '0 auto 12px',
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26,
-            }}>🌍🎙️</div>
+            }}></div>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, textAlign: 'center', marginBottom: 10 }}>
               {tI('invitePopupTitle')}
             </div>

@@ -45,9 +45,9 @@ const DetailView = memo(function DetailView({
   }, [messages, searchQuery]);
 
   const tabs = [
-    { id: 'messages', label: 'Messaggi', icon: '💬' },
-    { id: 'summary', label: 'Riepilogo', icon: '📝' },
-    { id: 'stats', label: 'Statistiche', icon: '📊' },
+    { id: 'messages', label: 'Messaggi', icon: '' },
+    { id: 'summary', label: 'Riepilogo', icon: '' },
+    { id: 'stats', label: 'Statistiche', icon: '' },
   ];
 
   return (
@@ -98,10 +98,10 @@ const DetailView = memo(function DetailView({
       {/* Info Cards */}
       <div style={{ padding: '12px 16px', display: 'flex', gap: 10, overflowX: 'auto' }}>
         {[
-          { label: 'Modalità', value: conversation.mode || 'Conversazione', icon: '🎯' },
-          { label: 'Contesto', value: conversation.context || 'Generale', icon: '🌍' },
-          { label: 'Messaggi', value: String(messages.length || conversation.messageCount || 0), icon: '💬' },
-          { label: 'Costo', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Free', icon: '💰' },
+          { label: 'Modalità', value: conversation.mode || 'Conversazione', icon: '' },
+          { label: 'Contesto', value: conversation.context || 'Generale', icon: '' },
+          { label: 'Messaggi', value: String(messages.length || conversation.messageCount || 0), icon: '' },
+          { label: 'Costo', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Free', icon: '' },
         ].map((card, i) => (
           <div key={i} style={{
             flexShrink: 0, padding: '10px 14px', borderRadius: 14,
@@ -143,7 +143,7 @@ const DetailView = memo(function DetailView({
               display: 'flex', gap: 8, marginBottom: 12, padding: '8px 12px',
               borderRadius: 12, background: S.colors.inputBg, border: `1px solid ${S.colors.inputBorder}`,
             }}>
-              <span style={{ color: S.colors.textMuted }}>🔍</span>
+              <span style={{ color: S.colors.textMuted }}></span>
               <input
                 placeholder="Cerca nei messaggi..."
                 value={searchQuery}
@@ -191,7 +191,7 @@ const DetailView = memo(function DetailView({
                               background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
                               color: playingMsgId === m.id ? S.colors.accent1 : S.colors.textMuted, fontSize: 14,
                             }}>
-                            {playingMsgId === m.id ? '🔊' : '▶'}
+                            {playingMsgId === m.id ? '' : '▶'}
                           </button>
                         )}
                       </div>
@@ -214,7 +214,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.cardBg, border: `1px solid ${S.colors.cardBorder}`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: 18 }}>✨</span>
+              <span style={{ fontSize: 18 }}></span>
               <span style={{ fontSize: 14, fontWeight: 700, color: S.colors.textPrimary }}>
                 Riepilogo AI
               </span>
@@ -230,12 +230,12 @@ const DetailView = memo(function DetailView({
         {activeTab === 'stats' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { label: 'Messaggi inviati', value: messages.filter(m => m.sender === prefs.name).length, icon: '📤' },
-              { label: 'Messaggi ricevuti', value: messages.filter(m => m.sender !== prefs.name).length, icon: '📥' },
-              { label: 'Lingue', value: `${myLangInfo.name} ⇄ ${partnerLang.name}`, icon: '🌐' },
-              { label: 'Durata', value: duration, icon: '⏱️' },
-              { label: 'Costo traduzione', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Gratuito', icon: '💰' },
-              { label: 'Contesto', value: conversation.context || 'Generale', icon: '🎯' },
+              { label: 'Messaggi inviati', value: messages.filter(m => m.sender === prefs.name).length, icon: '' },
+              { label: 'Messaggi ricevuti', value: messages.filter(m => m.sender !== prefs.name).length, icon: '' },
+              { label: 'Lingue', value: `${myLangInfo.name} ⇄ ${partnerLang.name}`, icon: '' },
+              { label: 'Durata', value: duration, icon: '' },
+              { label: 'Costo traduzione', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Gratuito', icon: '' },
+              { label: 'Contesto', value: conversation.context || 'Generale', icon: '' },
             ].map((stat, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',
@@ -262,7 +262,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.overlayBg, border: `1px solid ${S.colors.overlayBorder}`,
             color: S.colors.textPrimary, fontSize: 13, fontWeight: 600,
           }}>
-          📋 Esporta
+          Esporta
         </button>
         <button onClick={onShare}
           style={{
@@ -270,7 +270,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.accent2Bg, border: `1px solid ${S.colors.accent2Border}`,
             color: S.colors.accent2, fontSize: 13, fontWeight: 600,
           }}>
-          🔗 Condividi
+          Condividi
         </button>
         <button onClick={onDelete}
           style={{
@@ -278,7 +278,7 @@ const DetailView = memo(function DetailView({
             background: S.colors.accent3Bg, border: `1px solid ${S.colors.accent3Border}`,
             color: S.colors.statusError, fontSize: 13, fontWeight: 600,
           }}>
-          🗑️
+        
         </button>
       </div>
     </div>

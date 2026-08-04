@@ -68,7 +68,7 @@ function NetworkStatus() {
           animation: 'vtSlideDown 0.3s ease-out',
           boxShadow: '0 4px 20px rgba(255,59,48,0.3)',
         }}>
-          <span>{'📡'}</span>
+          <span>{''}</span>
           <span>Sei offline — i messaggi verranno inviati quando torni online</span>
         </div>
       )}

@@ -15,31 +15,31 @@ import { subscribeTick } from '../lib/ticker.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const MODE_LABELS = {
-  conversation: { label: 'Chat', icon: '💬', color: PALETTE.teal },
-  classroom:    { label: 'Classroom', icon: '🏫', color: '#10B981' },
-  interview:    { label: 'Interview', icon: '🎤', color: '#F59E0B' },
-  conference:   { label: 'Conference', icon: '🏛️', color: '#8B5CF6' },
-  freetalk:     { label: 'Free Talk', icon: '🎉', color: '#EC4899' },
-  simultaneous: { label: 'Live', icon: '⚡', color: '#EF4444' },
+  conversation: { label: 'Chat', icon: '', color: PALETTE.teal },
+  classroom:    { label: 'Classroom', icon: '', color: '#10B981' },
+  interview:    { label: 'Interview', icon: '', color: '#F59E0B' },
+  conference:   { label: 'Conference', icon: '', color: '#8B5CF6' },
+  freetalk:     { label: 'Free Talk', icon: '', color: '#EC4899' },
+  simultaneous: { label: 'Live', icon: '', color: '#EF4444' },
 };
 
 const ROOM_TYPE_ICONS = {
-  public: '🌍',
-  protected: '🔒',
-  private: '🔐',
-  temporary: '⏱️',
+  public: '',
+  protected: '',
+  private: '',
+  temporary: '',
 };
 
 const ROLE_BADGES = {
   owner: { label: 'Host', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
   moderator: { label: 'Mod', color: '#8B5CF6', bg: 'rgba(139,106,255,0.12)' },
   participant: null,
-  listener: { label: '👁', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
+  listener: { label: '', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
   invited: { label: 'Invitato', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
 };
 
 const LANG_FILTERS = [
-  { code: 'all', flag: '🌍', name: 'Tutte' },
+  { code: 'all', flag: '', name: 'Tutte' },
   { code: 'it', flag: '🇮🇹', name: 'IT' },
   { code: 'en', flag: '🇺🇸', name: 'EN' },
   { code: 'es', flag: '🇪🇸', name: 'ES' },
@@ -99,7 +99,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
     fetchRooms().finally(() => setTimeout(() => setRefreshAnim(false), 600));
   }, [fetchRooms]);
 
-  const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '🌍';
+  const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '';
 
   const timeAgo = (ts) => {
     const mins = Math.floor((Date.now() - ts) / 60000);
@@ -153,7 +153,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
         </button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-            🌍 Community
+            Community
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
             {rooms.length} {rooms.length === 1 ? 'BarTalk attivo' : 'BarTalk attivi'}
@@ -193,7 +193,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           borderRadius: 14, padding: '10px 14px',
         }}>
-          <span style={{ fontSize: 14, opacity: 0.4 }}>🔍</span>
+          <span style={{ fontSize: 14, opacity: 0.4 }}></span>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Cerca stanze..."
             style={{
@@ -297,7 +297,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
             }}>
-              🌍
+             
             </div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
               Nessuna stanza al momento
@@ -311,7 +311,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
-              🌍 Crea un BarTalk
+              Crea un BarTalk
             </button>
           </div>
         )}
@@ -319,7 +319,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
         {/* Filtered empty */}
         {!loading && rooms.length > 0 && filteredRooms.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}>🔍</div>
+            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}></div>
             <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>
               Nessuna stanza con questi filtri
             </div>
@@ -335,7 +335,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
 
         {/* Room cards */}
         {filteredRooms.map((room, idx) => {
-          const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '💬', color: PALETTE.teal };
+          const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '', color: PALETTE.teal };
           return (
             <button key={room.roomId} onClick={() => onJoinRoom(room.roomId)}
               style={{
@@ -395,8 +395,8 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, marginTop: 5, fontSize: 10, color: C.textMuted }}>
-                  <span>👥 {room.memberCount}</span>
-                  <span>🕐 {timeAgo(room.createdAt)}</span>
+                  <span>{room.memberCount}</span>
+                  <span>{timeAgo(room.createdAt)}</span>
                   {room.targetLangs?.length > 0 && (
                     <span>{room.targetLangs.map(l => getLangFlag(l)).join(' ')}</span>
                   )}

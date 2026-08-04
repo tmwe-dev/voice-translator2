@@ -116,7 +116,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
   const handleShare = useCallback(async () => {
     vibrate(15);
     const url = qrUrlRef.current;
-    const text = `🚕 TaxiTalk — Destinazione condivisa`;
+    const text = `TaxiTalk — Destinazione condivisa`;
     if (navigator.share && url) {
       try { await navigator.share({ title: 'TaxiTalk', text, url }); } catch {}
     } else if (url) {
@@ -155,10 +155,10 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         }}>‹</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: textPrimary }}>
-            🚕 Mostra al tassista
+            Mostra al tassista
           </div>
           <div style={{ fontSize: 10, color: textMuted }}>
-            🔒 Destinazione cifrata end-to-end
+            Destinazione cifrata end-to-end
           </div>
         </div>
         {timeLeft && !revoked && (
@@ -179,7 +179,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
       }}>
         {revoked ? (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🚫</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
               Destinazione revocata
             </div>
@@ -213,40 +213,40 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
               background: cardBg, border: `1px solid ${cardBorder}`,
             }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
-                📍 {destination.normalizedAddress}
+                {destination.normalizedAddress}
               </div>
               {destination.terminal && (
                 <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-                  ✈️ {destination.terminal}
+                 {destination.terminal}
                 </div>
               )}
               {destination.hotelName && (
                 <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-                  🏨 {destination.hotelName}
+                  {destination.hotelName}
                 </div>
               )}
               {destination.flightNumber && (
                 <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-                  🛫 Volo {destination.flightNumber}
+                  Volo {destination.flightNumber}
                 </div>
               )}
               {destination.entrance && (
                 <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-                  🚪 {destination.entrance}
+                  {destination.entrance}
                 </div>
               )}
               {destination.stops?.length > 0 && (
                 <div style={{ fontSize: 12, color: textMuted, marginBottom: 2 }}>
-                  📌 {destination.stops.length} fermat{destination.stops.length === 1 ? 'a' : 'e'}: {destination.stops.join(' → ')}
+                  {destination.stops.length} fermat{destination.stops.length === 1 ? 'a' : 'e'}: {destination.stops.join(' → ')}
                 </div>
               )}
               {destination.notes && (
                 <div style={{ fontSize: 12, color: textMuted, marginTop: 4, fontStyle: 'italic' }}>
-                  📝 {destination.notes}
+                  {destination.notes}
                 </div>
               )}
               <div style={{ fontSize: 10, color: `${accent}80`, marginTop: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                🔒 Solo chi scansiona il QR può leggere questi dati
+                Solo chi scansiona il QR può leggere questi dati
               </div>
             </div>
 
@@ -270,14 +270,14 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
               background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.2)',
               color: PALETTE.coral, fontSize: 13, fontWeight: 600, fontFamily: FONT,
             }}>
-              🚫 Revoca
+              Revoca
             </button>
             <button onClick={handleShare} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
               background: cardBg, border: `1px solid ${cardBorder}`,
               color: textPrimary, fontSize: 13, fontWeight: 600, fontFamily: FONT,
             }}>
-              📤 Condividi
+              Condividi
             </button>
             <button onClick={onStartConversation} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
@@ -285,7 +285,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${accent}35`,
             }}>
-              💬 Parla
+              Parla
             </button>
           </>
         )}

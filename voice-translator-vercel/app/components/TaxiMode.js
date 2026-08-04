@@ -26,7 +26,7 @@ const TaxiMode = memo(function TaxiMode({
 
   // Get language info
   const toLangInfo = getLang(toLang);
-  const langFlag = toLangInfo?.flag || '🌍';
+  const langFlag = toLangInfo?.flag || '';
   const langName = toLangInfo?.name || toLang.toUpperCase();
 
   // Handle device orientation for auto-activation
@@ -111,7 +111,7 @@ const TaxiMode = memo(function TaxiMode({
         }}
       >
         <div style={{ fontSize: '16px', fontWeight: '600', color: textPrimary }}>
-          🚕 TAXI MODE
+          TAXI MODE
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
@@ -137,7 +137,7 @@ const TaxiMode = memo(function TaxiMode({
             }}
             title="Play text-to-speech"
           >
-            🔊
+           
           </button>
           <button
             onClick={onClose}
@@ -295,7 +295,7 @@ const TaxiMode = memo(function TaxiMode({
           }}
           title="Play translation (tap to repeat)"
         >
-          🔊
+         
         </button>
       </div>
     </div>
@@ -340,7 +340,7 @@ const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' })
       }}
       title="Show Taxi Mode"
     >
-      <span>🚕</span>
+      <span></span>
       <span>Taxi</span>
     </button>
   );

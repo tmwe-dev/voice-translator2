@@ -62,11 +62,11 @@ const AIView = memo(function AIView({
   ];
 
   const translationStyles = [
-    { id: 'natural', label: 'Naturale', desc: 'Fluente e idiomatico', icon: '🌊' },
-    { id: 'literal', label: 'Letterale', desc: 'Fedele al testo originale', icon: '📐' },
-    { id: 'formal', label: 'Formale', desc: 'Registro professionale', icon: '👔' },
-    { id: 'casual', label: 'Informale', desc: 'Conversazione casual', icon: '😊' },
-    { id: 'technical', label: 'Tecnico', desc: 'Terminologia specialistica', icon: '⚙️' },
+    { id: 'natural', label: 'Naturale', desc: 'Fluente e idiomatico', icon: '' },
+    { id: 'literal', label: 'Letterale', desc: 'Fedele al testo originale', icon: '' },
+    { id: 'formal', label: 'Formale', desc: 'Registro professionale', icon: '' },
+    { id: 'casual', label: 'Informale', desc: 'Conversazione casual', icon: '' },
+    { id: 'technical', label: 'Tecnico', desc: 'Terminologia specialistica', icon: '' },
   ];
 
   const [selectedStyle, setSelectedStyle] = useState('natural');
@@ -133,7 +133,7 @@ const AIView = memo(function AIView({
           animation: 'vtSlideUp 0.3s ease-out',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 18 }}>📖</span>
+            <span style={{ fontSize: 18 }}></span>
             <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Glossario Personale</span>
             <span style={{
               marginLeft: 'auto', fontSize: 11, padding: '3px 8px', borderRadius: 8,
@@ -199,7 +199,7 @@ const AIView = memo(function AIView({
           animation: 'vtSlideUp 0.3s ease-out',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 18 }}>⚡</span>
+            <span style={{ fontSize: 18 }}></span>
             <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Automazioni AI</span>
           </div>
 
@@ -242,7 +242,7 @@ const AIView = memo(function AIView({
           animation: 'vtSlideUp 0.3s ease-out',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-            <span style={{ fontSize: 18 }}>🎨</span>
+            <span style={{ fontSize: 18 }}></span>
             <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Stile di Traduzione</span>
           </div>
 
@@ -282,7 +282,7 @@ const AIView = memo(function AIView({
         border: `1px solid ${S.colors.accent1Border}`,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <span style={{ fontSize: 14 }}>💡</span>
+          <span style={{ fontSize: 14 }}></span>
           <span style={{ fontSize: 12, fontWeight: 700, color: S.colors.accent1 }}>Suggerimento AI</span>
         </div>
         <p style={{ color: S.colors.textSecondary, fontSize: 13, lineHeight: 1.5, margin: 0 }}>

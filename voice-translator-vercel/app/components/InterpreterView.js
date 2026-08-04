@@ -92,7 +92,7 @@ function InterpreterView({
           animation: 'vtSubtitleIn 0.3s cubic-bezier(0.4,0,0.2,1)',
         }}>
           <span style={{ opacity: 0.5, fontSize: 11 }}>
-            {isStreaming ? '🎤 ' : ''}{myLang.toUpperCase()}
+            {isStreaming ? '' : ''}{myLang.toUpperCase()}
           </span>{' '}
           {isStreaming ? myLiveText : lastMySub?.text}
         </div>
