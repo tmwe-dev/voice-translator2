@@ -73,7 +73,7 @@ const DetailView = lazy(() => import('./components/DetailView.js'));
 // ═══ Context provider for prop drilling elimination ═══
 import { AppProvider } from './contexts/AppContext.js';
 import SpatialBackdrop from './components/SpatialBackdrop.js';
-import AmbienteVivo from './components/AmbienteVivo.js';
+import PolvereBackdrop from './components/PolvereBackdrop.js';
 
 
 export default function Home() {
@@ -797,24 +797,7 @@ function HomeInner() {
       creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
     },
   };
-  // UN SOLO ambiente per tutta l'app + dissolvenza fra le pagine.
-  // AmbienteVivo non viene MAI rimontato: il suo tempo non riparte.
-  // Il contenuto entra con una dissolvenza breve (chiave = view).
-  const wrap = (node) => (
-    <AppProvider value={appCtxValue}>
-      <SpatialBackdrop />
-      <AmbienteVivo />
-      {/* Contenitore a tutto schermo: le pagine usano position:fixed, quindi
-          NIENTE transform qui (creerebbe un contenitore alto zero e le
-          nasconderebbe). Dissolvenza di sola opacità, z-index sopra l'ambiente. */}
-      <div key={view} style={{
-        position: 'fixed', inset: 0, zIndex: 1,
-        animation: 'vtFadeIn 0.4s cubic-bezier(0.33,0,0.2,1) both',
-      }}>
-        {node}
-      </div>
-    </AppProvider>
-  );
+  const wrap = (node) => <AppProvider value={appCtxValue}><SpatialBackdrop /><PolvereBackdrop />{node}</AppProvider>;
 
   // =============================================
   // RENDER
