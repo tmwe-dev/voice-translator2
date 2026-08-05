@@ -4,6 +4,17 @@ import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import BarraReazioni from './BarraReazioni.js';
+import Velo from './Velo.js';
+import { velare } from '../lib/velo.js';
+
+// Avvolge la nuvoletta solo quando serve davvero: se non c'e niente da
+// coprire, il messaggio esce identico a prima, senza un livello in piu.
+function ForseVelato({ messaggio, attivo, C, children }) {
+  if (!attivo) return children;
+  const esito = velare(messaggio);
+  if (!esito.velare) return children;
+  return <Velo motivo={esito.motivo} C={C}>{children}</Velo>;
+}
 
 // Haptic feedback helper (mobile)
 function haptic(ms = 10) {
@@ -126,22 +137,27 @@ const MessageList = memo(function MessageList({
                 {isMine ? 'Tu' : m.sender}
               </div>
               <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
-                {/* Primary line: original for sender, translation for receiver */}
-                <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
-                  {isMine ? m.original : (hasTranslation ? translationForMe : m.original)}
-                </div>
-                {/* Secondary line: translation for sender, original for receiver */}
-                {pendingTranslation ? (
-                  <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
-                    {m._translationError
-                      ? (L('translationFailed') || 'Traduzione fallita \u26A0\uFE0F')
-                      : (L('translating') || 'Traducendo...')}
+                {/* b.101 \u2014 quello che uno scrive di suo pugno non gli si
+                    copre in faccia: sa cosa ha scritto. Si vela solo cio
+                    che arriva dagli altri. */}
+                <ForseVelato messaggio={m} attivo={!isMine} C={S.colors}>
+                  {/* Primary line: original for sender, translation for receiver */}
+                  <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
+                    {isMine ? m.original : (hasTranslation ? translationForMe : m.original)}
                   </div>
-                ) : (
-                  <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
-                    {isMine ? translationForMe : m.original}
-                  </div>
-                )}
+                  {/* Secondary line: translation for sender, original for receiver */}
+                  {pendingTranslation ? (
+                    <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
+                      {m._translationError
+                        ? (L('translationFailed') || 'Traduzione fallita \u26A0\uFE0F')
+                        : (L('translating') || 'Traducendo...')}
+                    </div>
+                  ) : (
+                    <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
+                      {isMine ? translationForMe : m.original}
+                    </div>
+                  )}
+                </ForseVelato>
               </div>
               {/* b.99 — pollice su, pollice giu, cuore e risposta: sempre
                   in vista, non dietro una pressione lunga che nessuno

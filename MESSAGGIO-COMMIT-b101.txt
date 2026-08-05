@@ -1,0 +1,59 @@
+b.101 — la tendina grigia sui messaggi pesanti
+
+Nelle stanze dove ci si puo mandare a quel paese, mandarsi a quel paese
+e permesso. Quello che non e permesso e sbatterlo in faccia a chi non ha
+chiesto di leggerlo.
+
+Percio il messaggio NON si cancella e chi lo scrive NON si blocca: si
+copre con una tendina grigia che dice "Linguaggio pesante — tocca per
+leggere". Un tocco e si apre, un altro e si richiude, perche chi si
+pente deve poter tornare indietro.
+
+═══ COSA COPRE, E COSA NO ═══
+
+Il rischio grosso non e velare troppo poco: e velare cose innocue,
+perche allora la gente smette di fidarsi e apre tutto senza guardare.
+Quindi l'elenco e deliberatamente CORTO, e il confronto guarda i confini
+di parola:
+
+  "cazzo"    -> velato
+  "cazzotto" -> NO
+  "merda"    -> velato
+  "merce"    -> NO
+  "Scunthorpe" -> NO (il classico caso da manuale)
+
+Non si aggira con le maiuscole, con gli accenti, con i numeri al posto
+delle lettere (str0nzo), con l'asterisco (f*ck) o allungando le vocali
+(stroooonzo). L'asterisco in particolare NON si cancella: in "f*ck" sta
+al posto di una lettera, e togliendolo resta "fck", che non somiglia
+piu a niente. Resta li, e nel confronto vale come una lettera qualsiasi.
+
+Si vela anche chi URLA: tutto maiuscolo, almeno quindici lettere e tre
+punti esclamativi. Non e un insulto, ma e comunque addosso.
+
+Quello che scrivi TU non ti viene coperto: sai cosa hai scritto.
+
+═══ DOVE VIVE, E PERCHE LI ═══
+
+Sul telefono, non sul server. Non e elegante, ma e istantaneo, non costa
+niente e — soprattutto — funziona anche nelle chat cifrate, dove il
+server non vede nulla e quindi non potrebbe giudicare.
+
+DUE LIMITI, DETTI CHIARAMENTE nel file:
+ · un elenco di parole non capisce il contesto
+ · copre le lingue elencate, non le altre quaranta
+
+Avevo scritto anche un giudizio dal server con la moderazione di OpenAI.
+L'HO TOLTO: il verdetto sarebbe arrivato in un campo che nessun
+componente legge, cioe l'ennesima funzione cablata a nulla — proprio la
+cosa che passo le sessioni a stanare. Quando servira, si costruisce
+fino alla nuvoletta, non a meta.
+
+═══ ACCESSIBILITA ═══
+
+Il testo coperto e aria-hidden, cosi la sintesi vocale non lo legge per
+sbaglio a chi non ha ancora scelto di scoprirlo; il pulsante invece
+dice cosa c'e sotto e perche.
+
+Prove: 650 test verdi (17 nuovi, velo.test.js — meta dei quali verificano
+cosa NON deve essere velato), 0 errori di lint.
