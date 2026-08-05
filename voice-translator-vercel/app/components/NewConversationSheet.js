@@ -30,7 +30,7 @@ const OPTIONS = [
     id: 'stanza-community',
     icona: 'globe',
     title: 'Apri una stanza pubblica',
-    desc: 'Chiunque nel mondo puo entrare e parlare',
+    desc: 'Chiunque nel mondo può entrare e parlare',
   },
   {
     id: 'contatti',

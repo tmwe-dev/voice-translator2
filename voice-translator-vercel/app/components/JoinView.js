@@ -1,4 +1,5 @@
 'use client';
+import Icon from './Icon.js';
 import { useState, useEffect, useRef } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
@@ -318,9 +319,7 @@ export default function JoinView({ joinCode,
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30,
-            }}>
-            
-            </div>
+            }}><Icon name="doorOpen" size={34} color={C.accent || 'rgba(255,255,255,0.4)'} /></div>
             <div style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, marginBottom: 4 }}>
               {tI('inviteWelcome')}
             </div>

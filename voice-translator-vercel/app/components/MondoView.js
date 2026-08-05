@@ -1,4 +1,5 @@
 'use client';
+import Icon from './Icon.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -296,9 +297,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
-            }}>
-             
-            </div>
+            }}><Icon name="globe" size={34} color={C.accent || 'rgba(255,255,255,0.4)'} /></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
               Nessuna stanza al momento
             </div>

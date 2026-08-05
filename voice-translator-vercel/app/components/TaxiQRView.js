@@ -1,4 +1,5 @@
 'use client';
+import Icon from './Icon.js';
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { encryptDestination } from '../lib/taxiCrypto.js';
@@ -179,7 +180,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
       }}>
         {revoked ? (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}></div>
+            <div style={{ marginBottom: 12 }}><Icon name="car" size={40} color={(S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: textPrimary, marginBottom: 6 }}>
               Destinazione revocata
             </div>

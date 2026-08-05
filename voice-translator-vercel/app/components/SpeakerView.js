@@ -1031,9 +1031,9 @@ function SpeakerView({ userToken }) {
               background: `linear-gradient(135deg, ${C.accent}15, ${C.purple}15)`,
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 36,
             }}>
-            
+              {/* b.94 — il riquadro era rimasto vuoto dopo la pulizia delle emoji */}
+              <Icon name="mic" size={34} color={C.accent} />
             </div>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
               Parla o scrivi
