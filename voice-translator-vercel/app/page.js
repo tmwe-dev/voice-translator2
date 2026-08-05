@@ -934,17 +934,9 @@ function HomeInner() {
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
       leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
       perVideo={intentoVideo} />
-    {/* Da qui si passa in video di gruppo: il codice da condividere e
-        gia sopra, e la chat resta dov'e. */}
-    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 12px' }}>
-      <button onClick={() => setView('stanza-video')} style={{
-        width: '100%', padding: '13px 16px', borderRadius: 13, cursor: 'pointer',
-        background: 'transparent', border: `1px solid ${S.colors.accent1}55`,
-        color: S.colors.accent1, fontSize: 14, fontWeight: 800, fontFamily: FONT,
-      }}>
-        Entra in video di gruppo
-      </button>
-    </div>
+    {/* La porta per il video di gruppo sta DENTRO LobbyView: messa qui
+        fuori finiva sotto la schermata della stanza e non si poteva
+        premere. Il collaudo dal vivo lo ha mostrato in b.102. */}
     {/* La sala d'attesa e il posto giusto: e qui che l'host sta mentre gli
         altri bussano. Il pannello lo vede solo chi ospita. */}
     {roomPolling.isHostRef?.current !== false && (

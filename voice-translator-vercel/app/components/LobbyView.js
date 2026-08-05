@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useRef } from 'react';
-import { LANGS, APP_URL } from '../lib/constants.js';
+import { LANGS, APP_URL, FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, inviteLang, setInviteLang,
@@ -72,6 +72,27 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
           </div>
           <div style={{textAlign:'center', marginBottom:12}}>
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
+          </div>
+
+          {/* ── b.104 · la porta per il video di gruppo ──
+              In b.102 questo pulsante stava FUORI da LobbyView, appiccicato
+              dopo. Il collaudo dal vivo lo ha bocciato: esisteva nel DOM,
+              ma la schermata della stanza gli passava sopra e nessuno
+              poteva toccarlo. Un pulsante che c'e ma non si preme non
+              esiste. Ora sta dentro la scheda, sotto "Condividi link". */}
+          <div style={{textAlign:'center', marginBottom:12}}>
+            <button
+              onClick={() => { unlockAudio?.(); setView('stanza-video'); }}
+              style={{
+                width:'100%', padding:'12px 16px', borderRadius:13, cursor:'pointer',
+                background:'transparent', border:`1px solid ${S.colors.accent1}55`,
+                color:S.colors.accent1, fontSize:14, fontWeight:800, fontFamily:FONT,
+              }}>
+              Entra in video di gruppo
+            </button>
+            <div style={{fontSize:11, color:S.colors.textMuted, marginTop:5, lineHeight:1.4}}>
+              Fino a 8 persone. Ognuno parla e legge nella propria lingua.
+            </div>
           </div>
           {/* ── INIZIO b.90 — "Videochiamata" apriva questa identica schermata ──
               Due voci diverse in Home portavano allo stesso posto, senza una

@@ -153,6 +153,16 @@ describe('la schermata', () => {
   it('e raggiungibile: c\'e una voce in Home e una porta dalla sala d\'attesa', () => {
     expect(leggi('components/HomeView.js')).toMatch(/id: 'stanza-video'/);
     expect(leggi('page.js')).toMatch(/view === 'stanza-video'/);
-    expect(leggi('page.js')).toMatch(/Entra in video di gruppo/);
+  });
+
+  it('il pulsante sta DENTRO la scheda della stanza, non appiccicato fuori', () => {
+    // b.102 lo aveva messo fuori da LobbyView: esisteva nel DOM ma la
+    // schermata della stanza gli passava sopra e non si poteva premere.
+    // Il collaudo dal vivo lo ha bocciato. Un pulsante che c'e ma non si
+    // preme non esiste.
+    expect(leggi('components/LobbyView.js')).toMatch(/Entra in video di gruppo/);
+    expect(leggi('components/LobbyView.js')).toMatch(/setView\('stanza-video'\)/);
+    expect(leggi('page.js'), 'non deve tornare fuori da LobbyView')
+      .not.toMatch(/Entra in video di gruppo/);
   });
 });
