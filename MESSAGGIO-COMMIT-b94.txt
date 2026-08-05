@@ -1,0 +1,22 @@
+b.94 — riparate le icone che la mia pulizia aveva lasciato vuote
+
+Navigando l'app dopo b.93 ho trovato un danno che avevo fatto io: la
+rimozione delle emoji (b.90) aveva svuotato i riquadri che le
+contenevano. Dove prima c'era un pittogramma ora c'era un quadrato
+vuoto: Community, TaxiTalk, TaxiQR, la pagina del tassista, Entra in
+una stanza.
+
+Non se n'era accorto nessun test, perche non era un errore: era un
+contenitore rimasto senza contenuto.
+
+Ora ognuno ha la sua icona mono, coerente con la pagina:
+  Community          -> globo
+  TaxiTalk / QR      -> auto
+  Entra in una stanza-> porta
+  TaxiTalk "parla"   -> microfono
+
+Corretto anche "puo" -> "può" nel pannello del tasto +.
+
+570 test verdi, lint pulito.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

@@ -1,0 +1,54 @@
+b.95 — il glossario comanda le traduzioni, e l'app smette di stare zitta
+
+Due dei tre interventi che avevo indicato per portare l'esperienza d'uso
+da 7 a 10. Sono anche i due che non toccano il codice fragile.
+
+═══ 1. IL GLOSSARIO ORA SERVE A QUALCOSA ═══
+
+Era la funzione piu promettente dell'app e non faceva niente: una pagina
+raccoglieva i termini, li salvava sul telefono, e finiva li. NESSUNA
+traduzione li leggeva.
+
+Ora il percorso e completo:
+  app/lib/glossario.js  un posto solo per leggere, salvare e filtrare
+  il client               manda solo i termini che compaiono in QUELLA
+                          frase (non tutti: costerebbe e distrarrebbe)
+  la rotta /api/translate li accetta
+  il prompt               li dichiara OBBLIGATORI, anche se al modello
+                          suonerebbe piu naturale un'altra parola
+
+Dettaglio che sarebbe passato inosservato: la CACHE. Una frase gia
+tradotta veniva restituita dalla memoria, quindi SENZA i termini
+dell'utente — cioe l'esatto contrario di quello che aveva chiesto.
+Ora le traduzioni con glossario saltano la cache.
+
+Perche conta: chi lavora in un settore ha venti parole che pesano piu di
+tutte le altre. E l'unica cosa che un traduttore generico non puo
+copiare facilmente.
+
+═══ 2. STATO PARLANTE ═══
+
+Prima: premevi il microfono, parlavi, rilasciavi, e poi SILENZIO. Non
+sapevi se ti aveva sentito, se stava traducendo, se era fallito. Il testo
+compariva, o non compariva.
+
+Ora una riga sola, sempre nello stesso punto, dice cosa succede:
+  "Ti ascolto…"  /  "Traduco…"  /  "Leggo ad alta voce…"
+e quando qualcosa va storto lo dice in italiano, con la via d'uscita:
+  "Credito esaurito: ricarica per continuare."
+  "Traduzione non riuscita. Riprova fra un momento."
+  "Sei senza connessione."
+  "Traduzione di riserva: qualita ridotta."  (quando l'IA e giu)
+
+Prima una traduzione fallita restituiva una stringa VUOTA: l'utente non
+sapeva nemmeno se aveva sbagliato lui.
+
+La riga e marcata role="status" aria-live: la leggono anche i lettori
+di schermo.
+
+578 test verdi (8 nuovi solo sul glossario), lint pulito.
+
+RESTA DA FARE, dei tre: la prima traduzione guidata nei primi 10 secondi.
+Tocca l'onboarding e la faro isolata.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

@@ -1071,6 +1071,40 @@ function HomeInner() {
               auth.isTrial, auth.isTopPro, auth.userAccount
             );
             roomInfoRef.current = room;
+
+            // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──
+            // Il modulo raccoglieva nome, tipo, categoria e numero massimo, e
+            // qui restavano lingua, modalita e descrizione: tutto il resto
+            // veniva buttato via. Risultato: nasceva una normale chat a due,
+            // Community restava eternamente "Nessuna stanza al momento", e la
+            // POST di /api/mondo non la chiamava nessuno.
+            const codice = room?.roomId || room?.code || room?.id;
+            if (codice && roomConfig.roomType !== 'private') {
+              try {
+                await fetch('/api/mondo', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    roomId: codice,
+                    host: prefs.name || 'Host',
+                    nome: roomConfig.nome,
+                    description: roomConfig.description || '',
+                    mode: roomConfig.mode,
+                    categoria: roomConfig.category,
+                    lang: roomConfig.lang || myLang,
+                    hostLang: prefs.lang || myLang,
+                    roomType: roomConfig.roomType,
+                    maxPartecipanti: roomConfig.maxParticipants,
+                    roomSessionToken: room?.sessionToken || room?.roomSessionToken || '',
+                    userToken: auth.userAccount?.token
+                      || (typeof window !== 'undefined' ? localStorage.getItem('vt-token') || '' : ''),
+                  }),
+                });
+              } catch (e) {
+                // La stanza esiste comunque: si entra col codice. Solo non
+                // compare in vetrina, e l'host deve poterlo sapere.
+                console.warn('[Community] stanza non pubblicata:', e?.message);
+              }
+            }
             setView('lobby');
           }}
         />

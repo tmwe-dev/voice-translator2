@@ -1,0 +1,33 @@
+b.92 — il pannello Sesamo diceva bugie sull'accesso
+
+Provando a entrare in /sesamo con la propria mail non si entrava mai, e
+non c'era modo di capire perche.
+
+LA CAUSA. Il campo "Admin email" e una finzione: il server IGNORA quello
+che scrivi. L'accesso dipende da due cose che la schermata non nominava
+nemmeno:
+  1. l'account con cui sei collegato all'APP (il token di sessione)
+  2. la variabile ADMIN_EMAILS, che deve contenere quell'indirizzo
+
+Se ADMIN_EMAILS non esiste, NESSUNO puo entrare. Mai. E l'unico segnale
+era un alert col messaggio tecnico in inglese.
+
+ORA la schermata dice la verita:
+- niente campo email finto
+- mostra a chiare lettere con quale account si entrerebbe, letto dalla
+  sessione vera
+- se non sei collegato lo dice e ti manda all'app ad accedere, invece di
+  lasciarti premere un tasto che non puo funzionare
+- se l'account non e fra gli amministratori, il messaggio spiega cosa
+  fare: aggiungerlo ad ADMIN_EMAILS su Vercel e rifare il deploy
+
+Tolte anche le due emoji rimaste nel pannello.
+
+568 test verdi, lint pulito.
+
+PROMEMORIA CONFIGURAZIONE: perche il pannello si apra serve, su Vercel,
+  ADMIN_EMAILS = lucaarcana@gmail.com,luca@tmwe.it
+seguito da un redeploy. L'indirizzo che conta e quello con cui si accede
+all'app, non quello dell'account Vercel.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

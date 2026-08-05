@@ -1,0 +1,39 @@
+b.96 — la prima traduzione entro dieci secondi
+
+Terzo e ultimo dei tre interventi per portare l'esperienza d'uso a 10.
+
+IL PROBLEMA. Il primo avvio era: benvenuto, sei dentro, arrangiati.
+L'utente LEGGEVA che l'app traduce, ma non lo SENTIVA mai. E chi non
+prova nei primi secondi non torna: nessuna spiegazione recupera quel
+momento perduto.
+
+LA SOLUZIONE. Una scheda in cima alla Home, solo al primo avvio:
+  - una frase gia pronta nella lingua dell'utente ("Buongiorno, mi
+    scusi, dove posso trovare un taxi?") — quindici lingue coperte
+  - sei mete a portata di tocco, mai quella che gia parla
+  - un pulsante: Ascolta
+
+Un tocco e la frase diventa testo tradotto E VOCE. Niente da capire,
+niente da configurare. Poi la scheda sparisce per sempre.
+
+La voce e meta dell'effetto: senza, resta un esercizio di lettura. Ma
+se la sintesi fallisce il testo resta comunque — la prova non si perde
+per un problema secondario.
+
+Nuovo componente isolato (PrimaProva.js): l'onboarding non e stato
+toccato, quindi nessun rischio sui percorsi esistenti.
+
+GUARDIE: prima-prova.test.js verifica che sia montata in Home, che si
+mostri una volta sola, che ci sia una frase per OGNI lingua del
+selettore iniziale (se ne mancasse una, l'utente vedrebbe una frase in
+una lingua non sua), che non proponga come meta la lingua che gia
+parla, che faccia sentire la voce e che dica cosa sta facendo.
+
+585 test verdi, lint pulito.
+
+CON QUESTO SONO FATTI TUTTI E TRE:
+  b.95  glossario collegato alle traduzioni
+  b.95  stato parlante ("Ti ascolto", "Traduco", errori in italiano)
+  b.96  prima traduzione guidata
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

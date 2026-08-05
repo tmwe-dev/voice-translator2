@@ -1,0 +1,32 @@
+b.93 — il tasto "+" smette di ripetere la Home, e apre una pagina che era murata
+
+IL BUCO. La pagina "Entra con un codice" (view 'join') esisteva, era
+completa, chiedeva codice, nome e lingua — e NESSUN pulsante dell'app la
+apriva. Ci si arrivava solo da un link o da un QR.
+
+Vuol dire che se un amico ti detta il codice della stanza a voce o per
+telefono, nell'app non c'era nessun posto dove scriverlo.
+
+Il test sui file orfani non poteva accorgersene: JoinView.js era
+importato regolarmente. A mancare era la NAVIGAZIONE, non il file.
+
+IL TASTO "+". Era il piu in vista di tutta l'app e ripeteva
+ESATTAMENTE le quattro voci gia presenti in Home. Ora porta dove la Home
+non arriva:
+  - Entra con un codice        -> la pagina murata di cui sopra
+  - Apri una stanza pubblica   -> creazione stanza Community
+  - I tuoi contatti            -> con chi parli di solito
+  - Conversazioni salvate      -> cronologia
+
+TROVATO STRADA FACENDO: la vista 'archive' era un secondo nome di
+'history'. Stessa pagina, due nomi, nessuno usava il secondo. Eliminato.
+
+GUARDIA: viste-raggiungibili.test.js confronta le viste che page.js sa
+disegnare con quelle che qualcuno apre davvero, e fallisce se una pagina
+torna a essere irraggiungibile. Esclude solo gli ingressi esterni voluti
+(primo avvio, link a una stanza, QR del tassista).
+Un secondo controllo impedisce al "+" di tornare a copiare la Home.
+
+570 test verdi, lint pulito.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>

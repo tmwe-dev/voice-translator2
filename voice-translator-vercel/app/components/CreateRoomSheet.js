@@ -41,6 +41,9 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   const textMuted = C.textMuted || 'rgba(242,244,247,0.60)';
   const inputBg = C.inputBg || 'rgba(14,18,32,0.6)';
 
+  // Il nome e OBBLIGATORIO: e la prima e spesso l'unica cosa che una
+  // persona legge nell'elenco. Una stanza senza nome non si sceglie.
+  const [nome, setNome] = useState('');
   const [roomType, setRoomType] = useState('public');
   const [category, setCategory] = useState('conversation');
   const [lang, setLang] = useState('it');
@@ -49,11 +52,16 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   const [creating, setCreating] = useState(false);
   const sheetRef = useSheetA11y(open, onClose);
 
+  const nomePulito = nome.trim();
+  const nomeValido = nomePulito.length >= 3;
+
   const handleCreate = useCallback(async () => {
+    if (!nomeValido) return;
     vibrate(20);
     setCreating(true);
     try {
       await onCreate({
+        nome: nomePulito,
         roomType,
         category,
         lang,
@@ -66,7 +74,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
       console.warn('[CreateRoom] Failed:', e?.message);
     }
     setCreating(false);
-  }, [roomType, category, lang, description, maxParticipants, onCreate, onClose]);
+  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, onCreate, onClose]);
 
   if (!open) return null;
 
@@ -113,6 +121,25 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
 
         {/* Scrollable content */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 20px 20px', scrollbarWidth: 'none' }}>
+
+          {/* Nome o argomento — obbligatorio, e la prima cosa che si legge */}
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="stanza-nome" style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Nome o argomento
+            </label>
+            <input id="stanza-nome" type="text" value={nome} maxLength={60}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Es: Caffè con chi impara l'italiano"
+              style={{
+                ...inputStyle,
+                border: `1px solid ${nomeValido || !nome ? cardBorder : `${C.accent3 || '#e5484d'}66`}`,
+              }} />
+            <div style={{ fontSize: 10, color: textMuted, marginTop: 5, lineHeight: 1.4 }}>
+              {nome && !nomeValido
+                ? 'Servono almeno tre lettere.'
+                : 'Chi scorre l’elenco legge questo, e decide se entrare.'}
+            </div>
+          </div>
 
           {/* Room Type */}
           <div style={{ marginBottom: 16 }}>
@@ -233,15 +260,16 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
 
         {/* Create button */}
         <div style={{ padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
-          <button onClick={handleCreate} disabled={creating} style={{
-            width: '100%', padding: '14px', borderRadius: 14, cursor: creating ? 'default' : 'pointer',
+          <button onClick={handleCreate} disabled={creating || !nomeValido} style={{
+            width: '100%', padding: '14px', borderRadius: 14,
+            cursor: creating || !nomeValido ? 'default' : 'pointer',
             background: `linear-gradient(135deg, ${accent}, ${purple})`,
             border: 'none', color: '#fff',
             fontSize: 15, fontWeight: 700, fontFamily: FONT,
             boxShadow: `0 4px 20px ${accent}35`,
-            opacity: creating ? 0.7 : 1,
+            opacity: creating || !nomeValido ? 0.45 : 1,
           }}>
-            {creating ? 'Creazione...' : 'Crea BarTalk'}
+            {creating ? 'Creazione...' : !nomeValido ? 'Dai un nome alla stanza' : 'Crea BarTalk'}
           </button>
         </div>
       </div>

@@ -50,7 +50,9 @@ export default function AdminPage() {
   useEffect(() => {
     const t = (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })();
     if (!t) return;
-    fetch('/api/user', { headers: { Authorization: `Bearer ${t}` } })
+    // La rotta /api/user smista per `action`: senza, risponde 400 "Invalid
+    // action" e il pannello resta convinto che tu non sia collegato.
+    fetch('/api/user?action=profile', { headers: { Authorization: `Bearer ${t}` } })
       .then(r => (r.ok ? r.json() : null))
       .then(d => { if (d?.email) setSessione(d.email); })
       .catch(() => {});

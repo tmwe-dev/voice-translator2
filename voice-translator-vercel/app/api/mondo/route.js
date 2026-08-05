@@ -9,6 +9,10 @@ const log = createLogger('mondo');
 const MONDO_KEY = 'mondo:rooms';
 const MONDO_TTL = 3600; // 1 hour
 
+// I quattro tipi che il modulo di creazione propone davvero.
+// 'private' non finisce mai in vetrina: ci si arriva solo con l'invito.
+const ROOM_TYPES = ['public', 'protected', 'private', 'temporary'];
+
 /**
  * GET /api/mondo — List public rooms
  * Returns: { rooms: [{ roomId, host, description, mode, lang, members, createdAt }] }
@@ -43,17 +47,43 @@ export async function POST(req) {
     const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-post'), 10);
     if (!rl.allowed) return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
 
-    const { roomId, host, description, mode, lang, members, roomSessionToken, userToken } = await req.json();
+    const {
+      roomId, host, nome, description, mode, lang, members,
+      roomType, categoria, maxPartecipanti, hostLang,
+      roomSessionToken, userToken,
+    } = await req.json();
     if (!roomId || !host) return NextResponse.json({ error: 'roomId and host required' }, { status: 400 });
     // Require some form of authentication to prevent spam
     if (!roomSessionToken && !userToken) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
 
+    // Il nome e obbligatorio: nell'elenco e la prima cosa che si legge.
+    const nomePulito = (nome || '').trim().slice(0, 60);
+    if (nomePulito.length < 3) {
+      return NextResponse.json({ error: 'Serve un nome di almeno tre lettere' }, { status: 400 });
+    }
+
+    // Una stanza privata si raggiunge solo con l'invito: non va in vetrina.
+    const tipo = ROOM_TYPES.includes(roomType) ? roomType : 'public';
+    if (tipo === 'private') {
+      return NextResponse.json({ ok: true, pubblicata: false, motivo: 'stanza privata' });
+    }
+
     const entry = {
       roomId,
       host,
+      nome: nomePulito,
       description: (description || '').slice(0, 100),
       mode: mode || 'conversation',
+      categoria: categoria || mode || 'conversation',
       lang: lang || 'en',
+      // La lingua dell'host regge la bandiera nell'elenco; se manca, quella
+      // della stanza e comunque piu informativa di niente.
+      hostLang: hostLang || lang || 'en',
+      roomType: tipo,
+      // 'protected' = si bussa e l'host apre. L'elenco lo deve dire prima
+      // che uno tocchi, altrimenti sembra che la stanza non risponda.
+      suApprovazione: tipo === 'protected',
+      maxPartecipanti: Math.min(50, Math.max(2, Number(maxPartecipanti) || 20)),
       memberCount: members?.length || 1,
       createdAt: Date.now(),
     };

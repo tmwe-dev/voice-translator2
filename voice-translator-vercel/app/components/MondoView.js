@@ -101,6 +101,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
   }, [fetchRooms]);
 
   const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '';
+  const getLangName = (code) => LANGS.find(l => l.code === code)?.name || '';
 
   const timeAgo = (ts) => {
     const mins = Math.floor((Date.now() - ts) / 60000);
@@ -115,7 +116,9 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
     if (modeFilter !== 'all') list = list.filter(r => r.mode === modeFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(r => r.host?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q));
+      list = list.filter(r => r.nome?.toLowerCase().includes(q)
+        || r.host?.toLowerCase().includes(q)
+        || r.description?.toLowerCase().includes(q));
     }
     return list;
   }, [rooms, langFilter, modeFilter, search]);
@@ -346,26 +349,40 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                 WebkitTapHighlightColor: 'transparent',
                 animation: `vtSlideUp 0.3s ease-out ${idx * 0.05}s both`,
               }}>
-              {/* Flag avatar */}
+              {/* Bandiera dell'host: da quale lingua e paese si parla */}
               <div style={{
                 fontSize: 26, width: 50, height: 50, borderRadius: 16, flexShrink: 0,
                 background: `${modeInfo.color}12`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 border: `1px solid ${modeInfo.color}20`,
               }}>
-                {getLangFlag(room.lang)}
+                {getLangFlag(room.hostLang || room.lang)}
               </div>
 
-              {/* Info */}
+              {/* Info — in cima il NOME della stanza: e cio che si sceglie.
+                  L'host viene dopo, con la sua bandiera e la sua lingua. */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-                  <span style={{ fontWeight: 700, fontSize: 14, color: C.textPrimary }}>
-                    {room.host}
+                  <span style={{
+                    fontWeight: 700, fontSize: 14, color: C.textPrimary,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
+                  }}>
+                    {room.nome || room.host}
                   </span>
                   {/* Room type icon */}
                   {room.roomType && room.roomType !== 'public' && (
                     <span style={{ fontSize: 12 }} title={room.roomType}>
                       {ROOM_TYPE_ICONS[room.roomType] || ''}
+                    </span>
+                  )}
+                  {/* Si bussa e l'host apre: dirlo PRIMA che uno tocchi,
+                      altrimenti sembra una stanza che non risponde. */}
+                  {room.suApprovazione && (
+                    <span style={{
+                      padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
+                      background: `${PALETTE.amber || '#F59E0B'}18`, color: PALETTE.amber || '#F59E0B',
+                    }}>
+                      Su approvazione
                     </span>
                   )}
                   {/* Host role badge */}
@@ -385,16 +402,23 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                     {modeInfo.icon} {modeInfo.label}
                   </span>
                 </div>
+
+                {/* Chi ospita, e da dove */}
+                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
+                  {getLangFlag(room.hostLang || room.lang)} {getLangName(room.hostLang || room.lang)}
+                  {' · '}{room.host}
+                </div>
+
                 {room.description && (
                   <div style={{
-                    fontSize: 12, color: C.textSecondary, marginTop: 1,
+                    fontSize: 12, color: C.textSecondary, marginTop: 2,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
                     {room.description}
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: 10, marginTop: 5, fontSize: 10, color: C.textMuted }}>
-                  <span>{room.memberCount}</span>
+                  <span>{room.memberCount}{room.maxPartecipanti ? `/${room.maxPartecipanti}` : ''}</span>
                   <span>{timeAgo(room.createdAt)}</span>
                   {room.targetLangs?.length > 0 && (
                     <span>{room.targetLangs.map(l => getLangFlag(l)).join(' ')}</span>

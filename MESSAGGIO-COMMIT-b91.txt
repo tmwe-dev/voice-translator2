@@ -1,0 +1,49 @@
+b.91 — chiusi gli errori di produzione rimasti
+
+Dopo il ripristino delle chiavi, i 401 di OpenAI sono spariti dai log.
+Restavano due gruppi di errori, ed erano entrambi lo stesso guasto.
+
+═══ IL TRADUTTORE GRATUITO SI APPOGGIAVA A UN SERVIZIO ROTTO ═══
+
+Nei log: 35 "tryProvider error [microsoft]" e 13 "Failed to fetch auth
+token ... Received undefined". La libreria non ufficiale di Microsoft non
+riesce piu a ottenere il proprio token, e falliva a ogni chiamata.
+
+Il guaio e che Microsoft era il provider PRIMARIO per tutte le lingue:
+ogni traduzione gratuita partiva con un fallimento garantito.
+
+Verificato dal vivo che Google (senza chiave) traduce bene. Quindi:
+- catena nuova: google, mymemory, microsoft (era: microsoft, google)
+- il "provider piu veloce" non e piu microsoft ma google
+- Microsoft ora fallisce IN SILENZIO e passa al prossimo, invece di far
+  risalire l'errore. Prima si lasciavano risalire gli errori "per poterli
+  segnalare": il risultato erano 48 errori in produzione per un servizio
+  che non funziona piu e nessun beneficio per chi usa l'app.
+
+568 test verdi, lint pulito.
+
+═══ VERIFICATO DAL VIVO OGGI ═══
+
+- traduzione testo: HTTP 200, IA viva, nessun ripiego
+- voce premium ElevenLabs: HTTP 200, 36 KB di audio reale, 250 voci
+- registro crediti: 5 righe di consumo, di cui una premium che scala
+  9 secondi contro i 5 del testo (quasi il triplo, come da listino)
+  e costa 0,27 centesimi contro 0,03 (nove volte, coerente)
+
+Fino a stamattina le righe di consumo erano ZERO.
+
+═══ NON RISOLTO, E DICHIARATO ═══
+
+1. ANTHROPIC_API_KEY: il nome ora e giusto ma la chiave risponde
+   "invalid x-api-key". Va rigenerata su console.anthropic.com.
+   Nel frattempo OpenAI copre, e la traduzione non si ferma.
+2. Errore React #418 (idratazione). Avevo una pista e l'ho scartata:
+   confrontavo l'HTML di /privacy con il DOM della home, cioe due pagine
+   diverse. Confrontate correttamente coincidono. Per trovarlo serve una
+   build di sviluppo con React non minificato, che qui non compila.
+   Non e bloccante: React si riprende ridisegnando lato client.
+3. Il "+" al centro della barra apre le stesse quattro voci della Home.
+4. Consumo della voce REGISTRATA (/api/transcribe) mai visto scattare:
+   serve una conversazione vera al microfono.
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>
