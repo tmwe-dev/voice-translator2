@@ -97,22 +97,46 @@ export default function useInitializeApp({
       }
 
       // 6. Room join from URL
+      //
+      // ── b.99 · CHI E INVITATO ENTRA, NON COMPILA UN MODULO ──
+      // Prima l'ingresso automatico chiedeva `saved`: un ospite nuovo non
+      // ha niente di salvato, quindi non scattava mai. Risultato: chi
+      // riceveva il link si trovava davanti a nome, lingua e codice da
+      // riempire — cioe un piccolo onboarding — invece che dentro la chat
+      // dove lo stavano aspettando. E li molti chiudono.
+      //
+      // Ora chi arriva con un invito entra e basta. Se non ha un nome gli
+      // se ne da uno provvisorio e la lingua la prende dal suo browser:
+      // due cose che potra cambiare dopo, con la conversazione gia aperta.
       const autoJoin = urlParams.get('auto') === '1';
       if (roomParam) {
         setJoinCode(roomParam.toUpperCase());
         window.history.replaceState({}, '', window.location.pathname);
 
-        if (autoJoin && saved) {
-          let p; try { p = JSON.parse(saved); } catch { p = null; }
-          if (p && p.name && p.lang) {
-            if (langParam) { p.lang = langParam; setPrefs(p); setMyLang(langParam); }
-            setTimeout(() => setAutoJoinTriggered(true), 500);
-          }
-        }
+        if (autoJoin) {
+          let p = null;
+          try { p = saved ? JSON.parse(saved) : null; } catch { p = null; }
 
-        const canAutoJoinFromQR = autoJoin && guestNameParam && (guestLangParam || langParam);
-        if (canAutoJoinFromQR) {
-          setTimeout(() => setAutoJoinTriggered(true), 800);
+          const linguaBrowser = (typeof navigator !== 'undefined'
+            ? (navigator.language || 'en').split('-')[0] : 'en');
+          const linguaOspite = guestLangParam || (p?.lang)
+            || (LANGS.find(l => l.code === linguaBrowser) ? linguaBrowser : 'en');
+          const nomeOspite = guestNameParam
+            ? decodeURIComponent(guestNameParam)
+            : (p?.name || 'Ospite');
+
+          const provvisorie = {
+            ...(p || {}),
+            name: nomeOspite,
+            lang: linguaOspite,
+            autoPlay: true,
+            avatar: p?.avatar || AVATARS[0],
+          };
+          setPrefs(provvisorie);
+          setMyLang(linguaOspite);
+          try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* privato */ }
+
+          setTimeout(() => setAutoJoinTriggered(true), 600);
         }
       }
 

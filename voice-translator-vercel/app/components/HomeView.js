@@ -4,6 +4,7 @@ import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
+import Icon from './Icon.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import PrimaProva, { primaProvaGiaFatta } from './PrimaProva.js'; // b.96
 
@@ -38,6 +39,15 @@ const ACTIONS = [
     icon: 'car',
     title: 'TaxiTalk',
     desc: 'Comunica la destinazione al tassista',
+  },
+  {
+    // b.99 — regalare minuti esisteva e funzionava, ma stava in fondo alla
+    // pagina del credito: nessuno ci arrivava per caso. Se una funzione
+    // non ha una voce dove le persone guardano, per loro non esiste.
+    id: 'regala',
+    icon: 'gift',
+    title: 'Regala minuti a qualcuno',
+    desc: 'Un link con dentro il tuo credito, per chi non ce l’ha',
   },
 ];
 
@@ -102,6 +112,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         break;
       case 'taxitalk':
         setView('speaker');
+        break;
+      case 'regala':
+        // La pagina del credito e gia il posto giusto: c'e il saldo, e i
+        // minuti regalati si scalano da li. Non serve una schermata nuova.
+        setView('credits');
         break;
     }
   }
@@ -244,7 +259,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   color: tilePieno ? '#fff' : C.textSecondary,
                   boxShadow: tilePieno ? `0 4px 14px -4px ${C.accent}70` : 'none',
                 }}>
-                  {action.icon === 'qr' ? <IconQR size={20} /> : action.icon === 'mail' ? <IconMail size={20} /> : action.icon === 'video' ? <IconVideoCall size={20} /> : <IconCar size={20} />}
+                  {action.icon === 'qr' ? <IconQR size={20} />
+                    : action.icon === 'mail' ? <IconMail size={20} />
+                    : action.icon === 'video' ? <IconVideoCall size={20} />
+                    : action.icon === 'gift' ? <Icon name="gift" size={20} color={C.accent} />
+                    : <IconCar size={20} />}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>

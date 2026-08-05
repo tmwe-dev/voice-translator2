@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import BarraReazioni from './BarraReazioni.js';
 
 // Haptic feedback helper (mobile)
 function haptic(ms = 10) {
@@ -56,6 +57,8 @@ const MessageList = memo(function MessageList({
   onMessageRead, // callback(msgId) when a partner's message becomes visible
   onReaction, // callback(msgId, emoji) for sending reactions via P2P
   onMessageDoubleClick, // callback(msg) for Taxi Mode activation on double-tap
+  // ── b.99 · reazioni durevoli (pollice su/giu, cuore) e risposte ──
+  conteReazioni, mieReazioni, onReagisci, onRispondi,
 }) {
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
   const longPressTimerRef = useRef(null);
@@ -140,6 +143,20 @@ const MessageList = memo(function MessageList({
                   </div>
                 )}
               </div>
+              {/* b.99 — pollice su, pollice giu, cuore e risposta: sempre
+                  in vista, non dietro una pressione lunga che nessuno
+                  scopre. Vale anche nelle chat cifrate: si conta un
+                  identificativo, non si legge un testo. */}
+              {onReagisci && (
+                <BarraReazioni
+                  msgId={m.id}
+                  conte={conteReazioni?.[m.id]}
+                  mie={mieReazioni?.[m.id]}
+                  onReagisci={onReagisci}
+                  onRispondi={onRispondi}
+                  C={S.colors}
+                  compatta />
+              )}
               {/* Reactions display */}
               {m._reactions && Object.keys(m._reactions).length > 0 && (
                 <div style={{display:'flex', gap:2, flexWrap:'wrap', marginTop:4}}>

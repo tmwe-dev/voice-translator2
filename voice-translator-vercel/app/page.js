@@ -39,6 +39,7 @@ const CreditsView = lazy(() => import('./components/CreditsView.js'));
 const ApiKeysView = lazy(() => import('./components/ApiKeysView.js'));
 const SettingsView = lazy(() => import('./components/SettingsView.js'));
 const LobbyView = lazy(() => import('./components/LobbyView.js'));
+const PannelloModerazione = lazy(() => import('./components/PannelloModerazione.js'));
 const RoomView = lazy(() => import('./components/RoomView.js'));
 const HistoryView = lazy(() => import('./components/HistoryView.js'));
 const SummaryView = lazy(() => import('./components/SummaryView.js'));
@@ -438,6 +439,19 @@ function HomeInner() {
   function savePrefs(newPrefs) {
     setPrefs(newPrefs); setMyLang(newPrefs.lang);
     localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
+
+    // b.98 — il nome viveva in DUE posti che non si parlavano: qui sul
+    // telefono, e sul server. Nelle stanze Community si leggeva quello
+    // locale, quindi bastava non aver mai aggiornato il server per
+    // presentarsi al mondo con un nome vecchio o con delle iniziali.
+    // Ora il locale comanda, e lo dice anche al server.
+    const token = (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })();
+    if (token && newPrefs.name) {
+      fetch('/api/user', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action: 'update', name: newPrefs.name, lang: newPrefs.lang, avatar: newPrefs.avatar }),
+      }).catch(() => { /* il nome locale resta valido: si riallinea al prossimo salvataggio */ });
+    }
   }
 
   /**
@@ -539,7 +553,9 @@ function HomeInner() {
   // SHARE
   // =============================================
   function shareRoom() {
-    const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}`;
+    // auto=1 — chi riceve l'invito entra dritto nella chat. Senza, si
+    // trovava davanti a un modulo da riempire: nome, lingua, codice.
+    const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}&auto=1`;
     if (navigator.share) navigator.share({ title:'BarTalk', text:`${t(inviteLang,'inviteText')}`, url });
     else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
   }
@@ -855,6 +871,7 @@ function HomeInner() {
   if (view === 'room') return wrap(
     <Suspense fallback={<LazyFallback />}>
     <RoomView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
+      roomSessionToken={roomPolling.roomSessionTokenRef?.current}
       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
       isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
@@ -902,6 +919,19 @@ function HomeInner() {
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
       leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
       perVideo={intentoVideo} />
+    {/* La sala d'attesa e il posto giusto: e qui che l'host sta mentre gli
+        altri bussano. Il pannello lo vede solo chi ospita. */}
+    {roomPolling.isHostRef?.current !== false && (
+      <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 20px' }}>
+        <PannelloModerazione
+          aperto
+          roomId={roomPolling.roomId}
+          roomSessionToken={roomPolling.roomSessionTokenRef?.current}
+          membri={roomPolling.roomInfo?.members || []}
+          mioNome={roomPolling.verifiedNameRef?.current || prefs.name}
+          onChiudi={null} />
+      </div>
+    )}
     </Suspense>
   );
 

@@ -31,6 +31,23 @@ export async function handleCreate({ name, lang, mode, avatar, context, contextP
 // ── Action: join ──
 export async function handleJoin({ roomId, name, lang, avatar }) {
   if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
+
+  // ── Moderazione: si controlla PRIMA di far entrare ──
+  // Un blocco che si applica dopo l'ingresso non e un blocco: la persona
+  // e gia dentro, ha gia scritto, e la si deve ributtare fuori a mano.
+  const { puoEntrare } = await import('./moderazione.js');
+  const varco = await puoEntrare(roomId, name);
+  if (!varco.ok) {
+    if (varco.motivo === 'bloccato') {
+      return NextResponse.json({ error: 'bloccato', motivo: 'bloccato' }, { status: 403 });
+    }
+    // Su approvazione: si bussa e si aspetta. Non e un errore, e un'attesa,
+    // e il client deve poterla raccontare invece di dire "non funziona".
+    const { richiediIngresso } = await import('./moderazione.js');
+    const stato = varco.motivo === 'rifiutato' ? 'rifiutato' : await richiediIngresso(roomId, name);
+    return NextResponse.json({ inAttesa: stato === 'in-attesa', stato, motivo: varco.motivo }, { status: 403 });
+  }
+
   const room = await joinRoom(roomId, name, lang, avatar || null);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   const member = room.members.find(m => m.name === name);

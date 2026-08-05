@@ -101,6 +101,15 @@ export async function POST(req) {
       }
     }
 
+    // Le regole vivono accanto alla stanza, non solo nella vetrina: le legge
+    // handleJoin per decidere se aprire, e la vetrina puo scomparire prima.
+    try {
+      const { salvaRegole } = await import('../../lib/moderazione.js');
+      await salvaRegole(roomId, { suApprovazione: entry.suApprovazione, hostNome: host });
+    } catch (e) {
+      log.warn('regole non salvate:', e?.message);
+    }
+
     // Add to front
     await redis('LPUSH', MONDO_KEY, JSON.stringify(entry));
     await redis('LTRIM', MONDO_KEY, 0, 29); // Keep max 30

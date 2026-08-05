@@ -1,0 +1,67 @@
+b.98 — l'host decide chi entra e chi resta fuori
+
+"Protetto" era solo un'etichetta: chiunque avesse il codice entrava lo
+stesso. E non c'era nessun modo di togliere di mezzo una persona.
+
+═══ 1. IL CONTROLLO AVVIENE PRIMA DELL'INGRESSO ═══
+
+app/lib/moderazione.js tiene insieme tre cose che vivono dello stesso
+dato: chi puo entrare, chi deve uscire, chi si comporta male.
+
+handleJoin ora interroga puoEntrare() PRIMA di joinRoom(). Un blocco che
+si applica dopo non e un blocco: la persona e gia dentro e ha gia
+scritto. Il test lo verifica confrontando le posizioni nel file.
+
+Dentro una stanza una persona e il suo NOME: e l'unita che usa gia
+tutto il resto (roomSessionToken porta roomId + name + role). Non
+inventiamo una seconda identita che si disallineerebbe il giorno dopo.
+"Marco", "marco " e "MARCO" sono la stessa persona.
+
+═══ 2. SOLO CHI OSPITA PUO DECIDERE ═══
+
+/api/moderazione — bussa, stato, richieste, ammetti, rifiuta, blocca,
+sblocca, segnala, reputazione.
+
+Ammettere, rifiutare e bloccare passano tutte da soloHost(), che parte
+dal TOKEN DI SESSIONE della stanza. Il nome scritto nel corpo della
+richiesta non vale niente: chiunque potrebbe scriverci "Luca".
+Non ci si puo bloccare da soli: chiuderebbe la propria stanza.
+
+═══ 3. SEGNALAZIONI CHE NON SI POSSONO FALSIFICARE ═══
+
+Una segnalazione per persona, tenuta con SET NX: senza, bastano dieci
+tocchi per affossare qualcuno che non piace. Non si segnala se stessi.
+Chi supera la soglia perde l'ingresso libero nelle stanze pubbliche, ma
+se qualcuno lo invita entra lo stesso: non sparisce, perde la porta
+aperta.
+
+Le segnalazioni seguono la persona e durano 30 giorni. Le liste di
+blocco muoiono con la stanza: un nome non deve restare bloccato in una
+stanza che non esiste piu.
+
+═══ 4. IL PANNELLO, NELLA SALA D'ATTESA ═══
+
+PannelloModerazione.js sta nella lobby, che e dove l'host sta davvero
+mentre gli altri bussano. Tre gesti, nessuna schermata nuova da
+imparare: Ammetti/Rifiuta, Blocca, Sblocca.
+
+═══ 5. CHI BUSSA CAPISCE CHE STA ASPETTANDO ═══
+
+Prima un rifiuto della moderazione finiva in "Room not found", e chi
+bussava a una stanza su approvazione credeva di aver sbagliato codice:
+riprovava, e riprovava. Ora il 403 con motivo diventa "Hai bussato:
+aspetta che ti aprano" oppure "Non puoi entrare in questa stanza".
+
+═══ 6. I DUE PUNTI APERTI DI b.97 ═══
+
+IL LUCCHETTO VUOTO. ROOM_TYPE_ICONS era rimasta svuotata dalla
+ripulitura delle emoji di b.94: renderizzava uno spazio. Ora sono nomi
+del sistema di icone.
+
+IL NOME IN DUE POSTI. Il nome viveva sul telefono E sul server, e i due
+non si parlavano: nelle stanze si leggeva quello locale, quindi bastava
+non aver mai aggiornato il server per presentarsi al mondo con delle
+iniziali. Nel collaudo si vedeva "lll". Ora savePrefs lo dice anche al
+server.
+
+Prove: 611 test verdi (16 nuovi, moderazione.test.js), 0 errori di lint.

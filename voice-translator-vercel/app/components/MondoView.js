@@ -24,11 +24,14 @@ const MODE_LABELS = {
   simultaneous: { label: 'Live', icon: '', color: '#EF4444' },
 };
 
+// b.98 — questa mappa era rimasta svuotata dalla ripulitura delle emoji di
+// b.94: renderizzava uno spazio, e il tipo di stanza non si vedeva piu.
+// Ora sono nomi del sistema di icone, non caratteri.
 const ROOM_TYPE_ICONS = {
-  public: '',
-  protected: '',
-  private: '',
-  temporary: '',
+  public: null,        // pubblica: nessun segno, e la normalita
+  protected: 'lock',
+  private: 'lock',
+  temporary: 'history',
 };
 
 const ROLE_BADGES = {
@@ -370,9 +373,9 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                     {room.nome || room.host}
                   </span>
                   {/* Room type icon */}
-                  {room.roomType && room.roomType !== 'public' && (
-                    <span style={{ fontSize: 12 }} title={room.roomType}>
-                      {ROOM_TYPE_ICONS[room.roomType] || ''}
+                  {ROOM_TYPE_ICONS[room.roomType] && (
+                    <span style={{ display: 'inline-flex' }} title={room.roomType}>
+                      <Icon name={ROOM_TYPE_ICONS[room.roomType]} size={12} color={C.textMuted} />
                     </span>
                   )}
                   {/* Si bussa e l'host apre: dirlo PRIMA che uno tocchi,
@@ -407,6 +410,15 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                 <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
                   {getLangFlag(room.hostLang || room.lang)} {getLangName(room.hostLang || room.lang)}
                   {' · '}{room.host}
+                </div>
+
+                {/* b.99 — la verita sulla riservatezza, scritta prima di
+                    entrare e non nascosta nelle condizioni d'uso. Qui i
+                    messaggi restano sul server: e il prezzo per far vedere
+                    a chi arriva di cosa si sta parlando. Le chat private
+                    restano cifrate, e sono un'altra cosa. */}
+                <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 3, opacity: 0.85 }}>
+                  Stanza aperta: i messaggi restano visibili a chi entra dopo.
                 </div>
 
                 {room.description && (

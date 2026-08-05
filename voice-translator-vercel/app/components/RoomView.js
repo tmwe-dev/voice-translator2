@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useRef, useEffect, useCallback } from 'react';
+import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
@@ -15,6 +15,7 @@ import TaxiMode, { TaxiButton } from './TaxiMode.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { getAttenuazione } from '../lib/audioPrefs.js';
+import useReazioni from '../hooks/useReazioni.js';
 
 const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -32,8 +33,39 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
   setLiveMode, interpreter, onMessageRead,
-  showChatActions, setShowChatActions, localChat, ProviderBadge }) {
+  showChatActions, setShowChatActions, localChat, ProviderBadge,
+  roomSessionToken }) {
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
+
+  // ── b.99 · reazioni durevoli ──
+  // Si chiedono i conteggi dei soli messaggi a schermo, in una chiamata
+  // sola. Sessanta e il tetto che accetta la rotta.
+  const idsVisibili = useMemo(
+    () => (messages || []).slice(-60).map(m => m.id).filter(Boolean),
+    [messages]
+  );
+  const reazioni = useReazioni({ roomId, roomSessionToken, msgIds: idsVisibili });
+
+  // Il messaggio a cui si sta rispondendo, mostrato sopra il campo di
+  // scrittura finche non si invia o non si annulla.
+  const [rispostaA, setRispostaA] = useState(null);
+
+  // ── Conservare i messaggi: SOLO nelle stanze Community ──
+  // Il client manda tutto, il SERVER decide: se la stanza non e stata
+  // pubblicata in Community non conserva niente e risponde
+  // "conservato: false". Cosi la promessa di riservatezza delle chat
+  // private non dipende dal fatto che il telefono si comporti bene.
+  const giaConservati = useRef(new Set());
+  useEffect(() => {
+    if (!roomId || !roomSessionToken) return;
+    for (const m of messages || []) {
+      if (!m?.id || giaConservati.current.has(m.id)) continue;
+      const testo = m.original || m.text || '';
+      if (!testo) continue;
+      giaConservati.current.add(m.id);
+      reazioni.conserva(m.id, testo, m.lang || myLang, m.rispostaA || null);
+    }
+  }, [messages, roomId, roomSessionToken, reazioni, myLang]);
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
@@ -380,6 +412,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             webrtc.sendDirectMessage({ type: 'msg-reaction', msgId, emoji, from: myName });
           }
         }}
+        conteReazioni={reazioni.conte}
+        mieReazioni={reazioni.mie}
+        onReagisci={reazioni.reagisci}
+        onRispondi={(msgId) => {
+          // Rispondere non apre una schermata: prepara il campo di scrittura
+          // con la citazione, e la risposta entra nella chat come gli altri
+          // messaggi. Come in una conversazione vera, non come in un forum.
+          const citato = (messages || []).find(m => m.id === msgId);
+          if (!citato) return;
+          setRispostaA({ id: msgId, nome: citato.sender || citato.from, testo: citato.original || citato.text || '' });
+          vibrate(10);
+        }}
         onMessageDoubleClick={(msg) => {
           const original = msg.text || msg.original || '';
           const translated = msg.translation || msg.translated || '';
@@ -448,6 +492,32 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       </div>
 
       {/* ═══ Talk Controls ═══ */}
+      {/* Stai rispondendo a qualcuno: si vede a chi, e si puo annullare */}
+      {rispostaA && (
+        <div style={{
+          margin: '0 10px 6px', padding: '8px 12px', borderRadius: 12,
+          background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
+          display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
+              Rispondi a {rispostaA.nome}
+            </div>
+            <div style={{
+              fontSize: 12, color: S.colors.textMuted,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {rispostaA.testo}
+            </div>
+          </div>
+          <button onClick={() => setRispostaA(null)} aria-label="Annulla risposta"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: S.colors.textMuted, fontSize: 16, padding: '0 4px',
+            }}>×</button>
+        </div>
+      )}
+
       <TalkControls
         L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
         canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}

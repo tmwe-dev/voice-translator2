@@ -684,7 +684,25 @@ export default function useRoomPolling({
         })
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
+
+        // b.98 — un rifiuto della moderazione NON e un guasto, e una
+        // risposta. Prima finiva tutto in "Room not found", e chi bussava
+        // a una stanza su approvazione credeva che il codice fosse
+        // sbagliato: riprovava, e riprovava.
+        if (res.status === 403 && (err.motivo || err.stato)) {
+          const e = new Error(
+            err.motivo === 'bloccato'
+              ? 'Non puoi entrare in questa stanza.'
+              : err.stato === 'rifiutato'
+                ? 'La tua richiesta non e stata accettata.'
+                : 'Hai bussato: aspetta che ti aprano.'
+          );
+          e.moderazione = err.motivo || err.stato;
+          e.inAttesa = !!err.inAttesa;
+          throw e;
+        }
+
         throw new Error(err.error || 'Room not found');
       }
       const data = await res.json();
