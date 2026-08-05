@@ -47,12 +47,18 @@ async function handlePost(req) {
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
-            roomMode, nativeLang, conversationContext, giaAddebitato } = { ...rawBody, ...inputValidation.data };
+            roomMode, nativeLang, conversationContext, giaAddebitato,
+            glossario } = { ...rawBody, ...inputValidation.data }; // b.95
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 
     // Check if this is a simple translation (no context/review/domain/description/conversationContext)
-    const isSimpleTranslation = !context && !isReview && !domainContext && !description && !conversationContext;
+    // b.95 — se ci sono termini di glossario la traduzione NON e semplice:
+    // usare la cache restituirebbe una versione senza i termini dell'utente,
+    // cioe esattamente il contrario di quello che ha chiesto.
+    const conGlossario = Array.isArray(glossario) && glossario.length > 0;
+    const isSimpleTranslation = !context && !isReview && !domainContext && !description
+      && !conversationContext && !conGlossario;
 
     // Build cache key for simple translations only
     let cacheKey = null;
@@ -127,7 +133,8 @@ async function handlePost(req) {
     // Build system prompt using extracted module
     let systemPrompt = buildSystemPrompt({
       sourceLang, targetLang, sourceLangName, targetLangName,
-      roomMode, nativeLang, domainContext, description, isReview, conversationContext
+      roomMode, nativeLang, domainContext, description, isReview, conversationContext,
+      glossario, // b.95 — i termini dell'utente pesano sulla traduzione
     });
 
     // Glossary injection — if user has active glossaries for this language pair

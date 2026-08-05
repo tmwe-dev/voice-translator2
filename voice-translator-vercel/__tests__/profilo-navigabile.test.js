@@ -41,9 +41,15 @@ describe('sezione profilo', () => {
     expect(pagineVuote, `Usa <LazyFallback /> per queste:\n  ${pagineVuote.join('\n  ')}`).toEqual([]);
   });
 
-  it('il glossario si salva, non vive solo in memoria', () => {
-    const src = leggi('components/AIView.js');
-    expect(src, 'AIView deve conservare il glossario').toMatch(/localStorage\.setItem/);
+  it('il glossario si salva E arriva alle traduzioni', () => {
+    // b.95 — prima bastava che AIView scrivesse su localStorage. Non
+    // basta piu: un glossario che nessuna traduzione legge e inutile.
+    const modulo = leggi('lib/glossario.js');
+    expect(modulo, 'il modulo deve salvare').toMatch(/localStorage\.setItem/);
+    expect(leggi('components/AIView.js'), 'la pagina deve usare il modulo').toMatch(/salvaGlossario/);
+    expect(leggi('api/translate/route.js'), 'la rotta deve accettarlo').toMatch(/glossario/);
+    expect(leggi('lib/translatePrompt.js'), 'e deve finire nel prompt').toMatch(/GLOSSARY/);
+    expect(leggi('components/SpeakerView.js'), 'il client deve mandarlo').toMatch(/glossarioPerTesto/);
   });
 
   it('un solo indirizzo di assistenza in tutta l\'app', () => {

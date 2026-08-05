@@ -12,6 +12,7 @@ import { IconClose } from './Icons.js';
 // ── FINE b.88 ──
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { glossarioPerTesto } from '../lib/glossario.js'; // b.95
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiTalk — Redesigned: "Parla, Traduci, Mostra"
@@ -72,6 +73,7 @@ function SpeakerView({ userToken }) {
   const [showStructuredDest, setShowStructuredDest] = useState(false);
   const [structuredDestination, setStructuredDestination] = useState(null);
   const [showQRView, setShowQRView] = useState(false);
+  const [erroreUltimo, setErroreUltimo] = useState(''); // b.95 — cosa e andato storto, in italiano
 
   // ── Refs ──
   const recorderRef = useRef(null);
@@ -88,6 +90,19 @@ function SpeakerView({ userToken }) {
   const speechRecRef = useRef(null);
   const fetchRouteRef = useRef(null);
   const campoTestoRef = useRef(null); // b.90 — per mettere a fuoco il campo
+
+  // ── INIZIO b.95 — STATO PARLANTE ──
+  // Prima: premevi il microfono, parlavi, rilasciavi, e poi SILENZIO.
+  // Non sapevi se ti aveva sentito, se stava traducendo, se era fallito.
+  // Ora ogni momento ha la sua frase, in un punto solo dello schermo.
+  const statoParlante = (() => {
+    if (recording) return { testo: mode === 'batch' ? 'Ti ascolto…' : 'Ascolto in diretta…', tono: 'attivo' };
+    if (processing) return { testo: 'Traduco…', tono: 'attesa' };
+    if (playing) return { testo: 'Leggo ad alta voce…', tono: 'attesa' };
+    if (erroreUltimo) return { testo: erroreUltimo, tono: 'errore' };
+    return null;
+  })();
+  // ── FINE b.95 ──
 
   // ── Fetch Deepgram key on mount ──
   useEffect(() => {
@@ -154,12 +169,24 @@ function SpeakerView({ userToken }) {
           sourceLangName: src?.name || sourceLang,
           targetLangName: tgt?.name || targetLang,
           userToken: userToken || '',
+          // b.95 — solo i termini che compaiono in QUESTA frase
+          glossario: glossarioPerTesto(text),
         }),
       });
-      if (!res.ok) return '';
+      if (!res.ok) {
+        // b.95 — prima tornava stringa vuota e l'utente non capiva nulla
+        setErroreUltimo(res.status === 402
+          ? 'Credito esaurito: ricarica per continuare.'
+          : 'Traduzione non riuscita. Riprova fra un momento.');
+        return '';
+      }
       const data = await res.json();
+      if (data.ripiego) setErroreUltimo('Traduzione di riserva: qualità ridotta.');
       return data.translated || '';
-    } catch { return ''; }
+    } catch {
+      setErroreUltimo('Sei senza connessione.');
+      return '';
+    }
   }, [sourceLang, targetLang, userToken]);
 
   // ── TTS: Edge TTS (free) → OpenAI fallback ──
@@ -275,7 +302,7 @@ function SpeakerView({ userToken }) {
   // ── Send typed message ──
   const sendTextMessage = useCallback(async () => {
     if (!textMessage.trim()) return;
-    vibrate(); setProcessing(true); setLiveText(textMessage.trim());
+    vibrate(); setErroreUltimo(''); setProcessing(true); setLiveText(textMessage.trim());
     const translated = await translateText(textMessage.trim(), true);
     setTranslatedText(translated);
     if (translated) {
@@ -794,6 +821,33 @@ function SpeakerView({ userToken }) {
           })}
         </div>
       )}
+
+      {/* ── INIZIO b.95 — la riga che racconta cosa sta succedendo ── */}
+      {statoParlante && (
+        <div style={{
+          margin: '0 16px 8px', padding: '9px 14px', borderRadius: 12,
+          display: 'flex', alignItems: 'center', gap: 9,
+          fontFamily: FONT, fontSize: 12.5, fontWeight: 600,
+          background: statoParlante.tono === 'errore' ? `${C.red}14` : `${C.accent}12`,
+          border: `1px solid ${statoParlante.tono === 'errore' ? `${C.red}30` : `${C.accent}25`}`,
+          color: statoParlante.tono === 'errore' ? C.red : C.accent,
+        }} role="status" aria-live="polite">
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%', flexShrink: 0,
+            background: statoParlante.tono === 'errore' ? C.red : C.accent,
+            animation: statoParlante.tono === 'attivo' ? 'vtMicPulse 1.2s ease-in-out infinite' : 'none',
+          }} />
+          {statoParlante.testo}
+          {statoParlante.tono === 'errore' && (
+            <button onClick={() => setErroreUltimo('')} aria-label="Chiudi"
+              style={{ marginLeft: 'auto', background: 'none', border: 'none',
+                color: C.red, cursor: 'pointer', display: 'flex' }}>
+              <IconClose size={13} />
+            </button>
+          )}
+        </div>
+      )}
+      {/* ── FINE b.95 ── */}
 
       {/* ═══ BARRA DESTINAZIONE ═══ */}
       {/* ── INIZIO b.88 — da fascia a riga compatta ──

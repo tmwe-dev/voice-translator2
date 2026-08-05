@@ -1,4 +1,5 @@
 'use client';
+import { glossarioPerTesto } from '../lib/glossario.js';
 import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import { isDirectMode } from '../lib/sessionGuard.js';
@@ -297,7 +298,8 @@ export default function useTranslationAPI({
           roomId,
           aiModel: prefsRef.current?.aiModel || undefined,
           ...options,
-          userToken: getEffectiveToken()
+          userToken: getEffectiveToken(),
+          glossario: glossarioPerTesto(text) // b.95 — i termini dell'utente
         })
       });
       if (!res.ok) {

@@ -46,7 +46,8 @@ const LANG_NAMES = {
  */
 export function buildSystemPrompt({
   sourceLang: rawSrcLang, targetLang: rawTgtLang, sourceLangName: rawSrcName, targetLangName: rawTgtName,
-  roomMode, nativeLang: rawNativeLang, domainContext, description, isReview, conversationContext
+  roomMode, nativeLang: rawNativeLang, domainContext, description, isReview, conversationContext,
+  glossario, // b.95 — i termini dell'utente, gia filtrati sul testo
 }) {
   // Sanitize all interpolated values to prevent prompt injection
   const sourceLang = sanitizeLangCode(rawSrcLang);
@@ -102,6 +103,27 @@ RULES:
 
   if (domainContext) systemPrompt += `\n\nDomain: ${domainContext}`;
   if (description) systemPrompt += `\nTopic: ${description}`;
+
+  // ── INIZIO b.95 — il glossario dell'utente COMANDA la traduzione ──
+  // Prima esisteva una pagina che raccoglieva i termini e non li usava
+  // nessuno. Ora arrivano fin qui: sono vincolanti, e battono anche una
+  // formulazione che al modello suonerebbe piu naturale.
+  if (Array.isArray(glossario) && glossario.length) {
+    const righe = glossario
+      .filter(t => t && typeof t.from === 'string' && typeof t.to === 'string')
+      .slice(0, 40)
+      .map(t => {
+        const da = sanitizeLangName(t.from) || String(t.from).slice(0, 60);
+        const a = sanitizeLangName(t.to) || String(t.to).slice(0, 60);
+        const nota = t.note ? ` (${String(t.note).slice(0, 60)})` : '';
+        return `"${da}" -> "${a}"${nota}`;
+      });
+    if (righe.length) {
+      systemPrompt += `\n\nGLOSSARY — the user's own terminology. These translations are`
+        + ` MANDATORY, even if another wording would sound more natural:\n${righe.join('\n')}`;
+    }
+  }
+  // ── FINE b.95 ──
   if (isReview) systemPrompt += `\nRefine the translation for coherence and accuracy as a complete passage.`;
 
   // ── Conversation context: rolling knowledge base for disambiguation ──

@@ -4,20 +4,16 @@ import { FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import Icon from './Icon.js';
 import PageHeader from './ui/PageHeader.js';
+import { leggiGlossario, salvaGlossario } from '../lib/glossario.js';
 
 // ── INIZIO b.89 — questa pagina prometteva e non manteneva ──
 // Il glossario e le automazioni vivevano SOLO in useState: aggiungevi un
 // termine, uscivi, era sparito. E non c'era nessun tasto per tornare
 // indietro. Ora il glossario si salva sul telefono e la pagina dice la
 // verita su cosa e gia attivo e cosa e ancora in lavorazione.
-const CHIAVE_GLOSSARIO = 'vt-glossario';
-
-function leggiGlossario() {
-  try {
-    const g = JSON.parse(localStorage.getItem(CHIAVE_GLOSSARIO) || 'null');
-    return Array.isArray(g) ? g : null;
-  } catch { return null; }
-}
+// b.95 — un posto solo per leggere e salvare: lib/glossario.js.
+// Da questa versione i termini NON restano qui: viaggiano con ogni
+// traduzione e comandano la scelta delle parole.
 // ── FINE b.89 ──
 
 /**
@@ -40,11 +36,8 @@ const AIView = memo(function AIView({
   const [activeSection, setActiveSection] = useState(null);
   // b.89 — parte da quello salvato, non da esempi finti
   const [glossaryTerms, setGlossaryTerms] = useState([]);
-  useEffect(() => { const g = leggiGlossario(); if (g) setGlossaryTerms(g); }, []);
-  useEffect(() => {
-    try { localStorage.setItem(CHIAVE_GLOSSARIO, JSON.stringify(glossaryTerms)); }
-    catch (e) { console.warn('[AIView] glossario non salvato:', e?.message); }
-  }, [glossaryTerms]);
+  useEffect(() => { setGlossaryTerms(leggiGlossario()); }, []);
+  useEffect(() => { salvaGlossario(glossaryTerms); }, [glossaryTerms]);
   const [newTermFrom, setNewTermFrom] = useState('');
   const [newTermTo, setNewTermTo] = useState('');
   const [automations, setAutomations] = useState([
