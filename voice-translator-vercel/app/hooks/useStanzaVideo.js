@@ -266,14 +266,20 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     if (!attiva || stato !== 'dentro') return undefined;
     return subscribeTick(RITMO_PRESENZE, async () => {
       const d = await api('battito');
-      // Chi e arrivato dopo di me e viene prima in ordine: tocca a me.
-      for (const nome of (d?.presenti || [])) {
-        if (nome.toLowerCase() === (mioNome || '').toLowerCase()) continue;
+      if (!d?.ok) return;
+      // RETE DI SICUREZZA, non la via normale. Di norma chiama chi entra,
+      // subito, verso chi ha trovato. Ma se quella proposta si perde
+      // (rete ballerina, scheda in secondo piano) senza questo nessuno
+      // riproverebbe mai e resterebbero due riquadri vuoti.
+      //
+      // Riprovo SOLO verso chi e arrivato prima di me: cosi il chiamante
+      // resta sempre lo stesso dei due, e non ci si offre a vicenda.
+      for (const nome of (d.arrivatiPrimaDiMe || [])) {
         if (peersRef.current.has(nome)) continue;
-        if ((mioNome || '').toLowerCase() < nome.toLowerCase()) proponi(nome);
+        proponi(nome);
       }
     }, { immediate: false });
-  }, [attiva, stato, api, mioNome, proponi]);
+  }, [attiva, stato, api, proponi]);
 
   // Chiudere la scheda senza salutare lascia riquadri fantasma agli altri.
   useEffect(() => () => { esci().catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps

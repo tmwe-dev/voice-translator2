@@ -29,9 +29,21 @@ const log = createLogger('stanza-video');
 //
 // CHI CHIAMA CHI. Se due persone si offrono a vicenda nello stesso
 // istante, la connessione non si stabilisce (in gergo: glare). Serve
-// una regola che decida da sola, senza accordi: propone SEMPRE chi ha
-// il nome che viene prima in ordine alfabetico. E' arbitraria, ma e
-// uguale per tutti e non richiede un giro di rete per concordarla.
+// una regola che decida da sola.
+//
+// La prima che avevo scritto era l'ordine alfabetico, e IL COLLAUDO CON
+// TRE PERSONE L'HA BOCCIATA: chiamava solo chi aveva il nome "minore",
+// quindi entrando in ordine Anna-Bruno-Carla nessuno chiamava nessuno.
+// L'errore di fondo: la regola era simmetrica, ma l'informazione no.
+// Chi entra sa subito chi c'e gia; chi c'era non sa di chi e arrivato
+// finche non ricontrolla.
+//
+// LA REGOLA GIUSTA E L'ORDINE DI ARRIVO: chiama sempre CHI ARRIVA
+// DOPO, verso tutti quelli che ha trovato. Non serve concordare niente,
+// non dipende dai nomi, e chi arriva ha gia in mano l'elenco che gli
+// serve. Per questo le presenze stanno in un insieme ORDINATO con il
+// momento di ingresso, non in un insieme semplice: senza il momento,
+// "dopo" non si puo sapere.
 // ═══════════════════════════════════════════════════════════════
 
 const TTL = 300;              // i segnali invecchiano in fretta
@@ -68,36 +80,49 @@ async function handlePost(req) {
         const stanza = await getRoom(roomId);
         if (!stanza) return NextResponse.json({ error: 'Stanza non trovata' }, { status: 404 });
 
-        await redis('SADD', presenze(roomId), io.name);
-        await redis('EXPIRE', presenze(roomId), TTL);
-        const dentro = (await redis('SMEMBERS', presenze(roomId))) || [];
+        // Chi c'era PRIMA di me: si legge prima di aggiungersi, altrimenti
+        // ci si troverebbe dentro il proprio nome.
+        const prima = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
+        const giaDentro = prima.filter(n => n.toLowerCase() !== io.name.toLowerCase());
 
-        if (dentro.length > MAX_PARTECIPANTI) {
-          await redis('SREM', presenze(roomId), io.name);
+        if (giaDentro.length >= MAX_PARTECIPANTI) {
           return NextResponse.json({
             error: 'stanza piena',
             motivo: `In video si sta in ${MAX_PARTECIPANTI}. Oltre, il telefono di ognuno dovrebbe spedire il proprio video troppe volte.`,
           }, { status: 409 });
         }
 
-        // A chi tocca proporre il collegamento: lo decide l'ordine
-        // alfabetico, uguale su tutti i telefoni senza doversi parlare.
-        const altri = dentro.filter(n => n.toLowerCase() !== io.name.toLowerCase());
-        const devoChiamare = altri.filter(n => io.name.toLowerCase() < n.toLowerCase());
+        await redis('ZADD', presenze(roomId), Date.now(), io.name);
+        await redis('EXPIRE', presenze(roomId), TTL);
 
-        return NextResponse.json({ ok: true, presenti: dentro, altri, devoChiamare });
+        // Chiamo TUTTI quelli che ho trovato. Sono arrivato dopo: tocca a me.
+        return NextResponse.json({
+          ok: true,
+          presenti: [...giaDentro, io.name],
+          altri: giaDentro,
+          devoChiamare: giaDentro,
+        });
       }
 
       // ── Resto vivo: senza, la presenza scade e spariscono i riquadri ──
       case 'battito': {
-        await redis('SADD', presenze(roomId), io.name);
+        // Il momento di ingresso NON si aggiorna: chi e arrivato prima
+        // deve restare "prima" anche dopo mille battiti, altrimenti
+        // l'ordine si mescola e due persone si richiamano a vicenda.
+        const mio = await redis('ZSCORE', presenze(roomId), io.name);
+        if (!mio) await redis('ZADD', presenze(roomId), Date.now(), io.name);
         await redis('EXPIRE', presenze(roomId), TTL);
-        const dentro = (await redis('SMEMBERS', presenze(roomId))) || [];
-        return NextResponse.json({ ok: true, presenti: dentro });
+
+        const dentro = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
+        const arrivatiPrimaDiMe = [];
+        const i = dentro.findIndex(n => n.toLowerCase() === io.name.toLowerCase());
+        if (i > 0) arrivatiPrimaDiMe.push(...dentro.slice(0, i));
+
+        return NextResponse.json({ ok: true, presenti: dentro, arrivatiPrimaDiMe });
       }
 
       case 'esci': {
-        await redis('SREM', presenze(roomId), io.name);
+        await redis('ZREM', presenze(roomId), io.name);
         await redis('DEL', cassetta(roomId, io.name));
         return NextResponse.json({ ok: true });
       }
@@ -130,9 +155,8 @@ async function handlePost(req) {
           .map(s => { try { return JSON.parse(s); } catch { return null; } })
           .filter(Boolean);
 
-        await redis('SADD', presenze(roomId), io.name);
         await redis('EXPIRE', presenze(roomId), TTL);
-        const dentro = (await redis('SMEMBERS', presenze(roomId))) || [];
+        const dentro = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
 
         return NextResponse.json({ ok: true, segnali, presenti: dentro, io: io.name });
       }

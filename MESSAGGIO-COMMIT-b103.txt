@@ -1,0 +1,41 @@
+b.103 — il collaudo a tre ha bocciato la mia regola, e aveva ragione
+
+Messe TRE persone vere in una stanza vera su b.102, la risposta e stata
+questa:
+
+  Anna  entra -> devoChiamare: []
+  Bruno entra -> devoChiamare: []
+  Carla entra -> devoChiamare: []
+
+Nessuno chiama nessuno. Nessuna connessione si stabilisce. Con due
+persone non si sarebbe visto: il difetto compare solo al terzo.
+
+L'ERRORE. Avevo scelto l'ordine alfabetico per decidere chi propone il
+collegamento: chiama chi ha il nome "minore". Ma Bruno non e minore di
+Anna, e Carla non e minore di nessuno dei due, quindi chi entrava non
+chiamava mai. E chi c'era gia non poteva rimediare, perche non sapeva
+di chi fosse arrivato.
+
+Il vizio di fondo: la regola era simmetrica, l'informazione no. Chi
+entra ha in mano l'elenco di chi c'e; chi c'era non ha niente.
+
+LA REGOLA GIUSTA E L'ORDINE DI ARRIVO. Chiama CHI ARRIVA DOPO, verso
+tutti quelli che ha trovato. Non dipende dai nomi, non serve concordare
+niente, e chi arriva ha gia l'elenco che gli serve.
+
+Perche le presenze diventano un insieme ORDINATO (ZADD/ZRANGE con il
+momento di ingresso): in un insieme semplice l'ordine non esiste, e
+"dopo" non si puo sapere.
+
+DUE DETTAGLI CHE SAREBBERO TORNATI A MORDERE:
+ · chi c'e si legge PRIMA di aggiungersi, altrimenti ci si trova dentro
+   il proprio nome e si chiama se stessi
+ · il battito NON riaggiorna il momento di ingresso: chi e arrivato
+   prima deve restare "prima" anche dopo mille battiti, se no l'ordine
+   si mescola e due persone si richiamano a vicenda
+
+La rete di sicurezza (se una proposta si perde) ora riprova SOLO verso
+chi e arrivato prima: il chiamante resta sempre lo stesso dei due.
+
+Prove: 672 test verdi. Tre test nuovi tengono ferma la regola, e uno
+porta scritto perche quella vecchia e stata bocciata.

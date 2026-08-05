@@ -77,10 +77,27 @@ describe('ogni segnale ha un destinatario', () => {
     expect(blocco).toMatch(/redis\('DEL', chiave\)/);
   });
 
-  it('chi propone lo decide una regola uguale per tutti', () => {
-    // Senza, due persone si offrono insieme e non si collega nessuno.
-    expect(rotta).toMatch(/io\.name\.toLowerCase\(\) < n\.toLowerCase\(\)/);
-    expect(hook).toMatch(/toLowerCase\(\) < nome\.toLowerCase\(\)/);
+  it('chiama chi ARRIVA DOPO, verso tutti quelli che trova', () => {
+    // La prima versione usava l'ordine alfabetico e il collaudo con tre
+    // persone l'ha bocciata: entrando Anna-Bruno-Carla, devoChiamare era
+    // vuoto per tutti e nessuno si collegava. La regola era simmetrica,
+    // ma l'informazione no: chi entra sa chi c'e, chi c'era non lo sa.
+    expect(rotta).toMatch(/devoChiamare: giaDentro/);
+    expect(rotta, 'chi c\'era si legge PRIMA di aggiungersi').toMatch(/const prima = \(await redis\('ZRANGE'/);
+  });
+
+  it('l\'ordine di arrivo si conserva davvero', () => {
+    // Con un insieme semplice l'ordine non esiste, e "dopo" non si sa.
+    expect(rotta).toMatch(/redis\('ZADD', presenze/);
+    expect(rotta, 'il battito non deve riscrivere il momento di ingresso')
+      .toMatch(/if \(!mio\) await redis\('ZADD'/);
+  });
+
+  it('la rete di sicurezza non fa offrire due persone a vicenda', () => {
+    // Si riprova SOLO verso chi e arrivato prima: il chiamante resta
+    // sempre lo stesso dei due.
+    expect(rotta).toMatch(/arrivatiPrimaDiMe/);
+    expect(hook).toMatch(/d\.arrivatiPrimaDiMe \|\| \[\]/);
   });
 
   it('c\'e un tetto dichiarato, e si spiega perche', () => {
