@@ -5,6 +5,7 @@ import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import { BatteryPillSlot } from './BatteryPill.js';
+import PrimaProva, { primaProvaGiaFatta } from './PrimaProva.js'; // b.96
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -50,6 +51,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   const langInfo = getLang(prefs.lang);
   const [activeRooms, setActiveRooms] = useState([]);
   const [showLangPicker, setShowLangPicker] = useState(false);
+  // b.96 — la prima prova si mostra una volta sola, e solo al primo avvio
+  const [mostraPrimaProva, setMostraPrimaProva] = useState(false);
+  useEffect(() => { setMostraPrimaProva(!primaProvaGiaFatta()); }, []);
 
   // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
   const C = useMemo(() => ({
@@ -196,6 +200,18 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             ))}
           </div>
         </div>
+
+        {/* ── INIZIO b.96 — la prima traduzione, entro dieci secondi ──
+            Il primo avvio era: benvenuto, sei dentro, arrangiati. Chi non
+            prova nei primi secondi non torna. Questa scheda fa SENTIRE
+            l'app invece di spiegarla, e poi sparisce per sempre. */}
+        {mostraPrimaProva && (
+          <PrimaProva
+            onChiudi={() => setMostraPrimaProva(false)}
+            onIniziaDavvero={() => handleAction('face-to-face')}
+          />
+        )}
+        {/* ── FINE b.96 ── */}
 
         {/* ═══ Le 4 azioni: righe in UNA card (spec sciame) ═══
             Tile gradiente solo sulla primaria; le altre tenui.
