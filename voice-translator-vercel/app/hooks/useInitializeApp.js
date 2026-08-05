@@ -125,16 +125,27 @@ export default function useInitializeApp({
             ? decodeURIComponent(guestNameParam)
             : (p?.name || 'Ospite');
 
-          const provvisorie = {
-            ...(p || {}),
-            name: nomeOspite,
-            lang: linguaOspite,
-            autoPlay: true,
-            avatar: p?.avatar || AVATARS[0],
-          };
-          setPrefs(provvisorie);
+          // ATTENZIONE ALL'ORDINE. Piu sopra, il ramo `lang=` fa un
+          // setPrefs FUNZIONALE che scrive anche su localStorage. React
+          // esegue quegli aggiornamenti DOPO, in coda, quindi una
+          // scrittura diretta qui verrebbe sovrascritta da quella —
+          // con il nome ancora vuoto. Il collaudo dal vivo lo ha mostrato:
+          // l'ospite entrava come "Ospite" ma sul telefono restava senza
+          // nome, e al primo ricaricamento non rientrava piu.
+          //
+          // Percio anche questo passa dalla coda: essendo l'ultimo, vince.
+          setPrefs(p => {
+            const provvisorie = {
+              ...(p || {}),
+              name: nomeOspite,
+              lang: linguaOspite,
+              autoPlay: true,
+              avatar: p?.avatar || AVATARS[0],
+            };
+            try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* privato */ }
+            return provvisorie;
+          });
           setMyLang(linguaOspite);
-          try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* privato */ }
 
           setTimeout(() => setAutoJoinTriggered(true), 600);
         }
