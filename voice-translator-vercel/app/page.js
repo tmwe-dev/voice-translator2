@@ -426,7 +426,7 @@ function HomeInner() {
       localStorage.setItem('vt-tutorial-done', '1');
     }
     // Auto-load history when navigating to archive tab
-    if (view === 'history' || view === 'archive') {
+    if (view === 'history') {
       loadHistory();
     }
     // Auto-fetch contacts when navigating to contacts view
@@ -719,7 +719,26 @@ function HomeInner() {
 
   // Handler for NewConversationSheet selections
   function handleNewConversationSelect(optionId) {
+    // ── INIZIO b.93 — il "+" non ripete piu la Home ──
+    // Prima queste quattro voci erano identiche a quelle della Home.
+    // Ora portano dove la Home non arriva.
     switch (optionId) {
+      case 'entra-codice':
+        // La pagina esisteva ma NESSUNO la apriva: si poteva entrare in
+        // una stanza solo da un link o da un QR, mai digitando il codice.
+        setJoinCode('');
+        setView('join');
+        break;
+      case 'stanza-community':
+        setShowCreateRoom(true);
+        break;
+      case 'contatti':
+        setView('contacts');
+        break;
+      case 'cronologia':
+        setView('history');
+        break;
+      // ── Voci storiche, ancora usate dalla Home ──
       case 'face-to-face':
         setIntentoVideo(false);
         handleCreateRoom();
@@ -738,6 +757,7 @@ function HomeInner() {
         setView('speaker');
         break;
     }
+    // ── FINE b.93 ──
   }
 
   async function startChatWithContact(contact) {
@@ -971,7 +991,7 @@ function HomeInner() {
     </>
   );
 
-  if (view === 'history' || view === 'archive') return wrap(
+  if (view === 'history') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <HistoryView convHistory={convHistory} viewConversation={viewConversation}

@@ -50,7 +50,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
 
   const navItems = [
     { id: 'home', label: 'Home', views: ['home', 'quickinvite'] },
-    { id: 'conversations', label: 'Chat', views: ['history', 'archive', 'summary', 'detail'] },
+    { id: 'conversations', label: 'Chat', views: ['history', 'summary', 'detail'] },
     { id: 'community', label: 'Community', views: ['mondo', 'speaker'] },
     { id: 'profile', label: 'Profilo', views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help', 'ai', 'contacts'] },
   ];

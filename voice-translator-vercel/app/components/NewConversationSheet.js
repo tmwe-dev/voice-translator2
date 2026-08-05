@@ -5,37 +5,44 @@ import { vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
-import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
+import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
-// NewConversationSheet — bottom sheet with 4 conversation options
-// "Con chi vuoi parlare?" → Faccia a faccia, Invita, Video, TaxiTalk
+// Pannello del tasto "+" — b.93
+//
+// Prima ripeteva ESATTAMENTE le quattro voci gia presenti in Home:
+// il tasto piu in vista dell'app non aggiungeva nulla.
+//
+// Ora fa le cose che da nessun'altra parte si possono fare. La prima
+// e la piu importante: ENTRARE CON UN CODICE. La pagina esisteva gia
+// ma era irraggiungibile — ci si arrivava solo da un link o da un QR.
+// Se un amico ti detta il codice a voce, prima non c'era modo di usarlo.
 // ═══════════════════════════════════════════════════════════════
 
 const OPTIONS = [
   {
-    id: 'face-to-face',
-    icon: 'qr',
-    title: 'Parla con chi hai davanti',
-    desc: 'Mostra il QR e parlate ciascuno nella propria lingua',
+    id: 'entra-codice',
+    icona: 'doorOpen',
+    title: 'Entra con un codice',
+    desc: 'Ti hanno dato un codice a voce o per messaggio',
   },
   {
-    id: 'invite',
-    icon: 'mail',
-    title: 'Invita una persona',
-    desc: 'Invia un link via WhatsApp, SMS o email',
+    id: 'stanza-community',
+    icona: 'globe',
+    title: 'Apri una stanza pubblica',
+    desc: 'Chiunque nel mondo puo entrare e parlare',
   },
   {
-    id: 'videocall',
-    icon: 'video',
-    title: 'Videochiamata tradotta',
-    desc: 'Chiamata video con traduzione in tempo reale',
+    id: 'contatti',
+    icona: 'user',
+    title: 'I tuoi contatti',
+    desc: 'Riprendi con chi parli di solito',
   },
   {
-    id: 'taxitalk',
-    icon: 'car',
-    title: 'TaxiTalk',
-    desc: 'Comunica la destinazione al tassista',
+    id: 'cronologia',
+    icona: 'history',
+    title: 'Conversazioni salvate',
+    desc: 'Rileggi o riascolta quelle di prima',
   },
 ];
 
@@ -83,7 +90,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
           color: C.text || '#fff',
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         }}>
-          Con chi vuoi parlare?
+          Cosa vuoi fare?
         </h2>
 
         {/* Options */}
@@ -112,7 +119,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
               onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
             >
               <span style={{ lineHeight: 0, flexShrink: 0, color: (S.colors?.accent2 || '#38e1ff') }}>
-                {opt.icon === 'qr' ? <IconQR size={26} /> : opt.icon === 'mail' ? <IconMail size={26} /> : opt.icon === 'video' ? <IconVideoCall size={26} /> : <IconCar size={26} />}
+                <Icon name={opt.icona} size={24} color={C.accent1 || '#5b8cff'} />
               </span>
               <div>
                 <div style={{
