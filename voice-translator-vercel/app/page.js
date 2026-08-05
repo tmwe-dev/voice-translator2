@@ -40,6 +40,8 @@ const ApiKeysView = lazy(() => import('./components/ApiKeysView.js'));
 const SettingsView = lazy(() => import('./components/SettingsView.js'));
 const LobbyView = lazy(() => import('./components/LobbyView.js'));
 const PannelloModerazione = lazy(() => import('./components/PannelloModerazione.js'));
+// b.102 — modulo separato: la videochiamata a due resta intatta.
+const StanzaVideoGruppo = lazy(() => import('./components/StanzaVideoGruppo.js'));
 const RoomView = lazy(() => import('./components/RoomView.js'));
 const HistoryView = lazy(() => import('./components/HistoryView.js'));
 const SummaryView = lazy(() => import('./components/SummaryView.js'));
@@ -913,12 +915,36 @@ function HomeInner() {
     </Suspense>
   );
 
+  // ── b.102 · Stanza video di gruppo ──
+  // Vista a se: non passa da RoomView e non tocca useWebRTC. Se qui si
+  // rompe qualcosa, la chiamata a due continua a funzionare com'e.
+  if (view === 'stanza-video') return wrap(
+    <Suspense fallback={<LazyFallback />}>
+      <StanzaVideoGruppo
+        roomId={roomPolling.roomId}
+        roomSessionToken={roomPolling.roomSessionTokenRef?.current}
+        mioNome={roomPolling.verifiedNameRef?.current || prefs.name}
+        onEsci={() => setView(roomPolling.roomId ? 'room' : 'home')} />
+    </Suspense>
+  );
+
   if (view === 'lobby') return wrap(
     <Suspense fallback={<LazyFallback />}>
     <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
       leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
       perVideo={intentoVideo} />
+    {/* Da qui si passa in video di gruppo: il codice da condividere e
+        gia sopra, e la chat resta dov'e. */}
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: '0 16px 12px' }}>
+      <button onClick={() => setView('stanza-video')} style={{
+        width: '100%', padding: '13px 16px', borderRadius: 13, cursor: 'pointer',
+        background: 'transparent', border: `1px solid ${S.colors.accent1}55`,
+        color: S.colors.accent1, fontSize: 14, fontWeight: 800, fontFamily: FONT,
+      }}>
+        Entra in video di gruppo
+      </button>
+    </div>
     {/* La sala d'attesa e il posto giusto: e qui che l'host sta mentre gli
         altri bussano. Il pannello lo vede solo chi ospita. */}
     {roomPolling.isHostRef?.current !== false && (

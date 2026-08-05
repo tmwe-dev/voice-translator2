@@ -41,6 +41,13 @@ const ACTIONS = [
     desc: 'Comunica la destinazione al tassista',
   },
   {
+    // b.102 — porta separata dalla videochiamata a due, che resta com'e.
+    id: 'stanza-video',
+    icon: 'video',
+    title: 'Stanza video di gruppo',
+    desc: 'Fino a 8 persone, ognuno parla e legge nella sua lingua',
+  },
+  {
     // b.99 — regalare minuti esisteva e funzionava, ma stava in fondo alla
     // pagina del credito: nessuno ci arrivava per caso. Se una funzione
     // non ha una voce dove le persone guardano, per loro non esiste.
@@ -112,6 +119,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         break;
       case 'taxitalk':
         setView('speaker');
+        break;
+      case 'stanza-video':
+        // Serve una stanza prima di poterci stare in video: si crea, e
+        // dalla sala d'attesa si entra col codice da condividere.
+        handleCreateRoom();
         break;
       case 'regala':
         // La pagina del credito e gia il posto giusto: c'e il saldo, e i

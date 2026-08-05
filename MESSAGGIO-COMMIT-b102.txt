@@ -1,0 +1,65 @@
+b.102 — stanza video di gruppo, come modulo separato
+
+Fatto come chiesto: IN PARALLELO. La videochiamata a due non e stata
+toccata di una riga. Ha il ducking regolabile, l'anti-eco, la gestione
+iOS e il doppio cursore: e curata, funziona, e non ci si mettono le mani.
+
+Un test lo verifica: il modulo nuovo NON importa useWebRTC.js. Se qui si
+rompe qualcosa, li non succede niente.
+
+═══ COSA CAMBIA PER STARE IN PIU DI DUE ═══
+
+1. UNA CONNESSIONE PER OGNI PERSONA.
+   Dove c'era pcRef (una variabile) ora c'e una mappa nome -> connessione.
+   E' da qui che discende tutto il resto: il flusso di ognuno finisce nel
+   SUO riquadro, invece di sovrascrivere quello di prima.
+
+2. OGNI SEGNALE HA UN DESTINATARIO.
+   /api/room mette i segnali in una lista sola della stanza (rtc:{id}) e
+   chi legge prende tutto quello che non ha scritto lui. Con due persone
+   e giusto. Con tre fa danno: la proposta che Uno manda a Due arriva
+   anche a Tre, che risponde, e le due risposte si accavallano.
+   /api/stanza-video da una cassetta a ciascuno: svideo:{stanza}:{nome}.
+
+3. CHI PROPONE LO DECIDE UNA REGOLA UGUALE PER TUTTI.
+   Se due si offrono nello stesso istante non si collega nessuno (glare).
+   Propone chi ha il nome che viene prima in ordine alfabetico:
+   arbitrario, ma identico su ogni telefono e senza un giro di rete per
+   concordarlo.
+
+Tetto dichiarato: 8. A otto, ognuno spedisce sette copie del proprio
+video. Oltre servirebbe un server di smistamento, che e infrastruttura e
+costo ricorrente.
+
+═══ LA TRADUZIONE, E CHI PAGA COSA ═══
+
+LA SCELTA CHE DECIDE TUTTO: ognuno trascrive SOLO IL PROPRIO microfono e
+manda agli altri il TESTO. Nessuno trascrive l'audio in arrivo.
+
+Perche: l'audio in arrivo e compresso, spesso mescolato, e non porta
+scritto di chi sia. E se in sei ognuno trascrivesse tutti gli altri, la
+stessa frase verrebbe trascritta e pagata sei volte. Cosi si trascrive
+una volta sola, da chi l'ha detta.
+
+Ne viene da se il modello che avevi chiesto:
+  parli   -> paghi la TUA trascrizione
+  ascolti -> paghi la TUA traduzione
+Se parlate la stessa lingua non si spende niente. La stessa frase non si
+ritraduce due volte.
+
+SI ACCORGE DA SOLO DI CHI PARLA. Un misuratore sul microfono: sopra
+soglia si registra, un secondo di quiete chiude il pezzo e lo manda.
+Nessun pulsante da tenere premuto. Chi parla a lungo viene tagliato ogni
+quindici secondi, cosi gli altri leggono senza aspettare la fine.
+
+LA STANZA RESTA LIBERA DI PARLARE: l'audio vero viaggia in WebRTC come
+sempre, la traduzione e un binario parallelo di testo che non fa da
+collo di bottiglia.
+
+═══ COME CI SI ARRIVA ═══
+
+Voce in Home ("Stanza video di gruppo") e pulsante nella sala d'attesa,
+dove c'e gia il codice da condividere.
+
+Prove: 670 test verdi (20 nuovi), 0 errori di lint. Il collaudo con
+persone vere lo faccio dopo il deploy.
