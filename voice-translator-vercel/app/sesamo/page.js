@@ -37,11 +37,24 @@ export default function AdminPage() {
   const [revenueChart, setRevenueChart] = useState([]);
   const [topLanguages, setTopLanguages] = useState([]);
   const [loading, setLoading] = useState(false);
+  // b.92 — chi e collegato davvero, e perche l'accesso e stato rifiutato
+  const [sessione, setSessione] = useState('');
+  const [errore, setErrore] = useState('');
 
   // Get session token from localStorage (set by auth flow)
   const getToken = () => {
     try { return localStorage.getItem('vt-token') || ''; } catch { return ''; }
   };
+
+  // b.92 — mostra subito con quale account si entrerebbe
+  useEffect(() => {
+    const t = (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })();
+    if (!t) return;
+    fetch('/api/user', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => { if (d?.email) setSessione(d.email); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = 'auto';
@@ -60,8 +73,16 @@ export default function AdminPage() {
 
   async function login() {
     setLoading(true);
+    setErrore('');
     const data = await fetchAdmin('stats');
-    if (data.error) { alert(data.error); setLoading(false); return; }
+    if (data.error) {
+      // b.92 — prima era un alert col messaggio tecnico inglese
+      setErrore(/admin/i.test(data.error)
+        ? `L${'\u2019'}account ${sessione || 'in uso'} non e fra gli amministratori. Aggiungilo alla variabile ADMIN_EMAILS su Vercel e rifai il deploy.`
+        : data.error);
+      setLoading(false);
+      return;
+    }
     setStats(data);
     setAuthenticated(true);
     // Load all data
@@ -86,15 +107,50 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div style={{ fontFamily: FONT, background: '#0a0a0a', color: '#e4e4e7', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ background: '#18181b', borderRadius: 16, padding: 32, width: 360 }}>
-          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 20px' }}>{'\u{1F510}'} {L('adminTitle')}</h1>
-          <input type="email" value={adminEmail} onChange={e => setAdminEmail(e.target.value)}
-            placeholder="Admin email" onKeyDown={e => e.key === 'Enter' && login()}
-            style={{ width: '100%', background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: '10px 12px', color: '#e4e4e7', fontSize: 14, marginBottom: 12, fontFamily: FONT, boxSizing: 'border-box' }} />
-          <button onClick={login} disabled={loading} style={{ width: '100%', background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: FONT }}>
-            {loading ? `\u23F3 ${L('adminVerifying')}` : L('adminLogin')}
+        {/* ── INIZIO b.92 — il campo email illudeva ──
+            Chiedeva un indirizzo che il server IGNORA: l'accesso dipende
+            dall'account con cui sei collegato nell'app e dall'elenco
+            ADMIN_EMAILS. Si poteva restare bloccati qui per sempre senza
+            capire perche. Ora la schermata dice la verita. */}
+        <div style={{ background: '#18181b', borderRadius: 16, padding: 32, width: 380 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: '0 0 6px' }}>{L('adminTitle')}</h1>
+          <p style={{ fontSize: 13, color: '#a1a1aa', lineHeight: 1.55, margin: '0 0 18px' }}>
+            L{'\u2019'}accesso usa l{'\u2019'}account con cui sei collegato all{'\u2019'}app.
+          </p>
+
+          <div style={{
+            background: '#09090b', border: '1px solid #27272a', borderRadius: 10,
+            padding: '12px 14px', marginBottom: 14,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: '#71717a', marginBottom: 4 }}>
+              SEI COLLEGATO COME
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: sessione ? '#e4e4e7' : '#f97316' }}>
+              {sessione || 'nessun account \u2014 accedi prima nell\u2019app'}
+            </div>
+          </div>
+
+          <button onClick={login} disabled={loading || !sessione} style={{
+            width: '100%', background: sessione ? '#f97316' : '#27272a',
+            color: sessione ? '#000' : '#71717a', border: 'none', borderRadius: 8,
+            padding: '11px 20px', fontWeight: 700, fontSize: 15,
+            cursor: sessione ? 'pointer' : 'default', fontFamily: FONT,
+          }}>
+            {loading ? L('adminVerifying') : L('adminLogin')}
           </button>
+
+          {!sessione && (
+            <Link href="/" style={{ display: 'block', textAlign: 'center', marginTop: 12, fontSize: 13, color: '#f97316' }}>
+              Vai all{'\u2019'}app e accedi
+            </Link>
+          )}
+          {errore && (
+            <div style={{ marginTop: 14, fontSize: 12.5, lineHeight: 1.55, color: '#f87171' }}>
+              {errore}
+            </div>
+          )}
         </div>
+        {/* ── FINE b.92 ── */}
       </div>
     );
   }
