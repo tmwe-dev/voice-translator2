@@ -189,6 +189,40 @@ export default function useVoiceRecorder() {
     return new Blob(segments.map(s => s.blob), { type: 'audio/webm' });
   }, [segments]);
 
+  // ── b.105 · questa funzione NON ESISTEVA ──
+  // Era elencata qui sotto fra le cose restituite, ma non era mai stata
+  // scritta. Alla riga `cleanup,` JavaScript cercava un nome che non c'e
+  // e lanciava ReferenceError, quindi la pagina "La tua voce clonata"
+  // moriva sempre, subito, con "Qualcosa e andato storto".
+  //
+  // Trovata con il collaudo pagina per pagina: da fermo il file sembrava
+  // a posto, perche la riga incriminata e una parola sola.
+  //
+  // Serve davvero: senza, il microfono resta acceso dopo aver lasciato
+  // la pagina e la spia della telecamera non si spegne piu.
+  const cleanup = useCallback(() => {
+    if (animFrameRef.current) { cancelAnimationFrame(animFrameRef.current); animFrameRef.current = null; }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+
+    const reg = mediaRecorderRef.current;
+    if (reg && reg.state !== 'inactive') { try { reg.stop(); } catch { /* gia ferma */ } }
+    mediaRecorderRef.current = null;
+
+    // Il microfono si spegne per ultimo: se si chiude prima, il
+    // registratore puo lamentarsi di una traccia sparita sotto i piedi.
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* gia ferma */ } });
+      streamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      try { audioContextRef.current.close(); } catch { /* gia chiuso */ }
+      audioContextRef.current = null;
+    }
+    analyserRef.current = null;
+    dataBufferRef.current = null;
+    chunksRef.current = [];
+  }, []);
+
   return {
     isRecording,
     isPaused,
