@@ -895,7 +895,7 @@ function HomeInner() {
       syncLangChange={roomPolling.syncLangChange} retranslateForNewLang={retranslateForNewLang}
       clonedVoiceId={auth.clonedVoiceId} clonedVoiceName={auth.clonedVoiceName}
       duckingLevel={audio.duckingLevel} setDuckingLevel={audio.setDuckingLevel}
-      vadAudioLevel={translation.vadAudioLevel} vadSilenceCountdown={translation.vadSilenceCountdown}
+      vadLivelloRef={translation.vadLivelloRef} vadSilenceCountdown={translation.vadSilenceCountdown}
       vadSensitivity={translation.vadSensitivity} setVadSensitivity={translation.setVadSensitivity}
       realtimeConnected={roomPolling.realtimeConnected}
       webrtc={webrtc}

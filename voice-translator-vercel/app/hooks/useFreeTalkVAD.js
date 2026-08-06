@@ -20,7 +20,7 @@ const dbg = createLogger('vad');
  * - Browser SpeechRecognition (for supported languages)
  * - MediaRecorder + Whisper (fallback for unsupported/unreliable languages)
  *
- * Returns: { isListening, vadAudioLevel, vadSilenceCountdown, vadSensitivity,
+ * Returns: { isListening, vadLivelloRef, vadSilenceCountdown, vadSensitivity,
  *            setVadSensitivity, startFreeTalk, stopFreeTalk, cleanupVAD }
  */
 export default function useFreeTalkVAD({
@@ -46,7 +46,20 @@ export default function useFreeTalkVAD({
 }) {
   const [isListening, setIsListening] = useState(false);
   const isListeningRef = useRef(false);
-  const [vadAudioLevel, setVadAudioLevel] = useState(0);
+  // ── b.108 · il livello del microfono NON e piu uno stato React ──
+  // Era un useState aggiornato dentro il ciclo a fotogrammi: sessanta
+  // setState al secondo, e ogni setState risaliva la catena
+  // useFreeTalkVAD -> useTranslation -> page -> RoomView -> MessageList
+  // ridisegnando TUTTE le nuvolette a schermo (fino a trenta, con avatar
+  // e reazioni: circa cinquecento elementi riconciliati, sessanta volte
+  // al secondo, per tutta la durata dell'ascolto).
+  //
+  // Era la ragione principale per cui il modo mani libere era impastato.
+  //
+  // Il valore serve a UNA barretta alta quaranta pixel. Ora vive in un
+  // riferimento e la barretta se lo legge da sola, disegnandosi da sola:
+  // React non viene disturbato nemmeno una volta.
+  const vadLivelloRef = useRef(0);
   const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null);
   const [vadSensitivity, setVadSensitivity] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -154,14 +167,17 @@ export default function useFreeTalkVAD({
         dbg.debug(`[STT-FreeTalk] Whisper-only mode for lang=${currentLang}`);
       }
 
+      // b.108 — il buffer si alloca UNA volta, non a ogni fotogramma:
+      // erano 256 byte sessanta volte al secondo, cioe 15 KB al secondo
+      // di spazzatura da raccogliere mentre si parla.
+      const data = new Uint8Array(analyser.frequencyBinCount);
+
       function check() {
         if (!vadAnalyserRef.current) return;
-        const data = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
 
-        const normalizedLevel = Math.min(avg / 128, 1);
-        setVadAudioLevel(normalizedLevel);
+        vadLivelloRef.current = Math.min(avg / 128, 1);
 
         const aboveThreshold = avg > threshold;
 
@@ -275,7 +291,7 @@ export default function useFreeTalkVAD({
     isListeningRef.current = false;
     setIsListening(false);
     setRecording(false);
-    setVadAudioLevel(0);
+    vadLivelloRef.current = 0;
     setVadSilenceCountdown(null);
     if (vadCountdownRef.current) { clearInterval(vadCountdownRef.current); vadCountdownRef.current = null; }
     if (vadTimerRef.current) { cancelAnimationFrame(vadTimerRef.current); vadTimerRef.current = null; }
@@ -330,7 +346,7 @@ export default function useFreeTalkVAD({
 
   return {
     isListening,
-    vadAudioLevel,
+    vadLivelloRef,
     vadSilenceCountdown,
     vadSensitivity,
     setVadSensitivity: updateSensitivity,

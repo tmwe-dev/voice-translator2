@@ -1,4 +1,5 @@
 'use client';
+import BarraLivelloMicrofono from './BarraLivelloMicrofono.js';
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend, IconWaveform } from './Icons.js';
@@ -8,7 +9,7 @@ const TalkControls = memo(function TalkControls({
   L, S, roomMode, roomId, isHost, canTalk, modeInfo, isTrial,
   recording, isListening,
   toggleRecording, cancelRecording, startFreeTalk, stopFreeTalk,
-  vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
+  vadLivelloRef, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   liveMode, setLiveModeState, setLiveMode,
   status, webrtc, myName, roomInfo,
   endChatAndSave, setView,
@@ -176,17 +177,12 @@ const TalkControls = memo(function TalkControls({
             </button>
           )}
           {/* VAD Audio Level Bar */}
-          {isListening && typeof vadAudioLevel === 'number' && (
+          {isListening && (
             <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40}}>
-              <div style={{width:6, height:40, borderRadius:3, background:S.colors.overlayBg || 'rgba(255,255,255,0.1)',
-                overflow:'hidden', position:'relative'}}>
-                <div style={{
-                  position:'absolute', bottom:0, width:'100%', borderRadius:3,
-                  height:`${Math.round(vadAudioLevel * 100)}%`,
-                  background: vadAudioLevel > 0.5 ? '#4ade80' : vadAudioLevel > 0.15 ? '#667eea' : 'rgba(255,255,255,0.2)',
-                  transition:'height 0.08s linear',
-                }} />
-              </div>
+              {/* b.108 — la barretta si disegna da sola leggendo un
+                  riferimento: il livello non passa piu da React, quindi
+                  non ridisegna la stanza sessanta volte al secondo. */}
+              <BarraLivelloMicrofono livelloRef={vadLivelloRef} attiva={isListening} C={S.colors} />
               {vadSilenceCountdown !== null && vadSilenceCountdown > 0 && (
                 <span style={{fontSize:9, color:S.colors.accent3, fontWeight:700, fontVariantNumeric:'tabular-nums'}}>
                   {vadSilenceCountdown}s

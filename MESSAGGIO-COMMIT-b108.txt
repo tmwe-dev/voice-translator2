@@ -1,0 +1,61 @@
+b.108 — il livello del microfono non ridisegna piu tutta la chat
+
+PASSO 5 DELLA CACCIA AL TESORO. Il singolo blocco piu grosso alla
+fluidita, secondo l'audit.
+
+═══ COSA SUCCEDEVA ═══
+
+useFreeTalkVAD:164 faceva setVadAudioLevel() dentro il ciclo a
+fotogrammi. Il livello del microfono e un numero in virgola mobile che
+cambia a OGNI fotogramma, quindi non c'era nessuna via d'uscita:
+sessanta setState al secondo.
+
+E ogni setState risaliva tutta la catena
+
+  useFreeTalkVAD -> useTranslation -> page -> RoomView -> MessageList
+
+ridisegnando TUTTE le nuvolette a schermo: fino a trenta, ciascuna con
+avatar da 56 pixel, barra reazioni, e stili calcolati. Circa cinquecento
+elementi riconciliati sessanta volte al secondo, per tutta la durata
+dell'ascolto.
+
+Su un telefono di fascia media questo da solo saturava il budget di
+fotogramma. Era la ragione principale per cui il modo mani libere era
+impastato.
+
+Tutto questo per una barretta alta QUARANTA PIXEL.
+
+═══ COSA HO FATTO ═══
+
+Il livello vive in un riferimento (vadLivelloRef), non in uno stato.
+BarraLivelloMicrofono.js si monta una volta e poi scrive altezza e
+colore direttamente sul nodo, con il proprio ciclo a fotogrammi. React
+non viene disturbato mai piu.
+
+Due accortezze:
+ · si aggiorna solo se la differenza si vede (mezzo punto percentuale):
+   sotto quella soglia e lavoro sprecato
+ · il ciclo si ferma a scheda nascosta e quando si smette di ascoltare
+
+Corretta anche l'allocazione per fotogramma: `new Uint8Array(...)` era
+dentro check(), cioe 256 byte sessanta volte al secondo — 15 KB/s di
+spazzatura da raccogliere proprio mentre si parla. Ora si alloca una
+volta.
+
+═══ UNA NOTA SULL'ACCESSIBILITA ═══
+
+Avevo messo role="meter" sulla barretta, e il lint ha giustamente
+chiesto aria-valuenow. Ma un valore che cambia sessanta volte al secondo
+non si puo annunciare a voce: sarebbe una promessa non mantenuta. La
+barretta e ora aria-hidden, e che si stia ascoltando lo dice il pulsante
+accanto, che ha gia il suo stato leggibile.
+
+═══ LA GUARDIA ═══
+
+fluidita-vad.test.js, 8 test. Verifica che dentro il ciclo non ci sia
+NESSUN setState (regex su set[A-Z]...), che il buffer non si allochi per
+fotogramma, che la barretta non usi useState, che si fermi a scheda
+nascosta, e che nessun file della catena passi piu il valore invece del
+riferimento.
+
+Prove: 781 test verdi (8 nuovi), 0 errori di lint.

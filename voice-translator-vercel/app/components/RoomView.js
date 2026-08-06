@@ -30,7 +30,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   syncLangChange, retranslateForNewLang,
   clonedVoiceId, clonedVoiceName,
   duckingLevel, setDuckingLevel,
-  vadAudioLevel, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
+  vadLivelloRef, vadSilenceCountdown, vadSensitivity, setVadSensitivity,
   realtimeConnected, webrtc, isHostVerified, verifiedName,
   setLiveMode, interpreter, onMessageRead,
   showChatActions, setShowChatActions, localChat, ProviderBadge,
@@ -524,7 +524,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         recording={recording} isListening={isListening}
         toggleRecording={toggleRecording} cancelRecording={cancelRecording}
         startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
-        vadAudioLevel={vadAudioLevel} vadSilenceCountdown={vadSilenceCountdown}
+        vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
         vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
         liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
         status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}

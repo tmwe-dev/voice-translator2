@@ -387,7 +387,7 @@ export default function useTranslation({
 
   const {
     isListening,
-    vadAudioLevel,
+    vadLivelloRef,
     vadSilenceCountdown,
     vadSensitivity,
     setVadSensitivity,
@@ -819,7 +819,7 @@ export default function useTranslation({
     processAndSendAudio,
     isListening,
     // VAD enhanced feedback (TMWEngine patterns)
-    vadAudioLevel,          // 0-1 normalized mic level
+    vadLivelloRef,          // riferimento al livello 0-1 (b.108: non e piu stato)
     vadSilenceCountdown,    // seconds remaining before auto-send, or null
     vadSensitivity,         // 'quiet' | 'normal' | 'noisy' | 'street'
     setVadSensitivity,      // change sensitivity preset
