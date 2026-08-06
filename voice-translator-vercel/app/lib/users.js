@@ -152,6 +152,25 @@ export async function getSession(token) {
   const data = await redis('GET', `session:${token}`);
   if (!data) return null;
   let session; try { session = JSON.parse(data); } catch { return null; }
+
+  // b.110 — la sessione conserva solo { email, created }, ma mezzo
+  // programma le chiede il NOME: l'archivio delle conversazioni e
+  // scritto sotto `convlist:{nome}` e il controllo "eri fra i
+  // partecipanti?" confronta i nomi dei membri. Chi leggeva
+  // `session.name` trovava undefined, ripiegava sull'email e cercava
+  // una chiave che non esiste: archivio vuoto, e aprire una vecchia
+  // conversazione rispondeva "non sei un partecipante".
+  //
+  // Il nome sta nel profilo. Lo si aggiunge qui, in un posto solo,
+  // invece di lasciare che ogni rotta si inventi un ripiego: un
+  // ripiego per rotta e anche un buco per rotta, perche il nome
+  // arriverebbe dal client e chiunque potrebbe dichiararsi un altro.
+  if (session.email && !session.name) {
+    try {
+      const user = await getUser(session.email);
+      if (user?.name) session.name = user.name;
+    } catch { /* il nome resta assente: si prosegue con l'email */ }
+  }
   return session;
 }
 

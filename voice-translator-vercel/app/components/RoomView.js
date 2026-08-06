@@ -427,8 +427,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         onMessageDoubleClick={(msg) => {
           const original = msg.text || msg.original || '';
           const translated = msg.translation || msg.translated || '';
-          const msgFromLang = msg.from === myName ? myLang : (partner?.lang || 'en');
-          const msgToLang = msg.from === myName ? (msg.targetLang || (partner?.lang || 'en')) : myLang;
+          // b.110 — era `msg.from`, campo che non esiste: chi produce il
+          // messaggio scrive `sender` (useTranslationAPI:86). Il confronto
+          // era sempre falso, quindi anche i MIEI messaggi venivano
+          // trattati come del partner e le due lingue finivano scambiate.
+          const mioMessaggio = msg.sender === myName;
+          const msgFromLang = mioMessaggio ? myLang : (partner?.lang || 'en');
+          const msgToLang = mioMessaggio ? (msg.targetLang || (partner?.lang || 'en')) : myLang;
           setTaxiData({ original, translated, fromLang: msgFromLang, toLang: msgToLang });
           setTaxiVisible(true);
         }}

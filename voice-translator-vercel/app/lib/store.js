@@ -242,8 +242,11 @@ export async function saveConversation(roomId) {
     summary: null // filled later by AI
   };
 
-  // Save conversation with 7-day TTL
-  await redis('SET', `conv:${id}`, JSON.stringify(conv), 'EX', 86400);
+  // b.110 — il commento diceva sette giorni e il codice ne dava UNO
+  // (86400). L'elenco invece scade davvero a sette (604800, sotto):
+  // dopo un giorno la conversazione compariva ancora nell'archivio ma
+  // aprirla dava "non trovata". Dati dell'utente persi senza un avviso.
+  await redis('SET', `conv:${id}`, JSON.stringify(conv), 'EX', 604800);
 
   // Add to each member's conversation list
   for (const member of room.members) {

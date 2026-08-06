@@ -12,7 +12,12 @@ export default function useNotifications({ messages, roomId, myName, notifPermis
     const msgs = messages || [];
     if (msgs.length > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
       const lastMsg = msgs[msgs.length - 1];
-      if (lastMsg && lastMsg.speaker !== myName && document.hidden) {
+      // b.110 — leggeva `lastMsg.speaker`, ma chi produce il messaggio
+      // scrive `sender` (useTranslationAPI:86, store:67). Il campo era
+      // sempre undefined, quindi il confronto era SEMPRE vero: arrivava
+      // una notifica anche per i propri messaggi, e il titolo era sempre
+      // "Partner".
+      if (lastMsg && lastMsg.sender !== myName && document.hidden) {
         // Update app badge
         if (navigator.setAppBadge) {
           const unread = msgs.length - prevMsgCountRef.current;
@@ -22,7 +27,7 @@ export default function useNotifications({ messages, roomId, myName, notifPermis
         if (notifPermission === 'granted' && navigator.serviceWorker?.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_LOCAL_NOTIFICATION',
-            title: `${lastMsg.speaker || 'Partner'}`,
+            title: `${lastMsg.sender || 'Partner'}`,
             body: lastMsg.translated || lastMsg.original || 'Nuovo messaggio',
             tag: `vt-msg-${roomId}`,
             roomId,

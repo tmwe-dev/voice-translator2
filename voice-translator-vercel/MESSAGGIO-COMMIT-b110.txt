@@ -1,0 +1,65 @@
+b.110 — i campi che non combaciavano: dieci guasti silenziosi
+
+Chi scrive un dato lo chiamava in un modo, chi lo legge in un altro.
+Nessun errore, nessun avviso: solo `undefined`, che in JavaScript e un
+valore come un altro. Il programma continuava a funzionare e sbagliava.
+
+Erano invisibili perche ognuno produceva un comportamento plausibile,
+di quelli che si scambiano per scelte di progetto.
+
+1. NOTIFICHE — useNotifications leggeva `lastMsg.speaker`, ma chi
+   produce il messaggio scrive `sender`. Il confronto "non e mio" era
+   sempre vero: arrivava una notifica anche per i propri messaggi, e il
+   titolo era sempre la parola "Partner".
+
+2. LINK DI INVITO — costruito su `room.roomId`, ma la stanza ha `id`.
+   L'indirizzo copiato conteneva "room=undefined": mandarlo non serviva
+   a niente. Stessa cosa nel dettaglio conversazione.
+
+3. MODALITA TAXI — decideva le due lingue con `msg.from`, campo che su
+   un messaggio di chat non esiste. Anche i propri messaggi venivano
+   trattati come del passeggero e le lingue finivano scambiate.
+
+4. STANZE COMMUNITY — il gettone di sessione si leggeva da
+   `room.sessionToken`, che non esiste: sta nel ref di useRoomPolling.
+   Era sempre vuoto, quindi se l'host non era gia loggato la rotta
+   rispondeva 401 e la stanza non compariva mai in vetrina.
+
+5. ENTRARE DA UN ELENCO — si chiamava setJoinCode e subito dopo
+   handleJoinRoom, che leggeva lo stato VECCHIO. La prima volta non
+   succedeva niente, la seconda si entrava nella stanza precedente.
+   Ora il codice si passa come argomento.
+
+6. LINGUE A TRE LETTERE — il filtro accettava solo due lettere, ma fra
+   le lingue dichiarate c'e `fil` (filippino). Per quegli utenti la
+   trascrizione rispondeva INVALID_INPUT e il messaggio vocale andava
+   perso; la traduzione "funzionava" solo perche ripiegava sul servizio
+   gratuito.
+
+7. ARCHIVIO CONVERSAZIONI — la sessione conserva { email, created } e
+   basta. Meta programma le chiedeva il NOME: l'archivio e scritto
+   sotto `convlist:{nome}` e il controllo "eri fra i partecipanti?"
+   confronta i nomi dei membri. Si ripiegava sull'email e si cercava
+   una chiave inesistente: archivio vuoto per chi era entrato con
+   l'account, e 403 aprendo una vecchia conversazione. Corretto alla
+   radice — getSession prende il nome dal profilo — invece che con un
+   ripiego per rotta, che sarebbe stato anche un buco per rotta (il
+   nome sarebbe arrivato dal client e chiunque poteva dichiararsi un
+   altro).
+
+8. SCADENZE — il commento prometteva sette giorni, il codice ne dava
+   uno. L'elenco pero scadeva davvero a sette: dopo un giorno la
+   conversazione compariva ancora nell'archivio ma aprirla diceva "non
+   trovata". Dati persi senza un avviso.
+
+Il difetto n.7 era in DUE rotte, non una: la GET era sfuggita alla
+prima lettura ed e stato il test a trovarla. Il difetto n.2 era in due
+punti per la stessa ragione.
+
+Aggiunto __tests__/campi-che-combaciano.test.js: dodici prove che non
+guardano il comportamento ma che i due lati usino la stessa parola.
+E l'unico modo per accorgersene subito, invece che fra sei mesi.
+
+805 test verdi su 54 file. Lint: 0 errori.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>

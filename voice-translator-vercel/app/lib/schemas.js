@@ -4,7 +4,12 @@
 // Each schema returns { valid: boolean, data: object, error?: string }
 // ═══════════════════════════════════════════════════════════════
 
-const LANG_CODE_RE = /^[a-z]{2}(-[A-Za-z]{2,4})?$/;
+// b.110 — accettava SOLO due lettere, ma constants.js:46 dichiara
+// `fil` (Filipino). Traduzione e trascrizione rispondevano
+// INVALID_INPUT a ogni utente filippino: la traduzione "funzionava"
+// solo perche il client ripiegava sul servizio gratuito, la
+// trascrizione falliva e il messaggio vocale andava perso.
+const LANG_CODE_RE = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/;
 const ROOM_ID_RE = /^[A-Z0-9]{4,20}$/;
 const EMAIL_RE = /^[^\s@<>"'`\\;]+@[^\s@]+\.[^\s@]{2,}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -784,7 +784,9 @@ function HomeInner() {
       setView('lobby');
       setStatus('');
       // Auto-copy invite link for the contact
-      const link = `${window.location.origin}?room=${room.roomId}`;
+      // b.110 — era `room.roomId`, ma l'oggetto stanza ha `id`
+      // (store.js:69). Il link copiato conteneva "room=undefined".
+      const link = `${window.location.origin}?room=${room.id}`;
       try { await navigator.clipboard.writeText(link); } catch {}
     } catch (e) { setStatus('Error: ' + e.message); }
   }
@@ -797,13 +799,15 @@ function HomeInner() {
     }
   }, [autoJoinTriggered, joinCode, prefs.name]);
 
-  async function handleJoinRoom() {
-    if (!joinCode.trim()) return;
+  async function handleJoinRoom(codiceEsplicito) {
+    // Chi arriva da un elenco passa il codice; chi digita usa lo stato.
+    const codice = (codiceEsplicito || joinCode || '').trim();
+    if (!codice) return;
     // Unlock audio + mic early (must be in user gesture context)
     audio.unlockAudio();
     try {
       setStatus('...');
-      const room = await roomPolling.handleJoinRoom(joinCode, prefs.name, myLang, prefs.avatar);
+      const room = await roomPolling.handleJoinRoom(codice, prefs.name, myLang, prefs.avatar);
       // Immediately sync roomInfoRef (don't wait for useEffect re-render)
       // This ensures getTargetLangInfo() sees the partner's language right away
       roomInfoRef.current = room;
@@ -1096,7 +1100,10 @@ function HomeInner() {
     <>
       <Suspense fallback={<LazyFallback />}>
       <MondoView
-        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(); }}
+        // b.110 — setJoinCode e asincrono: handleJoinRoom leggeva lo
+        // stato VECCHIO. La prima volta non succedeva niente, la seconda
+        // si entrava nella stanza precedente. Ora il codice si passa.
+        onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(rid); }}
         onCreateRoom={() => setShowCreateRoom(true)} />
       </Suspense>
       <Suspense fallback={null}>
@@ -1119,7 +1126,7 @@ function HomeInner() {
             // veniva buttato via. Risultato: nasceva una normale chat a due,
             // Community restava eternamente "Nessuna stanza al momento", e la
             // POST di /api/mondo non la chiamava nessuno.
-            const codice = room?.roomId || room?.code || room?.id;
+            const codice = room?.id;
             if (codice && roomConfig.roomType !== 'private') {
               try {
                 await fetch('/api/mondo', {
@@ -1135,7 +1142,12 @@ function HomeInner() {
                     hostLang: prefs.lang || myLang,
                     roomType: roomConfig.roomType,
                     maxPartecipanti: roomConfig.maxParticipants,
-                    roomSessionToken: room?.sessionToken || room?.roomSessionToken || '',
+                    // b.110 — `room.sessionToken` non esiste: handleCreateRoom
+                    // restituisce solo la stanza e mette il token nel ref
+                    // (useRoomPolling:661). Il campo era sempre vuoto, quindi
+                    // se l'host non era loggato /api/mondo rispondeva 401 e la
+                    // stanza non compariva mai in vetrina.
+                    roomSessionToken: roomPolling.roomSessionTokenRef?.current || '',
                     userToken: auth.userAccount?.token
                       || (typeof window !== 'undefined' ? localStorage.getItem('vt-token') || '' : ''),
                   }),
@@ -1252,7 +1264,8 @@ function HomeInner() {
           }}
           onShare={() => {
             if (!detailConversation?.roomId) return;
-            const link = `${window.location.origin}?room=${detailConversation.roomId}`;
+            // b.110 — la conversazione ha `id`, non `roomId` (store:233).
+            const link = `${window.location.origin}?room=${detailConversation.id}`;
             if (navigator.share) navigator.share({ title: 'BarTalk', url: link });
             else navigator.clipboard.writeText(link).then(() => { setStatus('Link copiato!'); setTimeout(() => setStatus(''), 2000); });
           }}

@@ -46,6 +46,11 @@ async function handlePost(req) {
 
     if (action === 'list') {
       // Prefer userToken (account-level identity) for listing conversations
+      // b.110 — l'elenco e archiviato sotto il NOME visualizzato
+      // (store.js: `convlist:${member.name}`). getSession ora restituisce
+      // anche il nome, preso dal profilo: prima c'era solo l'email e si
+      // cercava una chiave che non esiste, cosi l'archivio di chi era
+      // entrato con l'account appariva sempre vuoto.
       let resolvedName = null;
       if (userToken) {
         const session = await getSession(userToken);
