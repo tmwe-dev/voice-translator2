@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
 import { getClientIP } from '../../lib/validate.js';
-import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
+import { withApiGuard } from '../../lib/apiGuard.js';
 
 const log = createLogger('mondo');
 
@@ -17,10 +17,13 @@ const ROOM_TYPES = ['public', 'protected', 'private', 'temporary'];
  * GET /api/mondo — List public rooms
  * Returns: { rooms: [{ roomId, host, description, mode, lang, members, createdAt }] }
  */
-export async function GET(req) {
+async function handleGet(req) {
   try {
-    const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-get'), 30);
-    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
+    // b.118 — il limite di frequenza scritto a mano e stato tolto: ora
+    // lo mette la guardia comune (in fondo al file). Tenerne due
+    // significa contare due volte la stessa richiesta, e ritrovarsi con
+    // meta del limite dichiarato — un difetto che avevamo gia corretto
+    // altrove e che si era ricreato qui.
 
     const raw = await redis('LRANGE', MONDO_KEY, 0, 29); // Max 30 rooms
     const rooms = (raw || []).map(s => {
@@ -42,10 +45,13 @@ export async function GET(req) {
  * POST /api/mondo — Publish a room as public
  * Body: { roomId, host, description, mode, lang, members }
  */
-export async function POST(req) {
+async function handlePost(req) {
   try {
-    const rl = await checkRateLimit(getRateLimitKey(req, 'mondo-post'), 10);
-    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
+    // b.118 — il limite di frequenza scritto a mano e stato tolto: ora
+    // lo mette la guardia comune (in fondo al file). Tenerne due
+    // significa contare due volte la stessa richiesta, e ritrovarsi con
+    // meta del limite dichiarato — un difetto che avevamo gia corretto
+    // altrove e che si era ricreato qui.
 
     const {
       roomId, host, nome, description, mode, lang, members,
@@ -125,3 +131,11 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
+
+// ── b.118 · anche questa passa dalla guardia comune ──
+// La caccia al tesoro l'ha trovata scoperta: rispondeva 500 a un corpo
+// malformato, e non aveva il limite di frequenza condiviso. Aveva un
+// limite suo, scritto a mano — che e proprio il modo in cui una rotta
+// si dimentica per strada le protezioni aggiunte a tutte le altre.
+export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'mondo' });
+export const GET = withApiGuard(handleGet, { maxRequests: 30, prefix: 'mondo', skipBodyCheck: true });

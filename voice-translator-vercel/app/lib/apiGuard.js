@@ -57,6 +57,18 @@ function extractUserKey(req) {
  * @param {number} opts.maxBodySize - max body size in bytes (default: 256KB)
  * @param {boolean} opts.skipBodyCheck - skip body size check (e.g. for GET-only)
  */
+/**
+ * b.118 — l'errore viene dal corpo della richiesta?
+ * Si riconosce dal tipo e dal testo: sono i messaggi che i browser e
+ * Node usano quando un corpo non si lascia leggere nella forma attesa.
+ */
+function eColpaDelCorpo(e) {
+  if (!e) return false;
+  if (e instanceof SyntaxError) return true;          // JSON rotto
+  const m = String(e.message || '').toLowerCase();
+  return /json|formdata|form data|unexpected end of|body|multipart|boundary/.test(m);
+}
+
 export function withApiGuard(handler, opts = {}) {
   const {
     maxRequests = 60,
@@ -116,12 +128,66 @@ export function withApiGuard(handler, opts = {}) {
       }
     }
 
+    // ══════════════════════════════════════════════════════════
+    // 3-bis. b.118 · UN CORPO SBAGLIATO NON E UN GUASTO NOSTRO
+    //
+    // Provate una per una: DODICI rotte su dodici rispondevano 500 a un
+    // corpo malformato o vuoto. Nessuna esclusa. Chiunque, senza
+    // credenziali, poteva farle "esplodere" a comando.
+    //
+    // Il danno non e il messaggio d'errore: e che quei 500 finiscono
+    // nei registri e in Sentry insieme ai guasti VERI, e li seppelliscono.
+    // Il monitor interno dell'app segnalava gia "High error count
+    // detected" — si stava lamentando di se stesso, e nessuno guardava
+    // piu quella spia.
+    //
+    // Un corpo che non si legge e colpa di chi lo manda: 400, non 500.
+    // ══════════════════════════════════════════════════════════
+    if (!skipBodyCheck && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      const tipo = req.headers.get('content-type') || '';
+      if (tipo.includes('application/json')) {
+        // ATTENZIONE ALLA DIFFERENZA, che i test gia scritti hanno
+        // trovato prima di me: "non riesco nemmeno a PROVARE a leggere"
+        // non e la stessa cosa di "ho letto ed e sbagliato".
+        //
+        // La prima volta avevo scritto un try/catch solo, e bastava che
+        // `clone` non ci fosse perche OGNI richiesta prendesse 400:
+        // l'applicazione intera, ferma. Un rimedio peggiore del male.
+        //
+        // Ora: se non si puo controllare, si lascia passare — sara il
+        // gestore a dire la sua. Si rifiuta solo cio che si e letto e
+        // che e davvero malformato.
+        let copia = null;
+        try { copia = req.clone(); } catch { copia = null; }
+        if (copia && typeof copia.json === 'function') {
+          let valido = true;
+          try { await copia.json(); } catch { valido = false; }
+          if (!valido) {
+            return NextResponse.json(
+              { error: 'Corpo della richiesta non valido: atteso JSON.' },
+              { status: 400 }
+            );
+          }
+        }
+      }
+    }
+
     // 4. Call the actual handler with error tracking
     const startTime = Date.now();
     let response;
     try {
       response = await handler(req);
     } catch (e) {
+      // b.118 — seconda rete: se il corpo era leggibile ma di forma
+      // sbagliata (JSON dove serviva un modulo, per esempio), la
+      // lettura fallisce DENTRO il gestore. Anche quello e un errore di
+      // chi chiama, non nostro: 400, e fuori dai registri dei guasti.
+      if (eColpaDelCorpo(e)) {
+        return NextResponse.json(
+          { error: 'Corpo della richiesta non valido o di formato inatteso.' },
+          { status: 400 }
+        );
+      }
       // Track unhandled errors via Sentry
       trackError(prefix, e, req);
       return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
