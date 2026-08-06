@@ -14,6 +14,28 @@ const dbg = createLogger('polling');
 const REALTIME_FALLBACK_POLL = 3000;   // 3s when WebSocket is active (was 6s)
 const LEGACY_POLL_INTERVAL = 1500;     // 1.5s fallback when no WebSocket (was 2s)
 
+// ── b.111 · a schermo spento si rallenta, non si smette ──
+// Prima no: si chiedeva al server ogni secondo e mezzo anche col
+// telefono in tasca. Quaranta richieste al minuto, a vuoto, per ogni
+// persona in una stanza — batteria dell'utente e conto nostro.
+//
+// Perche RALLENTARE e non fermarsi del tutto, come fa il ticker
+// condiviso: le notifiche di messaggio arrivano proprio quando la
+// pagina e nascosta (useNotifications guarda `document.hidden`).
+// Fermarsi le spegnerebbe. Sei volte piu lento e il compromesso: da 40
+// richieste al minuto a 7, e un messaggio si annuncia entro nove
+// secondi invece che entro uno e mezzo — su un telefono in tasca
+// nessuno se ne accorge.
+const FRENO_A_SCHERMO_SPENTO = 6;
+
+const paginaNascosta = () =>
+  typeof document !== 'undefined' && document.hidden;
+
+const intervalloOra = (realtimeConnected) => {
+  const base = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
+  return paginaNascosta() ? base * FRENO_A_SCHERMO_SPENTO : base;
+};
+
 export default function useRoomPolling({
   prefsRef,
   myLangRef,
@@ -503,10 +525,27 @@ export default function useRoomPolling({
   // IMPORTANT: This does NOT re-subscribe — only changes the timer interval
   useEffect(() => {
     if (!roomId || !pollFnRef.current) return;
-    if (pollRef.current) clearInterval(pollRef.current);
-    const interval = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
-    pollRef.current = setInterval(pollFnRef.current, interval);
-    dbg.debug(`[Poll] Interval adjusted to ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'})`);
+
+    // Un solo posto decide ogni quanto si chiede: il collegamento
+    // Realtime e se lo schermo e acceso. Prima la visibilita non
+    // entrava nel conto e si martellava il server anche in tasca.
+    const riarma = () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      const interval = intervalloOra(realtimeConnected);
+      pollRef.current = setInterval(pollFnRef.current, interval);
+      dbg.debug(`[Poll] ogni ${interval}ms (Realtime: ${realtimeConnected ? 'ON' : 'OFF'}, schermo: ${paginaNascosta() ? 'spento' : 'acceso'})`);
+    };
+
+    const alCambioVisibilita = () => {
+      // Tornando, si guarda subito: nessuno deve aspettare il prossimo
+      // giro per vedere cosa e successo mentre non guardava.
+      if (!paginaNascosta()) { try { pollFnRef.current(); } catch { /* il giro dopo riprova */ } }
+      riarma();
+    };
+
+    riarma();
+    document.addEventListener('visibilitychange', alCambioVisibilita);
+    return () => document.removeEventListener('visibilitychange', alCambioVisibilita);
   }, [realtimeConnected, roomId]);
 
   const stopPolling = useCallback(() => {

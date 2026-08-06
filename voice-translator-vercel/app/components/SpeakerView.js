@@ -3,7 +3,8 @@ import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import Icon from './Icon.js';
-import { toast } from './Toast.js';
+import { toast } from '../lib/avvisi.js';
+import { creaCodaAudio } from '../lib/codaAudio.js';
 import TaxiDestinationPanel from './TaxiDestinationPanel.js';
 import TaxiQRView from './TaxiQRView.js';
 // ── INIZIO b.88 — mappa vettoriale anche qui, non solo dal tassista ──
@@ -189,12 +190,26 @@ function SpeakerView({ userToken }) {
     }
   }, [sourceLang, targetLang, userToken]);
 
-  // ── TTS: Edge TTS (free) → OpenAI fallback ──
-  const playTTS = useCallback(async (text, lang) => {
-    if (!text) return;
-    setPlaying(true);
+  // ── b.111 · TTS in coda, procurata in anticipo ──
+  //
+  // COS'ERA. Ogni frase tradotta chiamava direttamente questa funzione,
+  // che come prima cosa faceva `audioRef.current.pause()`. Cioe: la
+  // frase nuova AMMAZZAVA quella in corso. Nel taxi — il telefono
+  // appoggiato fra due persone che si parlano addosso — bastava una
+  // seconda frase perche la prima traduzione non venisse mai udita per
+  // intero. Nessun errore, nessun avviso: solo una voce che si
+  // interrompe a meta e un passeggero che non ha capito.
+  //
+  // Ora si accoda: si parla in ordine di arrivo, una alla volta, e
+  // l'audio della frase successiva si va a prendere mentre la
+  // precedente sta ancora parlando.
+  const codaRef = useRef(null);
+  if (!codaRef.current) codaRef.current = creaCodaAudio();
+  useEffect(() => () => codaRef.current?.ferma(), []);
+
+  const procura = useCallback(async (text, lang) => {
+    const langCode = getLang(lang)?.speech || lang || 'en';
     try {
-      const langCode = getLang(lang)?.speech || lang || 'en';
       const edgeRes = await fetch('/api/tts-edge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -202,37 +217,47 @@ function SpeakerView({ userToken }) {
       });
       if (edgeRes.ok) {
         const blob = await edgeRes.blob();
-        if (blob.size > 0) {
-          const url = URL.createObjectURL(blob);
-          if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-          const audio = new Audio(url);
-          audioRef.current = audio;
-          audio.volume = 1.0;
-          audio.play().catch(() => {});
-          audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); };
-          audio.onerror = () => { setPlaying(false); };
-          return;
-        }
+        if (blob.size > 0) return blob;
       }
-    } catch (e) { console.warn('[SpeakerView] TTS playback failed:', e?.message); }
+    } catch (e) { console.warn('[SpeakerView] Edge TTS non disponibile:', e?.message); }
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' }),
       });
-      if (!res.ok) { setPlaying(false); return; }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) { audioRef.current.pause(); }
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.volume = 1.0;
-      audio.play().catch(() => {});
-      audio.onended = () => { URL.revokeObjectURL(url); setPlaying(false); };
-      audio.onerror = () => { setPlaying(false); };
-    } catch { setPlaying(false); }
+      if (!res.ok) return null;
+      return await res.blob();
+    } catch { return null; }
   }, [prefs?.voice, userToken]);
+
+  const suona = useCallback((blob) => new Promise((finito) => {
+    if (!blob || blob.size === 0) { finito(); return; }
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.volume = 1.0;
+    const chiudi = () => { URL.revokeObjectURL(url); finito(); };
+    audio.onended = chiudi;
+    audio.onerror = chiudi;
+    // Rete di sicurezza: se il browser non chiama ne onended ne
+    // onerror, la coda resterebbe bloccata per sempre.
+    setTimeout(chiudi, 30000);
+    audio.play().catch(chiudi);
+  }), []);
+
+  const playTTS = useCallback(async (text, lang) => {
+    if (!text) return;
+    setPlaying(true);
+    codaRef.current.accoda(
+      `${text.slice(0, 60)}|${lang}`,
+      () => procura(text, lang),
+      async (blob) => {
+        await suona(blob);
+        if (codaRef.current.inCoda() === 0) setPlaying(false);
+      }
+    );
+  }, [procura, suona]);
 
   // ── Destination geocoding ──
   const searchDestination = useCallback(async (query) => {

@@ -10,6 +10,7 @@ import {
 } from '../lib/webrtc.js';
 import useE2EEncryption from './useE2EEncryption.js';
 import { createLogger } from '../lib/logger.js';
+import { creaPostaInUscita } from '../lib/postaInUscita.js';
 const dbg = createLogger('webrtc');
 
 // ═══════════════════════════════════════════════
@@ -43,6 +44,13 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   const pcRef = useRef(null);
   const dcRef = useRef(null);
+  // ── b.111 · la posta in uscita ──
+  // Se il canale non e aperto (o le chiavi non sono ancora state
+  // scambiate) il messaggio non parte. Prima si perdeva in silenzio:
+  // ora resta qui e riparte da solo quando il canale torna aperto.
+  const postaRef = useRef(null);
+  if (!postaRef.current) postaRef.current = creaPostaInUscita();
+
   const timeoutRef = useRef(null);
   const disconnectTimerRef = useRef(null);
   const sendersRef = useRef([]);
@@ -345,6 +353,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
       // ── E2E: initiate key exchange immediately after DC opens ──
       e2e.initiateKeyExchange(dc);
+
+      // ── b.111 · si consegna la posta rimasta sullo scrittoio ──
+      // Si aspetta un momento: lo scambio delle chiavi appena avviato
+      // non e istantaneo, e in Direct un messaggio spedito prima che
+      // siano pronte verrebbe rifiutato e rimesso in coda per niente.
+      setTimeout(() => {
+        postaRef.current?.svuota((busta) => e2e.sendEncrypted(dcRef.current, busta));
+      }, 600);
 
       // ── P2P Heartbeat: detect silent DataChannel death ──
       lastPongRef.current = Date.now();
@@ -725,6 +741,27 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     return e2e.sendEncrypted(dcRef.current, msg);
   }, [e2e.sendEncrypted]);
 
+  /**
+   * Come sendDirectMessage, ma se non parte NON lo butta: lo mette da
+   * parte e riprova all'apertura del canale. Da usare per il contenuto
+   * (i messaggi di chat), non per i comandi tipo "ho acceso la camera",
+   * che invecchiano male e vanno persi volentieri.
+   */
+  const spedisciOAccoda = useCallback(async (chiave, msg) => {
+    try {
+      const esito = await e2e.sendEncrypted(dcRef.current, msg);
+      if (esito !== false) return true;
+    } catch {
+      // In Direct, sendEncrypted SOLLEVA finche le chiavi non sono
+      // pronte. E il caso piu frequente: il primo secondo dopo essersi
+      // collegati. Non e un errore, e solo "non ancora".
+    }
+    postaRef.current.accoda(chiave, msg);
+    return false;
+  }, [e2e.sendEncrypted]);
+
+  const messaggiInAttesa = useCallback(() => postaRef.current.chiaviInAttesa(), []);
+
   const disconnect = useCallback(() => {
     cleanup();
     setWebrtcState('idle');
@@ -750,6 +787,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     toggleAudio,
     flipCamera,
     sendDirectMessage,
+    spedisciOAccoda,
+    messaggiInAttesa,
     disconnect,
   };
 }

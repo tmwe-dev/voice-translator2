@@ -1,2 +1,64 @@
+# ═══════════════════════════════════════════════════════════════
+# COSA NON ENTRA NEL REPOSITORY (b.111)
+#
+# Prima qui c'erano due righe, e il conto era questo: su 627 file
+# tracciati, 270 erano spazzatura — il 43%. Dipendenze scaricabili con
+# un comando, file di sistema di macOS, messaggi di commit salvati come
+# file accanto al codice.
+#
+# Non e una questione di eleganza. Chi arriva nuovo su questo progetto
+# deve capire quale file e vivo e quale e storia, e con quasi meta del
+# repository fatta di rumore ci mette il triplo del tempo.
+# ═══════════════════════════════════════════════════════════════
+
+# ── Dipendenze: si riscaricano, non si conservano ──
+node_modules/
+.pnp
+.pnp.js
+
+# ── Roba del sistema operativo ──
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ── Costruzione e cache ──
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+.eslintcache
+coverage/
+.nyc_output/
+
+# ── Segreti: qui dentro non entrano MAI ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Vercel ──
 .vercel
-.env*
+
+# ── Test di browser ──
+/playwright-report/
+/test-results/
+/blob-report/
+/playwright/.cache/
+
+# ── Registri ──
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── b.111 · i messaggi di commit stanno nei commit ──
+# Erano diciannove file di testo nella radice del progetto, uno per
+# versione, con dentro il messaggio che era GIA nel commit. Copie di
+# qualcosa che git conserva meglio di noi: `git log` le mostra tutte.
+MESSAGGIO-COMMIT-*.txt

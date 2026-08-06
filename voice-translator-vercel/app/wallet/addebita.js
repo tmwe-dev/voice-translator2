@@ -33,6 +33,43 @@ export async function creditoFinito(utente) {
 }
 
 /**
+ * Il credito basta per quello che sto per fare?
+ *
+ * b.111 — `creditoFinito` chiede solo "il saldo e a zero?". Bastava un
+ * secondo di credito residuo per passare, e poi si sintetizzava una
+ * frase da novanta: il lavoro veniva fatto, l'addebito falliva, e il
+ * servizio piu caro che abbiamo era regalato. Un solo secondo di
+ * credito apriva un rubinetto senza fondo, perche il costo della voce
+ * premium dipende da quanto e lungo il testo e il testo lo sceglie chi
+ * chiede.
+ *
+ * Questa domanda va fatta PRIMA di chiamare il fornitore, con il costo
+ * gia calcolato. Se il portafoglio non risponde non si blocca nessuno:
+ * meglio un uso non fatturato che un servizio rotto — ma l'addebito
+ * vero dopo resta comunque il controllo definitivo.
+ *
+ * @returns {boolean} vero se NON si puo procedere
+ */
+export async function creditoInsufficiente(utente, costoPrevisto) {
+  if (!utente) return false;
+  if (!Number.isFinite(costoPrevisto) || costoPrevisto <= 0) return false;
+  try {
+    return (await saldo(utente)) < costoPrevisto;
+  } catch (e) {
+    console.error('[wallet] saldo non leggibile, non blocco:', e.message);
+    return false;
+  }
+}
+
+/**
+ * Quanto costera una sintesi premium di questo testo? Serve a chiedere
+ * il permesso prima di spendere, con lo STESSO conto che si usera dopo.
+ */
+export function preventivoVocePremium(caratteri) {
+  return costoElevenLabsCaratteri(caratteri || 0);
+}
+
+/**
  * Un pezzo di conversazione vocale standard (STT + traduzione + voce base).
  * @returns {'ok'|'esaurito'|'saltato'}
  */

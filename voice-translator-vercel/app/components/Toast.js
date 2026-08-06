@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { PALETTE } from '../lib/palette.js';
+import { ascoltaAvvisi, dismissToast } from '../lib/avvisi.js';
 
 // ═══════════════════════════════════════════════
 // Toast Notification System
@@ -8,59 +9,14 @@ import { PALETTE } from '../lib/palette.js';
 // Auto-dismiss, stackable, with retry action
 // ═══════════════════════════════════════════════
 
-const TOAST_DURATION = 4000;
-const MAX_TOASTS = 3;
-
-// Global toast queue — components call addToast()
-let _listeners = new Set();
-let _toasts = [];
-let _nextId = 1;
-
-export function addToast(toast) {
-  const id = _nextId++;
-  const full = {
-    id,
-    type: toast.type || 'info', // 'info' | 'error' | 'success' | 'warning'
-    message: toast.message,
-    action: toast.action || null, // { label, onClick }
-    duration: toast.duration || TOAST_DURATION,
-    ts: Date.now(),
-  };
-  _toasts = [..._toasts, full].slice(-MAX_TOASTS);
-  _listeners.forEach(fn => fn([..._toasts]));
-
-  // Auto-dismiss
-  setTimeout(() => {
-    _toasts = _toasts.filter(t => t.id !== id);
-    _listeners.forEach(fn => fn([..._toasts]));
-  }, full.duration);
-
-  return id;
-}
-
-export function dismissToast(id) {
-  _toasts = _toasts.filter(t => t.id !== id);
-  _listeners.forEach(fn => fn([..._toasts]));
-}
-
-// Convenience shortcuts
-export const toast = {
-  info: (msg, opts) => addToast({ type: 'info', message: msg, ...opts }),
-  error: (msg, opts) => addToast({ type: 'error', message: msg, duration: 6000, ...opts }),
-  success: (msg, opts) => addToast({ type: 'success', message: msg, ...opts }),
-  warning: (msg, opts) => addToast({ type: 'warning', message: msg, duration: 5000, ...opts }),
-  // Error with retry button
-  errorRetry: (msg, onRetry) => addToast({
-    type: 'error', message: msg, duration: 8000,
-    action: { label: 'Riprova', onClick: onRetry },
-  }),
-  // Offline notification
-  offline: () => addToast({
-    type: 'warning',
-    message: 'Sei offline — i messaggi saranno inviati quando torni online',
-    duration: 10000,
-  }),
-};
+// b.111 — la coda degli avvisi e uscita da questo file (lib/avvisi.js).
+// Qui c'e solo il disegno. Il motivo e concreto: questo file contiene
+// JSX, e chi voleva avvisare l'utente da un hook doveva importarlo. Il
+// primo che ci ha provato ha fatto smettere di caricare un intero file
+// di test, perche il nostro esecutore non legge JSX dentro un .js.
+// Ma il difetto vero era la dipendenza al contrario: un hook non deve
+// dipendere da come le cose sono disegnate.
+export { addToast, dismissToast, toast } from '../lib/avvisi.js';
 
 // Colori dalla tavolozza centrale, non inventati qui. Segni tipografici
 // al posto delle emoji: nell'app non entrano emoji, in nessun punto.
@@ -76,11 +32,7 @@ const velo = (tinta, opacita) => `${tinta}${Math.round(opacita * 255).toString(1
 const ToastContainer = memo(function ToastContainer() {
   const [toasts, setToasts] = useState([]);
 
-  useEffect(() => {
-    const handler = (newToasts) => setToasts(newToasts);
-    _listeners.add(handler);
-    return () => _listeners.delete(handler);
-  }, []);
+  useEffect(() => ascoltaAvvisi(setToasts), []);
 
   if (toasts.length === 0) return null;
 

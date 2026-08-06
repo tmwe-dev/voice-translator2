@@ -9,9 +9,12 @@ import { velare } from '../lib/velo.js';
 
 // Avvolge la nuvoletta solo quando serve davvero: se non c'e niente da
 // coprire, il messaggio esce identico a prima, senza un livello in piu.
-function ForseVelato({ messaggio, attivo, C, children }) {
+function ForseVelato({ messaggio, attivo, hot, C, children }) {
   if (!attivo) return children;
-  const esito = velare(messaggio);
+  // b.111 — nelle stanze hot la tendina non scende: e il senso della
+  // stanza. Il confine sui reati non passa di qui — quei messaggi non
+  // partono nemmeno (reati.js), quindi qui non arrivano.
+  const esito = velare(messaggio, { hot });
   if (!esito.velare) return children;
   return <Velo motivo={esito.motivo} C={C}>{children}</Velo>;
 }
@@ -140,7 +143,7 @@ const MessageList = memo(function MessageList({
                 {/* b.101 \u2014 quello che uno scrive di suo pugno non gli si
                     copre in faccia: sa cosa ha scritto. Si vela solo cio
                     che arriva dagli altri. */}
-                <ForseVelato messaggio={m} attivo={!isMine} C={S.colors}>
+                <ForseVelato messaggio={m} attivo={!isMine} hot={!!roomInfo?.hot} C={S.colors}>
                   {/* Primary line: original for sender, translation for receiver */}
                   <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
                     {isMine ? m.original : (hasTranslation ? translationForMe : m.original)}

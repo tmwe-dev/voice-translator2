@@ -75,6 +75,7 @@ const DetailView = lazy(() => import('./components/DetailView.js'));
 // ═══ Context provider for prop drilling elimination ═══
 import { AppProvider } from './contexts/AppContext.js';
 import SpatialBackdrop from './components/SpatialBackdrop.js';
+import { montaCancelloDiretta, impostaModalita } from './lib/modalitaSessione.js';
 import Sciame from './components/Sciame.js';
 
 
@@ -147,11 +148,44 @@ function HomeInner() {
   // Currently defaults to 'translate'. Will be set based on room/user choice.
   const sessionModeRef = useRef('translate');
 
+  // ── b.111 · il cancello della modalita Diretta ──
+  // La guardia sul server esisteva gia in dodici rotte, ma leggeva
+  // un'intestazione che NESSUNO mandava: non e mai scattata. Qui si
+  // monta un cancello unico davanti a fetch, che quell'intestazione la
+  // aggiunge sempre e che in modalita Diretta non fa nemmeno partire le
+  // richieste vietate. Un solo punto, invece di quaranta punti da
+  // ricordare.
+  useEffect(() => { montaCancelloDiretta(); }, []);
+
+  // Unico modo di cambiare modalita: scrive nel ref (che leggono gli
+  // hook) e nel cancello (che legge fetch). Due copie della stessa
+  // verita che si separano sono il modo classico di ritrovarsi con la
+  // promessa rotta da una parte sola.
+  const cambiaModalitaSessione = useCallback((modo) => {
+    sessionModeRef.current = impostaModalita(modo);
+  }, []);
+
   // ── Stable ref for P2P DataChannel message sending ──
   // Declared before hooks so useTranslation can reference it via callback wrapper
   const sendDirectMessageRef = useRef(null);
   const sendDirectMessageStable = useCallback((msg) => {
     return sendDirectMessageRef.current ? sendDirectMessageRef.current(msg) : false;
+  }, []);
+
+  // ── b.111 · il contenuto non si perde ──
+  // sendDirectMessageStable restituisce `false` quando il canale non e
+  // aperto, e nessuno guardava quel `false`. Per i comandi va bene
+  // (dire "ho acceso la camera" dieci secondi dopo non serve a nulla),
+  // ma per un MESSAGGIO no: in modalita Direct non esiste copia sul
+  // server, quindi quel messaggio era perso e basta. Questa via lo
+  // mette da parte e lo rispedisce da sola quando il canale riapre.
+  // Nota: qui NON si guarda `webrtcConnected` — e proprio quando non
+  // si e connessi che la posta in uscita serve.
+  const spedisciContenutoRef = useRef(null);
+  const spedisciContenutoStable = useCallback((chiave, msg) => {
+    return spedisciContenutoRef.current
+      ? spedisciContenutoRef.current(chiave, msg)
+      : false;
   }, []);
 
   // ── Stable ref for interpreter — breaks circular dependency ──
@@ -208,6 +242,7 @@ function HomeInner() {
     broadcastMessage: roomPolling.broadcastMessage,
     broadcastMessageUpdate: roomPolling.broadcastMessageUpdate,
     sendDirectMessage: sendDirectMessageStable,
+    spedisciContenuto: spedisciContenutoStable,
     verifiedNameRef: roomPolling.verifiedNameRef,
     addLocalMessage: roomPolling.addLocalMessage,
     updateLocalMessage: roomPolling.updateLocalMessage,
@@ -301,7 +336,10 @@ function HomeInner() {
   // Sync sendDirectMessageRef when WebRTC connects/disconnects
   useEffect(() => {
     sendDirectMessageRef.current = webrtc.webrtcConnected ? webrtc.sendDirectMessage : null;
-  }, [webrtc.webrtcConnected, webrtc.sendDirectMessage]);
+    // La posta in uscita si collega SEMPRE, connessi o no: e il suo
+    // mestiere tenere da parte quello che ora non puo partire.
+    spedisciContenutoRef.current = webrtc.spedisciOAccoda || null;
+  }, [webrtc.webrtcConnected, webrtc.sendDirectMessage, webrtc.spedisciOAccoda]);
 
   // =============================================
   // REF SYNC
@@ -431,7 +469,17 @@ function HomeInner() {
     }
   }, [view]);
 
-  function savePrefs(newPrefs) {
+  // b.111 — era una `function` normale, quindi un oggetto NUOVO a ogni
+  // render. Finisce nel valore di AppContext, che la tiene fra le sue
+  // dipendenze: il contesto risultava cambiato SEMPRE, e tutti i
+  // componenti che usano useApp() si ridisegnavano a ogni battuta di
+  // tasto, a ogni giro del microfono, a ogni interrogazione del
+  // server. Tutta la memoizzazione fatta con cura in AppContext era
+  // annullata da questa singola riga.
+  //
+  // Non ha dipendenze: setPrefs e setMyLang sono stabili per contratto
+  // di React, il resto lo legge quando serve.
+  const savePrefs = useCallback(function savePrefs(newPrefs) {
     setPrefs(newPrefs); setMyLang(newPrefs.lang);
     localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
 
@@ -447,7 +495,7 @@ function HomeInner() {
         body: JSON.stringify({ action: 'update', name: newPrefs.name, lang: newPrefs.lang, avatar: newPrefs.avatar }),
       }).catch(() => { /* il nome locale resta valido: si riallinea al prossimo salvataggio */ });
     }
-  }
+  }, []);
 
   /**
    * Re-translate recent partner messages when user changes language.
@@ -838,7 +886,27 @@ function HomeInner() {
       creditBalance: auth.creditBalance, userAccount: auth.userAccount, useOwnKeys: auth.useOwnKeys,
     },
   };
-  const wrap = (node) => <AppProvider value={appCtxValue}><SpatialBackdrop /><Sciame modo="velo" />{node}</AppProvider>;
+  // ── b.111 · il velo si toglie dove serve la macchina ──
+  // Lo sciame disegna 1.400 granelli a ogni fotogramma: sessanta volte
+  // al secondo, sempre, su qualunque schermata. E bello e costa poco su
+  // un portatile; su un telefono che nello stesso momento sta
+  // codificando video, riconoscendo la voce e cifrando, quella CPU
+  // manca dove serve davvero — e si sente, perche l'audio salta.
+  //
+  // Nelle tre schermate dove si PARLA il velo non c'e. Non e una
+  // rinuncia: durante una conversazione nessuno lo guarda, e chi
+  // ascolta preferisce sentire bene.
+  //
+  // SpatialBackdrop resta ovunque: sono due sfumature animate dal CSS,
+  // le muove la scheda grafica e non tolgono niente a nessuno.
+  const SCHERMATE_SENZA_VELO = new Set(['room', 'speaker', 'join']);
+  const wrap = (node) => (
+    <AppProvider value={appCtxValue}>
+      <SpatialBackdrop />
+      {!SCHERMATE_SENZA_VELO.has(view) && <Sciame modo="velo" />}
+      {node}
+    </AppProvider>
+  );
 
   // =============================================
   // RENDER
@@ -1142,6 +1210,10 @@ function HomeInner() {
                     hostLang: prefs.lang || myLang,
                     roomType: roomConfig.roomType,
                     maxPartecipanti: roomConfig.maxParticipants,
+                    // b.111 — stanza a litigio libero: nessuna tendina
+                    // grigia davanti al linguaggio pesante. I reati
+                    // restano vietati come in ogni altra stanza.
+                    hot: !!roomConfig.hot,
                     // b.110 — `room.sessionToken` non esiste: handleCreateRoom
                     // restituisce solo la stanza e mette il token nel ref
                     // (useRoomPolling:661). Il campo era sempre vuoto, quindi

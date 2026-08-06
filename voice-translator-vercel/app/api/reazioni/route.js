@@ -7,6 +7,7 @@ import { leggiRegole } from '../../lib/moderazione.js';
 import {
   reagisci, leggiConte, leggiMie, contaRisposte, salvaMessaggio, storico, TIPI,
 } from '../../lib/reazioni.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('reazioni');
 
@@ -38,6 +39,16 @@ async function eCommunity(roomId) {
 }
 
 async function handlePost(req) {
+  // b.111 — la guardia mancava proprio qui. Vedi lib/modalitaSessione.js:
+  // l'intestazione che la fa scattare non la mandava nessuno, quindi
+  // anche dove c'era non e mai servita. Ora arriva davvero.
+  try { assertCloudProcessingAllowed(req); } catch (e) {
+    if (e instanceof DirectModeError) {
+      return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
+    }
+    throw e;
+  }
+
   try {
     const corpo = await req.json();
     const azione = typeof corpo.azione === 'string' ? corpo.azione : '';

@@ -38,17 +38,43 @@ const ICE_SERVERS = [
   },
 ];
 
-// Add custom TURN server if configured via env vars (supplements free TURN)
+// ═══════════════════════════════════════════════
+// b.111 — IL RELAY PROPRIO SOSTITUISCE QUELLO PUBBLICO
+//
+// Prima il TURN privato si AGGIUNGEVA a quello pubblico ("supplements
+// free TURN"). Detto in chiaro: anche dopo aver pagato un relay
+// proprio, una parte del traffico continuava a passare da un server di
+// terzi con credenziali pubbliche — openrelayproject / openrelayproject,
+// le stesse per chiunque al mondo.
+//
+// Il traffico resta cifrato due volte (DTLS di WebRTC piu AES-GCM
+// nostro), quindi il relay non legge i contenuti. Ma vede CHI parla con
+// CHI, quando e per quanto: metadati, che spesso dicono piu del testo.
+// E non ha SLA, ne quote garantite, ne una politica di conservazione
+// che possiamo mostrare a un utente che la chieda.
+//
+// Ora: se c'e un relay nostro, quello pubblico esce dalla lista.
+// ═══════════════════════════════════════════════
+
+/** Vero se stiamo usando il relay pubblico gratuito, cioe nessuno di nostro. */
+export let RELAY_PUBBLICO = true;
+
 if (typeof window !== 'undefined') {
   const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
   const turnUser = process.env.NEXT_PUBLIC_TURN_USER;
   const turnPass = process.env.NEXT_PUBLIC_TURN_PASS;
+
   if (turnUrl) {
-    ICE_SERVERS.push({
-      urls: turnUrl,
-      username: turnUser || '',
-      credential: turnPass || '',
-    });
+    // Fuori i relay di terzi: restano solo gli STUN, che non
+    // trasportano traffico ma dicono soltanto "il tuo indirizzo
+    // pubblico e questo".
+    for (let i = ICE_SERVERS.length - 1; i >= 0; i--) {
+      const u = ICE_SERVERS[i].urls || '';
+      if (String(u).startsWith('turn:') || String(u).startsWith('turns:')) {
+        ICE_SERVERS.splice(i, 1);
+      }
+    }
+    ICE_SERVERS.push({ urls: turnUrl, username: turnUser || '', credential: turnPass || '' });
     if (turnUrl.startsWith('turn:')) {
       ICE_SERVERS.push({
         urls: turnUrl.replace('turn:', 'turns:'),
@@ -56,6 +82,14 @@ if (typeof window !== 'undefined') {
         credential: turnPass || '',
       });
     }
+    RELAY_PUBBLICO = false;
+  } else {
+    // Non e un dettaglio da scoprire in produzione: si dice subito.
+    log.warn(
+      'Nessun TURN privato configurato (NEXT_PUBLIC_TURN_URL). ' +
+      'Si usa il relay pubblico gratuito: va bene per le prove, non per gli utenti veri. ' +
+      'Vede chi parla con chi, non ha quote garantite ne SLA.'
+    );
   }
 }
 

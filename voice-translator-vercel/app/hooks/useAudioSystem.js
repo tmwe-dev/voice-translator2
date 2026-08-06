@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang } from '../lib/constants.js';
 import useTTSEngine from './useTTSEngine.js';
 import { getVolumeTTS } from '../lib/audioPrefs.js';
+import { creaCodaAudio } from '../lib/codaAudio.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -39,8 +40,11 @@ export default function useAudioSystem({
   // Audio refs
   const persistentAudioRef = useRef(null);
   const audioContextRef = useRef(null);
-  const audioQueueRef = useRef([]);
-  const isPlayingRef = useRef(false);
+  // b.111 — la coda con l'anticipo: prepara la voce successiva mentre
+  // quella corrente sta ancora parlando. Prima il silenzio fra una
+  // frase e l'altra era lungo quanto la richiesta di rete.
+  const codaRef = useRef(null);
+  if (!codaRef.current) codaRef.current = creaCodaAudio();
   const playedMsgIdsRef = useRef(new Set());
   const persistentMicRef = useRef(null);
   const audioEnabledRef = useRef(audioEnabled);
@@ -168,12 +172,10 @@ export default function useAudioSystem({
     } catch (e) { console.warn('[useAudioSystem] connectToDucking failed:', e?.message || e); return null; }
   }
 
-  // When audio becomes ready, flush any queued items that arrived before unlock
-  useEffect(() => {
-    if (audioReady && audioQueueRef.current.length > 0 && !isPlayingRef.current) {
-      processAudioQueue();
-    }
-  }, [audioReady]);
+  // b.111 — qui si rilanciava la vecchia coda quando l'audio veniva
+  // sbloccato. Non serve piu: la coda nuova non aspetta lo sblocco per
+  // partire, e chi suona ha gia i suoi ripieghi (altro elemento audio,
+  // e in ultima istanza la voce del browser).
 
   // Auto-unlock on first touch/click (same as b.41)
   useEffect(() => {
@@ -200,7 +202,7 @@ export default function useAudioSystem({
       }
       activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) { /* cleanup */ } });
       activeBlobUrlsRef.current.clear();
-      audioQueueRef.current = [];
+      codaRef.current?.svuota();
       playedMsgIdsRef.current.clear();
       if (typeof speechSynthesis !== 'undefined') {
         try {
@@ -313,56 +315,52 @@ export default function useAudioSystem({
     }
     setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
     if (!audioEnabledRef.current) { playNotifSound(); return; }
-    audioQueueRef.current.push({ text, lang });
-    processAudioQueue();
+    accodaConAnticipo(text, lang, msgId || contentKey);
   }
 
-  async function playOneItem(text, lang) {
-    const voiceEngine = prefsRef.current?.voiceEngine || 'auto';
-    if (voiceEngine === 'edge') await tts.playEdgeTTS(text, lang);
-    else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, lang);
-    else if (voiceEngine === 'openai') await tts.playTTS(text, lang);
-    else {
-      const hasClonedVoice = !!clonedVoiceIdRef?.current;
-      if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, lang);
-      else await tts.playEdgeTTS(text, lang);
-    }
+  /**
+   * b.111 — mette la voce in coda e ne comincia SUBITO la preparazione,
+   * anche se davanti c'e ancora qualcuno che parla. Il turno di parola
+   * resta rigorosamente quello di arrivo: preparare in anticipo non
+   * vuol dire parlare prima.
+   */
+  function accodaConAnticipo(text, lang, chiave) {
+    const primaVoce = !codaRef.current.attiva();
+    if (primaVoce) preparaUscitaAudio();
+
+    codaRef.current.accoda(
+      chiave,
+      () => tts.procuraVoce(text, lang),
+      async (blob) => {
+        startDucking();
+        try { await tts.suonaVoce(blob, text, lang); }
+        finally {
+          stopDucking();
+          // Quando la coda si e svuotata si smette di segnalare "sto
+          // parlando", altrimenti il microfono resta sordo per sempre.
+          if (codaRef.current.inCoda() === 0) segnalaTTS(false);
+        }
+      }
+    );
   }
 
-  async function processAudioQueue() {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) return;
-    isPlayingRef.current = true;
-
-    // Aggressively try to unlock/resume audio context before playing
-    if (!audioReadyRef.current) {
-      try { unlockAudio(); } catch {}
-    }
+  /** Sblocco audio, volume e avviso "parla la TTS": una volta sola. */
+  function preparaUscitaAudio() {
+    if (!audioReadyRef.current) { try { unlockAudio(); } catch {} }
     const ctx = audioContextRef.current;
-    if (ctx && ctx.state === 'suspended') {
-      try { await ctx.resume(); } catch {}
-    }
-
-    try {
-      const pa = getPersistentAudio();
-      pa.volume = getVolumeTTS(); // manopola "voce tradotta" (audioPrefs)
-    } catch {}
-
-    // Avvisa il resto dell'app: sta parlando la TTS locale.
+    if (ctx && ctx.state === 'suspended') { ctx.resume().catch(() => {}); }
+    try { getPersistentAudio().volume = getVolumeTTS(); } catch {}
     // Chi ascolta: RoomView (attenua la voce del partner, iOS-safe) e
     // il riconoscimento vocale (scarta l'audio: anti-eco).
     segnalaTTS(true);
-    while (audioQueueRef.current.length > 0) {
-      const { text, lang } = audioQueueRef.current.shift();
-      startDucking();
-      try {
-        await playOneItem(text, lang);
-      } catch (e) { console.error('[Audio] playback error:', e); }
-      stopDucking();
-    }
-    segnalaTTS(false);
-
-    isPlayingRef.current = false;
   }
+
+  // b.111 — qui stavano playOneItem e processAudioQueue: la vecchia
+  // coda, che preparava una voce solo dopo che la precedente aveva
+  // finito di parlare. Sostituite da accodaConAnticipo + lib/codaAudio.
+  // Tolte e non lasciate a dormire: due code audio nello stesso file
+  // sono il modo piu sicuro per far suonare due volte la stessa frase
+  // fra sei mesi.
 
   // =============================================
   // PLAY MESSAGE (manual replay)

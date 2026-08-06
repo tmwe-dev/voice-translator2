@@ -75,4 +75,15 @@ export const BLOCKED_IN_DIRECT = [
   '/api/summary',
   '/api/conversation',
   '/api/chat-action',
+  // ── b.111 · quattro che mancavano, e non erano le meno gravi ──
+  // stt-token consegna al telefono un gettone per aprire un flusso
+  // audio DIRETTO verso Deepgram: in modalita Diretta e la voce, dal
+  // vivo, verso un terzo. Era la falla piu grande e non era nell'elenco.
+  '/api/stt-token',
+  '/api/translate-stream',
+  // La clonazione carica una registrazione della propria voce.
+  '/api/voice-clone',
+  // Le reazioni conservano il TESTO del messaggio per la vetrina
+  // Community. Giusto li, sbagliato in una conversazione riservata.
+  '/api/reazioni',
 ];

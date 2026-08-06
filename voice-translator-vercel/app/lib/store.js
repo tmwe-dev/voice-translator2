@@ -201,15 +201,46 @@ export async function updateMessage(roomId, sender, original, updates) {
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateMessage result:', e.message); return null; }
 }
 
+// b.111 — quante righe si leggono quando si chiede "cosa e successo
+// da un secondo a questa parte". La lista ne tiene 200 (LTRIM in
+// ADD_MESSAGE): prima si leggevano e si interpretavano TUTTE E 200 a
+// ogni giro, cioe ogni secondo e mezzo, per tenerne quasi sempre zero
+// o una. In una stanza di quattro persone erano 32.000 letture al
+// minuto per consegnare qualche frase.
+//
+// Sessanta e abbondante: in un secondo e mezzo non arrivano sessanta
+// messaggi. Se pero la coda pescata comincia gia dopo il momento
+// richiesto, vuol dire che qualcosa e rimasto indietro (il telefono
+// era in tasca, la rete era caduta) e allora si rilegge tutto. Meglio
+// una lettura in piu ogni tanto che un messaggio perso.
+const CODA_MESSAGGI = 60;
+
 export async function getMessages(roomId, after = 0) {
   const key = `msgs:${roomId.toUpperCase()}`;
-  const allMsgs = await redis('LRANGE', key, 0, -1);
-  if (!allMsgs || !Array.isArray(allMsgs)) return [];
-  // FASE 6A: Use >= to avoid missing messages at exact timestamp boundary
-  // Client-side dedup by message ID handles duplicates
-  return allMsgs
-    .map(m => { try { return JSON.parse(m); } catch (e) { log.warn('Failed to parse message in getMessages:', e.message); return null; } }).filter(Boolean)
+  const interpreta = (righe) => righe
+    .map(m => { try { return JSON.parse(m); } catch (e) { log.warn('Failed to parse message in getMessages:', e.message); return null; } })
+    .filter(Boolean)
+    // FASE 6A: Use >= to avoid missing messages at exact timestamp boundary
+    // Client-side dedup by message ID handles duplicates
     .filter(m => m.timestamp >= after);
+
+  // Primo caricamento: serve tutta la conversazione, non c'e scorciatoia.
+  if (!after) {
+    const tutti = await redis('LRANGE', key, 0, -1);
+    return Array.isArray(tutti) ? interpreta(tutti) : [];
+  }
+
+  const coda = await redis('LRANGE', key, -CODA_MESSAGGI, -1);
+  if (!coda || !Array.isArray(coda)) return [];
+  const recenti = interpreta(coda);
+
+  // Se TUTTI i sessanta pescati sono nuovi, il piu vecchio dei nuovi
+  // potrebbe non essere il piu vecchio che serviva: si rilegge tutto.
+  if (coda.length >= CODA_MESSAGGI && recenti.length === coda.length) {
+    const tutti = await redis('LRANGE', key, 0, -1);
+    return Array.isArray(tutti) ? interpreta(tutti) : recenti;
+  }
+  return recenti;
 }
 
 export async function getAllMessages(roomId) {

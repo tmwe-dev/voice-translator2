@@ -3,6 +3,8 @@
 // Extracted from translate/route.js for reuse and testability
 // ═══════════════════════════════════════════════
 
+import { createHash } from 'crypto';
+
 // Script ranges for non-Latin target language validation
 export const SCRIPT_RANGES = {
   'th': /[\u0E00-\u0E7F]/,      // Thai
@@ -92,7 +94,26 @@ export function calcConfidence(sourceText, translatedText, sourceLang, targetLan
 /**
  * Simple hash for cache key (first 32 chars of base64-encoded text)
  */
+/**
+ * La chiave con cui una traduzione viene messa in cache.
+ *
+ * b.111 — PRIMA NON ERA UN'IMPRONTA. Era il testo stesso, scritto in
+ * base64 e tagliato a 32 caratteri: cioe i primi 24 caratteri del
+ * testo, travestiti. Due frasi che cominciavano allo stesso modo
+ * finivano nella stessa casella, e la seconda persona si prendeva la
+ * traduzione della prima:
+ *
+ *   "Buongiorno, come sta oggi signora Rossi?"    → QnVvbmdpb3JubywgY29tZSBzdGEgb2dn
+ *   "Buongiorno, come sta oggi signora Bianchi?"  → QnVvbmdpb3JubywgY29tZSBzdGEgb2dn
+ *
+ * Non un rallentamento: una traduzione SBAGLIATA, servita con
+ * sicurezza. E il tipo di guasto che nessuno segnala, perche chi legge
+ * non sa cosa era stato scritto davvero.
+ *
+ * C'era anche un test che lo copriva. Confrontava "Hello" con "World",
+ * che differiscono dalla prima lettera: passava sempre, e non ha mai
+ * guardato dove il difetto era.
+ */
 export function getSimpleHash(text) {
-  const encoded = Buffer.from(text).toString('base64');
-  return encoded.substring(0, 32);
+  return createHash('sha256').update(String(text ?? ''), 'utf8').digest('hex').slice(0, 32);
 }

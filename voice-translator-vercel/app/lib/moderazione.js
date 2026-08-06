@@ -45,16 +45,22 @@ export function normalizza(nome) {
 
 // ── Regole della stanza (scritte quando la stanza viene pubblicata) ──
 
-export async function salvaRegole(roomId, { suApprovazione, hostNome }) {
+export async function salvaRegole(roomId, { suApprovazione, hostNome, hot }) {
   await redis('SET', chiave.regole(roomId),
-    JSON.stringify({ suApprovazione: !!suApprovazione, hostNome: normalizza(hostNome) }),
+    // b.111 — `hot`: stanza a litigio libero. Toglie la tendina grigia
+    // davanti al linguaggio pesante, NON il divieto sui reati: quello
+    // vale in ogni stanza e lo fa rispettare reati.js.
+    JSON.stringify({ suApprovazione: !!suApprovazione, hostNome: normalizza(hostNome), hot: !!hot }),
     'EX', TTL_STANZA);
 }
 
 export async function leggiRegole(roomId) {
   const grezzo = await redis('GET', chiave.regole(roomId));
-  if (!grezzo) return { suApprovazione: false, hostNome: '' };
-  try { return JSON.parse(grezzo); } catch { return { suApprovazione: false, hostNome: '' }; }
+  const nessuna = { suApprovazione: false, hostNome: '', hot: false };
+  if (!grezzo) return nessuna;
+  // Una stanza vecchia, salvata prima di b.111, non ha il campo `hot`:
+  // deve risultare NON hot, mai il contrario. Nel dubbio si copre.
+  try { return { ...nessuna, ...JSON.parse(grezzo) }; } catch { return nessuna; }
 }
 
 export async function eHost(roomId, nome) {

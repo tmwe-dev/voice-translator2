@@ -388,6 +388,18 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                       Su approvazione
                     </span>
                   )}
+                  {/* b.111 — litigio libero. Va detto PRIMA di entrare:
+                      e la ragione per cui uno sceglie questa stanza, o
+                      per cui gira alla larga. Scoprirlo dentro sarebbe
+                      un'imboscata. */}
+                  {room.hot && (
+                    <span style={{
+                      padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
+                      background: 'rgba(255,90,60,0.12)', color: '#FF7A5C',
+                    }} title="Qui si può litigare: niente tendina sulle parole pesanti. Minacce e reati restano vietati.">
+                      Litigio libero
+                    </span>
+                  )}
                   {/* Host role badge */}
                   {room.myRole && ROLE_BADGES[room.myRole] && (
                     <span style={{

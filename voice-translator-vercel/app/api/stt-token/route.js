@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('sttToken');
 
@@ -13,6 +14,19 @@ const log = createLogger('sttToken');
 // ═══════════════════════════════════════════════
 
 async function handler(req) {
+  // ── b.111 · la falla piu grande, e non era nemmeno nell'elenco ──
+  // Questa rotta consegna al telefono un gettone per aprire un flusso
+  // audio DIRETTO verso Deepgram. In modalita Diretta significa la
+  // voce, dal vivo, verso un terzo — mentre all'utente si prometteva
+  // che niente lasciava il telefono. Non aveva la guardia e non era
+  // fra le rotte vietate: due dimenticanze sullo stesso punto.
+  try { assertCloudProcessingAllowed(req); } catch (e) {
+    if (e instanceof DirectModeError) {
+      return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
+    }
+    throw e;
+  }
+
   // Auth guard: require room session token or user token
   try {
     const body = await req.clone().json().catch(() => ({}));

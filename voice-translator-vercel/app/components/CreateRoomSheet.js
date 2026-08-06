@@ -50,6 +50,9 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   const [description, setDescription] = useState('');
   const [maxParticipants, setMaxParticipants] = useState(20);
   const [creating, setCreating] = useState(false);
+  // b.111 — stanza a litigio libero. Spenta di default: e una scelta,
+  // e le scelte che cambiano le regole non si fanno per distrazione.
+  const [hot, setHot] = useState(false);
   const sheetRef = useSheetA11y(open, onClose);
 
   const nomePulito = nome.trim();
@@ -67,6 +70,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         lang,
         description: description.trim(),
         maxParticipants,
+        hot,
         mode: category, // maps to existing room modes
       });
       onClose();
@@ -74,7 +78,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
       console.warn('[CreateRoom] Failed:', e?.message);
     }
     setCreating(false);
-  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, onCreate, onClose]);
+  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, onCreate, onClose]);
 
   if (!open) return null;
 
@@ -165,6 +169,44 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                 );
               })}
             </div>
+          </div>
+
+          {/* ── b.111 · Litigio libero ── */}
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => { setHot(!hot); vibrate(10); }}
+              aria-pressed={hot}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                background: hot ? 'rgba(255,90,60,0.10)' : cardBg,
+                border: `1px solid ${hot ? 'rgba(255,90,60,0.35)' : cardBorder}`,
+                textAlign: 'left', fontFamily: FONT, display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+              {/* Nessuna emoji: un segno tipografico, come ovunque nell'app. */}
+              <span aria-hidden="true" style={{
+                fontSize: 13, fontWeight: 800, lineHeight: '18px', width: 18, textAlign: 'center',
+                color: hot ? '#FF7A5C' : textMuted,
+              }}>{hot ? '!' : '·'}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: hot ? '#FF7A5C' : textPrimary, marginBottom: 2 }}>
+                  Litigio libero
+                </span>
+                <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
+                  {hot
+                    ? 'Qui ci si può mandare a quel paese: niente tendina grigia davanti alle parole pesanti. Minacce, ricatti e tutto ciò che riguarda minori restano vietati — qui come ovunque.'
+                    : 'Le parole pesanti restano coperte da una tendina: chi vuole leggerle, tocca.'}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{
+                width: 34, height: 20, borderRadius: 10, flexShrink: 0, marginTop: 2,
+                background: hot ? '#FF7A5C' : cardBorder, position: 'relative', transition: 'background .18s',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2, left: hot ? 16 : 2, width: 16, height: 16,
+                  borderRadius: '50%', background: '#fff', transition: 'left .18s',
+                }} />
+              </span>
+            </button>
           </div>
 
           {/* Category */}

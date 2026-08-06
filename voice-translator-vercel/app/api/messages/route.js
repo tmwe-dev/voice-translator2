@@ -5,6 +5,7 @@ import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getCl
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { puoPartire } from '../../lib/reati.js';
 
 const log = createLogger('messages');
 
@@ -52,6 +53,21 @@ async function handlePost(req) {
     // (il confronto sul testo fallisce quando la sanitizzazione lo modifica → doppioni).
     const clientId = (typeof body.clientId === 'string' && /^tmp_[\w-]{1,60}$/.test(body.clientId))
       ? body.clientId : null;
+
+    // ── b.111 · il confine, anche qui ──
+    // Lo stesso controllo c'e gia sul telefono, prima dell'invio: quello
+    // e il solo che funziona in modalita Direct, dove qui non arriva
+    // niente. Ma un client si puo modificare, e chi vuole mandare una
+    // minaccia e esattamente il tipo di persona disposta a farlo.
+    // Quindi si ripete: il divieto vale in ogni stanza, hot comprese.
+    const confine = puoPartire(original);
+    if (!confine.ok) {
+      log.warn('messaggio fermato al confine:', confine.categoria);
+      return NextResponse.json(
+        { error: confine.motivo, categoria: confine.categoria, bloccato: true },
+        { status: 422 }
+      );
+    }
 
     // ── Idempotenza: stesso mittente + stesso testo entro 8s = stesso messaggio ──
     // Cintura di sicurezza server contro ogni doppio invio (doppio tap,

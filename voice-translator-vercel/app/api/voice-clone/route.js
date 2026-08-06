@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, deductCredits } from '../../lib/users.js';
 import { createLogger } from '../../lib/logger.js';
+import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('voiceClone');
 
@@ -11,6 +12,16 @@ const CLONE_COST_CREDITS = 500; // 500 cents = €5.00
 // POST /api/voice-clone — Clone a voice
 // ═══════════════════════════════════════
 async function handlePost(req) {
+  // b.111 — la guardia mancava proprio qui. Vedi lib/modalitaSessione.js:
+  // l'intestazione che la fa scattare non la mandava nessuno, quindi
+  // anche dove c'era non e mai servita. Ora arriva davvero.
+  try { assertCloudProcessingAllowed(req); } catch (e) {
+    if (e instanceof DirectModeError) {
+      return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
+    }
+    throw e;
+  }
+
   try {
     const formData = await req.formData();
     const userToken = formData.get('userToken');

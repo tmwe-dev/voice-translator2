@@ -5,6 +5,7 @@ import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } 
 import { findConsensus } from '../../lib/consensus.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { getSimpleHash } from '../../lib/translateValidation.js';
 
 const log = createLogger('translateConsensus');
 
@@ -18,10 +19,8 @@ const log = createLogger('translateConsensus');
 // Security: rate limited 20 req/min, CORS restricted
 // ═══════════════════════════════════════════════
 
-function getSimpleHash(text) {
-  const encoded = Buffer.from(text).toString('base64');
-  return encoded.substring(0, 32);
-}
+// b.111 — c'erano tre copie della stessa impronta rotta, una per
+// rotta. Ora e una sola, e funziona (vedi translateValidation.js).
 
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

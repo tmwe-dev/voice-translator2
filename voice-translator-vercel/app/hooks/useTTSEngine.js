@@ -333,6 +333,68 @@ export default function useTTSEngine({
     await playBlobWithFallback(blob, text, langCode);
   }
 
+  // ═══════════════════════════════════════════════
+  // b.111 — PROCURARE e FAR SUONARE, separati
+  //
+  // Le funzioni playXxx qui sopra fanno le due cose insieme: vanno a
+  // prendere l'audio e lo suonano, in un `await` solo. Va benissimo
+  // quando c'e una frase sola, ma in una conversazione significa che
+  // l'audio della frase successiva si comincia a cercare solo quando
+  // la precedente ha finito di parlare: fra una frase e l'altra resta
+  // un silenzio lungo quanto la richiesta di rete.
+  //
+  // Separandole, la coda (lib/codaAudio.js) puo procurarsi la prossima
+  // voce MENTRE quella corrente sta ancora parlando, e far suonare
+  // tutto rigorosamente in ordine.
+  //
+  // Non sostituiscono le playXxx: quelle restano per il riascolto
+  // manuale di un singolo messaggio, dove non c'e niente da anticipare.
+  // ═══════════════════════════════════════════════
+
+  /** Va a prendere l'audio. Non suona niente. @returns {Promise<Blob|null>} */
+  async function procuraVoce(text, langCode) {
+    const motore = prefsRef.current?.voiceEngine || 'auto';
+    const premium = motore === 'elevenlabs'
+      || (motore === 'auto' && !!clonedVoiceIdRef?.current && !!canUseElevenLabsRef?.current);
+
+    if (premium) {
+      try {
+        const res = await fetch('/api/tts-elevenlabs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text,
+            voiceId: clonedVoiceIdRef?.current || selectedELVoice || undefined,
+            langCode: langCode || undefined,
+            avatarName: getAvatarName(),
+            userToken: getEffectiveToken(),
+            roomId: roomIdRef.current || undefined,
+          }),
+        });
+        if (res.ok) return await res.blob();
+        // 402 = credito insufficiente: si ripiega sulla voce gratuita,
+        // che e esattamente cio che la rotta si aspetta.
+      } catch { /* si ripiega */ }
+    }
+
+    try {
+      return await fetchEdgeTTSBlob(text, langCode);
+    } catch {
+      try {
+        const alt = (prefsRef.current?.edgeTtsVoiceGender || 'female') === 'female' ? 'male' : 'female';
+        return await fetchEdgeTTSBlob(text, langCode, alt);
+      } catch {
+        return null;   // niente blob: chi suona ripieghera sulla voce del browser
+      }
+    }
+  }
+
+  /** Fa suonare quello che procuraVoce ha portato. */
+  async function suonaVoce(blob, text, langCode) {
+    if (!blob) return browserSpeak(text, langCode);
+    return playBlobWithFallback(blob, text, langCode);
+  }
+
   return {
     browserSpeak,
     checkVoiceAvailability,
@@ -341,5 +403,7 @@ export default function useTTSEngine({
     playTTSElevenLabs,
     playBlobAudio,
     playBlobNewAudio,
+    procuraVoce,
+    suonaVoce,
   };
 }

@@ -182,17 +182,25 @@ describe('Privacy contract', () => {
     expect(Object.keys(body)).toEqual(['ciphertext']);
   });
 
-  it('all 11 content-processing API routes are in BLOCKED_IN_DIRECT', () => {
-    expect(BLOCKED_IN_DIRECT.length).toBe(11);
-
+  it('ogni rotta che tocca un contenuto e nell\'elenco vietato', () => {
+    // b.112 — questo test controllava che l'elenco fosse LUNGO undici.
+    // Un numero non e un contratto: quando sono state trovate quattro
+    // rotte che portavano contenuti e non erano nell'elenco, il test
+    // e diventato rosso per il motivo sbagliato — non perche mancava
+    // qualcosa, ma perche il conto non tornava piu. Ora controlla che
+    // ci siano le rotte giuste, e l'elenco puo crescere.
     const routes = [
       '/api/messages', '/api/translate', '/api/translate-free',
       '/api/translate-consensus', '/api/transcribe', '/api/tts',
       '/api/tts-edge', '/api/tts-elevenlabs', '/api/summary',
       '/api/conversation', '/api/chat-action',
+      // b.112 — le quattro che mancavano. stt-token era la piu grave:
+      // consegna un gettone per aprire un flusso audio dal vivo verso
+      // Deepgram, cioe la voce, mentre si promette che non esce niente.
+      '/api/stt-token', '/api/translate-stream', '/api/voice-clone', '/api/reazioni',
     ];
     for (const r of routes) {
-      expect(BLOCKED_IN_DIRECT).toContain(r);
+      expect(BLOCKED_IN_DIRECT, `${r} deve essere vietata in modalita Diretta`).toContain(r);
     }
   });
 });

@@ -4,6 +4,8 @@ import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import { isDirectMode } from '../lib/sessionGuard.js';
 import { createLogger } from '../lib/logger.js';
+import { puoPartire } from '../lib/reati.js';
+import { toast } from '../lib/avvisi.js';
 const dbg = createLogger('translation-api');
 
 /**
@@ -36,6 +38,7 @@ export default function useTranslationAPI({
   broadcastMessage,
   broadcastMessageUpdate, // Phase 2: broadcast translation to partner
   sendDirectMessage,  // WebRTC DataChannel: P2P instant delivery
+  spedisciContenuto,  // b.111 — come sopra, ma se non parte lo tiene da parte
   verifiedNameRef,
   addLocalMessage,    // Callback to add message to local messages[] immediately
   updateLocalMessage, // Callback to update existing message (add translation)
@@ -64,6 +67,25 @@ export default function useTranslationAPI({
    */
   const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return null;
+
+    // ── b.111 · il confine, prima di tutto il resto ──
+    // Nelle stanze hot si puo litigare: il velo grigio non scende. Ma
+    // minacce, ricatti, istigazione e qualsiasi cosa riguardi minori
+    // non partono da NESSUNA stanza, hot comprese.
+    //
+    // Il controllo sta qui e non piu in la per una ragione precisa:
+    // qui e prima di ogni invio, e quindi vale anche in modalita
+    // Direct, dove il server non vede niente e non potrebbe fermare
+    // nulla. Il controllo sul server (in /api/messages) resta comunque,
+    // perche un client si puo modificare.
+    const confine = puoPartire(original);
+    if (!confine.ok) {
+      dbg.warn('[sendMessage] fermato al confine:', confine.categoria);
+      // Si dice PERCHE. Un messaggio che sparisce senza spiegazione fa
+      // pensare a un guasto, e chi ha scritto lo riscrive uguale.
+      toast.error(confine.motivo);
+      return { bloccato: true, categoria: confine.categoria, motivo: confine.motivo };
+    }
 
     // ── Freno anti doppio invio ──
     // Parlando, l'auto-invio del VAD (silenzio) e il tocco sul tasto possono
@@ -97,10 +119,16 @@ export default function useTranslationAPI({
 
     // ── Instant delivery: P2P (always) + Realtime broadcast (only in Translate mode) ──
     // Priority 1: WebRTC DataChannel (P2P, ~50ms) — ALWAYS, in both modes
-    if (sendDirectMessage) {
-      try {
-        sendDirectMessage({ type: 'chat-message', message: instantMsg });
-      } catch {}
+    // b.111 — prima era `try { sendDirectMessage(...) } catch {}`:
+    // se il canale non era aperto la funzione restituiva `false` e
+    // nessuno lo guardava; se le chiavi non erano ancora pronte
+    // SOLLEVAVA e il catch vuoto se lo mangiava. In modalita Direct non
+    // c'e copia sul server: quel messaggio era perso per sempre, e
+    // intanto compariva nella propria chat come inviato.
+    if (spedisciContenuto) {
+      spedisciContenuto(instantMsg.id || tempId, { type: 'chat-message', message: instantMsg });
+    } else if (sendDirectMessage) {
+      try { sendDirectMessage({ type: 'chat-message', message: instantMsg }); } catch {}
     }
     // Priority 2: Supabase Realtime broadcast (~100ms)
     // BLOCKED in Direct mode — no message content through Supabase
@@ -168,7 +196,7 @@ export default function useTranslationAPI({
     // Return immediately with the instant message — don't await server save
     // The promise is kept alive so it completes in background
     return { message: instantMsg, serverSave: serverSavePromise };
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, verifiedNameRef, addLocalMessage]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, spedisciContenuto, verifiedNameRef, addLocalMessage]);
 
   /**
    * Phase 2: Send translation update for an already-sent message.

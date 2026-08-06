@@ -8,7 +8,7 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { creditoFinito, addebitaVocePremium } from '../../wallet/addebita.js';
+import { creditoFinito, creditoInsufficiente, preventivoVocePremium, addebitaVocePremium } from '../../wallet/addebita.js';
 
 const log = createLogger('ttsElevenlabs');
 
@@ -162,6 +162,24 @@ async function handlePost(req) {
 
     // Preprocess text for TTS quality
     const cleanText = preprocessForTTS(text, lang2);
+
+    // ── b.111 · il permesso si chiede prima di spendere ──
+    // Il controllo sopra chiede solo "il saldo e a zero?": con un solo
+    // secondo residuo si passava, si sintetizzava una frase da novanta,
+    // e l'addebito dopo falliva. L'audio era gia stato prodotto e
+    // consegnato: la voce premium, il servizio piu caro che abbiamo,
+    // finiva regalata. Qui si chiede col conto vero, sullo stesso testo
+    // che verra fatturato.
+    if (pagante) {
+      const preventivo = preventivoVocePremium(cleanText.length);
+      if (await creditoInsufficiente(pagante, preventivo)) {
+        return NextResponse.json({
+          error: 'Credito insufficiente per la voce premium',
+          creditoEsaurito: true,
+          servono: preventivo,
+        }, { status: 402 });
+      }
+    }
 
     // ── Adaptive voice settings for tonal languages ──
     // Tonal languages need higher stability to preserve tone accuracy

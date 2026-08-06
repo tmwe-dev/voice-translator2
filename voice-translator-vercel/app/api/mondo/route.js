@@ -50,7 +50,7 @@ export async function POST(req) {
     const {
       roomId, host, nome, description, mode, lang, members,
       roomType, categoria, maxPartecipanti, hostLang,
-      roomSessionToken, userToken,
+      roomSessionToken, userToken, hot,
     } = await req.json();
     if (!roomId || !host) return NextResponse.json({ error: 'roomId and host required' }, { status: 400 });
     // Require some form of authentication to prevent spam
@@ -83,6 +83,10 @@ export async function POST(req) {
       // 'protected' = si bussa e l'host apre. L'elenco lo deve dire prima
       // che uno tocchi, altrimenti sembra che la stanza non risponda.
       suApprovazione: tipo === 'protected',
+      // b.111 — stanza a litigio libero. Nell'elenco si DEVE vedere
+      // prima di entrare: e il motivo per cui uno sceglie di entrarci,
+      // o di stare alla larga.
+      hot: !!hot,
       maxPartecipanti: Math.min(50, Math.max(2, Number(maxPartecipanti) || 20)),
       memberCount: members?.length || 1,
       createdAt: Date.now(),
@@ -105,7 +109,7 @@ export async function POST(req) {
     // handleJoin per decidere se aprire, e la vetrina puo scomparire prima.
     try {
       const { salvaRegole } = await import('../../lib/moderazione.js');
-      await salvaRegole(roomId, { suApprovazione: entry.suApprovazione, hostNome: host });
+      await salvaRegole(roomId, { suApprovazione: entry.suApprovazione, hostNome: host, hot: entry.hot });
     } catch (e) {
       log.warn('regole non salvate:', e?.message);
     }

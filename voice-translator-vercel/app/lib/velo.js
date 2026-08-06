@@ -48,7 +48,10 @@ const TERMINI = [
 // nel confronto vale come una lettera qualsiasi.
 const SOSTITUZIONI = { '0': 'o', '1': 'i', '3': 'e', '4': 'a', '5': 's', '7': 't', '@': 'a', '$': 's' };
 
-function appiattisci(testo) {
+// Esportata da b.111: anche reati.js deve guardare il testo con gli
+// stessi occhi, altrimenti "ti4mmazzo" passerebbe da una parte e non
+// dall'altra.
+export function appiattisci(testo) {
   return (testo || '')
     .toLowerCase()
     // Accenti via: "cabrón" e "cabron" sono la stessa parola. Il gruppo
@@ -92,8 +95,19 @@ export function daVelare(testo) {
 
 // Il verdetto del server, quando c'e, vale piu del nostro elenco: ha
 // visto il testo con un modello, non con una lista di parole.
-export function velare(messaggio) {
+export function velare(messaggio, opzioni = {}) {
   if (!messaggio) return { velare: false, motivo: '' };
+
+  // b.111 — nelle stanze "hot" il velo non scende. Non e una svista:
+  // e il senso della stanza. Chi entra sa cosa c'e dentro, e coprire
+  // un litigio a chi ha scelto di assistere a un litigio significa
+  // solo costringerlo a toccare lo schermo a ogni riga.
+  //
+  // Attenzione a cosa NON cambia: qui si toglie la TENDINA, non il
+  // confine. I reati non arrivano nemmeno a questo punto — li ferma
+  // reati.js prima della partenza, in ogni stanza, hot comprese.
+  if (opzioni.hot) return { velare: false, motivo: '' };
+
   if (messaggio.moderazione?.velare) {
     return { velare: true, motivo: messaggio.moderazione.motivo || 'contenuto pesante' };
   }

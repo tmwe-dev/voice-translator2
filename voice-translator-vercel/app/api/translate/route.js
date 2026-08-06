@@ -63,19 +63,28 @@ async function handlePost(req) {
     const isSimpleTranslation = !context && !isReview && !domainContext && !description
       && !conversationContext && !conGlossario;
 
-    // Build cache key for simple translations only
+    // ── b.111 · le due domande si fanno insieme, non una dopo l'altra ──
+    // Prima si aspettava la cache, poi (molto piu in basso, dopo
+    // resolveAuth) si aspettava il glossario. Due viaggi a Upstash in
+    // fila, 30-80ms l'uno, prima ancora di cominciare a tradurre.
+    // Sono domande indipendenti: partono insieme.
+    //
+    // Il glossario si chiede anche se poi la cache risponde e non serve
+    // piu: e una lettura, non costa niente, e chiederlo dopo
+    // costerebbe un viaggio intero. Il `.catch` c'e perche una promessa
+    // avviata e mai attesa, se fallisce, fa rumore.
     let cacheKey = null;
-    let cachedTranslation = null;
     if (isSimpleTranslation) {
-      const textHash = getSimpleHash(text);
-      cacheKey = `tc:${sourceLang}:${targetLang}:${textHash}`;
-      try {
-        cachedTranslation = await redis('GET', cacheKey);
-      } catch (e) {
-        log.error('Cache lookup error:', e);
-        // Continue without cache on error
-      }
+      cacheKey = `tc:${sourceLang}:${targetLang}:${getSimpleHash(text)}`;
     }
+    const chiestaCache = cacheKey
+      ? redis('GET', cacheKey).catch((e) => { log.error('Cache lookup error:', e); return null; })
+      : Promise.resolve(null);
+    const chiestoGlossario = userToken
+      ? redis('GET', `glossary:${sourceLang}:${targetLang}:${userToken.slice(-8)}`).catch(() => null)
+      : Promise.resolve(null);
+
+    const cachedTranslation = await chiestaCache;
 
     // If we have a cached translation, return it immediately
     if (cachedTranslation) {
@@ -143,14 +152,12 @@ async function handlePost(req) {
     // Glossary injection — if user has active glossaries for this language pair
     // NOTE: This is a self-referencing fetch that adds 200-500ms latency.
     // Only do it if the user likely has glossaries (check Redis first).
-    if (userToken) {
-      try {
-        const glossaryCheck = await redis('GET', `glossary:${sourceLang}:${targetLang}:${userToken.slice(-8)}`).catch(() => null);
-        if (glossaryCheck) {
-          systemPrompt += glossaryCheck;
-        }
-      } catch (e) { /* glossary injection is optional */ }
-    }
+    // b.111 — la richiesta e partita in cima, insieme a quella della
+    // cache: qui c'e gia la risposta e non si aspetta piu niente.
+    try {
+      const glossaryCheck = await chiestoGlossario;
+      if (glossaryCheck) systemPrompt += glossaryCheck;
+    } catch { /* glossary injection is optional */ }
 
     // Build messages array
     const messages = buildMessages(systemPrompt, text, context);
