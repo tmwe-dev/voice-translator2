@@ -21,9 +21,9 @@ async function verifyMembership(roomId, identity) {
 }
 
 // ── Action: create ──
-export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail }) {
+export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta }) {
   if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
-  const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null);
+  const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null, !!diretta);
   const { token } = await createRoomSession(room.id, name, 'host');
   return NextResponse.json({ room, roomSessionToken: token });
 }

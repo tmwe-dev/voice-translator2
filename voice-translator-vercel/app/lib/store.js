@@ -63,7 +63,7 @@ export async function resolveRoomIdentity(token, name, roomId) {
 // ROOMS
 // =============================================
 
-export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null) {
+export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null, diretta = false) {
   const id = randomBytes(4).toString('hex').toUpperCase();
   const room = {
     id,
@@ -78,6 +78,13 @@ export async function createRoom(creatorName, creatorLang, mode = 'conversation'
     description: description || '',
     totalCost: 0,
     msgCount: 0,
+    // b.113 — Stanza Diretta: la scelta la fa l'host, ma DEVE viaggiare
+    // con la stanza. Chi entra dopo, da un invito o dalla vetrina, non
+    // ha modo di saperlo altrimenti: si ritroverebbe in una stanza
+    // senza traduzione senza capire perche, oppure — molto peggio —
+    // continuerebbe a mandare la propria voce alla nuvola credendo di
+    // essere in una conversazione riservata.
+    diretta: !!diretta,
     ended: false
   };
   await redis('SET', `room:${id}`, JSON.stringify(room), 'EX', 3600); // 1 hour TTL (privacy-first)

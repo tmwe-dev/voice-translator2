@@ -62,6 +62,9 @@ async function handlePostRoom(req) {
           name, lang, mode: body.mode, avatar: body.avatar,
           context: body.context, contextPrompt: body.contextPrompt,
           description: body.description, hostTier: body.hostTier,
+          // b.113 — Stanza Diretta: viaggia con la stanza, cosi chi entra
+          // dopo lo sa senza doverlo indovinare.
+          diretta: body.diretta,
           // ── b.107 · l'email di chi paga NON arriva piu dal client ──
           // Prima era `hostEmail: body.hostEmail` e il server si fidava.
           // apiAuth:160 usa quel campo come `billingEmail`, cioe come il

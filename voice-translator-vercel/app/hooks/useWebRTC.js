@@ -65,7 +65,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const lastPongRef = useRef(0);
 
   // ── E2E Encryption (extracted hook) ──
-  const e2e = useE2EEncryption({ sessionModeRef });
+  // b.113 — la stanza entra nel calcolo del numero di sicurezza: due
+  // stanze diverse con le stesse chiavi devono dare numeri diversi,
+  // cosi un numero visto altrove non si puo riusare qui.
+  const roomIdRef = useRef(roomId);
+  useEffect(() => { roomIdRef.current = roomId; }, [roomId]);
+  const e2e = useE2EEncryption({ sessionModeRef, roomIdRef });
 
   // ── Callback ref for onDirectMessage (avoids stale closure in DataChannel) ──
   // Without this, dc.onmessage captures the initial handleDCMessage which closes
@@ -787,6 +792,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     toggleAudio,
     flipCamera,
     sendDirectMessage,
+    numeroSicurezza: e2e.numeroSicurezza,
     spedisciOAccoda,
     messaggiInAttesa,
     disconnect,

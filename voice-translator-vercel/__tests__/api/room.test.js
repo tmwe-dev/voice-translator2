@@ -66,7 +66,11 @@ describe('POST /api/room', () => {
       expect(res.status).toBe(200);
       expect(data.room.id).toBe('ABC123');
       expect(data.roomSessionToken).toBe('test-token-123');
-      expect(mockCreateRoom).toHaveBeenCalledWith('Luca', 'it', 'conversation', null, null, null, null, 'FREE', null);
+      // b.113 — l'ultimo argomento e `diretta`: una stanza normale
+      // nasce falsa, e la scelta si fa esplicitamente. Se un giorno
+      // diventasse vera per errore, la traduzione si spegnerebbe per
+      // tutti senza che nessuno l'abbia chiesto.
+      expect(mockCreateRoom).toHaveBeenCalledWith('Luca', 'it', 'conversation', null, null, null, null, 'FREE', null, false);
       expect(mockCreateRoomSession).toHaveBeenCalledWith('ABC123', 'Luca', 'host');
     });
 

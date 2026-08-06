@@ -633,6 +633,8 @@ function HomeInner() {
 
   async function endChatAndSave() {
     if (!roomPolling.roomId) return;
+    // b.113 — come in leaveRoomTemporary: la modalita non si eredita.
+    cambiaModalitaSessione('translate');
     roomPolling.stopPolling();
     setStatus('...');
     try {
@@ -650,6 +652,10 @@ function HomeInner() {
 
   function leaveRoomTemporary() {
     if (!roomPolling.roomId) return;
+    // b.113 — si torna alla modalita normale. Senza, una Stanza Diretta
+    // lascerebbe in eredita le sue regole alla conversazione dopo: la
+    // traduzione risulterebbe rotta senza un motivo visibile.
+    cambiaModalitaSessione('translate');
     // Save room to active rooms list in localStorage
     try {
       let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
@@ -856,6 +862,13 @@ function HomeInner() {
     try {
       setStatus('...');
       const room = await roomPolling.handleJoinRoom(codice, prefs.name, myLang, prefs.avatar);
+      // b.113 — la Stanza Diretta si EREDITA. Chi entra da un invito non
+      // ha scelto niente: se non leggesse questo campo continuerebbe a
+      // mandare la propria voce alla nuvola dentro una stanza che si
+      // presenta come riservata. E la modalita si azzera uscendo (sotto,
+      // in leaveRoomTemporary), perche una conversazione riservata non
+      // deve lasciare in eredita le sue regole a quella dopo.
+      cambiaModalitaSessione(room?.diretta ? 'direct' : 'translate');
       // Immediately sync roomInfoRef (don't wait for useEffect re-render)
       // This ensures getTargetLangInfo() sees the partner's language right away
       roomInfoRef.current = room;
@@ -1184,9 +1197,19 @@ function HomeInner() {
               roomConfig.mode || selectedMode, prefs.avatar,
               selectedContext, roomConfig.mode || selectedMode,
               roomConfig.description || '',
-              auth.isTrial, auth.isTopPro, auth.userAccount
+              auth.isTrial, auth.isTopPro, auth.userAccount,
+              roomConfig.diretta
             );
             roomInfoRef.current = room;
+
+            // ── b.113 · la scelta dell'utente diventa effettiva QUI ──
+            // Prima della riga sotto, la modalita Diretta era un
+            // meccanismo perfettamente funzionante che nessuno poteva
+            // accendere. Si imposta prima di qualunque altra cosa,
+            // perche da questo istante in poi il cancello davanti a
+            // fetch deve gia sapere che rotte lasciar passare.
+            cambiaModalitaSessione(roomConfig.diretta ? 'direct' : 'translate');
+            roomInfoRef.current = { ...room, diretta: !!roomConfig.diretta };
 
             // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──
             // Il modulo raccoglieva nome, tipo, categoria e numero massimo, e
@@ -1258,7 +1281,8 @@ function HomeInner() {
             const room = await roomPolling.handleCreateRoom(
               prefs.name || 'Host', langToUse, selectedMode, prefs.avatar,
               selectedContext, selectedMode, '',
-              auth.isTrial, auth.isTopPro, auth.userAccount
+              auth.isTrial, auth.isTopPro, auth.userAccount,
+              roomConfig.diretta
             );
             roomInfoRef.current = room;
             setStatus('');

@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import {
   generateKeyPair, exportPublicKey, importPublicKey,
   deriveSharedKey, encryptMessage, decryptMessage, isE2EAvailable,
@@ -7,6 +7,7 @@ import {
 import { sendViaDataChannel } from '../lib/webrtc.js';
 import { isDirectMode } from '../lib/sessionGuard.js';
 import { createLogger } from '../lib/logger.js';
+import { numeroDiSicurezza } from '../lib/improntaChiavi.js';
 const dbg = createLogger('e2e');
 
 /**
@@ -28,8 +29,13 @@ const dbg = createLogger('e2e');
  * @param {Object} opts
  * @param {React.MutableRefObject<string>} opts.sessionModeRef - 'direct' | 'translate'
  */
-export default function useE2EEncryption({ sessionModeRef } = {}) {
+export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
   const keyPairRef = useRef(null);
+  // b.113 — le due chiavi pubbliche servono anche DOPO lo scambio, per
+  // calcolare il numero di sicurezza che le due persone si confrontano.
+  const miaChiaveRef = useRef(null);
+  const suaChiaveRef = useRef(null);
+  const [numeroSicurezza, setNumeroSicurezza] = useState('');
   const sharedKeyRef = useRef(null);
   const readyRef = useRef(false);
 
@@ -40,6 +46,7 @@ export default function useE2EEncryption({ sessionModeRef } = {}) {
       const keyPair = await generateKeyPair();
       keyPairRef.current = keyPair;
       const pubKeyStr = await exportPublicKey(keyPair.publicKey);
+      miaChiaveRef.current = pubKeyStr;
       if (dc?.readyState === 'open') {
         dc.send(JSON.stringify({ type: 'e2e-pubkey', key: pubKeyStr }));
       }
@@ -57,6 +64,27 @@ export default function useE2EEncryption({ sessionModeRef } = {}) {
       const sharedKey = await deriveSharedKey(keyPairRef.current.privateKey, partnerPubKey);
       sharedKeyRef.current = sharedKey;
       readyRef.current = true;
+
+      // ── b.113 · il numero di sicurezza ──
+      // Da qui in poi i messaggi sono cifrati. Ma cifrati CON CHI? La
+      // matematica non lo sa: sa solo che la chiave ricevuta e valida,
+      // non a chi appartiene. Questo numero e l'unico modo che hanno le
+      // due persone di scoprire se qualcuno si e messo in mezzo — e
+      // devono confrontarlo per una strada che l'attacco non controlla:
+      // a voce, di persona, al telefono.
+      suaChiaveRef.current = partnerKeyStr;
+      try {
+        const n = await numeroDiSicurezza(
+          miaChiaveRef.current, partnerKeyStr, roomIdRef?.current || ''
+        );
+        setNumeroSicurezza(n);
+      } catch (e) {
+        // Senza numero non si blocca la conversazione, ma non si puo
+        // nemmeno dire che sia verificata: la schermata lo dira.
+        dbg.warn('[E2E] numero di sicurezza non calcolabile:', e?.message);
+        setNumeroSicurezza('');
+      }
+
       dbg.debug('[E2E] Shared key derived — messages are now encrypted');
     } catch (e) {
       console.warn('[E2E] Key derivation failed:', e);
@@ -134,6 +162,12 @@ export default function useE2EEncryption({ sessionModeRef } = {}) {
     keyPairRef.current = null;
     sharedKeyRef.current = null;
     readyRef.current = false;
+    // b.113 — anche le chiavi e il numero. Un numero di sicurezza
+    // rimasto da una conversazione precedente e peggio di nessun
+    // numero: qualcuno lo guarderebbe credendo che valga per questa.
+    miaChiaveRef.current = null;
+    suaChiaveRef.current = null;
+    setNumeroSicurezza('');
   }, []);
 
   return {
@@ -144,6 +178,9 @@ export default function useE2EEncryption({ sessionModeRef } = {}) {
     sendEncrypted,
     decryptMsg,
     reset,
+    // b.113 — vuoto finche le chiavi non si sono scambiate. Chi lo
+    // mostra deve dire la differenza fra "non ancora" e "verificato".
+    numeroSicurezza,
   };
 }
 

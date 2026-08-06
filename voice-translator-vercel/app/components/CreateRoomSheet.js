@@ -53,6 +53,9 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   // b.111 — stanza a litigio libero. Spenta di default: e una scelta,
   // e le scelte che cambiano le regole non si fanno per distrazione.
   const [hot, setHot] = useState(false);
+  // b.113 — Stanza Diretta: niente nuvola, per davvero. Spenta di suo:
+  // toglie la traduzione, che e il motivo per cui quasi tutti sono qui.
+  const [diretta, setDiretta] = useState(false);
   const sheetRef = useSheetA11y(open, onClose);
 
   const nomePulito = nome.trim();
@@ -71,6 +74,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         description: description.trim(),
         maxParticipants,
         hot,
+        diretta,
         mode: category, // maps to existing room modes
       });
       onClose();
@@ -78,7 +82,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
       console.warn('[CreateRoom] Failed:', e?.message);
     }
     setCreating(false);
-  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, onCreate, onClose]);
+  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, diretta, onCreate, onClose]);
 
   if (!open) return null;
 
@@ -169,6 +173,67 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                 );
               })}
             </div>
+          </div>
+
+          {/* ── b.113 · Stanza Diretta ──
+              L'elenco di cosa si SPEGNE sta scritto per intero, e non
+              in fondo in piccolo. Una promessa di riservatezza che
+              nasconde il suo prezzo e una promessa che si ritorce
+              contro: qui il prezzo e la traduzione, cioe la ragione per
+              cui quasi tutti aprono questo programma. */}
+          <div style={{ marginBottom: 16 }}>
+            <button
+              onClick={() => { setDiretta(!diretta); vibrate(10); }}
+              aria-pressed={diretta}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                background: diretta ? 'rgba(38,217,176,0.10)' : cardBg,
+                border: `1px solid ${diretta ? 'rgba(38,217,176,0.35)' : cardBorder}`,
+                textAlign: 'left', fontFamily: FONT, display: 'flex', gap: 10, alignItems: 'flex-start',
+              }}>
+              <span aria-hidden="true" style={{
+                fontSize: 13, fontWeight: 800, lineHeight: '18px', width: 18, textAlign: 'center',
+                color: diretta ? '#26D9B0' : textMuted,
+              }}>{diretta ? '✓' : '·'}</span>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: diretta ? '#26D9B0' : textPrimary, marginBottom: 2 }}>
+                  Stanza Diretta — niente passa dai nostri server
+                </span>
+                <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
+                  {diretta
+                    ? 'I messaggi viaggiano da telefono a telefono, cifrati. Noi non li vediamo, non li conserviamo, non ne teniamo copia.'
+                    : 'La conversazione usa i nostri servizi per tradurre, trascrivere e leggere ad alta voce.'}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{
+                width: 34, height: 20, borderRadius: 10, flexShrink: 0, marginTop: 2,
+                background: diretta ? '#26D9B0' : cardBorder, position: 'relative', transition: 'background .18s',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2, left: diretta ? 16 : 2, width: 16, height: 16,
+                  borderRadius: '50%', background: '#fff', transition: 'left .18s',
+                }} />
+              </span>
+            </button>
+
+            {diretta && (
+              <div style={{
+                marginTop: 8, padding: '10px 12px', borderRadius: 10,
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+                fontSize: 10, color: textMuted, lineHeight: 1.6,
+              }}>
+                <span style={{ display: 'block', fontWeight: 700, color: '#F59E0B', marginBottom: 4 }}>
+                  Cosa si spegne, in cambio
+                </span>
+                Niente traduzione automatica. Niente trascrizione della voce.
+                Niente lettura ad alta voce. Niente archivio della conversazione:
+                quando chiudete, non resta nulla da nessuna parte.
+                <span style={{ display: 'block', marginTop: 5 }}>
+                  Resta la chat scritta, la videochiamata e la chiamata vocale —
+                  ma nella lingua in cui le scrivete e le dite.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── b.111 · Litigio libero ── */}

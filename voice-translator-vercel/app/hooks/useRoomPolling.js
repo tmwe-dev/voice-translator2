@@ -674,7 +674,7 @@ export default function useRoomPolling({
 
   async function handleCreateRoom(
     name, lang, mode, avatar, selectedContext, selectedMode,
-    roomDescription, isTrial, isTopPro, userAccount
+    roomDescription, isTrial, isTopPro, userAccount, diretta = false
   ) {
     try {
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
@@ -694,6 +694,10 @@ export default function useRoomPolling({
           // altro e fargli pagare tutti i consumi della stanza. Ora si
           // manda il TOKEN e l'email la ricava il server dalla sessione:
           // si puo far pagare solo se stessi.
+          // b.113 — Stanza Diretta: la scelta dell'host viaggia con la
+          // stanza, cosi chi entra da un invito la eredita invece di
+          // mandare la propria voce alla nuvola credendosi al riparo.
+          diretta: !!diretta,
           userToken: getEffectiveToken?.() || null
         })
       });

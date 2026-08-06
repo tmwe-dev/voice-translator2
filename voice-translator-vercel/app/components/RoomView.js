@@ -9,6 +9,7 @@ import { IconCamera, IconSend } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
+import NumeroSicurezza from './NumeroSicurezza.js';
 import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
 import TaxiMode, { TaxiButton } from './TaxiMode.js';
@@ -240,6 +241,33 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   return (
     <div style={S.roomPage} role="main" aria-label="Translation room">
       <audio ref={remoteAudioRef} autoPlay playsInline style={{display:'none'}} />
+
+      {/* ── b.113 · la Stanza Diretta si vede sempre ──
+          Non e un vezzo grafico: se la traduzione non funziona e non si
+          capisce perche, si pensa a un guasto. Qui c'e scritto che e una
+          scelta, e di chi. */}
+      {roomInfo?.diretta && (
+        <div style={{
+          padding: '8px 14px', background: 'rgba(38,217,176,0.10)',
+          borderBottom: '1px solid rgba(38,217,176,0.25)',
+          fontSize: 11, color: S.colors.textPrimary, lineHeight: 1.5,
+        }}>
+          <strong style={{ color: '#26D9B0' }}>Stanza Diretta.</strong>{' '}
+          I messaggi restano fra i due telefoni: non passano dai nostri
+          server e non ne resta copia. In cambio non c&apos;è traduzione,
+          né trascrizione, né lettura ad alta voce.
+        </div>
+      )}
+
+      {/* ── b.113 · con chi stai parlando ──
+          Compare solo quando c'e un collegamento diretto fra i due
+          telefoni: e li che la domanda ha senso. Chiuso di suo, per non
+          mettersi in mezzo a una conversazione; si apre toccandolo. */}
+      {webrtc?.webrtcConnected && (
+        <div style={{ padding: '6px 12px 0', display: 'flex', justifyContent: 'flex-end' }}>
+          <NumeroSicurezza numero={webrtc.numeroSicurezza} C={S.colors} compatto />
+        </div>
+      )}
 
       {/* ═══ Header ═══ */}
       <RoomHeader
