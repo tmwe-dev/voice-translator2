@@ -468,6 +468,22 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     dbg.debug('[WebRTC] Signal received:', type, 'from:', payload.from, 'state:', stateRef.current);
 
     // ── NEW: Call request/response flow ──
+    if (type === 'call-ended') {
+      // b.117 — l'altro ha riagganciato di proposito. Non e un guasto:
+      // non si tenta nulla, si chiude e basta. Senza questo, chi resta
+      // prova a ricomporre e riaccende la telecamera dell'altro.
+      if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
+      if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
+      if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
+      autoReconnectAttemptRef.current = MAX_AUTO_RECONNECTS;   // niente altri tentativi
+      pendingCallRef.current = false;
+      setIncomingCall(null);
+      cleanup();
+      setWebrtcState('idle');
+      stateRef.current = 'idle';
+      return;
+    }
+
     if (type === 'call-request') {
       // Someone wants to call us — show incoming call banner
       if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
@@ -548,6 +564,16 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
 
       if (stateRef.current !== 'connecting') {
+        // b.117 — terza difesa. Questo ramo accetta un'offerta arrivata
+        // senza che nessuno abbia chiesto una chiamata: comodo per
+        // compatibilita, ma e la porta da cui rientrava la
+        // videochiamata appena chiusa. Dopo un CHIUDI, chi vuole
+        // richiamare deve passare dalla porta principale — una
+        // chiamata vera, che si vede e si accetta.
+        if (chiusuraVolutaRef.current) {
+          dbg.debug('[WebRTC] offerta non richiesta ignorata: la chiamata era stata chiusa di proposito');
+          return;
+        }
         // Direct offer (no call-request) — auto-accept for backward compatibility
         cleanup();
         setWebrtcState('connecting');
@@ -801,13 +827,22 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const disconnect = useCallback(() => {
     // b.116 — da qui in poi ogni interruzione e voluta, non subita.
     chiusuraVolutaRef.current = true;
+    // b.117 — E LO SI DICE ALL'ALTRO. Fermare solo la propria
+    // riconnessione non bastava: chi restava dentro vedeva cadere la
+    // linea, la scambiava per un guasto e mandava una nuova offerta.
+    // Chi aveva chiuso la accettava in automatico (vedi il ramo
+    // 'offer' piu sopra, "auto-accept for backward compatibility") e la
+    // videochiamata si riapriva da sola, telecamera compresa.
+    //
+    // Una chiusura e un fatto, non un'opinione: va comunicata.
+    try { sendSignal('call-ended', JSON.stringify({ voluta: true })); } catch { /* si chiude comunque */ }
     if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
     if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     cleanup();
     setWebrtcState('idle');
     stateRef.current = 'idle';
     setIncomingCall(null);
-  }, [cleanup]);
+  }, [cleanup, sendSignal]);
 
   return {
     webrtcState,

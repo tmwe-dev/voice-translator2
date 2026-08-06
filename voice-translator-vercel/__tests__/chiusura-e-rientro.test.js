@@ -84,6 +84,66 @@ describe('chi chiude ha chiuso: la telecamera non si riaccende', () => {
   });
 });
 
+describe('b.117 · il rimedio di b.116 non bastava, e il collaudo lo ha detto subito', () => {
+  const w = () => senzaCommenti(app('hooks/useWebRTC.js'));
+
+  // In b.116 avevo fermato la riconnessione di CHI CHIUDE. Ma il difetto
+  // arrivava dall'altra parte: chi RESTA vede cadere la linea, la
+  // scambia per un guasto e manda una nuova offerta. E chi ha chiuso la
+  // accettava in automatico, per compatibilita — riaprendo la
+  // videochiamata e riaccendendo la telecamera.
+  //
+  // Fermare meta di un dialogo non serve: bisogna dirlo all'altro.
+
+  it('chi chiude AVVISA l\'altro', () => {
+    const s = w();
+    const i = s.indexOf('const disconnect = useCallback');
+    expect(s.slice(i, i + 700)).toMatch(/sendSignal\('call-ended'/);
+  });
+
+  it('chi resta riceve l\'avviso e non tenta nulla', () => {
+    const s = w();
+    const i = s.indexOf("if (type === 'call-ended')");
+    expect(i, 'il segnale deve essere gestito').toBeGreaterThan(-1);
+    const corpo = s.slice(i, i + 800);
+    expect(corpo, 'niente altri tentativi').toMatch(/autoReconnectAttemptRef\.current = MAX_AUTO_RECONNECTS/);
+    expect(corpo).toMatch(/cleanup\(\)/);
+    expect(corpo).toMatch(/setWebrtcState\('idle'\)/);
+  });
+
+  it('chi ha chiuso rifiuta le offerte NON richieste', () => {
+    // E la porta da cui rientrava la videochiamata: un'offerta arrivata
+    // senza che nessuno abbia chiesto una chiamata veniva accettata "per
+    // compatibilita".
+    // Qui si legge il sorgente GREZZO: il punto di riferimento e un
+    // commento, e senzaCommenti lo toglierebbe. Ci sono cascato scrivendo
+    // il test la prima volta.
+    const s = app('hooks/useWebRTC.js');
+    const i = s.indexOf('Direct offer (no call-request)');
+    expect(i, 'il ramo dell\'offerta non richiesta deve esistere').toBeGreaterThan(-1);
+    expect(s.slice(i - 700, i)).toMatch(/if \(chiusuraVolutaRef\.current\) \{[\s\S]{0,320}return;/);
+  });
+
+  it('tre difese, non una: se ne salta una, le altre reggono', () => {
+    const s = w();
+    // 1. il gestore degli stati  2. la riconnessione  3. le offerte non richieste
+    expect((s.match(/chiusuraVolutaRef\.current/g) || []).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('sendSignal e fra le dipendenze di disconnect, e solo li', () => {
+    // Metterlo anche in un effetto che gira PRIMA che sendSignal esista
+    // farebbe esplodere la pagina al primo render. C'e andato vicino.
+    const grezzo = app('hooks/useWebRTC.js');
+    const righe = grezzo.split('\n');
+    const posSendSignal = righe.findIndex(r => /const sendSignal = useCallback/.test(r));
+    righe.forEach((r, n) => {
+      if (/\[cleanup, sendSignal\]/.test(r)) {
+        expect(n, 'una dipendenza non puo precedere cio da cui dipende').toBeGreaterThan(posSendSignal);
+      }
+    });
+  });
+});
+
 describe('una stanza si toglie solo se il server lo dice', () => {
   const h = () => senzaCommenti(app('components/HomeView.js'));
 
