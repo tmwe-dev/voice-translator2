@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { getLang, SILENCE_DELAY, VAD_THRESHOLD, VAD_PRESETS, isWhisperPrimaryLang } from '../lib/constants.js';
 import { createLogger } from '../lib/logger.js';
+import { creaCalibratore, sogliaInScala255 } from '../lib/calibraRumore.js';
 const dbg = createLogger('vad');
 
 /**
@@ -60,6 +61,8 @@ export default function useFreeTalkVAD({
   // riferimento e la barretta se lo legge da sola, disegnandosi da sola:
   // React non viene disturbato nemmeno una volta.
   const vadLivelloRef = useRef(0);
+  // Il calibratore del rumore: esiste solo in modo "auto".
+  const calibratoreRef = useRef(null);
   const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null);
   const [vadSensitivity, setVadSensitivity] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -127,6 +130,10 @@ export default function useFreeTalkVAD({
       // Get threshold settings from sensitivity preset
       const preset = VAD_PRESETS[vadSensitivity] || VAD_PRESETS.normal;
       const threshold = preset.threshold;
+      // b.109 — se il preset e "auto", il calibratore ascolta il rumore
+      // dell'ambiente nel primo secondo e ricava la soglia da solo.
+      // Recuperato da app/attic/useVAD.js, dove era finito senza motivo.
+      calibratoreRef.current = preset.calibra ? creaCalibratore() : null;
       const silenceDelay = preset.silenceDelay;
       const minVoiceDuration = preset.minVoiceDuration;
 
@@ -177,9 +184,19 @@ export default function useFreeTalkVAD({
         analyser.getByteFrequencyData(data);
         const avg = data.reduce((a, b) => a + b, 0) / data.length;
 
-        vadLivelloRef.current = Math.min(avg / 128, 1);
+        const livello = Math.min(avg / 128, 1);
+        vadLivelloRef.current = livello;
 
-        const aboveThreshold = avg > threshold;
+        // Soglia: quella scelta a mano, oppure quella che il microfono ha
+        // ricavato da solo ascoltando la stanza.
+        let sogliaOra = threshold;
+        const cal = calibratoreRef.current;
+        if (cal) {
+          cal.aggiungi(livello);
+          if (cal.pronto()) sogliaOra = sogliaInScala255(cal.soglia());
+        }
+
+        const aboveThreshold = avg > sogliaOra;
 
         // ── Noise gate logic ──
         if (aboveThreshold && !isRecRef.current) {

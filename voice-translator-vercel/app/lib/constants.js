@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.108';
+export const APP_VERSION = 'b.109';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -147,6 +147,10 @@ export const VAD_THRESHOLD = 40;            // Voice Activity Detection volume t
 // silenceDelay: ms of silence before auto-send
 // minVoiceDuration: ms of continuous voice needed to trigger recording (noise gate)
 export const VAD_PRESETS = {
+  // b.109 — "auto" si taratura da solo ascoltando il rumore dell'ambiente
+  // nel primo secondo (lib/calibraRumore.js). La soglia qui e solo il
+  // valore di partenza, finche la calibrazione non e pronta.
+  auto:   { threshold: 40, silenceDelay: 2000, minVoiceDuration: 150, calibra: true },
   quiet:  { threshold: 25, silenceDelay: 1500, minVoiceDuration: 80 },   // Quiet room
   normal: { threshold: 40, silenceDelay: 2000, minVoiceDuration: 150 },  // Default
   noisy:  { threshold: 60, silenceDelay: 2500, minVoiceDuration: 250 },  // Noisy environment

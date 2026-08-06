@@ -30,7 +30,6 @@ import ErrorBoundary from './components/ErrorBoundary.js';
 import ToastContainer, { toast } from './components/Toast.js';
 import NetworkStatus from './components/NetworkStatus.js';
 import TutorialOverlay from './components/TutorialOverlay.js';
-import { setAppState, setRoomState, setAuthState } from './stores/appStore.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
 
 // ═══ LAZY-LOADED: secondary views (loaded on demand → faster initial bundle) ═══
@@ -313,23 +312,17 @@ function HomeInner() {
   useEffect(() => { roomIdRef.current = roomPolling.roomId; }, [roomPolling.roomId]);
   useEffect(() => { clonedVoiceIdRef.current = auth.clonedVoiceId || null; }, [auth.clonedVoiceId]);
 
-  // ═══ STORE BRIDGE: sync local state → Zustand-lite stores ═══
-  // This allows new components to read from stores instead of prop-drilling
-  useEffect(() => { setAppState({ view, theme, prefs, isOnline: navigator.onLine }); }, [view, theme, prefs]);
-  useEffect(() => {
-    setRoomState({
-      roomId: roomPolling.roomId, roomInfo: roomPolling.roomInfo,
-      messages: roomPolling.messages, members: roomPolling.roomInfo?.members || [],
-      isConnected: roomPolling.partnerConnected,
-    });
-  }, [roomPolling.roomId, roomPolling.roomInfo, roomPolling.messages, roomPolling.partnerConnected]);
-  useEffect(() => {
-    setAuthState({
-      userToken: auth.userToken, tier: auth.isTopPro ? 'TOP_PRO' : auth.isTrial ? 'FREE' : 'PRO',
-      credits: auth.creditBalance, isAuthenticated: !!auth.userToken,
-      user: auth.userAccount, email: auth.authEmail,
-    });
-  }, [auth.userToken, auth.isTopPro, auth.isTrial, auth.creditBalance, auth.userAccount]);
+  // ── b.109 · qui c'era il "ponte" verso stores/appStore.js ──
+  // Tre effetti che copiavano vista, tema, preferenze, stanza, l'INTERO
+  // array dei messaggi, token, piano e credito dentro uno store. Il
+  // commento diceva che serviva a far leggere i componenti nuovi senza
+  // passarsi le prop.
+  //
+  // Nessun componente ha mai letto quello store: zero occorrenze di
+  // useAppStore, useRoomStore, useAuthStore, useMessages e compagnia in
+  // tutta l'applicazione e nei test. Era una migrazione annunciata e mai
+  // avvenuta, e nel frattempo copiava l'array dei messaggi a ogni giro
+  // del polling per nessuno.
 
 
   // (Free tier tracking extracted to useFreeTierTracking hook)

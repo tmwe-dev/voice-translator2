@@ -7,8 +7,11 @@
 //
 // Questo test costruisce il grafo degli import (compresi quelli
 // dinamici) e fallisce se un file di app/ non è raggiungibile.
-// Se un file serve davvero, collegalo. Se non serve, mettilo in
-// app/attic/ — che è escluso da questo controllo.
+// Se un file serve davvero, collegalo. Se non serve, CANCELLALO: in
+// b.109 la discarica app/attic/ (2.130 righe, zero importatori) e stata
+// eliminata, perche una discarica dentro app/ viene comunque compilata,
+// cercata e inclusa in ogni ricerca. Quello che vale la pena tenere sta
+// in attic/ alla radice del repository, fuori dal progetto.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
@@ -20,7 +23,7 @@ function tuttiIFile(dir, trovati = []) {
   for (const voce of fs.readdirSync(dir, { withFileTypes: true })) {
     const p = path.join(dir, voce.name);
     if (voce.isDirectory()) {
-      if (voce.name === 'attic' || voce.name === 'node_modules') continue;
+      if (voce.name === 'node_modules') continue;
       tuttiIFile(p, trovati);
     } else if (voce.name.endsWith('.js')) {
       trovati.push(p);
@@ -52,10 +55,25 @@ describe('nessun file orfano in app/', () => {
       }
     }
 
+    // ── Le LAPIDI non sono codice orfano ──
+    // Il disco su cui gira questo lavoro non permette di cancellare i
+    // file. Quando un file va rimosso ma non si puo, ci si lascia una
+    // lapide: un blocco di commenti che dice cosa c'era, perche se ne va
+    // e il comando per toglierlo. Il criterio e stretto — deve portare
+    // quella frase esatta E non contenere NEMMENO UNA riga eseguibile —
+    // cosi non si puo usare per nascondere codice vero.
+    const eLapide = (f) => {
+      const src = fs.readFileSync(f, 'utf8');
+      if (!src.includes('LAPIDE — questo file va CANCELLATO')) return false;
+      const codice = src.split('\n')
+        .filter(r => r.trim() && !r.trim().startsWith('//') && !r.trim().startsWith('*'));
+      return codice.length === 0;
+    };
+
     const orfani = file
-      .filter(f => !importati.has(path.resolve(f)) && !INGRESSI.test(f))
+      .filter(f => !importati.has(path.resolve(f)) && !INGRESSI.test(f) && !eLapide(f))
       .map(f => path.relative(APP, f));
 
-    expect(orfani, `File mai importati (collegali oppure spostali in app/attic/):\n  ${orfani.join('\n  ')}`).toEqual([]);
+    expect(orfani, `File mai importati. Collegali, oppure cancellali:\n  ${orfani.join('\n  ')}`).toEqual([]);
   });
 });
