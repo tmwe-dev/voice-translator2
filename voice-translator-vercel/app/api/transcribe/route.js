@@ -99,6 +99,23 @@ async function handlePost(req) {
     const secondi = durataSec || Math.min(120, buffer.length / 4000);
     const esito = await addebitaVoce(pagante, secondi);
 
+    // ── b.107 · la ricevuta che sostituisce la parola del client ──
+    // La traduzione che segue questa trascrizione non va riaddebitata: e
+    // la seconda meta dello stesso gesto. Prima lo diceva il CLIENT, con
+    // un `giaAddebitato: true` nel corpo della richiesta — cioe chiunque
+    // poteva scriverlo su ogni messaggio e tradurre gratis per sempre.
+    //
+    // Ora lo dice il server a se stesso: qui si lascia una ricevuta
+    // legata a chi paga e al testo trascritto, e /api/translate la
+    // consuma UNA volta sola. Vive un minuto: il tempo di completare il
+    // giro, non abbastanza per essere riusata.
+    if (pagante && original) {
+      try {
+        const { ricevutaVoce } = await import('../../lib/ricevute.js');
+        await ricevutaVoce(pagante, original);
+      } catch (e) { log.warn('ricevuta non emessa:', e?.message); }
+    }
+
     // esito 'esaurito' = questo era l'ultimo pezzo: il client ferma la sessione
     return NextResponse.json({ original, ...(esito === 'esaurito' && { creditoEsaurito: true }) });
   } catch (e) {

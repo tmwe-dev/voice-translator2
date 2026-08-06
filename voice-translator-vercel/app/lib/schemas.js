@@ -95,7 +95,9 @@ export function validateTranslateInput(body) {
       nativeLang: body.nativeLang || undefined,
       conversationContext: body.conversationContext ? clean(body.conversationContext, 3000) : undefined,
       // true = fase 2 di un audio già addebitato da /api/transcribe (no doppio addebito)
-      giaAddebitato: !!body.giaAddebitato,
+      // b.107 — `giaAddebitato` NON si accetta piu dal client: chi diceva
+      // "questo l'ho gia pagato" era chi doveva pagare. Ora lo stabilisce
+      // il server con una ricevuta (lib/ricevute.js).
     },
   };
 }

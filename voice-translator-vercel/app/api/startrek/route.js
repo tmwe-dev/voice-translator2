@@ -232,7 +232,7 @@ export async function POST(req) {
       const todayUTC = new Date().toISOString().split('T')[0];
 
       // Platform daily spend
-      const platformSpent = parseInt(await redis('GET', `daily:platform:${todayUTC}`) || '0');
+      const platformSpent = parseFloat(await redis('GET', `daily:platform:${todayUTC}`) || '0') || 0;
 
       // User stats
       const users = [];
@@ -255,7 +255,7 @@ export async function POST(req) {
               else freeUsers++;
 
               // Get today's spend for this user
-              const dailySpent = parseInt(await redis('GET', `daily:${u.email}:${todayUTC}`) || '0');
+              const dailySpent = parseFloat(await redis('GET', `daily:${u.email}:${todayUTC}`) || '0') || 0;
 
               users.push({
                 email: u.email,

@@ -207,7 +207,9 @@ export async function resolveAuth({
     try {
       const todayUTC = new Date().toISOString().split('T')[0];
       const dailyKey = `daily:${billingEmail}:${todayUTC}`;
-      const dailySpent = parseInt(await redis('GET', dailyKey) || '0');
+      // b.107 — parseFloat, non parseInt: da quando il contatore somma il
+      // valore vero, i decimali contano. Con parseInt "4.7" diventava 4.
+      const dailySpent = parseFloat(await redis('GET', dailyKey) || '0') || 0;
 
       if (DAILY_LIMITS.PER_USER > 0 && dailySpent >= DAILY_LIMITS.PER_USER) {
         throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
@@ -215,7 +217,7 @@ export async function resolveAuth({
 
       // Check platform total daily spend
       const platformDailyKey = `daily:platform:${todayUTC}`;
-      const platformSpent = parseInt(await redis('GET', platformDailyKey) || '0');
+      const platformSpent = parseFloat(await redis('GET', platformDailyKey) || '0') || 0;
       if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && platformSpent >= DAILY_LIMITS.PLATFORM_TOTAL) {
         throw NextResponse.json({ error: ERRORS.PLATFORM_LIMIT }, { status: 503 });
       }
@@ -239,19 +241,31 @@ export async function trackDailySpend(email, amountCents) {
   try {
     const todayUTC = new Date().toISOString().split('T')[0];
 
-    // Track per-user daily spend
-    const dailyKey = `daily:${email}:${todayUTC}`;
-    const newAmount = await redis('INCRBY', dailyKey, Math.ceil(amountCents));
-    if (newAmount === Math.ceil(amountCents)) {
-      await redis('EXPIRE', dailyKey, 90000); // ~25 hours TTL
-    }
+    // ── b.107 · qui il contatore correva dieci volte piu della spesa ──
+    // Prima c'era INCRBY con Math.ceil(amountCents). INCRBY vuole numeri
+    // interi, e l'arrotondamento serviva a quello — ma l'addebito minimo
+    // di una traduzione e 0,1 centesimi (MIN_CHARGE.TRANSLATE), e
+    // Math.ceil(0.1) fa 1.
+    //
+    // Cioe: si scalava un decimo di centesimo e se ne contava uno intero.
+    // Il tetto di 500 (cinque euro al giorno, DAILY_LIMITS.PER_USER)
+    // scattava dopo 500 traduzioni invece di 5.000, e l'utente leggeva
+    // "limite di spesa giornaliero raggiunto" avendo speso CINQUANTA
+    // CENTESIMI.
+    //
+    // INCRBYFLOAT somma il valore vero senza arrotondare, resta atomico
+    // come INCRBY, e non cambia l'unita di misura: il contatore continua
+    // a essere in centesimi e i tetti restano quelli scritti in config.
+    const somma = async (chiave) => {
+      const nuovo = parseFloat(await redis('INCRBYFLOAT', chiave, amountCents)) || 0;
+      // Prima scrittura della giornata: si dà una scadenza alla chiave.
+      // Il confronto e con tolleranza perche i decimali in virgola mobile
+      // non tornano mai esatti al bit.
+      if (nuovo <= amountCents + 1e-9) await redis('EXPIRE', chiave, 90000); // ~25 ore
+    };
 
-    // Track platform total daily spend
-    const platformKey = `daily:platform:${todayUTC}`;
-    const platformAmount = await redis('INCRBY', platformKey, Math.ceil(amountCents));
-    if (platformAmount === Math.ceil(amountCents)) {
-      await redis('EXPIRE', platformKey, 90000);
-    }
+    await somma(`daily:${email}:${todayUTC}`);
+    await somma(`daily:platform:${todayUTC}`);
   } catch (e) {
     log.error('Daily spend tracking error:', e);
   }

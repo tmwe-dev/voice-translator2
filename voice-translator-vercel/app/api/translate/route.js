@@ -50,7 +50,7 @@ async function handlePost(req) {
 
     const { text, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
-            roomMode, nativeLang, conversationContext, giaAddebitato,
+            roomMode, nativeLang, conversationContext,
             glossario } = { ...rawBody, ...inputValidation.data }; // b.95
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
@@ -251,8 +251,22 @@ async function handlePost(req) {
     }
 
     // ── Wallet: addebito del messaggio (salvo fase 2 di un audio già pagato) ──
+    //
+    // b.107 — chi dice che l'audio e gia stato pagato NON e piu il client.
+    // Prima bastava mandare `giaAddebitato: true` nel corpo per saltare
+    // l'addebito: una riga nel browser e traduzioni gratis a vita.
+    // Ora /api/transcribe lascia una ricevuta legata a chi paga e al testo
+    // trascritto, e qui la si strappa: vale una volta sola.
+    let giaPagatoDavvero = false;
+    if (billingEmail && !isOwnKey && !isReview) {
+      try {
+        const { strappaRicevutaVoce } = await import('../../lib/ricevute.js');
+        giaPagatoDavvero = await strappaRicevutaVoce(billingEmail, text);
+      } catch (e) { log.warn('ricevuta non verificata:', e?.message); }
+    }
+
     let creditoEsaurito = false;
-    if (billingEmail && !isOwnKey && !isReview && !giaAddebitato) {
+    if (billingEmail && !isOwnKey && !isReview && !giaPagatoDavvero) {
       const esito = await addebitaTesto(billingEmail, text.length);
       creditoEsaurito = esito === 'esaurito';
     }

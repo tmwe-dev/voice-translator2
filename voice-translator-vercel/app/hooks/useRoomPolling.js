@@ -650,7 +650,12 @@ export default function useRoomPolling({
           contextPrompt: ctxObj.prompt,
           description: roomDescription,
           hostTier: currentTier,
-          hostEmail: userAccount?.email || null
+          // b.107 — prima qui viaggiava `hostEmail: userAccount?.email`, e
+          // il server si fidava. Chi voleva poteva scriverci l'email di un
+          // altro e fargli pagare tutti i consumi della stanza. Ora si
+          // manda il TOKEN e l'email la ricava il server dalla sessione:
+          // si puo far pagare solo se stessi.
+          userToken: getEffectiveToken?.() || null
         })
       });
       if (!res.ok) {

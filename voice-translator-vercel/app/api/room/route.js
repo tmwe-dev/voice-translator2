@@ -12,6 +12,20 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('room');
 
+// b.107 — l'unico modo lecito di sapere chi paga: la sessione.
+// Restituisce null per gli ospiti non autenticati, che e giusto: una
+// stanza senza host registrato non ha un portafoglio a cui attingere.
+async function emailDallaSessione(userToken) {
+  if (!userToken || typeof userToken !== 'string') return null;
+  try {
+    const { getSession } = await import('../../lib/users.js');
+    const sessione = await getSession(userToken);
+    return sessione?.email || null;
+  } catch {
+    return null;
+  }
+}
+
 // POST /api/room - Create, join, or manage a room
 async function handlePostRoom(req) {
   try {
@@ -47,7 +61,16 @@ async function handlePostRoom(req) {
         return handleCreate({
           name, lang, mode: body.mode, avatar: body.avatar,
           context: body.context, contextPrompt: body.contextPrompt,
-          description: body.description, hostTier: body.hostTier, hostEmail: body.hostEmail,
+          description: body.description, hostTier: body.hostTier,
+          // ── b.107 · l'email di chi paga NON arriva piu dal client ──
+          // Prima era `hostEmail: body.hostEmail` e il server si fidava.
+          // apiAuth:160 usa quel campo come `billingEmail`, cioe come il
+          // portafoglio da cui scalare tutti i consumi della stanza:
+          // bastava scriverci l'indirizzo di un altro per farlo pagare
+          // al posto proprio.
+          //
+          // Ora si ricava dalla sessione: si puo far pagare solo se stessi.
+          hostEmail: await emailDallaSessione(body.userToken),
         });
 
       case 'join':

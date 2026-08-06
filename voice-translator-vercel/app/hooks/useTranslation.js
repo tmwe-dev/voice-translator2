@@ -209,7 +209,10 @@ export default function useTranslation({
 
     // ── PHASE 2: Translate + update ──
     getPerf().mark(PERF.TRANSLATE_LATENCY);
-    const translateOpts = { ...buildTranslateOpts(), ...(opts.giaAddebitato && { giaAddebitato: true }) };
+    // b.107 — non si manda piu `giaAddebitato`: lo decide il server con
+    // la ricevuta lasciata da /api/transcribe. Il client non ha titolo
+    // per dichiarare di aver gia pagato.
+    const translateOpts = buildTranslateOpts();
     let translations = {};
     let primaryTranslated = '';
     let finalTargetLang = primaryTargetLang;
@@ -366,8 +369,9 @@ export default function useTranslation({
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
     try {
-      // giaAddebitato: questo audio è già stato scalato da /api/transcribe
-      await translateAndSend(original, { skipPhase1: true, giaAddebitato: true, myL, targetLangs });
+      // L'audio e gia stato scalato da /api/transcribe, che ha lasciato
+      // una ricevuta: la strappa /api/translate, non serve dirglielo.
+      await translateAndSend(original, { skipPhase1: true, myL, targetLangs });
     } catch (e) {
       console.error('[processAndSendAudio] Translation failed:', e);
       if (updateLocalMessage) {
