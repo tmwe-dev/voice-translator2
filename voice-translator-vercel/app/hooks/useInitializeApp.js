@@ -37,7 +37,12 @@ export default function useInitializeApp({
       }
 
       // 2. URL language params
-      const langParam = urlParams.get('lang');   // host's language (for invite message display only)
+      // b.115 — questo commento diceva "host's language, for invite
+      // message display only" e ha tratto in inganno chi ha scritto il
+      // blocco dell'ingresso automatico (me). Il selettore che riempie
+      // questo parametro si chiama "Lingua dell'invitato": e la lingua
+      // dell'OSPITE, e va applicata.
+      const langParam = urlParams.get('lang');   // lingua scelta per l'invitato
       const guestLangParam = urlParams.get('gl'); // guest's language (what we should set)
       const guestNameParam = urlParams.get('gn');
       const guestGenderParam = urlParams.get('gg');
@@ -119,8 +124,32 @@ export default function useInitializeApp({
 
           const linguaBrowser = (typeof navigator !== 'undefined'
             ? (navigator.language || 'en').split('-')[0] : 'en');
-          const linguaOspite = guestLangParam || (p?.lang)
-            || (LANGS.find(l => l.code === linguaBrowser) ? linguaBrowser : 'en');
+          // b.115 — QUI MANCAVA `langParam`, ed e il difetto per cui la
+          // lingua scelta nell'invito non arrivava mai.
+          //
+          // Il selettore dell'invito si chiama "Lingua dell'invitato" e
+          // finisce nel link come `lang=`. Ma questa riga guardava solo
+          // `gl=`, le preferenze salvate e la lingua del browser. Il
+          // blocco piu sopra leggeva `lang=` e impostava la lingua
+          // giusta — poi arrivava questo, che gira PER ULTIMO (lo dice
+          // il commento qui sotto, scritto da me) e la sovrascriveva
+          // con quella del browser.
+          //
+          // Risultato provato dal vivo: chi apriva un invito
+          // "?lang=en" entrava in italiano, e le due bandiere in cima
+          // erano tutte e due italiane. Nessuna traduzione possibile,
+          // perche sorgente e destinazione coincidevano.
+          //
+          // L'ordine giusto e questo, dal piu esplicito al piu generico:
+          //   gl=      chi invita ha scelto la lingua dell'ospite in un QR
+          //   lang=    chi invita l'ha scelta nel modulo di invito
+          //   salvate  l'ospite era gia stato qui e aveva scelto
+          //   browser  ultima risorsa
+          const linguaValida = (c) => !!c && !!LANGS.find(l => l.code === c);
+          const linguaOspite = (linguaValida(guestLangParam) && guestLangParam)
+            || (linguaValida(langParam) && langParam)
+            || (linguaValida(p?.lang) && p.lang)
+            || (linguaValida(linguaBrowser) ? linguaBrowser : 'en');
           const nomeOspite = guestNameParam
             ? decodeURIComponent(guestNameParam)
             : (p?.name || 'Ospite');
