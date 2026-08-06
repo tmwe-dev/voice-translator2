@@ -48,6 +48,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // Se il canale non e aperto (o le chiavi non sono ancora state
   // scambiate) il messaggio non parte. Prima si perdeva in silenzio:
   // ora resta qui e riparte da solo quando il canale torna aperto.
+  // ── b.116 · "ho chiuso io" ──
+  // Chi preme CHIUDI provoca la stessa cosa che provoca una rete che
+  // cade: la connessione si interrompe. Il codice non sapeva
+  // distinguere le due cose e trattava sempre l'interruzione come un
+  // guasto — quindi ricomponeva la chiamata da solo, e per farlo
+  // RIACCENDEVA LA TELECAMERA di chi aveva appena chiuso.
+  //
+  // Difetto di riservatezza, non di comodita: uno chiude, si alza, e la
+  // sua telecamera torna accesa senza che nessuno gliel'abbia chiesto.
+  const chiusuraVolutaRef = useRef(false);
+
   const postaRef = useRef(null);
   if (!postaRef.current) postaRef.current = creaPostaInUscita();
 
@@ -252,6 +263,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       setWebrtcState('connected');
       stateRef.current = 'connected';
       if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
+    } else if (chiusuraVolutaRef.current) {
+      // b.116 — si e chiuso di proposito: qualunque cosa dica lo stato
+      // della connessione, non si riprova. E la differenza fra "e caduta
+      // la linea" e "ho riagganciato".
+      return;
     } else if (state === 'disconnected') {
       // ── ICE restart strategy (MDN-recommended: 3-4s after disconnected) ──
       // Don't destroy the connection — try to renegotiate ICE first.
@@ -300,6 +316,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // call-request via signaling. Partner auto-accepts renegotiation offers.
   // Max 2 attempts with exponential backoff (3s, 6s).
   function attemptAutoReconnect() {
+    // b.116 — seconda difesa: anche se una chiamata partisse comunque
+    // (un temporizzatore gia avviato, per esempio), qui si ferma. La
+    // telecamera non si riaccende mai dopo un CHIUDI.
+    if (chiusuraVolutaRef.current) return;
     if (autoReconnectAttemptRef.current >= MAX_AUTO_RECONNECTS) {
       console.warn('[WebRTC] Auto-reconnect limit reached — giving up');
       setWebrtcState('failed');
@@ -636,6 +656,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Request call (sends call-request, waits for acceptance) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
     if (stateRef.current === 'connecting' || stateRef.current === 'connected') return;
+    // b.116 — una chiamata NUOVA e una scelta nuova: si riapre la porta
+    // che CHIUDI aveva sbarrato. Senza questa riga, dopo aver chiuso una
+    // volta non si potrebbe piu chiamare per il resto della sessione —
+    // si curerebbe un difetto creandone uno peggiore.
+    chiusuraVolutaRef.current = false;
     const type = withVideo ? 'video' : 'voice';
     setCallType(type);
     callTypeRef.current = type;
@@ -663,6 +688,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
 
   // ── Accept incoming call ──
   const acceptIncomingCall = useCallback(async () => {
+    // b.116 — una chiamata NUOVA e una scelta nuova: si riapre la porta
+    // che CHIUDI aveva sbarrato. Senza questa riga, dopo aver chiuso una
+    // volta non si potrebbe piu chiamare per il resto della sessione —
+    // si curerebbe un difetto creandone uno peggiore.
+    chiusuraVolutaRef.current = false;
+
     if (!incomingCall) return;
     const type = incomingCall.withVideo ? 'video' : 'voice';
     setCallType(type);
@@ -768,6 +799,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const messaggiInAttesa = useCallback(() => postaRef.current.chiaviInAttesa(), []);
 
   const disconnect = useCallback(() => {
+    // b.116 — da qui in poi ogni interruzione e voluta, non subita.
+    chiusuraVolutaRef.current = true;
+    if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
+    if (disconnectTimerRef.current) { clearTimeout(disconnectTimerRef.current); disconnectTimerRef.current = null; }
     cleanup();
     setWebrtcState('idle');
     stateRef.current = 'idle';

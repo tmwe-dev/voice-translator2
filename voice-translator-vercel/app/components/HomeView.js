@@ -85,19 +85,34 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
       try {
         let saved; try { saved = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { saved = []; }
         if (saved.length === 0) { setActiveRooms([]); return; }
-        const checked = [];
+        // ── b.116 · una stanza si toglie solo se il server LO DICE ──
+        //
+        // Prima bastava che il controllo fallisse — rete incerta, 401,
+        // limite di frequenza — perche la riga sparisse: il `catch {}`
+        // si mangiava l'errore, la stanza non finiva in `checked`, e
+        // subito dopo `checked` veniva SCRITTO SOPRA l'elenco salvato.
+        // Un singhiozzo di rete e la conversazione lasciata a meta era
+        // persa per sempre, senza un avviso.
+        //
+        // Ora il dubbio conserva. Si toglie una stanza solo quando la
+        // risposta arriva davvero e dice "non esiste" o "e finita".
+        const rimaste = [];
         for (const room of saved) {
           try {
             const res = await fetch('/api/room', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'check', roomId: room.roomId })
             });
+            if (!res.ok) { rimaste.push(room); continue; }   // non si sa: si tiene
             const data = await res.json();
-            if (data.exists && !data.ended) checked.push(room);
-          } catch {}
+            const spenta = data && (data.exists === false || data.ended === true);
+            if (!spenta) rimaste.push(room);
+          } catch {
+            rimaste.push(room);   // rete incerta: si tiene
+          }
         }
-        localStorage.setItem('vt-active-rooms', JSON.stringify(checked));
-        setActiveRooms(checked);
+        localStorage.setItem('vt-active-rooms', JSON.stringify(rimaste));
+        setActiveRooms(rimaste);
       } catch {}
     }
     checkActiveRooms();
