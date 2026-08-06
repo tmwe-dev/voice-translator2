@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getRoom } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, getClientIP } from '../../lib/validate.js';
-import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import {
   resolveIdentity,
   handleCreate, handleJoin, handleHeartbeat, handleSpeaking,
@@ -16,8 +15,18 @@ const log = createLogger('room');
 // POST /api/room - Create, join, or manage a room
 async function handlePostRoom(req) {
   try {
-    const rl = await checkRateLimit(getRateLimitKey(req, 'room'), 60);
-    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    // ── b.106 · qui c'era un SECONDO limitatore sulla STESSA chiave ──
+    // withApiGuard (in fondo al file) conta gia su "room:IP" con tetto 420.
+    // Questa riga contava di nuovo sulla stessa identica chiave con tetto
+    // 60: ogni richiesta valeva DUE gettoni e il tetto vero diventava 30
+    // al minuto per indirizzo IP.
+    //
+    // Il battito della stanza fa 40 richieste al minuto: 429 dopo ventitre
+    // secondi di conversazione. E la chiave e per IP, quindi due telefoni
+    // sullo stesso WiFi — il caso del bar — se ne dividevano 30.
+    //
+    // Il commento qui sotto dice che il tetto fu alzato a 420 proprio per
+    // questo motivo. Questa riga annullava quella correzione.
 
     const body = await req.json();
     const action = typeof body.action === 'string' ? body.action : '';

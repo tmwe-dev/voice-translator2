@@ -3,7 +3,6 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
-import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth } from '../../lib/apiAuth.js';
-import { checkRateLimit } from '../../lib/rateLimit.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
 import { createLogger } from '../../lib/logger.js';

@@ -5,7 +5,6 @@ import { addCost } from '../../lib/store.js';
 import { deductCredits, deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
-import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { redis } from '../../lib/redis.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
@@ -29,11 +28,15 @@ async function handlePost(req) {
       throw e;
     }
 
-    // Rate limit: 30 requests/minute per IP
-    const rl = await checkRateLimit(getRateLimitKey(req, 'translate'), 30);
-    if (!rl.allowed) {
-      return apiError(ErrorCode.RATE_LIMIT, null, { retryAfter: Math.ceil(rl.retryAfterMs / 1000) });
-    }
+    // ── b.106 · qui c'era un SECONDO limitatore sulla STESSA chiave ──
+    // withApiGuard, in fondo al file, conta gia su "translate:IP" con
+    // tetto 120. Questa riga contava di nuovo sulla stessa chiave con
+    // tetto 30: ogni traduzione valeva due gettoni e il tetto vero era
+    // 15 al minuto per indirizzo IP.
+    //
+    // In una stanza con due persone sulla stessa rete il traduttore si
+    // spegneva da solo dopo poche frasi. Il freno sulla spesa resta
+    // quello giornaliero, in apiAuth.
 
     // Validate and sanitize input
     const rawBody = await req.json();

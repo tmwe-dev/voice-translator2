@@ -18,8 +18,9 @@ async function handlePost(req) {
       throw e;
     }
 
-    const rl = await checkRateLimit(getRateLimitKey(req, 'messages'), 120);
-    if (!rl.allowed) return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+    // b.106 — secondo limitatore sulla stessa chiave "messages:IP" del
+    // guard in fondo al file: ogni richiesta contava due volte e il tetto
+    // vero era 60, non 120.
 
     const body = await req.json();
     const roomId = sanitizeRoomId(body.roomId);

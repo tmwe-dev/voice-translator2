@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, createGiftInvite, acceptGiftInvite, getGiftInfo } from '../../lib/users.js';
 import { redis } from '../../lib/redis.js';
-import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('contacts');

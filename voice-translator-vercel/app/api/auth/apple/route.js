@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
-import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import crypto from 'crypto';
@@ -54,11 +53,9 @@ async function verifyAppleJWT(id_token) {
 // Apple Sign-In: verify identity token and create/login user
 async function appleHandler(req) {
   try {
-    // Rate limit: 10/min per IP
-    const rl = await checkRateLimit(getRateLimitKey(req, 'auth-apple'), 10);
-    if (!rl.allowed) {
-      return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
-    }
+    // b.106 — era un secondo conteggio sulla STESSA chiave del guard, che
+    // dimezzava il tetto senza volerlo. Trattandosi di autenticazione, sul
+    // guard e rimasto il tetto piu STRETTO dei due (10), non il piu largo.
 
     const { id_token, user: appleUser, referralCode } = await req.json();
 
@@ -176,4 +173,4 @@ async function appleHandler(req) {
   }
 }
 
-export const POST = withApiGuard(appleHandler, { maxRequests: 20, prefix: 'auth-apple' });
+export const POST = withApiGuard(appleHandler, { maxRequests: 10, prefix: 'auth-apple' });

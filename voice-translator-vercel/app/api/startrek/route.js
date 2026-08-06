@@ -20,7 +20,7 @@ export async function POST(req) {
 
     // Rate limit admin auth attempts: 5 per minute per IP
     const { checkRateLimit, getRateLimitKey } = await import('../../lib/rateLimit.js');
-    const rl = await checkRateLimit(getRateLimitKey(req, 'admin'), 5);
+    const rl = await checkRateLimit(getRateLimitKey(req, 'startrek'), 5);
     if (!rl.allowed) {
       return NextResponse.json({ error: 'Too many attempts. Locked out.' }, { status: 429 });
     }

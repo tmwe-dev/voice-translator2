@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
-import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 
@@ -10,11 +9,9 @@ const log = createLogger('authGoogle');
 // Uses Google's tokeninfo endpoint (no extra npm packages needed)
 async function handler(req) {
   try {
-    // Rate limit: 10/min per IP
-    const rl = await checkRateLimit(getRateLimitKey(req, 'auth-google'), 10);
-    if (!rl.allowed) {
-      return NextResponse.json({ error: 'Too many attempts. Please wait.' }, { status: 429 });
-    }
+    // b.106 — era un secondo conteggio sulla STESSA chiave del guard, che
+    // dimezzava il tetto senza volerlo. Trattandosi di autenticazione, sul
+    // guard e rimasto il tetto piu STRETTO dei due (10), non il piu largo.
 
     const { credential, code, referralCode } = await req.json();
 
@@ -141,4 +138,4 @@ async function handler(req) {
   }
 }
 
-export const POST = withApiGuard(handler, { maxRequests: 20, prefix: 'auth-google' });
+export const POST = withApiGuard(handler, { maxRequests: 10, prefix: 'auth-google' });
