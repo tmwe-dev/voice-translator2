@@ -204,7 +204,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 14, color: C.textMuted }}>Caricamento destinazione...</div>
         </div>
       </div>
@@ -215,7 +215,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 8 }}>{error}</div>
           <button onClick={() => setView('home')} style={{
             padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
@@ -238,7 +238,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           flex: 1, display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', padding: 24,
         }}>
-          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
+          <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
           <div style={{ fontSize: 22, fontWeight: 800, color: C.textPrimary, marginBottom: 6, textAlign: 'center' }}>
             TaxiTalk
           </div>

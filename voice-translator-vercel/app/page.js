@@ -1278,11 +1278,17 @@ function HomeInner() {
           try {
             setStatus('...');
             const langToUse = overrideLang || myLang;
+            // b.114 — qui NON esiste `roomConfig`: questa e la creazione
+            // rapida dell'invito, che non passa dal modulo con le
+            // opzioni. In b.113 ci era finito lo stesso, perche la
+            // sostituzione ha colpito tutti e due i punti di chiamata, e
+            // il risultato era "Errore di connessione. Riprova." su ogni
+            // invito. Una stanza creata al volo non e Diretta.
             const room = await roomPolling.handleCreateRoom(
               prefs.name || 'Host', langToUse, selectedMode, prefs.avatar,
               selectedContext, selectedMode, '',
               auth.isTrial, auth.isTopPro, auth.userAccount,
-              roomConfig.diretta
+              false
             );
             roomInfoRef.current = room;
             setStatus('');
