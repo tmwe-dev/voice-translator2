@@ -1,5 +1,15 @@
 import { ImageResponse } from 'next/og';
 
+// INVENTARIO: pubblica — la chiedono i programmi di WhatsApp e dei social, che non hanno credenziali
+//
+// E l'immagine di anteprima che si vede quando si incolla un
+// collegamento a BarTalk in una chat o su un social. La
+// chiedono i programmi che leggono le pagine per conto di WhatsApp,
+// Telegram, X: non hanno credenziali e non possono averne. Chiuderla
+// vorrebbe dire che ogni collegamento condiviso appare senza immagine.
+// Non riceve niente da fuori (GET senza parametri) e disegna sempre la
+// stessa cosa, quindi non c'e un ingresso da cui far entrare qualcosa.
+
 export const runtime = 'edge';
 
 export async function GET() {
