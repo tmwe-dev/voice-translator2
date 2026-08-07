@@ -60,7 +60,14 @@ describe('useTranslationAPI', () => {
 
       // Now returns instant message + server save promise
       expect(response.message).toBeTruthy();
-      expect(response.message._status).toBe('sent');
+      // b.120 — era 'sent', ed era una bugia: lo stato veniva messo
+      // alla creazione, prima che qualunque cosa fosse partita. Un
+      // messaggio parcheggiato in attesa di rete mostrava la stessa
+      // spunta di uno arrivato dall'altra parte.
+      //
+      // Ora nasce 'in-coda' e diventa 'inviato' solo quando il server o
+      // il canale diretto lo hanno preso davvero in carico.
+      expect(response.message._status).toBe('in-coda');
       expect(response.message.original).toBe('Hello');
       expect(response.message.translated).toBe('Ciao');
       expect(response.serverSave).toBeInstanceOf(Promise);

@@ -795,9 +795,9 @@ export default function useRoomPolling({
     setMessages(prev => {
       const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
       if (idx < 0) return prev;
-      if (prev[idx]._status === 'read') return prev; // Already marked
+      if (prev[idx]._status === 'letto') return prev; // gia segnato
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], _status: 'read' };
+      updated[idx] = { ...updated[idx], _status: 'letto' };
       return updated;
     });
   }, []);
@@ -807,9 +807,11 @@ export default function useRoomPolling({
     setMessages(prev => {
       const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
       if (idx < 0) return prev;
-      if (prev[idx]._status === 'delivered') return prev; // Already marked
+      // b.120 — 'letto' viene DOPO 'consegnato': una conferma di
+      // consegna arrivata in ritardo non deve far tornare indietro.
+      if (prev[idx]._status === 'consegnato' || prev[idx]._status === 'letto') return prev;
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], _status: 'delivered' };
+      updated[idx] = { ...updated[idx], _status: 'consegnato' };
       return updated;
     });
   }, []);

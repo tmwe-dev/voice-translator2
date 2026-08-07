@@ -7,6 +7,17 @@ import BarraReazioni from './BarraReazioni.js';
 import Velo from './Velo.js';
 import { velare } from '../lib/velo.js';
 
+// b.120 — le parole che l'utente legge toccando la spunta. Servono
+// anche a chi usa un lettore di schermo, che altrimenti sentirebbe
+// solo "immagine".
+const ETICHETTA_STATO = {
+  'in-coda':    'In attesa di partire',
+  'inviato':    'Inviato',
+  'consegnato': 'Arrivato all\'altro telefono',
+  'letto':      'Letto',
+  'fallito':    'Non e partito',
+};
+
 // Avvolge la nuvoletta solo quando serve davvero: se non c'e niente da
 // coprire, il messaggio esce identico a prima, senza un livello in piu.
 function ForseVelato({ messaggio, attivo, hot, C, children }) {
@@ -211,15 +222,39 @@ const MessageList = memo(function MessageList({
                     fontSize:13, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
                   +
                 </button>
-                {/* Delivery status: ✓ sent → ✓✓ delivered → ✓✓ green (read) */}
+                {/* ── b.120 · cinque stati, non due ──
+                    Prima c'erano due sole spunte, e la prima veniva
+                    messa PRIMA che qualcosa fosse partito: un messaggio
+                    parcheggiato in attesa di rete sembrava spedito.
+                    Adesso ognuno dei cinque momenti si vede:
+
+                      in coda    ·   in attesa che il canale si apra
+                      inviato    ✓   il server o il canale l'ha preso
+                      consegnato ✓✓  e arrivato all'altro telefono
+                      letto      ✓✓  l'ha visto (in verde)
+                      fallito    !   non e partito, e non partira
+
+                    Il grigio non e un dettaglio estetico: e la
+                    differenza fra "aspetta" e "e andata". */}
                 {isMine && (
-                  <span style={{
-                    color: m._status === 'read' ? PALETTE.green : m._status === 'delivered' ? PALETTE.blue : S.colors.textMuted,
-                    marginLeft:'auto', display:'flex', alignItems:'center',
-                  }}>
-                    {m._status === 'read' || m._status === 'delivered'
-                      ? <IconCheckDouble size={13}/>
-                      : <IconCheck size={13}/>}
+                  <span
+                    title={ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda']}
+                    aria-label={ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda']}
+                    style={{
+                      color: m._status === 'fallito' ? (PALETTE.red || '#EF4444')
+                        : m._status === 'letto' ? PALETTE.green
+                        : m._status === 'consegnato' ? PALETTE.blue
+                        : S.colors.textMuted,
+                      marginLeft:'auto', display:'flex', alignItems:'center', gap:3,
+                      opacity: m._status === 'in-coda' ? 0.55 : 1,
+                    }}>
+                    {m._status === 'fallito'
+                      ? <span style={{fontSize:12, fontWeight:800}}>!</span>
+                      : m._status === 'in-coda'
+                        ? <span style={{fontSize:12, lineHeight:1}}>·</span>
+                        : (m._status === 'letto' || m._status === 'consegnato')
+                          ? <IconCheckDouble size={13}/>
+                          : <IconCheck size={13}/>}
                   </span>
                 )}
               </div>

@@ -112,7 +112,20 @@ export default function useTranslationAPI({
       targetLang,
       translations: translations || null,
       timestamp: Date.now(),
-      _status: 'sent', // ✓ sent → ✓✓ delivered (updated when partner acks)
+      // ── b.120 · "in coda" non e "consegnato" ──
+      // Fino a ieri qui c'era `_status: 'sent'`, messo PRIMA che
+      // qualunque cosa fosse partita. Un messaggio parcheggiato nella
+      // posta in uscita — perche il canale era chiuso, perche la rete
+      // era caduta — mostrava la stessa identica spunta di uno arrivato
+      // dall'altra parte.
+      //
+      // E un difetto che ho introdotto io in b.111: la posta in uscita
+      // ha smesso di PERDERE i messaggi, ma ha cominciato a far credere
+      // che fossero partiti. Meglio del prima, ma disonesto.
+      //
+      // Ora si parte dal vero: e in coda. Diventa "inviato" solo quando
+      // qualcuno lo ha davvero preso in carico.
+      _status: 'in-coda',
     };
 
     const isDirect = isDirectMode(sessionModeRef?.current);
@@ -125,8 +138,20 @@ export default function useTranslationAPI({
     // SOLLEVAVA e il catch vuoto se lo mangiava. In modalita Direct non
     // c'e copia sul server: quel messaggio era perso per sempre, e
     // intanto compariva nella propria chat come inviato.
+    // La chiave con cui questo messaggio si riconosce dopo, per
+    // aggiornarne lo stato: la stessa che usa la posta in uscita.
+    const chiaveMsg = instantMsg.id || tempId;
+    const segnaStato = (stato) => {
+      if (!updateLocalMessage) return;
+      updateLocalMessage(original, senderName, { _status: stato });
+    };
+
     if (spedisciContenuto) {
-      spedisciContenuto(instantMsg.id || tempId, { type: 'chat-message', message: instantMsg });
+      // b.120 — il risultato NON si butta piu: dice se e partito davvero
+      // o se e rimasto sullo scrittoio.
+      Promise.resolve(spedisciContenuto(chiaveMsg, { type: 'chat-message', message: instantMsg }))
+        .then((partito) => { if (partito) segnaStato('inviato'); })
+        .catch(() => { /* resta "in coda": la posta riprovera da sola */ });
     } else if (sendDirectMessage) {
       try { sendDirectMessage({ type: 'chat-message', message: instantMsg }); } catch { /* via di riserva, usata solo se la posta in uscita non c e: chi ascolta se ne accorge dallo stato del canale */ }
     }
@@ -177,6 +202,10 @@ export default function useTranslationAPI({
       })
     }).then(res => {
       if (res.ok) {
+        // b.120 — il server lo ha preso in carico: da qui in poi non e
+        // piu "in coda". Non e ancora "consegnato": quello lo dira
+        // l'altro telefono con la sua conferma.
+        segnaStato('inviato');
         return res.json().then(data => {
           if (data.message?.id && sentByMeRef) {
             sentByMeRef.current.add(data.message.id);
@@ -184,9 +213,13 @@ export default function useTranslationAPI({
           return data;
         });
       }
+      // b.120 — il server ha risposto male. Prima non lo sapeva nessuno
+      // e il messaggio restava li con la sua bella spunta.
+      segnaStato('fallito');
       return null;
     }).catch(e => {
       console.error('[sendMessage] Server save error:', e);
+      segnaStato('fallito');
       return null;
     });
 
@@ -196,7 +229,7 @@ export default function useTranslationAPI({
     // Return immediately with the instant message — don't await server save
     // The promise is kept alive so it completes in background
     return { message: instantMsg, serverSave: serverSavePromise };
-  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, spedisciContenuto, verifiedNameRef, addLocalMessage]);
+  }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, spedisciContenuto, verifiedNameRef, addLocalMessage, updateLocalMessage]);
 
   /**
    * Phase 2: Send translation update for an already-sent message.
