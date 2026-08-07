@@ -57,7 +57,7 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
   const [tradotto, setTradotto] = useState('');
 
   const chiudiPerSempre = useCallback(() => {
-    try { localStorage.setItem(FATTA, '1'); } catch { /* privato */ }
+    try { localStorage.setItem(FATTA, '1'); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
     onChiudi?.();
   }, [onChiudi]);
 

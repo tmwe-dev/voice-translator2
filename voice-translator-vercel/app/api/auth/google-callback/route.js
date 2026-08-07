@@ -184,7 +184,7 @@ function successPopupHTML(resultJson) {
           var data = JSON.parse(atob("${b64}"));
           window.opener.postMessage({ type: 'google-oauth-result', data: data }, '${appUrl}');
         }
-      } catch(e) {}
+      } catch(e) { /* gettone di stato illeggibile: vale come assente e l accesso viene rifiutato */ }
       setTimeout(function() { window.close(); }, 1000);
     </script>
   </body></html>`;

@@ -26,6 +26,22 @@ const config = [
     },
     rules: {
       'no-undef': 'error',
+      // ── b.119 · un errore ingoiato in silenzio e un difetto in incubazione ──
+      // Due dei guasti trovati provando in due erano esattamente questo:
+      //   · la stanza lasciata a meta spariva per sempre, perche un
+      //     controllo fallito finiva in un `catch {}`;
+      //   · i messaggi in modalita Direct sparivano, perche l'invio
+      //     falliva dentro un `try { ... } catch {}`.
+      //
+      // In nessuno dei due casi c'era un errore visibile: solo una cosa
+      // che non succedeva.
+      //
+      // La regola NON vieta di ignorare un errore. Vieta di ignorarlo
+      // SENZA DIRLO: basta una riga di commento che spieghi perche qui
+      // va bene, e ESLint tace. Il costo e scrivere una frase; il
+      // guadagno e che fra sei mesi si sa se era una scelta o una
+      // dimenticanza.
+      'no-empty': ['error', { allowEmptyCatch: false }],
       // Structured logging: console.* forbidden in app code (use lib/logger.js)
       'no-console': ['warn', { allow: ['warn', 'error'] }],
       // React 19: no need for React import

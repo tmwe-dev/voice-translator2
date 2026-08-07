@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.118';
+export const APP_VERSION = 'b.119';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -187,7 +187,7 @@ export function getLang(code) { return LANGS.find(l => l.code === code) || LANGS
 export function isWhisperPrimaryLang(code) { return WHISPER_PRIMARY_LANGS.has(code); }
 
 export function vibrate(ms = 15) {
-  try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* non-critical */ }
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { /* valore non leggibile: si usa quello predefinito */ }
 }
 
 export function formatCredits(cents) {

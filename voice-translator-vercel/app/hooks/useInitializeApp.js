@@ -171,7 +171,7 @@ export default function useInitializeApp({
               autoPlay: true,
               avatar: p?.avatar || AVATARS[0],
             };
-            try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* privato */ }
+            try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
             return provvisorie;
           });
           setMyLang(linguaOspite);
@@ -296,6 +296,6 @@ export default function useInitializeApp({
         reg.update().catch(() => {});
       }).catch(err => console.error('SW registration failed:', err));
     }
-    try { initMonitoring(); } catch {}
+    try { initMonitoring(); } catch { /* il monitoraggio e un di piu: se non parte, l applicazione funziona uguale */ }
   }, []);
 }

@@ -19,7 +19,7 @@ function sanitizeOrigin(requestOrigin) {
   try {
     const parsed = new URL(requestOrigin);
     if (ALLOWED_ORIGINS.some(o => parsed.origin === new URL(o).origin)) return requestOrigin;
-  } catch {}
+  } catch { /* un indirizzo malformato non e valido: si usa quello predefinito */ }
   return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 }
 

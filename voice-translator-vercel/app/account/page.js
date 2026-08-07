@@ -13,7 +13,7 @@ export default function AccountPage() {
     try {
       const saved = localStorage.getItem('vt-prefs');
       if (saved) setPrefs(JSON.parse(saved));
-    } catch {}
+    } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
 
     // Fetch user data if authenticated
     const token = localStorage.getItem('vt-token');

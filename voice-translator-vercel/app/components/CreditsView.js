@@ -34,7 +34,7 @@ export default function CreditsView({ userAccount }) {
     try {
       const r = await fetch('/api/wallet/saldo', { headers: conToken() });
       if (r.ok) setDati(await r.json());
-    } catch { /* offline */ }
+    } catch { /* senza rete non si puo avvisare: si riprova al prossimo collegamento */ }
   }, [conToken]);
 
   useEffect(() => { carica(); }, [carica]);

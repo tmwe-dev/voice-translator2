@@ -304,7 +304,7 @@ export default function useStreamingInterpreter({
           noiseGateRef.current = ng;
           recordStream = ng.cleanStream;
         }
-      } catch {}
+      } catch { /* filtro del rumore non applicabile: si registra il flusso cosi com e */ }
 
       // Deepgram WebSocket
       const speechLang = getLang(myLang)?.speech || 'en-US';
@@ -369,7 +369,7 @@ export default function useStreamingInterpreter({
             if (data.type === 'UtteranceEnd') {
               handleUtteranceEnd();
             }
-          } catch {}
+          } catch { /* messaggio del riconoscitore in un formato inatteso: si aspetta il prossimo */ }
         };
 
         ws.onerror = () => { console.warn('[StreamInterp] WS error'); resolve(false); };
@@ -394,15 +394,15 @@ export default function useStreamingInterpreter({
     }
 
     // Cleanup audio
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch {} processorRef.current = null; }
-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch {} audioCtxRef.current = null; }
-    if (noiseGateRef.current) { try { noiseGateRef.current.destroy(); } catch {} noiseGateRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} }); streamRef.current = null; }
+    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } processorRef.current = null; }
+    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } audioCtxRef.current = null; }
+    if (noiseGateRef.current) { try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } noiseGateRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }); streamRef.current = null; }
     if (wsRef.current) {
       try {
         if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
         wsRef.current.close();
-      } catch {}
+      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       wsRef.current = null;
     }
 
@@ -501,9 +501,9 @@ export default function useStreamingInterpreter({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (wsRef.current) { try { wsRef.current.close(); } catch {} }
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
-      if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch {} }
+      if (wsRef.current) { try { wsRef.current.close(); } catch { /* il temporizzatore era gia scaduto */ } }
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+      if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
       subtitleTimersRef.current.forEach(id => clearTimeout(id));
       subtitleTimersRef.current = [];
       clearTimeout(sentencePauseTimerRef.current);

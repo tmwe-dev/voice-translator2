@@ -22,7 +22,7 @@ export default function useContacts({ userTokenRef }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'heartbeat', token })
         });
-      } catch {}
+      } catch { /* la rete puo mancare: chi chiama decide cosa fare del vuoto */ }
     }
 
     const unsubHeartbeat = subscribeTick(HEARTBEAT_INTERVAL, sendHeartbeat, { immediate: true });
@@ -36,7 +36,7 @@ export default function useContacts({ userTokenRef }) {
         navigator.sendBeacon('/api/contacts', JSON.stringify({
           action: 'offline', token
         }));
-      } catch {}
+      } catch { /* avviso di uscita mandato mentre la pagina si chiude: se non parte, il server se ne accorge dal silenzio */ }
     };
     window.addEventListener('beforeunload', handleUnload);
 
@@ -108,7 +108,7 @@ export default function useContacts({ userTokenRef }) {
         setContacts(prev => prev.filter(c => c.email !== contactEmail));
         return true;
       }
-    } catch {}
+    } catch { /* la rete puo mancare: chi chiama decide cosa fare del vuoto */ }
     return false;
   }, [userTokenRef]);
 
@@ -192,13 +192,13 @@ export default function useContacts({ userTokenRef }) {
         try {
           await navigator.clipboard.writeText(inviteUrl);
           return { ok: true, copied: true };
-        } catch {}
+        } catch { /* l utente ha annullato, o il permesso non c e */ }
         break;
       case 'native':
         if (navigator.share) {
           try {
             await navigator.share({ title: 'BarTalk', text, url: inviteUrl });
-          } catch {}
+          } catch { /* l utente ha annullato, o il permesso non c e */ }
         }
         break;
       default:

@@ -182,7 +182,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               });
             }
           }
-        } catch {}
+        } catch { /* destinazione illeggibile o gia scaduta: la schermata resta in attesa */ }
       },
       () => {}, { timeout: 10000 }
     );

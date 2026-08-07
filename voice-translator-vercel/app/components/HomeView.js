@@ -88,7 +88,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         // ── b.116 · una stanza si toglie solo se il server LO DICE ──
         //
         // Prima bastava che il controllo fallisse — rete incerta, 401,
-        // limite di frequenza — perche la riga sparisse: il `catch {}`
+        // limite di frequenza — perche la riga sparisse: il `catch { /* risposta illeggibile: la stanza si conserva, non si cancella nel dubbio */ }`
         // si mangiava l'errore, la stanza non finiva in `checked`, e
         // subito dopo `checked` veniva SCRITTO SOPRA l'elenco salvato.
         // Un singhiozzo di rete e la conversazione lasciata a meta era
@@ -113,7 +113,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         }
         localStorage.setItem('vt-active-rooms', JSON.stringify(rimaste));
         setActiveRooms(rimaste);
-      } catch {}
+      } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
     }
     checkActiveRooms();
   }, []);

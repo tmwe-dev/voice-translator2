@@ -16,7 +16,7 @@ function leggi(chiave, base) {
   } catch { return base; }
 }
 function scrivi(chiave, v) {
-  try { localStorage.setItem(chiave, String(v)); } catch { /* privato/pieno */ }
+  try { localStorage.setItem(chiave, String(v)); } catch { /* navigazione privata o memoria piena: le preferenze restano in memoria */ }
 }
 
 export function getVolumeTTS() { return leggi('vt-vol-tts', 1); }

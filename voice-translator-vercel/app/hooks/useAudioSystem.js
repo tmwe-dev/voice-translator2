@@ -66,7 +66,7 @@ export default function useAudioSystem({
     try {
       window.__bartalkTTS = attivo;
       window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo } }));
-    } catch { /* SSR */ }
+    } catch { /* sul server non esistono finestra e audio: qui non si fa nulla */ }
   }
 
   function getPersistentAudio() {
@@ -120,7 +120,7 @@ export default function useAudioSystem({
         src.buffer = buf;
         src.connect(ctx.destination);
         src.start(0);
-      } catch {}
+      } catch { /* sblocco audio: il browser lo concede solo dopo un tocco, si riprova al prossimo */ }
 
       // Play silent audio to unlock HTML5 Audio on mobile
       const pa = getPersistentAudio();
@@ -134,7 +134,7 @@ export default function useAudioSystem({
         a.playsInline = true;
         a.volume = 0.01;
         a.play().catch(() => {});
-      } catch {}
+      } catch { /* il browser puo rifiutare di suonare senza un tocco dell utente */ }
 
       // CRITICAL: set audioReady IMMEDIATELY (like b.41 that worked)
       // Don't wait for ctx.state === 'running' — that blocks on mobile
@@ -151,14 +151,14 @@ export default function useAudioSystem({
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try { gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03); } catch (e) { /* cleanup */ }
+    try { gain.gain.setTargetAtTime(duckingLevelRef.current, ctx.currentTime, 0.03); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
   }
 
   function stopDucking() {
     const gain = duckingGainRef.current;
     const ctx = audioContextRef.current;
     if (!gain || !ctx) return;
-    try { gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06); } catch (e) { /* cleanup */ }
+    try { gain.gain.setTargetAtTime(1.0, ctx.currentTime, 0.06); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
   }
 
   function connectToDucking(audioElement) {
@@ -194,20 +194,20 @@ export default function useAudioSystem({
     return () => {
       if (persistentAudioRef.current) { persistentAudioRef.current.pause(); persistentAudioRef.current.src = ''; }
       if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-        try { audioContextRef.current.close(); } catch (e) { /* cleanup */ }
+        try { audioContextRef.current.close(); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
       }
       if (persistentMicRef.current) {
-        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) { /* cleanup */ } });
+        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
         persistentMicRef.current = null;
       }
-      activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) { /* cleanup */ } });
+      activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
       activeBlobUrlsRef.current.clear();
       codaRef.current?.svuota();
       playedMsgIdsRef.current.clear();
       if (typeof speechSynthesis !== 'undefined') {
         try {
           speechSynthesis.cancel();
-        } catch (e) { /* cleanup */ }
+        } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
       }
     };
   }, []);
@@ -346,10 +346,10 @@ export default function useAudioSystem({
 
   /** Sblocco audio, volume e avviso "parla la TTS": una volta sola. */
   function preparaUscitaAudio() {
-    if (!audioReadyRef.current) { try { unlockAudio(); } catch {} }
+    if (!audioReadyRef.current) { try { unlockAudio(); } catch { /* sblocco audio: il browser lo concede solo dopo un tocco, si riprova al prossimo */ } }
     const ctx = audioContextRef.current;
     if (ctx && ctx.state === 'suspended') { ctx.resume().catch(() => {}); }
-    try { getPersistentAudio().volume = getVolumeTTS(); } catch {}
+    try { getPersistentAudio().volume = getVolumeTTS(); } catch { /* il contesto audio era gia nello stato voluto */ }
     // Chi ascolta: RoomView (attenua la voce del partner, iOS-safe) e
     // il riconoscimento vocale (scarta l'audio: anti-eco).
     segnalaTTS(true);

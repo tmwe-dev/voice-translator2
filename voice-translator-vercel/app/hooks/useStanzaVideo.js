@@ -67,7 +67,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   const chiudiPeer = useCallback((nome) => {
     const p = peersRef.current.get(nome);
     if (p) {
-      try { p.pc.close(); } catch { /* gia chiusa */ }
+      try { p.pc.close(); } catch { /* la connessione era gia chiusa */ }
       peersRef.current.delete(nome);
     }
     codaIceRef.current.delete(nome);
@@ -150,7 +150,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
 
     // I candidati arrivati prima della descrizione ora si possono usare.
     const coda = codaIceRef.current.get(nome) || [];
-    for (const c of coda) { try { await addIceCandidate(voce.pc, c); } catch { /* scaduto */ } }
+    for (const c of coda) { try { await addIceCandidate(voce.pc, c); } catch { /* la richiesta e scaduta: il giro successivo riprova */ } }
     codaIceRef.current.delete(nome);
   }, [apriPeer, api, ascoltaCanale]);
 
@@ -169,13 +169,13 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
           if (voce) {
             await acceptAnswer(voce.pc, s.dati);
             const coda = codaIceRef.current.get(da) || [];
-            for (const c of coda) { try { await addIceCandidate(voce.pc, c); } catch { /* scaduto */ } }
+            for (const c of coda) { try { await addIceCandidate(voce.pc, c); } catch { /* la richiesta e scaduta: il giro successivo riprova */ } }
             codaIceRef.current.delete(da);
           }
         } else if (s.tipo === 'ice') {
           const voce = peersRef.current.get(da);
           if (voce?.pc.remoteDescription) {
-            try { await addIceCandidate(voce.pc, s.dati); } catch { /* scaduto */ }
+            try { await addIceCandidate(voce.pc, s.dati); } catch { /* la richiesta e scaduta: il giro successivo riprova */ }
           } else {
             // Arrivato troppo presto: si mette da parte, non si butta.
             const coda = codaIceRef.current.get(da) || [];

@@ -374,7 +374,7 @@ export default function useTTSEngine({
         if (res.ok) return await res.blob();
         // 402 = credito insufficiente: si ripiega sulla voce gratuita,
         // che e esattamente cio che la rotta si aspetta.
-      } catch { /* si ripiega */ }
+      } catch { /* voce premium non disponibile: si ripiega su quella gratuita */ }
     }
 
     try {

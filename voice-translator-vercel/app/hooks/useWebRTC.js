@@ -392,7 +392,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = setInterval(() => {
         if (dcRef.current?.readyState === 'open') {
-          try { dcRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch {}
+          try { dcRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch { /* il temporizzatore era gia scaduto */ }
           if (Date.now() - lastPongRef.current > 20000 && stateRef.current === 'connected') {
             console.warn('[WebRTC] No heartbeat pong for 20s — connection may be dead');
           }
@@ -405,7 +405,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         // ── Internal protocol messages ──
         if (msg.type === 'ping') {
           if (dcRef.current?.readyState === 'open') {
-            try { dcRef.current.send(JSON.stringify({ type: 'pong', ts: Date.now() })); } catch {}
+            try { dcRef.current.send(JSON.stringify({ type: 'pong', ts: Date.now() })); } catch { /* dato illeggibile: vale come assente */ }
           }
           return;
         }

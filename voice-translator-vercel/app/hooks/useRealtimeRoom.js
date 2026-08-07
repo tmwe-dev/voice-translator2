@@ -44,7 +44,7 @@ export default function useRealtimeRoom({
   const subscribe = useCallback((rid) => {
     readyRef.current = false;
     if (channelRef.current) {
-      try { channelRef.current.unsubscribe(); } catch {}
+      try { channelRef.current.unsubscribe(); } catch { /* il canale era gia chiuso */ }
       channelRef.current = null;
       setConnected(false);
     }
@@ -109,7 +109,7 @@ export default function useRealtimeRoom({
   const unsubscribe = useCallback(() => {
     readyRef.current = false;
     if (channelRef.current) {
-      try { channelRef.current.unsubscribe(); } catch {}
+      try { channelRef.current.unsubscribe(); } catch { /* il canale era gia chiuso */ }
       channelRef.current = null;
       setConnected(false);
     }

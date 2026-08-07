@@ -841,7 +841,7 @@ function HomeInner() {
       // b.110 — era `room.roomId`, ma l'oggetto stanza ha `id`
       // (store.js:69). Il link copiato conteneva "room=undefined".
       const link = `${window.location.origin}?room=${room.id}`;
-      try { await navigator.clipboard.writeText(link); } catch {}
+      try { await navigator.clipboard.writeText(link); } catch { /* l utente ha annullato, o il permesso non c e */ }
     } catch (e) { setStatus('Error: ' + e.message); }
   }
 

@@ -65,7 +65,7 @@ export default function useParlatoTradotto({
       try {
         const t = localStorage.getItem('vt-token');
         if (t) fd.append('userToken', t);
-      } catch { /* privato */ }
+      } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
 
       const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
       if (!r.ok) { setErrore('Non sono riuscito a trascrivere'); return; }
@@ -163,8 +163,8 @@ export default function useParlatoTradotto({
     return () => {
       vivo = false;
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      try { registratoreRef.current?.stop(); } catch { /* gia ferma */ }
-      try { ac.close(); } catch { /* gia chiuso */ }
+      try { registratoreRef.current?.stop(); } catch { /* la registrazione era gia ferma */ }
+      try { ac.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       parlandoRef.current = false;
     };
   }, [attivo, mioStream, trascrivi, chiudiPezzo]);

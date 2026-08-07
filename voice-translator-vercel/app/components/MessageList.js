@@ -21,7 +21,7 @@ function ForseVelato({ messaggio, attivo, hot, C, children }) {
 
 // Haptic feedback helper (mobile)
 function haptic(ms = 10) {
-  try { navigator?.vibrate?.(ms); } catch {}
+  try { navigator?.vibrate?.(ms); } catch { /* il dispositivo non vibra: non cambia nulla */ }
 }
 
 // Virtual scroll threshold — only render all messages if under this count

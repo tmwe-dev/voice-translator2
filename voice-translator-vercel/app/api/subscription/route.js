@@ -21,7 +21,7 @@ function sanitizeReturnUrl(url) {
     if (ALLOWED_ORIGINS.some(origin => parsed.origin === new URL(origin).origin)) {
       return url;
     }
-  } catch {}
+  } catch { /* un indirizzo malformato non e valido: si usa quello predefinito */ }
   // Reject unrecognized domains — fall back to app URL
   return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 }

@@ -7,6 +7,7 @@ import useTranslationAPI from './useTranslationAPI.js';
 import useFreeTalkVAD from './useFreeTalkVAD.js';
 import { getPerf, PERF } from '../lib/perfTelemetry.js';
 import { createLogger } from '../lib/logger.js';
+import { toast } from '../lib/avvisi.js';
 const dbg = createLogger('translation');
 
 // ═══════════════════════════════════════════════════════════════
@@ -434,7 +435,7 @@ export default function useTranslation({
       try {
         const started = await startDeepgramStreaming(currentLang);
         if (started) return;
-      } catch {}
+      } catch { /* Deepgram non disponibile: si prosegue col riconoscimento del browser */ }
     }
 
     // ── Hybrid STT routing ──
@@ -538,7 +539,7 @@ export default function useTranslation({
     recognition.onend = () => {
       if (streamingModeRef.current && !stoppingRef.current) {
         processedFinalsRef.current = new Set();
-        try { recognition.start(); } catch {}
+        try { recognition.start(); } catch { /* il riconoscimento era gia ripartito da solo */ }
       }
     };
 
@@ -566,7 +567,7 @@ export default function useTranslation({
     streamingModeRef.current = false;
     const hadSpeechRec = !!speechRecRef.current;
     if (speechRecRef.current) {
-      try { speechRecRef.current.stop(); } catch {}
+      try { speechRecRef.current.stop(); } catch { /* il temporizzatore era gia scaduto */ }
       // DON'T null the ref yet — onresult callback may still fire
     }
 
@@ -603,7 +604,21 @@ export default function useTranslation({
           if (roomId) setSpeakingState(roomId, false);
           setStreamingMsg(null);
           if (blob.size > 1000) {
-            try { await processAndSendAudio(blob); } catch {}
+            try { await processAndSendAudio(blob); } catch (errore) {
+            // b.119 — qui c'era un `catch { /* il registratore era gia fermo */ }` vuoto, in TUTTI E DUE i
+            // percorsi della registrazione. Parlavi, smettevi, e se la
+            // trascrizione o la traduzione o l'invio fallivano non
+            // succedeva NIENTE: nessun errore, nessun avviso, le tue
+            // parole sparivano. Lo stesso difetto dei messaggi persi
+            // corretto in b.111 — ma sulla voce, che e il motivo per
+            // cui questo programma esiste.
+            //
+            // Non si puo riprovare da soli: l'audio e gia stato
+            // consumato. Ma si puo almeno DIRLO, invece di lasciare
+            // credere che sia andata.
+            dbg.error('[voce] invio fallito:', errore?.message);
+            toast.error('Non sono riuscito a mandare quello che hai detto. Riprova.');
+          }
           }
           resolve();
         };
@@ -619,7 +634,7 @@ export default function useTranslation({
     // Stop backup recording (discard — we have STT text)
     if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
       backupRecRef.current.onstop = () => {};
-      try { backupRecRef.current.stop(); } catch {}
+      try { backupRecRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
     }
     backupRecRef.current = null;
     backupChunksRef.current = [];
@@ -686,7 +701,21 @@ export default function useTranslation({
         const blob = new Blob(chunksRef.current, { type: recRef.current.mimeType });
         if (blob.size < 1000) { setRecording(false); setStreamingMsg(null); return; }
         setStreamingMsg({ original: '', translated: null, isStreaming: false, _whisperProcessing: true });
-        try { await processAndSendAudio(blob); } catch {}
+        try { await processAndSendAudio(blob); } catch (errore) {
+            // b.119 — qui c'era un `catch { /* il registratore era gia fermo */ }` vuoto, in TUTTI E DUE i
+            // percorsi della registrazione. Parlavi, smettevi, e se la
+            // trascrizione o la traduzione o l'invio fallivano non
+            // succedeva NIENTE: nessun errore, nessun avviso, le tue
+            // parole sparivano. Lo stesso difetto dei messaggi persi
+            // corretto in b.111 — ma sulla voce, che e il motivo per
+            // cui questo programma esiste.
+            //
+            // Non si puo riprovare da soli: l'audio e gia stato
+            // consumato. Ma si puo almeno DIRLO, invece di lasciare
+            // credere che sia andata.
+            dbg.error('[voce] invio fallito:', errore?.message);
+            toast.error('Non sono riuscito a mandare quello che hai detto. Riprova.');
+          }
         setRecording(false);
         setStreamingMsg(null);
         // (refreshBalance legacy rimosso — vedi nota sopra: causa 429)
@@ -717,20 +746,20 @@ export default function useTranslation({
     if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
     streamingModeRef.current = false;
     if (speechRecRef.current) {
-      try { speechRecRef.current.stop(); } catch {}
+      try { speechRecRef.current.stop(); } catch { /* il temporizzatore era gia scaduto */ }
       speechRecRef.current = null;
     }
     stopDeepgramStreaming();
     if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
       backupRecRef.current.onstop = () => {};
-      try { backupRecRef.current.stop(); } catch {}
+      try { backupRecRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
     }
     backupRecRef.current = null;
     backupStreamRef.current = null;
     backupChunksRef.current = [];
     if (recRef.current && recRef.current.state !== 'inactive') {
       recRef.current.onstop = () => {};
-      try { recRef.current.stop(); } catch {}
+      try { recRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
     }
     recRef.current = null;
     chunksRef.current = [];
@@ -781,17 +810,17 @@ export default function useTranslation({
       streamingModeRef.current = false;
       if (speakingKeepAliveRef.current) { clearInterval(speakingKeepAliveRef.current); speakingKeepAliveRef.current = null; }
       if (speechRecRef.current) {
-        try { speechRecRef.current.stop(); } catch {}
+        try { speechRecRef.current.stop(); } catch { /* il temporizzatore era gia scaduto */ }
         speechRecRef.current = null;
       }
       if (backupRecRef.current && backupRecRef.current.state !== 'inactive') {
-        try { backupRecRef.current.stop(); } catch {}
+        try { backupRecRef.current.stop(); } catch { /* il temporizzatore era gia scaduto */ }
         backupRecRef.current = null;
       }
       backupStreamRef.current = null;
       backupChunksRef.current = [];
       if (recRef.current && recRef.current.state !== 'inactive') {
-        try { recRef.current.stop(); } catch {}
+        try { recRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
         recRef.current = null;
       }
       chunksRef.current = [];

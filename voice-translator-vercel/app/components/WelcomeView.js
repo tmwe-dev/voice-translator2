@@ -519,7 +519,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                   try {
                     if (v.trim()) localStorage.setItem('vt-voucher-pendente', v.trim());
                     else localStorage.removeItem('vt-voucher-pendente');
-                  } catch {}
+                  } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
                 }}
                 placeholder={Lf('codePlaceholder', 'CODICE (facoltativo)')}
                 aria-label="Codice regalo"

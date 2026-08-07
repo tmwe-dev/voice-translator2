@@ -42,7 +42,7 @@ function detectLang() {
     const rawPrefs = localStorage.getItem('vt-prefs') || '{}';
     let prefs; try { prefs = JSON.parse(rawPrefs); } catch { prefs = null; }
     if (prefs?.lang) return mapLang(prefs.lang);
-  } catch {}
+  } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
   // 3. Browser language
   const browserLang = (navigator.language || 'en').split('-')[0];
   return mapLang(browserLang);

@@ -206,7 +206,7 @@ export function withApiGuard(handler, opts = {}) {
         const effectiveRemaining = Math.min(ipRl.remaining, userRl.remaining);
         response.headers.set('X-RateLimit-Limit', String(maxRequests));
         response.headers.set('X-RateLimit-Remaining', String(effectiveRemaining));
-      } catch {}
+      } catch { /* risposta senza intestazioni modificabili (un flusso, per esempio): i conteggi non si allegano */ }
     }
 
     return response;

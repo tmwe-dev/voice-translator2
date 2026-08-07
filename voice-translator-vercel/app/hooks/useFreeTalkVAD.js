@@ -108,7 +108,7 @@ export default function useFreeTalkVAD({
       const stream = await getMicStream();
       vadStreamRef.current = stream;
       if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
-        try { vadAudioCtxRef.current.close(); } catch {}
+        try { vadAudioCtxRef.current.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       }
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       vadAudioCtxRef.current = audioCtx;
@@ -166,7 +166,7 @@ export default function useFreeTalkVAD({
         recognition.onend = () => {
           if (streamingModeRef.current && isListeningRef.current) {
             ftProcessedFinals = new Set();
-            try { recognition.start(); } catch {}
+            try { recognition.start(); } catch { /* il riconoscimento era gia ripartito da solo */ }
           }
         };
         recognition.start();
@@ -294,7 +294,7 @@ export default function useFreeTalkVAD({
         vadTimerRef.current = requestAnimationFrame(check);
       }
       check();
-    } catch {}
+    } catch { /* il temporizzatore era gia scaduto */ }
   }, [isListening, myLangRef, roomId, getMicStream, unlockAudio, setSpeakingState,
       getRecorderMime, speechRecRef, allWordsRef, lastInterimRef, streamingModeRef, whisperOnlyRef,
       lowConfidenceCountRef, handleSpeechResult, setStreamingMsg, setRecording,
@@ -317,13 +317,13 @@ export default function useFreeTalkVAD({
     vadStreamRef.current = null;
     vadAnalyserRef.current = null;
     if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
-      try { vadAudioCtxRef.current.close(); } catch {}
+      try { vadAudioCtxRef.current.close(); } catch { /* il temporizzatore era gia scaduto */ }
       vadAudioCtxRef.current = null;
     }
     if (streamingModeRef.current) {
       streamingModeRef.current = false;
       if (speechRecRef.current) {
-        try { speechRecRef.current.stop(); } catch {}
+        try { speechRecRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
         speechRecRef.current = null;
       }
 
@@ -356,7 +356,7 @@ export default function useFreeTalkVAD({
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
     vadAnalyserRef.current = null;
     if (vadAudioCtxRef.current && vadAudioCtxRef.current.state !== 'closed') {
-      try { vadAudioCtxRef.current.close(); } catch {}
+      try { vadAudioCtxRef.current.close(); } catch { /* il temporizzatore era gia scaduto */ }
       vadAudioCtxRef.current = null;
     }
   }, []);

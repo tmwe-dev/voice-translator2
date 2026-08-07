@@ -205,17 +205,17 @@ export default function useVoiceRecorder() {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
 
     const reg = mediaRecorderRef.current;
-    if (reg && reg.state !== 'inactive') { try { reg.stop(); } catch { /* gia ferma */ } }
+    if (reg && reg.state !== 'inactive') { try { reg.stop(); } catch { /* la registrazione era gia ferma */ } }
     mediaRecorderRef.current = null;
 
     // Il microfono si spegne per ultimo: se si chiude prima, il
     // registratore puo lamentarsi di una traccia sparita sotto i piedi.
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* gia ferma */ } });
+      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* la registrazione era gia ferma */ } });
       streamRef.current = null;
     }
     if (audioContextRef.current) {
-      try { audioContextRef.current.close(); } catch { /* gia chiuso */ }
+      try { audioContextRef.current.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       audioContextRef.current = null;
     }
     analyserRef.current = null;

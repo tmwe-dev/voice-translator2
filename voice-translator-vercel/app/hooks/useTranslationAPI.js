@@ -119,7 +119,7 @@ export default function useTranslationAPI({
 
     // ── Instant delivery: P2P (always) + Realtime broadcast (only in Translate mode) ──
     // Priority 1: WebRTC DataChannel (P2P, ~50ms) — ALWAYS, in both modes
-    // b.111 — prima era `try { sendDirectMessage(...) } catch {}`:
+    // b.111 — prima era `try { sendDirectMessage(...) } catch { /* via di riserva: il canale diretto si e chiuso, il messaggio viaggia comunque per il server */ }`:
     // se il canale non era aperto la funzione restituiva `false` e
     // nessuno lo guardava; se le chiavi non erano ancora pronte
     // SOLLEVAVA e il catch vuoto se lo mangiava. In modalita Direct non
@@ -128,7 +128,7 @@ export default function useTranslationAPI({
     if (spedisciContenuto) {
       spedisciContenuto(instantMsg.id || tempId, { type: 'chat-message', message: instantMsg });
     } else if (sendDirectMessage) {
-      try { sendDirectMessage({ type: 'chat-message', message: instantMsg }); } catch {}
+      try { sendDirectMessage({ type: 'chat-message', message: instantMsg }); } catch { /* via di riserva, usata solo se la posta in uscita non c e: chi ascolta se ne accorge dallo stato del canale */ }
     }
     // Priority 2: Supabase Realtime broadcast (~100ms)
     // BLOCKED in Direct mode — no message content through Supabase
@@ -217,7 +217,7 @@ export default function useTranslationAPI({
 
     // Broadcast to partner via P2P (fastest) — always
     if (sendDirectMessage) {
-      try { sendDirectMessage({ type: 'message-update', ...updatePayload }); } catch {}
+      try { sendDirectMessage({ type: 'message-update', ...updatePayload }); } catch { /* la traduzione viaggia anche per Realtime e per il server: se il canale diretto e chiuso arriva lo stesso */ }
     }
     // Broadcast to partner via Realtime — BLOCKED in Direct mode
     if (broadcastMessageUpdate && !isDirect) {

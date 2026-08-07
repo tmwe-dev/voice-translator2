@@ -68,12 +68,12 @@ export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85 } = 
 
   function destroy() {
     if (rafId) cancelAnimationFrame(rafId);
-    try { source.disconnect(); } catch {}
-    try { highPass.disconnect(); } catch {}
-    try { lowPass.disconnect(); } catch {}
-    try { analyser.disconnect(); } catch {}
-    try { gate.disconnect(); } catch {}
-    try { ctx.close(); } catch {}
+    try { source.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
+    try { highPass.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
+    try { lowPass.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
+    try { analyser.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
+    try { gate.disconnect(); } catch { /* il temporizzatore era gia scaduto */ }
+    try { ctx.close(); } catch { /* il temporizzatore era gia scaduto */ }
   }
 
   return { cleanStream: dest.stream, analyser, destroy };

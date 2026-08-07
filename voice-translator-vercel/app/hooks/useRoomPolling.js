@@ -149,7 +149,7 @@ export default function useRoomPolling({
           targetLang: msg.targetLang,
           timestamp: msg.timestamp || Date.now(),
         });
-      } catch {}
+      } catch { /* la base di conoscenza perde un messaggio: la conversazione continua */ }
     }
   }, [prefsRef, myLangRef, queueAudio]);
 
@@ -591,7 +591,7 @@ export default function useRoomPolling({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       });
-    } catch {}
+    } catch { /* la rete puo mancare: chi chiama decide cosa fare del vuoto */ }
   }
 
   function broadcastLiveText(text) {

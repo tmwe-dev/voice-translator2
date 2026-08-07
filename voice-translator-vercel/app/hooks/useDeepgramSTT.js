@@ -180,15 +180,15 @@ export default function useDeepgramSTT({
    */
   const stopDeepgramStreaming = useCallback(async () => {
     if (deepgramProcessorRef.current) {
-      try { deepgramProcessorRef.current.disconnect(); } catch {}
+      try { deepgramProcessorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       deepgramProcessorRef.current = null;
     }
     if (deepgramAudioCtxRef.current && deepgramAudioCtxRef.current.state !== 'closed') {
-      try { deepgramAudioCtxRef.current.close(); } catch {}
+      try { deepgramAudioCtxRef.current.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       deepgramAudioCtxRef.current = null;
     }
     if (deepgramStreamRef.current) {
-      deepgramStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      deepgramStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       deepgramStreamRef.current = null;
     }
     if (deepgramWsRef.current) {
@@ -199,7 +199,7 @@ export default function useDeepgramSTT({
           await new Promise(r => setTimeout(r, 400)); // Wait for final transcription
         }
         deepgramWsRef.current.close();
-      } catch {}
+      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       deepgramWsRef.current = null;
     }
   }, []);

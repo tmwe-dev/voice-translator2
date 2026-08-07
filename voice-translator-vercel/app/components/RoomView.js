@@ -304,12 +304,12 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 speechSynthesis.speak(warmup);
                 setTimeout(() => speechSynthesis.cancel(), 100);
               }
-            } catch {}
+            } catch { /* il riconoscimento vocale non e disponibile qui */ }
             try {
               const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
               a.playsInline = true; a.volume = 0.01;
               a.play().catch(() => {});
-            } catch {}
+            } catch { /* il browser puo rifiutare di suonare senza un tocco dell utente */ }
           }}
           style={{
             position: 'fixed', bottom: 80, left: 16, right: 16,

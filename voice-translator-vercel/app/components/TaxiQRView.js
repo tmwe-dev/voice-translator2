@@ -119,9 +119,9 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
     const url = qrUrlRef.current;
     const text = `TaxiTalk — Destinazione condivisa`;
     if (navigator.share && url) {
-      try { await navigator.share({ title: 'TaxiTalk', text, url }); } catch {}
+      try { await navigator.share({ title: 'TaxiTalk', text, url }); } catch { /* l utente ha annullato, o il permesso non c e */ }
     } else if (url) {
-      try { await navigator.clipboard.writeText(url); } catch {}
+      try { await navigator.clipboard.writeText(url); } catch { /* l utente ha annullato, o il permesso non c e */ }
     }
   }, []);
 
@@ -132,7 +132,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
     try {
       const res = await fetch(`/api/taxi/destination?id=${destId}`, { method: 'DELETE' });
       if (res.ok) setRevoked(true);
-    } catch {}
+    } catch { /* il dispositivo non vibra: non cambia nulla */ }
   }, [destId]);
 
   if (!destination) return null;

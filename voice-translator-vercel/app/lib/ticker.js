@@ -47,7 +47,7 @@ function handleVisibility() {
     // Refresh immediately on return, then resume
     const now = Date.now();
     for (const sub of subscribers) {
-      if (sub.immediate) { sub.last = now; try { sub.fn(); } catch { /* ignore */ } }
+      if (sub.immediate) { sub.last = now; try { sub.fn(); } catch { /* esito ininfluente per il seguito */ } }
     }
     if (subscribers.size > 0) start();
   }
@@ -78,7 +78,7 @@ export function subscribeTick(intervalMs, fn, opts = {}) {
   subscribers.add(sub);
   ensureVisibilityHook();
   if (typeof document === 'undefined' || !document.hidden) start();
-  if (sub.immediate) { sub.last = Date.now(); try { fn(); } catch { /* ignore */ } }
+  if (sub.immediate) { sub.last = Date.now(); try { fn(); } catch { /* esito ininfluente per il seguito */ } }
   return () => {
     subscribers.delete(sub);
     if (subscribers.size === 0) stop();

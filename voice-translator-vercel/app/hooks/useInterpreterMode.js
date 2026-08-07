@@ -310,15 +310,15 @@ export default function useInterpreterMode({
   const stopInterpreter = useCallback(() => {
     setActive(false);
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-      try { recorderRef.current.stop(); } catch {}
+      try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
     }
     recorderRef.current = null;
     if (noiseGateRef.current) {
-      try { noiseGateRef.current.destroy(); } catch {}
+      try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       noiseGateRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       streamRef.current = null;
     }
     dbg.debug('[Interpreter] Stopped');
@@ -328,10 +328,10 @@ export default function useInterpreterMode({
   useEffect(() => {
     return () => {
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
-        try { recorderRef.current.stop(); } catch {}
+        try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch {} });
+        streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       }
       // Clear all pending subtitle timers
       subtitleTimersRef.current.forEach(id => clearTimeout(id));

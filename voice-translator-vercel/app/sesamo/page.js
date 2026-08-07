@@ -11,7 +11,7 @@ import AdminWallet from '../components/AdminWallet.js';
 
 function detectLang() {
   if (typeof window === 'undefined') return 'en';
-  try { let p; try { p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); } catch { p = null; } if (p?.lang) return mapLang(p.lang); } catch {}
+  try { let p; try { p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); } catch { p = null; } if (p?.lang) return mapLang(p.lang); } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
   return mapLang((typeof navigator !== 'undefined' ? navigator.language : 'en').split('-')[0]);
 }
 

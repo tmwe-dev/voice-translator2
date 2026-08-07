@@ -380,7 +380,7 @@ function SpeakerView({ userToken }) {
   }, [sourceLang, targetLang, translateText, playTTS, destCoords]);
 
   const stopBatchRecord = useCallback(() => {
-    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch { /* cleanup */ } speechRecRef.current = null; }
+    if (speechRecRef.current) { try { speechRecRef.current.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } speechRecRef.current = null; }
   }, []);
 
   // ── Live mode (Deepgram streaming) ──
@@ -468,11 +468,11 @@ function SpeakerView({ userToken }) {
       });
     }
     clearTimeout(translateTimerRef.current);
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* cleanup */ } processorRef.current = null; }
-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* cleanup */ } audioCtxRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* cleanup */ } }); streamRef.current = null; }
+    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } processorRef.current = null; }
+    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } audioCtxRef.current = null; }
+    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } }); streamRef.current = null; }
     if (wsRef.current) {
-      try { if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' })); wsRef.current.close(); } catch { /* cleanup */ }
+      try { if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' })); wsRef.current.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
       wsRef.current = null;
     }
     setRecording(false);
@@ -481,10 +481,10 @@ function SpeakerView({ userToken }) {
   // ── Cleanup ──
   useEffect(() => {
     return () => {
-      if (audioRef.current) try { audioRef.current.pause(); } catch { /* cleanup */ }
-      if (wsRef.current) try { wsRef.current.close(); } catch { /* cleanup */ }
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* cleanup */ } });
-      if (audioCtxRef.current?.state !== 'closed') try { audioCtxRef.current?.close(); } catch { /* cleanup */ }
+      if (audioRef.current) try { audioRef.current.pause(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
+      if (wsRef.current) try { wsRef.current.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
+      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
+      if (audioCtxRef.current?.state !== 'closed') try { audioCtxRef.current?.close(); } catch { /* si sta smontando: se era gia chiuso non cambia nulla */ }
       clearTimeout(translateTimerRef.current);
     };
   }, []);
