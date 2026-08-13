@@ -99,6 +99,10 @@ function HomeInner() {
   const [view, setView] = useState('loading');
   const [prefs, setPrefs] = useState({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
   const [convHistory, setConvHistory] = useState([]);
+  // b.123 — senza account l'archivio sul server non esiste (e non puo
+  // esistere: non c'e niente a cui legarlo). Va detto, altrimenti
+  // sembra che le conversazioni siano sparite.
+  const [archivioSoloLocale, setArchivioSoloLocale] = useState(false);
   const [currentConv, setCurrentConv] = useState(null);
   const [detailConversation, setDetailConversation] = useState(null);
   const [detailMessages, setDetailMessages] = useState([]);
@@ -623,10 +627,15 @@ function HomeInner() {
   async function loadHistory() {
     if (!prefs.name) return;
     try {
-      const listBody = { action:'list', userToken: auth.userTokenRef?.current || null };
-      if (!auth.userTokenRef?.current) listBody.userName = prefs.name;
+      // b.123 — il ripiego `userName` non c'e piu: chiedere l'archivio
+      // dando un nome era il buco. Senza account non si chiede niente al
+      // server, cosi non si fa una richiesta che sappiamo gia rifiutata.
+      // La cronologia dell'ospite resta sul dispositivo (chatStorage).
+      const token = auth.userTokenRef?.current || null;
+      if (!token) { setConvHistory([]); setArchivioSoloLocale(true); return; }
+      setArchivioSoloLocale(false);
       const res = await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(listBody) });
+        body: JSON.stringify({ action:'list', userToken: token }) });
       if (res.ok) { const { conversations } = await res.json(); setConvHistory(conversations || []); }
     } catch (e) { console.error('History error:', e); }
   }
@@ -675,18 +684,63 @@ function HomeInner() {
     setView('home');
   }
 
+
+  // ═══════════════════════════════════════════════════════════════
+  // UNA SOLA PORTA (b.123)
+  //
+  // Si entra in una stanza da tre parti: creandola, entrandoci da un
+  // codice o da un invito, e RIENTRANDOCI dopo esserne usciti a meta.
+  // Tutte e tre applicavano le stesse regole, ognuna per conto suo.
+  //
+  // A `rejoinRoom` ne mancava una: quella che conta.
+  //
+  //     handleJoinRoom  ->  cambiaModalitaSessione(room.diretta ? ...)
+  //     creaStanza      ->  cambiaModalitaSessione(roomConfig.diretta ? ...)
+  //     rejoinRoom      ->  (niente)
+  //
+  // Uscendo, `leaveRoomTemporary` riporta la sessione su 'translate'
+  // — giusto: le regole di una conversazione riservata non si ereditano.
+  // Ma rientrando nessuno le rimetteva. Quindi una stanza che nel
+  // database ha `diretta: true`, e che a schermo continua a dire "i
+  // messaggi viaggiano da telefono a telefono", ricominciava a mandare
+  // tutto ai nostri server.
+  //
+  // Non un errore di calcolo: una PROMESSA DISATTESA, e sull'unica cosa
+  // per cui qualcuno sceglierebbe la modalita Diretta.
+  //
+  // Il difetto non e la riga dimenticata. E che la stessa decisione
+  // fosse scritta in tre punti: prima o poi uno dei tre resta indietro,
+  // ed e sempre quello che si prova di meno. Qui c'e una volta sola.
+  // ═══════════════════════════════════════════════════════════════
+  const applicaPoliticaStanza = useCallback((room) => {
+    if (!room) return;
+
+    // PRIMA di ogni altra cosa: da questo istante il cancello davanti a
+    // fetch deve gia sapere quali rotte lasciar passare.
+    cambiaModalitaSessione(room.diretta ? 'direct' : 'translate');
+
+    roomInfoRef.current = room;
+    roomContextRef.current = {
+      contextId: room.context || 'general',
+      contextPrompt: room.contextPrompt || '',
+      description: room.description || '',
+    };
+
+    const hostTier = room.hostTier || 'FREE';
+    auth.roomTierOverrideRef.current = hostTier;
+    if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
+    else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
+    else { auth.setIsTrial(false); auth.setIsTopPro(false); }
+  }, [cambiaModalitaSessione, auth]);
+
   async function rejoinRoom(rid) {
     audio.unlockAudio();
     try {
       setStatus('...');
       const room = await roomPolling.handleJoinRoom(rid, prefs.name, myLang, prefs.avatar);
-      roomInfoRef.current = room;
-      roomContextRef.current = { contextId: room.context || 'general', contextPrompt: room.contextPrompt || '', description: room.description || '' };
-      const hostTier = room.hostTier || 'FREE';
-      auth.roomTierOverrideRef.current = hostTier;
-      if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
-      else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
-      else { auth.setIsTrial(false); auth.setIsTopPro(false); }
+      // b.123 — qui mancava la modalita Diretta: una stanza riservata
+      // tornava a passare dai server. Ora si entra da una porta sola.
+      applicaPoliticaStanza(room);
       // Remove from active rooms list since we're back in
       try {
         let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
@@ -868,11 +922,8 @@ function HomeInner() {
       // presenta come riservata. E la modalita si azzera uscendo (sotto,
       // in leaveRoomTemporary), perche una conversazione riservata non
       // deve lasciare in eredita le sue regole a quella dopo.
-      cambiaModalitaSessione(room?.diretta ? 'direct' : 'translate');
-      // Immediately sync roomInfoRef (don't wait for useEffect re-render)
-      // This ensures getTargetLangInfo() sees the partner's language right away
-      roomInfoRef.current = room;
-      roomContextRef.current = { contextId: room.context || 'general', contextPrompt: room.contextPrompt || '', description: room.description || '' };
+      // b.123 — la stessa politica di rejoin e della creazione: una sola.
+      applicaPoliticaStanza(room);
       const hostTier = room.hostTier || 'FREE';
       auth.roomTierOverrideRef.current = hostTier;
       if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
@@ -1120,7 +1171,7 @@ function HomeInner() {
   if (view === 'history') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
-      <HistoryView convHistory={convHistory} viewConversation={viewConversation}
+      <HistoryView convHistory={convHistory} archivioSoloLocale={archivioSoloLocale} viewConversation={viewConversation}
         verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
       </Suspense>
       {bottomNav}
@@ -1200,15 +1251,15 @@ function HomeInner() {
               auth.isTrial, auth.isTopPro, auth.userAccount,
               roomConfig.diretta
             );
-            roomInfoRef.current = room;
-
-            // ── b.113 · la scelta dell'utente diventa effettiva QUI ──
-            // Prima della riga sotto, la modalita Diretta era un
-            // meccanismo perfettamente funzionante che nessuno poteva
-            // accendere. Si imposta prima di qualunque altra cosa,
-            // perche da questo istante in poi il cancello davanti a
-            // fetch deve gia sapere che rotte lasciar passare.
-            cambiaModalitaSessione(roomConfig.diretta ? 'direct' : 'translate');
+            // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
+            // Prima di b.113 la modalita Diretta era un meccanismo
+            // perfettamente funzionante che nessuno poteva accendere.
+            // Da b.123 la riga non e piu qui ma dentro la politica
+            // unica, cosi non puo restare indietro in uno dei tre
+            // ingressi (a rejoinRoom era gia successo).
+            // Si legge `diretta` dalla stanza tornata dal server, con
+            // ripiego sulla scelta locale se il server non la rimanda.
+            applicaPoliticaStanza({ ...room, diretta: room?.diretta ?? roomConfig.diretta });
             roomInfoRef.current = { ...room, diretta: !!roomConfig.diretta };
 
             // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──

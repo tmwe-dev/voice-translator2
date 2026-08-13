@@ -98,34 +98,6 @@ async function handlePost(req) {
       });
     }
 
-    // ── Smart Provider Routing: check if Asia provider is better for this pair ──
-    const providerRoute = routeProvider(sourceLang, targetLang);
-    let useAsiaProvider = false;
-
-    if (providerRoute.provider === 'asia' && providerRoute.confidence >= 0.85) {
-      // Try Qwen-MT for CJK pairs — faster and cheaper
-      try {
-        const { translateAsia } = await import('../../lib/translateAsia.js');
-        const asiaResult = await translateAsia(text, sourceLang, targetLang, {});
-        if (asiaResult?.translated) {
-          const asiaConfidence = calcConfidence(text, asiaResult.translated, sourceLang, targetLang);
-          const asiaValidation = validateOutput(text, asiaResult.translated, targetLang);
-          if (asiaValidation.valid) {
-            return NextResponse.json({
-              translated: asiaResult.translated,
-              confidence: asiaConfidence,
-              cost: asiaResult.cost || 0,
-              costEurCents: 0,
-              provider: asiaResult.provider || 'qwen',
-              cached: false
-            });
-          }
-        }
-      } catch (asiaErr) {
-        log.warn('Asia provider failed, falling back to global:', asiaErr.message);
-      }
-    }
-
     // Resolve model selection
     const modelInfo = MODEL_MAP[aiModel] || MODEL_MAP['gpt-4o-mini'];
     const authProvider = modelInfo.provider === 'openai' ? 'openai'
@@ -141,6 +113,48 @@ async function handlePost(req) {
       minCredits: MIN_CREDITS.TRANSLATE,
       skipCreditCheck: !!isReview,
     });
+
+    // ── b.123 · CHI PAGA SI DECIDE PRIMA DI SCEGLIERE IL FORNITORE ──
+    //
+    // Questo blocco stava PRIMA di resolveAuth e finiva con un `return`.
+    // Quindi per le coppie instradate in Asia (cinese, giapponese,
+    // coreano) la funzione usciva senza mai passare da:
+    //
+    //   autenticazione · controllo credito · addebito wallet ·
+    //   costo della stanza · spesa giornaliera
+    //
+    // E dichiarava `costEurCents: 0`, cosi nemmeno il monitoraggio a
+    // valle poteva accorgersene. Il fornitore ci fatturava, e da noi
+    // non risultava niente: non per gli anonimi — per TUTTI, anche per
+    // chi aveva pagato e si aspettava che i minuti scalassero.
+    //
+    // Nessun test lo aveva toccato: ogni pezzo, da solo, e corretto. E
+    // l'ORDINE fra due cose giuste a produrre il percorso sbagliato.
+    // (E io l'avevo mancato provando solo it→en, che passa dal Global.)
+    //
+    // Ora l'autorizzazione e sopra, e il risultato di Asia non esce piu
+    // dalla porta di servizio: prosegue nello stesso percorso del
+    // Global, dove la contabilita gia c'e ed e sola.
+    const providerRoute = routeProvider(sourceLang, targetLang);
+    let risultatoAsia = null;
+
+    if (providerRoute.provider === 'asia' && providerRoute.confidence >= 0.85) {
+      // Qwen-MT per le coppie CJK: piu veloce e meno caro.
+      try {
+        const { translateAsia } = await import('../../lib/translateAsia.js');
+        const asiaResult = await translateAsia(text, sourceLang, targetLang, {});
+        if (asiaResult?.translated && validateOutput(text, asiaResult.translated, targetLang).valid) {
+          risultatoAsia = {
+            translated: asiaResult.translated,
+            provider: asiaResult.provider || 'qwen',
+            cost: asiaResult.cost || 0,
+          };
+        }
+      } catch (asiaErr) {
+        log.warn('Asia provider failed, falling back to global:', asiaErr.message);
+      }
+    }
+
 
     // Build system prompt using extracted module
     let systemPrompt = buildSystemPrompt({
@@ -182,7 +196,16 @@ async function handlePost(req) {
       fallbacks.push({ provider: 'anthropic', model: 'claude-3-haiku-20240307', apiKey: process.env.ANTHROPIC_API_KEY });
     }
 
-    let { translated, usage, wasFallback } = await callLLMWithFallback(primaryOpts, fallbacks, 10000);
+    // Se Asia ha gia tradotto, il modello non si chiama: si sarebbe
+    // pagata due volte la stessa frase.
+    let translated, usage, wasFallback;
+    if (risultatoAsia) {
+      translated = risultatoAsia.translated;
+      usage = null;
+      wasFallback = false;
+    } else {
+      ({ translated, usage, wasFallback } = await callLLMWithFallback(primaryOpts, fallbacks, 10000));
+    }
 
     // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
     const validation = validateOutput(text, translated, targetLang);
@@ -242,7 +265,11 @@ async function handlePost(req) {
     }
 
     // Calculate cost (approximate — uses OpenAI pricing as baseline)
-    const gptCost = calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 });
+    // Asia dichiara il proprio costo e non produce `usage`: senza questo
+    // il conto risulterebbe zero e resterebbe solo l'addebito minimo.
+    const gptCost = risultatoAsia
+      ? risultatoAsia.cost
+      : calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 });
     const ttsCost = calcTtsCost(translated.length);
     const msgCostUsd = gptCost + ttsCost;
     const msgCostEurCents = usdToEurCents(msgCostUsd);

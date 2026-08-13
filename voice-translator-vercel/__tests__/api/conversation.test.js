@@ -130,11 +130,22 @@ describe('POST /api/conversation', () => {
       expect(mockGetUserConversations).toHaveBeenCalledWith('Luca');
     });
 
-    it('lists conversations with name fallback', async () => {
+    // b.123 — questo test affermava la vulnerabilita: bastava dichiarare
+    // `userName: 'Luca'` per ricevere l'elenco delle conversazioni di
+    // Luca, e da li i loro identificativi. Ora afferma il contrario.
+    it('rifiuta l\'elenco a chi dichiara solo un nome', async () => {
       mockGetUserConversations.mockResolvedValue([]);
       const res = await POST(makeReq({
         action: 'list', userName: 'Luca'
       }));
+      expect(res.status).toBe(401);
+      expect(mockGetUserConversations, 'non si deve nemmeno leggere').not.toHaveBeenCalled();
+    });
+
+    it('e lo concede a chi ha una sessione verificata', async () => {
+      mockGetSession.mockResolvedValue({ email: 'luca@test.com', name: 'Luca' });
+      mockGetUserConversations.mockResolvedValue([]);
+      const res = await POST(makeReq({ action: 'list', userToken: 'valid-token' }));
       expect(res.status).toBe(200);
       expect(mockGetUserConversations).toHaveBeenCalledWith('Luca');
     });
@@ -163,12 +174,25 @@ describe('GET /api/conversation', () => {
     expect(data.conversation.id).toBe('conv1');
   });
 
-  it('returns conversation with room session token', async () => {
+  // b.123 — il gettone di stanza vale SOLO per la sua stanza.
+  // Il mock qui sopra emette una sessione per la stanza 'ABC': prima
+  // apriva anche la conversazione 'conv1', che non c'entrava niente.
+  // Era esattamente il buco: un gettone si ottiene creando una stanza
+  // qualsiasi e scegliendosi il nome che si vuole.
+  it('apre la conversazione della PROPRIA stanza', async () => {
+    mockGetConversation.mockResolvedValue({
+      id: 'ABC', members: [{ name: 'Luca' }, { name: 'Guest' }]
+    });
+    const res = await GET(makeGetReq({ id: 'ABC' }, { 'x-room-session': 'valid-rst' }));
+    expect(res.status).toBe(200);
+  });
+
+  it('ma non quella di un\'altra stanza, nemmeno col nome giusto', async () => {
     mockGetConversation.mockResolvedValue({
       id: 'conv1', members: [{ name: 'Luca' }, { name: 'Guest' }]
     });
     const res = await GET(makeGetReq({ id: 'conv1' }, { 'x-room-session': 'valid-rst' }));
-    expect(res.status).toBe(200);
+    expect(res.status, 'sessione per ABC, conversazione conv1').toBe(401);
   });
 
   it('returns 403 for non-participant (verified user)', async () => {

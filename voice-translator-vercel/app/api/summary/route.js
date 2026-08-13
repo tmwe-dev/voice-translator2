@@ -46,6 +46,37 @@ async function handlePost(req) {
     const conv = await getConversation(convId);
     if (!conv) return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
 
+    // ── b.123 · AVERE UN ACCOUNT NON VUOL DIRE ESSERCI STATO ──
+    //
+    // Qui c'era un controllo solo: "sei autenticato?". Superato quello,
+    // si prendeva la conversazione e si costruiva la TRASCRIZIONE
+    // INTEGRALE da mandare al modello. Mancava la seconda domanda, che
+    // e quella che conta: "sei stato in QUESTA conversazione?".
+    //
+    // Da solo sarebbe stato grave a meta — bisogna indovinare un
+    // identificativo. Ma insieme al buco di /api/conversation, dove
+    // bastava un nome per farsi dare l'elenco degli identificativi, non
+    // c'era piu niente da indovinare: si prendeva la lista di Mario e
+    // si chiedeva il riassunto delle sue conversazioni, una per una.
+    //
+    // Due controlli deboli in due file diversi, ciascuno con la sua
+    // buona ragione, che messi in fila diventano una porta aperta.
+    // E il motivo per cui i test verdi su ogni singolo pezzo non
+    // bastano: nessuno di loro guarda la catena.
+    //
+    // Il riassunto e anche l'unica risposta che RIVELEREBBE il contenuto
+    // in forma leggibile — quindi il controllo va qui, prima di leggere
+    // anche un solo messaggio.
+    const nomeUtente = session.name || session.email;
+    const eraPresente = conv.members?.some((m) => m.name === nomeUtente);
+    if (!eraPresente) {
+      log.warn('riassunto negato: utente estraneo alla conversazione');
+      return NextResponse.json(
+        { error: 'Non hai partecipato a questa conversazione' },
+        { status: 403 }
+      );
+    }
+
     // If summary already exists, return it (no cost)
     if (conv.summary) {
       return NextResponse.json({ summary: conv.summary });

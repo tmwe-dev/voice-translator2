@@ -15,7 +15,7 @@ import { useApp } from '../contexts/AppContext.js';
 // filter chips, conversation list with avatars
 // ═══════════════════════════════════════════════
 
-function HistoryView({ convHistory, viewConversation, verifiedName }) {
+function HistoryView({ convHistory, viewConversation, verifiedName, archivioSoloLocale = false }) {
   const { L, S, prefs, setView, status, theme, setTheme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
@@ -436,10 +436,12 @@ function HistoryView({ convHistory, viewConversation, verifiedName }) {
         {convHistory.length === 0 ? (
           <EmptyState
             icon=""
-            title="Nessuna conversazione"
-            desc="Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!"
-            actionLabel="Inizia a parlare"
-            onAction={() => setView('home')}
+            title={archivioSoloLocale ? 'Archivio solo su questo telefono' : 'Nessuna conversazione'}
+            desc={archivioSoloLocale
+              ? 'Senza un account le conversazioni non vengono conservate sui nostri server: restano su questo dispositivo. Accedi per ritrovarle ovunque.'
+              : 'Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!'}
+            actionLabel={archivioSoloLocale ? 'Accedi' : 'Inizia a parlare'}
+            onAction={() => setView(archivioSoloLocale ? 'profile' : 'home')}
             S={{ colors: C }}
           />
         ) : filtered.length === 0 ? (

@@ -44,16 +44,24 @@ describe('la scelta esiste, e spenta di suo', () => {
 });
 
 describe('la scelta diventa effettiva', () => {
+  // b.123 — la riga non e piu qui: e dentro `applicaPoliticaStanza`,
+  // la porta unica da cui passano tutti e tre gli ingressi. Prima era
+  // scritta in tre punti e a `rejoinRoom` mancava: rientrando, una
+  // stanza Diretta ricominciava a passare dai server.
   it('creare una Stanza Diretta accende la modalita', () => {
     const p = senzaCommenti(app('page.js'));
-    expect(p).toMatch(/cambiaModalitaSessione\(roomConfig\.diretta \? 'direct' : 'translate'\)/);
+    expect(p, 'la creazione applica la politica unica')
+      .toMatch(/applicaPoliticaStanza\(\{ \.\.\.room, diretta: room\?\.diretta \?\? roomConfig\.diretta \}\)/);
+    expect(p, 'e la politica legge diretta dalla stanza')
+      .toMatch(/cambiaModalitaSessione\(room\.diretta \? 'direct' : 'translate'\)/);
   });
 
   it('si accende PRIMA di qualunque altra cosa', () => {
     // Da quell'istante il cancello davanti a fetch deve gia sapere
-    // quali rotte lasciar passare.
-    const p = app('page.js');
-    const accende = p.indexOf("cambiaModalitaSessione(roomConfig.diretta");
+    // quali rotte lasciar passare. Si guarda il CODICE, non i commenti:
+    // la vecchia forma della riga e citata qui sopra per spiegarla.
+    const p = senzaCommenti(app('page.js'));
+    const accende = p.indexOf("applicaPoliticaStanza({ ...room");
     const pubblica = p.indexOf("await fetch('/api/mondo'");
     expect(accende).toBeGreaterThan(0);
     expect(accende).toBeLessThan(pubblica);
@@ -77,7 +85,11 @@ describe('chi entra da un invito la eredita', () => {
 
   it('entrando si legge dalla stanza, non si indovina', () => {
     const p = senzaCommenti(app('page.js'));
-    expect(p).toMatch(/cambiaModalitaSessione\(room\?\.diretta \? 'direct' : 'translate'\)/);
+    // b.123 — vale per l'ingresso da invito E per il rientro: prima
+    // erano due percorsi diversi e solo uno leggeva `diretta`.
+    expect(p).toMatch(/cambiaModalitaSessione\(room\.diretta \? 'direct' : 'translate'\)/);
+    const i = p.indexOf('async function rejoinRoom');
+    expect(p.slice(i, i + 700), 'anche rientrando').toMatch(/applicaPoliticaStanza\(room\)/);
   });
 });
 

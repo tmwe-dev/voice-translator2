@@ -1,19 +1,53 @@
 'use client';
 import { useEffect } from 'react';
+import { fetchConRiprova } from '../lib/riprova.js';
+import { toast } from '../lib/avvisi.js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('voci-premium');
 
 /**
  * useElevenLabsSync — Auto-loads ElevenLabs voices and syncs selection to localStorage.
  */
 export default function useElevenLabsSync(auth) {
-  // Auto-load voices when EL access is available
+  // ── Le voci premium (b.122) ──
+  //
+  // Prima: una sola fetch, e se falliva `console.warn` e finita li.
+  // L'effetto non ripartiva perche la sua unica dipendenza
+  // (`canUseElevenLabs`) non cambiava piu. Un singhiozzo di rete al
+  // momento sbagliato voleva dire niente voci premium per tutta la
+  // sessione, senza che comparisse niente da nessuna parte.
+  //
+  // Era questo il motivo per cui "a volte le voci premium non ci sono".
   useEffect(() => {
-    if (auth.canUseElevenLabs && auth.elevenLabsVoices.length === 0) {
-      const token = auth.userTokenRef.current || '';
-      fetch('/api/tts-elevenlabs?action=voices', { headers: { 'Authorization': `Bearer ${token}` } })
-        .then(r => r.json())
-        .then(data => { if (data.voices) auth.setElevenLabsVoices(data.voices); })
-        .catch(e => console.warn('[useElevenLabsSync] fetch voices failed:', e?.message || e));
-    }
+    if (!auth.canUseElevenLabs || auth.elevenLabsVoices.length > 0) return;
+
+    let annullato = false;
+    const token = auth.userTokenRef.current || '';
+
+    fetchConRiprova('/api/tts-elevenlabs?action=voices',
+      { headers: { 'Authorization': `Bearer ${token}` } },
+      {
+        volte: 3,
+        // Se dopo tre tentativi non ce l'ha fatta, l'utente lo deve
+        // sapere: altrimenti apre l'elenco, lo trova vuoto, e pensa di
+        // non aver diritto alle voci premium.
+        suRinuncia: (errore) => {
+          if (annullato) return;
+          log.warn('voci premium non caricate:', errore?.message);
+          toast.error('Non riesco a caricare le voci premium. Riprova fra poco.');
+        },
+      })
+      .then((r) => r.json())
+      .then((data) => {
+        if (annullato || !data.voices) return;
+        auth.setElevenLabsVoices(data.voices);
+      })
+      .catch(() => { /* gia detto all'utente da suRinuncia: qui si tace per non dirlo due volte */ });
+
+    // Se si cambia schermata mentre i tentativi sono in corso, l'avviso
+    // non deve comparire su una pagina che non c'entra piu.
+    return () => { annullato = true; };
   }, [auth.canUseElevenLabs]);
 
   // Load saved voice from localStorage
@@ -21,13 +55,24 @@ export default function useElevenLabsSync(auth) {
     try {
       const savedVoice = localStorage.getItem('vt-elvoice');
       if (savedVoice) auth.setSelectedELVoice(savedVoice);
-    } catch (e) { console.warn('[useElevenLabsSync] localStorage error:', e?.message); }
+    } catch (e) {
+      // In navigazione privata localStorage solleva: la voce salvata
+      // non si recupera, ma non e un guasto da mostrare — si riparte
+      // dalla predefinita e la sessione funziona lo stesso.
+      log.warn('voce salvata non recuperabile:', e?.message);
+    }
   }, []);
 
   // Persist voice selection
   useEffect(() => {
     if (auth.selectedELVoice) {
-      try { localStorage.setItem('vt-elvoice', auth.selectedELVoice); } catch (e) { console.warn('[useElevenLabsSync] localStorage error:', e?.message); }
+      try {
+        localStorage.setItem('vt-elvoice', auth.selectedELVoice);
+      } catch (e) {
+        // Idem: la scelta vale per questa sessione e non sopravvive al
+        // riavvio. Avvisare a schermo per questo sarebbe rumore.
+        log.warn('voce non memorizzata:', e?.message);
+      }
     }
   }, [auth.selectedELVoice]);
 
