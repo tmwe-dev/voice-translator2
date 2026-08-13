@@ -45,7 +45,9 @@ const nextConfig = {
           // ── Permissions policy: only allow camera/mic for self ──
           {
             key: 'Permissions-Policy',
-            value: 'camera=(self), microphone=(self), geolocation=(), payment=(self)',
+            // b.124 — vedi middleware.js: TaxiTalk usa la geolocalizzazione,
+            // e qui era vietata. Le due configurazioni devono concordare.
+            value: 'camera=(self), microphone=(self), geolocation=(self), payment=(self)',
           },
           // ── HSTS: force HTTPS ──
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },

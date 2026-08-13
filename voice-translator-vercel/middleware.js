@@ -36,7 +36,18 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
   'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=self, microphone=self, geolocation=()',
+  // b.124 — `geolocation=()` vieta la geolocalizzazione a TUTTI, compresi
+  // noi. Ed e la stessa applicazione che poi chiama:
+  //   SpeakerView.js:139   navigator.geolocation.getCurrentPosition
+  //   TaxiDriverView.js:160 navigator.geolocation.getCurrentPosition
+  //   TaxiMap.js:79        navigator.geolocation.watchPosition
+  // Il browser rifiutava senza mai mostrare la richiesta di permesso:
+  // per l'utente TaxiTalk semplicemente non trovava la posizione, e non
+  // c'era modo di capire perche.
+  // `self` significa: puo chiederla questa origine, e nessun altro
+  // — nessun riquadro incorporato. Il permesso vero lo da comunque
+  // l'utente, con la finestra del browser.
+  'Permissions-Policy': 'camera=self, microphone=self, geolocation=self',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
   'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com https://plausible.io; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://api.stripe.com https://*.upstash.io https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://tiles.openfreemap.org; frame-src https://js.stripe.com https://accounts.google.com https://www.openstreetmap.org; media-src 'self' blob: data:; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
   // ── Cross-Origin isolation (allow SharedArrayBuffer for audio worklets) ──
