@@ -18,6 +18,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import italiano from '../app/lib/locales/it.js';
+import { modalitaDiStanza, eDiretta } from '../app/lib/decisioni.js';
 
 const app = (p) => fs.readFileSync(path.join(__dirname, '..', 'app', p), 'utf8');
 const senzaCommenti = (s) =>
@@ -27,19 +29,26 @@ describe('la scelta esiste, e spenta di suo', () => {
   it('c\'e un interruttore al momento di creare la stanza', () => {
     const c = app('components/CreateRoomSheet.js');
     expect(c).toMatch(/const \[diretta, setDiretta\] = useState\(false\)/);
-    expect(c).toMatch(/Stanza Diretta/);
+    expect(senzaCommenti(c)).toContain("L('directRoomTitle')");
+    expect(italiano.directRoomTitle).toContain('Stanza Diretta');
   });
 
   it('dice per intero cosa si spegne, non in fondo in piccolo', () => {
     // Una promessa di riservatezza che nasconde il suo prezzo e una
     // promessa che si ritorce contro. Qui il prezzo e la traduzione,
     // cioe il motivo per cui quasi tutti aprono questo programma.
-    const c = app('components/CreateRoomSheet.js');
+    // b.139 — il testo non e piu nel componente: e nei 15 pacchetti lingua,
+    // e nel JSX c'e la chiave. Si prova che la chiave sia usata E che il
+    // pacchetto italiano dica ancora ogni singola cosa che si perde: una
+    // guardia che smette di leggere il testo vero non guarda piu niente.
+    const c = senzaCommenti(app('components/CreateRoomSheet.js'));
+    expect(c, 'la scheda deve mostrare il prezzo').toContain("L('directRoomCostBody')");
+    expect(c, 'e anche cosa resta').toContain("L('directRoomCostBody2')");
     for (const cosa of ['traduzione', 'trascrizione', 'lettura ad alta voce', 'archivio']) {
-      expect(c, `deve dire che si perde: ${cosa}`).toMatch(new RegExp(cosa, 'i'));
+      expect(italiano.directRoomCostBody, `deve dire che si perde: ${cosa}`).toMatch(new RegExp(cosa, 'i'));
     }
-    expect(c, 'e anche cosa RESTA, altrimenti sembra che si spenga tutto')
-      .toMatch(/Resta la chat scritta/);
+    expect(italiano.directRoomCostBody2, 'e anche cosa RESTA, altrimenti sembra che si spenga tutto')
+      .toContain('Resta la chat scritta');
   });
 });
 
@@ -52,8 +61,13 @@ describe('la scelta diventa effettiva', () => {
     const p = senzaCommenti(app('page.js'));
     expect(p, 'la creazione applica la politica unica')
       .toMatch(/applicaPoliticaStanza\(\{ \.\.\.room, diretta: room\?\.diretta \?\? roomConfig\.diretta \}\)/);
+    // b.139 — il ternario e diventato `modalitaDiStanza()`, la stessa
+    // funzione che usano il cancello e le rotte: la traduzione da stanza a
+    // modalita si fa in un posto solo.
     expect(p, 'e la politica legge diretta dalla stanza')
-      .toMatch(/cambiaModalitaSessione\(room\.diretta \? 'direct' : 'translate'\)/);
+      .toContain('cambiaModalitaSessione(modalitaDiStanza(room))');
+    expect(modalitaDiStanza({ diretta: true })).toBe('direct');
+    expect(modalitaDiStanza({ diretta: false })).toBe('translate');
   });
 
   it('si accende PRIMA di qualunque altra cosa', () => {
@@ -87,7 +101,7 @@ describe('chi entra da un invito la eredita', () => {
     const p = senzaCommenti(app('page.js'));
     // b.123 — vale per l'ingresso da invito E per il rientro: prima
     // erano due percorsi diversi e solo uno leggeva `diretta`.
-    expect(p).toMatch(/cambiaModalitaSessione\(room\.diretta \? 'direct' : 'translate'\)/);
+    expect(p).toContain('cambiaModalitaSessione(modalitaDiStanza(room))');
     const i = p.indexOf('async function rejoinRoom');
     expect(p.slice(i, i + 700), 'anche rientrando').toMatch(/applicaPoliticaStanza\(room\)/);
   });
@@ -114,9 +128,16 @@ describe('dentro la stanza si vede sempre', () => {
     // Se la traduzione non funziona e non si capisce perche, si pensa a
     // un guasto. Qui c'e scritto che e una scelta.
     const r = app('components/RoomView.js');
-    expect(r).toMatch(/roomInfo\?\.diretta &&/);
-    expect(r).toMatch(/Stanza Diretta\./);
-    expect(r, 'ripete cosa manca, non solo cosa si guadagna')
-      .toMatch(/non c&apos;è traduzione/);
+    // b.139 — `roomInfo?.diretta` e diventato `eDiretta(roomInfo)`: la
+    // fascia si accende dalla stessa regola che usa il server.
+    expect(r).toContain('eDiretta(roomInfo)');
+    expect(eDiretta({ diretta: true })).toBe(true);
+    // b.139 — la fascia c'e ancora ma parla la lingua di chi guarda: nel
+    // componente ci sono le chiavi, il testo sta nei pacchetti.
+    expect(senzaCommenti(r)).toContain("L('directRoomBannerTitle')");
+    expect(senzaCommenti(r)).toContain("L('directRoomBannerBody')");
+    expect(italiano.directRoomBannerTitle).toContain('Stanza Diretta');
+    expect(italiano.directRoomBannerBody, 'ripete cosa manca, non solo cosa si guadagna')
+      .toMatch(/non c.è traduzione/);
   });
 });

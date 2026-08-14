@@ -3,15 +3,15 @@ import { redis } from '../../lib/redis.js';
 import { getClientIP } from '../../lib/validate.js';
 import { createLogger } from '../../lib/logger.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
+import { normalizzaTipoStanza, vaInVetrina, richiedeApprovazione, normalizzaCapienza } from '../../lib/decisioni.js';
 
 const log = createLogger('mondo');
 
 const MONDO_KEY = 'mondo:rooms';
 const MONDO_TTL = 3600; // 1 hour
 
-// I quattro tipi che il modulo di creazione propone davvero.
-// 'private' non finisce mai in vetrina: ci si arriva solo con l'invito.
-const ROOM_TYPES = ['public', 'protected', 'private', 'temporary'];
+// b.139-bis — l'elenco dei tipi stava qui E in CreateRoomSheet.js, e le
+// due copie non si conoscevano. Ora sta in decisioni.js: vedi TIPI_STANZA.
 
 /**
  * GET /api/mondo — List public rooms
@@ -69,8 +69,10 @@ async function handlePost(req) {
     }
 
     // Una stanza privata si raggiunge solo con l'invito: non va in vetrina.
-    const tipo = ROOM_TYPES.includes(roomType) ? roomType : 'public';
-    if (tipo === 'private') {
+    // Il predicato e quello di decisioni.js, lo stesso che consulta page.js
+    // prima di chiamare: la porta e qui, ma la regola e una sola.
+    const tipo = normalizzaTipoStanza(roomType);
+    if (!vaInVetrina(tipo)) {
       return NextResponse.json({ ok: true, pubblicata: false, motivo: 'stanza privata' });
     }
 
@@ -88,12 +90,12 @@ async function handlePost(req) {
       roomType: tipo,
       // 'protected' = si bussa e l'host apre. L'elenco lo deve dire prima
       // che uno tocchi, altrimenti sembra che la stanza non risponda.
-      suApprovazione: tipo === 'protected',
+      suApprovazione: richiedeApprovazione(tipo),
       // b.111 — stanza a litigio libero. Nell'elenco si DEVE vedere
       // prima di entrare: e il motivo per cui uno sceglie di entrarci,
       // o di stare alla larga.
       hot: !!hot,
-      maxPartecipanti: Math.min(50, Math.max(2, Number(maxPartecipanti) || 20)),
+      maxPartecipanti: normalizzaCapienza(maxPartecipanti),
       memberCount: members?.length || 1,
       createdAt: Date.now(),
     };

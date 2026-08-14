@@ -41,7 +41,15 @@
 // Chi aggiungera una rotta domani sara protetto senza saperlo.
 // ═══════════════════════════════════════════════════════════════
 
-import { BLOCKED_IN_DIRECT } from './sessionGuard.js';
+// b.139 — prima si importava l'elenco e si riscriveva qui il confronto
+// (`p === r || p.startsWith(...)`), e la stessa riga non esisteva da
+// nessun'altra parte: il server non poteva usarla nemmeno volendo.
+// Ora la regola, l'elenco e la normalizzazione vengono da un posto solo.
+import {
+  rottaVietataInDiretta,
+  normalizzaModalita,
+  eModalitaDiretta,
+} from './decisioni.js';
 
 let modaleCorrente = 'translate';
 let cancelloMontato = false;
@@ -53,7 +61,7 @@ export function modalitaCorrente() {
 
 /** Cambia modalita. Da chiamare quando si entra in una conversazione. */
 export function impostaModalita(modo) {
-  modaleCorrente = modo === 'direct' ? 'direct' : 'translate';
+  modaleCorrente = normalizzaModalita(modo);
   return modaleCorrente;
 }
 
@@ -102,9 +110,8 @@ export function montaCancelloDiretta() {
     if (!eNostra(url)) return fetchOriginale(risorsa, opzioni);
 
     const modo = modaleCorrente;
-    if (modo === 'direct') {
-      const p = percorso(url);
-      if (BLOCKED_IN_DIRECT.some((r) => p === r || p.startsWith(`${r}/`))) {
+    if (eModalitaDiretta(modo)) {
+      if (rottaVietataInDiretta(percorso(url))) {
         // Si risponde come avrebbe risposto il server, cosi chi chiama
         // non ha bisogno di sapere che il blocco e avvenuto prima.
         return Promise.resolve(new Response(

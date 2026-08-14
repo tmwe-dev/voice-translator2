@@ -3,7 +3,7 @@ import { useApp } from '../contexts/AppContext.js';
 
 export default function SummaryView({ currentConv, summaryLoading, shareSummary,
   setCurrentConv, verifiedName }) {
-  const { L, S, prefs, setView, status, theme, setTheme } = useApp();
+  const { L, S, prefs, setView, status, theme, setTheme, uiLang } = useApp();
   if (!currentConv) return null;
   const s = currentConv.summary;
   const isHost = currentConv.host === (verifiedName || prefs.name);
@@ -14,18 +14,18 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
       <div style={S.scrollCenter}>
         <div style={S.topBar}>
           <button style={S.backBtn} onClick={() => { setCurrentConv(null); setView('history'); }}>{'←'}</button>
-          <span style={{fontWeight:600, fontSize:17}}>Report</span>
+          <span style={{fontWeight:600, fontSize:17}}>{L('reportWord')}</span>
         </div>
 
         {summaryLoading ? (
           <div style={{textAlign:'center', marginTop:40}}>
             <div style={{fontSize:24, marginBottom:8}}>...</div>
-            <div style={{color:colors.textMuted, fontSize:13}}>AI Report...</div>
+            <div style={{color:colors.textMuted, fontSize:13}}>{L('aiReportLoading')}</div>
           </div>
         ) : s ? (
           <div style={{...S.card, width:'100%', maxWidth:380}}>
             <div style={{fontSize:18, fontWeight:700, marginBottom:8, color:colors.textPrimary,
-              lineHeight:1.3}}>{s.title || 'Report'}</div>
+              lineHeight:1.3}}>{s.title || L('reportWord')}</div>
 
             {s.topics?.length > 0 && (
               <div style={{display:'flex', gap:5, flexWrap:'wrap', marginBottom:12}}>
@@ -49,7 +49,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
 
             {s.keyPoints?.length > 0 && (
               <div style={{marginBottom:16}}>
-                <div style={{...S.label, marginBottom:8}}>Key Points</div>
+                <div style={{...S.label, marginBottom:8}}>{L('keyPointsLabel')}</div>
                 {s.keyPoints.map((p,i) => (
                   <div key={i} style={{display:'flex', gap:8, marginBottom:6, fontSize:13,
                     color:colors.textSecondary, lineHeight:1.5}}>
@@ -81,7 +81,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
               {currentConv.members?.map(m => m.name).join(' & ')} - {currentConv.msgCount} {L('messages')}
             </div>
             <div style={{fontSize:11, color:colors.textMuted}}>
-              {currentConv.created ? new Date(currentConv.created).toLocaleString('it-IT') : ''}
+              {currentConv.created ? new Date(currentConv.created).toLocaleString(uiLang) : ''}
             </div>
           </div>
         )}

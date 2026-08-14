@@ -71,7 +71,7 @@ const RoomHeader = memo(function RoomHeader({
           }}
           title={L('exitWord')}>
           <IconBack size={16}/>
-          <span style={{fontSize: 11, fontWeight: 600}}>{L('exit') || 'Esci'}</span>
+          <span style={{fontSize: 11, fontWeight: 600}}>{L('exit')}</span>
         </button>
 
         {/* ── Center: Language flags ── */}
@@ -205,14 +205,14 @@ const RoomHeader = memo(function RoomHeader({
                       background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
                       fontSize:13, fontWeight:500, textAlign:'left'}}>
                     <span style={{fontSize:15, width:24, textAlign:'center'}}><IconBrainAI size={15}/></span>
-                    <span>AI Actions</span>
+                    <span>{L('aiActionsTitle')}</span>
                   </button>
                 )}
                 {/* Audio Ducking */}
                 <div style={{padding:'8px 12px'}}>
                   <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
                     <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconMusic size={15}/>}</span>
-                    <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>Audio Ducking</span>
+                    <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>{L('audioDuckingLabel')}</span>
                     <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
                       {Math.round((duckingLevel || 0.2) * 100)}%
                     </span>

@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { sanitizeRoomId } from '../../lib/validate.js';
-import { verifyRoomSession } from '../../lib/store.js';
+import { verifyRoomSession, getRoom } from '../../lib/store.js';
 import { createLogger } from '../../lib/logger.js';
 import { leggiRegole } from '../../lib/moderazione.js';
 import {
   reagisci, leggiConte, leggiMie, contaRisposte, salvaMessaggio, storico, TIPI,
 } from '../../lib/reazioni.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
+import { siConservanoIMessaggi } from '../../lib/decisioni.js';
 
 const log = createLogger('reazioni');
 
@@ -29,20 +30,51 @@ async function chiSei(token, roomId) {
   return s;
 }
 
-// Una stanza e "Community" se e stata pubblicata in vetrina: e li che si
-// e accettato di rinunciare alla cifratura in cambio dello storico.
-// Le regole esistono solo per le stanze passate da /api/mondo. Una chat
-// privata non ne ha, e quindi non conserva niente: e il discrimine.
-async function eCommunity(roomId) {
-  const regole = await leggiRegole(roomId);
-  return !!regole?.hostNome;
+// ── b.139 · QUI STAVA LA SECONDA COPIA DELLA REGOLA, E DAVA UN'ALTRA
+//            RISPOSTA ──
+//
+// C'era una `eCommunity(roomId)` che guardava soltanto se la stanza fosse
+// pubblicata in vetrina, e NON guardava `diretta` per niente. Quindi:
+//
+//   stanza Diretta + tipo "Pubblico" (che e il valore predefinito nel
+//   modulo di creazione, e page.js pubblica in vetrina tutto cio che non
+//   e privato)
+//     → il client dice: non si conserva, /api/reazioni e vietata
+//     → questo file diceva: si conserva, e una stanza Community
+//
+// Due risposte opposte alla stessa domanda, sullo stesso caso, sulla cosa
+// piu delicata che questo programma promette. A tenerle d'accordo era
+// solo l'intestazione `x-session-mode`, che manda il client: la promessa
+// di riservatezza poggiava sul buon comportamento di chi la richiede.
+//
+// Ora la domanda si fa una volta sola, a `siConservanoIMessaggi`, e le si
+// danno i due dati del SERVER: le regole della stanza e la stanza.
+async function siConserva(roomId) {
+  const [regole, stanza] = await Promise.all([leggiRegole(roomId), getRoom(roomId)]);
+  return siConservanoIMessaggi({ regole, stanza });
 }
 
 async function handlePost(req) {
   // b.111 — la guardia mancava proprio qui. Vedi lib/modalitaSessione.js:
   // l'intestazione che la fa scattare non la mandava nessuno, quindi
   // anche dove c'era non e mai servita. Ora arriva davvero.
-  try { assertCloudProcessingAllowed(req); } catch (e) {
+  // b.139 — la guardia leggeva SOLO l'intestazione, cioe si fidava del
+  // client. Ora, appena si sa di che stanza si parla, si chiede alla
+  // stanza. Il corpo va letto prima per avere il roomId: si legge una
+  // volta sola e si passa avanti.
+  let corpo;
+  try {
+    corpo = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Corpo non valido' }, { status: 400 });
+  }
+
+  try {
+    await assertElaborazioneConsentita(req, {
+      roomId: sanitizeRoomId(corpo?.roomId || ''),
+      roomSessionToken: typeof corpo?.roomSessionToken === 'string' ? corpo.roomSessionToken : '',
+    });
+  } catch (e) {
     if (e instanceof DirectModeError) {
       return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
     }
@@ -50,7 +82,6 @@ async function handlePost(req) {
   }
 
   try {
-    const corpo = await req.json();
     const azione = typeof corpo.azione === 'string' ? corpo.azione : '';
     const roomId = sanitizeRoomId(corpo.roomId || '');
     const token = typeof corpo.roomSessionToken === 'string' ? corpo.roomSessionToken : '';
@@ -92,7 +123,7 @@ async function handlePost(req) {
       case 'salva': {
         const io = await chiSei(token, roomId);
         if (!io) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
-        if (!await eCommunity(roomId)) {
+        if (!await siConserva(roomId)) {
           // Non e un errore da nascondere: e la promessa di riservatezza
           // delle chat private, e va rispettata in silenzio.
           return NextResponse.json({ ok: true, conservato: false, motivo: 'chat privata' });
@@ -109,7 +140,7 @@ async function handlePost(req) {
 
       // ── Cosa vede chi entra adesso. ──
       case 'storico': {
-        if (!await eCommunity(roomId)) {
+        if (!await siConserva(roomId)) {
           return NextResponse.json({ ok: true, recenti: [], rilevanti: [], conservazione: false });
         }
         const d = await storico(roomId);

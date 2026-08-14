@@ -49,10 +49,13 @@ const BottomNav = ({ currentView, onNewConversation }) => {
   const C = S.colors || {};
 
   const navItems = [
-    { id: 'home', label: 'Home', views: ['home', 'quickinvite'] },
-    { id: 'conversations', label: 'Chat', views: ['history', 'summary', 'detail'] },
+    // b.139 — 'Profilo' era italiano fisso in una barra sempre a schermo:
+    // la parola piu vista dell'applicazione, e l'unica mai tradotta.
+    // 'Community' resta com'e: e il nome della sezione, non una parola comune.
+    { id: 'home', label: L('navHome'), views: ['home', 'quickinvite'] },
+    { id: 'conversations', label: L('navChat'), views: ['history', 'summary', 'detail'] },
     { id: 'community', label: 'Community', views: ['mondo', 'speaker'] },
-    { id: 'profile', label: 'Profilo', views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help', 'ai', 'contacts'] },
+    { id: 'profile', label: L('navProfile'), views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help', 'ai', 'contacts'] },
   ];
 
   const hiddenViews = new Set(['room', 'lobby', 'join', 'welcome', 'loading']);

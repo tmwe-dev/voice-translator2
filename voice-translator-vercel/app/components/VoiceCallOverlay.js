@@ -49,7 +49,7 @@ function VoiceCallOverlay({
         gap: 8, color: 'rgba(255,255,255,0.7)', fontSize: 14,
       }}>
         <Icon name="phone" size={16} color="rgba(255,255,255,0.5)" />
-        <span>Chiamata vocale</span>
+        <span>{L('voiceCall')}</span>
         <span style={{ marginLeft: 8, color: PALETTE.teal, fontWeight: 600 }}>
           {formatTime(duration)}
         </span>

@@ -2,9 +2,20 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { t, linguaInterfacciaFuoriContesto } from './lib/i18n.js';
 
+// b.139 — questa pagina parlava inglese a tutti. Vive FUORI da
+// AppProvider (e la pagina 404 di Next, montata da sola), quindi L()
+// qui non esiste: la lingua se la legge come CookieConsent, dalle
+// preferenze salvate e in ultima istanza dal browser. La si mette in
+// stato e non in una costante perche il server non ha localStorage:
+// disegnare subito la lingua vera farebbe litigare l'idratazione.
 export default function NotFound() {
   const [countdown, setCountdown] = useState(5);
+  const [lingua, setLingua] = useState('en');
+  const T = (k) => t(lingua, k);
+
+  useEffect(() => { setLingua(linguaInterfacciaFuoriContesto()); }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -37,7 +48,7 @@ export default function NotFound() {
           404
         </h1>
         <p style={{ fontSize: 16, color: '#a1a1aa', marginBottom: 24 }}>
-          This page doesn&apos;t exist. Maybe a translation got lost?
+          {T('notFoundText')}
         </p>
         <Link href="/"
           style={{
@@ -51,12 +62,12 @@ export default function NotFound() {
             textDecoration: 'none',
             transition: 'transform 0.2s',
           }}
-          aria-label="Go back to home page"
+          aria-label={T('goHomeAria')}
         >
-          Go Home
+          {T('goHomeBtn')}
         </Link>
         <p style={{ fontSize: 12, color: '#52525b', marginTop: 16 }}>
-          Redirecting in {countdown}s...
+          {T('redirectingIn')} {countdown}s...
         </p>
       </div>
     </div>

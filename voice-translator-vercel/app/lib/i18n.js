@@ -1,6 +1,6 @@
 // Lightweight i18n — loads language packs on demand
 // Fallback languages (en, it) are loaded eagerly; others lazy-loaded
-// Total: 15 languages, 383 keys each
+// Total: 15 languages, 951 keys each
 //
 // b.136 — QUESTA E' LA LINGUA DELL'INTERFACCIA, NON QUELLA PARLATA.
 // Fino a b.135 erano la stessa cosa (`prefs.lang`), e non lo sono: un

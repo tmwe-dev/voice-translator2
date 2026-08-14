@@ -65,6 +65,9 @@ async function handlePostRoom(req) {
           // b.113 — Stanza Diretta: viaggia con la stanza, cosi chi entra
           // dopo lo sa senza doverlo indovinare.
           diretta: body.diretta,
+          // b.139-bis — la capienza va scritta sulla stanza alla nascita:
+          // e il solo posto da cui la legge lo script che fa entrare.
+          maxPartecipanti: body.maxPartecipanti,
           // ── b.107 · l'email di chi paga NON arriva piu dal client ──
           // Prima era `hostEmail: body.hostEmail` e il server si fidava.
           // apiAuth:160 usa quel campo come `billingEmail`, cioe come il

@@ -627,7 +627,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               border: '1px solid rgba(255,255,255,0.08)',
               color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
-            }}>Reset</button>
+            }}>{L('resetWord')}</button>
           </div>
         )}
 

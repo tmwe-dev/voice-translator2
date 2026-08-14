@@ -3,6 +3,7 @@ import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoom
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 import { createLogger } from './logger.js';
+import { puoModerare, eMembro, ruoloDi } from './decisioni.js';
 const log = createLogger('roomActions');
 
 // ── Helper: resolve identity from token or fallback to name ──
@@ -14,16 +15,19 @@ export async function resolveIdentity(roomSessionToken, name, roomId) {
 async function verifyMembership(roomId, identity) {
   const room = await getRoom(roomId);
   if (!room) return { error: NextResponse.json({ error: 'Room not found' }, { status: 404 }) };
-  if (!room.members.some(m => m.name === identity.name)) {
+  // b.139-bis — questo confronto era ricopiato in cinque punti (qui,
+  // il ruolo qui sotto, e tre volte in /api/messages). Ora la domanda
+  // "fa parte della stanza?" ha una risposta sola, in decisioni.js.
+  if (!eMembro(room, identity.name)) {
     return { error: NextResponse.json({ error: 'Not a room member' }, { status: 403 }) };
   }
   return { room };
 }
 
 // ── Action: create ──
-export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta }) {
+export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta, maxPartecipanti }) {
   if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
-  const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null, !!diretta);
+  const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null);
   const { token } = await createRoomSession(room.id, name, 'host');
   return NextResponse.json({ room, roomSessionToken: token });
 }
@@ -60,9 +64,7 @@ export async function handleJoin({ roomId, name, lang, avatar }) {
       { status: 409 }
     );
   }
-  const member = room.members.find(m => m.name === name);
-  const role = member?.role || 'guest';
-  const { token } = await createRoomSession(room.id, name, role);
+  const { token } = await createRoomSession(room.id, name, ruoloDi(room, name));
   return NextResponse.json({ room, roomSessionToken: token });
 }
 
@@ -73,9 +75,12 @@ export async function handleHeartbeat({ roomId, identity }) {
   const room = await updateHeartbeat(roomId, identity.name);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   // Attach verified identity info so client doesn't need name-based guessing
-  const isHost = identity.verified
-    ? identity.role === 'host'
-    : room.host === identity.name;
+  // b.139 — la stessa domanda ("e l'host?") era scritta a mano qui, in
+  // handleChangeMode, in handleGrantSpeak, in /api/conversation e in
+  // /api/moderazione: cinque copie, e non tutte uguali (chi confrontava i
+  // nomi alla lettera, chi normalizzati, chi guardava le regole di vetrina).
+  // Ora la risposta e una sola.
+  const isHost = puoModerare({ identita: identity, stanza: room });
   return NextResponse.json({ room, verifiedName: identity.name, isHost });
 }
 
@@ -97,11 +102,7 @@ export async function handleChangeMode({ roomId, mode, identity }) {
   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const currentRoom = await getRoom(roomId);
   if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-  // Token-verified: check role; unverified: check name
-  const isHost = identity.verified
-    ? identity.role === 'host'
-    : currentRoom.host === identity.name;
-  if (!isHost) {
+  if (!puoModerare({ identita: identity, stanza: currentRoom })) {
     return NextResponse.json({ error: 'Only the host can change room mode' }, { status: 403 });
   }
   const room = await updateRoomMode(roomId, mode);
@@ -126,8 +127,9 @@ export async function handleGrantSpeak({ roomId, identity, targetMember }) {
   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const currentRoom = await getRoom(roomId);
   if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-  const isHost = identity.verified ? identity.role === 'host' : currentRoom.host === identity.name;
-  if (!isHost) return NextResponse.json({ error: 'Only the host can grant speaking' }, { status: 403 });
+  if (!puoModerare({ identita: identity, stanza: currentRoom })) {
+    return NextResponse.json({ error: 'Only the host can grant speaking' }, { status: 403 });
+  }
   const room = await grantSpeaking(roomId, targetMember);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   return NextResponse.json({ room });

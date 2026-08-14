@@ -41,6 +41,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { trasportoAmmesso, TRASPORTO } from '../app/lib/decisioni.js';
 
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
@@ -146,9 +147,15 @@ describe('in modalita Diretta le conferme non passano dai server', () => {
     // Sarebbe una perdita: una conferma sul nostro canale rivela che
     // quel messaggio esiste, ed e proprio cio che la Diretta promette
     // di non far passare da noi.
+    // b.139 — la domanda non si scrive piu a mano qui: la stessa regola
+    // ("in Diretta Realtime e chiuso") la usano anche useTranslationAPI e
+    // le rotte, e viveva in cinque copie. Ora e `trasportoAmmesso()`.
     const s = p();
-    expect(s).toMatch(/!isDirectMode\(sessionModeRef\.current\) && roomPolling\.broadcastRead/);
-    expect(s).toMatch(/!isDirectMode\(sessionModeRef\.current\) && roomPolling\.broadcastAck/);
+    expect(s).toContain("trasportoAmmesso(sessionModeRef.current, TRASPORTO.REALTIME) && roomPolling.broadcastRead");
+    expect(s).toContain("trasportoAmmesso(sessionModeRef.current, TRASPORTO.REALTIME) && roomPolling.broadcastAck");
+    // E la regola dice davvero quello che deve dire.
+    expect(trasportoAmmesso('direct', TRASPORTO.REALTIME), 'in Diretta Realtime e chiuso').toBe(false);
+    expect(trasportoAmmesso('translate', TRASPORTO.REALTIME), 'in Traduzione e aperto').toBe(true);
   });
 
   it('e il ripiego scatta solo se il diretto NON e riuscito', () => {

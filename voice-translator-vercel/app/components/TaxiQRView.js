@@ -157,7 +157,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 16px', flexShrink: 0,
       }}>
-        <button onClick={onClose} aria-label="Chiudi" style={{
+        <button onClick={onClose} aria-label={L('closeWord')} style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: cardBg, border: `1px solid ${cardBorder}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',

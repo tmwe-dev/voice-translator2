@@ -61,7 +61,11 @@ describe('in una stanza si entra da una porta sola', () => {
     const s = p();
     const i = s.indexOf('const applicaPoliticaStanza');
     const corpo = s.slice(i, i + 900);
-    expect(corpo).toMatch(/cambiaModalitaSessione\(room\.diretta \? 'direct' : 'translate'\)/);
+    // b.139 — il ternario `room.diretta ? 'direct' : 'translate'` non e piu
+    // scritto qui: era la stessa traduzione da stanza a modalita che vive
+    // anche nel cancello e nelle rotte. Ora la fa `modalitaDiStanza()`, e la
+    // guardia si sposta sulla chiamata invece che sulla riga.
+    expect(corpo).toContain('cambiaModalitaSessione(modalitaDiStanza(room))');
     expect(corpo.indexOf('cambiaModalitaSessione'), 'prima di roomInfoRef')
       .toBeLessThan(corpo.indexOf('roomInfoRef.current = room'));
   });
@@ -79,8 +83,16 @@ describe('in una stanza si entra da una porta sola', () => {
     // decisione fosse scritta in tre punti. Prima o poi uno resta
     // indietro, ed e sempre quello che si prova di meno.
     const s = p();
-    const decisioni = s.match(/cambiaModalitaSessione\([^)]*\?[^)]*\)/g) || [];
+    // Chi decide la modalita dalla stanza deve essere uno solo. Si contano
+    // sia la forma vecchia (il ternario a mano) sia quella nuova.
+    const decisioni = [
+      ...(s.match(/cambiaModalitaSessione\([^)]*\?[^)]*\)/g) || []),
+      ...(s.match(/cambiaModalitaSessione\(modalitaDiStanza\([^)]*\)\)/g) || []),
+    ];
     expect(decisioni.length, `la scelta direct/translate va fatta in un punto solo, trovata ${decisioni.length} volte`).toBe(1);
+    // E il ternario non deve tornare a mano da nessuna parte in page.js.
+    expect(s, 'la traduzione stanza→modalita si fa in decisioni.js')
+      .not.toMatch(/diretta \? 'direct' : 'translate'/);
   });
 
   it('ma uscire continua ad azzerarla, in tutti e due i modi', () => {

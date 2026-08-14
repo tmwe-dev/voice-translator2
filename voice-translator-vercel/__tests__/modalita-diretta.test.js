@@ -146,8 +146,13 @@ describe('una sola verita sulla modalita, non due', () => {
   it('l\'elenco delle rotte vietate è finalmente letto da qualcuno', () => {
     // Era un elenco che nessun file importava: buone intenzioni scritte
     // e mai collegate.
+    // b.139 — l'elenco non e piu importato da sessionGuard ma da
+    // decisioni.js, insieme al CONFRONTO che prima era riscritto qui
+    // dentro e che percio il server non poteva usare. Il nome
+    // BLOCKED_IN_DIRECT resta valido: sessionGuard lo ri-esporta.
     const m = app('lib/modalitaSessione.js');
-    expect(m).toMatch(/import \{ BLOCKED_IN_DIRECT \}/);
+    expect(m).toMatch(/rottaVietataInDiretta/);
+    expect(m).toMatch(/from '\.\/decisioni\.js'/);
     expect(BLOCKED_IN_DIRECT.length).toBeGreaterThan(5);
     expect(BLOCKED_IN_DIRECT).toContain('/api/transcribe');
     expect(BLOCKED_IN_DIRECT).toContain('/api/tts-edge');

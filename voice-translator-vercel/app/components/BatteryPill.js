@@ -234,7 +234,7 @@ export default function BatteryPill({ utente }) {
               width: '100%', marginTop: 14, padding: 11, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit',
               fontSize: 13, fontWeight: 700, background: 'transparent',
               border: `1px solid ${tc.cardBorder}`, color: tc.textSecondary,
-            }}>Chiudi</button>
+            }}>{L('closeWord')}</button>
           </div>
         </div>
       )}

@@ -5,6 +5,7 @@ import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getCl
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { eDiretta, eMembro } from '../../lib/decisioni.js';
 import { puoPartire } from '../../lib/reati.js';
 
 const log = createLogger('messages');
@@ -40,8 +41,16 @@ async function handlePost(req) {
     // Verify sender is actually a member of this room
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    const isMember = room.members.some(m => m.name === identity.name);
-    if (!isMember) return NextResponse.json({ error: 'Sender is not a room member' }, { status: 403 });
+    // ── b.139 · la modalita Diretta la dice la STANZA, non l'intestazione ──
+    // La guardia in cima legge `x-session-mode`, che manda il client: ferma
+    // il caso normale, non chi mente. La stanza e gia stata caricata qui
+    // sopra per un altro motivo, quindi la risposta vera non costa niente.
+    // Per un client onesto non cambia nulla: in una stanza Diretta questa
+    // richiesta non parte proprio.
+    if (eDiretta(room)) {
+      return NextResponse.json({ error: 'Cloud processing is forbidden in Direct mode' }, { status: 403 });
+    }
+    if (!eMembro(room, identity.name)) return NextResponse.json({ error: 'Sender is not a room member' }, { status: 403 });
 
     const translated = sanitizeText(body.translated || '', 10000);
     const sourceLang = typeof body.sourceLang === 'string' ? body.sourceLang.slice(0, 10) : '';
@@ -153,8 +162,11 @@ async function handlePatch(req) {
     // Verify sender is a member of this room
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    const isMember = room.members.some(m => m.name === identity.name);
-    if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+    // b.139 — vedi la POST: la stanza e l'autorita, non l'intestazione.
+    if (eDiretta(room)) {
+      return NextResponse.json({ error: 'Cloud processing is forbidden in Direct mode' }, { status: 403 });
+    }
+    if (!eMembro(room, identity.name)) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
 
     const translated = sanitizeText(body.translated || '', 10000);
     const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
@@ -203,8 +215,11 @@ async function handleGet(req) {
     // Verify requester is a member of this room
     const room = await getRoom(roomId);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-    const isMember = room.members.some(m => m.name === identity.name);
-    if (!isMember) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
+    // b.139 — vedi la POST: la stanza e l'autorita, non l'intestazione.
+    if (eDiretta(room)) {
+      return NextResponse.json({ error: 'Cloud processing is forbidden in Direct mode' }, { status: 403 });
+    }
+    if (!eMembro(room, identity.name)) return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
 
     const msgs = await getMessages(roomId, after);
     return NextResponse.json({ messages: msgs });

@@ -1,6 +1,15 @@
+import { CAPIENZA } from './decisioni.js';
+
 // Lua scripts for atomic Redis operations
 // Each script runs as a single atomic unit inside Redis — no race conditions.
 // Used by store.js via redis('EVAL', script, numkeys, KEYS..., ARGV...)
+//
+// b.139-bis — QUI DENTRO NON SI SCRIVONO PIU NUMERI DI POLITICA.
+// Il tetto dei partecipanti era scritto tre volte in tre linguaggi
+// (CreateRoomSheet 20, /api/mondo 20, questo file 10) e il terzo era
+// quello che decideva davvero, perche `createRoom` non scriveva il
+// campo. I limiti ora vengono da decisioni.js e si INTERPOLANO nel
+// sorgente Lua: restano un numero solo, in un posto solo.
 
 // Helper: all room scripts need to GET → decode → modify → encode → SET
 // cjson is built into Redis Lua. KEYS[1] is always the room key.
@@ -37,9 +46,9 @@ if not found then
   -- API gli rispondevano 403 "Not a room member" — senza che nulla glielo
   -- avesse detto. Buttato fuori da una conversazione mentre ci parlava.
   -- E il limite era 10 fisso, mentre la UI ne prometteva fino a 20.
-  local tetto = tonumber(room.maxPartecipanti) or 10
-  if tetto < 2 then tetto = 2 end
-  if tetto > 50 then tetto = 50 end
+  local tetto = tonumber(room.maxPartecipanti) or ${CAPIENZA.PREDEFINITA}
+  if tetto < ${CAPIENZA.MIN} then tetto = ${CAPIENZA.MIN} end
+  if tetto > ${CAPIENZA.MAX} then tetto = ${CAPIENZA.MAX} end
   if #room.members < tetto then
     table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar})
   else

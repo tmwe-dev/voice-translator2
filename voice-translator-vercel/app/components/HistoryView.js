@@ -16,7 +16,7 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════
 
 function HistoryView({ convHistory, viewConversation, verifiedName, archivioSoloLocale = false }) {
-  const { L, S, prefs, setView, status, theme, setTheme } = useApp();
+  const { L, S, prefs, setView, status, theme, setTheme, uiLang } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -98,14 +98,14 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    if (date.toDateString() === today.toDateString()) return 'Oggi';
-    if (date.toDateString() === yesterday.toDateString()) return 'Ieri';
-    return date.toLocaleDateString('it-IT', { month: 'short', day: 'numeric' });
+    if (date.toDateString() === today.toDateString()) return L('todayWord');
+    if (date.toDateString() === yesterday.toDateString()) return L('yesterdayWord');
+    return date.toLocaleDateString(uiLang, { month: 'short', day: 'numeric' });
   };
 
   const renderConversationCard = (c, index) => {
     const memberNames = c.members?.filter(m => m !== (verifiedName || prefs.name)) || [];
-    const displayName = c.topic || memberNames.join(', ') || 'Conversazione';
+    const displayName = c.topic || memberNames.join(', ') || L('conversation');
 
     return (
       <button

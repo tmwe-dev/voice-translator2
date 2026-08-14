@@ -125,9 +125,9 @@ function SpeakerView({ userToken }) {
   // Non sapevi se ti aveva sentito, se stava traducendo, se era fallito.
   // Ora ogni momento ha la sua frase, in un punto solo dello schermo.
   const statoParlante = (() => {
-    if (recording) return { testo: mode === 'batch' ? 'Ti ascolto…' : 'Ascolto in diretta…', tono: 'attivo' };
-    if (processing) return { testo: 'Traduco…', tono: 'attesa' };
-    if (playing) return { testo: 'Leggo ad alta voce…', tono: 'attesa' };
+    if (recording) return { testo: mode === 'batch' ? L('taxiIListen') : L('taxiListenLive'), tono: 'attivo' };
+    if (processing) return { testo: L('translatingDots'), tono: 'attesa' };
+    if (playing) return { testo: L('readingAloud'), tono: 'attesa' };
     if (erroreUltimo) return { testo: erroreUltimo, tono: 'errore' };
     return null;
   })();
@@ -205,18 +205,18 @@ function SpeakerView({ userToken }) {
       if (!res.ok) {
         // b.95 — prima tornava stringa vuota e l'utente non capiva nulla
         setErroreUltimo(res.status === 402
-          ? 'Credito esaurito: ricarica per continuare.'
-          : 'Traduzione non riuscita. Riprova fra un momento.');
+          ? L('creditExhausted')
+          : L('translationRetryLater'));
         return '';
       }
       const data = await res.json();
-      if (data.ripiego) setErroreUltimo('Traduzione di riserva: qualità ridotta.');
+      if (data.ripiego) setErroreUltimo(L('fallbackTranslation'));
       return data.translated || '';
     } catch {
-      setErroreUltimo('Sei senza connessione.');
+      setErroreUltimo(L('youHaveNoConnection'));
       return '';
     }
-  }, [sourceLang, targetLang, userToken]);
+  }, [sourceLang, targetLang, userToken, L]);
 
   // ── b.111 · TTS in coda, procurata in anticipo ──
   //
@@ -300,7 +300,7 @@ function SpeakerView({ userToken }) {
       if (!res.ok) throw new Error('Geocoding failed');
       const data = await res.json();
       if (data.length === 0) {
-        setDestError('Luogo non trovato');
+        setDestError(L('placeNotFound'));
         setDestCoords(null);
       } else if (data.length === 1) {
         const place = data[0];
@@ -312,9 +312,9 @@ function SpeakerView({ userToken }) {
           displayName: p.display_name, type: p.type || '',
         })));
       }
-    } catch { setDestError('Errore di ricerca'); setDestCoords(null); }
+    } catch { setDestError(L('searchError')); setDestCoords(null); }
     setDestLoading(false);
-  }, [targetLang]);
+  }, [targetLang, L]);
 
   const selectSearchResult = useCallback((result) => {
     setDestCoords(result); setSearchResults([]); setDestError(''); setShowDestPanel(false);
@@ -365,7 +365,7 @@ function SpeakerView({ userToken }) {
       }]);
       playTTS(translated, targetLang);
     } else {
-      toast.error(L('translationError') || 'Traduzione fallita');
+      toast.error(L('translationError'));
     }
     setProcessing(false); setTextMessage('');
   }, [textMessage, translateText, sourceLang, targetLang, destCoords, playTTS, L]);
@@ -566,9 +566,9 @@ function SpeakerView({ userToken }) {
       }}>
         {/* Barra: le due schede affiancate + chiusura esplicita */}
         <div style={{ display: 'flex', gap: 8, padding: '10px 12px 8px', alignItems: 'center' }}>
-          {scheda('mappa', 'Mappa')}
-          {scheda('testo', 'Testo')}
-          <button onClick={() => { vibrate(); setMirrorMode(false); }} aria-label="Chiudi" style={{
+          {scheda('mappa', L('mapWord'))}
+          {scheda('testo', L('textWord'))}
+          <button onClick={() => { vibrate(); setMirrorMode(false); }} aria-label={L('closeWord')} style={{
             width: 46, height: 46, borderRadius: 13, flexShrink: 0,
             background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
             color: 'rgba(255,255,255,0.75)', cursor: 'pointer',
@@ -615,7 +615,7 @@ function SpeakerView({ userToken }) {
             {/* Lingua dell'autista: scelta in un tocco */}
             <div style={{ padding: '0 12px 8px' }}>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(255,255,255,0.4)', marginBottom: 7 }}>
-                LINGUA DELL{'’'}AUTISTA
+                {L('driverLanguage')}
               </div>
               <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
                 {COMMON_LANGS.map(codice => {
@@ -649,7 +649,7 @@ function SpeakerView({ userToken }) {
                 maxHeight: '100%', overflowY: 'auto', wordBreak: 'break-word',
                 textShadow: `0 0 34px ${C.accent}35`,
               }}>
-                {testoAutista || (processing ? 'Traduco…' : 'Parla o scrivi: qui compare il messaggio per l’autista')}
+                {testoAutista || (processing ? L('translatingDots') : L('mirrorHint'))}
               </div>
             </div>
 
@@ -665,7 +665,7 @@ function SpeakerView({ userToken }) {
                   WebkitTapHighlightColor: 'transparent',
                 }}>
                   <Icon name="speaker" size={20} color="#fff" />
-                  {playing ? 'Sto leggendo…' : `Leggi in ${tgtInfo?.name || targetLang}`}
+                  {playing ? L('readingNow') : L('readInLang').replace('{x}', tgtInfo?.name || targetLang)}
                 </button>
               </div>
             )}
@@ -783,7 +783,7 @@ function SpeakerView({ userToken }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             WebkitTapHighlightColor: 'transparent',
           }}
-          aria-label="Mostra al tassista">
+          aria-label={L('showToDriver')}>
           {/* b.88 — icona mono: due frecce, "gira lo schermo verso l'altro" */}
           <Icon name="swap" size={17} color={C.accent} />
         </button>
@@ -808,7 +808,7 @@ function SpeakerView({ userToken }) {
           <span style={{ fontSize: 22 }}>{srcInfo?.flag || ''}</span>
           <div style={{ textAlign: 'left' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{srcInfo?.name || sourceLang}</div>
-            <div style={{ fontSize: 9, color: C.textMuted }}>Parlo in</div>
+            <div style={{ fontSize: 9, color: C.textMuted }}>{L('iSpeakIn')}</div>
           </div>
         </button>
 
@@ -834,7 +834,7 @@ function SpeakerView({ userToken }) {
           }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary }}>{tgtInfo?.name || targetLang}</div>
-            <div style={{ fontSize: 9, color: C.textMuted }}>Traduci in</div>
+            <div style={{ fontSize: 9, color: C.textMuted }}>{L('translateIntoLabel')}</div>
           </div>
           <span style={{ fontSize: 22 }}>{tgtInfo?.flag || ''}</span>
         </button>
@@ -892,7 +892,7 @@ function SpeakerView({ userToken }) {
           }} />
           {statoParlante.testo}
           {statoParlante.tono === 'errore' && (
-            <button onClick={() => setErroreUltimo('')} aria-label="Chiudi"
+            <button onClick={() => setErroreUltimo('')} aria-label={L('closeWord')}
               style={{ marginLeft: 'auto', background: 'none', border: 'none',
                 color: C.red, cursor: 'pointer', display: 'flex' }}>
               <IconClose size={13} />
@@ -945,15 +945,15 @@ function SpeakerView({ userToken }) {
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', cursor: 'pointer', fontSize: 12, color: '#fff', fontWeight: 700, fontFamily: FONT,
             }}>
-              Mostra
+              {L('showWord')}
             </button>
-            <button onClick={clearDestination} aria-label="Togli la destinazione" style={{
+            <button onClick={clearDestination} aria-label={L('removeDestination')} style={{
               padding: '7px 14px', borderRadius: 11,
               background: 'transparent', border: `1px solid ${C.cardBorder}`,
               cursor: 'pointer', fontSize: 11, color: C.textMuted, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             }}>
-              <IconClose size={12} /> Togli
+              <IconClose size={12} /> {L('removeWord')}
             </button>
           </div>
         </div>
@@ -971,7 +971,7 @@ function SpeakerView({ userToken }) {
           }}>
             {/* b.88 — icone mono */}
             <Icon name="globe" size={14} color={C.textMuted} />
-            <span style={{ fontSize: 11, color: C.textMuted, flex: 1, textAlign: 'left' }}>Destinazione rapida</span>
+            <span style={{ fontSize: 11, color: C.textMuted, flex: 1, textAlign: 'left' }}>{L('quickDestination')}</span>
             <span style={{ fontSize: 12, color: C.textMuted }}>{showDestPanel ? '▼' : '+'}</span>
           </button>
           <button onClick={() => { vibrate(15); setShowStructuredDest(true); }} style={{
@@ -983,7 +983,7 @@ function SpeakerView({ userToken }) {
             WebkitTapHighlightColor: 'transparent',
           }}>
             <Icon name="doorCreate" size={14} color={C.accent} />
-            <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>QR Taxi</span>
+            <span style={{ fontSize: 11, color: C.accent, fontWeight: 600 }}>{L('qrTaxiBtn')}</span>
           </button>
         </div>
       )}
@@ -999,7 +999,7 @@ function SpeakerView({ userToken }) {
             <input type="text" value={destination}
               onChange={(e) => setDestination(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && destination.trim()) searchDestination(destination); }}
-              placeholder="Indirizzo, hotel, monumento..."
+              placeholder={L('addressPlaceholder')}
               autoFocus
               style={{
                 flex: 1, padding: '10px 14px', borderRadius: 12,
@@ -1087,7 +1087,7 @@ function SpeakerView({ userToken }) {
                   {/* b.88 — icone mono */}
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                     <Icon name={playing ? 'refresh' : 'speaker'} size={13} color="#fff" />
-                    {playing ? '...' : 'Ascolta'}
+                    {playing ? '...' : L('listenWord')}
                   </span>
                 </button>
                 <button onClick={() => { vibrate(); setMirrorMode(true); }}
@@ -1097,7 +1097,7 @@ function SpeakerView({ userToken }) {
                     cursor: 'pointer', color: C.accent, fontFamily: FONT, fontSize: 11, fontWeight: 700,
                   }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                    <Icon name="swap" size={13} color={C.accent} /> Mostra
+                    <Icon name="swap" size={13} color={C.accent} /> {L('showWord')}
                   </span>
                 </button>
               </div>
@@ -1143,12 +1143,12 @@ function SpeakerView({ userToken }) {
               <Icon name="mic" size={34} color={C.accent} />
             </div>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-              Parla o scrivi
+              {L('speakOrType')}
             </div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto' }}>
               {mode === 'batch'
-                ? 'Tieni premuto il microfono, parla, rilascia. La traduzione viene letta ad alta voce.'
-                : 'Tocca il microfono per iniziare la traduzione continua in tempo reale.'}
+                ? L('taxiHintBatch')
+                : L('taxiHintLive')}
             </div>
             <div style={{
               marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap',
@@ -1159,9 +1159,9 @@ function SpeakerView({ userToken }) {
                   pulsanti veri, e quello che è solo un'istruzione ("tieni
                   premuto") è scritto come istruzione, non come tasto. */}
               {[
-                { icona: 'send', label: 'Scrivi messaggio',
+                { icona: 'send', label: L('writeMessage'),
                   azione: () => { vibrate(); campoTestoRef.current?.focus(); } },
-                { icona: 'swap', label: 'Mostra al tassista',
+                { icona: 'swap', label: L('showToDriver'),
                   azione: () => { vibrate(); setMirrorMode(true); } },
               ].map((tasto, i) => (
                 <button key={i} onClick={tasto.azione} style={{
@@ -1191,7 +1191,7 @@ function SpeakerView({ userToken }) {
           <input type="text" ref={campoTestoRef} value={textMessage}
             onChange={(e) => setTextMessage(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') inviaTesto(); }}
-            placeholder={recording ? (mode === 'batch' ? 'Rilascia per tradurre...' : 'Sto ascoltando...') : 'Scrivi messaggio...'}
+            placeholder={recording ? (mode === 'batch' ? `${L('releaseToTranslate')}...` : L('listening')) : `${L('writeMessage')}...`}
             disabled={recording}
             style={{
               flex: 1, padding: '12px 14px', borderRadius: 14,
@@ -1245,7 +1245,7 @@ function SpeakerView({ userToken }) {
             fontSize: 10, color: C.red, fontWeight: 600,
             animation: 'vtPulse 1.5s ease-in-out infinite',
           }}>
-            {mode === 'batch' ? '● Rilascia per tradurre' : '● Traduzione live attiva — tap per fermare'}
+            {mode === 'batch' ? `● ${L('releaseToTranslate')}` : `● ${L('liveTranslationOn')}`}
           </div>
         )}
       </div>

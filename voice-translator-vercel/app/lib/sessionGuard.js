@@ -16,6 +16,11 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createLogger } from './logger.js';
+import {
+  eModalitaDiretta,
+  ROTTE_VIETATE_IN_DIRETTA,
+  modalitaAutorevole,
+} from './decisioni.js';
 
 const log = createLogger('session-guard');
 
@@ -28,7 +33,10 @@ const log = createLogger('session-guard');
  */
 export function assertCloudProcessingAllowed(req) {
   const mode = req.headers.get('x-session-mode');
-  if (mode === 'direct') {
+  // b.139 — il confronto non si scrive piu qui: la regola su cosa sia
+  // "modalita Diretta" vive in decisioni.js, ed e la stessa che usano il
+  // cancello davanti a fetch e la guardia sulla conservazione.
+  if (eModalitaDiretta(mode)) {
     log.warn('Cloud processing blocked — Direct mode', {
       url: req.url,
       mode,
@@ -55,7 +63,30 @@ export class DirectModeError extends Error {
  * @returns {boolean}
  */
 export function isDirectMode(mode) {
-  return mode === 'direct';
+  return eModalitaDiretta(mode);
+}
+
+/**
+ * ── LA GUARDIA CHE NON SI FIDA DEL CLIENT (b.139) ──
+ *
+ * `assertCloudProcessingAllowed` sopra legge l'intestazione, che manda
+ * il client: ferma il caso normale ma non difende da chi mente. Questa
+ * versione chiede anche alla STANZA, quando la richiesta porta con se il
+ * codice o il gettone di sessione.
+ *
+ * Per un client onesto non cambia niente: in una stanza Diretta queste
+ * richieste non partono. Cambia per uno che non lo e.
+ *
+ * @param {Request} req
+ * @param {{roomId?: string, roomSessionToken?: string}} riferimento
+ * @throws {DirectModeError}
+ */
+export async function assertElaborazioneConsentita(req, riferimento = {}) {
+  const modo = await modalitaAutorevole(req, riferimento);
+  if (eModalitaDiretta(modo)) {
+    log.warn('Elaborazione bloccata — stanza in modalita Diretta', { url: req?.url });
+    throw new DirectModeError('Cloud processing is forbidden in Direct mode');
+  }
 }
 
 /**
@@ -63,27 +94,7 @@ export function isDirectMode(mode) {
  * Used by client-side code to skip requests entirely
  * (don't even send them — defense in depth with server guard).
  */
-export const BLOCKED_IN_DIRECT = [
-  '/api/messages',
-  '/api/translate',
-  '/api/translate-free',
-  '/api/translate-consensus',
-  '/api/transcribe',
-  '/api/tts',
-  '/api/tts-edge',
-  '/api/tts-elevenlabs',
-  '/api/summary',
-  '/api/conversation',
-  '/api/chat-action',
-  // ── b.111 · quattro che mancavano, e non erano le meno gravi ──
-  // stt-token consegna al telefono un gettone per aprire un flusso
-  // audio DIRETTO verso Deepgram: in modalita Diretta e la voce, dal
-  // vivo, verso un terzo. Era la falla piu grande e non era nell'elenco.
-  '/api/stt-token',
-  '/api/translate-stream',
-  // La clonazione carica una registrazione della propria voce.
-  '/api/voice-clone',
-  // Le reazioni conservano il TESTO del messaggio per la vetrina
-  // Community. Giusto li, sbagliato in una conversazione riservata.
-  '/api/reazioni',
-];
+// b.139 — l'elenco stava qui, e il server non poteva confrontarlo perche
+// il confronto era scritto dentro il cancello del client. Ora la copia
+// buona e in decisioni.js; questo nome resta per chi lo importa gia.
+export const BLOCKED_IN_DIRECT = ROTTE_VIETATE_IN_DIRETTA;

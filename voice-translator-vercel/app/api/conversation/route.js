@@ -5,6 +5,7 @@ import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { puoModerare, eDiretta } from '../../lib/decisioni.js';
 
 const log = createLogger('conversation');
 
@@ -31,12 +32,17 @@ async function handlePost(req) {
       const room = await getRoom(rid);
       if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
 
-      // Token-verified: check role directly; unverified: check name match
-      const isHost = identity.verified
-        ? identity.role === 'host'
-        : room.host === identity.name;
-      if (!isHost) {
+      // b.139 — quarta copia della regola "chi e host": ora e una sola.
+      if (!puoModerare({ identita: identity, stanza: room })) {
         return NextResponse.json({ error: 'Only the host can end the room' }, { status: 403 });
+      }
+
+      // b.139 — e la stanza dice se puo esistere un archivio. `saveConversation`
+      // scrive la conversazione INTERA sui nostri sistemi: in una stanza Diretta
+      // e esattamente la cosa che si e promesso di non fare. La guardia in cima
+      // legge l'intestazione del client; la stanza e gia qui, e non mente.
+      if (eDiretta(room)) {
+        return NextResponse.json({ error: 'Cloud processing is forbidden in Direct mode' }, { status: 403 });
       }
 
       const conv = await saveConversation(rid);

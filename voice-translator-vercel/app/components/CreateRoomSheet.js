@@ -4,6 +4,7 @@ import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+import { TIPI_STANZA, CAPIENZA, normalizzaCapienza } from '../lib/decisioni.js';
 
 // ═══════════════════════════════════════════════════════════════
 // CreateRoomSheet — Create a Community BarTalk room
@@ -13,15 +14,24 @@ import { useApp } from '../contexts/AppContext.js';
 // Fields: name, description, language, type, category, max participants
 // ═══════════════════════════════════════════════════════════════
 
-const ROOM_TYPES = [
-  { id: 'public', icon: '', label: 'Pubblico', desc: 'Chiunque può entrare e partecipare' },
-  { id: 'protected', icon: '', label: 'Protetto', desc: 'Richiede approvazione per entrare' },
-  { id: 'private', icon: '', label: 'Privato', desc: 'Solo su invito diretto' },
-  { id: 'temporary', icon: '', label: 'Temporaneo', desc: 'Si chiude automaticamente dopo 1 ora' },
-];
+// b.139 — qui c'erano le etichette scritte in italiano dentro la tabella.
+// Una tabella si costruisce UNA volta, al caricamento del modulo, quando la
+// lingua dell'utente non e ancora nota: percio ora contiene le CHIAVI, e la
+// traduzione avviene al disegno, dove L() c'e ed e aggiornata.
+// b.139-bis — gli identificativi non sono piu scritti qui: erano una
+// seconda copia di quelli che /api/mondo accetta, e due elenchi separati
+// della stessa cosa divergono al primo tipo aggiunto da una parte sola.
+// Qui restano solo le etichette, che il server non ha mai avuto.
+const ETICHETTE_TIPO = {
+  public: { label: 'roomTypePublic', desc: 'roomTypePublicDesc' },
+  protected: { label: 'roomTypeProtected', desc: 'roomTypeProtectedDesc' },
+  private: { label: 'roomTypePrivate', desc: 'roomTypePrivateDesc' },
+  temporary: { label: 'roomTypeTemporary', desc: 'roomTypeTemporaryDesc' },
+};
+const ROOM_TYPES = TIPI_STANZA.map((id) => ({ id, icon: '', ...ETICHETTE_TIPO[id] }));
 
 const CATEGORIES = [
-  { id: 'conversation', icon: '', label: 'Conversazione', color: PALETTE.teal },
+  { id: 'conversation', icon: '', label: 'catConversation', color: PALETTE.teal },
   { id: 'classroom', icon: '', label: 'Classroom', color: '#10B981' },
   // b.126 — 'interview' e 'conference' TOLTE.
   //
@@ -38,13 +48,15 @@ const CATEGORIES = [
   //
   // Se un giorno servono davvero, si aggiungono qui E in MODES E in
   // TalkControls, insieme.
+  // 'Classroom' e 'Free Talk' restano cosi: sono nomi propri della modalita,
+  // scritti uguali in ogni lingua dell'interfaccia.
   { id: 'freetalk', icon: '', label: 'Free Talk', color: '#EC4899' },
 ];
 
 const POPULAR_LANGS = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'ar'];
 
 function CreateRoomSheet({ open, onClose, onCreate }) {
-  const { S } = useApp();
+  const { S, L } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
   const purple = C.accent2 || PALETTE.violet;
@@ -61,7 +73,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   const [category, setCategory] = useState('conversation');
   const [lang, setLang] = useState('it');
   const [description, setDescription] = useState('');
-  const [maxParticipants, setMaxParticipants] = useState(20);
+  const [maxParticipants, setMaxParticipants] = useState(CAPIENZA.PREDEFINITA);
   const [creating, setCreating] = useState(false);
   // b.111 — stanza a litigio libero. Spenta di default: e una scelta,
   // e le scelte che cambiano le regole non si fanno per distrazione.
@@ -100,7 +112,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         // un relay, e in un relay la promessa "niente passa dai nostri
         // server" cambia significato) e "dichiarare 1:1", la seconda e
         // onesta e si puo fare oggi.
-        maxParticipants: diretta ? 2 : maxParticipants,
+        maxParticipants: normalizzaCapienza(maxParticipants, { diretta }),
         hot,
         diretta,
         mode: category, // maps to existing room modes
@@ -126,7 +138,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-       role="dialog" aria-modal="true" aria-label="Crea un BarTalk">
+       role="dialog" aria-modal="true" aria-label={L('createBarTalk')}>
 
       <div ref={sheetRef} style={{
         background: C.bg || PALETTE.bgDeep, borderRadius: '20px 20px 0 0',
@@ -142,13 +154,13 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
-              Crea un BarTalk
+              {L('createBarTalk')}
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
-              Un tavolo virtuale internazionale
+              {L('virtualTable')}
             </div>
           </div>
-          <button onClick={onClose} aria-label="Chiudi" style={{
+          <button onClick={onClose} aria-label={L('closeWord')} style={{
             width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
             color: textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -161,26 +173,26 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
           {/* Nome o argomento — obbligatorio, e la prima cosa che si legge */}
           <div style={{ marginBottom: 16 }}>
             <label htmlFor="stanza-nome" style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Nome o argomento
+              {L('roomNameOrTopic')}
             </label>
             <input id="stanza-nome" type="text" value={nome} maxLength={60}
               onChange={(e) => setNome(e.target.value)}
-              placeholder="Es: Caffè con chi impara l'italiano"
+              placeholder={L('roomNamePlaceholder')}
               style={{
                 ...inputStyle,
                 border: `1px solid ${nomeValido || !nome ? cardBorder : `${C.accent3 || '#e5484d'}66`}`,
               }} />
             <div style={{ fontSize: 10, color: textMuted, marginTop: 5, lineHeight: 1.4 }}>
               {nome && !nomeValido
-                ? 'Servono almeno tre lettere.'
-                : 'Chi scorre l’elenco legge questo, e decide se entrare.'}
+                ? L('roomNameTooShort')
+                : L('roomNameHelp')}
             </div>
           </div>
 
           {/* Room Type */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Tipo di stanza
+              {L('roomTypeLabel')}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
               {ROOM_TYPES.map(rt => {
@@ -194,9 +206,9 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                       <span style={{ fontSize: 16 }}>{rt.icon}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: sel ? accent : textPrimary }}>{rt.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: sel ? accent : textPrimary }}>{L(rt.label)}</span>
                     </div>
-                    <div style={{ fontSize: 10, color: textMuted, lineHeight: 1.4 }}>{rt.desc}</div>
+                    <div style={{ fontSize: 10, color: textMuted, lineHeight: 1.4 }}>{L(rt.desc)}</div>
                   </button>
                 );
               })}
@@ -216,7 +228,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                 setDiretta(nuovo);
                 // b.126 — accendendo la Diretta la stanza diventa 1:1.
                 // Va detto MENTRE si sceglie, non scoperto dopo.
-                if (nuovo && maxParticipants > 2) setMaxParticipants(2);
+                if (nuovo && maxParticipants > CAPIENZA.DIRETTA) setMaxParticipants(CAPIENZA.DIRETTA);
                 vibrate(10);
               }}
               aria-pressed={diretta}
@@ -232,12 +244,12 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
               }}>{diretta ? '✓' : '·'}</span>
               <span style={{ flex: 1 }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: diretta ? '#26D9B0' : textPrimary, marginBottom: 2 }}>
-                  Stanza Diretta — niente passa dai nostri server
+                  {L('directRoomTitle')}
                 </span>
                 <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
                   {diretta
-                    ? 'I messaggi viaggiano da telefono a telefono, cifrati. Noi non li vediamo, non li conserviamo, non ne teniamo copia.'
-                    : 'La conversazione usa i nostri servizi per tradurre, trascrivere e leggere ad alta voce.'}
+                    ? L('directRoomOnDesc')
+                    : L('directRoomOffDesc')}
                 </span>
               </span>
               <span aria-hidden="true" style={{
@@ -258,14 +270,11 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                 fontSize: 10, color: textMuted, lineHeight: 1.6,
               }}>
                 <span style={{ display: 'block', fontWeight: 700, color: '#F59E0B', marginBottom: 4 }}>
-                  Cosa si spegne, in cambio
+                  {L('directRoomCostTitle')}
                 </span>
-                Niente traduzione automatica. Niente trascrizione della voce.
-                Niente lettura ad alta voce. Niente archivio della conversazione:
-                quando chiudete, non resta nulla da nessuna parte.
+                {L('directRoomCostBody')}
                 <span style={{ display: 'block', marginTop: 5 }}>
-                  Resta la chat scritta, la videochiamata e la chiamata vocale —
-                  ma nella lingua in cui le scrivete e le dite.
+                  {L('directRoomCostBody2')}
                 </span>
               </div>
             )}
@@ -289,12 +298,12 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
               }}>{hot ? '!' : '·'}</span>
               <span style={{ flex: 1 }}>
                 <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: hot ? '#FF7A5C' : textPrimary, marginBottom: 2 }}>
-                  Litigio libero
+                  {L('freeFightTitle')}
                 </span>
                 <span style={{ display: 'block', fontSize: 10, color: textMuted, lineHeight: 1.5 }}>
                   {hot
-                    ? 'Qui ci si può mandare a quel paese: niente tendina grigia davanti alle parole pesanti. Minacce, ricatti e tutto ciò che riguarda minori restano vietati — qui come ovunque.'
-                    : 'Le parole pesanti restano coperte da una tendina: chi vuole leggerle, tocca.'}
+                    ? L('freeFightOnDesc')
+                    : L('freeFightOffDesc')}
                 </span>
               </span>
               <span aria-hidden="true" style={{
@@ -312,7 +321,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
           {/* Category */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Categoria
+              {L('categoryLabel')}
             </label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {CATEGORIES.map(cat => {
@@ -325,7 +334,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
                     display: 'flex', alignItems: 'center', gap: 5, fontFamily: FONT,
                   }}>
                     <span style={{ fontSize: 14 }}>{cat.icon}</span>
-                    <span style={{ fontSize: 11, fontWeight: 600, color: sel ? cat.color : textPrimary }}>{cat.label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: sel ? cat.color : textPrimary }}>{L(cat.label)}</span>
                   </button>
                 );
               })}
@@ -335,7 +344,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
           {/* Language */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Lingua principale
+              {L('mainLanguage')}
             </label>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {POPULAR_LANGS.map(code => {
@@ -361,12 +370,12 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
           {/* Description */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Descrizione (opzionale)
+              {L('descriptionOptional')}
             </label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
-              placeholder="Di cosa si parlerà in questa stanza?"
+              placeholder={L('roomDescPlaceholder')}
               rows={2}
               maxLength={200}
               style={{ ...inputStyle, resize: 'none', lineHeight: 1.5 }}
@@ -379,16 +388,16 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
           {/* Max participants */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-              Partecipanti max
+              {L('maxParticipants')}
             </label>
             <div style={{ display: 'flex', gap: 6 }}>
               {[5, 10, 20, 50].map(n => {
                 const sel = maxParticipants === n;
                 return (
-                  <button key={n} disabled={diretta && n > 2}
-                    title={diretta && n > 2 ? 'La modalita Diretta e uno-a-uno' : undefined}
-                    onClick={() => { if (diretta && n > 2) return; setMaxParticipants(n); vibrate(10); }} style={{
-                    opacity: diretta && n > 2 ? 0.35 : 1,
+                  <button key={n} disabled={diretta && n > CAPIENZA.DIRETTA}
+                    title={diretta && n > CAPIENZA.DIRETTA ? L('directIsOneToOne') : undefined}
+                    onClick={() => { if (diretta && n > CAPIENZA.DIRETTA) return; setMaxParticipants(n); vibrate(10); }} style={{
+                    opacity: diretta && n > CAPIENZA.DIRETTA ? 0.35 : 1,
                     padding: '8px 16px', borderRadius: 10, cursor: 'pointer',
                     background: sel ? `${purple}15` : 'transparent',
                     border: `1px solid ${sel ? `${purple}30` : cardBorder}`,
@@ -414,7 +423,7 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
             boxShadow: `0 4px 20px ${accent}35`,
             opacity: creating || !nomeValido ? 0.45 : 1,
           }}>
-            {creating ? 'Creazione...' : !nomeValido ? 'Dai un nome alla stanza' : 'Crea BarTalk'}
+            {creating ? L('creatingDots') : !nomeValido ? L('giveRoomAName') : L('createBarTalk')}
           </button>
         </div>
       </div>

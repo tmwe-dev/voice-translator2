@@ -158,7 +158,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   }
 
   return (
-    <main style={S.page} aria-label="BarTalk Home">
+    <main style={S.page} aria-label={L('homeAria')}>
       <div style={{
         ...S.scrollCenter,
         display: 'flex', flexDirection: 'column',

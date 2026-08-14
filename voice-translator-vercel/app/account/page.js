@@ -2,11 +2,19 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { t, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 
+// b.139 — pagina in inglese fisso. Sta fuori da AppProvider (e una
+// rotta a se, /account) quindi non ha L(): legge la lingua da sola,
+// come CookieConsent e come la 404.
 export default function AccountPage() {
   const [prefs, setPrefs] = useState(null);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lingua, setLingua] = useState('en');
+  const T = (k) => t(lingua, k);
+
+  useEffect(() => { setLingua(linguaInterfacciaFuoriContesto()); }, []);
 
   useEffect(() => {
     // Load prefs from localStorage
@@ -44,17 +52,17 @@ export default function AccountPage() {
     }}>
       {/* Back button */}
       <Link href="/" style={{ color: '#71717a', fontSize: 14, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, marginBottom: 24 }}>
-        ← Back
+        {'←'} {T('backWord')}
       </Link>
 
       {/* Avatar + Name */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div style={{ fontSize: 56, marginBottom: 8 }}>{prefs?.avatar || '🌐'}</div>
         <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
-          {prefs?.name || user?.name || 'Guest User'}
+          {prefs?.name || user?.name || T('accountGuest')}
         </h1>
         <p style={{ fontSize: 13, color: '#71717a', margin: 0 }}>
-          {user?.email || 'Not signed in'}
+          {user?.email || T('notSignedIn')}
         </p>
       </div>
 
@@ -64,7 +72,7 @@ export default function AccountPage() {
         border: '1px solid #27272a', marginBottom: 16,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Plan</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{T('planWord')}</span>
           <span style={{
             padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 800,
             background: tc.bg, color: tc.text, textTransform: 'uppercase',
@@ -77,8 +85,8 @@ export default function AccountPage() {
         {user && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#71717a', marginBottom: 6 }}>
-              <span>Credits</span>
-              <span>{user.credits || 0} remaining</span>
+              <span>{T('creditsWord')}</span>
+              <span>{user.credits || 0} {T('creditsRemaining')}</span>
             </div>
             <div style={{ height: 6, borderRadius: 3, background: '#27272a', overflow: 'hidden' }}>
               <div style={{
@@ -98,17 +106,17 @@ export default function AccountPage() {
         border: '1px solid #27272a', marginBottom: 16,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Voice Clone</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{T('voiceCloneLabel')}</span>
           <span style={{
             fontSize: 12, fontWeight: 700,
             color: user?.clonedVoiceId ? '#4ade80' : '#71717a',
           }}>
-            {user?.clonedVoiceId ? '✓ Active' : 'Not cloned'}
+            {user?.clonedVoiceId ? `✓ ${T('voiceCloneActive')}` : T('voiceCloneNone')}
           </span>
         </div>
         {user?.clonedVoiceName && (
           <p style={{ fontSize: 12, color: '#71717a', margin: '8px 0 0' }}>
-            Voice: {user.clonedVoiceName}
+            {T('voiceLabelPrefix')}: {user.clonedVoiceName}
           </p>
         )}
       </div>
@@ -119,7 +127,7 @@ export default function AccountPage() {
         border: '1px solid #27272a', marginBottom: 16,
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, fontWeight: 700 }}>Language</span>
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{T('languageWord')}</span>
           <span style={{ fontSize: 13, color: '#a1a1aa' }}>
             {prefs?.lang?.toUpperCase() || 'EN'}
           </span>
@@ -129,8 +137,8 @@ export default function AccountPage() {
       {/* Quick links */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 24 }}>
         {[
-          { href: '/terms', label: 'Terms of Service' },
-          { href: '/privacy', label: 'Privacy Policy' },
+          { href: '/terms', label: T('termsOfServiceLink') },
+          { href: '/privacy', label: T('privacyPolicyLink') },
         ].map(link => (
           <a key={link.href} href={link.href} style={{
             display: 'block', padding: '14px 16px', borderRadius: 12,

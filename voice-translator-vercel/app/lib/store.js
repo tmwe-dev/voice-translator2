@@ -4,6 +4,7 @@
 
 import { createLogger } from './logger.js';
 import { redis } from './redis.js';
+import { normalizzaCapienza, normalizzaTipoStanza } from './decisioni.js';
 import { randomUUID, randomBytes } from 'crypto';
 
 const log = createLogger('store');
@@ -63,7 +64,7 @@ export async function resolveRoomIdentity(token, name, roomId) {
 // ROOMS
 // =============================================
 
-export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null, diretta = false) {
+export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null, diretta = false, maxPartecipanti = null) {
   const id = randomBytes(4).toString('hex').toUpperCase();
   const room = {
     id,
@@ -85,6 +86,20 @@ export async function createRoom(creatorName, creatorLang, mode = 'conversation'
     // continuerebbe a mandare la propria voce alla nuvola credendo di
     // essere in una conversazione riservata.
     diretta: !!diretta,
+    // ── b.139-bis · IL TETTO SI SCRIVE ALLA NASCITA ──
+    //
+    // Non veniva scritto affatto. L'unico punto che lo metteva sulla
+    // stanza era `aggiornaPoliticaPubblica`, chiamata solo da /api/mondo:
+    // cioe SOLO per le stanze pubblicate in vetrina. In una stanza
+    // privata il campo restava assente e il tetto vero diventava il
+    // ripiego dello script Lua — che valeva DIECI, mentre il modulo di
+    // creazione ne aveva promessi venti e disegnato i bottoni fino a 50.
+    //
+    // L'undicesimo si sentiva dire "La stanza e al completo" in una
+    // stanza creata per venti, senza che nessuno dei due potesse capire
+    // perche. Ora il numero c'e da subito, e viene dalla stessa
+    // funzione che usa la vetrina.
+    maxPartecipanti: normalizzaCapienza(maxPartecipanti, { diretta: !!diretta }),
     ended: false
   };
   await redis('SET', `room:${id}`, JSON.stringify(room), 'EX', 3600); // 1 hour TTL (privacy-first)
@@ -171,8 +186,8 @@ export async function aggiornaPoliticaPubblica(roomId, { hot, roomType, maxParte
   const key = `room:${roomId.toUpperCase()}`;
   const result = await redis('EVAL', AGGIORNA_POLITICA_PUBBLICA, 1, key,
     hot ? '1' : '0',
-    String(roomType || 'public'),
-    String(Number(maxPartecipanti) || 20),
+    normalizzaTipoStanza(roomType),
+    String(normalizzaCapienza(maxPartecipanti)),
     suApprovazione ? '1' : '0');
   if (!result) return null;
   try { return JSON.parse(result); } catch (e) { log.warn('politica pubblica non rileggibile:', e.message); return null; }

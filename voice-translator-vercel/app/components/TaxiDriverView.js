@@ -77,8 +77,8 @@ function TaxiDriverView({ destId, decryptionKey }) {
 
         const res = await fetch(`/api/taxi/destination?id=${destId}`);
         if (!res.ok) {
-          if (res.status === 404) setError('Destinazione scaduta, già letta o non trovata');
-          else setError('Errore nel caricamento');
+          if (res.status === 404) setError(L('taxiDestExpired'));
+          else setError(L('loadingError'));
           setLoading(false); return;
         }
         const { ciphertext } = await res.json();
@@ -93,9 +93,9 @@ function TaxiDriverView({ destId, decryptionKey }) {
         if (matched) setDriverLang(matched.code);
       } catch (e) {
         if (e?.message?.includes('decrypt') || e?.name === 'OperationError') {
-          setError('Impossibile decifrare la destinazione. Il link potrebbe essere incompleto.');
+          setError(L('cannotDecryptDest'));
         } else {
-          setError('Errore di rete');
+          setError(L('networkError'));
         }
       }
       setLoading(false);
@@ -205,7 +205,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: C.bg, fontFamily: FONT }}>
         <div style={{ textAlign: 'center' }}>
           <div style={{ marginBottom: 16 }}><Icon name="car" size={40} color={(_S?.colors?.textMuted) || 'rgba(255,255,255,0.35)'} /></div>
-          <div style={{ fontSize: 14, color: C.textMuted }}>Caricamento destinazione...</div>
+          <div style={{ fontSize: 14, color: C.textMuted }}>{L('loadingDestination')}</div>
         </div>
       </div>
     );
@@ -221,7 +221,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             padding: '10px 24px', borderRadius: 12, cursor: 'pointer',
             background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
             color: C.accent, fontSize: 13, fontWeight: 600, fontFamily: FONT,
-          }}>Torna alla home</button>
+          }}>{L('backHome')}</button>
         </div>
       </div>
     );
@@ -316,7 +316,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
         }}>
           {translating ? (
             <div style={{ textAlign: 'center', padding: '12px 0' }}>
-              <div style={{ fontSize: 13, color: C.textMuted }}>Traduzione in corso...</div>
+              <div style={{ fontSize: 13, color: C.textMuted }}>{L('translationInProgress')}</div>
             </div>
           ) : (
             <>

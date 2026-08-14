@@ -31,9 +31,83 @@ import { useApp } from '../contexts/AppContext.js';
 // dritti in chat. E' un lavoro di b.133 e non va rotto.
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// LA RIGA DI UN PAESE (b.140)
+//
+// Era definita DENTRO SceltaPaeseView: lo stesso errore che in b.133
+// faceva perdere una lettera alla volta al campo nome. Ogni battuta
+// nella ricerca ricreava la funzione, React la vedeva come un tipo di
+// componente nuovo e rimontava tutte le righe da capo — motivo per cui
+// nessuna animazione poteva reggere e il passaggio del mouse non
+// lasciava traccia. Fuori, la sua identita e stabile.
+//
+// L'effetto chiesto da Luca: bandiera che cresce del 18% e sotto una
+// lastra di vetro sfumata. Il vetro e in `linear-gradient` con due
+// stop trasparenti, non un colore pieno: cosi sopra lo sciame animato
+// si vede attraverso invece di spegnerlo.
+// ═══════════════════════════════════════════════════════════════
+function RigaPaese({ p, evidenziato, selezionato, c, lingua, onScegli, onConferma, ritardo }) {
+  const [sopra, setSopra] = useState(false);
+  const acceso = sopra || selezionato;
+  return (
+    <button
+      onClick={() => onScegli(p)}
+      onDoubleClick={() => onConferma(p)}
+      onMouseEnter={() => setSopra(true)}
+      onMouseLeave={() => setSopra(false)}
+      onFocus={() => setSopra(true)}
+      onBlur={() => setSopra(false)}
+      aria-pressed={selezionato}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
+        padding: '11px 13px', marginBottom: 5, borderRadius: 14, cursor: 'pointer',
+        fontFamily: FONT,
+        background: selezionato
+          ? `linear-gradient(120deg, ${c.accent1Bg || 'rgba(38,217,176,0.16)'} 0%, rgba(255,255,255,0.05) 60%, transparent 100%)`
+          : sopra
+            ? 'linear-gradient(120deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.045) 55%, transparent 100%)'
+            : evidenziato ? (c.overlayBg || 'rgba(255,255,255,0.03)') : 'transparent',
+        border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.35)') : sopra ? 'rgba(255,255,255,0.12)' : 'transparent'}`,
+        backdropFilter: acceso ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: acceso ? 'blur(12px)' : 'none',
+        transform: sopra ? 'translateX(3px)' : 'translateX(0)',
+        // L'entrata a cascata: ogni riga arriva 18 ms dopo la precedente.
+        // Sopra le venti si smette di scalare, altrimenti l'ultima
+        // arriverebbe mezzo secondo dopo e sembrerebbe un ritardo.
+        animation: `vtRigaEntra 0.32s ease-out ${Math.min(ritardo, 20) * 0.018}s both`,
+        transition: 'background 0.22s, border-color 0.22s, transform 0.22s',
+        WebkitTapHighlightColor: 'transparent',
+      }}>
+      <span style={{
+        fontSize: 25, lineHeight: 1, flexShrink: 0,
+        display: 'inline-block',
+        transform: acceso ? 'scale(1.18)' : 'scale(1)',
+        filter: acceso ? 'drop-shadow(0 3px 10px rgba(0,0,0,0.45))' : 'none',
+        transition: 'transform 0.24s cubic-bezier(0.34,1.4,0.64,1), filter 0.24s',
+      }}>{p.bandiera}</span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700,
+          color: selezionato ? (c.accent1 || '#26D9B0') : (c.textPrimary || '#fff'),
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {p.nome}
+        </span>
+        <span style={{ display: 'block', fontSize: 11, color: c.textMuted || 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+          {lingua.name}
+        </span>
+      </span>
+      {p.nome !== p.nomeEn && (
+        <span style={{ fontSize: 10.5, color: c.textMuted || 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+          {p.nomeEn}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export default function SceltaPaeseView({ onFatto }) {
   const { S, prefs, savePrefs, theme } = useApp();
   const c = S?.colors || {};
+  const [uscita, setUscita] = useState(false);
   const [ricerca, setRicerca] = useState('');
   const [scelto, setScelto] = useState(null);
 
@@ -72,7 +146,19 @@ export default function SceltaPaeseView({ onFatto }) {
     return tutti.filter(p => p.codice !== proposto.codice);
   }, [ricerca, proposto]);
 
+  // b.140 — IL PASSAGGIO ALLA PAGINA DOPO.
+  //
+  // Prima la schermata spariva di colpo. Ora si congeda: sale di un
+  // filo e sfuma in 260 ms, poi si cambia vista. Il tempo qui e legato
+  // a `vtPaeseEsce` piu sotto — se si cambia uno vanno cambiati tutti e
+  // due, altrimenti si vede un lampo di vuoto.
   function conferma(paese) {
+    if (!paese) return;
+    setUscita(true);
+    setTimeout(() => confermaDavvero(paese), 260);
+  }
+
+  function confermaDavvero(paese) {
     if (!paese) return;
     const linguaParlata = LANGS.find(l => l.code === paese.lingua) ? paese.lingua : 'en';
     const nuove = {
@@ -85,53 +171,30 @@ export default function SceltaPaeseView({ onFatto }) {
     onFatto?.(nuove);
   }
 
+  // b.140 — LO SFONDO OPACO SPEGNEVA LO SCIAME.
+  //
+  // `page.js` disegna gia SpatialBackdrop e Sciame sotto questa vista
+  // (passa da `wrap`, e 'paese' non e fra le schermate senza velo). Ma
+  // qui sopra c'era un gradiente PIENO a tutto schermo che li copriva:
+  // gli effetti c'erano e non si vedevano.
+  //
+  // Ora e un velo semitrasparente: da profondita al testo e lascia
+  // passare le particelle che si muovono dietro.
   const isChiaro = theme === 'dawn' || theme === 'blubianco' || theme === 'avorio';
   const sfondo = isChiaro
-    ? 'linear-gradient(165deg, #f7f8fc 0%, #eef0f7 50%, #f7f8fc 100%)'
-    : 'linear-gradient(165deg, #05070f 0%, #0a0f1f 45%, #101730 100%)';
+    ? 'linear-gradient(165deg, rgba(247,248,252,0.72) 0%, rgba(238,240,247,0.60) 50%, rgba(247,248,252,0.72) 100%)'
+    : 'linear-gradient(165deg, rgba(5,7,15,0.68) 0%, rgba(10,15,31,0.52) 45%, rgba(16,23,48,0.68) 100%)';
 
-  const RigaPaese = ({ p, evidenziato }) => {
-    const lingua = getLang(p.lingua);
-    const selezionato = attivo?.codice === p.codice;
-    return (
-      <button
-        onClick={() => { setScelto(p); }}
-        onDoubleClick={() => conferma(p)}
-        aria-pressed={selezionato}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-          padding: '11px 13px', marginBottom: 5, borderRadius: 14, cursor: 'pointer',
-          fontFamily: FONT,
-          background: selezionato ? (c.accent1Bg || 'rgba(38,217,176,0.12)')
-            : evidenziato ? (c.overlayBg || 'rgba(255,255,255,0.03)') : 'transparent',
-          border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.35)') : 'transparent'}`,
-          transition: 'background 0.18s, border-color 0.18s',
-        }}>
-        <span style={{ fontSize: 25, lineHeight: 1, flexShrink: 0 }}>{p.bandiera}</span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700,
-            color: selezionato ? (c.accent1 || '#26D9B0') : (c.textPrimary || '#fff'),
-            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {p.nome}
-          </span>
-          <span style={{ display: 'block', fontSize: 11, color: c.textMuted || 'rgba(255,255,255,0.45)', marginTop: 1 }}>
-            {lingua.name}
-          </span>
-        </span>
-        {p.nome !== p.nomeEn && (
-          <span style={{ fontSize: 10.5, color: c.textMuted || 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
-            {p.nomeEn}
-          </span>
-        )}
-      </button>
-    );
-  };
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
       background: sfondo, color: c.textPrimary || '#fff', fontFamily: FONT,
       display: 'flex', flexDirection: 'column',
+      // Entrata all'apertura, uscita alla conferma. I 260 ms qui devono
+      // combaciare con il ritardo in `conferma()`: se l'animazione fosse
+      // piu lunga si vedrebbe la vista nuova comparire sotto questa.
+      animation: uscita ? 'vtPaeseEsce 0.26s ease-in forwards' : 'vtPaeseEntra 0.4s ease-out',
       paddingTop: 'max(20px, env(safe-area-inset-top))',
     }}>
       <div style={{ padding: '0 20px 12px', width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
@@ -170,7 +233,9 @@ export default function SceltaPaeseView({ onFatto }) {
               color: c.textMuted || 'rgba(255,255,255,0.4)', padding: '4px 4px 8px' }}>
               {L('countrySuggested')}
             </div>
-            <RigaPaese p={proposto} evidenziato />
+            <RigaPaese p={proposto} evidenziato c={c} lingua={getLang(proposto.lingua)}
+              selezionato={attivo?.codice === proposto.codice}
+              onScegli={setScelto} onConferma={conferma} ritardo={0} />
             <div style={{ height: 10 }} />
           </>
         )}
@@ -185,7 +250,11 @@ export default function SceltaPaeseView({ onFatto }) {
             {L('countryNone')}
           </div>
         )}
-        {risultati.map(p => <RigaPaese key={p.codice} p={p} />)}
+        {risultati.map((p, i) => (
+          <RigaPaese key={p.codice} p={p} c={c} lingua={getLang(p.lingua)}
+            selezionato={attivo?.codice === p.codice}
+            onScegli={setScelto} onConferma={conferma} ritardo={i} />
+        ))}
 
         <div style={{ height: 24 }} />
       </div>
@@ -201,12 +270,19 @@ export default function SceltaPaeseView({ onFatto }) {
           onClick={() => conferma(attivo)}
           disabled={!attivo}
           style={{
-            width: '100%', padding: 15, borderRadius: 16, border: 'none',
+            width: '100%', padding: 15, borderRadius: 16,
             cursor: attivo ? 'pointer' : 'default', fontFamily: FONT,
             fontSize: 15.5, fontWeight: 800, color: attivo ? '#fff' : (c.textMuted || 'rgba(255,255,255,0.35)'),
+            // b.140 — tasto in vetro invece che in tinta piena: sotto
+            // c'e lo sciame che si muove, e un rettangolo opaco lo
+            // avrebbe spento proprio nel punto piu guardato.
             background: attivo
-              ? `linear-gradient(135deg, ${c.accent1 || '#26D9B0'}, ${c.accent2 || '#7C6BF5'})`
-              : (c.overlayBg || 'rgba(255,255,255,0.04)'),
+              ? `linear-gradient(135deg, ${c.accent1 || '#26D9B0'}44 0%, ${c.accent2 || '#7C6BF5'}3A 55%, rgba(255,255,255,0.10) 100%)`
+              : 'rgba(255,255,255,0.045)',
+            border: `1px solid ${attivo ? (c.accent1Border || 'rgba(38,217,176,0.45)') : 'rgba(255,255,255,0.09)'}`,
+            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+            boxShadow: attivo ? `0 8px 30px -10px ${c.accent1 || '#26D9B0'}55` : 'none',
+            transition: 'background 0.25s, box-shadow 0.25s, transform 0.15s',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             WebkitTapHighlightColor: 'transparent',
           }}>
@@ -214,6 +290,12 @@ export default function SceltaPaeseView({ onFatto }) {
           {L('countryConfirm')}
         </button>
       </div>
+
+      <style>{`
+        @keyframes vtPaeseEntra { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
+        @keyframes vtPaeseEsce  { to { opacity: 0; transform: translateY(-14px) scale(0.99); } }
+        @keyframes vtRigaEntra  { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
     </div>
   );
 }

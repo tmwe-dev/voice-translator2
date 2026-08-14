@@ -142,10 +142,19 @@ export function getPaese(codice) {
  * Insensibile a maiuscole e ad accenti — chi cerca "espana" deve
  * trovare "Espana" anche senza la tilde sulla tastiera.
  */
+// b.140 — I PAESI ERANO NELL'ORDINE IN CUI LI AVEVO SCRITTI IO.
+//
+// Luca: "PERCHE NON POSSO ORDINARE I PAESI PER NOME?". Nessun ordine
+// visibile significa che per trovare il proprio bisogna leggerli tutti.
+// Si ordina per nome LOCALE, quello che l'utente vede scritto in
+// grande, con `localeCompare` cosi accenti e caratteri non latini
+// finiscono al posto giusto invece che in fondo.
+const PAESI_ORDINATI = [...PAESI].sort((a, b) => a.nome.localeCompare(b.nome, undefined, { sensitivity: 'base' }));
+
 export function cercaPaesi(testo) {
   const q = normalizza(testo);
-  if (!q) return PAESI;
-  return PAESI.filter(p =>
+  if (!q) return PAESI_ORDINATI;
+  return PAESI_ORDINATI.filter(p =>
     normalizza(p.nome).includes(q) ||
     normalizza(p.nomeEn).includes(q) ||
     p.codice.toLowerCase().startsWith(q)

@@ -742,7 +742,12 @@ export default function useRoomPolling({
 
   async function handleCreateRoom(
     name, lang, mode, avatar, selectedContext, selectedMode,
-    roomDescription, isTrial, isTopPro, userAccount, diretta = false
+    roomDescription, isTrial, isTopPro, userAccount, diretta = false,
+    // b.139-bis — la capienza scelta nel modulo di creazione non arrivava
+    // mai alla stanza: viaggiava solo verso /api/mondo, cioe solo per le
+    // stanze pubblicate. In una stanza privata il numero scelto veniva
+    // buttato via e valeva il ripiego dello script Lua.
+    maxPartecipanti = null
   ) {
     try {
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
@@ -766,6 +771,7 @@ export default function useRoomPolling({
           // stanza, cosi chi entra da un invito la eredita invece di
           // mandare la propria voce alla nuvola credendosi al riparo.
           diretta: !!diretta,
+          maxPartecipanti,
           userToken: getEffectiveToken?.() || null
         })
       });
@@ -819,7 +825,14 @@ export default function useRoomPolling({
           throw e;
         }
 
-        throw new Error(err.error || 'Room not found');
+        // b.139 — qui si mostrava all'utente il testo che arrivava dal
+        // SERVER (`err.error`), scritto in italiano nelle rotte. Chi apriva
+        // l'applicazione in coreano leggeva 'La stanza e al completo'.
+        // Il server resta l'autorita sul FATTO (la stanza e piena, la stanza
+        // non c'e); la PAROLA da mostrare la sceglie il client, che e l'unico
+        // a sapere in che lingua sta guardando chi legge.
+        if (res.status === 409 && err.piena) throw new Error(tFuori('roomIsFull'));
+        throw new Error(tFuori('roomNotFound'));
       }
       const data = await res.json();
       const { room, roomSessionToken: token } = data;

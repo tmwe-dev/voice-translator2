@@ -37,9 +37,9 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
           <div style={S.card}>
             <div style={{textAlign:'center', padding:'24px 0'}}>
               <div style={{fontSize:40, marginBottom:12}}>{''}</div>
-              <div style={{fontSize:15, fontWeight:600, marginBottom:8}}>Login richiesto</div>
+              <div style={{fontSize:15, fontWeight:600, marginBottom:8}}>{L('loginRequired')}</div>
               <div style={{fontSize:13, color:'rgba(255,255,255,0.6)', marginBottom:20, lineHeight:1.5}}>
-                Per salvare le tue chiavi API devi prima accedere al tuo account.
+                {L('loginBeforeKeysDesc')}
               </div>
               <button style={S.btn} onClick={() => setView('account')}>
                 Accedi / Registrati
@@ -97,12 +97,12 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
           </button>
           {saveStatus === 'ok' && (
             <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(34,197,94,0.15)', color:PALETTE.green, fontSize:13, textAlign:'center'}}>
-              Chiavi salvate con successo!
+              {L('keysSavedOk')}
             </div>
           )}
           {saveStatus === 'error' && (
             <div style={{marginTop:8, padding:'8px 12px', borderRadius:8, background:'rgba(239,68,68,0.15)', color:PALETTE.red, fontSize:13, textAlign:'center'}}>
-              {saveError || 'Salvataggio fallito'}
+              {saveError || L('saveFailed')}
             </div>
           )}
         </div>

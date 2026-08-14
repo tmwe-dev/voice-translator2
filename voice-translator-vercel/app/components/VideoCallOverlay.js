@@ -204,7 +204,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 </div>
               )}
               {webrtc.webrtcConnected && (
-                <span style={{ color: '#64748b', fontSize: 13 }}>Camera spenta</span>
+                <span style={{ color: '#64748b', fontSize: 13 }}>{L('cameraOff')}</span>
               )}
             </div>
           )}
@@ -363,7 +363,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   paddingTop: 8, borderTop: '1px solid rgba(160,190,255,0.12)' }}>
                   <button onClick={() => setMostraTesto(v => !v)}
                     aria-pressed={mostraTesto} style={mostraTesto ? pillOn : pillOff}>
-                    {'\u{1F4AC}'} Testo
+                    {'\u{1F4AC}'} {L('textWord')}
                   </button>
                   <span style={{ width: 1, height: 16, background: 'rgba(160,190,255,0.15)' }} />
                   <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>SENTI</span>
@@ -372,7 +372,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                       onClick={() => { setAttenuazione(p.valore); setLivelloAtt(p.valore); if (setVideoDucking) setVideoDucking(p.valore < 0.5); }}
                       aria-pressed={livelloAtt === p.valore}
                       style={livelloAtt === p.valore ? pillOn : pillOff}>
-                      {p.nome}
+                      {L(p.chiave)}
                     </button>
                   ))}
                 </div>
@@ -457,14 +457,14 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               onClick={() => webrtc.flipCamera()}
               active={false}
               icon={<IconFlipCamera size={20}/>}
-              label="Ruota"
+              label={L('rotateWord')}
               color="#94a3b8" size={46}
             />
             <ControlBtn
               onClick={() => setVideoFullscreen(false)}
               active={false}
               icon={<IconMinimize size={20}/>}
-              label="Chat"
+              label={L('navChat')}
               color="#94a3b8" size={46}
             />
           </div>
@@ -580,21 +580,21 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             onClick={() => webrtc.flipCamera()}
             active={true}
             icon={<IconFlipCamera size={20}/>}
-            label="Ruota"
+            label={L('rotateWord')}
             color="#60a5fa" activeColor="rgba(96,165,250,0.12)"
           />
           <ControlBtn size={48}
             onClick={() => setVideoFullscreen(true)}
             active={true}
             icon={<IconExpand size={20}/>}
-            label="Espandi"
+            label={L('expandWord')}
             color="#f59e0b" activeColor="rgba(245,158,11,0.15)"
           />
           <ControlBtn size={48}
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             active={false}
             icon={<IconPhoneOff size={20}/>}
-            label="Chiudi"
+            label={L('closeWord')}
             color="#ef4444" activeColor="rgba(239,68,68,0.2)"
           />
         </div>

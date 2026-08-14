@@ -5,6 +5,35 @@ import { FONT } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
 import { eIPhone } from '../hooks/usePWAInstall.js';
+import { useApp } from '../contexts/AppContext.js';
+
+// ═══════════════════════════════════════════════════════════════
+// ISTRUZIONI CERTE, NON "CERCA NEL MENU" (b.139)
+//
+// Luca, guardando il pannello sul suo telefono:
+//   "NON C'e NESSUN INSTALLA DENTRO GOOGLE, FORSE IN SAFARI.
+//    DEVI DARE ISTRUZIONI CERTE."
+//
+// Aveva ragione. Il testo diceva "apri il menu del browser e cerca
+// Installa BarTalk": su Chrome da computer quella voce NEL MENU NON
+// C'E — l'installazione sta nella barra dell'indirizzo, a destra. Su
+// Android invece e' davvero nei tre puntini. Su Safari da iPhone si
+// passa da Condividi. Su Firefox non si puo' installare affatto.
+//
+// Un'istruzione sbagliata e' peggio di nessuna istruzione: manda la
+// persona a cercare una voce che non esiste e le fa credere di aver
+// sbagliato lei.
+// ═══════════════════════════════════════════════════════════════
+function riconosciPiattaforma() {
+  if (typeof navigator === 'undefined') return 'chrome';
+  const ua = navigator.userAgent || '';
+  if (/iphone|ipad|ipod/i.test(ua)) return 'ios';
+  if (/android/i.test(ua)) return 'android';
+  if (/firefox\//i.test(ua)) return 'firefox';
+  // Safari da Mac: c'e' "Safari" ma non "Chrome" ne' "Chromium".
+  if (/safari/i.test(ua) && !/chrome|chromium|edg/i.test(ua)) return 'safariMac';
+  return 'chrome';
+}
 
 // ═══════════════════════════════════════════════════════════════
 // INSTALLA, OPPURE RESTA NEL BROWSER (b.134)
@@ -32,6 +61,11 @@ import { eIPhone } from '../hooks/usePWAInstall.js';
 // ═══════════════════════════════════════════════════════════════
 
 export default function InstallaApp({ pwa, theme }) {
+  // b.139 — i testi erano in italiano fisso. Questo pannello e la prima
+  // cosa che vede chi apre l'applicazione da un telefono nuovo: se parla
+  // italiano a un turista tailandese, la scelta fra installare e restare
+  // nel browser non e piu una scelta, e un indovinello.
+  const { L } = useApp();
   const [istruzioniAperte, setIstruzioniAperte] = useState(false);
   const S = getStyles(theme);
   const col = S.colors || {};
@@ -68,14 +102,33 @@ export default function InstallaApp({ pwa, theme }) {
   const bloccate = typeof Notification !== 'undefined' && Notification.permission === 'denied';
   const aMano = !bloccate && !pwa.puoInstallare;
 
-  const istruzioni = suIPhone
-    ? ['Tocca Condividi in basso in Safari', 'Scorri e scegli "Aggiungi a Home"', 'Conferma con "Aggiungi"']
-    : ['Apri il menu del browser (i tre puntini in alto)', 'Cerca "Installa BarTalk" o "Aggiungi a schermata Home"', 'Conferma con "Installa"'];
+  // b.139 — LE ISTRUZIONI ERANO SBAGLIATE PER MEZZO MONDO.
+  //
+  // C'erano due sole varianti: iPhone e "tutto il resto". E il "tutto
+  // il resto" diceva di aprire il menu del browser e cercare "Installa
+  // BarTalk" — voce che su Chrome da COMPUTER nel menu non esiste:
+  // l'installazione sta nella barra dell'indirizzo, a destra. Luca l'ha
+  // trovato subito: "NON C'E NESSUN INSTALLA DENTRO GOOGLE".
+  //
+  // Un'istruzione sbagliata e peggio di nessuna: manda la persona a
+  // cercare qualcosa che non c'e e le fa credere di aver sbagliato lei.
+  //
+  // Ora sono cinque percorsi veri, uno per piattaforma. Firefox ne ha
+  // uno solo perche non permette di installare: e giusto dirlo invece
+  // di far cercare a vuoto.
+  const PASSI = {
+    ios: ['instIos1', 'instIos2', 'instIos3'],
+    android: ['instAndroid1', 'instAndroid2', 'instAndroid3'],
+    chrome: ['instChrome1', 'instChrome2', 'instChrome3'],
+    safariMac: ['instSafariMac1', 'instSafariMac2'],
+    firefox: ['instFirefox'],
+  };
+  const istruzioni = (PASSI[riconosciPiattaforma()] || PASSI.chrome).map((k) => L(k));
 
   return (
     <div
       role="dialog"
-      aria-label="Installa BarTalk"
+      aria-label={L('installAppAria')}
       style={{
         // b.134-ter — PROVATO NEL BROWSER: COPRIVA LA NAVIGAZIONE.
         //
@@ -110,14 +163,14 @@ export default function InstallaApp({ pwa, theme }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.testo, marginBottom: 4 }}>
-              {bloccate ? 'Gli avvisi sono bloccati da questo browser' : 'Installa BarTalk sul dispositivo'}
+              {bloccate ? L('notifBlockedTitle') : L('installOnDeviceTitle')}
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: C.testoTenue }}>
               {bloccate
-                ? 'Hai negato le notifiche a BarTalk in passato, e il browser non le richiede piu da solo. Si riaprono dal lucchetto accanto all’indirizzo.'
+                ? L('notifBlockedDesc')
                 : suIPhone
-                  ? 'Su iPhone gli avvisi dei tuoi contatti arrivano solo con l’app aggiunta alla Home. In Safari non arriveranno.'
-                  : 'Ricevi gli avvisi dei tuoi contatti anche ad app chiusa, e apri BarTalk a schermo intero. Nel browser funziona tutto il resto.'}
+                  ? L('installIphoneDesc')
+                  : L('installGenericDesc')}
             </div>
           </div>
         </div>
@@ -128,7 +181,7 @@ export default function InstallaApp({ pwa, theme }) {
             fontSize: 13, lineHeight: 1.7, color: C.testoTenue,
           }}>
             {(bloccate
-              ? ['Clicca il lucchetto accanto all’indirizzo, in alto', 'Cerca "Notifiche" e rimettila su Consenti', 'Ricarica la pagina']
+              ? [L('notifFixStep1'), L('notifFixStep2'), L('notifFixStep3')]
               : istruzioni
             ).map((passo) => <li key={passo}>{passo}</li>)}
           </ol>
@@ -158,8 +211,8 @@ export default function InstallaApp({ pwa, theme }) {
             }}
           >
             {(bloccate || aMano || suIPhone)
-              ? (istruzioniAperte ? 'Ho capito' : 'Come si fa')
-              : 'Installa l’app'}
+              ? (istruzioniAperte ? L('gotItWord') : L('howToDoIt'))
+              : L('installTheApp')}
           </button>
           <button
             onClick={pwa.dismissInstallBanner}
@@ -170,7 +223,7 @@ export default function InstallaApp({ pwa, theme }) {
               WebkitTapHighlightColor: 'transparent', whiteSpace: 'nowrap',
             }}
           >
-            Resta nel browser
+            {L('stayInBrowser')}
           </button>
         </div>
       </div>

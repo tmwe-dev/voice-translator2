@@ -14,11 +14,13 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 
 const FIELD_CONFIG = [
-  { key: 'terminal', icon: '', label: 'Terminal / Gate', placeholder: 'es. Terminal 2, Gate B12' },
-  { key: 'entrance', icon: '', label: 'Ingresso', placeholder: 'es. Ingresso principale, lato nord' },
-  { key: 'hotelName', icon: '', label: 'Hotel / Struttura', placeholder: 'es. Hotel Milano Central' },
-  { key: 'flightNumber', icon: '', label: 'Numero volo', placeholder: 'es. AZ1234' },
-  { key: 'notes', icon: '', label: 'Note per il tassista', placeholder: 'es. Bagaglio grande, 2 persone' },
+  // b.139 — etichette e segnaposto erano in italiano dentro la tabella, che
+  // nasce col modulo. Ora sono chiavi: si traducono quando si disegna il campo.
+  { key: 'terminal', icon: '', label: 'destTerminal', placeholder: 'destTerminalPh' },
+  { key: 'entrance', icon: '', label: 'destEntrance', placeholder: 'destEntrancePh' },
+  { key: 'hotelName', icon: '', label: 'destHotel', placeholder: 'destHotelPh' },
+  { key: 'flightNumber', icon: '', label: 'destFlight', placeholder: 'destFlightPh' },
+  { key: 'notes', icon: '', label: 'destNotes', placeholder: 'destNotesPh' },
 ];
 
 function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
@@ -243,7 +245,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             marginBottom: showDetails ? 12 : 0,
           }}>
-            <span>Dettagli aggiuntivi (opzionale)</span>
+            <span>{L('extraDetails')}</span>
             <span style={{ fontSize: 10, transition: 'transform 0.2s', transform: showDetails ? 'rotate(180deg)' : 'none' }}>▼</span>
           </button>
 
@@ -253,10 +255,10 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {FIELD_CONFIG.map(f => (
                 <div key={f.key}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>{f.icon}</span> {f.label}
+                    <span>{f.icon}</span> {L(f.label)}
                   </label>
                   <input type="text" value={details[f.key]} onChange={e => setDetails(prev => ({ ...prev, [f.key]: e.target.value }))}
-                    placeholder={f.placeholder} style={inputStyle}
+                    placeholder={L(f.placeholder)} style={inputStyle}
                   />
                 </div>
               ))}

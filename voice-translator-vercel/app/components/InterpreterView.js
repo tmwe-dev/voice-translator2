@@ -11,6 +11,7 @@ import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import getStyles from '../lib/styles.js';
 import { FONT } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
+import { tFuori } from '../lib/i18n.js';
 
 const CONTROLS_HIDE_DELAY = 5000;
 
@@ -166,7 +167,7 @@ function InterpreterView({
           {/* Close button */}
           <button
             onClick={onClose}
-            aria-label="Close interpreter"
+            aria-label={tFuori('closeInterpreter')}
             style={{
               width: 56, height: 56, borderRadius: '50%',
               background: 'rgba(255,59,48,0.8)',

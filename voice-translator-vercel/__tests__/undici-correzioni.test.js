@@ -10,6 +10,8 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { CAPIENZA } from '../app/lib/decisioni.js';
+import { JOIN_ROOM as JOIN_ROOM_GENERATO } from '../app/lib/redisLua.js';
 
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
@@ -31,7 +33,13 @@ describe('1 · nessuno viene buttato fuori in silenzio', () => {
 
   it('e il tetto e quello scelto dall\'host, non 10 fisso', () => {
     // La UI ne prometteva fino a 20, Redis ne teneva 10.
-    expect(lua()).toMatch(/local tetto = tonumber\(room\.maxPartecipanti\) or 10/);
+    //
+    // b.139-bis — il numero non e piu scritto dentro il Lua: veniva da
+    // li e da altri due posti, e i tre non concordavano. Ora lo script
+    // se lo fa interpolare da CAPIENZA (decisioni.js), quindi si
+    // controlla il sorgente Lua GENERATO, non il modello.
+    expect(lua()).toContain('tonumber(room.maxPartecipanti) or ${CAPIENZA.PREDEFINITA}');
+    expect(JOIN_ROOM_GENERATO).toContain('tonumber(room.maxPartecipanti) or 20');
   });
 
   it('chi arriva a stanza piena riceve 409, non un posto altrui', () => {
@@ -200,14 +208,17 @@ describe('9 · la modalita Diretta e uno-a-uno', () => {
     // useWebRTC ha un solo pcRef: il terzo che entrava in una stanza
     // Diretta non riceveva e non mandava niente, in silenzio, dentro una
     // stanza che gli prometteva riservatezza.
+    // b.139-bis — il 2 non e piu scritto a mano qui: era il terzo posto
+    // in cui viveva un numero di capienza. Ora e CAPIENZA.DIRETTA.
     const s = senzaCommenti(leggi('app/components/CreateRoomSheet.js'));
-    expect(s).toMatch(/maxParticipants: diretta \? 2 : maxParticipants/);
-    expect(s).toMatch(/if \(nuovo && maxParticipants > 2\) setMaxParticipants\(2\)/);
+    expect(s).toContain('normalizzaCapienza(maxParticipants, { diretta })');
+    expect(s).toContain('if (nuovo && maxParticipants > CAPIENZA.DIRETTA) setMaxParticipants(CAPIENZA.DIRETTA)');
+    expect(CAPIENZA.DIRETTA).toBe(2);
   });
 
   it('e il selettore non lascia risalire', () => {
     expect(senzaCommenti(leggi('app/components/CreateRoomSheet.js')))
-      .toMatch(/disabled=\{diretta && n > 2\}/);
+      .toContain('disabled={diretta && n > CAPIENZA.DIRETTA}');
   });
 });
 

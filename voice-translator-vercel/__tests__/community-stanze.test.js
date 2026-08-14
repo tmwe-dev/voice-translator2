@@ -16,8 +16,15 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
+import italiano from '../app/lib/locales/it.js';
+
 const APP = path.join(__dirname, '..', 'app');
 const leggi = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
+
+// Un difetto CITATO in un commento non e quel difetto: le frasi italiane
+// sopravvivono nelle spiegazioni, e un test che le cerca trova la propria.
+const senzaCommenti = (s) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
 const sheet = leggi('components/CreateRoomSheet.js');
 const pagina = leggi('page.js');
@@ -26,10 +33,16 @@ const elenco = leggi('components/MondoView.js');
 
 describe('creazione stanza Community', () => {
   it('il nome e obbligatorio: senza, il pulsante non parte', () => {
-    expect(sheet, 'serve un campo nome').toMatch(/Nome o argomento/);
+    // b.139 — prima si cercavano le frasi italiane dentro il componente.
+    // Ora quelle frasi vivono nei pacchetti lingua, e nel componente c'e la
+    // chiave: si controlla la chiave qui e il TESTO nel pacchetto italiano,
+    // cosi la guardia resta intera invece di spegnersi con la traduzione.
+    expect(senzaCommenti(sheet), 'serve un campo nome').toContain("L('roomNameOrTopic')");
+    expect(italiano.roomNameOrTopic, 'la chiave deve avere un testo').toContain('Nome o argomento');
     expect(sheet, 'e una soglia minima').toMatch(/nomeValido/);
     expect(sheet, 'il pulsante deve essere bloccato').toMatch(/disabled=\{creating \|\| !nomeValido\}/);
-    expect(sheet, 'e deve dire perche').toMatch(/Dai un nome alla stanza/);
+    expect(senzaCommenti(sheet), 'e deve dire perche').toContain("L('giveRoomAName')");
+    expect(italiano.giveRoomAName, 'la chiave deve avere un testo').toContain('Dai un nome alla stanza');
   });
 
   it('handleCreate non chiama onCreate con un nome vuoto', () => {
@@ -50,8 +63,19 @@ describe('creazione stanza Community', () => {
   });
 
   it('una stanza privata non finisce in vetrina', () => {
-    expect(pagina, 'il client non la pubblica').toMatch(/roomConfig\.roomType !== 'private'/);
-    expect(rotta, 'e il server la rifiuta comunque').toMatch(/tipo === 'private'/);
+    // b.139-bis — il predicato non e piu scritto qui ne li: era la stessa
+    // regola in due punti, con due segni opposti (`!== 'private'` sul
+    // client, `=== 'private'` sul server), e concordavano per fortuna.
+    // Ora tutti e due chiedono `vaInVetrina()` a decisioni.js. Il
+    // controllo non cerca piu la frase: cerca che nessuno dei due se la
+    // sia riscritta per conto suo.
+    expect(pagina, 'il client chiede la regola al file unico').toContain('vaInVetrina(');
+    expect(rotta, 'e il server pure').toContain('vaInVetrina(');
+    // La citazione si toglie prima di cercare: il commento che spiega la
+    // correzione contiene la frase corretta, e un controllo ingenuo
+    // troverebbe la propria spiegazione (trappola gia costata tempo).
+    expect(senzaCommenti(pagina), 'il client non riscrive il confronto').not.toContain("roomType !== 'private'");
+    expect(senzaCommenti(rotta), 'e il server nemmeno').not.toContain("tipo === 'private'");
   });
 
   it('la rotta conserva i campi invece di ignorarli', () => {

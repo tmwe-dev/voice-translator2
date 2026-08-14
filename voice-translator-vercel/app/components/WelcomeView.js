@@ -55,7 +55,10 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
     textDim: tc.textMuted || 'rgba(255,255,255,0.30)',
   };
 
-  const Lf = (key, fallback) => { const v = L(key); return (v && v !== key) ? v : fallback; };
+  // b.139 — c'era `Lf(chiave, ripiego)`: quando la chiave mancava usciva il
+  // RIPIEGO, scritto in italiano. Chi apriva la pagina in coreano leggeva
+  // 'Configurazione rapida'. Le chiavi ora ci sono tutte e 15: il ripiego
+  // non serve piu, e tenerlo avrebbe solo nascosto la prossima chiave persa.
 
   // ── Google Auth ──
   const googleInitRef = useRef(false);
@@ -160,9 +163,9 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
   // Feature pills — icone MONO a filo sottile, mai emoji
   const features = [
-    { icon: <IconGlobe size={19} />, text: Lf('featureTranslate', 'Traduzione AI istantanea'), color: D.neon1 },
-    { icon: <IconMic size={19} />, text: Lf('featureVoices', 'Voci premium ElevenLabs'), color: D.neon2 },
-    { icon: <IconBattery size={19} />, text: Lf('featureFree', '30 minuti in regalo'), color: D.neon4 },
+    { icon: <IconGlobe size={19} />, text: L('featureTranslate'), color: D.neon1 },
+    { icon: <IconMic size={19} />, text: L('featureVoices'), color: D.neon2 },
+    { icon: <IconBattery size={19} />, text: L('featureFree'), color: D.neon4 },
   ];
 
   // Progress indicator
@@ -272,7 +275,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               ...stagger(1),
             }}>
-              {Lf('heroTitle', 'Parla qualsiasi lingua, ovunque')}
+              {L('heroTitle')}
             </div>
 
             {/* Subtitle */}
@@ -281,7 +284,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               marginBottom: 32, maxWidth: 320,
               ...stagger(2),
             }}>
-              {Lf('heroSubtitle', 'Traduci conversazioni in tempo reale con voci AI premium. 30 minuti in regalo.')}
+              {L('heroSubtitle')}
             </div>
 
             {/* Feature pills */}
@@ -316,14 +319,14 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 } catch { googleOAuthPopup(); }
               }}>
                 <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-                {Lf('continueWithGoogle', 'Continua con Google')}
+                {L('continueWithGoogle')}
               </CTAButton>
             </div>
 
             {/* Skip — Continue without account */}
             <div style={{ width: '100%', ...stagger(7) }}>
               <CTAButton secondary onClick={() => setPhase(1)}>
-                {Lf('continueWithoutAccount', 'Continua senza account')}
+                {L('continueWithoutAccount')}
               </CTAButton>
             </div>
 
@@ -358,15 +361,15 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: D.textMuted,
                 cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0',
                 WebkitTapHighlightColor: 'transparent', ...stagger(0) }}>
-              {'←'} {Lf('back', 'Indietro')}
+              {'←'} {L('backWord')}
             </button>
 
             {/* Title */}
             <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
-              {Lf('setupTitle', 'Configurazione rapida')}
+              {L('setupTitle')}
             </div>
             <div style={{ fontSize: 13, color: D.textMuted, marginBottom: 24, textAlign: 'center', ...stagger(1) }}>
-              {Lf('setupSubtitle', 'Lingua e nome — 30 secondi')}
+              {L('setupSubtitle')}
             </div>
 
             {/* ── b.136 · QUI C'ERA UN SECONDO SELETTORE DI LINGUA ──
@@ -386,7 +389,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2,
                   textTransform: 'uppercase', color: D.textMuted }}>
-                  {Lf('countryLabel', 'Paese')}
+                  {L('countryLabel')}
                 </span>
                 <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: D.text, marginTop: 2 }}>
                   {paese?.nome || linguaParlata.name}
@@ -406,11 +409,11 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Name Input */}
             <div style={{ width: '100%', marginBottom: 24, ...stagger(3) }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: D.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2 }}>
-                {Lf('yourName', 'Il tuo nome')}
+                {L('yourName')}
               </div>
               <input type="text" value={prefs.name}
                 onChange={(e) => setPrefs({ ...prefs, name: e.target.value })}
-                placeholder={Lf('namePlaceholder', 'Es. Marco')}
+                placeholder={L('nameExample')}
                 maxLength={20}
                 style={{
                   width: '100%', padding: '14px 16px', borderRadius: 14, boxSizing: 'border-box',
@@ -422,14 +425,14 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                 onBlur={(e) => { e.target.style.borderColor = D.glassBorder; e.target.style.boxShadow = 'none'; }}
               />
               {prefs.name.trim().length > 0 && prefs.name.trim().length < 2 && (
-                <div style={{ fontSize: 11, color: D.neon3, marginTop: 6 }}>{Lf('minChars', 'Minimo 2 caratteri')}</div>
+                <div style={{ fontSize: 11, color: D.neon3, marginTop: 6 }}>{L('minChars')}</div>
               )}
             </div>
 
             {/* Next */}
             <div style={{ width: '100%', ...stagger(4) }}>
               <CTAButton onClick={() => setPhase(2)} disabled={!canNextSetup}>
-                {Lf('next', 'Avanti')} <span style={{ fontSize: 18 }}>{'→'}</span>
+                {L('next')} <span style={{ fontSize: 18 }}>{'→'}</span>
               </CTAButton>
             </div>
           </div>
@@ -448,15 +451,15 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               style={{ alignSelf: 'flex-start', background: 'none', border: 'none', color: D.textMuted,
                 cursor: 'pointer', fontFamily: FONT, fontSize: 14, marginBottom: 8, padding: '4px 0',
                 WebkitTapHighlightColor: 'transparent', ...stagger(0) }}>
-              {'←'} {Lf('back', 'Indietro')}
+              {'←'} {L('backWord')}
             </button>
 
             {/* Greeting */}
             <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 6, textAlign: 'center', ...stagger(0) }}>
-              {Lf('heyName', `Ciao ${prefs.name}!`)}
+              {L('heyName').replace('{x}', prefs.name)}
             </div>
             <div style={{ fontSize: 13, color: D.textMuted, marginBottom: 24, textAlign: 'center', ...stagger(1) }}>
-              {Lf('chooseAvatar', 'Scegli il tuo avatar')}
+              {L('chooseAvatar')}
             </div>
 
             {/* Avatar Grid */}
@@ -507,7 +510,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Hai un codice regalo? (voucher — riscattato appena entri) */}
             <div style={{ width: '100%', marginBottom: 18, ...stagger(4) }}>
               <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: D.textMuted, marginBottom: 6 }}>
-                {Lf('haveCode', 'HAI UN CODICE REGALO?')}
+                {L('haveCode')}
               </div>
               <input
                 value={codicePromo}
@@ -519,8 +522,8 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                     else localStorage.removeItem('vt-voucher-pendente');
                   } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
                 }}
-                placeholder={Lf('codePlaceholder', 'CODICE (facoltativo)')}
-                aria-label="Codice regalo"
+                placeholder={L('codePlaceholder')}
+                aria-label={L('giftCodeAria')}
                 style={{
                   width: '100%', boxSizing: 'border-box', padding: '12px 14px', borderRadius: 14,
                   fontFamily: 'inherit', fontSize: 14, fontWeight: 700, letterSpacing: 1,
@@ -532,7 +535,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
             {/* Start Button */}
             <div style={{ width: '100%', ...stagger(5) }}>
               <CTAButton onClick={finishWelcome}>
-                {Lf('startUsing', 'Inizia ad usare BarTalk')} {''}
+                {L('startUsing')} {''}
               </CTAButton>
             </div>
           </div>

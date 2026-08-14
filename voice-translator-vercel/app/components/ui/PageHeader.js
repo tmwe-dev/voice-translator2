@@ -1,6 +1,7 @@
 'use client';
 import { memo } from 'react';
 import { FONT } from '../../lib/constants.js';
+import { tFuori } from '../../lib/i18n.js';
 
 // ═══════════════════════════════════════
 // PageHeader — consistent header for all views
@@ -27,7 +28,7 @@ const PageHeader = ({ title, subtitle, onBack, S, rightAction }) => {
             padding: 8, margin: -8, display: 'flex', alignItems: 'center',
             color: C.textPrimary || '#fafafa',
           }}
-          aria-label="Indietro"
+          aria-label={tFuori('backWord')}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

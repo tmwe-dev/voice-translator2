@@ -5,7 +5,10 @@ import {
   deriveSharedKey, encryptMessage, decryptMessage, isE2EAvailable,
 } from '../lib/e2eCrypto.js';
 import { sendViaDataChannel } from '../lib/webrtc.js';
-import { isDirectMode } from '../lib/sessionGuard.js';
+// b.139 — la risposta a "siamo in Diretta?" viene dal file unico delle
+// decisioni: qui e una scelta che si paga cara, perche in Diretta la cifratura
+// e a prova di guasto (fail-closed) e in Traduzione no.
+import { eModalitaDiretta } from '../lib/decisioni.js';
 import { createLogger } from '../lib/logger.js';
 import { numeroDiSicurezza } from '../lib/improntaChiavi.js';
 const dbg = createLogger('e2e');
@@ -105,7 +108,7 @@ export default function useE2EEncryption({ sessionModeRef, roomIdRef } = {}) {
   const sendEncrypted = useCallback(async (dc, msg) => {
     if (!dc || dc.readyState !== 'open') return false;
 
-    const isDirect = isDirectMode(sessionModeRef?.current);
+    const isDirect = eModalitaDiretta(sessionModeRef?.current);
 
     // Control messages bypass encryption for low latency (both modes)
     const isControlMsg = msg?.type === 'ping' || msg?.type === 'pong' || msg?.type === 'e2e-pubkey'

@@ -10,41 +10,44 @@ import Sciame from './Sciame.js';
 // TutorialOverlay — Dark Ambient Onboarding
 // ═══════════════════════════════════════════════
 
+// b.139 — titoli e descrizioni erano scritti qui in italiano. La tabella
+// nasce al caricamento del modulo, prima che si sappia la lingua di chi
+// guarda: percio contiene CHIAVI, tradotte al disegno con L().
 const STEPS = [
   {
     iconName: 'doorOpen',
-    title: 'Benvenuto in BarTalk',
-    desc: 'Il traduttore vocale in tempo reale. Parla nella tua lingua, chi hai davanti ti sente nella sua. In regalo: 30 minuti per provare tutto.',
+    title: 'tutStep1Title',
+    desc: 'tutStep1Desc',
     accent: PALETTE.teal,
   },
   {
     iconName: 'mic',
-    title: 'Parla e Traduci',
-    desc: 'Tieni premuto PARLA e parla. La traduzione appare e si sente all\'istante, in più di 40 lingue.',
+    title: 'tutStep2Title',
+    desc: 'tutStep2Desc',
     accent: '#E8924A',
   },
   {
     iconName: 'link',
-    title: 'Inviti e Videochiamate',
-    desc: 'Manda un link a chiunque: entra senza account e paga tutto chi invita. Nelle stanze Community, invece, ognuno usa i propri minuti.',
+    title: 'tutStep3Title',
+    desc: 'tutStep3Desc',
     accent: PALETTE.violet,
   },
   {
     iconName: 'swap',
-    title: 'TaxiTalk e Mirror',
-    desc: 'Dal vivo lo schermo si divide in due; inclina il telefono e si capovolge da solo per chi ti sta di fronte.',
+    title: 'tutStep4Title',
+    desc: 'tutStep4Desc',
     accent: PALETTE.teal,
   },
   {
     iconName: 'battery',
-    title: 'I tuoi minuti, per sempre',
-    desc: 'La batteria in alto mostra il credito. Quando serve ricarichi da €4,99 — i minuti non scadono. La voce premium ElevenLabs consuma 3×.',
+    title: 'tutStep5Title',
+    desc: 'tutStep5Desc',
     accent: '#E8924A',
   },
   {
     iconName: 'key',
-    title: 'Con le TUE chiavi, illimitato',
-    desc: 'Hai una chiave OpenAI o ElevenLabs? Inseriscila in Profilo → API Keys: l\'uso diventa illimitato e paghi solo i provider.',
+    title: 'tutStep6Title',
+    desc: 'tutStep6Desc',
     accent: PALETTE.violet,
   },
 ];
@@ -186,7 +189,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text', fontFamily: FONT,
           }}>
-            {current.title}
+            {L(current.title)}
           </div>
 
           {/* Description */}
@@ -195,7 +198,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
             lineHeight: 1.7, marginBottom: 36,
             fontFamily: FONT, fontWeight: 300,
           }}>
-            {current.desc}
+            {L(current.desc)}
           </div>
 
           {/* Navigation */}
@@ -223,7 +226,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
                 cursor: 'pointer', fontFamily: FONT, transition: 'all 0.3s',
                 backdropFilter: 'blur(12px)',
               }}>
-              Salta
+              {L('skipWord')}
             </button>
 
             <button onClick={goNext}
@@ -236,7 +239,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
                 boxShadow: `0 8px 24px ${current.accent}35`,
                 transition: 'all 0.3s',
               }}>
-              {isLastStep ? 'Inizia!' : 'Avanti →'}
+              {isLastStep ? L('startExcl') : `${L('next')} →`}
             </button>
           </div>
 

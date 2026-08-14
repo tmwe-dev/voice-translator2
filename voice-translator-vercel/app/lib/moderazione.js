@@ -1,4 +1,5 @@
 import { redis } from './redis.js';
+import { normalizzaNome, puoModerare } from './decisioni.js';
 
 // ═══════════════════════════════════════════════════════════════
 // MODERAZIONE DELLE STANZE
@@ -39,8 +40,11 @@ const chiave = {
 // Il nome si confronta senza maiuscole e senza spazi ai bordi: "Marco" e
 // "marco " sono la stessa persona, e un blocco aggirabile con lo shift non
 // sarebbe un blocco.
+// b.139 — la normalizzazione dei nomi era scritta qui e confrontata
+// altrove alla lettera: due modi di dire "sono la stessa persona".
+// Ora c'e una funzione sola, in decisioni.js, e questa la riusa.
 export function normalizza(nome) {
-  return (nome || '').trim().toLowerCase().slice(0, 40);
+  return normalizzaNome(nome);
 }
 
 // ── Regole della stanza (scritte quando la stanza viene pubblicata) ──
@@ -63,9 +67,17 @@ export async function leggiRegole(roomId) {
   try { return { ...nessuna, ...JSON.parse(grezzo) }; } catch { return nessuna; }
 }
 
+/**
+ * b.139 — questa funzione risponde SOLO in base alle regole della stanza,
+ * cioe solo per le stanze pubblicate in vetrina: in una chat privata dice
+ * "no" anche a chi la stanza l'ha creata. Non e un difetto di per se — e
+ * la domanda "sei l'host DICHIARATO IN VETRINA" — ma non e la domanda
+ * "puoi moderare". Per quella si usa `puoModerare()` in decisioni.js, che
+ * mette insieme il ruolo nel gettone, le regole e la stanza.
+ */
 export async function eHost(roomId, nome) {
-  const { hostNome } = await leggiRegole(roomId);
-  return !!hostNome && hostNome === normalizza(nome);
+  const regole = await leggiRegole(roomId);
+  return puoModerare({ identita: { name: nome }, regole });
 }
 
 // ── Blocco ──

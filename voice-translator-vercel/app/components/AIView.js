@@ -40,26 +40,29 @@ const AIView = memo(function AIView({
   useEffect(() => { salvaGlossario(glossaryTerms); }, [glossaryTerms]);
   const [newTermFrom, setNewTermFrom] = useState('');
   const [newTermTo, setNewTermTo] = useState('');
+  // b.139 — nome e descrizione erano italiano fisso dentro lo stato. Sono
+  // testi che l'utente legge, non identificatori: qui restano le chiavi e la
+  // traduzione avviene al disegno, cosi cambia insieme alla lingua scelta.
   const [automations, setAutomations] = useState([
-    { id: 1, name: 'Auto-saluto', desc: 'Saluta automaticamente quando un partner si connette', enabled: true },
-    { id: 2, name: 'Riepilogo automatico', desc: 'Genera un riepilogo AI al termine della conversazione', enabled: true },
-    { id: 3, name: 'Correzione ortografica', desc: 'Correggi automaticamente errori prima di tradurre', enabled: false },
-    { id: 4, name: 'Tono formale', desc: 'Adatta le traduzioni a un registro formale', enabled: false },
+    { id: 1, name: 'aiGreetName', desc: 'aiGreetDesc', enabled: true },
+    { id: 2, name: 'aiSummaryName', desc: 'aiSummaryDesc', enabled: true },
+    { id: 3, name: 'aiSpellName', desc: 'aiSpellDesc', enabled: false },
+    { id: 4, name: 'aiFormalName', desc: 'aiFormalDesc', enabled: false },
   ]);
 
   const quickActions = [
-    { icona: 'mic', label: 'Interprete', desc: 'Modalità interpretazione real-time', action: () => { if (setSelectedMode) setSelectedMode('interpreter'); if (handleCreateRoom) handleCreateRoom(); }, color: S.colors.accent1 },
-    { icona: 'graduation', label: 'Glossario', desc: 'Gestisci termini personalizzati', action: () => setActiveSection(activeSection === 'glossary' ? null : 'glossary'), color: S.colors.accent2 },
-    { icona: 'zap', label: 'Automazioni', desc: 'Regole AI automatiche', action: () => setActiveSection(activeSection === 'automations' ? null : 'automations'), color: S.colors.statusWarning },
-    { icona: 'star', label: 'Stile', desc: 'Preferenze di traduzione', action: () => setActiveSection(activeSection === 'style' ? null : 'style'), color: S.colors.accent4 },
+    { icona: 'mic', label: L('interpreterWord'), desc: L('interpreterModeDesc'), action: () => { if (setSelectedMode) setSelectedMode('interpreter'); if (handleCreateRoom) handleCreateRoom(); }, color: S.colors.accent1 },
+    { icona: 'graduation', label: L('glossaryWord'), desc: L('glossaryManageDesc'), action: () => setActiveSection(activeSection === 'glossary' ? null : 'glossary'), color: S.colors.accent2 },
+    { icona: 'zap', label: L('automationsWord'), desc: L('aiAutomationsDesc'), action: () => setActiveSection(activeSection === 'automations' ? null : 'automations'), color: S.colors.statusWarning },
+    { icona: 'star', label: L('styleWord'), desc: L('translationPrefsDesc'), action: () => setActiveSection(activeSection === 'style' ? null : 'style'), color: S.colors.accent4 },
   ];
 
   const translationStyles = [
-    { id: 'natural', label: 'Naturale', desc: 'Fluente e idiomatico', icon: '' },
-    { id: 'literal', label: 'Letterale', desc: 'Fedele al testo originale', icon: '' },
-    { id: 'formal', label: 'Formale', desc: 'Registro professionale', icon: '' },
-    { id: 'casual', label: 'Informale', desc: 'Conversazione casual', icon: '' },
-    { id: 'technical', label: 'Tecnico', desc: 'Terminologia specialistica', icon: '' },
+    { id: 'natural', label: L('styleNatural'), desc: L('styleNaturalDesc'), icon: '' },
+    { id: 'literal', label: L('styleLiteral'), desc: L('styleLiteralDesc'), icon: '' },
+    { id: 'formal', label: L('styleFormal'), desc: L('styleFormalDesc'), icon: '' },
+    { id: 'casual', label: L('styleCasual'), desc: L('styleCasualDesc'), icon: '' },
+    { id: 'technical', label: L('styleTechnical'), desc: L('styleTechnicalDesc'), icon: '' },
   ];
 
   const [selectedStyle, setSelectedStyle] = useState('natural');
@@ -193,7 +196,7 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Automazioni AI</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>{L('aiAutomationsTitle')}</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -205,8 +208,8 @@ const AIView = memo(function AIView({
                 transition: 'all 0.2s',
               }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{auto.name}</div>
-                  <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{auto.desc}</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: S.colors.textPrimary }}>{L(auto.name)}</div>
+                  <div style={{ fontSize: 11, color: S.colors.textMuted, marginTop: 2 }}>{L(auto.desc)}</div>
                 </div>
                 <button onClick={() => toggleAutomation(auto.id)}
                   style={{
@@ -236,7 +239,7 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Stile di Traduzione</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>{L('translationStyleTitle')}</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -276,11 +279,10 @@ const AIView = memo(function AIView({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
           <span style={{ fontSize: 14 }}></span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: S.colors.accent1 }}>Suggerimento AI</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: S.colors.accent1 }}>{L('aiSuggestionLabel')}</span>
         </div>
         <p style={{ color: S.colors.textSecondary, fontSize: 13, lineHeight: 1.5, margin: 0 }}>
-          Attiva il glossario personale per migliorare la precisione delle traduzioni nei tuoi contesti d'uso più frequenti.
-          L'AI imparerà dalle tue correzioni.
+          {L('aiTipBody')}
         </p>
       </div>
 

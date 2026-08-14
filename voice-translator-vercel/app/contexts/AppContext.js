@@ -35,6 +35,11 @@ export function AppProvider({ children, value }) {
   const ctx = useMemo(() => ({
     // ── i18n ──
     L,
+    // b.139 — non basta tradurre le parole: le DATE si formattano da
+    // sole, e chi le scriveva passava 'it-IT' a mano. Un coreano vedeva
+    // "12 nov" nel proprio archivio. Chi deve formattare una data ora
+    // ha qui la lingua dell'interfaccia, la stessa che usa L().
+    uiLang: linguaInterfaccia,
     // ── Styles & Theme ──
     S: value.S,
     theme: value.theme,
@@ -62,7 +67,7 @@ export function AppProvider({ children, value }) {
       useOwnKeys: value.auth?.useOwnKeys,
     },
   }), [
-    L, value.S, value.theme, value.setTheme,
+    L, linguaInterfaccia, value.S, value.theme, value.setTheme,
     value.prefs, value.setPrefs, value.savePrefs,
     value.myLang, value.setMyLang,
     value.view, value.setView,

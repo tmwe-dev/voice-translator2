@@ -14,6 +14,7 @@
 // quello che disegna, e legge da qui.
 // ═══════════════════════════════════════════════════════════════
 
+import { tFuori } from './i18n.js';
 const DURATA = 4000;
 const MASSIMO = 3;
 
@@ -66,11 +67,14 @@ export const toast = {
   warning: (msg, opts) => addToast({ type: 'warning', message: msg, duration: 5000, ...opts }),
   errorRetry: (msg, onRetry) => addToast({
     type: 'error', message: msg, duration: 8000,
-    action: { label: 'Riprova', onClick: onRetry },
+    action: { label: tFuori('retryWord'), onClick: onRetry },
   }),
   offline: () => addToast({
     type: 'warning',
-    message: 'Sei offline — i messaggi saranno inviati quando torni online',
+    // b.139 — questa frase era scritta due volte: qui in italiano fisso e
+    // nei pacchetti lingua come 'offlineBanner', con parole leggermente
+    // diverse. Due copie della stessa frase divergono sempre: ora e una.
+    message: tFuori('offlineBanner'),
     duration: 10000,
   }),
 };

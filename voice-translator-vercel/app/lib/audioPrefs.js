@@ -26,8 +26,10 @@ export function getAttenuazione() { return leggi('vt-attenuazione', 0.2); }
 export function setAttenuazione(v) { scrivi('vt-attenuazione', v); }
 
 // Preset per la UI: quanto senti l'originale mentre parla la traduzione
+// b.139 — `nome` era il testo italiano. La tabella nasce col modulo, prima
+// che si sappia la lingua: ora porta la CHIAVE e chi disegna traduce.
 export const PRESET_ATTENUAZIONE = [
-  { id: 'tutto', nome: 'Solo tradotta', valore: 0 },
-  { id: 'medio', nome: 'Attenuata', valore: 0.2 },
-  { id: 'poco', nome: 'Entrambe', valore: 0.55 },
+  { id: 'tutto', chiave: 'onlyTranslated', valore: 0 },
+  { id: 'medio', chiave: 'attenuatedWord', valore: 0.2 },
+  { id: 'poco', chiave: 'bothWord', valore: 0.55 },
 ];

@@ -6,8 +6,10 @@ import { createLogger } from '../../lib/logger.js';
 import {
   blocca, sblocca, elencoBloccati,
   richiediIngresso, richiesteInAttesa, decidi, statoIngresso,
-  segnala, contaSegnalazioni, eHost, leggiRegole,
+  segnala, contaSegnalazioni, leggiRegole,
 } from '../../lib/moderazione.js';
+import { puoModerare } from '../../lib/decisioni.js';
+import { getRoom } from '../../lib/store.js';
 
 const log = createLogger('moderazione');
 
@@ -33,8 +35,16 @@ async function chiSei(roomSessionToken, roomId) {
 async function soloHost(roomSessionToken, roomId) {
   const io = await chiSei(roomSessionToken, roomId);
   if (!io) return { errore: NextResponse.json({ error: 'Sessione non valida' }, { status: 401 }) };
-  const host = io.role === 'host' || await eHost(roomId, io.name);
-  if (!host) return { errore: NextResponse.json({ error: 'Solo chi ospita puo farlo' }, { status: 403 }) };
+  // b.139 — qui la somma delle due regole era scritta a mano
+  // (`io.role === 'host' || await eHost(...)`), ed era l'unico punto in cui
+  // le due mezze verita si tenevano su a vicenda: `eHost()` da solo non
+  // riconosce l'host di una stanza non pubblicata in vetrina, e il ruolo da
+  // solo non riconosce chi ospita una stanza di vetrina entrandoci di nuovo.
+  // Ora la somma sta in `puoModerare()`, e la fa anche chi non se ne ricorda.
+  const [regole, stanza] = await Promise.all([leggiRegole(roomId), getRoom(roomId)]);
+  if (!puoModerare({ identita: io, stanza, regole })) {
+    return { errore: NextResponse.json({ error: 'Solo chi ospita puo farlo' }, { status: 403 }) };
+  }
   return { io };
 }
 

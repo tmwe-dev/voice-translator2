@@ -13,6 +13,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import { rilevanza, TIPI } from '../app/lib/reazioni.js';
+import { siConservanoIMessaggi } from '../app/lib/decisioni.js';
 
 const APP = path.join(__dirname, '..', 'app');
 const leggi = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
@@ -68,7 +69,9 @@ describe('reazioni e cifratura', () => {
 
   it('conservare i messaggi vale SOLO per le stanze Community', () => {
     const blocco = rotta.slice(rotta.indexOf("case 'salva'"), rotta.indexOf("case 'storico'"));
-    expect(blocco).toMatch(/eCommunity/);
+    // b.139 — la domanda non e piu "e Community?" ma "si conserva?", che e
+    // quella vera: una stanza Community DIRETTA non conserva niente.
+    expect(blocco).toMatch(/siConserva/);
     expect(blocco, 'la riservatezza delle chat private va rispettata in silenzio')
       .toMatch(/conservato: false/);
   });
@@ -82,7 +85,19 @@ describe('reazioni e cifratura', () => {
     // Il client manda tutto: se decidesse lui, basterebbe un client
     // modificato per far conservare una chat privata.
     expect(leggi('components/RoomView.js')).toMatch(/reazioni\.conserva/);
-    expect(rotta).toMatch(/if \(!await eCommunity\(roomId\)\)/);
+    expect(rotta).toMatch(/if \(!await siConserva\(roomId\)\)/);
+    // E decide sui DATI del server: le regole della stanza e la stanza.
+    expect(rotta).toMatch(/leggiRegole\(roomId\)/);
+    expect(rotta).toMatch(/getRoom\(roomId\)/);
+  });
+
+  it('una stanza DIRETTA non conserva, nemmeno se e in vetrina', () => {
+    // b.139 — era il caso in cui le due copie della regola davano risposte
+    // opposte: il client "no" (rotta vietata in Diretta), il server "si"
+    // (e una stanza Community). A tenerle d'accordo c'era solo
+    // l'intestazione mandata dal client.
+    expect(siConservanoIMessaggi({ regole: { hostNome: 'luca' }, stanza: { diretta: true } })).toBe(false);
+    expect(siConservanoIMessaggi({ regole: { hostNome: 'luca' }, stanza: { diretta: false } })).toBe(true);
   });
 
   it('lo storico mostra gli ultimi venti e i tre piu rilevanti', () => {

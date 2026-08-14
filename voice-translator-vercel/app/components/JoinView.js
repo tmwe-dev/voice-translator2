@@ -162,27 +162,18 @@ export default function JoinView({ joinCode,
     }
   }, [guestStep]);
 
-  // i18n helper
-  const tx = (key) => {
-    const map = {
-      continue: { it:'Continua', es:'Continuar', fr:'Continuer', de:'Weiter', en:'Continue' },
-      gender: { it:'Genere', es:'Género', fr:'Genre', de:'Geschlecht', en:'Gender' },
-      male: { it:'Maschio', es:'Hombre', fr:'Homme', de:'Mann', en:'Male' },
-      female: { it:'Femmina', es:'Mujer', fr:'Femme', de:'Frau', en:'Female' },
-      other: { it:'Altro', es:'Otro', fr:'Autre', de:'Andere', en:'Other' },
-      yourLang: { it:'La tua lingua', es:'Tu idioma', fr:'Ta langue', de:'Deine Sprache', en:'Your Language' },
-      yourLangDesc: { it:'Scegli la lingua in cui parli', es:'Elige el idioma que hablas', fr:'Choisis la langue que tu parles', de:'Wähle die Sprache, die du sprichst', en:'Choose the language you speak' },
-      audioPrefs: { it:'Preferenze audio', es:'Preferencias de audio', fr:'Préférences audio', de:'Audio-Einstellungen', en:'Audio Preferences' },
-      autoPlay: { it:'Riproduzione automatica', es:'Reproducción automática', fr:'Lecture automatique', de:'Automatische Wiedergabe', en:'Auto-play audio' },
-      autoPlayDesc: { it:'Ascolta automaticamente le traduzioni', es:'Escuchar traducciones automáticamente', fr:'Écouter automatiquement les traductions', de:'Übersetzungen automatisch hören', en:'Automatically hear translations' },
-      transVoice: { it:'Voce di traduzione', es:'Voz de traducción', fr:'Voix de traduction', de:'Übersetzungsstimme', en:'Translation voice' },
-      changeVoiceLater: { it:'Puoi cambiare la voce anche durante la chat', es:'Puedes cambiar la voz durante el chat', fr:'Tu peux changer la voix pendant le chat', de:'Du kannst die Stimme während des Chats ändern', en:'You can change the voice during chat too' },
-      freeVoice: { it:'Voce libera (Edge TTS)', es:'Voz libre (Edge TTS)', fr:'Voix gratuite (Edge TTS)', de:'Freie Stimme (Edge TTS)', en:'Free voice (Edge TTS)' },
-      joinChat: { it:'Entra nella Chat', es:'Unirse al Chat', fr:'Rejoindre le Chat', de:'Chat beitreten', en:'Join Chat' },
-    };
-    const lang = iL.split('-')[0];
-    return map[key]?.[lang] || map[key]?.en || key;
-  };
+  // ── b.139 · IL MINI-DIZIONARIO INTERNO E STATO SMONTATO ──
+  //
+  // Qui viveva una funzione di traduzione tutta sua, con la mappa dentro:
+  // quattordici frasi scritte a mano in it/es/fr/de/en e basta. Chi arrivava
+  // con l'interfaccia in giapponese, arabo o russo leggeva l'inglese, e non
+  // per una scelta ma perche quelle lingue nella mappa non c'erano.
+  //
+  // Era anche una SECONDA fonte di verita per gli stessi testi: la
+  // stessa etichetta poteva vivere qui e nei pacchetti lingua, con due
+  // parole diverse. Ora le chiavi sono quelle vere, in tutti e 15 i
+  // pacchetti, e passano da `tI()` come tutto il resto della pagina —
+  // che rispetta anche la lingua scelta da chi invita (b.115).
 
   // Shared button styles
 
@@ -291,7 +282,7 @@ export default function JoinView({ joinCode,
           {bandiera} {prefs.name}
         </div>
         <div style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', maxWidth: 300 }}>
-          {tI('joining') || 'Entro nella conversazione…'}
+          {tI('joining')}
         </div>
         {status && <div style={{ marginTop: 14, fontSize: 13, color: C.red }}>{status}</div>}
         <style>{`@keyframes vtGira { to { transform: rotate(360deg); } }`}</style>
@@ -340,7 +331,7 @@ export default function JoinView({ joinCode,
           </div>
 
           <div style={{ fontSize: 14, color: C.textSecondary, marginBottom: 28 }}>
-            {tI('inviteInstructions') || 'Sei stato invitato a una conversazione tradotta in tempo reale.'}
+            {tI('invitedToTranslated')}
           </div>
 
           {/* ONE BIG BUTTON — just "Chat" */}
@@ -361,7 +352,7 @@ export default function JoinView({ joinCode,
             onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
             onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            Chat
+            {tI('navChat')}
           </button>
 
           {status && <div style={{ textAlign: 'center', marginTop: 12, fontSize: 13, color: C.red }}>{status}</div>}
@@ -451,12 +442,12 @@ export default function JoinView({ joinCode,
 
           {/* Gender */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tx('gender')}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('genderWord')}</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {[
-                { key: 'male', icon: '♂', label: tx('male') },
-                { key: 'female', icon: '♀', label: tx('female') },
-                { key: 'other', icon: '⚧', label: tx('other') },
+                { key: 'male', icon: '♂', label: tI('maleWord') },
+                { key: 'female', icon: '♀', label: tI('femaleWord') },
+                { key: 'other', icon: '⚧', label: tI('otherWord') },
               ].map(g => (
                 <button key={g.key} onClick={() => setGender(g.key)} style={{
                   flex: 1, padding: '12px 8px', borderRadius: 14, cursor: 'pointer',
@@ -475,7 +466,7 @@ export default function JoinView({ joinCode,
           </div>
 
           <PrimaryBtn C={C} FONT={FONT} onClick={handleNext} disabled={!canProceedStep0} style={{ marginTop: 16 }}>
-            {tx('continue')} →
+            {tI('continueWord')} →
           </PrimaryBtn>
         </GlassCard>
       )}
@@ -484,8 +475,8 @@ export default function JoinView({ joinCode,
       {guestStep === 1 && (
         <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tx('yourLang')}</div>
-            <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>{tx('yourLangDesc')}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tI('yourLang')}</div>
+            <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>{tI('yourLangDesc')}</div>
           </div>
 
           {/* Language grid */}
@@ -510,7 +501,7 @@ export default function JoinView({ joinCode,
 
           {/* Avatar */}
           <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>Avatar</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('avatarWord')}</div>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
               {AVATARS.map((av, i) => (
                 <div key={i} onClick={() => setPrefs(p => ({...p, avatar: av}))}
@@ -541,7 +532,7 @@ export default function JoinView({ joinCode,
               WebkitTapHighlightColor: 'transparent',
             }}>←</button>
             <PrimaryBtn C={C} FONT={FONT} onClick={handleNext} style={{ flex: 1 }}>
-              {tx('continue')} →
+              {tI('continueWord')} →
             </PrimaryBtn>
           </div>
         </GlassCard>
@@ -551,7 +542,7 @@ export default function JoinView({ joinCode,
       {guestStep === 2 && (
         <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
-            <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tx('audioPrefs')}</div>
+            <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tI('audioPrefs')}</div>
           </div>
 
           {/* Auto-play toggle */}
@@ -561,8 +552,8 @@ export default function JoinView({ joinCode,
             border: `1px solid ${C.cardBorder}`,
           }}>
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{tx('autoPlay')}</div>
-              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{tx('autoPlayDesc')}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.textPrimary }}>{tI('autoPlayLabel')}</div>
+              <div style={{ fontSize: 10, color: C.textMuted, marginTop: 2 }}>{tI('autoPlayDesc')}</div>
             </div>
             <button onClick={() => setAudioAutoPlay(!audioAutoPlay)} style={{
               width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
@@ -580,7 +571,7 @@ export default function JoinView({ joinCode,
 
           {/* Voice grid */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tx('transVoice')}</div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 8 }}>{tI('transVoice')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
               {VOICES.map(v => (
                 <button key={v} onClick={() => setSelectedVoicePref(v)} style={{
@@ -598,7 +589,7 @@ export default function JoinView({ joinCode,
                 </button>
               ))}
             </div>
-            <div style={{ fontSize: 9, color: C.textMuted, textAlign: 'center', marginTop: 4 }}>{tx('changeVoiceLater')}</div>
+            <div style={{ fontSize: 9, color: C.textMuted, textAlign: 'center', marginTop: 4 }}>{tI('changeVoiceLater')}</div>
           </div>
 
           {/* Edge TTS gender */}
@@ -607,7 +598,7 @@ export default function JoinView({ joinCode,
             padding: '10px 14px', background: `rgba(255,255,255,0.03)`, borderRadius: 12, marginBottom: 14,
             border: `1px solid ${C.cardBorder}`,
           }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: C.textPrimary }}>{tx('freeVoice')}</div>
+            <div style={{ fontSize: 12, fontWeight: 500, color: C.textPrimary }}>{tI('freeVoiceEdge')}</div>
             <div style={{ display: 'flex', gap: 4 }}>
               {['female', 'male'].map(g => (
                 <button key={g} onClick={() => setPrefs(p => ({...p, edgeTtsVoiceGender: g}))} style={{
@@ -617,7 +608,7 @@ export default function JoinView({ joinCode,
                   color: (prefs.edgeTtsVoiceGender || 'female') === g ? '#fff' : C.textMuted,
                   fontWeight: (prefs.edgeTtsVoiceGender || 'female') === g ? 600 : 400,
                 }}>
-                  {g === 'female' ? '♀' : '♂'} {g === 'female' ? tx('female') : tx('male')}
+                  {g === 'female' ? '♀' : '♂'} {g === 'female' ? tI('femaleWord') : tI('maleWord')}
                 </button>
               ))}
             </div>
@@ -653,7 +644,7 @@ export default function JoinView({ joinCode,
               WebkitTapHighlightColor: 'transparent',
             }}>←</button>
             <PrimaryBtn C={C} FONT={FONT} onClick={handleJoin} disabled={!canJoin} style={{ flex: 1 }}>
-              {tI('inviteJoinBtn') || tx('joinChat')}
+              {tI('inviteJoinBtn') || tI('joinChat')}
             </PrimaryBtn>
           </div>
 

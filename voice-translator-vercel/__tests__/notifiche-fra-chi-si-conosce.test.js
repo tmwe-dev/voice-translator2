@@ -39,6 +39,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import italiano from '../app/lib/locales/it.js';
 
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
@@ -69,19 +70,41 @@ describe('l\'hook dell\'installazione non e piu scollegato', () => {
   });
 
   it('il banner offre le due strade, non una sola', () => {
+    // b.139 — il banner parla ora la lingua di chi legge: nel componente
+    // ci sono le chiavi, e la frase da controllare sta nel pacchetto italiano.
     const b = leggi('app/components/InstallaApp.js');
-    expect(b, 'la scelta deve essere vera').toMatch(/Resta nel browser/);
+    expect(senzaCommenti(b), 'la scelta deve essere vera').toContain("L('stayInBrowser')");
+    expect(italiano.stayInBrowser).toContain('Resta nel browser');
     expect(b).toMatch(/dismissInstallBanner/);
     expect(b).toMatch(/handleInstallApp/);
   });
 
-  it('e su iPhone spiega come si fa invece di mostrare un bottone finto', () => {
-    // Safari non implementa `beforeinstallprompt`: un bottone "Installa"
-    // li non avrebbe niente da chiamare. E proprio su iPhone installare
-    // e l'UNICO modo di ricevere avvisi.
+  it('e le istruzioni sono quelle VERE di ogni piattaforma (b.139)', () => {
+    // Prima c'erano due sole varianti: iPhone e "tutto il resto". E il
+    // "tutto il resto" diceva di aprire il menu del browser e cercare
+    // "Installa BarTalk" — voce che su Chrome da COMPUTER nel menu non
+    // esiste: sta nella barra dell'indirizzo. Luca l'ha trovato subito.
+    //
+    // Un'istruzione sbagliata e peggio di nessuna: manda la persona a
+    // cercare qualcosa che non c'e e le fa credere di aver sbagliato lei.
     const b = senzaCommenti(leggi('app/components/InstallaApp.js'));
-    expect(b).toMatch(/eIPhone/);
-    expect(b).toMatch(/Aggiungi a Home/);
+    expect(b, 'serve il riconoscimento del dispositivo').toContain('riconosciPiattaforma()');
+    for (const p of ['ios:', 'android:', 'chrome:', 'safariMac:', 'firefox:']) {
+      expect(b, `manca il percorso ${p}`).toContain(p);
+    }
+    expect(b, 'la vecchia istruzione generica non deve tornare')
+      .not.toContain('installGenStep1');
+  });
+
+  it('e Firefox lo dice invece di far cercare a vuoto', () => {
+    // Firefox non permette di installare applicazioni web: dare tre
+    // passi finti li sarebbe una presa in giro.
+    const it_ = JSON.parse(leggi('app/lib/locales/it.js').match(/= (\{[\s\S]*\});/)[1]);
+    expect(it_.instFirefox).toMatch(/Firefox/);
+    expect(it_.instChrome2, 'su computer si passa dalla barra dell\'indirizzo')
+      .toMatch(/barra dell'indirizzo|freccia/);
+    expect(it_.instAndroid1, 'su Android invece i tre puntini ci sono davvero')
+      .toMatch(/tre puntini/);
   });
 });
 
@@ -300,6 +323,8 @@ describe('nessun bottone che non fa niente', () => {
   });
 
   it('e per le notifiche bloccate dice DOVE si riaprono', () => {
-    expect(b()).toMatch(/lucchetto accanto all/);
+    expect(b()).toContain("L('notifFixStep1')");
+    expect(italiano.notifFixStep1).toMatch(/lucchetto accanto all/);
+    expect(italiano.notifBlockedDesc).toMatch(/lucchetto accanto all/);
   });
 });

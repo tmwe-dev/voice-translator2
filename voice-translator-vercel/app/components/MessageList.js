@@ -118,7 +118,7 @@ const MessageList = memo(function MessageList({
   }, []);
 
   return (
-    <div style={S.chatArea} role="log" aria-live="polite" aria-label="Chat messages">
+    <div style={S.chatArea} role="log" aria-live="polite" aria-label={L('chatMessagesAria')}>
       {messages.length === 0 && (
         <div style={{textAlign:'center', color:S.colors.textMuted, marginTop:60, fontSize:13, lineHeight:1.6}}>
           {L('speakNow')}{'\n'}
@@ -151,7 +151,7 @@ const MessageList = memo(function MessageList({
             <div style={{maxWidth:'75%', display:'flex', flexDirection:'column',
               alignItems:isMine ? 'flex-end' : 'flex-start'}}>
               <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:3}}>
-                {isMine ? 'Tu' : m.sender}
+                {isMine ? L('youWord') : m.sender}
               </div>
               <div style={{...S.bubble, ...(isMine ? S.bubbleMine : S.bubbleOther)}}>
                 {/* b.101 \u2014 quello che uno scrive di suo pugno non gli si
@@ -296,13 +296,13 @@ const MessageList = memo(function MessageList({
           <AvatarImg src={prefs.avatar} size={56} style={{marginBottom:2}} />
           <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>
             <div style={{fontSize:10, color:S.colors.textTertiary, marginBottom:3, display:'flex', alignItems:'center', gap:4}}>
-              <span>Tu</span>
+              <span>{L('youWord')}</span>
               <span style={{display:'inline-block', width:6, height:6, borderRadius:3,
                 background: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
                 animation:'vtPulse 1.2s infinite ease-in-out'}} />
               <span style={{color: streamingMsg._whisperProcessing ? S.colors.accent4 : S.colors.accent3,
                 fontSize:9, fontWeight:600}}>
-                {streamingMsg._whisperProcessing ? 'ELABORAZIONE' : streamingMsg._whisperListening ? 'ASCOLTO' : 'LIVE'}
+                {streamingMsg._whisperProcessing ? L('processingUpper') : streamingMsg._whisperListening ? L('listeningUpper') : L('liveUpper')}
               </span>
             </div>
             <div style={{...S.bubble, ...S.bubbleMine, border:`1px solid ${S.colors.accent3Border}`}}>

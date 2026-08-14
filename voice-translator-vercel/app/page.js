@@ -1,6 +1,10 @@
 'use client';
 // b.128 — serve per non mandare conferme sul canale sbagliato in Diretta.
-import { isDirectMode } from './lib/sessionGuard.js';
+// b.139 — le due righe qui sotto chiedevano "siamo in Diretta?" per decidere
+// se una conferma di lettura poteva passare da Realtime. E la stessa domanda
+// che si fanno useTranslationAPI e le rotte: ora la risposta viene dal file
+// unico delle decisioni, cosi non puo separarsi da loro.
+import { trasportoAmmesso, TRASPORTO, modalitaDiStanza, vaInVetrina } from './lib/decisioni.js';
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
@@ -307,7 +311,7 @@ function HomeInner() {
           try { partita = sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }) !== false; }
           catch (e) { partita = false; }
         }
-        if (!partita && !isDirectMode(sessionModeRef.current) && roomPolling.broadcastAck) {
+        if (!partita && trasportoAmmesso(sessionModeRef.current, TRASPORTO.REALTIME) && roomPolling.broadcastAck) {
           try { roomPolling.broadcastAck(message.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
         }
       }
@@ -753,7 +757,10 @@ function HomeInner() {
 
     // PRIMA di ogni altra cosa: da questo istante il cancello davanti a
     // fetch deve gia sapere quali rotte lasciar passare.
-    cambiaModalitaSessione(room.diretta ? 'direct' : 'translate');
+    // b.139 — il ternario `room.diretta ? 'direct' : 'translate'` era scritto
+    // qui e, con parole diverse, dentro il cancello e nelle rotte. Ora la
+    // traduzione da stanza a modalita si fa in un posto solo.
+    cambiaModalitaSessione(modalitaDiStanza(room));
 
     roomInfoRef.current = room;
     roomContextRef.current = {
@@ -1138,7 +1145,7 @@ function HomeInner() {
           try { partita = sendDirectMessageRef.current({ type: 'msg-read', msgId }) !== false; }
           catch (e) { partita = false; }
         }
-        if (!partita && !isDirectMode(sessionModeRef.current) && roomPolling.broadcastRead) {
+        if (!partita && trasportoAmmesso(sessionModeRef.current, TRASPORTO.REALTIME) && roomPolling.broadcastRead) {
           try { roomPolling.broadcastRead(msgId); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
         }
       }}
@@ -1353,7 +1360,8 @@ function HomeInner() {
               selectedContext, roomConfig.mode || selectedMode,
               roomConfig.description || '',
               auth.isTrial, auth.isTopPro, auth.userAccount,
-              roomConfig.diretta
+              roomConfig.diretta,
+              roomConfig.maxParticipants
             );
             // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
             // Prima di b.113 la modalita Diretta era un meccanismo
@@ -1373,7 +1381,12 @@ function HomeInner() {
             // Community restava eternamente "Nessuna stanza al momento", e la
             // POST di /api/mondo non la chiamava nessuno.
             const codice = room?.id;
-            if (codice && roomConfig.roomType !== 'private') {
+            // b.139-bis — qui c'era scritto `roomType !== 'private'`, e la
+            // stessa regola col segno opposto stava in /api/mondo. Il server
+            // resta l'autorita e rifiuta comunque; questo controllo evita solo
+            // una richiesta destinata a essere respinta, e ora legge la regola
+            // dallo stesso posto da cui la legge il server.
+            if (codice && vaInVetrina(roomConfig.roomType)) {
               try {
                 await fetch('/api/mondo', {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },

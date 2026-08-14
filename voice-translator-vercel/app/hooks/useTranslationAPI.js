@@ -2,7 +2,12 @@
 import { glossarioPerTesto } from '../lib/glossario.js';
 import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
+// b.139 — la regola su quali strade puo prendere un messaggio era scritta a
+// mano in tre punti di questo file, sotto forma di `!isDirect` sparsi. Bastava
+// dimenticarne uno perche in modalita Diretta un pezzo di conversazione uscisse
+// da Realtime. Ora la si chiede una volta a `trasportiAmmessi()`.
 import { isDirectMode } from '../lib/sessionGuard.js';
+import { trasportiAmmessi, TRASPORTO } from '../lib/decisioni.js';
 import { createLogger } from '../lib/logger.js';
 import { puoPartire } from '../lib/reati.js';
 import { toast } from '../lib/avvisi.js';
@@ -144,7 +149,8 @@ export default function useTranslationAPI({
       _status: 'in-coda',
     };
 
-    const isDirect = isDirectMode(sessionModeRef?.current);
+    const vie = trasportiAmmessi(sessionModeRef?.current);
+    const isDirect = !vie[TRASPORTO.SERVER];
 
     // ── Instant delivery: P2P (always) + Realtime broadcast (only in Translate mode) ──
     // Priority 1: WebRTC DataChannel (P2P, ~50ms) — ALWAYS, in both modes
@@ -173,7 +179,7 @@ export default function useTranslationAPI({
     }
     // Priority 2: Supabase Realtime broadcast (~100ms)
     // BLOCKED in Direct mode — no message content through Supabase
-    if (broadcastMessage && !isDirect) {
+    if (broadcastMessage && vie[TRASPORTO.REALTIME]) {
       broadcastMessage(instantMsg);
     }
 
@@ -262,19 +268,19 @@ export default function useTranslationAPI({
       updateLocalMessage(original, senderName, { translated, targetLang, translations });
     }
 
-    const isDirect = isDirectMode(sessionModeRef?.current);
+    const vie = trasportiAmmessi(sessionModeRef?.current);
 
     // Broadcast to partner via P2P (fastest) — always
     if (sendDirectMessage) {
       try { sendDirectMessage({ type: 'message-update', ...updatePayload }); } catch { /* la traduzione viaggia anche per Realtime e per il server: se il canale diretto e chiuso arriva lo stesso */ }
     }
     // Broadcast to partner via Realtime — BLOCKED in Direct mode
-    if (broadcastMessageUpdate && !isDirect) {
+    if (broadcastMessageUpdate && vie[TRASPORTO.REALTIME]) {
       broadcastMessageUpdate(updatePayload);
     }
 
     // ── Server update: BLOCKED in Direct mode ──
-    if (isDirect) return;
+    if (!vie[TRASPORTO.SERVER]) return;
 
     // ── Server update: PATCH with smart retry ──
     // Strategy: Try PATCH immediately (Phase 1 POST is usually done by now).

@@ -17,6 +17,7 @@ import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { getAttenuazione } from '../lib/audioPrefs.js';
 import useReazioni from '../hooks/useReazioni.js';
+import { eDiretta } from '../lib/decisioni.js';
 
 const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -239,23 +240,21 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   }
 
   return (
-    <div style={S.roomPage} role="main" aria-label="Translation room">
+    <div style={S.roomPage} role="main" aria-label={L('translationRoomAria')}>
       <audio ref={remoteAudioRef} autoPlay playsInline style={{display:'none'}} />
 
       {/* ── b.113 · la Stanza Diretta si vede sempre ──
           Non e un vezzo grafico: se la traduzione non funziona e non si
           capisce perche, si pensa a un guasto. Qui c'e scritto che e una
           scelta, e di chi. */}
-      {roomInfo?.diretta && (
+      {eDiretta(roomInfo) && (
         <div style={{
           padding: '8px 14px', background: 'rgba(38,217,176,0.10)',
           borderBottom: '1px solid rgba(38,217,176,0.25)',
           fontSize: 11, color: S.colors.textPrimary, lineHeight: 1.5,
         }}>
-          <strong style={{ color: '#26D9B0' }}>Stanza Diretta.</strong>{' '}
-          I messaggi restano fra i due telefoni: non passano dai nostri
-          server e non ne resta copia. In cambio non c&apos;è traduzione,
-          né trascrizione, né lettura ad alta voce.
+          <strong style={{ color: '#26D9B0' }}>{L('directRoomBannerTitle')}</strong>{' '}
+          {L('directRoomBannerBody')}
         </div>
       )}
 
@@ -319,7 +318,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             display: 'flex', alignItems: 'center', gap: 12,
             cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
           }}
-          aria-label="Activate audio"
+          aria-label={L('activateAudio')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
@@ -370,10 +369,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
               <div>
                 <div style={{color:'#fff', fontSize:14, fontWeight:600}}>
                   {isVideo ? <IconCamera size={16} /> : <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>}
-                  {' '}{webrtc.incomingCall.from} {L('callIncoming') || 'ti sta chiamando'}
+                  {' '}{webrtc.incomingCall.from} {L('callIncoming')}
                 </div>
                 <div style={{color:'#94a3b8', fontSize:11, marginTop:2}}>
-                  {isVideo ? 'Video call in arrivo' : 'Chiamata vocale in arrivo'}
+                  {isVideo ? L('incomingVideoCall') : L('incomingVoiceCall')}
                 </div>
               </div>
             </div>
@@ -497,7 +496,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
         background:'rgba(0,0,0,0.15)', borderTop:`1px solid ${S.colors.overlayBorder}`}}>
         <input
-          aria-label={L('typePlaceholder') || 'Type a message'}
+          aria-label={L('typePlaceholder')}
           style={{flex:1, padding:'8px 12px', borderRadius:20, background:S.colors.inputBg,
             border:`1px solid ${S.colors.inputBorder}`, color:S.colors.textPrimary, fontSize:14, outline:'none',
             fontFamily:FONT, boxSizing:'border-box'}}
@@ -517,7 +516,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           disabled={sendingText}
         />
         <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
-          aria-label={L('send') || 'Send message'}
+          aria-label={L('send')}
           style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
             background: textInput.trim() ? S.colors.btnGradient : S.colors.overlayBg,
             color: textInput.trim() ? S.colors.textPrimary : S.colors.textMuted,
@@ -546,7 +545,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
               {rispostaA.testo}
             </div>
           </div>
-          <button onClick={() => setRispostaA(null)} aria-label="Annulla risposta"
+          <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               color: S.colors.textMuted, fontSize: 16, padding: '0 4px',
