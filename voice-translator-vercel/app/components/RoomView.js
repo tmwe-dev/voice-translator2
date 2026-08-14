@@ -404,6 +404,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         videoDucking={videoDucking} setVideoDucking={setVideoDucking}
         partnerVolume={partnerVolume} setPartnerVolume={setPartnerVolume}
         lastTranslationSubtitle={lastTranslationSubtitle}
+        interpreter={interpreter}
+        interpreterActive={interpreterActive}
+        setInterpreterActive={setInterpreterActive}
         recording={recording} isListening={isListening}
         partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} S={S}
       />

@@ -2,7 +2,7 @@
 import { memo, useRef, useEffect, useState } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
-  IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord } from './Icons.js';
+  IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord, IconGlobe } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
@@ -28,6 +28,21 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   videoDucking, setVideoDucking,
   partnerVolume, setPartnerVolume,
   lastTranslationSubtitle,
+  // ── b.132 · l'interprete, che qui non arrivava ──
+  // La chiamata VOCALE riceveva `interpreter`, `interpreterActive` e
+  // `setInterpreterActive`. La videochiamata no: riceveva solo
+  // `lastTranslationSubtitle`, che e il sottotitolo dell'ultimo
+  // messaggio di CHAT — un'altra cosa.
+  //
+  // Quindi in videochiamata non esisteva nessun modo di accendere
+  // l'interprete: niente testo della voce tradotta, niente voce
+  // dell'agente. Mentre la Home promette "Videochiamata tradotta —
+  // con sottotitoli e voce tradotta".
+  //
+  // Tutto il resto c'era gia e funzionava: trascrizione, traduzione,
+  // sintesi, invio sul canale dati, ricezione, riproduzione. Mancava
+  // il comando per accenderlo, in una sola delle due chiamate.
+  interpreter, interpreterActive, setInterpreterActive,
   recording, isListening,
   partnerSpeaking, partnerTyping,
   S,
@@ -280,8 +295,12 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
 
           {/* ═══ Pannello traduzione — SEMPRE visibile, dal primo secondo ═══ */}
           {(() => {
-            const subs = Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle
-              : lastTranslationSubtitle ? [lastTranslationSubtitle] : [];
+            // b.132 — quando l'interprete e acceso, il sottotitolo VERO
+            // e il suo: arriva dalla voce in tempo reale, non dalla chat.
+            const daInterprete = interpreterActive && interpreter?.lastSubtitle
+              ? [interpreter.lastSubtitle] : null;
+            const subs = daInterprete || (Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle
+              : lastTranslationSubtitle ? [lastTranslationSubtitle] : []);
             const latest = subs.length > 0 ? subs[subs.length - 1] : null;
             const acc = S?.colors?.accent2 || '#38e1ff';
             const acc1 = S?.colors?.accent1 || '#5b8cff';
@@ -404,6 +423,18 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
             />
           </div>
+
+          {/* b.132 — l'interprete si accende anche da qui, non solo
+              nella chiamata vocale. Stessa veste degli altri comandi. */}
+          {setInterpreterActive && (
+            <ControlBtn
+              onClick={() => setInterpreterActive(!interpreterActive)}
+              active={interpreterActive}
+              icon={<IconGlobe size={22}/>}
+              label={interpreterActive ? 'Traduce' : 'Traduci'}
+              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
+            />
+          )}
 
           {/* TERMINA — il protagonista, impossibile sbagliarsi */}
           <button
