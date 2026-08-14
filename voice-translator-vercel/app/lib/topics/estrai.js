@@ -100,6 +100,33 @@ export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
 }
 
 /**
+ * b.149 — L'IMMAGINE SI VERIFICA PRIMA DI PROMETTERLA.
+ * Dal vivo (schermate di Luca): card con un riquadro vuoto enorme al
+ * posto della foto. Un og:image dichiarato nella pagina puo essere
+ * morto, spostato o vietato all'hotlink: se finisce cosi nella cache
+ * CONDIVISA, il buco lo vedono tutti per 15 minuti. Quindi: una HEAD
+ * con 4 secondi di tempo. Si scarta solo su verdetto CERTO (404/410,
+ * 5xx, rete): un 403 o un 405 possono essere solo antipatia per HEAD,
+ * e nel dubbio l'immagine si tiene — il ripiego grafico ora esiste.
+ */
+export async function immagineRaggiungibile(url, { timeoutMs = 4000 } = {}) {
+  try {
+    const verdetto = await assertSSRFSafe(url);
+    if (!verdetto.safe) return false;
+    const r = await fetch(url, {
+      method: 'HEAD',
+      headers: { 'User-Agent': UA },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (r.status === 404 || r.status === 410 || r.status >= 500) return false;
+    const tipo = r.headers.get('content-type') || '';
+    if (r.ok && tipo && !tipo.startsWith('image/')) return false;
+    return true;
+  } catch { return false; }
+}
+
+/**
  * Arricchisce i primi N articoli con le schede, a piccoli gruppi
  * concorrenti. Chi fallisce resta con titolo+fonte+URL: il piano dice
  * di non bloccare la ricerca per una fonte che non si fa leggere.
@@ -117,11 +144,22 @@ export async function arricchisci(articoli, { quanti = 10, concorrenza = 4, suPr
       // Quindi "completa" significa: descrizione E un'immagine che NON
       // venga dal thumbnailer di Bing.
       const immagineBuona = art.immagine && !eMiniaturaBing(art.immagine);
-      if (immagineBuona && art.descrizione) continue;
-      const scheda = await estraiScheda(art.url);
-      if (scheda.immagine && !immagineBuona) art.immagine = scheda.immagine;
-      if (scheda.descrizione && !art.descrizione) art.descrizione = scheda.descrizione;
-      if (scheda.pubblicato && !art.pubblicato) art.pubblicato = scheda.pubblicato;
+      // La miniatura Bing si mette da parte: se l'og:image si rivela
+      // finto, e comunque meglio del fondale (MSN dichiara come
+      // og:image una pagina HTML — visto dal vivo, b.149).
+      const riservaBing = eMiniaturaBing(art.immagine) ? art.immagine : '';
+      if (!immagineBuona || !art.descrizione) {
+        const scheda = await estraiScheda(art.url);
+        if (scheda.immagine && !immagineBuona) art.immagine = scheda.immagine;
+        if (scheda.descrizione && !art.descrizione) art.descrizione = scheda.descrizione;
+        if (scheda.pubblicato && !art.pubblicato) art.pubblicato = scheda.pubblicato;
+      }
+      // b.149 — la promessa si controlla: o l'immagine risponde, o
+      // non si dichiara. Meglio il fondale elegante del buco nero.
+      if (art.immagine && !(await immagineRaggiungibile(art.immagine))) {
+        art.immagine = (riservaBing && riservaBing !== art.immagine
+          && await immagineRaggiungibile(riservaBing)) ? riservaBing : '';
+      }
       if (suProgresso) { try { suProgresso(art.dominio); } catch { /* il progresso non ferma il lavoro */ } }
     }
   }
