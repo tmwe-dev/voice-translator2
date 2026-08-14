@@ -51,8 +51,22 @@ const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja', 
 // Based on Test Center results: Microsoft is primary for ALL languages
 // Google is a reliable secondary. MyMemory only as emergency fallback.
 const PROVIDER_CHAINS = {
-  // b.91 — Google primo perche funziona davvero; Microsoft in fondo.
-  '*': ['google', 'mymemory', 'microsoft'],
+  // b.127 — Microsoft TOLTO del tutto dalla catena.
+  //
+  // In b.91 era stato retrocesso in fondo "come ultima possibilita".
+  // Gli errori di produzione degli ultimi 7 giorni dicono che quando ci
+  // si arriva fallisce ancora, con lo stesso identico messaggio:
+  //
+  //     Failed to fetch auth token: The first argument must be of type
+  //     string or an instance of Buffer... Received undefined
+  //
+  // Una possibilita che non riesce mai non e una rete di sicurezza: e
+  // un tentativo sprecato che fa aspettare l'utente e sporca i registri
+  // con qualcosa che sembra un guasto nuovo ed e sempre lo stesso.
+  //
+  // Restano due fornitori veri. Se un giorno la libreria si aggiusta,
+  // Microsoft si rimette qui — ma dopo averlo provato, non per scaramanzia.
+  '*': ['google', 'mymemory'],
 };
 
 // Fastest provider per target language (for superfast mode)
@@ -347,7 +361,10 @@ export async function runProviderChain(text, sourceLang, targetLang, opts = {}) 
 
   // Filter out unavailable providers
   chain = chain.filter(isProviderAvailable);
-  if (chain.length === 0) chain = ['microsoft', 'google']; // Always have fallbacks
+  // b.127 — il ripiego d'emergenza metteva Microsoft PER PRIMO: se la
+  // catena si svuotava, il primo tentativo era proprio quello che non
+  // riesce mai. Ora si parte da quello che funziona.
+  if (chain.length === 0) chain = ['google', 'mymemory'];
 
   for (const providerId of chain) {
     const result = await tryProvider(providerId, text, sourceLang, targetLang, userEmail);
