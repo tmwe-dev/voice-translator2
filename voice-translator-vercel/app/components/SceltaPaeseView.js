@@ -4,6 +4,8 @@ import { FONT, LANGS, getLang } from '../lib/constants.js';
 import { cercaPaesi, indovinaPaese, getPaese } from '../lib/paesi.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import { useApp } from '../contexts/AppContext.js';
+import SpatialBackdrop from './SpatialBackdrop.js';
+import Sciame from './Sciame.js';
 
 // ═══════════════════════════════════════════════════════════════
 // SCELTA PAESE — la prima cosa che si vede, prima di tutto (b.136)
@@ -234,6 +236,36 @@ export default function SceltaPaeseView({ onFatto }) {
       // combaciare con il ritardo in `conferma()`: se l'animazione fosse
       // piu lunga si vedrebbe la vista nuova comparire sotto questa.
       animation: uscita ? 'vtPaeseEsce 0.26s ease-in forwards' : 'vtPaeseEntra 0.55s cubic-bezier(0.22,1,0.36,1)',
+    }}>
+      {/* ═══ b.144 — LO SCIAME DEVE STARE QUI DENTRO ═══
+          Luca: "perche non vedo le animazioni che si vedono nella
+          pagina successiva?"
+
+          page.js disegna SpatialBackdrop e Sciame SOTTO questa vista.
+          Ma questa vista ha il fondo OPACO — e deve averlo, perche
+          renderlo trasparente e cio che in b.140 aveva reso tutto
+          grigio. Quindi li copriva.
+
+          Non e una scelta fra le due cose: basta disegnarli QUI, sopra
+          il fondo e sotto il contenuto. Cosi il fondo resta pieno e le
+          particelle si vedono, come nella pagina dopo.
+
+          `pointerEvents: none` e obbligatorio: senza, questo strato
+          intercetterebbe i click e nessun paese sarebbe selezionabile. */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        <SpatialBackdrop />
+        {/* `vivo`, non `velo`. E lo stesso modo di WelcomeView:228, la
+            pagina subito dopo questa. Luca le ha viste una accanto
+            all'altra e la differenza saltava agli occhi — di la la
+            costellazione che si muove, di qua il nero.
+            `velo` e la versione sbiadita per le schermate di lavoro,
+            dove il movimento distrarrebbe. Qui siamo all'accoglienza:
+            e il momento in cui l'applicazione deve farsi guardare. */}
+        <Sciame modo="vivo" fase={2} />
+      </div>
+      <div style={{
+        position: 'relative', zIndex: 1,
+        display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0,
       paddingTop: 'max(20px, env(safe-area-inset-top))',
     }}>
       <div style={{ padding: '0 20px 12px', width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
@@ -326,6 +358,8 @@ export default function SceltaPaeseView({ onFatto }) {
           {attivo && <span style={{ fontSize: 19, lineHeight: 1 }}>{attivo.bandiera}</span>}
           {L('countryConfirm')}
         </button>
+      </div>
+
       </div>
 
       <style>{`
