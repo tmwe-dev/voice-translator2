@@ -75,6 +75,53 @@ function handleEval(script, numKeys, ...rest) {
     if (!data) return null;
     const room = JSON.parse(data);
     room.mode = argv[0];
+    // b.157 — mirror del reset di mani alzate/permesso concesso che
+    // UPDATE_ROOM_MODE ora fa in redisLua.js ad ogni cambio modalita.
+    for (const m of room.members) {
+      m.handRaised = false;
+      m.handRaisedAt = 0;
+      m.granted = false;
+    }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === SET_HAND_RAISED) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const [memberName, raisedStr, nowStr] = argv;
+    const raised = raisedStr === '1';
+    const member = room.members.find(m => m.name === memberName);
+    if (member) {
+      member.handRaised = raised;
+      member.handRaisedAt = raised ? parseInt(nowStr) : 0;
+    }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  if (script === GRANT_SPEAKING) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const [grantee, nowStr] = argv;
+    const now = parseInt(nowStr);
+    for (const m of room.members) {
+      m.handRaised = false;
+      m.handRaisedAt = 0;
+      if (m.name === grantee) {
+        m.granted = true;
+        m.speaking = true;
+        m.speakingAt = now;
+      } else {
+        m.granted = false;
+        m.speaking = false;
+        m.speakingAt = 0;
+      }
+    }
     const encoded = JSON.stringify(room);
     redisStore[keys[0]] = encoded;
     return encoded;
@@ -170,7 +217,7 @@ vi.mock('../../app/lib/redis.js', () => ({
   redis: (...args) => mockRedis(...args),
 }));
 
-const { createRoom, getRoom, joinRoom, setSpeaking, updateHeartbeat, addCost, updateRoomMode, changeMemberLang, addMessage, getMessages } = await import('../../app/lib/store.js');
+const { createRoom, getRoom, joinRoom, setSpeaking, updateHeartbeat, addCost, updateRoomMode, changeMemberLang, addMessage, getMessages, setHandRaised, grantSpeaking } = await import('../../app/lib/store.js');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -294,6 +341,63 @@ describe('Room Operations', () => {
     const updated = await changeMemberLang(room.id, 'Luca', 'fr');
     expect(updated.members[0].lang).toBe('fr');
     expect(updated.members[0].langChangedAt).toBeGreaterThan(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.157 — Classroom: "alza mano" -> "l'host concede la parola"
+//
+// Nato dall'audit dei setting chiesto da Luca. CONFERMATO leggendo il
+// codice: canTalk in RoomView.js era cablato a `isHost`, e
+// grantSpeaking toccava solo "speaking"/"speakingAt" — lo stesso campo
+// che ogni battuta di conversazione riscrive (SET_SPEAKING). Il
+// permesso concesso dall'host non sopravviveva alla prima battuta
+// successiva di NESSUNO, e comunque nessuno lo leggeva. Aggiunto un
+// campo persistente dedicato, "granted", distinto da "speaking".
+// ═══════════════════════════════════════════════════════════════
+describe('Classroom — alza mano e concedi parola (b.157)', () => {
+  it('setHandRaised alza la mano del membro giusto, non tocca gli altri', async () => {
+    const room = await createRoom('Host', 'it');
+    await joinRoom(room.id, 'Studente', 'en');
+    const updated = await setHandRaised(room.id, 'Studente', true);
+    const studente = updated.members.find(m => m.name === 'Studente');
+    const host = updated.members.find(m => m.name === 'Host');
+    expect(studente.handRaised).toBe(true);
+    expect(studente.handRaisedAt).toBeGreaterThan(0);
+    expect(host.handRaised).toBeFalsy();
+  });
+
+  it('grantSpeaking concede "granted" al destinatario e lo toglie a tutti gli altri', async () => {
+    const room = await createRoom('Host', 'it');
+    await joinRoom(room.id, 'Studente', 'en');
+    await joinRoom(room.id, 'Studente2', 'fr');
+    await setHandRaised(room.id, 'Studente', true);
+    const updated = await grantSpeaking(room.id, 'Studente');
+    const studente = updated.members.find(m => m.name === 'Studente');
+    const studente2 = updated.members.find(m => m.name === 'Studente2');
+    expect(studente.granted).toBe(true);
+    expect(studente.handRaised).toBe(false);
+    expect(studente2.granted).toBe(false);
+  });
+
+  it('il "granted" concesso NON sparisce alla prima battuta di conversazione successiva (bug originale)', async () => {
+    const room = await createRoom('Host', 'it');
+    await joinRoom(room.id, 'Studente', 'en');
+    await grantSpeaking(room.id, 'Studente');
+    // una battuta qualsiasi, anche di un altro membro, non deve toccare "granted"
+    const updated = await setSpeaking(room.id, 'Host', true, 'Ciao a tutti');
+    const studente = updated.members.find(m => m.name === 'Studente');
+    expect(studente.granted).toBe(true);
+  });
+
+  it('cambiare modalita azzera mani alzate e permessi residui di un giro precedente', async () => {
+    const room = await createRoom('Host', 'it', 'classroom');
+    await joinRoom(room.id, 'Studente', 'en');
+    await grantSpeaking(room.id, 'Studente');
+    const updated = await updateRoomMode(room.id, 'classroom');
+    const studente = updated.members.find(m => m.name === 'Studente');
+    expect(studente.granted).toBe(false);
+    expect(studente.handRaised).toBe(false);
   });
 });
 

@@ -142,11 +142,22 @@ redis.call('SET', KEYS[1], encoded, 'EX', 3600)
 return encoded
 `;
 
+// b.157 — audit dei setting: cambiare modalita non azzerava mani alzate
+// ne il permesso di parola concesso in un giro precedente di classroom.
+// Una stanza che esce ed entra di nuovo in classroom ripartiva con
+// membri gia "granted" da una sessione precedente, senza che l'host
+// avesse concesso nulla stavolta. Si azzera ad ogni cambio modalita,
+// qualunque sia la modalita di destinazione.
 export const UPDATE_ROOM_MODE = `
 local data = redis.call('GET', KEYS[1])
 if not data then return nil end
 local room = cjson.decode(data)
 room.mode = ARGV[1]
+for i, m in ipairs(room.members) do
+  room.members[i].handRaised = false
+  room.members[i].handRaisedAt = 0
+  room.members[i].granted = false
+end
 local encoded = cjson.encode(room)
 redis.call('SET', KEYS[1], encoded, 'EX', 3600)
 return encoded
@@ -196,6 +207,16 @@ return encoded
 /**
  * Atomic grantSpeaking: grant speaking to one member, lower all others.
  * KEYS[1] = room key, ARGV[1] = memberName, ARGV[2] = now
+ *
+ * b.157 — audit dei setting: PRIMA questo script toccava solo
+ * "speaking"/"speakingAt", cioe l'indicatore transitorio "sta parlando
+ * ORA" che ogni singola battuta di conversazione riscrive (vedi
+ * SET_SPEAKING sopra). Il permesso concesso spariva al primo "sto
+ * parlando" successivo di chiunque — compreso il concesso stesso — e
+ * RoomView.js non lo leggeva comunque: "canTalk" era cablato a
+ * "isHost", quindi lo studente autorizzato non poteva parlare lo
+ * stesso. Aggiunto un campo persistente dedicato, "granted", che
+ * "speaking" non tocca e non sovrascrive.
  */
 export const GRANT_SPEAKING = `
 local data = redis.call('GET', KEYS[1])
@@ -207,11 +228,13 @@ for i, m in ipairs(room.members) do
   if m.name == grantee then
     room.members[i].handRaised = false
     room.members[i].handRaisedAt = 0
+    room.members[i].granted = true
     room.members[i].speaking = true
     room.members[i].speakingAt = now
   else
     room.members[i].handRaised = false
     room.members[i].handRaisedAt = 0
+    room.members[i].granted = false
     room.members[i].speaking = false
     room.members[i].speakingAt = 0
   end

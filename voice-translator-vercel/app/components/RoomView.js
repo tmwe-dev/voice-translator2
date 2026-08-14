@@ -107,7 +107,16 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const stanzaMondo = !!roomInfo?.roomType && vaInVetrina(roomInfo.roomType);
   const isHost = isHostVerified !== undefined ? isHostVerified : roomInfo?.host === myName;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
-  const canTalk = roomMode === 'classroom' ? isHost : true;
+  // b.157 — audit dei setting: canTalk era cablato a "solo l'host" in
+  // classroom, punto e basta. L'intero percorso "alza mano -> l'host
+  // concede la parola" (raiseHand/grantSpeak, TalkControls.js) scriveva
+  // uno stato che nessuno leggeva mai: lo studente autorizzato restava
+  // muto come prima della concessione. Ora si legge il campo persistente
+  // "granted" che grantSpeaking imposta sul proprio membro (vedi
+  // GRANT_SPEAKING in redisLua.js — non e piu lo stesso campo "speaking"
+  // che ogni battuta di conversazione riscrive).
+  const myMember = roomInfo?.members?.find(m => m.name === myName);
+  const canTalk = roomMode === 'classroom' ? (isHost || !!myMember?.granted) : true;
   const totalCost = roomInfo?.totalCost || 0;
   const msgCount = roomInfo?.msgCount || 0;
   const roomCtx = CONTEXTS.find(c => c.id === (roomInfo?.context || 'general')) || CONTEXTS[0];

@@ -15,8 +15,17 @@ const TalkControls = memo(function TalkControls({
   endChatAndSave, setView,
 }) {
   const [handRaising, setHandRaising] = useState(false);
-  const [handRaised, setHandRaised] = useState(false);
   const [grantingSpeak, setGrantingSpeak] = useState(null);
+  // b.157 — audit dei setting: "handRaised" locale era uno stato SOLO
+  // ottimistico, mai riletto dal server dopo il primo click. Se l'host
+  // concedeva la parola a un ALTRO studente (grantSpeaking abbassa
+  // tutte le mani, redisLua.js), quello studente restava con il
+  // pulsante disabilitato e la spunta verde per sempre — non poteva
+  // piu alzare la mano una seconda volta nella stessa sessione, pur
+  // essendo di nuovo con la mano abbassata sul server. Ora si legge il
+  // proprio membro in roomInfo, aggiornato dal polling (useRoomPolling,
+  // ogni 1.5-3s) e da Realtime.
+  const myHandRaised = !!roomInfo?.members?.find(m => m.name === myName)?.handRaised;
 
   return (
     // ═══ INIZIO v.154 — mic accanto al testo, extra sotto-a-destra ═══
@@ -125,7 +134,7 @@ const TalkControls = memo(function TalkControls({
       {roomMode === 'classroom' && !canTalk && (
         <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:12, padding:10}}>
           <button
-            disabled={handRaising || handRaised}
+            disabled={handRaising || myHandRaised}
             onClick={async () => {
               setHandRaising(true);
               const body = {
@@ -138,7 +147,6 @@ const TalkControls = memo(function TalkControls({
                 const res = await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (res.ok) {
                   vibrate(15);
-                  setHandRaised(true);
                 } else {
                   console.warn('[TalkControls] raiseHand server error:', res.status);
                 }
@@ -151,15 +159,15 @@ const TalkControls = memo(function TalkControls({
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '10px 20px', borderRadius: 14,
-              background: handRaised ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
-              border: handRaised ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,165,0,0.3)',
-              color: handRaised ? PALETTE.green : '#FFA500',
-              fontSize: 14, fontWeight: 600, cursor: handRaised ? 'default' : 'pointer',
+              background: myHandRaised ? 'rgba(34,197,94,0.15)' : 'rgba(255,165,0,0.15)',
+              border: myHandRaised ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(255,165,0,0.3)',
+              color: myHandRaised ? PALETTE.green : '#FFA500',
+              fontSize: 14, fontWeight: 600, cursor: myHandRaised ? 'default' : 'pointer',
               fontFamily: FONT, transition: 'all 0.2s',
               opacity: handRaising ? 0.6 : 1,
             }}
           >
-            <IconHandRaise size={18} /> {handRaising ? '...' : handRaised ? `✓ ${L('handRaised')}` : L('raiseHand')}
+            <IconHandRaise size={18} /> {handRaising ? '...' : myHandRaised ? `✓ ${L('handRaised')}` : L('raiseHand')}
           </button>
           <span style={{ color: S.colors.textMuted, fontSize: 12 }}>
             <IconLock size={12} /> {L('waitingPermission')}
