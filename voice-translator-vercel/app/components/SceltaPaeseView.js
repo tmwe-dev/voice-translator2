@@ -46,7 +46,7 @@ import { useApp } from '../contexts/AppContext.js';
 // stop trasparenti, non un colore pieno: cosi sopra lo sciame animato
 // si vede attraverso invece di spegnerlo.
 // ═══════════════════════════════════════════════════════════════
-function RigaPaese({ p, evidenziato, selezionato, c, lingua, onScegli, onConferma, ritardo }) {
+function RigaPaese({ p, ultima, selezionato, c, lingua, onScegli, onConferma, ritardo }) {
   const [sopra, setSopra] = useState(false);
   const acceso = sopra || selezionato;
   return (
@@ -59,47 +59,57 @@ function RigaPaese({ p, evidenziato, selezionato, c, lingua, onScegli, onConferm
       onBlur={() => setSopra(false)}
       aria-pressed={selezionato}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-        padding: '11px 13px', marginBottom: 5, borderRadius: 14, cursor: 'pointer',
-        fontFamily: FONT,
-        // Vetro come le card del resto dell'applicazione: fermo e
-        // leggibile a riposo, acceso al passaggio del mouse.
-        background: selezionato
-          ? `linear-gradient(120deg, ${c.accent1Bg || 'rgba(38,217,176,0.18)'} 0%, rgba(255,255,255,0.06) 65%, rgba(255,255,255,0.02) 100%)`
-          : sopra
-            ? 'linear-gradient(120deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 60%, rgba(255,255,255,0.015) 100%)'
-            : (c.glassCard || 'rgba(255,255,255,0.028)'),
-        border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.4)') : sopra ? 'rgba(255,255,255,0.14)' : (c.cardBorder || 'rgba(255,255,255,0.05)')}`,
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        boxShadow: sopra ? '0 6px 22px -12px rgba(0,0,0,0.65)' : 'none',
-        transform: sopra ? 'translateX(3px)' : 'translateX(0)',
-        // L'entrata a cascata: ogni riga arriva 18 ms dopo la precedente.
-        // Sopra le venti si smette di scalare, altrimenti l'ultima
-        // arriverebbe mezzo secondo dopo e sembrerebbe un ritardo.
+        // b.142 — LO SCHEMA E QUELLO DI HOME, NON UNO NUOVO.
+        //
+        // In b.141 avevo dato a ogni paese una card sua: novantadue
+        // rettangoli grigi impilati sopra lo sfondo. Luca, giustamente:
+        // "cancella questi elementi grigi sopra lo sfondo".
+        //
+        // Home non fa cosi. Ha UN contenitore con bordo e dentro le
+        // righe separate da una linea sottile — nessuno sfondo per riga.
+        // E lo schema della casa: si copia quello invece di inventarne
+        // un terzo.
+        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+        padding: '13px 2px', textAlign: 'left',
+        background: 'none', border: 'none',
+        borderBottom: ultima ? 'none' : `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
+        cursor: 'pointer', fontFamily: FONT,
+        opacity: sopra ? 0.82 : 1,
         animation: `vtRigaEntra 0.32s ease-out ${Math.min(ritardo, 20) * 0.018}s both`,
-        transition: 'background 0.22s, border-color 0.22s, transform 0.22s',
+        transition: 'opacity 0.2s',
         WebkitTapHighlightColor: 'transparent',
       }}>
+      {/* La bandiera sta nel riquadro che in Home ospita l'icona:
+          stessa misura, stesso raggio, stesso bordo. Da selezionata
+          prende l'accento pieno, come la voce principale di Home. */}
       <span style={{
-        fontSize: 25, lineHeight: 1, flexShrink: 0,
-        display: 'inline-block',
-        transform: acceso ? 'scale(1.18)' : 'scale(1)',
-        filter: acceso ? 'drop-shadow(0 3px 10px rgba(0,0,0,0.45))' : 'none',
-        transition: 'transform 0.24s cubic-bezier(0.34,1.4,0.64,1), filter 0.24s',
-      }}>{p.bandiera}</span>
+        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: selezionato
+          ? `linear-gradient(145deg, ${c.accent1 || '#26D9B0'}, ${c.accent2 || '#7C6BF5'})`
+          : (c.cardBg || 'rgba(255,255,255,0.03)'),
+        border: selezionato ? 'none' : `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
+        boxShadow: selezionato ? `0 4px 14px -4px ${c.accent1 || '#26D9B0'}70` : 'none',
+        transition: 'background 0.2s, box-shadow 0.2s',
+      }}>
+        <span style={{
+          fontSize: 21, lineHeight: 1, display: 'inline-block',
+          transform: acceso ? 'scale(1.18)' : 'scale(1)',
+          transition: 'transform 0.24s cubic-bezier(0.34,1.4,0.64,1)',
+        }}>{p.bandiera}</span>
+      </span>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700,
+        <span style={{ display: 'block', fontSize: 15, fontWeight: 700,
           color: selezionato ? (c.accent1 || '#26D9B0') : (c.textPrimary || '#fff'),
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {p.nome}
         </span>
-        <span style={{ display: 'block', fontSize: 11, color: c.textMuted || 'rgba(255,255,255,0.45)', marginTop: 1 }}>
+        <span style={{ display: 'block', fontSize: 12, color: c.textMuted || 'rgba(255,255,255,0.45)', marginTop: 2 }}>
           {lingua.name}
         </span>
       </span>
       {p.nome !== p.nomeEn && (
-        <span style={{ fontSize: 10.5, color: c.textMuted || 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
+        <span style={{ fontSize: 11, color: c.textMuted || 'rgba(255,255,255,0.3)', flexShrink: 0 }}>
           {p.nomeEn}
         </span>
       )}
@@ -243,9 +253,15 @@ export default function SceltaPaeseView({ onFatto }) {
               color: c.textMuted || 'rgba(255,255,255,0.4)', padding: '4px 4px 8px' }}>
               {L('countrySuggested')}
             </div>
-            <RigaPaese p={proposto} evidenziato c={c} lingua={getLang(proposto.lingua)}
-              selezionato={attivo?.codice === proposto.codice}
-              onScegli={setScelto} onConferma={conferma} ritardo={0} />
+            <div style={{
+              background: c.cardBg || 'rgba(255,255,255,0.03)',
+              border: `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
+              borderRadius: 18, padding: '2px 14px',
+            }}>
+              <RigaPaese p={proposto} ultima c={c} lingua={getLang(proposto.lingua)}
+                selezionato={attivo?.codice === proposto.codice}
+                onScegli={setScelto} onConferma={conferma} ritardo={0} />
+            </div>
             <div style={{ height: 10 }} />
           </>
         )}
@@ -260,11 +276,22 @@ export default function SceltaPaeseView({ onFatto }) {
             {L('countryNone')}
           </div>
         )}
-        {risultati.map((p, i) => (
-          <RigaPaese key={p.codice} p={p} c={c} lingua={getLang(p.lingua)}
-            selezionato={attivo?.codice === p.codice}
-            onScegli={setScelto} onConferma={conferma} ritardo={i} />
-        ))}
+        {/* b.142 — un solo contenitore, come la lista delle porte in
+            Home: bordo esterno, righe dentro separate da una linea. */}
+        {risultati.length > 0 && (
+          <div style={{
+            background: c.cardBg || 'rgba(255,255,255,0.03)',
+            border: `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
+            borderRadius: 18, padding: '2px 14px',
+          }}>
+            {risultati.map((p, i) => (
+              <RigaPaese key={p.codice} p={p} c={c} lingua={getLang(p.lingua)}
+                ultima={i === risultati.length - 1}
+                selezionato={attivo?.codice === p.codice}
+                onScegli={setScelto} onConferma={conferma} ritardo={i} />
+            ))}
+          </div>
+        )}
 
         <div style={{ height: 24 }} />
       </div>
@@ -273,8 +300,7 @@ export default function SceltaPaeseView({ onFatto }) {
         padding: '12px 20px calc(16px + env(safe-area-inset-bottom))',
         width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box',
         borderTop: `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
-        background: c.headerBg || 'rgba(5,7,15,0.85)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        background: S.page.background,
       }}>
         <button
           onClick={() => conferma(attivo)}
@@ -283,16 +309,15 @@ export default function SceltaPaeseView({ onFatto }) {
             width: '100%', padding: 15, borderRadius: 16,
             cursor: attivo ? 'pointer' : 'default', fontFamily: FONT,
             fontSize: 15.5, fontWeight: 800, color: attivo ? '#fff' : (c.textMuted || 'rgba(255,255,255,0.35)'),
-            // b.140 — tasto in vetro invece che in tinta piena: sotto
-            // c'e lo sciame che si muove, e un rettangolo opaco lo
-            // avrebbe spento proprio nel punto piu guardato.
+            // b.142 — il vetro inventato in b.140 non c'entrava niente
+            // col resto: i tasti principali di questa applicazione sono
+            // a gradiente pieno d'accento. Questo e uno di quelli.
             background: attivo
-              ? `linear-gradient(135deg, ${c.accent1 || '#26D9B0'}44 0%, ${c.accent2 || '#7C6BF5'}3A 55%, rgba(255,255,255,0.10) 100%)`
-              : 'rgba(255,255,255,0.045)',
-            border: `1px solid ${attivo ? (c.accent1Border || 'rgba(38,217,176,0.45)') : 'rgba(255,255,255,0.09)'}`,
-            backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
-            boxShadow: attivo ? `0 8px 30px -10px ${c.accent1 || '#26D9B0'}55` : 'none',
-            transition: 'background 0.25s, box-shadow 0.25s, transform 0.15s',
+              ? `linear-gradient(145deg, ${c.accent1 || '#26D9B0'}, ${c.accent2 || '#7C6BF5'})`
+              : (c.cardBg || 'rgba(255,255,255,0.03)'),
+            border: attivo ? 'none' : `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
+            boxShadow: attivo ? `0 6px 20px -6px ${c.accent1 || '#26D9B0'}70` : 'none',
+            transition: 'background 0.2s, box-shadow 0.2s',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9,
             WebkitTapHighlightColor: 'transparent',
           }}>
