@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
@@ -55,7 +55,7 @@ const CATEGORIES = [
 
 const POPULAR_LANGS = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'ar'];
 
-function CreateRoomSheet({ open, onClose, onCreate }) {
+function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
   const { S, L } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
@@ -82,6 +82,16 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
   // toglie la traduzione, che e il motivo per cui quasi tutti sono qui.
   const [diretta, setDiretta] = useState(false);
   const sheetRef = useSheetA11y(open, onClose);
+
+  // b.147 — "Parlane": una card News apre questo foglio con nome e
+  // descrizione gia scritti. Si applica all'APERTURA, non a ogni
+  // disegno: quello che l'utente corregge a mano non va riscritto.
+  useEffect(() => {
+    if (open && preimpostato?.nome) {
+      setNome(preimpostato.nome.slice(0, 60));
+      if (preimpostato.descrizione) setDescription(preimpostato.descrizione.slice(0, 200));
+    }
+  }, [open, preimpostato]);
 
   const nomePulito = nome.trim();
   const nomeValido = nomePulito.length >= 3;

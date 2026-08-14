@@ -141,6 +141,9 @@ function HomeInner() {
   // [Removed dead code: showShareApp, shareAppLang — unused]
   const [showNewConversation, setShowNewConversation] = useState(false);
   const [showCreateRoom, setShowCreateRoom] = useState(false);
+  // b.147 — "Parlane" su una Topic Card: il foglio di creazione stanza
+  // si apre gia compilato con titolo e sintesi dell'argomento.
+  const [topicPreset, setTopicPreset] = useState(null);
   const [intentoVideo, setIntentoVideo] = useState(false); // b.90 — si e scelta la videochiamata
   const [taxiDestId, setTaxiDestId] = useState(null);
   const [taxiKey, setTaxiKey] = useState(null);
@@ -1362,12 +1365,18 @@ function HomeInner() {
         // stato VECCHIO. La prima volta non succedeva niente, la seconda
         // si entrava nella stanza precedente. Ora il codice si passa.
         onJoinRoom={(rid) => { setJoinCode(rid); handleJoinRoom(rid); }}
-        onCreateRoom={() => setShowCreateRoom(true)} />
+        onCreateRoom={() => { setTopicPreset(null); setShowCreateRoom(true); }}
+        onParlane={(topic) => {
+          // b.147 — dalla notizia alla conversazione: e il punto del piano.
+          setTopicPreset({ nome: topic.titolo, descrizione: topic.sintesi || '' });
+          setShowCreateRoom(true);
+        }} />
       </Suspense>
       <Suspense fallback={null}>
         <CreateRoomSheet
           open={showCreateRoom}
-          onClose={() => setShowCreateRoom(false)}
+          preimpostato={topicPreset}
+          onClose={() => { setShowCreateRoom(false); setTopicPreset(null); }}
           onCreate={async (roomConfig) => {
             const room = await roomPolling.handleCreateRoom(
               prefs.name || 'Host', roomConfig.lang || myLang,

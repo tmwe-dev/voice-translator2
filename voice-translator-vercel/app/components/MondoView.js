@@ -14,6 +14,7 @@ import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
 import { useApp } from '../contexts/AppContext.js';
+import MondoNews from './MondoNews.js';
 
 const MODE_LABELS = {
   conversation: { label: 'Chat', icon: '', color: PALETTE.teal },
@@ -61,7 +62,7 @@ const LANG_FILTERS = [
   { code: 'th', flag: '🇹🇭', name: 'TH' },
 ];
 
-function MondoView({ onJoinRoom, onCreateRoom }) {
+function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const { L, S, prefs, setView, theme } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
@@ -81,6 +82,10 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
     divider: col.dividerColor || 'rgba(255,255,255,0.04)',
   };
 
+  // b.147 — Mondo si divide in due anime: le STANZE (quello che c'era)
+  // e le NEWS (il seminatore di conversazioni). Un tab, non due pagine:
+  // la gerarchia resta Mondo → argomento → persone → conversazione.
+  const [tab, setTab] = useState('stanze');
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -196,7 +201,38 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
         )}
       </header>
 
+      {/* ═══ TAB: STANZE | NEWS ═══ */}
+      <div style={{ display: 'flex', gap: 6, padding: '0 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5 }}>
+        {[
+          { id: 'stanze', labelKey: 'tabRooms' },
+          { id: 'news', labelKey: 'tabNews' },
+        ].map(t => {
+          const attivo = tab === t.id;
+          return (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              flex: 1, padding: '9px 0', borderRadius: 12, cursor: 'pointer',
+              background: attivo ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
+              border: attivo ? 'none' : `1px solid ${C.cardBorder}`,
+              color: attivo ? '#fff' : C.textSecondary,
+              fontSize: 13, fontWeight: 700, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent',
+              boxShadow: attivo ? `0 2px 12px ${C.accent}30` : 'none',
+            }}>
+              {L(t.labelKey)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ═══ TAB NEWS ═══ */}
+      {tab === 'news' && (
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5 }}>
+          <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+        </div>
+      )}
+
       {/* ═══ SEARCH BAR ═══ */}
+      {tab === 'stanze' && (
       <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
@@ -219,8 +255,10 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           )}
         </div>
       </div>
+      )}
 
       {/* ═══ LANGUAGE PILLS ═══ */}
+      {tab === 'stanze' && (
       <div style={{
         display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
         WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
@@ -244,9 +282,10 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           );
         })}
       </div>
+      )}
 
       {/* ═══ MODE PILLS ═══ */}
-      {availableModes.length > 2 && (
+      {tab === 'stanze' && availableModes.length > 2 && (
         <div style={{
           display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>
@@ -270,6 +309,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
       )}
 
       {/* ═══ ROOM LIST ═══ */}
+      {tab === 'stanze' && (
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px', scrollbarWidth: 'none' }}>
 
         {/* Loading skeleton */}
@@ -467,6 +507,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           );
         })}
       </div>
+      )}
 
       {/* CSS */}
       <style>{`
