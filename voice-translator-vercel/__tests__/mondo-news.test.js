@@ -162,3 +162,22 @@ describe('normalizzaQuery', () => {
     expect(normalizzaQuery('x'.repeat(500)).length).toBeLessThanOrEqual(120);
   });
 });
+
+// ── b.147-bis: la faccia sgranata ───────────────────────────────
+
+describe('miniature Bing (b.147-bis)', async () => {
+  const { eMiniaturaBing, ingrandisciMiniaturaBing } = await import('../app/lib/topics/ricerca.js');
+  it('riconosce il thumbnailer di Bing e non i siti veri', () => {
+    expect(eMiniaturaBing('https://th.bing.com/th?id=OVFT.x&w=234&h=132')).toBe(true);
+    expect(eMiniaturaBing('https://www.gazzetta.it/foto.jpg')).toBe(false);
+  });
+  it('chiede la stessa immagine in grande invece del francobollo', () => {
+    const grande = ingrandisciMiniaturaBing('https://th.bing.com/th?id=OVFT.x&w=234&h=132');
+    expect(grande).toContain('w=1200');
+    expect(grande).toContain('h=675');
+  });
+  it('un URL non-Bing resta com\'e', () => {
+    const u = 'https://www.gazzetta.it/foto.jpg?w=100';
+    expect(ingrandisciMiniaturaBing(u)).toBe(u);
+  });
+});

@@ -14,6 +14,7 @@
 
 import { assertSSRFSafe } from './ssrf.js';
 import { pulisciTestoWeb } from './iniezione.js';
+import { eMiniaturaBing } from './ricerca.js';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
@@ -111,9 +112,14 @@ export async function arricchisci(articoli, { quanti = 10, concorrenza = 4, suPr
     while (indice < daFare.length) {
       const mio = indice++;
       const art = daFare[mio];
-      if (art.immagine && art.descrizione) continue; // gia completa dal flusso RSS
+      // b.147-bis — la miniatura Bing e un ripiego, non un traguardo:
+      // anche ingrandita resta peggiore dell'og:image dell'articolo.
+      // Quindi "completa" significa: descrizione E un'immagine che NON
+      // venga dal thumbnailer di Bing.
+      const immagineBuona = art.immagine && !eMiniaturaBing(art.immagine);
+      if (immagineBuona && art.descrizione) continue;
       const scheda = await estraiScheda(art.url);
-      if (scheda.immagine && !art.immagine) art.immagine = scheda.immagine;
+      if (scheda.immagine && !immagineBuona) art.immagine = scheda.immagine;
       if (scheda.descrizione && !art.descrizione) art.descrizione = scheda.descrizione;
       if (scheda.pubblicato && !art.pubblicato) art.pubblicato = scheda.pubblicato;
       if (suProgresso) { try { suProgresso(art.dominio); } catch { /* il progresso non ferma il lavoro */ } }

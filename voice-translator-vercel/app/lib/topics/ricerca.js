@@ -64,6 +64,33 @@ export function leggiRss(xml) {
   return items;
 }
 
+/**
+ * b.147-bis — LA FACCIA SGRANATA. Le miniature del flusso Bing sono
+ * francobolli (w=234): gonfiate a tutta card diventavano una foto
+ * sfocata, visto dal vivo in produzione. Il loro server pero accetta
+ * misure diverse nella query: si chiede la stessa immagine in grande.
+ * Resta comunque un'immagine di riserva: la scheda dell'articolo
+ * (og:image) ha la priorita, vedi arricchisci() in estrai.js.
+ */
+export function eMiniaturaBing(url) {
+  try {
+    const h = new URL(url).hostname;
+    return h === 'th.bing.com' || h.endsWith('.bing.com') || h === 'bing.com';
+  } catch { return false; }
+}
+
+export function ingrandisciMiniaturaBing(url) {
+  try {
+    const u = new URL(url);
+    if (!eMiniaturaBing(url)) return url;
+    u.searchParams.set('w', '1200');
+    u.searchParams.set('h', '675');
+    u.searchParams.set('qlt', '90');
+    u.searchParams.delete('c');
+    return u.href;
+  } catch { return url; }
+}
+
 /** Bing incapsula gli URL in un rimbalzo apiclick: l'originale sta in ?url= */
 export function sbucciaUrlBing(url) {
   try {
@@ -105,7 +132,7 @@ function normalizzaItem(grezzi) {
       url,
       dominio,
       fonte: it.fonte || dominio,
-      immagine: it.immagine || '',
+      immagine: it.immagine ? ingrandisciMiniaturaBing(it.immagine) : '',
       descrizione,
       pubblicato: it.dataPub ? Date.parse(it.dataPub) || null : null,
     });
