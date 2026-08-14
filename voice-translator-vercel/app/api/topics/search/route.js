@@ -21,6 +21,12 @@ import { createLogger } from '../../../lib/logger.js';
 
 const log = createLogger('topics');
 
+// b.150 — con la riserva Google la ricerca fresca puo superare i 10s
+// predefiniti delle funzioni Vercel: due richieste in piu per articolo
+// per sbucciare i rimbalzi. Il tempo massimo va dichiarato, o la
+// funzione muore a meta stream.
+export const maxDuration = 60;
+
 const LINGUE = new Set(['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi']);
 const CATEGORIE = new Set(['notizie','sport','tecnologia','economia','scienza','arte']);
 

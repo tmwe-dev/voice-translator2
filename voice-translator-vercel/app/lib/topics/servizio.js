@@ -18,7 +18,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { redis } from '../redis.js';
-import { cercaNotizie } from './ricerca.js';
+import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 
@@ -91,6 +91,12 @@ export async function cercaArgomenti(query, lingua = 'en', {
   racconta('cerca', { query: q });
   const articoli = await cercaNotizie(q, lingua, { massimo: 20 });
   racconta('fonti', { quante: articoli.length });
+  // b.150 — se e entrata la riserva Google, i rimbalzi si sbucciano
+  // fino al dominio vero: senza questo, niente og:image e card nude.
+  await risolviLinkGoogle(articoli, {
+    quanti: 10,
+    suRisolto: (dominio) => racconta('leggo', { dominio }),
+  });
   if (articoli.length === 0) {
     return { argomenti: [], stanze, daCache: false, quando: Date.now() };
   }

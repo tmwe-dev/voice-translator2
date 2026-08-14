@@ -141,6 +141,61 @@ function normalizzaItem(grezzi) {
 }
 
 /**
+ * b.150 — IL RIMBALZO DI GOOGLE SI SBUCCIA DAVVERO.
+ * Dal vivo (Luca): per certe query Bing risponde 200 con ZERO item —
+ * non un singhiozzo, proprio nessun risultato — e la riserva Google
+ * entra in campo. Ma i suoi link sono rimbalzi news.google.com: senza
+ * il dominio vero niente og:image, e le card restavano tutte senza
+ * foto.
+ * L'ID nel percorso /rss/articles/ nel formato nuovo NON si decodifica
+ * offline. La strada che funziona (provata): si apre la pagina del
+ * rimbalzo, si leggono la firma e il timestamp che Google ci mette
+ * dentro (data-n-a-sg / data-n-a-ts), e si chiede al suo stesso
+ * endpoint interno batchexecute l'indirizzo vero. Due richieste per
+ * articolo: si fa solo per i primi N e solo quando serve.
+ * Se fallisce, il rimbalzo resta: la card si apre lo stesso, solo
+ * senza foto — mai bloccare la ricerca per una fonte testarda.
+ */
+export async function risolviLinkGoogle(items, { quanti = 10, concorrenza = 3, mercato = 'US:en', suRisolto } = {}) {
+  const daFare = items.filter(i => i.dominio === 'news.google.com').slice(0, quanti);
+  let indice = 0;
+  async function operaio() {
+    while (indice < daFare.length) {
+      const it = daFare[indice++];
+      try {
+        const id = it.url.match(/articles\/([^?]+)/)?.[1];
+        if (!id) continue;
+        const pg = await fetch(it.url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(8000) });
+        const html = await pg.text();
+        const sg = html.match(/data-n-a-sg="([^"]+)"/)?.[1];
+        const ts = html.match(/data-n-a-ts="([^"]+)"/)?.[1];
+        if (!sg || !ts) continue;
+        const payload = [['Fbv4je', JSON.stringify(['garturlreq',
+          [['X', 'X', ['X', 'X'], null, null, 1, 1, mercato, null, 1, null, null, null, null, null, 0, 1],
+            'X', 'X', 1, [1, 1, 1], 1, 1, null, 0, 0, null, 0],
+          id, Number(ts), sg]), null, 'generic']];
+        const resp = await fetch('https://news.google.com/_/DotsSplashUi/data/batchexecute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8', 'User-Agent': UA },
+          body: 'f.req=' + encodeURIComponent(JSON.stringify([payload])),
+          signal: AbortSignal.timeout(8000),
+        });
+        const testo = await resp.text();
+        const vero = [...testo.matchAll(/https?:[^"\\,\]]+/g)].map(x => x[0])
+          .find(u => !/google\.|gstatic\./.test(u));
+        if (vero) {
+          it.url = vero;
+          try { it.dominio = new URL(vero).hostname.replace(/^www\./, ''); } catch { /* si tiene il vecchio dominio */ }
+          if (suRisolto) { try { suRisolto(it.dominio); } catch { /* il progresso non ferma il lavoro */ } }
+        }
+      } catch { /* si tiene il rimbalzo: la card vive anche senza foto */ }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concorrenza, daFare.length) }, operaio));
+  return items;
+}
+
+/**
  * Cerca notizie per una query nella lingua data.
  * @returns {Promise<Array<{titolo,url,dominio,fonte,immagine,descrizione,pubblicato}>>}
  */
