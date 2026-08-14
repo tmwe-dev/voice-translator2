@@ -127,7 +127,19 @@ describe('chi e invitato entra, non compila un modulo', () => {
     // Era `if (autoJoin && saved)`: un ospite nuovo non ha niente di
     // salvato, quindi non scattava MAI proprio per chi ne aveva bisogno.
     expect(init).not.toMatch(/if \(autoJoin && saved\)/);
-    expect(init).toMatch(/if \(autoJoin\) \{/);
+    // b.133 — e non pretende piu nemmeno `auto=1`, che mettevano solo i
+    // nostri QR. Questa riga chiedeva `if (autoJoin) {`: il cancello e
+    // caduto del tutto, ora basta il codice stanza. La garanzia e piu
+    // forte di prima, non piu debole — si veda
+    // invito-si-entra-e-basta.test.js.
+    expect(init).not.toMatch(/if \(autoJoin\) \{/);
+    // `init` qui e il sorgente COI COMMENTI, e in mezzo ce ne sono molti:
+    // la finestra va presa larga o si taglia prima di arrivarci.
+    const i = init.indexOf('if (roomParam) {');
+    const j = init.indexOf('if (paymentStatus ===', i);
+    expect(j, 'il ramo del codice stanza deve chiudersi prima dei pagamenti')
+      .toBeGreaterThan(i);
+    expect(init.slice(i, j)).toMatch(/setAutoJoinTriggered\(true\)/);
   });
 
   it('a chi non ha un nome se ne da uno provvisorio', () => {

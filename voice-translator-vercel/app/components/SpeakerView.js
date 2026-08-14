@@ -92,6 +92,34 @@ function SpeakerView({ userToken }) {
   const fetchRouteRef = useRef(null);
   const campoTestoRef = useRef(null); // b.90 — per mettere a fuoco il campo
 
+  // ─── SUL COMPUTER IL CURSORE TORNA NEL CAMPO (b.133) ───
+  //
+  // Al computer si scrive con la tastiera e si mandano piu messaggi di
+  // fila. Dopo ogni invio il fuoco spariva e bisognava ricliccare dentro.
+  //
+  // Il motivo e nel ramo qui sotto: `textMessage.trim() ? <invia> :
+  // <microfono>`. Appena il campo si svuota il bottone che si e appena
+  // premuto viene SOSTITUITO da quello del microfono. Il nodo che aveva
+  // il fuoco non esiste piu, e il fuoco torna al documento — non al
+  // campo, che nel frattempo non l'ha mai avuto.
+  //
+  // Sul telefono resta com'e, ed e voluto: li riprendere il fuoco
+  // richiama la tastiera a schermo e copre meta conversazione. Percio la
+  // condizione non guarda solo la larghezza ma anche `pointer: fine` —
+  // un tablet largo col dito resta trattato come un telefono.
+  const suComputer = useCallback(() => (
+    typeof window !== 'undefined'
+    && !!window.matchMedia?.('(min-width: 768px) and (pointer: fine)')?.matches
+  ), []);
+
+  const inviaTesto = useCallback(() => {
+    sendTextMessage();
+    if (!suComputer()) return;
+    // Dopo il ridisegno, altrimenti si mette a fuoco il campo di prima
+    // e il cambio di ramo lo porta via subito dopo.
+    setTimeout(() => { try { campoTestoRef.current?.focus(); } catch (e) { /* il campo puo essere sparito uscendo dalla stanza: non e un errore da mostrare */ } }, 0);
+  }, [sendTextMessage, suComputer]);
+
   // ── INIZIO b.95 — STATO PARLANTE ──
   // Prima: premevi il microfono, parlavi, rilasciavi, e poi SILENZIO.
   // Non sapevi se ti aveva sentito, se stava traducendo, se era fallito.
@@ -1162,7 +1190,7 @@ function SpeakerView({ userToken }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <input type="text" ref={campoTestoRef} value={textMessage}
             onChange={(e) => setTextMessage(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') sendTextMessage(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') inviaTesto(); }}
             placeholder={recording ? (mode === 'batch' ? 'Rilascia per tradurre...' : 'Sto ascoltando...') : 'Scrivi messaggio...'}
             disabled={recording}
             style={{
@@ -1175,7 +1203,7 @@ function SpeakerView({ userToken }) {
 
           {/* Send text OR mic button */}
           {textMessage.trim() ? (
-            <button onClick={sendTextMessage} disabled={processing} style={{
+            <button onClick={inviaTesto} disabled={processing} style={{
               width: 46, height: 46, borderRadius: '50%',
               background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
               border: 'none', cursor: 'pointer',

@@ -113,12 +113,23 @@ export default function useInitializeApp({
       // Ora chi arriva con un invito entra e basta. Se non ha un nome gli
       // se ne da uno provvisorio e la lingua la prende dal suo browser:
       // due cose che potra cambiare dopo, con la conversazione gia aperta.
-      const autoJoin = urlParams.get('auto') === '1';
+      // b.133 — L'INGRESSO AUTOMATICO ERA RISERVATO A `auto=1`.
+      //
+      // Solo i QR generati da noi mettevano quel parametro. Un invito
+      // condiviso a mano — il caso piu comune, il link incollato in una
+      // chat — arrivava senza, e l'ospite si ritrovava davanti alle tre
+      // schermate di presentazione: nome, lingua, audio. Tre schermate
+      // prima di poter scrivere una parola, per una persona che era
+      // stata invitata a parlare, non a iscriversi.
+      //
+      // Chi apre un codice stanza E' un invitato, punto: come ci sia
+      // arrivato non cambia cosa vuole fare. Il parametro non decide
+      // piu niente.
       if (roomParam) {
         setJoinCode(roomParam.toUpperCase());
         window.history.replaceState({}, '', window.location.pathname);
 
-        if (autoJoin) {
+        {
           let p = null;
           try { p = saved ? JSON.parse(saved) : null; } catch { p = null; }
 

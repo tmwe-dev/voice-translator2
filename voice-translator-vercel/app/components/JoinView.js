@@ -15,6 +15,62 @@ import { useApp } from '../contexts/AppContext.js';
 // Manual join: single card with room code input
 // ═══════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// b.133 · IL CAMPO NOME CHE ACCETTAVA UNA LETTERA SOLA
+//
+// Luca: "il campo nome non accetta piu di un carattere e ti butta
+// fuori dal campo".
+//
+// GlassCard e PrimaryBtn erano definiti DENTRO il corpo di JoinView.
+// Ogni battuta cambia `prefs` → JoinView si ridisegna → quelle due
+// funzioni vengono RICREATE → React le vede come tipi di componente
+// NUOVI → smonta tutto il sottoalbero e lo rimonta da capo.
+//
+// L'input veniva distrutto e ricostruito dopo ogni carattere. Il fuoco
+// se ne andava con lui, e la lettera successiva finiva nel vuoto.
+//
+// Non e un difetto di validazione o di `maxLength`: e la posizione
+// della definizione. Un componente definito dentro un altro non e mai
+// lo stesso componente due volte.
+//
+// Portati fuori: adesso la loro identita e stabile per tutta la vita
+// del modulo, e React riconosce lo stesso albero.
+// ═══════════════════════════════════════════════════════════════
+
+function GlassCard({ children, style = {}, C }) {
+  return (
+    <div style={{
+      background: C.card, borderRadius: 22, padding: '24px 20px',
+      border: `1px solid ${C.cardBorder}`,
+      backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
+      width: '100%', maxWidth: 400,
+      boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5)`,
+      animation: 'vtScaleIn 0.35s ease-out',
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+function PrimaryBtn({ onClick, disabled, children, style = {}, C, FONT }) {
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      width: '100%', padding: '14px 20px', borderRadius: 14, border: 'none',
+      background: disabled ? C.card : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
+      color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT,
+      cursor: disabled ? 'default' : 'pointer',
+      opacity: disabled ? 0.4 : 1,
+      boxShadow: disabled ? 'none' : `0 4px 20px ${C.accent}35`,
+      WebkitTapHighlightColor: 'transparent',
+      transition: 'all 0.2s',
+      ...style,
+    }}>
+      {children}
+    </button>
+  );
+}
+
 export default function JoinView({ joinCode,
   setJoinCode, inviteMsgLang, setInviteMsgLang, handleJoinRoom, userToken, setAuthStep,
   unlockAudio }) {
@@ -47,9 +103,53 @@ export default function JoinView({ joinCode,
   const iL = inviteMsgLang || prefs.lang || 'en';
   const tI = (key) => t(iL, key);
   const isInvited = !!inviteMsgLang;
-  // Guest is pre-filled if: invite link + name already set + gender already set (from QR params)
-  // window.__VT_GUEST_PREFILLED is set by useInitializeApp when gn/gg/gl params are parsed
-  const isPrefilled = prefs.name && prefs.gender && isInvited;
+  // b.133 — IL GENERE NON E UN REQUISITO PER ENTRARE.
+  //
+  // Prima serviva anche `prefs.gender`, che arriva solo dal parametro
+  // `gg=` dei nostri QR. Un invito normale non ce l'ha, quindi l'ospite
+  // finiva nelle tre schermate anche quando aveva gia nome e lingua.
+  // Il genere serve a scegliere una voce: e una preferenza, non una
+  // chiave d'ingresso, e si imposta dopo con la chat gia aperta.
+  const isPrefilled = prefs.name && isInvited;
+
+  // ─── ENTRA DA SOLO (b.133) ───
+  //
+  // "Non deve fare niente, deve solo aprire la pagina e scrivere."
+  //
+  // L'avvio automatico vive in page.js e scatta 600 ms dopo il
+  // caricamento. Ma finche non ha finito, questa schermata mostrava il
+  // modulo — quindi l'ospite VEDEVA comunque le domande, e se l'avvio
+  // per qualsiasi motivo non andava a buon fine restava li dentro
+  // convinto di doverle compilare.
+  //
+  // Ora, se c'e un invito e c'e un nome (anche provvisorio), non si
+  // mostra nessun modulo: si mostra che stiamo entrando. E se dopo 1,2 s
+  // siamo ANCORA qui, vuol dire che l'avvio di page.js non e partito e
+  // allora entriamo da questa parte. Se il timer di page.js ha
+  // funzionato questo componente e gia smontato e il timer muore con lui:
+  // non c'e modo di chiedere l'ingresso due volte.
+  const entraDaSolo = isInvited && !!String(prefs.name || '').trim();
+  const [ingressoBloccato, setIngressoBloccato] = useState(false);
+  const ingressoRef = useRef(false);
+
+  useEffect(() => {
+    if (!entraDaSolo || ingressoRef.current) return;
+    ingressoRef.current = true;
+
+    const ripiego = setTimeout(() => {
+      try { unlockAudio?.(); } catch (e) { /* l'audio si sbloccera al primo tocco: non e un motivo per non entrare */ }
+      savePrefs(prefs);
+      handleJoinRoom();
+    }, 1200);
+
+    // Se dopo otto secondi siamo ancora su questa schermata, l'ingresso
+    // non e riuscito davvero (stanza piena, codice scaduto, rete). A quel
+    // punto e giusto ridare i comandi invece di lasciare girare un cerchio.
+    const resa = setTimeout(() => setIngressoBloccato(true), 8000);
+
+    return () => { clearTimeout(ripiego); clearTimeout(resa); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entraDaSolo]);
 
   useEffect(() => {
     if (guestStep === 0 && nameInputRef.current) {
@@ -80,35 +180,6 @@ export default function JoinView({ joinCode,
   };
 
   // Shared button styles
-  const GlassCard = ({ children, style = {} }) => (
-    <div style={{
-      background: C.card, borderRadius: 22, padding: '24px 20px',
-      border: `1px solid ${C.cardBorder}`,
-      backdropFilter: 'blur(30px)', WebkitBackdropFilter: 'blur(30px)',
-      width: '100%', maxWidth: 400,
-      boxShadow: `0 20px 60px -15px rgba(0,0,0,0.5)`,
-      animation: 'vtScaleIn 0.35s ease-out',
-      ...style,
-    }}>
-      {children}
-    </div>
-  );
-
-  const PrimaryBtn = ({ onClick, disabled, children, style = {} }) => (
-    <button onClick={onClick} disabled={disabled} style={{
-      width: '100%', padding: '14px 20px', borderRadius: 14, border: 'none',
-      background: disabled ? C.card : `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-      color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT,
-      cursor: disabled ? 'default' : 'pointer',
-      opacity: disabled ? 0.4 : 1,
-      boxShadow: disabled ? 'none' : `0 4px 20px ${C.accent}35`,
-      WebkitTapHighlightColor: 'transparent',
-      transition: 'all 0.2s',
-      ...style,
-    }}>
-      {children}
-    </button>
-  );
 
   // ─── MANUAL JOIN (no invite link) ───
   if (!isInvited) {
@@ -125,7 +196,7 @@ export default function JoinView({ joinCode,
           pointerEvents: 'none',
         }} />
 
-        <GlassCard>
+        <GlassCard C={C}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <button onClick={() => { window.history.replaceState({}, '', window.location.pathname); setView('home'); setJoinCode(''); setInviteMsgLang(null); }}
@@ -178,7 +249,7 @@ export default function JoinView({ joinCode,
             </select>
           </div>
 
-          <PrimaryBtn onClick={() => { if (unlockAudio) unlockAudio(); savePrefs(prefs); handleJoinRoom(); }}
+          <PrimaryBtn C={C} FONT={FONT} onClick={() => { if (unlockAudio) unlockAudio(); savePrefs(prefs); handleJoinRoom(); }}
             disabled={joinCode.length < 4 || !prefs.name.trim()}>
             {L('enterRoom')} →
           </PrimaryBtn>
@@ -187,6 +258,38 @@ export default function JoinView({ joinCode,
         </GlassCard>
 
         <style>{`@keyframes vtScaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }`}</style>
+      </div>
+    );
+  }
+
+  // ─── SI ENTRA, NON SI CHIEDE (b.133) ───
+  // Nessun modulo, nessun bottone: un solo respiro e si e dentro.
+  if (entraDaSolo && !ingressoBloccato) {
+    const bandiera = LANGS.find(l => l.code === myLang)?.flag || '';
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        minHeight: '100dvh', padding: '20px 16px',
+        background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: '-10%', left: '10%', width: '80vw', height: '80vw',
+          borderRadius: '50%', background: `radial-gradient(circle, ${C.accent}12 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          width: 64, height: 64, borderRadius: 32, marginBottom: 22,
+          border: `2px solid ${C.accent}30`, borderTopColor: C.accent,
+          animation: 'vtGira 0.9s linear infinite',
+        }} />
+        <div style={{ fontSize: 18, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
+          {bandiera} {prefs.name}
+        </div>
+        <div style={{ fontSize: 14, color: C.textSecondary, textAlign: 'center', maxWidth: 300 }}>
+          {tI('joining') || 'Entro nella conversazione…'}
+        </div>
+        {status && <div style={{ marginTop: 14, fontSize: 13, color: C.red }}>{status}</div>}
+        <style>{`@keyframes vtGira { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -212,7 +315,7 @@ export default function JoinView({ joinCode,
           pointerEvents: 'none',
         }} />
 
-        <GlassCard style={{ textAlign: 'center', maxWidth: 380 }}>
+        <GlassCard C={C} style={{ textAlign: 'center', maxWidth: 380 }}>
           {/* Invite image / welcome illustration */}
           <div style={{
             width: 100, height: 100, borderRadius: 28, margin: '0 auto 20px',
@@ -312,7 +415,7 @@ export default function JoinView({ joinCode,
 
       {/* ═══ STEP 0: Welcome + Name + Gender ═══ */}
       {guestStep === 0 && (
-        <GlassCard>
+        <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <div style={{
               width: 64, height: 64, borderRadius: 20, margin: '0 auto 12px',
@@ -366,7 +469,7 @@ export default function JoinView({ joinCode,
             </div>
           </div>
 
-          <PrimaryBtn onClick={handleNext} disabled={!canProceedStep0} style={{ marginTop: 16 }}>
+          <PrimaryBtn C={C} FONT={FONT} onClick={handleNext} disabled={!canProceedStep0} style={{ marginTop: 16 }}>
             {tx('continue')} →
           </PrimaryBtn>
         </GlassCard>
@@ -374,7 +477,7 @@ export default function JoinView({ joinCode,
 
       {/* ═══ STEP 1: Language + Avatar ═══ */}
       {guestStep === 1 && (
-        <GlassCard>
+        <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tx('yourLang')}</div>
             <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>{tx('yourLangDesc')}</div>
@@ -432,7 +535,7 @@ export default function JoinView({ joinCode,
               color: C.textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
               WebkitTapHighlightColor: 'transparent',
             }}>←</button>
-            <PrimaryBtn onClick={handleNext} style={{ flex: 1 }}>
+            <PrimaryBtn C={C} FONT={FONT} onClick={handleNext} style={{ flex: 1 }}>
               {tx('continue')} →
             </PrimaryBtn>
           </div>
@@ -441,7 +544,7 @@ export default function JoinView({ joinCode,
 
       {/* ═══ STEP 2: Audio + Voice + Join ═══ */}
       {guestStep === 2 && (
-        <GlassCard>
+        <GlassCard C={C}>
           <div style={{ textAlign: 'center', marginBottom: 14 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary }}>{tx('audioPrefs')}</div>
           </div>
@@ -544,7 +647,7 @@ export default function JoinView({ joinCode,
               color: C.textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
               WebkitTapHighlightColor: 'transparent',
             }}>←</button>
-            <PrimaryBtn onClick={handleJoin} disabled={!canJoin} style={{ flex: 1 }}>
+            <PrimaryBtn C={C} FONT={FONT} onClick={handleJoin} disabled={!canJoin} style={{ flex: 1 }}>
               {tI('inviteJoinBtn') || tx('joinChat')}
             </PrimaryBtn>
           </div>
@@ -595,7 +698,7 @@ export default function JoinView({ joinCode,
               {tI('invitePopupFeatures')}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <PrimaryBtn onClick={() => { setShowInvitePopup(false); setView('account'); setAuthStep('email'); }}
+              <PrimaryBtn C={C} FONT={FONT} onClick={() => { setShowInvitePopup(false); setView('account'); setAuthStep('email'); }}
                 style={{ flex: 1, fontSize: 13 }}>
                 {tI('invitePopupCreateAccount')}
               </PrimaryBtn>
