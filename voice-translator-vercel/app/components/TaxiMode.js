@@ -306,42 +306,38 @@ const TaxiMode = memo(function TaxiMode({
  * TaxiButton Component
  * A small toolbar button to activate Taxi Mode.
  */
+// ═══ INIZIO b.129 — il Taxi entra in riga con gli altri ═══
+//
+// Era l'unico pulsante GIALLO PIENO con testo nero, in mezzo a icone
+// tonde e smorzate. Attirava piu attenzione della videochiamata, e non
+// perche fosse piu importante: perche era piu colorato.
+//
+// Ora ha la stessa veste degli altri — cerchio 36, fondo neutro, icona.
+// Chi lo cerca lo trova; chi non lo cerca non ne viene distratto.
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
   const C = S.colors || {};
-  const statusWarning = C.statusWarning || PALETTE.amber;
-  const textPrimary = C.textPrimary || ((theme === 'deep' || theme === 'ember') ? '#ffffff' : '#000000');
-  const borderColor = C.cardBorder || ((theme === 'deep' || theme === 'ember') ? '#374151' : '#e5e7eb');
 
   return (
     <button
       onClick={onClick}
       style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '8px 12px',
-        borderRadius: '6px',
-        backgroundColor: statusWarning,
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
-        color: '#000000',
-        transition: 'all 0.2s ease',
-        whiteSpace: 'nowrap',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        width: 36, height: 36, borderRadius: 18,
+        background: C.overlayBg || 'rgba(255,255,255,0.06)',
+        color: C.textMuted || 'rgba(255,255,255,0.6)',
+        border: 'none', cursor: 'pointer', flexShrink: 0,
+        transition: 'background 0.15s, color 0.15s',
+        WebkitTapHighlightColor: 'transparent',
       }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-1px)';
-        e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.boxShadow = 'none';
-      }}
-      title="Show Taxi Mode"
+      title="Modalita taxi"
+      aria-label="Modalita taxi"
     >
-      <span></span>
-      <span>Taxi</span>
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 3h6l1 3H8l1-3z"/>
+        <path d="M5 17h14v-5.5a2 2 0 0 0-.4-1.2L17 6H7L5.4 10.3A2 2 0 0 0 5 11.5V17z"/>
+        <circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/>
+      </svg>
     </button>
   );
 });

@@ -23,57 +23,100 @@ const TalkControls = memo(function TalkControls({
       {status && <div style={{fontSize:12, color:S.colors.accent3, marginBottom:6, fontWeight:500}}>{status}</div>}
 
       {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
-        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:16, padding:'4px 0'}}>
-          {/* Cancel button */}
-          {recording && (
-            <button onClick={() => { vibrate(15); cancelRecording(); }}
-              title="Annulla registrazione"
-              style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-                width:52, height:52, borderRadius:14, border:`2px solid ${S.colors.statusError}`,
-                background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
-                cursor:'pointer', justifyContent:'center',
-                WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
-              <span style={{fontSize:20}}>{'\u2716'}</span>
-              <span style={{fontSize:7, fontWeight:700}}>ANNULLA</span>
-            </button>
-          )}
-          {/* Riduzione rumore: onde + RUMORE — non deve sembrare un microfono */}
-          {!recording && (
-            <button onClick={async () => {
-              const next = !liveMode;
-              setLiveModeState(next);
-              if (setLiveMode) await setLiveMode(next);
-              vibrate(15);
-            }}
-              title={liveMode ? 'Riduzione rumore attiva' : 'Attiva riduzione rumore'}
-              style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-                width:52, height:52, borderRadius:14,
-                border: liveMode ? '2px solid #22c55e' : `2px solid ${S.colors.overlayBorder}`,
-                background: liveMode ? 'rgba(34,197,94,0.12)' : S.colors.overlayBg,
-                color: liveMode ? PALETTE.green : S.colors.textMuted,
-                cursor:'pointer', justifyContent:'center',
-                WebkitTapHighlightColor:'transparent', transition:'all 0.2s',
-                boxShadow: liveMode ? '0 0 12px rgba(34,197,94,0.25)' : 'none'}}>
-              <span style={{fontSize:16, display:'flex'}}><IconWaveform size={16}/></span>
-              <span style={{fontSize:7, fontWeight:700}}>RUMORE</span>
-            </button>
-          )}
-          {/* TASTO UNICO: fermo = PARLA · in registrazione = INVIA (verde).
-              Toccarlo ferma E invia: una sola azione di conferma. */}
+        <>
+        {/* ═══ INIZIO b.129 — un gesto solo, e si capisce cosa fa ═══
+            PRIMA: tre pulsanti, tre colori, etichette da 7 pixel.
+              · ANNULLA compariva solo mentre registravi → la fila si
+                spostava sotto il dito a meta gesto;
+              · RUMORE con un'onda: nessuno sa se accende il rumore o lo
+                toglie. E comunque e un'impostazione, non un gesto da
+                fare mentre si parla — spostata nel menu, dove sta il
+                resto delle preferenze;
+              · nessun segnale che stesse davvero ascoltando: premevi e
+                speravi.
+            ORA: un tasto grande, due stati, un contatore che si muove.
+            Il posto dell'ANNULLA e sempre occupato, cosi niente salta.
+            Due colori: neutro a riposo, accento mentre registra. */}
+        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:20, padding:'4px 0'}}>
+          {/* Slot ANNULLA — larghezza riservata anche da fermo: la fila non si muove */}
+          <div style={{width:56, display:'flex', justifyContent:'center'}}>
+            {recording && (
+              <button onClick={() => { vibrate(15); cancelRecording(); }}
+                aria-label="Annulla la registrazione"
+                style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
+                  width:52, height:52, borderRadius:26,
+                  border:'none', background:S.colors.overlayBg, color:S.colors.textMuted,
+                  cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'background 0.15s'}}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                <span style={{fontSize:10, fontWeight:600, letterSpacing:0.2}}>Annulla</span>
+              </button>
+            )}
+          </div>
+
+          {/* Il gesto principale */}
           <button onClick={() => { vibrate(25); toggleRecording(); }}
-            aria-label={recording ? 'Invia il messaggio vocale' : 'Parla'}
-            style={{...S.talkBtn, width:72, height:72, fontSize:30,
-              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+            aria-label={recording ? 'Invia il messaggio vocale' : 'Tieni premuto per parlare'}
+            style={{...S.talkBtn, width:84, height:84, borderRadius:42,
+              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
+              border:'none', cursor:'pointer', WebkitTapHighlightColor:'transparent',
+              transition:'background 0.2s',
               ...(recording ? {
-                background:'linear-gradient(90deg,#16a34a,#3ddc84)',
-                border:'none', color:'#fff',
-                boxShadow:'0 0 0 8px rgba(61,220,132,0.15), 0 0 24px rgba(61,220,132,0.35)',
+                background: S.colors.accent4Bg,
+                color: S.colors.textPrimary,
                 animation:'vtRecordPulse 1.5s ease-in-out infinite',
-              } : {})}}>
-            {recording ? <IconSend size={24}/> : <IconMic size={28}/>}
-            <span style={{fontSize:8, fontWeight:800, letterSpacing:1}}>{recording ? 'INVIA' : 'PARLA'}</span>
+              } : {
+                background: S.colors.overlayBg,
+                color: S.colors.textPrimary,
+              })}}>
+            {recording ? <IconSend size={26}/> : <IconMic size={30}/>}
+            <span style={{fontSize:11, fontWeight:600, letterSpacing:0.2}}>
+              {recording ? 'Invia' : 'Parla'}
+            </span>
           </button>
+
+          {/* Slot simmetrico: tiene il microfono al centro esatto */}
+          <div style={{width:56}} aria-hidden="true" />
         </div>
+
+        {/* La riga che mancava: mentre registra, si vede che sta ascoltando.
+            Senza, l'unico modo di sapere se il tasto aveva funzionato era
+            parlare e sperare. */}
+        {recording && (
+          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+            fontSize:12, color:S.colors.textMuted, marginTop:6}} aria-live="polite">
+            <span style={{width:7, height:7, borderRadius:4, background:S.colors.textPrimary,
+              animation:'vtRecordPulse 1.2s ease-in-out infinite'}} />
+            <span>Ti sto ascoltando — tocca Invia quando hai finito</span>
+          </div>
+        )}
+        {/* La riduzione rumore, con le PAROLE.
+            Prima era un quadrato con un'onda e la scritta "RUMORE" da 7
+            pixel: nessuno poteva sapere se accendeva il rumore o lo
+            toglieva. Ora dice cosa fa, e sta sotto — e una preferenza,
+            non un gesto da fare mentre si parla. */}
+        {!recording && (
+          <button onClick={async () => {
+            const next = !liveMode;
+            setLiveModeState(next);
+            if (setLiveMode) await setLiveMode(next);
+            vibrate(15);
+          }}
+            aria-pressed={liveMode}
+            style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+              margin:'8px auto 0', padding:'6px 14px', borderRadius:16,
+              background: liveMode ? S.colors.accent4Bg : 'transparent',
+              color: liveMode ? S.colors.textPrimary : S.colors.textMuted,
+              border:'none', cursor:'pointer', fontSize:12, fontWeight:500,
+              WebkitTapHighlightColor:'transparent', transition:'background 0.15s, color 0.15s'}}>
+            <span style={{width:8, height:8, borderRadius:4,
+              background: liveMode ? 'currentColor' : 'transparent',
+              border:`1.5px solid currentColor`, transition:'background 0.15s'}} />
+            <span>Riduzione rumore{liveMode ? ' attiva' : ''}</span>
+          </button>
+        )}
+        {/* ═══ FINE b.129 ═══ */}
+        </>
       )}
 
       {roomMode === 'classroom' && !canTalk && (

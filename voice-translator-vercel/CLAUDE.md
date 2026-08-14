@@ -78,6 +78,27 @@ Chiedere il permesso di riparare non e prudenza: e scaricare sulla
 persona una decisione che ha gia preso quando ha chiesto un lavoro
 funzionante.
 
+## 1-quater. Il ciclo: prova · correggi · riprova dal vivo
+
+Una fase di collaudo non finisce quando si e capito cosa non va. Finisce
+quando la cosa funziona.
+
+Il ciclo obbligatorio e:
+
+    prova → trovi il difetto → CORREGGI → riprova DAL VIVO → verde
+
+Senza chiedere niente in mezzo. Se qualcosa non funziona non serve una
+conferma per procedere: la conferma e gia nell'aver chiesto un collaudo.
+
+- Non si consegna un elenco di difetti trovati: si consegna un elenco di
+  difetti **corretti**, con la prova della riprova.
+- La riprova e **fisica**, sul sistema vero, non un test unitario che
+  passa. Un test verde non dimostra che il difetto sia sparito dal
+  prodotto: lo dimostra il prodotto.
+- Si riesegue il BLOCCO INTERO, non solo la prova che era rossa: una
+  correzione che sistema un caso e ne rompe un altro si vede solo cosi.
+- Si passa al blocco successivo quando il precedente e interamente verde.
+
 ## 2. Ci si ferma solo per tre motivi, e si dice quale
 
 Fermarsi e legittimo **solo** in questi casi:

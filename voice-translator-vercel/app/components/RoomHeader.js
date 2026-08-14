@@ -8,6 +8,39 @@ import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconChec
 import { PALETTE } from '../lib/palette.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 
+// ═══ INIZIO b.129 — due colori, una forma ═══
+//
+// Prima la barra aveva QUATTRO colori — verde (in chiamata), rosso
+// (audio spento e partner assente), giallo (Taxi), accento (attivo) —
+// e quattro forme: pillole da 10px, da 12px, quadrati da 36, e un
+// pulsante con testo. Nessuna gerarchia: tutto gridava allo stesso modo.
+//
+// Ora due soli stati, e si leggono a colpo d'occhio:
+//
+//   riposo  → fondo neutro, icona smorzata
+//   attivo  → fondo accento, icona piena
+//
+// Il rosso e sparito. Un'icona barrata dice "spento" meglio di un
+// colore d'allarme: l'audio disattivato non e un guasto, e una scelta.
+// Il verde e sparito: "in chiamata" e gia detto dal fondo acceso.
+//
+// E lo stato del partner NON sta piu sull'ingranaggio, dove non voleva
+// dire niente. Sta sulla sua bandiera, smorzata quando non c'e — sulla
+// persona, non sulle impostazioni.
+const BOTTONE = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 36, height: 36, borderRadius: 18,
+  border: 'none', cursor: 'pointer', flexShrink: 0,
+  transition: 'background 0.15s, color 0.15s',
+  WebkitTapHighlightColor: 'transparent',
+};
+const veste = (S, attivo) => ({
+  ...BOTTONE,
+  background: attivo ? S.colors.accent4Bg : S.colors.overlayBg,
+  color: attivo ? S.colors.textPrimary : S.colors.textMuted,
+});
+// ═══ FINE b.129 ═══
+
 const RoomHeader = memo(function RoomHeader({
   L, S, myLang, myL, otherL, otherMembers, partner,
   showLangPicker, setShowLangPicker, handleLangChange,
@@ -51,7 +84,13 @@ const RoomHeader = memo(function RoomHeader({
           </button>
           <span style={{color:S.colors.textTertiary, fontSize:14, flexShrink:0}}>{<IconSwap size={14}/>}</span>
           {otherMembers.length > 0 ? (
-            <span style={{fontSize:18, display:'flex', gap:2, flexShrink:0}}>
+            <span style={{fontSize:18, display:'flex', gap:2, flexShrink:0,
+              /* b.129 — il partner assente si vede sulla SUA bandiera, smorzata.
+                 Prima era un pallino rosso sull'ingranaggio: un colore d'allarme
+                 su un oggetto che non c'entrava niente. */
+              opacity: partnerConnected ? 1 : 0.35,
+              transition:'opacity 0.3s'}}
+              title={partnerConnected ? 'Collegato' : 'Non collegato'}>
               {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
                 <span key={i}>{flag}</span>
               ))}
@@ -73,15 +112,8 @@ const RoomHeader = memo(function RoomHeader({
               }
             }}
               title="Chiamata vocale" aria-label="Avvia chiamata vocale"
-              style={{display:'flex', alignItems:'center', justifyContent:'center', gap:4,
-                height:36, padding:'0 10px', borderRadius:18, fontSize:16, cursor:'pointer',
-                border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
-                background: (webrtc.webrtcConnected && webrtc.callType === 'voice')
-                  ? 'rgba(34,197,94,0.2)' : S.colors.overlayBg,
-                color: (webrtc.webrtcConnected && webrtc.callType === 'voice')
-                  ? PALETTE.green : S.colors.textMuted}}>
+              style={veste(S, webrtc.webrtcConnected && webrtc.callType === 'voice')}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-              {webrtc.webrtcConnected && webrtc.callType === 'voice' && <div style={{width:6, height:6, borderRadius:3, background:PALETTE.green}} />}
             </button>
           )}
           {/* Video call button */}
@@ -95,18 +127,8 @@ const RoomHeader = memo(function RoomHeader({
               }
             }}
               title={showVideoCall ? 'Chiudi video' : 'Videochiamata'}
-              style={{display:'flex', alignItems:'center', justifyContent:'center', gap:4,
-                height:36, padding:'0 12px', borderRadius:18, fontSize:16, cursor:'pointer',
-                border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
-                background: showVideoCall
-                  ? (webrtc.webrtcConnected ? 'rgba(34,197,94,0.2)' : S.colors.accent4Bg)
-                  : S.colors.overlayBg,
-                color: showVideoCall
-                  ? (webrtc.webrtcConnected ? PALETTE.green : S.colors.textPrimary)
-                  : S.colors.textMuted,
-                boxShadow: webrtc.webrtcConnected && showVideoCall ? '0 0 8px rgba(34,197,94,0.3)' : 'none'}}>
+              style={veste(S, showVideoCall)}>
               <IconCamera size={18}/>
-              {webrtc.webrtcConnected && webrtc.callType === 'video' && <div style={{width:6, height:6, borderRadius:3, background:PALETTE.green}} />}
             </button>
           )}
           {/* Taxi Mode toggle — solo in chat: durante una chiamata non ha senso */}
@@ -131,26 +153,15 @@ const RoomHeader = memo(function RoomHeader({
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
             title={audioEnabled ? 'Disattiva audio traduzioni' : 'Attiva audio traduzioni'}
-            style={{display:'flex', alignItems:'center', justifyContent:'center',
-              width:36, height:36, borderRadius:18, fontSize:16, cursor:'pointer',
-              border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
-              background: audioEnabled ? S.colors.accent4Bg : 'rgba(239,68,68,0.15)',
-              color: audioEnabled ? S.colors.statusOk : PALETTE.red}}>
+            style={veste(S, audioEnabled)}>
             {audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}
           </button>
           {/* More menu button */}
           <div style={{position:'relative', flexShrink:0}}>
             <button onClick={() => setShowMoreMenu(!showMoreMenu)}
               title="Impostazioni"
-              style={{display:'flex', alignItems:'center', justifyContent:'center',
-                width:36, height:36, borderRadius:18, fontSize:18, fontWeight:700,
-                cursor:'pointer', border:'none', transition:'all 0.2s', WebkitTapHighlightColor:'transparent',
-                background: showMoreMenu ? S.colors.accent4Bg : S.colors.overlayBg,
-                color: S.colors.textPrimary, position:'relative'}}>
+              style={veste(S, showMoreMenu)}>
               <IconSettings size={18}/>
-              <div style={{position:'absolute', top:2, right:2, width:8, height:8, borderRadius:4,
-                background: partnerConnected ? PALETTE.green : PALETTE.red,
-                border:'2px solid rgba(0,0,0,0.4)'}} />
             </button>
             {/* ── Overflow menu dropdown ── */}
             {showMoreMenu && (
