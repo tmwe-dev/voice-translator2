@@ -62,14 +62,17 @@ function RigaPaese({ p, evidenziato, selezionato, c, lingua, onScegli, onConferm
         display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
         padding: '11px 13px', marginBottom: 5, borderRadius: 14, cursor: 'pointer',
         fontFamily: FONT,
+        // Vetro come le card del resto dell'applicazione: fermo e
+        // leggibile a riposo, acceso al passaggio del mouse.
         background: selezionato
-          ? `linear-gradient(120deg, ${c.accent1Bg || 'rgba(38,217,176,0.16)'} 0%, rgba(255,255,255,0.05) 60%, transparent 100%)`
+          ? `linear-gradient(120deg, ${c.accent1Bg || 'rgba(38,217,176,0.18)'} 0%, rgba(255,255,255,0.06) 65%, rgba(255,255,255,0.02) 100%)`
           : sopra
-            ? 'linear-gradient(120deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.045) 55%, transparent 100%)'
-            : evidenziato ? (c.overlayBg || 'rgba(255,255,255,0.03)') : 'transparent',
-        border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.35)') : sopra ? 'rgba(255,255,255,0.12)' : 'transparent'}`,
-        backdropFilter: acceso ? 'blur(12px)' : 'none',
-        WebkitBackdropFilter: acceso ? 'blur(12px)' : 'none',
+            ? 'linear-gradient(120deg, rgba(255,255,255,0.11) 0%, rgba(255,255,255,0.05) 60%, rgba(255,255,255,0.015) 100%)'
+            : (c.glassCard || 'rgba(255,255,255,0.028)'),
+        border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.4)') : sopra ? 'rgba(255,255,255,0.14)' : (c.cardBorder || 'rgba(255,255,255,0.05)')}`,
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        boxShadow: sopra ? '0 6px 22px -12px rgba(0,0,0,0.65)' : 'none',
         transform: sopra ? 'translateX(3px)' : 'translateX(0)',
         // L'entrata a cascata: ogni riga arriva 18 ms dopo la precedente.
         // Sopra le venti si smette di scalare, altrimenti l'ultima
@@ -180,10 +183,17 @@ export default function SceltaPaeseView({ onFatto }) {
   //
   // Ora e un velo semitrasparente: da profondita al testo e lascia
   // passare le particelle che si muovono dietro.
-  const isChiaro = theme === 'dawn' || theme === 'blubianco' || theme === 'avorio';
-  const sfondo = isChiaro
-    ? 'linear-gradient(165deg, rgba(247,248,252,0.72) 0%, rgba(238,240,247,0.60) 50%, rgba(247,248,252,0.72) 100%)'
-    : 'linear-gradient(165deg, rgba(5,7,15,0.68) 0%, rgba(10,15,31,0.52) 45%, rgba(16,23,48,0.68) 100%)';
+  // b.141 — LA STESSA GRAFICA DELLE ALTRE PAGINE.
+  //
+  // In b.140 avevo reso lo sfondo semitrasparente per far vedere lo
+  // sciame: il risultato era un grigio slavato che non somigliava a
+  // nessun'altra schermata. HomeView, Impostazioni e tutte le altre
+  // usano `S.page` — il gradiente di casa, dal tema. Questa deve
+  // sembrare la stessa applicazione, non una pagina a parte.
+  //
+  // La profondita la danno il velo e le card in vetro, non la
+  // trasparenza del fondo.
+  const sfondo = S.page.background;
 
 
   return (

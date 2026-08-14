@@ -149,7 +149,11 @@ export default function CookieConsent() {
             <Link href="/privacy" style={linkStyle}>
               {T('cookiePrivacy')}
             </Link>{' '}
-            for more details.
+            {/* b.141 — "for more details." era rimasto fuori dalla
+                traduzione di b.137: la frase finiva in italiano e
+                ripartiva in inglese a meta riga. Ora la chiusura sta
+                dentro `cookieText`, che termina con il rimando al
+                link: una frase sola, in una lingua sola. */}
           </p>
           <div style={buttonsContainerStyle}>
             <button
