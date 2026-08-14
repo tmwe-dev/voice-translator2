@@ -51,7 +51,7 @@ function immagineDecente(url) {
  * Non lancia mai: il piano prevede il ripiego (titolo+fonte+URL bastano).
  */
 export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
-  const vuota = { immagine: '', descrizione: '', pubblicato: null, ok: false };
+  const vuota = { titolo: '', immagine: '', descrizione: '', pubblicato: null, ok: false };
   try {
     const verdetto = await assertSSRFSafe(url);
     if (!verdetto.safe) return { ...vuota, motivo: verdetto.reason };
@@ -74,6 +74,13 @@ export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
     }
     lettore.cancel().catch(() => {});
 
+    // b.154 — il titolo serve al link condiviso in chat (ContenutiChat):
+    // senza, la card mostra solo il nome del dominio. Stesso schema
+    // og→twitter→<title> gia usato per l'immagine.
+    const titoloRaw = meta(html, 'og:title') || meta(html, 'twitter:title')
+      || (html.match(/<title[^>]*>([^<]{1,200})<\/title>/i) || [])[1] || '';
+    const titolo = pulisciTestoWeb(decodifica(titoloRaw)).testo.slice(0, 160);
+
     let immagine = decodifica(meta(html, 'og:image')
       || meta(html, 'og:image:url')
       || meta(html, 'twitter:image')
@@ -93,7 +100,7 @@ export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
     const dataRaw = meta(html, 'article:published_time') || meta(html, 'og:updated_time');
     const pubblicato = dataRaw ? (Date.parse(dataRaw) || null) : null;
 
-    return { immagine, descrizione, pubblicato, ok: true };
+    return { titolo, immagine, descrizione, pubblicato, ok: true };
   } catch (e) {
     return { ...vuota, motivo: e.message };
   }

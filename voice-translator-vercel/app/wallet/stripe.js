@@ -61,6 +61,15 @@ export async function leggiWebhook(corpoGrezzo, firmaHeader) {
  */
 export function estraiPagamento(evento) {
   if (evento.type !== 'checkout.session.completed') return null;
+  // b.154 — CONFERMATO: mancava questo controllo. Stripe distingue
+  // 'paid' da 'unpaid'/'no_payment_required' dentro payment_status,
+  // e per i metodi di pagamento differiti il Checkout può dirsi
+  // "completed" prima che i fondi siano arrivati davvero (in quel
+  // caso arriva poi un evento separato async_payment_succeeded/
+  // failed). Accreditare su "completed" da solo, senza guardare
+  // payment_status, rischia di pagare un acquisto mai andato a buon
+  // fine con un metodo differito.
+  if (evento.data.object.payment_status && evento.data.object.payment_status !== 'paid') return null;
   const m = evento.data.object.metadata || {};
   if (!m.utente_id || !m.secondi) return null;
   return {

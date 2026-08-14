@@ -45,6 +45,36 @@ export async function registraMovimento(utenteId, tipo, secondi, dettaglio = {})
 }
 
 /**
+ * b.154 — come registraMovimento, ma per gli acquisti Stripe: se lo
+ * stesso Stripe Session ID è già stato accreditato (indice unico
+ * `idx_ledger_stripe_session`, migration 007), NON accredita di
+ * nuovo — ritorna { duplicato: true } invece di lanciare, cosi il
+ * webhook può rispondere comunque 200 a Stripe (altrimenti Stripe
+ * ritenta all'infinito un evento che in realtà è già a posto).
+ *
+ * Questo esiste perché il webhook Stripe può consegnare lo stesso
+ * evento più di una volta (retry, resend manuale, doppio deploy): la
+ * garanzia vive nel vincolo DB, non in un controllo JS che una corsa
+ * fra due richieste concorrenti potrebbe aggirare.
+ */
+export async function registraAcquistoStripe(utenteId, secondi, dettaglio) {
+  const { error } = await db().from('credit_ledger').insert({
+    user_id: utenteId,
+    tipo: 'acquisto',
+    secondi: Math.round(secondi),
+    dettaglio,
+  });
+  if (error) {
+    // 23505 = violazione di vincolo unico: questo Stripe Session ID
+    // è già stato accreditato. Non è un errore, è la prova che ha
+    // già funzionato una volta.
+    if (error.code === '23505') return { duplicato: true };
+    throw new Error('Ledger acquisto: ' + error.message);
+  }
+  return { duplicato: false };
+}
+
+/**
  * Saldo attuale = somma di tutti i movimenti.
  */
 export async function saldo(utenteId) {

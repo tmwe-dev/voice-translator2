@@ -317,7 +317,13 @@ async function handlePost(req) {
     if (roomId) {
       bgTasks.push(addCost(roomId, msgCostUsd).catch(() => {}));
     }
-    if (billingEmail && !isOwnKey && !isReview) {
+    // b.154 — PRIMA il tracking (compreso il tetto di piattaforma dentro
+    // trackDailySpend) partiva solo con billingEmail: le chiamate anonime
+    // (nessun token, nessuna stanza) non venivano mai contate, quindi il
+    // tetto di €100/giorno per la piattaforma non le vedeva mai. Ora si
+    // traccia sempre (billingEmail null aggiorna solo il contatore
+    // aggregato, vedi trackDailySpend in apiAuth.js).
+    if (!isOwnKey && !isReview) {
       bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents)).catch(() => {}));
     }
     if (isLending && lendingCodeUsed) {

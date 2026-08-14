@@ -14,6 +14,8 @@ import NumeroSicurezza from './NumeroSicurezza.js';
 import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
 import TaxiMode, { TaxiButton } from './TaxiMode.js';
+import ContenutiChat from './ContenutiChat.js';
+import SchedaArgomento from './SchedaArgomento.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import { getAttenuazione } from '../lib/audioPrefs.js';
@@ -52,6 +54,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   // Il messaggio a cui si sta rispondendo, mostrato sopra il campo di
   // scrittura finche non si invia o non si annulla.
   const [rispostaA, setRispostaA] = useState(null);
+  const [schedaChat, setSchedaChat] = useState(null); // { tipo, dati } | null — link condiviso in chat, aperto (b.154)
 
   // ── Conservare i messaggi: SOLO nelle stanze Community ──
   // Il client manda tutto, il SERVER decide: se la stanza non e stata
@@ -536,6 +539,15 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </button>
       </div>
 
+      {/* ═══ INIZIO v.154 — Contenuti chat (link condivisi) ═══
+          COSA: striscia scorrevole subito sotto il campo di scrittura.
+          PERCHE: richiesta di Luca (14/8) — i link condivisi in chat
+          (articoli, video) diventano miniature apribili invece di
+          restare testo nudo in mezzo ai messaggi. Legge solo `messages`,
+          nessun nuovo campo nei messaggi. */}
+      <ContenutiChat messages={messages} S={S} L={L} onApri={setSchedaChat} />
+      {/* ═══ FINE v.154 ═══ */}
+
       {/* ═══ Talk Controls ═══ */}
       {/* Stai rispondendo a qualcuno: si vede a chi, e si puo annullare */}
       {rispostaA && (
@@ -632,6 +644,24 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         S={S}
         theme={theme}
       />
+
+      {/* ═══ INIZIO v.154 — Scheda del link condiviso ═══
+          COSA: la scheda di lettura/visione gia costruita per Mondo
+          News, riusata qui per i link scoperti in chat da ContenutiChat.
+          PERCHE: "a destra riassunto o accesso all'articolo" (Luca,
+          14/8) — la scheda ha gia dentro sintesi/link/player. */}
+      <SchedaArgomento
+        aperta={!!schedaChat}
+        tipo={schedaChat?.tipo}
+        dati={schedaChat?.dati}
+        C={S.colors}
+        onClose={() => setSchedaChat(null)}
+        onParlane={() => {
+          if (schedaChat?.dati?.titolo) setTextInput(t => (t ? t : '') + schedaChat.dati.titolo);
+          setSchedaChat(null);
+        }}
+      />
+      {/* ═══ FINE v.154 ═══ */}
 
       <style>{`
         @keyframes vtPulse { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }

@@ -110,12 +110,17 @@ async function handlePost(req) {
     // Deduct cost upfront (before streaming)
     const ttsCostUsd = calcTtsCost(text.length);
     const ttsCostEurCents = usdToEurCents(ttsCostUsd);
-    if (billingEmail && !isOwnKey) {
-      try {
-        const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
-        await deductCredits(billingEmail, charge);
-        trackDailySpend(billingEmail, charge).catch(() => {});
-      } catch (e) { log.error('TTS credit deduct error:', e); }
+    // b.154 — l'addebito personale serve solo con un billingEmail (non
+    // si scala nessuno), ma il conteggio verso il tetto DI PIATTAFORMA
+    // deve vedere anche le chiamate anonime: prima trackDailySpend
+    // viveva solo dentro questo `if`, quindi la modalita libera non
+    // veniva mai contata nel tetto di €100/giorno.
+    if (!isOwnKey) {
+      const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
+      if (billingEmail) {
+        try { await deductCredits(billingEmail, charge); } catch (e) { log.error('TTS credit deduct error:', e); }
+      }
+      trackDailySpend(billingEmail, charge).catch(() => {});
     }
 
     const response = await openai.audio.speech.create({

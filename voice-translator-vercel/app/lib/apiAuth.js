@@ -71,7 +71,19 @@ export async function resolveAuth({
   if (userToken) {
     // Path 1: Authenticated user (host or user with own account)
     const session = await getSession(userToken);
-    if (session) {
+    // b.154 — CONFERMATO da audit esterno (14/8) e verificato qui: un
+    // token PRESENTE ma NON valido (scaduto, falsificato, sessione
+    // sparita) prima non veniva respinto. Il controllo restava dentro
+    // `if (session)`, e se `session` era null il blocco non faceva
+    // nulla: si usciva dall'if/else if/else if senza throw, e si
+    // arrivava in fondo con billingEmail ancora null — cioe con la
+    // STESSA porta aperta della modalita "nessun token" (sotto), ma
+    // con la differenza che qui l'utente HA dichiarato un token: un
+    // token rotto o rubato non deve mai finire uguale a "nessuno".
+    if (!session) {
+      throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
+    }
+    {
       billingEmail = session.email;
       const user = await getUser(billingEmail);
       if (user) {
@@ -186,15 +198,17 @@ export async function resolveAuth({
       }
     }
   } else {
-    // Path 4: No token, no room — FREE ACCESS MODE
-    // All features are free and open. Use platform keys, no billing.
-    return {
-      apiKey: defaultKey,
-      isOwnKey: false,
-      billingEmail: null,
-      isLending: false,
-      lendingCodeUsed: null,
-    };
+    // Path 4: No token, no room, no lending — accesso libero dichiarato
+    // (chiave di piattaforma, nessun utente da addebitare). NON esce
+    // piu subito: prima usciva qui con un `return`, saltando A PIEDI
+    // PARI il controllo sotto — compreso il tetto di spesa TOTALE
+    // della piattaforma (€100/giorno), che quindi non si applicava
+    // affatto alle chiamate anonime. Confermato dall'audit esterno
+    // del 14/8 e verificato leggendo il codice: qui sotto restava
+    // solo `if (billingEmail && ...)`, mai vero per questo percorso.
+    // Ora si prosegue fino al blocco condiviso: l'identita resta
+    // "nessuno" (niente addebito personale, e coerente), ma il tetto
+    // di piattaforma la copre come ogni altra chiamata.
   }
 
   // For ElevenLabs, ensure we have a key
@@ -203,19 +217,27 @@ export async function resolveAuth({
   }
 
   // Check daily spending limits (only for platform credits, not own keys)
-  if (billingEmail && !isOwnKey && !skipCreditCheck) {
+  if (!isOwnKey && !skipCreditCheck) {
     try {
       const todayUTC = new Date().toISOString().split('T')[0];
-      const dailyKey = `daily:${billingEmail}:${todayUTC}`;
-      // b.107 — parseFloat, non parseInt: da quando il contatore somma il
-      // valore vero, i decimali contano. Con parseInt "4.7" diventava 4.
-      const dailySpent = parseFloat(await redis('GET', dailyKey) || '0') || 0;
 
-      if (DAILY_LIMITS.PER_USER > 0 && dailySpent >= DAILY_LIMITS.PER_USER) {
-        throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
+      // Il limite PER UTENTE serve solo se c'e un utente identificato
+      // da addebitare — anonimo non ha una chiave utente da limitare
+      // qui (lo protegge comunque withApiGuard per IP).
+      if (billingEmail) {
+        const dailyKey = `daily:${billingEmail}:${todayUTC}`;
+        // b.107 — parseFloat, non parseInt: da quando il contatore somma il
+        // valore vero, i decimali contano. Con parseInt "4.7" diventava 4.
+        const dailySpent = parseFloat(await redis('GET', dailyKey) || '0') || 0;
+
+        if (DAILY_LIMITS.PER_USER > 0 && dailySpent >= DAILY_LIMITS.PER_USER) {
+          throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
+        }
       }
 
-      // Check platform total daily spend
+      // Check platform total daily spend — SEMPRE, anche per l'accesso
+      // libero: e l'unico tetto che protegge la piattaforma quando non
+      // c'e nessun billingEmail da limitare singolarmente.
       const platformDailyKey = `daily:platform:${todayUTC}`;
       const platformSpent = parseFloat(await redis('GET', platformDailyKey) || '0') || 0;
       if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && platformSpent >= DAILY_LIMITS.PLATFORM_TOTAL) {
@@ -237,9 +259,23 @@ export async function resolveAuth({
  * Call this after deducting credits
  */
 export async function trackDailySpend(email, amountCents) {
-  if (!email || amountCents <= 0) return;
+  if (amountCents <= 0) return;
   try {
     const todayUTC = new Date().toISOString().split('T')[0];
+    // b.154 — il tetto di piattaforma (€100/giorno) si controlla ANCHE
+    // per le chiamate anonime (resolveAuth Path 4), ma se qui si
+    // usciva senza `email` il contatore `daily:platform:...` non
+    // veniva MAI incrementato per quelle chiamate: il tetto controllato
+    // in resolveAuth restava sempre a zero, quindi mai vero. Senza
+    // email si aggiorna solo il contatore di piattaforma, non quello
+    // personale (che non esiste, per definizione, per l'anonimo).
+    if (!email) {
+      await (async (chiave) => {
+        const nuovo = parseFloat(await redis('INCRBYFLOAT', chiave, amountCents)) || 0;
+        if (nuovo <= amountCents + 1e-9) await redis('EXPIRE', chiave, 90000);
+      })(`daily:platform:${todayUTC}`);
+      return;
+    }
 
     // ── b.107 · qui il contatore correva dieci volte piu della spesa ──
     // Prima c'era INCRBY con Math.ceil(amountCents). INCRBY vuole numeri

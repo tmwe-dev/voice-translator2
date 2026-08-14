@@ -1,6 +1,6 @@
 // Lightweight i18n — loads language packs on demand
 // Fallback languages (en, it) are loaded eagerly; others lazy-loaded
-// Total: 15 languages, 1059 keys each
+// Total: 15 languages, 1078 keys each
 //
 // Il numero e uguale in tutti e quindici, e deve restarlo: e la sola
 // cosa che si puo contare per sapere se una schermata parla a tutti o

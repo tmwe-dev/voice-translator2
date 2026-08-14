@@ -229,10 +229,15 @@ async function handlePost(req) {
         });
         if (fallback.ok) {
           const buf = Buffer.from(await fallback.arrayBuffer());
-          if (billingEmail && !isOwnKey) {
+          if (!isOwnKey) {
+            // b.154 — vedi nota gemella sotto: il tetto di piattaforma
+            // deve contare anche l'anonimo, l'addebito personale no.
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
-            try { await deductCredits(billingEmail, charge1); await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback credit deduct failed:', e?.message); }
+            if (billingEmail) {
+              try { await deductCredits(billingEmail, charge1); } catch (e) { log.warn('Fallback credit deduct failed:', e?.message); }
+            }
+            try { await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
           }
           const esitoFb = await addebitaVocePremium(pagante, cleanText.length);
           return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), ...(esitoFb === 'esaurito' && { 'X-Credito-Esaurito': '1' }) } });
@@ -249,12 +254,15 @@ async function handlePost(req) {
     const elCostUsd = calcElevenLabsCost(cleanText.length);
     const elCostEurCents = usdToEurCents(elCostUsd);
 
-    if (billingEmail && !isOwnKey) {
-      try {
-        const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
-        await deductCredits(billingEmail, charge);
-        await trackDailySpend(billingEmail, charge);
-      } catch (e) { log.error('ElevenLabs credit deduct error:', e); }
+    if (!isOwnKey) {
+      // b.154 — stessa correzione: il tetto di piattaforma (dentro
+      // trackDailySpend) deve vedere anche le chiamate senza
+      // billingEmail (accesso libero), l'addebito personale no.
+      const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
+      if (billingEmail) {
+        try { await deductCredits(billingEmail, charge); } catch (e) { log.error('ElevenLabs credit deduct error:', e); }
+      }
+      try { await trackDailySpend(billingEmail, charge); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
     }
 
     // ── Wallet: addebito premium DOPO l'audio riuscito ──

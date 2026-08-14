@@ -227,7 +227,7 @@ const RoomHeader = memo(function RoomHeader({
                     onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
                     style={{width:'100%', accentColor:S.colors.accent4Border, height:4}} />
                   <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
-                    Volume partner durante la traduzione
+                    {L('duckingHint')}
                   </div>
                 </div>
                 {/* Close & Archive */}
@@ -253,7 +253,7 @@ const RoomHeader = memo(function RoomHeader({
                       <div style={{display:'flex', alignItems:'center', gap:10}}>
                         <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconBattery size={15}/>}</span>
                         <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
-                          {freeLimitExceeded ? 'Limite raggiunto' : 'Piano FREE'}
+                          {freeLimitExceeded ? L('freeDailyLimitHit') : L('freePlan')}
                         </span>
                         <span style={{marginLeft:'auto', fontSize:12, fontWeight:700, color:battColor, fontFamily:'monospace'}}>
                           {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
