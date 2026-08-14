@@ -46,7 +46,7 @@ import { useApp } from '../contexts/AppContext.js';
 // stop trasparenti, non un colore pieno: cosi sopra lo sciame animato
 // si vede attraverso invece di spegnerlo.
 // ═══════════════════════════════════════════════════════════════
-function RigaPaese({ p, ultima, selezionato, c, lingua, onScegli, onConferma, ritardo }) {
+function RigaPaese({ p, selezionato, c, lingua, onScegli, onConferma, ritardo }) {
   const [sopra, setSopra] = useState(false);
   const acceso = sopra || selezionato;
   return (
@@ -59,46 +59,62 @@ function RigaPaese({ p, ultima, selezionato, c, lingua, onScegli, onConferma, ri
       onBlur={() => setSopra(false)}
       aria-pressed={selezionato}
       style={{
-        // b.142 — LO SCHEMA E QUELLO DI HOME, NON UNO NUOVO.
+        // b.143 — LE CARD IN VETRO, SULLO SFONDO GIUSTO.
         //
-        // In b.141 avevo dato a ogni paese una card sua: novantadue
-        // rettangoli grigi impilati sopra lo sfondo. Luca, giustamente:
-        // "cancella questi elementi grigi sopra lo sfondo".
+        // Luca: "riprendi il formato delle cards che avevamo sullo
+        // sfondo sbagliato di prima e usale qui".
         //
-        // Home non fa cosi. Ha UN contenitore con bordo e dentro le
-        // righe separate da una linea sottile — nessuno sfondo per riga.
-        // E lo schema della casa: si copia quello invece di inventarne
-        // un terzo.
-        display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-        padding: '13px 2px', textAlign: 'left',
-        background: 'none', border: 'none',
-        borderBottom: ultima ? 'none' : `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
-        cursor: 'pointer', fontFamily: FONT,
-        opacity: sopra ? 0.82 : 1,
-        animation: `vtRigaEntra 0.32s ease-out ${Math.min(ritardo, 20) * 0.018}s both`,
-        transition: 'opacity 0.2s',
+        // In b.142 avevo buttato via anche le card mentre toglievo lo
+        // sfondo slavato: due cose diverse, e ne serviva correggere una
+        // sola. Il vetro andava bene, era il fondo che non andava.
+        // Ora il vetro torna, sopra il gradiente di casa.
+        display: 'flex', alignItems: 'center', gap: 13, width: '100%',
+        padding: '12px 14px', marginBottom: 7, textAlign: 'left',
+        borderRadius: 16, cursor: 'pointer', fontFamily: FONT,
+        background: selezionato
+          ? `linear-gradient(120deg, ${c.accent1Bg || 'rgba(38,217,176,0.20)'} 0%, rgba(255,255,255,0.07) 65%, rgba(255,255,255,0.02) 100%)`
+          : sopra
+            ? 'linear-gradient(120deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.06) 60%, rgba(255,255,255,0.02) 100%)'
+            : (c.glassCard || 'rgba(255,255,255,0.035)'),
+        border: `1px solid ${selezionato ? (c.accent1Border || 'rgba(38,217,176,0.45)') : sopra ? 'rgba(255,255,255,0.16)' : (c.cardBorder || 'rgba(255,255,255,0.06)')}`,
+        // b.143 — NIENTE backdrop-filter QUI.
+        //
+        // Luca: "stai espandendo l'effetto a tutta la pagina e non solo
+        // le cards dei paesi". Aveva ragione, e la causa e questa riga.
+        //
+        // `backdrop-filter` sfoca cio che sta DIETRO l'elemento. Con
+        // novantadue card impilate il browser costruisce novantadue
+        // strati di sfocatura sovrapposti, e il risultato non e vetro
+        // sulle card: e una nebbia grigia su tutta la finestra.
+        //
+        // L'effetto vetro non ha bisogno del blur: lo fanno il gradiente
+        // chiaro in diagonale e il bordo sottile. Quelli restano, la
+        // nebbia se ne va.
+        boxShadow: acceso ? '0 10px 28px -14px rgba(0,0,0,0.75)' : 'none',
+        transform: sopra ? 'translateX(6px)' : 'translateX(0)',
+        animation: `vtRigaEntra 0.5s cubic-bezier(0.22,1,0.36,1) ${Math.min(ritardo, 24) * 0.035}s both`,
+        transition: 'background 0.24s, border-color 0.24s, transform 0.24s, box-shadow 0.24s',
         WebkitTapHighlightColor: 'transparent',
       }}>
-      {/* La bandiera sta nel riquadro che in Home ospita l'icona:
-          stessa misura, stesso raggio, stesso bordo. Da selezionata
-          prende l'accento pieno, come la voce principale di Home. */}
+      {/* Bandiera NUDA: il riquadro col bordo che avevo copiato da Home
+          la incassava come fosse un'icona qualsiasi. E l'unica immagine
+          della riga, deve stare libera. */}
       <span style={{
-        width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: selezionato
-          ? `linear-gradient(145deg, ${c.accent1 || '#26D9B0'}, ${c.accent2 || '#7C6BF5'})`
-          : (c.cardBg || 'rgba(255,255,255,0.03)'),
-        border: selezionato ? 'none' : `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
-        boxShadow: selezionato ? `0 4px 14px -4px ${c.accent1 || '#26D9B0'}70` : 'none',
-        transition: 'background 0.2s, box-shadow 0.2s',
+        fontSize: 27, lineHeight: 1, flexShrink: 0, display: 'inline-block',
+        transform: acceso ? 'scale(1.2) rotate(-4deg)' : 'scale(1) rotate(0deg)',
+        filter: acceso ? 'drop-shadow(0 4px 12px rgba(0,0,0,0.5))' : 'none',
+        transition: 'transform 0.26s cubic-bezier(0.34,1.4,0.64,1), filter 0.26s',
+      }}>{p.bandiera}</span>
+
+      {/* Anche il nome cresce, non solo la bandiera: cosi l'ingrandimento
+          e di TUTTA la riga e non di un dettaglio. L'origine a sinistra
+          perche crescendo dal centro il testo scivolerebbe via. */}
+      <span style={{
+        flex: 1, minWidth: 0, display: 'block',
+        transformOrigin: 'left center',
+        transform: acceso ? 'scale(1.05)' : 'scale(1)',
+        transition: 'transform 0.26s cubic-bezier(0.34,1.4,0.64,1)',
       }}>
-        <span style={{
-          fontSize: 21, lineHeight: 1, display: 'inline-block',
-          transform: acceso ? 'scale(1.18)' : 'scale(1)',
-          transition: 'transform 0.24s cubic-bezier(0.34,1.4,0.64,1)',
-        }}>{p.bandiera}</span>
-      </span>
-      <span style={{ flex: 1, minWidth: 0 }}>
         <span style={{ display: 'block', fontSize: 15, fontWeight: 700,
           color: selezionato ? (c.accent1 || '#26D9B0') : (c.textPrimary || '#fff'),
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -203,6 +219,9 @@ export default function SceltaPaeseView({ onFatto }) {
   //
   // La profondita la danno il velo e le card in vetro, non la
   // trasparenza del fondo.
+  // Fondo PIENO, senza trasparenze: il velo lo danno le card, non la
+  // pagina. Se il fondo e semitrasparente si vede lo sciame ma tutto il
+  // resto sbiadisce, ed e cio che rendeva la schermata grigia.
   const sfondo = S.page.background;
 
 
@@ -214,7 +233,7 @@ export default function SceltaPaeseView({ onFatto }) {
       // Entrata all'apertura, uscita alla conferma. I 260 ms qui devono
       // combaciare con il ritardo in `conferma()`: se l'animazione fosse
       // piu lunga si vedrebbe la vista nuova comparire sotto questa.
-      animation: uscita ? 'vtPaeseEsce 0.26s ease-in forwards' : 'vtPaeseEntra 0.4s ease-out',
+      animation: uscita ? 'vtPaeseEsce 0.26s ease-in forwards' : 'vtPaeseEntra 0.55s cubic-bezier(0.22,1,0.36,1)',
       paddingTop: 'max(20px, env(safe-area-inset-top))',
     }}>
       <div style={{ padding: '0 20px 12px', width: '100%', maxWidth: 480, margin: '0 auto', boxSizing: 'border-box' }}>
@@ -253,15 +272,9 @@ export default function SceltaPaeseView({ onFatto }) {
               color: c.textMuted || 'rgba(255,255,255,0.4)', padding: '4px 4px 8px' }}>
               {L('countrySuggested')}
             </div>
-            <div style={{
-              background: c.cardBg || 'rgba(255,255,255,0.03)',
-              border: `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
-              borderRadius: 18, padding: '2px 14px',
-            }}>
-              <RigaPaese p={proposto} ultima c={c} lingua={getLang(proposto.lingua)}
-                selezionato={attivo?.codice === proposto.codice}
-                onScegli={setScelto} onConferma={conferma} ritardo={0} />
-            </div>
+            <RigaPaese p={proposto} c={c} lingua={getLang(proposto.lingua)}
+              selezionato={attivo?.codice === proposto.codice}
+              onScegli={setScelto} onConferma={conferma} ritardo={0} />
             <div style={{ height: 10 }} />
           </>
         )}
@@ -276,22 +289,11 @@ export default function SceltaPaeseView({ onFatto }) {
             {L('countryNone')}
           </div>
         )}
-        {/* b.142 — un solo contenitore, come la lista delle porte in
-            Home: bordo esterno, righe dentro separate da una linea. */}
-        {risultati.length > 0 && (
-          <div style={{
-            background: c.cardBg || 'rgba(255,255,255,0.03)',
-            border: `1px solid ${c.cardBorder || 'rgba(255,255,255,0.06)'}`,
-            borderRadius: 18, padding: '2px 14px',
-          }}>
-            {risultati.map((p, i) => (
-              <RigaPaese key={p.codice} p={p} c={c} lingua={getLang(p.lingua)}
-                ultima={i === risultati.length - 1}
-                selezionato={attivo?.codice === p.codice}
-                onScegli={setScelto} onConferma={conferma} ritardo={i} />
-            ))}
-          </div>
-        )}
+        {risultati.map((p, i) => (
+          <RigaPaese key={p.codice} p={p} c={c} lingua={getLang(p.lingua)}
+            selezionato={attivo?.codice === p.codice}
+            onScegli={setScelto} onConferma={conferma} ritardo={i} />
+        ))}
 
         <div style={{ height: 24 }} />
       </div>
@@ -327,9 +329,9 @@ export default function SceltaPaeseView({ onFatto }) {
       </div>
 
       <style>{`
-        @keyframes vtPaeseEntra { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: scale(1); } }
+        @keyframes vtPaeseEntra { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes vtPaeseEsce  { to { opacity: 0; transform: translateY(-14px) scale(0.99); } }
-        @keyframes vtRigaEntra  { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes vtRigaEntra  { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
       `}</style>
     </div>
   );

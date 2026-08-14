@@ -110,7 +110,16 @@ function HomeInner() {
   // b.136 — `lang` e la lingua PARLATA, `uiLang` quella dell'INTERFACCIA,
   // `country` il paese (bandiera del profilo). Prima esisteva solo
   // `lang` e faceva tutti e tre i mestieri.
-  const [prefs, setPrefs] = useState({ name:'', lang:'it', uiLang:'it', country:'IT', avatar:AVATARS[0], voice:'nova', autoPlay:true });
+  // b.143 — LA BASE E L'INGLESE, NON L'ITALIANO.
+  //
+  // Questi valori valgono nell'istante fra il primo disegno e la
+  // lettura delle preferenze salvate, e per chiunque arrivi senza
+  // niente. Erano 'it' e 'IT' perche l'applicazione e nata qui: ma un
+  // giapponese che apre il link vedeva un lampo di italiano prima che
+  // `indovinaPaese()` facesse il suo lavoro.
+  // L'inglese e la base neutra: nessuno lo trova offensivo, e chi ha
+  // una lingua sua la ottiene un istante dopo.
+  const [prefs, setPrefs] = useState({ name:'', lang:'en', uiLang:'en', country:'', avatar:AVATARS[0], voice:'nova', autoPlay:true });
   const [convHistory, setConvHistory] = useState([]);
   // b.123 — senza account l'archivio sul server non esiste (e non puo
   // esistere: non c'e niente a cui legarlo). Va detto, altrimenti
@@ -169,7 +178,7 @@ function HomeInner() {
 
   // Refs — created BEFORE hooks so they can be shared
   const msgsEndRef = useRef(null);
-  const prefsRef = useRef({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
+  const prefsRef = useRef({ name:'', lang:'en', avatar:AVATARS[0], voice:'nova', autoPlay:true });
   const myLangRef = useRef('it');
   const roomInfoRef = useRef(null);
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
