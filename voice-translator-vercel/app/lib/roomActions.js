@@ -50,6 +50,16 @@ export async function handleJoin({ roomId, name, lang, avatar }) {
 
   const room = await joinRoom(roomId, name, lang, avatar || null);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+  // b.126 — stanza piena: si rifiuta CHI ARRIVA, non si butta fuori chi
+  // c'e gia. Prima l'undicesimo prendeva il posto di un partecipante,
+  // che restava col suo gettone ma fuori da room.members — e scopriva di
+  // essere stato espulso solo dai 403 che cominciava a ricevere.
+  if (room.piena) {
+    return NextResponse.json(
+      { error: 'La stanza e al completo', piena: true },
+      { status: 409 }
+    );
+  }
   const member = room.members.find(m => m.name === name);
   const role = member?.role || 'guest';
   const { token } = await createRoomSession(room.id, name, role);
@@ -133,54 +143,25 @@ export async function handleChangeLang({ roomId, lang, identity }) {
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
   return NextResponse.json({ room });
 }
-
-// ── Action: webrtc-signal ──
-export async function handleWebrtcSignal({ roomId, signal, identity }) {
-  if (!roomId || !signal) return NextResponse.json({ error: 'roomId and signal required' }, { status: 400 });
-  // Verify sender via session token or signal.from membership
-  if (identity) {
-    const { error } = await verifyMembership(roomId, identity);
-    if (error) return error;
-  } else {
-    // Fallback: verify signal.from
-    const senderName = signal?.from;
-    if (senderName) {
-      const sigRoom = await getRoom(roomId);
-      if (!sigRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
-      if (!sigRoom.members.some(m => m.name === senderName)) {
-        return NextResponse.json({ error: 'Not a room member' }, { status: 403 });
-      }
-    }
-  }
-  const key = `rtc:${roomId}`;
-  try {
-    await redis('RPUSH', key, JSON.stringify(signal));
-    await redis('LTRIM', key, -50, -1);
-    await redis('EXPIRE', key, 300);
-  } catch (e) {
-    log.error('WebRTC signal store error:', e);
-  }
-  return NextResponse.json({ ok: true });
-}
-
-// ── Action: webrtc-poll ──
-export async function handleWebrtcPoll({ roomId, identity }) {
-  if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
-  if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-  const { error } = await verifyMembership(roomId, identity);
-  if (error) return error;
-  const key = `rtc:${roomId}`;
-  try {
-    const raw = await redis('LRANGE', key, 0, -1);
-    const signals = (raw || [])
-      .map(s => { try { return JSON.parse(s); } catch { return null; } })
-      .filter(s => s && s.from !== identity.name);
-    return NextResponse.json({ signals });
-  } catch {
-    return NextResponse.json({ signals: [] });
-  }
-}
-
+// ── b.126 · qui c'erano handleWebrtcSignal e handleWebrtcPoll ──
+//
+// Erano una SECONDA implementazione del signalling WebRTC, via
+// /api/room, accanto a quella vera che passa da Supabase Realtime
+// (useWebRTC.js: `channel.on('broadcast', { event: 'webrtc-signal' })`).
+//
+// Nessun client le chiamava piu: verificato cercando
+// `action: 'webrtc-signal'` in tutto app/ — zero occorrenze fuori da
+// qui. Ed erano il percorso MENO protetto dei due: in mancanza di un
+// gettone si accontentavano di `signal.from`, cioe di un nome
+// dichiarato dal chiamante. Esattamente la classe di difetto chiusa in
+// b.123 su archivio e riassunto.
+//
+// Un secondo ingresso dimenticato e peggio di un ingresso in piu: non
+// viene aggiornato quando si irrobustisce il primo, e resta aperto
+// mentre tutti credono che la porta sia una sola.
+//
+// Se un giorno servisse un ripiego al Realtime, va riscritto con la
+// stessa verifica del percorso principale — non resuscitato.
 // ── Action: check ──
 export async function handleCheck({ roomId }) {
   if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });

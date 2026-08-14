@@ -50,6 +50,19 @@ export default function useReazioni({ roomId, roomSessionToken, msgIds = [] }) {
 
   // ── Reagire ──
   const reagisci = useCallback(async (msgId, tipo) => {
+    // ── b.126 · si annota com'era PRIMA, per poter tornare indietro ──
+    //
+    // L'anticipo sullo schermo e giusto: una reazione deve comparire
+    // subito. Ma se il server rifiuta — succede sempre in modalita
+    // Direct, dove /api/reazioni e chiuso dal cancello — prima non
+    // succedeva niente: la reazione restava li, visibile solo a chi
+    // l'aveva messa, e non era mai stata consegnata a nessuno.
+    //
+    // Mostrare una cosa che non e successa e la stessa bugia della
+    // spunta di consegna corretta in b.120.
+    const conteDiPrima = conte[msgId];
+    const mieDiPrima = mie[msgId];
+
     // Subito sullo schermo: si toglie se c'era, si mette se non c'era, e
     // su/giu si escludono come fa il server.
     setConte(prima => {
@@ -79,8 +92,21 @@ export default function useReazioni({ roomId, roomSessionToken, msgIds = [] }) {
     if (d?.ok) {
       setConte(p => ({ ...p, [msgId]: { ...(p[msgId] || {}), ...d.conte } }));
       setMie(p => ({ ...p, [msgId]: d.mie || {} }));
+      return;
     }
-  }, [chiama, mie]);
+    // b.126 — il server non l'ha presa: si torna com'era. Meglio una
+    // reazione che sparisce di una che finge di esserci.
+    setConte(p => {
+      const q = { ...p };
+      if (conteDiPrima === undefined) delete q[msgId]; else q[msgId] = conteDiPrima;
+      return q;
+    });
+    setMie(p => {
+      const q = { ...p };
+      if (mieDiPrima === undefined) delete q[msgId]; else q[msgId] = mieDiPrima;
+      return q;
+    });
+  }, [chiama, mie, conte]);
 
   // ── Conservare un messaggio (il server decide se puo) ──
   const conserva = useCallback((msgId, testo, lang, rispostaA) => {

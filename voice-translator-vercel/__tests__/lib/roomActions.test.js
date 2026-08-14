@@ -1,3 +1,10 @@
+// b.126 — i test del signalling WebRTC via /api/room sono stati tolti
+// insieme al codice che provavano. Era una SECONDA implementazione,
+// accanto a quella vera su Supabase Realtime, che nessun client
+// chiamava piu — e la meno protetta delle due: senza gettone si
+// accontentava di `signal.from`, un nome dichiarato dal chiamante.
+// Un test che tiene in vita del codice morto lo fa sembrare vivo.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Redis
@@ -194,64 +201,7 @@ describe('handleChangeLang', () => {
   });
 });
 
-describe('handleWebrtcSignal', () => {
-  it('stores signal from verified member', async () => {
-    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }] });
-    mockRedis.mockResolvedValue('OK');
-    const res = await handleWebrtcSignal({
-      roomId: 'ABC', signal: { type: 'offer', from: 'Host' },
-      identity: { name: 'Host', verified: true }
-    });
-    expect(res.status).toBe(200);
-    expect(mockRedis).toHaveBeenCalledWith('RPUSH', 'rtc:ABC', expect.any(String));
-  });
 
-  it('stores signal with signal.from fallback (no identity)', async () => {
-    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }] });
-    mockRedis.mockResolvedValue('OK');
-    const res = await handleWebrtcSignal({
-      roomId: 'ABC', signal: { type: 'offer', from: 'Host' }, identity: null
-    });
-    expect(res.status).toBe(200);
-  });
-
-  it('rejects signal from non-member', async () => {
-    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }] });
-    const res = await handleWebrtcSignal({
-      roomId: 'ABC', signal: { type: 'offer', from: 'Hacker' }, identity: null
-    });
-    expect(res.status).toBe(403);
-  });
-});
-
-describe('handleWebrtcPoll', () => {
-  it('returns filtered signals for member', async () => {
-    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }, { name: 'Guest' }] });
-    mockRedis.mockResolvedValue([
-      JSON.stringify({ from: 'Guest', type: 'offer' }),
-      JSON.stringify({ from: 'Host', type: 'answer' }),
-    ]);
-    const res = await handleWebrtcPoll({
-      roomId: 'ABC', identity: { name: 'Host', verified: true }
-    });
-    const data = await res.json();
-    expect(data.signals).toHaveLength(1);
-    expect(data.signals[0].from).toBe('Guest');
-  });
-
-  it('returns 401 without identity', async () => {
-    const res = await handleWebrtcPoll({ roomId: 'ABC', identity: null });
-    expect(res.status).toBe(401);
-  });
-
-  it('rejects non-member', async () => {
-    mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }] });
-    const res = await handleWebrtcPoll({
-      roomId: 'ABC', identity: { name: 'Hacker', verified: false }
-    });
-    expect(res.status).toBe(403);
-  });
-});
 
 describe('handleCheck', () => {
   it('returns room existence', async () => {

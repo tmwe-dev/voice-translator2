@@ -1,3 +1,10 @@
+// b.126 — i test del signalling WebRTC via /api/room sono stati tolti
+// insieme al codice che provavano. Era una SECONDA implementazione,
+// accanto a quella vera su Supabase Realtime, che nessun client
+// chiamava piu — e la meno protetta delle due: senza gettone si
+// accontentava di `signal.from`, un nome dichiarato dal chiamante.
+// Un test che tiene in vita del codice morto lo fa sembrare vivo.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Redis
@@ -163,35 +170,7 @@ describe('POST /api/room', () => {
     });
   });
 
-  describe('webrtc-signal', () => {
-    it('stores signal from room member', async () => {
-      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }, { name: 'Guest' }] });
-      mockRedis.mockResolvedValue('OK');
-      const res = await POST(makeReq({ action: 'webrtc-signal', roomId: 'ABC', signal: { from: 'Luca', type: 'offer' } }));
-      expect(res.status).toBe(200);
-    });
 
-    it('rejects signal from non-member', async () => {
-      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }] });
-      const res = await POST(makeReq({ action: 'webrtc-signal', roomId: 'ABC', signal: { from: 'Hacker', type: 'offer' } }));
-      expect(res.status).toBe(403);
-    });
-  });
-
-  describe('webrtc-poll', () => {
-    it('returns filtered signals', async () => {
-      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Luca' }, { name: 'Guest' }] });
-      mockRedis.mockResolvedValue([
-        JSON.stringify({ from: 'Guest', type: 'offer' }),
-        JSON.stringify({ from: 'Luca', type: 'answer' }),
-      ]);
-      const res = await POST(makeReq({ action: 'webrtc-poll', roomId: 'ABC', name: 'Luca' }));
-      const data = await res.json();
-      // Should exclude own signals
-      expect(data.signals).toHaveLength(1);
-      expect(data.signals[0].from).toBe('Guest');
-    });
-  });
 
   describe('check', () => {
     it('returns room existence', async () => {

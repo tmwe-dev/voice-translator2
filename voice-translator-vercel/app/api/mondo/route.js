@@ -120,6 +120,32 @@ async function handlePost(req) {
       log.warn('regole non salvate:', e?.message);
     }
 
+    // ── b.125 · e anche SULLA STANZA, che e cio che la chat legge ──
+    //
+    // La casella "litigio libero" finiva qui nella vetrina e nelle
+    // regole di moderazione, ma non sulla stanza. E MessageList decide
+    // se velare le parole pesanti leggendo `roomInfo.hot`, dove
+    // `roomInfo` E la stanza: leggeva sempre `undefined`.
+    //
+    // Quindi la casella si poteva spuntare, il campo si salvava in due
+    // posti, la vetrina mostrava il contrassegno — e dentro la stanza
+    // non cambiava niente. Tre sistemi che descrivono la stessa cosa e
+    // quello che l'utente guarda non parla con quello che ha scelto.
+    try {
+      const { aggiornaPoliticaPubblica } = await import('../../lib/store.js');
+      await aggiornaPoliticaPubblica(roomId, {
+        hot: entry.hot,
+        roomType: entry.roomType,
+        maxPartecipanti: entry.maxPartecipanti,
+        suApprovazione: entry.suApprovazione,
+      });
+    } catch (e) {
+      // Non blocca la pubblicazione: la stanza esiste comunque e resta
+      // usabile, solo con la politica predefinita. Ma va detto, perche
+      // e esattamente il disallineamento che stiamo togliendo.
+      log.warn('politica pubblica non applicata alla stanza:', e?.message);
+    }
+
     // Add to front
     await redis('LPUSH', MONDO_KEY, JSON.stringify(entry));
     await redis('LTRIM', MONDO_KEY, 0, 29); // Keep max 30

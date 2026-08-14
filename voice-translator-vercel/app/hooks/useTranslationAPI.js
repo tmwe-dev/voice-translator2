@@ -54,6 +54,13 @@ export default function useTranslationAPI({
 
   // ── Ultimo testo inviato (freno anti doppio invio VAD+tasto) ──
   const lastSentTextRef = useRef({ testo: '', quando: 0 });
+  // ── b.126 · quale spedizione portava questo testo ──
+  // `sendMessage` assegna a ogni invio un `tempId` (`tmp_...`) e il
+  // server lo salva sul messaggio. La fase 2 avviene in un'altra
+  // funzione, che quel valore non lo riceve: invece di cambiare tutte le
+  // firme fino a chi chiama, lo si tiene qui — le due funzioni vivono
+  // nello stesso hook, e distano meno di un secondo.
+  const idSpedizioneRef = useRef(new Map());
 
   /**
    * Send a translated message to the room.
@@ -100,6 +107,15 @@ export default function useTranslationAPI({
 
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
     const tempId = `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    // b.126 — si annota quale spedizione porta questo testo, cosi la
+    // fase 2 puo dire QUALE messaggio aggiornare invece di cercarlo per
+    // contenuto. Si tiene corta: oltre 50 voci si butta la piu vecchia,
+    // perche una mappa che cresce all'infinito e una perdita di memoria
+    // con un altro nome (stessa regola della posta in uscita, b.111).
+    if (idSpedizioneRef.current.size > 50) {
+      idSpedizioneRef.current.delete(idSpedizioneRef.current.keys().next().value);
+    }
+    idSpedizioneRef.current.set(original, tempId);
 
     // Build a message object for instant delivery
     const instantMsg = {
@@ -236,7 +252,7 @@ export default function useTranslationAPI({
    * Updates local display, broadcasts to partner via P2P + Realtime,
    * and updates the server-saved message.
    */
-  const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
+    const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
     if (!roomId) return;
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
     const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations, timestamp: Date.now() };
@@ -272,6 +288,14 @@ export default function useTranslationAPI({
           body: JSON.stringify({
             roomId,
             roomSessionToken: roomSessionTokenRef?.current || null,
+            // b.126 — si dice QUALE messaggio, non lo si fa indovinare
+            // dal contenuto. `original` e `sender` restano per i server
+            // che non hanno ancora il nuovo percorso.
+            // b.126 — si dice QUALE messaggio aggiornare, invece di
+            // farlo indovinare dal contenuto: due "si" di fila dello
+            // stesso utente sono indistinguibili, e la traduzione del
+            // primo, arrivando tardi, finiva sul secondo.
+            clientId: idSpedizioneRef.current.get(original) || '',
             original,
             sender: senderName,
             translated,

@@ -1399,8 +1399,12 @@ function HomeInner() {
           conversation={detailConversation || {}}
           messages={detailMessages || []}
           onBack={() => setView('history')}
-          onResume={detailConversation?.roomId ? () => {
-            if (rejoinRoom) rejoinRoom(detailConversation.roomId);
+          // b.126 — una conversazione salvata NON ha `roomId`: il suo `id`
+          // E il codice della stanza (store.js: `const id = roomId.toUpperCase()`).
+          // Chiedendo `detailConversation?.roomId` la condizione era sempre
+          // falsa, quindi il pulsante Riprendi non compariva MAI.
+          onResume={detailConversation?.id ? () => {
+            if (rejoinRoom) rejoinRoom(detailConversation.id);
           } : undefined}
           onExport={() => {
             if (!detailMessages?.length) return;
@@ -1416,8 +1420,12 @@ function HomeInner() {
             else { navigator.clipboard.writeText(text).then(() => { setStatus(L('exportCopied')); setTimeout(() => setStatus(''), 2000); }); }
           }}
           onShare={() => {
-            if (!detailConversation?.roomId) return;
-            // b.110 — la conversazione ha `id`, non `roomId` (store:233).
+            // b.126 — il commento sotto lo diceva gia da b.110 ("la
+            // conversazione ha `id`, non `roomId`") e la riga sopra
+            // continuava a controllare `roomId`: usciva sempre subito, e
+            // il link non veniva generato mai. Una spiegazione giusta
+            // accanto a un codice che non l'aveva seguita.
+            if (!detailConversation?.id) return;
             const link = `${window.location.origin}?room=${detailConversation.id}`;
             if (navigator.share) navigator.share({ title: 'BarTalk', url: link });
             else navigator.clipboard.writeText(link).then(() => { setStatus('Link copiato!'); setTimeout(() => setStatus(''), 2000); });
@@ -1427,7 +1435,27 @@ function HomeInner() {
             if (!confirm('Eliminare questa conversazione?')) return;
             fetch('/api/conversation', { method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'delete', convId: detailConversation.id, userToken: auth.userTokenRef?.current || null })
-            }).then(() => { loadHistory(); setView('history'); }).catch(e => console.error('Delete error:', e));
+            })
+              .then(async (res) => {
+                // b.126 — prima non si guardava `res.ok`: il server
+                // rispondeva "Invalid action" (l'azione `delete` non
+                // esisteva) e l'utente vedeva la schermata tornare
+                // indietro come se fosse stato cancellato. Una
+                // cancellazione che non cancella, dichiarata riuscita.
+                if (!res.ok) {
+                  const errore = await res.json().catch(() => ({}));
+                  setStatus(errore.error || 'Non sono riuscito a eliminare');
+                  setTimeout(() => setStatus(''), 3000);
+                  return;
+                }
+                loadHistory();
+                setView('history');
+              })
+              .catch(e => {
+                console.error('Delete error:', e);
+                setStatus('Non sono riuscito a eliminare');
+                setTimeout(() => setStatus(''), 3000);
+              });
           }}
           onPlayMessage={(msg) => audio.playMessage(msg)}
           playingMsgId={audio.playingMsgId}

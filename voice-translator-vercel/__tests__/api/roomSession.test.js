@@ -1,3 +1,10 @@
+// b.126 — i test del signalling WebRTC via /api/room sono stati tolti
+// insieme al codice che provavano. Era una SECONDA implementazione,
+// accanto a quella vera su Supabase Realtime, che nessun client
+// chiamava piu — e la meno protetta delle due: senza gettone si
+// accontentava di `signal.from`, un nome dichiarato dal chiamante.
+// Un test che tiene in vita del codice morto lo fa sembrare vivo.
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Redis
@@ -134,27 +141,6 @@ describe('Room Session Token Auth Flow', () => {
     });
   });
 
-  describe('token-based webrtc-poll', () => {
-    it('accepts poll with valid session token', async () => {
-      mockGetRoom.mockResolvedValue({ id: 'ABC', members: [{ name: 'Host' }, { name: 'Guest' }] });
-      mockRedis.mockResolvedValue([
-        JSON.stringify({ from: 'Guest', type: 'offer' }),
-      ]);
-      const res = await POST(makeReq({
-        action: 'webrtc-poll',
-        roomId: 'ABC',
-        roomSessionToken: 'valid-host-token'
-      }));
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.signals).toHaveLength(1);
-    });
-
-    it('rejects poll without identity', async () => {
-      const res = await POST(makeReq({ action: 'webrtc-poll', roomId: 'ABC' }));
-      expect(res.status).toBe(401);
-    });
-  });
 
   describe('backward compatibility (name-only)', () => {
     it('heartbeat still works with name fallback', async () => {

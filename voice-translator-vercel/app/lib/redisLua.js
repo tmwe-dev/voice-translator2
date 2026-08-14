@@ -30,15 +30,20 @@ for i, m in ipairs(room.members) do
   end
 end
 if not found then
-  if #room.members < 10 then
+  -- b.126 · MAI sostituire un membro in silenzio.
+  -- Prima, superato il decimo, l'undicesimo NON veniva rifiutato: prendeva
+  -- il posto di un partecipante gia dentro. Quello sostituito conservava
+  -- il suo gettone ma spariva da room.members, e da quel momento certe
+  -- API gli rispondevano 403 "Not a room member" — senza che nulla glielo
+  -- avesse detto. Buttato fuori da una conversazione mentre ci parlava.
+  -- E il limite era 10 fisso, mentre la UI ne prometteva fino a 20.
+  local tetto = tonumber(room.maxPartecipanti) or 10
+  if tetto < 2 then tetto = 2 end
+  if tetto > 50 then tetto = 50 end
+  if #room.members < tetto then
     table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar})
   else
-    for i, m in ipairs(room.members) do
-      if m.role ~= 'host' then
-        room.members[i] = {name=name, lang=lang, joined=now, role='guest', avatar=avatar}
-        break
-      end
-    end
+    return 'PIENA'
   end
 end
 local encoded = cjson.encode(room)
@@ -101,6 +106,33 @@ return encoded
  * Atomic updateRoomMode.
  * KEYS[1] = room key, ARGV[1] = newMode
  */
+/**
+ * Atomic aggiornaPoliticaPubblica (b.125).
+ *
+ * La stanza non conosceva `hot`, `roomType`, `maxPartecipanti` ne
+ * `suApprovazione`: quei campi vivevano SOLO nella voce della vetrina
+ * (/api/mondo) e nelle regole di moderazione. Ma la chat legge
+ * `roomInfo.hot` per decidere se velare le parole pesanti, e roomInfo
+ * E la stanza — quindi leggeva sempre `undefined`.
+ *
+ * Risultato: le stanze "litigio libero" non lo sono mai state.
+ *
+ * KEYS[1] = room key
+ * ARGV[1] = hot ('1' o '0'), [2] = roomType, [3] = maxPartecipanti, [4] = suApprovazione
+ */
+export const AGGIORNA_POLITICA_PUBBLICA = `
+local data = redis.call('GET', KEYS[1])
+if not data then return nil end
+local room = cjson.decode(data)
+room.hot = ARGV[1] == '1'
+room.roomType = ARGV[2]
+room.maxPartecipanti = tonumber(ARGV[3])
+room.suApprovazione = ARGV[4] == '1'
+local encoded = cjson.encode(room)
+redis.call('SET', KEYS[1], encoded, 'EX', 3600)
+return encoded
+`;
+
 export const UPDATE_ROOM_MODE = `
 local data = redis.call('GET', KEYS[1])
 if not data then return nil end
@@ -192,7 +224,26 @@ local original = ARGV[2]
 local translated = ARGV[3]
 local targetLang = ARGV[4]
 local translationsJson = ARGV[5]
+-- b.126 · si cerca per ID; il contenuto e solo un ripiego.
+-- Prima si cercava SOLO per sender + original, dal fondo. Due "ok" di
+-- fila dello stesso utente sono indistinguibili: se la traduzione del
+-- primo arrivava in ritardo, finiva sul secondo. Un'entita non si
+-- identifica mai col proprio contenuto.
+local messageId = ARGV[6] or ''
 local msgs = redis.call('LRANGE', key, 0, -1)
+if messageId ~= '' then
+  for i = #msgs, 1, -1 do
+    local m = cjson.decode(msgs[i])
+    if m.clientId == messageId then
+      if translated ~= '' then m.translated = translated end
+      if targetLang ~= '' then m.targetLang = targetLang end
+      if translationsJson ~= '' then m.translations = cjson.decode(translationsJson) end
+      local encoded = cjson.encode(m)
+      redis.call('LSET', key, i - 1, encoded)
+      return encoded
+    end
+  end
+end
 for i = #msgs, 1, -1 do
   local m = cjson.decode(msgs[i])
   if m.sender == sender and m.original == original then
@@ -279,6 +330,16 @@ if not data then return nil end
 local conv = cjson.decode(data)
 conv.summary = ARGV[1]
 local encoded = cjson.encode(conv)
-redis.call('SET', KEYS[1], encoded, 'EX', 86400)
+-- b.126 · qui c'era 86400: UN giorno.
+-- saveConversation salva a 604800 (sette giorni) e l'elenco scade a
+-- sette. Generare il riassunto RISCRIVEVA la conversazione accorciandole
+-- la vita a un giorno, senza toccare l'elenco. Dopo 24 ore la
+-- conversazione compariva ancora nell'archivio e aprirla dava "non
+-- trovata": dati dell'utente persi, per aver chiesto un riassunto.
+-- Si conserva la scadenza che c'era invece di imporne una nuova: se
+-- alla conversazione restavano due giorni, restano due giorni.
+local ttl = redis.call('TTL', KEYS[1])
+if ttl == nil or ttl < 0 then ttl = 604800 end
+redis.call('SET', KEYS[1], encoded, 'EX', ttl)
 return encoded
 `;

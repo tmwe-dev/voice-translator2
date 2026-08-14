@@ -47,24 +47,42 @@ export function routeProvider(sourceLang, targetLang, opts = {}) {
     return { provider: 'asia', model: opts.model || 'auto', reason: 'cjk_pair', confidence: 0.95 };
   }
 
-  // CJK ↔ anything — Qwen still better for CJK comprehension
+  // ── b.126 · l'ordine dei casi rendeva due rami irraggiungibili ──
+  //
+  // Prima veniva qui `if (srcFamily === 'CJK' || tgtFamily === 'CJK')`,
+  // che intercetta OGNI coppia con una lingua CJK. Quindi i due casi
+  // scritti sotto — SEA↔CJK e SOUTH_ASIAN↔CJK — non venivano raggiunti
+  // mai: quella condizione li aveva gia presi tutti.
+  //
+  // Sul fornitore finale cambiava poco (restava 'asia' comunque), ma il
+  // `reason` e la `confidence` erano sbagliati. E la confidenza non e
+  // decorativa: /api/translate usa Qwen solo sopra 0,85. Un caso
+  // classificato male puo finire dalla parte sbagliata di quella soglia.
+  //
+  // I casi specifici vanno PRIMA di quello generale. E la stessa regola
+  // di sempre: dal piu stretto al piu largo.
+
+  // SEA ↔ CJK: specifico, quindi prima.
+  if ((srcFamily === 'SEA' && tgtFamily === 'CJK') || (srcFamily === 'CJK' && tgtFamily === 'SEA')) {
+    return { provider: 'asia', model: opts.model || 'auto', reason: 'sea_cjk_pair', confidence: 0.90 };
+  }
+
+  // SOUTH_ASIAN ↔ CJK: specifico, quindi prima.
+  if ((srcFamily === 'SOUTH_ASIAN' && tgtFamily === 'CJK') || (srcFamily === 'CJK' && tgtFamily === 'SOUTH_ASIAN')) {
+    return { provider: 'asia', model: opts.model || 'auto', reason: 'south_asian_cjk', confidence: 0.85 };
+  }
+
+  // CJK ↔ tutto il resto — il caso generale, ora in fondo ai suoi.
   if (srcFamily === 'CJK' || tgtFamily === 'CJK') {
     return { provider: 'asia', model: opts.model || 'auto', reason: 'cjk_involved', confidence: 0.90 };
   }
 
-  // SEA ↔ CJK or SEA ↔ SEA — Qwen has good SEA support
-  if ((srcFamily === 'SEA' && tgtFamily === 'CJK') || (srcFamily === 'CJK' && tgtFamily === 'SEA')) {
-    return { provider: 'asia', model: opts.model || 'auto', reason: 'sea_cjk_pair', confidence: 0.90 };
-  }
   if (srcFamily === 'SEA' && tgtFamily === 'SEA') {
     return { provider: 'asia', model: opts.model || 'auto', reason: 'sea_pair', confidence: 0.80 };
   }
 
-  // South Asian — Qwen has decent Hindi/Bengali/Tamil
+  // South Asian senza CJK (il caso con CJK e gia stato preso sopra).
   if (srcFamily === 'SOUTH_ASIAN' || tgtFamily === 'SOUTH_ASIAN') {
-    if (srcFamily === 'CJK' || tgtFamily === 'CJK') {
-      return { provider: 'asia', model: opts.model || 'auto', reason: 'south_asian_cjk', confidence: 0.85 };
-    }
     return { provider: 'global', model: opts.model || 'auto', reason: 'south_asian_global', confidence: 0.80 };
   }
 

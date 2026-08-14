@@ -23,8 +23,21 @@ const ROOM_TYPES = [
 const CATEGORIES = [
   { id: 'conversation', icon: '', label: 'Conversazione', color: PALETTE.teal },
   { id: 'classroom', icon: '', label: 'Classroom', color: '#10B981' },
-  { id: 'interview', icon: '', label: 'Intervista', color: '#F59E0B' },
-  { id: 'conference', icon: '', label: 'Conferenza', color: '#8B5CF6' },
+  // b.126 — 'interview' e 'conference' TOLTE.
+  //
+  // Si potevano scegliere qui, la stanza nasceva con quel `mode`, e poi
+  // TalkControls non trovava nessun percorso per quella modalita: niente
+  // comandi vocali, e nessuna spiegazione. MODES (constants.js) conosce
+  // solo conversation, classroom, freetalk e simultaneous.
+  //
+  // Fra "implementarle davvero" e "toglierle dalla UI" ho scelto la
+  // seconda: aggiungerle a MODES facendole comportare come un'altra
+  // modalita vorrebbe dire inventare un prodotto per far tacere un
+  // difetto. Offrire una scelta che non funziona e peggio che non
+  // offrirla — chi la sceglie non capisce cosa ha sbagliato.
+  //
+  // Se un giorno servono davvero, si aggiungono qui E in MODES E in
+  // TalkControls, insieme.
   { id: 'freetalk', icon: '', label: 'Free Talk', color: '#EC4899' },
 ];
 
@@ -72,7 +85,22 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
         category,
         lang,
         description: description.trim(),
-        maxParticipants,
+        // ── b.126 · la Diretta e SOLO uno-a-uno ──
+        //
+        // Si poteva creare una stanza pubblica, "Diretta", fino a 20
+        // partecipanti. Ma useWebRTC ha un solo `pcRef` e un solo
+        // `dcRef`: una connessione, un canale. Il modello reale e
+        // 1 telefono <-> 1 telefono, e la UI ne prometteva 1 <-> 19.
+        //
+        // Il terzo che entrava in una stanza Diretta non riceveva
+        // niente e non poteva mandare niente — dentro una stanza che
+        // gli prometteva riservatezza. Nessun errore: solo silenzio.
+        //
+        // Fra "costruire il multiparte" (che vuol dire N connessioni o
+        // un relay, e in un relay la promessa "niente passa dai nostri
+        // server" cambia significato) e "dichiarare 1:1", la seconda e
+        // onesta e si puo fare oggi.
+        maxParticipants: diretta ? 2 : maxParticipants,
         hot,
         diretta,
         mode: category, // maps to existing room modes
@@ -183,7 +211,14 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
               cui quasi tutti aprono questo programma. */}
           <div style={{ marginBottom: 16 }}>
             <button
-              onClick={() => { setDiretta(!diretta); vibrate(10); }}
+              onClick={() => {
+                const nuovo = !diretta;
+                setDiretta(nuovo);
+                // b.126 — accendendo la Diretta la stanza diventa 1:1.
+                // Va detto MENTRE si sceglie, non scoperto dopo.
+                if (nuovo && maxParticipants > 2) setMaxParticipants(2);
+                vibrate(10);
+              }}
               aria-pressed={diretta}
               style={{
                 width: '100%', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
@@ -350,7 +385,10 @@ function CreateRoomSheet({ open, onClose, onCreate }) {
               {[5, 10, 20, 50].map(n => {
                 const sel = maxParticipants === n;
                 return (
-                  <button key={n} onClick={() => { setMaxParticipants(n); vibrate(10); }} style={{
+                  <button key={n} disabled={diretta && n > 2}
+                    title={diretta && n > 2 ? 'La modalita Diretta e uno-a-uno' : undefined}
+                    onClick={() => { if (diretta && n > 2) return; setMaxParticipants(n); vibrate(10); }} style={{
+                    opacity: diretta && n > 2 ? 0.35 : 1,
                     padding: '8px 16px', borderRadius: 10, cursor: 'pointer',
                     background: sel ? `${purple}15` : 'transparent',
                     border: `1px solid ${sel ? `${purple}30` : cardBorder}`,

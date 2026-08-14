@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity, verifyRoomSession } from '../../lib/store.js';
+import { saveConversation, getConversation, getUserConversations, getRoom, resolveRoomIdentity, verifyRoomSession, deleteConversation } from '../../lib/store.js';
 import { getSession } from '../../lib/users.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 import { createLogger } from '../../lib/logger.js';
@@ -17,7 +17,7 @@ async function handlePost(req) {
       throw e;
     }
 
-    const { action, roomId, userName, roomSessionToken, userToken } = await req.json();
+    const { action, roomId, userName, roomSessionToken, userToken, convId } = await req.json();
 
     if (action === 'end') {
       const rid = sanitizeRoomId(roomId);
@@ -82,6 +82,31 @@ async function handlePost(req) {
 
       const convs = await getUserConversations(resolvedName);
       return NextResponse.json({ conversations: convs });
+    }
+
+    // ── b.126 · eliminare, che prima non si poteva ──
+    //
+    // Il pulsante c'era, il client mandava `action: 'delete'`, e qui si
+    // finiva dritti su "Invalid action" qui sotto. Il client non
+    // guardava `res.ok` e tornava all'elenco come se fosse riuscito: il
+    // dato restava sul server per sette giorni e l'utente lo credeva
+    // cancellato.
+    if (action === 'delete') {
+      if (!userToken) {
+        return NextResponse.json({ error: 'Serve un account per eliminare una conversazione' }, { status: 401 });
+      }
+      const sessione = await getSession(userToken);
+      const nome = sessione ? (sessione.name || sessione.email) : null;
+      if (!nome) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
+
+      const { esito } = await deleteConversation(convId, nome);
+      if (esito === 'dati-mancanti') return NextResponse.json({ error: 'convId richiesto' }, { status: 400 });
+      if (esito === 'non-trovata') return NextResponse.json({ error: 'Conversazione non trovata' }, { status: 404 });
+      if (esito === 'non-partecipante') {
+        log.warn('eliminazione negata: utente estraneo alla conversazione');
+        return NextResponse.json({ error: 'Non hai partecipato a questa conversazione' }, { status: 403 });
+      }
+      return NextResponse.json({ eliminata: true });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

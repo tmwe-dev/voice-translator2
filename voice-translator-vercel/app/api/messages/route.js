@@ -69,13 +69,41 @@ async function handlePost(req) {
       );
     }
 
-    // ── Idempotenza: stesso mittente + stesso testo entro 8s = stesso messaggio ──
-    // Cintura di sicurezza server contro ogni doppio invio (doppio tap,
-    // VAD+tasto insieme, retry di rete): non salviamo un duplicato,
-    // rispondiamo con il messaggio già esistente.
+    // ── b.126 · un doppione si riconosce dal SUO IDENTIFICATIVO ──
+    //
+    // Prima era: stesso mittente + stesso testo entro 8 secondi =
+    // duplicato. Ma in una conversazione vera questo e normalissimo:
+    //
+    //     A: si
+    //     B: sei sicuro?
+    //     A: si
+    //
+    // Il secondo "si" spariva. E nessuno poteva capirlo: non compariva
+    // un errore, il messaggio semplicemente non c'era.
+    //
+    // Un doppio invio e la STESSA spedizione ripetuta — un doppio tocco,
+    // un ritentativo di rete. Il client la marca con un identificativo
+    // suo: due spedizioni diverse hanno identificativi diversi, anche se
+    // dicono la stessa cosa. Il contenuto non identifica niente.
+    //
+    // Il ripiego su mittente+testo resta solo per i client vecchi che
+    // non mandano ancora `clientMessageId`, e con una finestra molto
+    // piu stretta (1,5 s): abbastanza per un doppio tocco, troppo poco
+    // per due risposte vere.
     try {
       const recenti = await getMessages(roomId, Date.now() - 8000);
-      const gemello = recenti.find(m => m.sender === identity.name && m.original === original);
+      let gemello = null;
+      if (clientId) {
+        // `clientId` esisteva gia (formato `tmp_...`): e l'identificativo
+        // che il mittente assegna alla spedizione. Serviva solo smettere
+        // di ignorarlo qui. Inventarne un altro avrebbe aggiunto un
+        // quinto concetto per la stessa cosa.
+        gemello = recenti.find((m) => m.clientId === clientId);
+      } else {
+        const soglia = Date.now() - 1500;
+        gemello = recenti.find((m) =>
+          m.sender === identity.name && m.original === original && (m.timestamp || 0) >= soglia);
+      }
       if (gemello) {
         return NextResponse.json({ message: gemello, duplicato: true });
       }
@@ -132,9 +160,15 @@ async function handlePatch(req) {
     const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
     const translations = sanitizeTranslations(body.translations);
 
+    // b.126 — l'identificativo del messaggio, se il client lo manda.
+    // Senza, si ricadeva su `sender + testo`: due "si" di fila dello
+    // stesso utente sono indistinguibili, e la traduzione del primo, se
+    // arrivava tardi, finiva sul secondo.
+    const messageId = (typeof body.clientId === 'string' && /^tmp_[\w-]{1,60}$/.test(body.clientId))
+      ? body.clientId : '';
     const updated = await updateMessage(roomId, identity.name, original, {
       translated, targetLang, translations,
-    });
+    }, messageId);
     if (!updated) return NextResponse.json({ error: 'Message not found' }, { status: 404 });
 
     return NextResponse.json({ message: updated });

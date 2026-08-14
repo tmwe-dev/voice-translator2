@@ -8,7 +8,7 @@ import { randomUUID, randomBytes } from 'crypto';
 
 const log = createLogger('store');
 import {
-  JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
+  JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE, AGGIORNA_POLITICA_PUBBLICA,
   CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
   UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
 } from './redisLua.js';
@@ -102,6 +102,9 @@ export async function joinRoom(id, name, lang, avatar = null) {
   const key = `room:${id.toUpperCase()}`;
   const result = await redis('EVAL', JOIN_ROOM, 1, key, name, lang, avatar || '', Date.now().toString());
   if (!result) return null;
+  // b.126 — la stanza piena ora si dichiara, invece di far fuori qualcuno
+  // per fare posto. Chi chiama deve poterlo distinguere da "non esiste".
+  if (result === 'PIENA') return { piena: true };
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse joinRoom result:', e.message); return null; }
 }
 
@@ -138,6 +141,41 @@ export async function updateRoomMode(roomId, newMode) {
   const result = await redis('EVAL', UPDATE_ROOM_MODE, 1, key, newMode);
   if (!result) return null;
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateRoomMode result:', e.message); return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LA POLITICA PUBBLICA VIVE SULLA STANZA (b.125)
+//
+// Prima `hot`, `roomType`, `maxPartecipanti` e `suApprovazione`
+// stavano solo nella voce della vetrina (/api/mondo) e, in parte,
+// nelle regole di moderazione. La stanza vera non li conosceva.
+//
+// Ma MessageList decide se velare le parole pesanti cosi:
+//
+//     <ForseVelato hot={!!roomInfo?.hot} ...>
+//
+// e `roomInfo` E la stanza. Quindi leggeva sempre `undefined`, il velo
+// si applicava sempre, e le stanze "litigio libero" non lo sono mai
+// state — pur essendo la casella nella UI, il campo nel database della
+// vetrina e la regola di moderazione tutti al loro posto.
+//
+// Tre sistemi che descrivono la stessa stanza, e quello che l'utente
+// guarda non parla con quello che l'utente ha scelto.
+//
+// Qui la politica torna dove serve leggerla. Non risolve tutta
+// l'ambiguita — la vetrina tiene ancora una sua copia per l'elenco —
+// ma toglie il disallineamento sul campo che decide cosa si vede.
+// ═══════════════════════════════════════════════════════════════
+export async function aggiornaPoliticaPubblica(roomId, { hot, roomType, maxPartecipanti, suApprovazione }) {
+  if (!roomId) return null;
+  const key = `room:${roomId.toUpperCase()}`;
+  const result = await redis('EVAL', AGGIORNA_POLITICA_PUBBLICA, 1, key,
+    hot ? '1' : '0',
+    String(roomType || 'public'),
+    String(Number(maxPartecipanti) || 20),
+    suApprovazione ? '1' : '0');
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { log.warn('politica pubblica non rileggibile:', e.message); return null; }
 }
 
 export async function changeMemberLang(roomId, memberName, newLang) {
@@ -197,13 +235,18 @@ export async function addMessage(roomId, msg) {
  * Update an existing message with translation data (Phase 2 of two-phase send).
  * Finds message by sender + original text, updates translated/targetLang/translations.
  */
-export async function updateMessage(roomId, sender, original, updates) {
+// b.126 — `messageId` e il modo giusto di dire QUALE messaggio. `sender`
+// e `original` restano come ripiego per i client vecchi, che non lo
+// mandano ancora: senza, la fase 2 delle loro traduzioni smetterebbe di
+// funzionare al primo deploy.
+export async function updateMessage(roomId, sender, original, updates, messageId = '') {
   const id = roomId.toUpperCase();
   const key = `msgs:${id}`;
   const result = await redis('EVAL', UPDATE_MESSAGE, 1, key,
     sender, original,
     updates.translated || '', updates.targetLang || '',
-    updates.translations ? JSON.stringify(updates.translations) : '');
+    updates.translations ? JSON.stringify(updates.translations) : '',
+    messageId || '');
   if (!result) return null;
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateMessage result:', e.message); return null; }
 }
@@ -321,6 +364,56 @@ export async function updateConversationSummary(convId, summary) {
   const result = await redis('EVAL', UPDATE_CONV_SUMMARY, 1, key, typeof summary === 'string' ? summary : JSON.stringify(summary));
   if (!result) return null;
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateConversationSummary result:', e.message); return null; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ELIMINARE UNA CONVERSAZIONE (b.126)
+//
+// L'azione non esisteva. Il pulsante c'era, il client la mandava, e
+// /api/conversation rispondeva "Invalid action" — ma il client non
+// guardava `res.ok` e tornava all'elenco come se fosse andata bene.
+//
+// Il dato dell'utente restava sul server per sette giorni, e lui era
+// convinto di averlo cancellato. Non e un difetto di comodita.
+//
+// Si toglie da due posti: la conversazione (`conv:ID`) e la riga
+// nell'elenco di OGNI partecipante (`convlist:NOME`) — altrimenti
+// resterebbe visibile e aprirebbe su "non trovata".
+// ═══════════════════════════════════════════════════════════════
+export async function deleteConversation(convId, richiedente) {
+  const id = String(convId || '').toUpperCase();
+  if (!id || !richiedente) return { esito: 'dati-mancanti' };
+
+  const conv = await getConversation(id);
+  if (!conv) return { esito: 'non-trovata' };
+
+  // Solo chi c'era puo cancellarla. Senza questo controllo sarebbe lo
+  // stesso buco che b.123 ha appena chiuso su lettura e riassunto.
+  const eraPresente = conv.members?.some((m) => m.name === richiedente);
+  if (!eraPresente) return { esito: 'non-partecipante' };
+
+  await redis('DEL', `conv:${id}`);
+
+  // La riga va tolta dall'elenco di tutti, non solo di chi cancella:
+  // lasciarla agli altri vorrebbe dire mostrare loro una conversazione
+  // che non si apre piu.
+  for (const membro of conv.members || []) {
+    const listKey = `convlist:${membro.name}`;
+    try {
+      const righe = await redis('LRANGE', listKey, 0, -1);
+      if (!Array.isArray(righe)) continue;
+      for (const riga of righe) {
+        let voce; try { voce = JSON.parse(riga); } catch { continue; }
+        if (voce?.id === id) await redis('LREM', listKey, 0, riga);
+      }
+    } catch (e) {
+      // Se un elenco non si ripulisce, la conversazione e comunque
+      // sparita: resta una riga che aprira su "non trovata". Meglio
+      // saperlo che fallire tutta la cancellazione.
+      log.warn(`elenco di ${membro.name} non ripulito:`, e.message);
+    }
+  }
+  return { esito: 'eliminata' };
 }
 
 export async function getUserConversations(userName) {
