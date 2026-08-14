@@ -49,6 +49,29 @@ export default function InstallaApp({ pwa, theme }) {
 
   if (!pwa?.showInstallBanner) return null;
 
+  // ── b.134-bis · TRE SITUAZIONI DIVERSE, NON UNA ──
+  //
+  // Provando dal vivo su Chrome da computer ho trovato due cose.
+  //
+  // 1. `beforeinstallprompt` non era arrivato, quindi `puoInstallare`
+  //    era falso: un bottone "Installa l'app" li non avrebbe avuto
+  //    niente da chiamare. Non e un caso raro riservato a Safari — su
+  //    desktop capita normalmente.
+  //
+  // 2. Il permesso delle notifiche risultava gia `denied`. E la
+  //    situazione peggiore da gestire male: una volta negato, il
+  //    browser NON lo richiede piu, e `requestNotifPermission()` torna
+  //    subito 'denied' senza mostrare niente. L'utente premerebbe un
+  //    bottone che non fa assolutamente nulla, per sempre.
+  //    L'unico modo di riaprirla e il lucchetto accanto all'indirizzo,
+  //    e va detto, perche nessuno lo indovina.
+  const bloccate = typeof Notification !== 'undefined' && Notification.permission === 'denied';
+  const aMano = !bloccate && !pwa.puoInstallare;
+
+  const istruzioni = suIPhone
+    ? ['Tocca Condividi in basso in Safari', 'Scorri e scegli "Aggiungi a Home"', 'Conferma con "Aggiungi"']
+    : ['Apri il menu del browser (i tre puntini in alto)', 'Cerca "Installa BarTalk" o "Aggiungi a schermata Home"', 'Conferma con "Installa"'];
+
   return (
     <div
       role="dialog"
@@ -75,31 +98,38 @@ export default function InstallaApp({ pwa, theme }) {
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: C.testo, marginBottom: 4 }}>
-              Installa BarTalk sul dispositivo
+              {bloccate ? 'Gli avvisi sono bloccati da questo browser' : 'Installa BarTalk sul dispositivo'}
             </div>
             <div style={{ fontSize: 13, lineHeight: 1.45, color: C.testoTenue }}>
-              {suIPhone
-                ? 'Su iPhone gli avvisi dei tuoi contatti arrivano solo con l’app aggiunta alla Home. In Safari non arriveranno.'
-                : 'Ricevi gli avvisi dei tuoi contatti anche ad app chiusa, e apri BarTalk a schermo intero. Nel browser funziona tutto il resto.'}
+              {bloccate
+                ? 'Hai negato le notifiche a BarTalk in passato, e il browser non le richiede piu da solo. Si riaprono dal lucchetto accanto all’indirizzo.'
+                : suIPhone
+                  ? 'Su iPhone gli avvisi dei tuoi contatti arrivano solo con l’app aggiunta alla Home. In Safari non arriveranno.'
+                  : 'Ricevi gli avvisi dei tuoi contatti anche ad app chiusa, e apri BarTalk a schermo intero. Nel browser funziona tutto il resto.'}
             </div>
           </div>
         </div>
 
-        {suIPhone && istruzioniAperte && (
+        {istruzioniAperte && (
           <ol style={{
             margin: '0 0 14px', paddingLeft: 20,
             fontSize: 13, lineHeight: 1.7, color: C.testoTenue,
           }}>
-            <li>Tocca <strong style={{ color: C.testo }}>Condividi</strong> in basso in Safari</li>
-            <li>Scorri e scegli <strong style={{ color: C.testo }}>Aggiungi a Home</strong></li>
-            <li>Conferma con <strong style={{ color: C.testo }}>Aggiungi</strong></li>
+            {(bloccate
+              ? ['Clicca il lucchetto accanto all’indirizzo, in alto', 'Cerca "Notifiche" e rimettila su Consenti', 'Ricarica la pagina']
+              : istruzioni
+            ).map((passo) => <li key={passo}>{passo}</li>)}
           </ol>
         )}
 
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={async () => {
-              if (suIPhone) { setIstruzioniAperte((v) => !v); return; }
+              // Se non c'e niente da chiamare — permesso gia negato, o
+              // il browser non ci ha dato l'invito a installare — si
+              // spiega. Un bottone che non fa niente e peggio di un
+              // bottone che non c'e.
+              if (bloccate || aMano || suIPhone) { setIstruzioniAperte((v) => !v); return; }
               await pwa.handleInstallApp();
               // Installare NON concede le notifiche: sono due permessi
               // distinti, e il primo non implica il secondo. Si chiede
@@ -115,7 +145,9 @@ export default function InstallaApp({ pwa, theme }) {
               WebkitTapHighlightColor: 'transparent',
             }}
           >
-            {suIPhone ? (istruzioniAperte ? 'Ho capito' : 'Come si fa') : 'Installa l’app'}
+            {(bloccate || aMano || suIPhone)
+              ? (istruzioniAperte ? 'Ho capito' : 'Come si fa')
+              : 'Installa l’app'}
           </button>
           <button
             onClick={pwa.dismissInstallBanner}

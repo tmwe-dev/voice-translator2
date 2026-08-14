@@ -75,12 +75,31 @@ export default function usePWAInstall() {
     if ('Notification' in window) setNotifPermission(Notification.permission);
     setInstallata(eInstallata());
 
-    // Su iPhone `beforeinstallprompt` NON esiste: Apple non lo implementa.
-    // Se aspettassimo quell'evento, il banner non comparirebbe proprio
-    // sui dispositivi dove installare e l'UNICO modo di avere le
-    // notifiche. Percio li si mostra da soli, con le istruzioni.
-    if (eIPhone() && !eInstallata() && !localStorage.getItem('vt-install-dismissed')) {
-      setShowInstallBanner(true);
+    // ── b.134-bis · PROVATO DAL VIVO, E NON COMPARIVA ──
+    //
+    // Aperta la produzione su Chrome da computer, il banner non c'era.
+    // Interrogando la pagina: non era stato rifiutato (`vt-install-
+    // dismissed` nullo), l'applicazione non era installata, il service
+    // worker girava. Mancava una cosa sola:
+    //
+    //     beforeinstallprompt: MAI ARRIVATO
+    //
+    // Chrome quell'evento lo emette quando vuole lui — dopo che
+    // considera l'utente "abbastanza coinvolto" — e su desktop spesso
+    // non lo emette affatto. Safari non lo implementa proprio.
+    //
+    // Avevo appeso tutto il banner a un evento che non e garantito:
+    // esattamente la classe di difetto che stavo correggendo, cioe una
+    // funzione che esiste e non si accende mai.
+    //
+    // Ora la regola non dipende da nessun evento: se l'applicazione non
+    // e installata e nessuno ha detto di no, si propone. L'evento, se
+    // arriva, serve solo a decidere se il bottone puo installare da solo
+    // o se bisogna spiegare come si fa a mano.
+    if (!eInstallata() && !localStorage.getItem('vt-install-dismissed')) {
+      // Un attimo di respiro: comparire nello stesso istante in cui la
+      // pagina si disegna la fa sembrare un cartello pubblicitario.
+      setTimeout(() => setShowInstallBanner(true), 2500);
     }
 
     // Se l'utente installa dal menu del browser invece che dal nostro

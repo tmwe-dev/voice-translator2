@@ -228,3 +228,78 @@ describe('si avvisano solo le persone che si conoscono', () => {
     expect(s.slice(i, i + 120)).toMatch(/status: 403/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// E POI L'HO PROVATO, E NON COMPARIVA (b.134-bis)
+//
+// Aperta la produzione su Chrome da computer: nessun banner.
+// Interrogando la pagina dal vivo:
+//
+//   vt-install-dismissed : null      (nessuno l'aveva rifiutato)
+//   display-mode         : browser   (non era installata)
+//   serviceWorker        : attivo
+//   PushManager          : presente
+//   beforeinstallprompt  : MAI ARRIVATO
+//   Notification.permission : "denied"
+//
+// Due difetti, e il primo era mio, della stessa classe di quello che
+// stavo correggendo.
+//
+// ── PRIMO: AVEVO APPESO TUTTO A UN EVENTO NON GARANTITO ──
+//
+// Il banner si accendeva solo su `beforeinstallprompt`, oppure su
+// iPhone. Ma Chrome quell'evento lo emette quando decide lui, dopo che
+// considera l'utente abbastanza coinvolto, e su desktop spesso non lo
+// emette affatto. Quindi: funzione costruita, collegata, e che non si
+// accendeva mai — esattamente il difetto di usePWAInstall che avevo
+// appena riparato, rifatto da me un'ora dopo.
+//
+// Ora la regola non dipende da nessun evento: non installata e non
+// rifiutata, si propone. L'evento serve solo a decidere se il bottone
+// installa da solo o se bisogna spiegare come si fa a mano.
+//
+// ── SECONDO: IL BOTTONE CHE NON FA NIENTE PER SEMPRE ──
+//
+// Con il permesso gia `denied`, `Notification.requestPermission()`
+// torna subito 'denied' senza mostrare niente: il browser non lo
+// richiede piu. L'utente avrebbe premuto un bottone morto all'infinito.
+// Si riapre solo dal lucchetto accanto all'indirizzo, e va detto,
+// perche nessuno lo indovina.
+// ═══════════════════════════════════════════════════════════════
+describe('il banner non dipende da un evento che puo non arrivare', () => {
+  const hook = () => senzaCommenti(leggi('app/hooks/usePWAInstall.js'));
+
+  it('si mostra a chi non ha installato e non ha detto di no', () => {
+    const s = hook();
+    expect(s).toMatch(/if \(!eInstallata\(\) && !localStorage\.getItem\('vt-install-dismissed'\)\)/);
+  });
+
+  it('e non solo su iPhone, come prima', () => {
+    // Il vecchio ramo esigeva eIPhone(): su Chrome desktop, dove
+    // l'evento non arriva, non restava nessuna strada.
+    expect(hook()).not.toMatch(/if \(eIPhone\(\) && !eInstallata\(\)/);
+  });
+});
+
+describe('nessun bottone che non fa niente', () => {
+  const b = () => senzaCommenti(leggi('app/components/InstallaApp.js'));
+
+  it('sa distinguere il permesso gia negato', () => {
+    expect(b()).toMatch(/const bloccate = typeof Notification !== 'undefined' && Notification\.permission === 'denied'/);
+  });
+
+  it('e sa che senza invito del browser si installa a mano', () => {
+    expect(b()).toMatch(/const aMano = !bloccate && !pwa\.puoInstallare/);
+  });
+
+  it('in tutti e due i casi spiega invece di chiamare il vuoto', () => {
+    const s = b();
+    expect(s).toMatch(/if \(bloccate \|\| aMano \|\| suIPhone\) \{ setIstruzioniAperte/);
+    expect(s, 'e il testo del bottone cambia di conseguenza')
+      .toMatch(/\(bloccate \|\| aMano \|\| suIPhone\)\s*\?\s*\(istruzioniAperte/);
+  });
+
+  it('e per le notifiche bloccate dice DOVE si riaprono', () => {
+    expect(b()).toMatch(/lucchetto accanto all/);
+  });
+});
