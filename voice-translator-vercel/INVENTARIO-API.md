@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **40** — vive: **36**, rimosse: **4**
+Rotte totali: **41** — vive: **37**, rimosse: **4**
 
 ## Come si legge
 
@@ -39,7 +39,8 @@ Rotte totali: **40** — vive: **36**, rimosse: **4**
 | /api/moderazione | POST | si | moderazione | — | — | — | si |
 | /api/mondo | POST GET | si | mondo | — | — | — | — |
 | /api/og | GET | — | — | — | — | — | — |
-| /api/push-subscribe | POST GET DELETE | si | push-subscribe | — | — | — | — |
+| /api/push-send | POST | si | push-send | — | — | — | si |
+| /api/push-subscribe | POST GET DELETE | si | push-subscribe | — | — | — | si |
 | /api/reazioni | POST | si | reazioni | — | — | si | si |
 | /api/room | POST GET | si | room | — | — | — | si |
 | /api/stanza-video | POST | si | stanza-video | — | — | — | si |

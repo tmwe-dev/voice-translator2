@@ -79,6 +79,7 @@ import { AppProvider } from './contexts/AppContext.js';
 import SpatialBackdrop from './components/SpatialBackdrop.js';
 import { montaCancelloDiretta, impostaModalita } from './lib/modalitaSessione.js';
 import Sciame from './components/Sciame.js';
+import InstallaApp from './components/InstallaApp.js';
 
 
 export default function Home() {
@@ -130,6 +131,21 @@ function HomeInner() {
   const { freeCharsUsed, freeLimitExceeded, freeResetTime, freeCharsRef, trackFreeChars } = freeTier;
 
   // PWA install (extracted hook)
+  //
+  // b.134 — QUI STAVA IL GUASTO. Questa riga prendeva UN campo solo:
+  //
+  //     const { notifPermission } = pwa;
+  //
+  // e gli altri quattro che l'hook restituisce — il banner
+  // d'installazione, l'installazione stessa, il rifiuto e la richiesta
+  // del permesso — non li usava nessuno, in tutta la cartella `app/`.
+  //
+  // Quindi il banner non compariva mai, il permesso non veniva mai
+  // chiesto, `notifPermission` restava per sempre 'default', e a valle
+  // useNotifications.js:27 aspettava 'granted' che non arrivava:
+  // taceva anche la notifica LOCALE del messaggio a scheda nascosta.
+  //
+  // Una funzione intera spenta da una destrutturazione incompleta.
   const pwa = usePWAInstall();
   const { notifPermission } = pwa;
 
@@ -917,6 +933,25 @@ function HomeInner() {
     }
   }, [autoJoinTriggered, joinCode, prefs.name]);
 
+  // ─── ISCRIZIONE ALLE NOTIFICHE (b.134) ───
+  //
+  // Si rinnova a OGNI accesso, non solo quando si concede il permesso.
+  // Il browser puo revocare o rigenerare il recapito quando vuole, e su
+  // Redis l'iscrizione scade dopo trenta giorni: chi apre l'applicazione
+  // la rinnova senza accorgersene, e chi non l'apre per un mese smette
+  // di ricevere avvisi — che e il comportamento giusto.
+  //
+  // Il permesso NON si chiede qui. Chiederlo all'avvio, senza contesto,
+  // e il modo migliore per farselo negare per sempre: il browser ricorda
+  // il rifiuto e non lo richiede piu. Lo chiede il banner, quando
+  // l'utente ha appena detto che vuole gli avvisi.
+  useEffect(() => {
+    if (!auth.userToken) return;
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    pwa.iscriviAllePush(auth.userToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth.userToken, notifPermission]);
+
   async function handleJoinRoom(codiceEsplicito) {
     // Chi arriva da un elenco passa il codice; chi digita usa lo stato.
     const codice = (codiceEsplicito || joinCode || '').trim();
@@ -979,6 +1014,12 @@ function HomeInner() {
       <SpatialBackdrop />
       {!SCHERMATE_SENZA_VELO.has(view) && <Sciame modo="velo" />}
       {node}
+      {/* b.134 — l'invito a installare passa da qui perche `wrap` e
+          l'unico imbuto: `{bottomNav}` compare in sedici punti diversi,
+          e appenderlo li avrebbe voluto dire dimenticarlo in qualcuno.
+          Durante una conversazione non si mostra: coprirebbe il campo
+          di scrittura proprio mentre si sta parlando. */}
+      {!SCHERMATE_SENZA_VELO.has(view) && <InstallaApp pwa={pwa} theme={theme} />}
     </AppProvider>
   );
 
