@@ -186,26 +186,46 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.125**
-- In produzione: **b.121** — le versioni b.122, b.123, b.124 e b.125 sono
-  committate localmente ma **non spinte**: git bloccato dal lucchetto.
-- Test: 1062 verdi su 72 file · 0 errori di lint (52 avvisi noti)
-- Sentry: collegato in `instrumentation.js`, **DSN non impostato** su
-  Vercel. Finche manca, in produzione non c'e nessun allarme.
-- Collaudo a due telefoni: **mai eseguito**.
+- Versione: **b.131** — in produzione e verificata dal vivo
+- Test: 1099 verdi su 75 file · 0 errori di lint (52 avvisi noti)
+- Sentry: collegato in `instrumentation.js`, **DSN non impostato**.
+  MA gli errori di esecuzione di Vercel si leggono gia col suo MCP
+  (`get_runtime_errors`) e vanno guardati a ogni sessione: e da li che
+  e uscita la correzione di b.127.
 
-### Aperti dall'audit esterno (13 su 20, non verificati salvo dove detto)
+### Banco di prova a due utenti, SENZA secondo telefono
 
-1. Canale dati Direct che nasce solo con una chiamata *(verificato, non corretto)*
-2. QR TaxiTalk che non accoppia le due persone
-3. Limite stanza 10 contro 20 dichiarati, con sostituzione silenziosa
-4. Direct multiutente incompatibile con un solo `pcRef`
-5. Interview e Conference sconosciute al motore delle modalita
-6. Archivio: Resume, Share e Delete rotti; Delete non controlla la risposta
-7. Fase 2 dei messaggi cercata per `sender + testo` invece che per id
-8. Dedup server che cancella messaggi legittimi
-9. Il riassunto accorcia la vita dell'archivio da 7 giorni a 1
-10. `GET /api/room` restituisce l'oggetto interno senza autenticazione
-11. Rami irraggiungibili nel provider router
-12. UI che in Direct mostra comandi vietati; reazioni senza rollback
-13. Due implementazioni di signalling WebRTC, una morta
+Due schede sulla stessa origine. `vt-prefs` e condiviso, ma l'identita
+di stanza vive in memoria: si imposta il nome, si carica la scheda, si
+cambia il nome, si carica l'altra. Oppure si pilotano due client
+dall'API con due gettoni distinti — piu veloce per tutto cio che e
+lato server.
+
+Copre: chat, traduzione, conferme, ingressi, limiti, porte, archivio.
+NON copre: WebRTC fra reti diverse, microfono e telecamera veri, iOS.
+
+### Collaudo eseguito (b.131) — tutto verificato in produzione
+
+S1 fondamenta · S2 rotture volute · S3 limiti · S4 porte · S5 catene
+laterali: **tutti verdi**. Dettaglio in COLLAUDO-STRESS.md.
+
+### Restano SOLO le prove che richiedono due telefoni fisici
+
+1. Videochiamata: chiude uno, la telecamera dell'altro non si riaccende
+2. Numero di sicurezza identico sui due schermi
+3. QR TaxiTalk inquadrato davvero
+4. Chiamata su due reti diverse (serve TURN privato)
+
+### Aperti dall'audit esterno (2 su 20)
+
+1. Canale dati Direct che nasce solo con una chiamata *(verificato)*
+2. Sessione condivisa TaxiTalk: il QR non accoppia le due persone
+
+### Trappole imparate provando
+
+- `window.fetch` e AVVOLTO: sovrascrive `x-session-mode`. Per provare il
+  cancello della Diretta si usa XHR, che il wrapper non tocca.
+- `/api/messages` si legge con `?room=` (non `roomId`) e gettone
+  nell'intestazione `x-room-session`.
+- Venti invii in parallelo NON hanno un ordine: per giudicare l'ordine
+  si invia in sequenza.
