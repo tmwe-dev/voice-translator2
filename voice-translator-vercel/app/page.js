@@ -1045,7 +1045,13 @@ function HomeInner() {
           e appenderlo li avrebbe voluto dire dimenticarlo in qualcuno.
           Durante una conversazione non si mostra: coprirebbe il campo
           di scrittura proprio mentre si sta parlando. */}
-      {!SCHERMATE_SENZA_VELO.has(view) && <InstallaApp pwa={pwa} theme={theme} />}
+      {/* b.136-bis — PROVATO AL PRIMO AVVIO PULITO E NON ANDAVA.
+          Sulla scelta del paese comparivano DUE pannelli sovrapposti in
+          fondo: questo e l'avviso dei cookie. Chiedere di installare
+          l'applicazione a chi non ha ancora detto da dove viene e fuori
+          tempo — e coprivano il pulsante di conferma, che e l'unica cosa
+          da fare in quella schermata. */}
+      {!SCHERMATE_SENZA_VELO.has(view) && view !== 'paese' && <InstallaApp pwa={pwa} theme={theme} />}
     </AppProvider>
   );
 

@@ -3,12 +3,45 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PALETTE } from '../lib/palette.js';
+import { t, mapLang } from '../lib/i18n.js';
+
+// ═══════════════════════════════════════════════════════════════
+// L'AVVISO COOKIE PARLAVA SOLO INGLESE (b.136-bis)
+//
+// Trovato al primo avvio pulito, subito dopo aver passato una
+// sessione intera a togliere l'inglese dal resto dell'applicazione:
+// questo pannello diceva "We use cookies to enhance your
+// experience", "Only Essential", "Accept All" — sopra un'interfaccia
+// italiana. Ed e la PRIMA cosa che legge chi arriva.
+//
+// Era sfuggito a tutti e due i giri perche non usa `L()`: vive in
+// layout.js, FUORI da AppProvider, quindi il contesto non ce l'ha.
+// Percio la lingua se la legge da solo dalle preferenze salvate, e
+// se non ce ne sono ancora (e al primo avvio non ce ne sono) la
+// prende dal browser.
+//
+// E l'arancione: era l'unico punto dell'applicazione con un terzo
+// colore. Luca era stato esplicito in b.129 — "non voglio piu di due
+// colori nella pagina". Ora usa l'accento di casa.
+// ═══════════════════════════════════════════════════════════════
+
+function linguaSalvata() {
+  if (typeof window === 'undefined') return 'en';
+  try {
+    const p = JSON.parse(localStorage.getItem('vt-prefs') || 'null');
+    if (p?.uiLang) return p.uiLang;
+  } catch { /* preferenze illeggibili: si ripiega sul browser */ }
+  return mapLang((navigator.language || 'en').split('-')[0]);
+}
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
+  const [lingua, setLingua] = useState('en');
+  const T = (k) => t(lingua, k);
 
   useEffect(() => {
     try {
+      setLingua(linguaSalvata());
       const consent = localStorage.getItem('vt-cookie-consent');
       if (!consent) {
         setTimeout(() => setVisible(true), 1500);
@@ -66,7 +99,7 @@ export default function CookieConsent() {
 
   const acceptButtonStyle = {
     padding: '10px 16px',
-    background: PALETTE.orange,
+    background: PALETTE.teal,
     color: 'white',
     border: 'none',
     borderRadius: '8px',
@@ -93,10 +126,10 @@ export default function CookieConsent() {
   };
 
   const linkStyle = {
-    color: PALETTE.orange,
+    color: PALETTE.teal,
     textDecoration: 'none',
     cursor: 'pointer',
-    borderBottom: '1px solid #f97316',
+    borderBottom: `1px solid ${PALETTE.teal}`,
   };
 
   return (
@@ -116,9 +149,9 @@ export default function CookieConsent() {
       <div style={containerStyle}>
         <div style={bannerStyle}>
           <p style={textStyle}>
-            We use cookies to enhance your experience. Essential cookies are always enabled. You can review our{' '}
+            {T('cookieText')}{' '}
             <Link href="/privacy" style={linkStyle}>
-              Privacy Policy
+              {T('cookiePrivacy')}
             </Link>{' '}
             for more details.
           </p>
@@ -135,7 +168,7 @@ export default function CookieConsent() {
                 e.target.style.borderColor = '#27272a';
               }}
             >
-              Only Essential
+              {T('cookieEssential')}
             </button>
             <button
               style={acceptButtonStyle}
@@ -144,10 +177,10 @@ export default function CookieConsent() {
                 e.target.style.background = '#ea580c';
               }}
               onMouseLeave={(e) => {
-                e.target.style.background = PALETTE.orange;
+                e.target.style.background = PALETTE.teal;
               }}
             >
-              Accept All
+              {T('cookieAccept')}
             </button>
           </div>
         </div>

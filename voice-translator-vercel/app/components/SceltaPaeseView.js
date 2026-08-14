@@ -56,7 +56,21 @@ export default function SceltaPaeseView({ onFatto }) {
 
   useEffect(() => { preloadLang(linguaSchermata); }, [linguaSchermata]);
 
-  const risultati = useMemo(() => cercaPaesi(ricerca), [ricerca]);
+  // b.136-bis — L'ITALIA COMPARIVA DUE VOLTE.
+  //
+  // Provato al primo avvio: il paese proposto stava in cima sotto
+  // "Suggerito per te" e POI di nuovo, identico, come prima voce di
+  // "Tutti i paesi". Sembrava un errore di caricamento.
+  //
+  // Quando non si sta cercando, il proposto lo si toglie dall'elenco
+  // sotto: e gia in cima, evidenziato. Durante una ricerca invece resta
+  // tutto, perche li conta solo cio che si cerca e nascondere un
+  // risultato valido sarebbe peggio di ripeterlo.
+  const risultati = useMemo(() => {
+    const tutti = cercaPaesi(ricerca);
+    if (ricerca || !proposto) return tutti;
+    return tutti.filter(p => p.codice !== proposto.codice);
+  }, [ricerca, proposto]);
 
   function conferma(paese) {
     if (!paese) return;
