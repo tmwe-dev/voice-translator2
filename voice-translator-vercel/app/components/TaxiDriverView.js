@@ -36,6 +36,16 @@ const DRIVER_LANGS = [
   { code: 'vi', flag: '🇻🇳', name: 'Tiếng Việt' },
 ];
 
+// b.145 — QUESTA SCHERMATA LA LEGGE UN ESTRANEO.
+//
+// E' il tassista, che non ha installato niente e apre un link: se non
+// parla italiano non ha nessun modo di capire cosa gli si sta chiedendo.
+// Restavano in italiano fisso la scelta della lingua (scritta meta in
+// inglese e meta in italiano, "Select your language / Seleziona la tua
+// lingua": due lingue su quarantaquattro), l'etichetta della
+// destinazione, le fermate, i due bottoni di conferma, il navigatore e
+// "Parla con passeggero" — cioe tutto quello che si tocca. Anche km e
+// min sono chiavi: in russo, cinese e thailandese si scrivono diversi.
 function TaxiDriverView({ destId, decryptionKey }) {
   const { L, setView, theme } = useApp();
   const _S = getStyles(theme);
@@ -243,7 +253,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             TaxiTalk
           </div>
           <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, textAlign: 'center' }}>
-            Select your language / Seleziona la tua lingua
+            {L('selectYourLanguage')}
           </div>
 
           <div style={{
@@ -321,7 +331,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           ) : (
             <>
               <div style={{ fontSize: 10, fontWeight: 600, color: C.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>
-                Destinazione
+                {L('destinationWord')}
               </div>
               <div style={{
                 fontSize: 22, fontWeight: 800, color: C.textPrimary, lineHeight: 1.3, marginBottom: 8,
@@ -357,7 +367,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               {destination.stops?.length > 0 && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: C.accent, marginBottom: 4 }}>
-                    Fermate intermedie
+                    {L('intermediateStops')}
                   </div>
                   {destination.stops.map((stop, i) => (
                     <div key={i} style={{
@@ -397,14 +407,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: C.accent }}>{routeInfo.distKm}</div>
-              <div style={{ fontSize: 10, color: C.textMuted }}>km</div>
+              <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitKm')}</div>
             </div>
             <div style={{
               flex: 1, padding: '14px', borderRadius: 14, textAlign: 'center',
               background: C.card, border: `1px solid ${C.cardBorder}`,
             }}>
               <div style={{ fontSize: 24, fontWeight: 800, color: C.purple }}>{routeInfo.durationMin}</div>
-              <div style={{ fontSize: 10, color: C.textMuted }}>min</div>
+              <div style={{ fontSize: 10, color: C.textMuted }}>{L('unitMin')}</div>
             </div>
           </div>
         )}
@@ -424,7 +434,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             textAlign: 'center',
           }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: C.accent }}>
-              ✓ Destinazione confermata
+              ✓ {L('destConfirmed')}
             </div>
           </div>
         )}
@@ -442,7 +452,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
             border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, fontFamily: FONT,
             boxShadow: `0 4px 20px ${C.accent}35`,
           }}>
-            ✓ Confermo destinazione
+            ✓ {L('confirmDestination')}
           </button>
         ) : (
           <>
@@ -451,7 +461,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               background: `${C.accent}12`, border: `1px solid ${C.accent}25`,
               color: C.accent, fontSize: 13, fontWeight: 700, fontFamily: FONT,
             }}>
-              Navigatore
+              {L('openNavigator')}
             </button>
             <button onClick={() => setView('speaker')} style={{
               flex: 1, padding: '14px', borderRadius: 14, cursor: 'pointer',
@@ -459,7 +469,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
-              Parla con passeggero
+              {L('talkToPassenger')}
             </button>
           </>
         )}

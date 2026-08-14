@@ -1,6 +1,11 @@
 // Lightweight i18n — loads language packs on demand
 // Fallback languages (en, it) are loaded eagerly; others lazy-loaded
-// Total: 15 languages, 951 keys each
+// Total: 15 languages, 1030 keys each
+//
+// Il numero e uguale in tutti e quindici, e deve restarlo: e la sola
+// cosa che si puo contare per sapere se una schermata parla a tutti o
+// solo a chi legge l'inglese. Aggiungere una chiave vuol dire
+// aggiungerla quindici volte, non una.
 //
 // b.136 — QUESTA E' LA LINGUA DELL'INTERFACCIA, NON QUELLA PARLATA.
 // Fino a b.135 erano la stessa cosa (`prefs.lang`), e non lo sono: un

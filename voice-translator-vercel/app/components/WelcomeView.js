@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { getLang, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
+import { getLang, AVATARS, AVATAR_NAMES, FONT, LANGS } from '../lib/constants.js';
 import { getPaese } from '../lib/paesi.js';
 import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
@@ -24,6 +24,54 @@ import { IconGlobe, IconMic, IconBattery } from './Icons.js';
 // Design: Dark ambient glassmorphism, floating orbs,
 //         gradient text, staggered animations
 // ═══════════════════════════════════════════════════════════
+
+// I nomi delle lingue in vetrina restano scritti cosi come si scrivono
+// nella loro lingua: tradurre "Deutsch" in tedesco non ha senso, e la
+// vetrina serve proprio a far vedere gli alfabeti diversi. Quello che si
+// traduce e la coda "+N altre" — e il numero non e piu scritto a mano
+// (diceva 33 mentre le lingue in piu sono LANGS.length - 12): un conto
+// sbagliato in vetrina e la prima cosa che fa dubitare del resto.
+// Il bottone principale delle tre fasi.
+//
+// b.145 — era definito DENTRO WelcomeView, e in fase 1 convive col
+// campo del nome: ogni lettera battuta cambiava lo stato, il corpo
+// veniva rieseguito, questa funzione rinasceva e per React era un
+// TIPO nuovo. E' l'errore di b.133 (JoinView) e di b.140 (le righe dei
+// paesi), qui ancora in piedi. Fuori dal corpo il tipo e stabile: lo
+// scintillio dell'animazione non riparte da zero a ogni battuta e il
+// bottone non si smonta sotto il dito di chi lo sta premendo.
+// I colori, unica cosa che prendeva dalla chiusura, arrivano come `D`.
+const CTAButton = ({ D, onClick, disabled, children, secondary }) => (
+  <button onClick={onClick} disabled={disabled}
+    style={{
+      width: '100%', padding: secondary ? '14px' : '16px', borderRadius: 16,
+      cursor: disabled ? 'default' : 'pointer',
+      background: disabled ? 'rgba(255,255,255,0.04)'
+        : secondary ? 'rgba(255,255,255,0.04)'
+        : `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
+      border: secondary ? `1.5px solid ${D.glassBorder}` : 'none',
+      color: disabled ? D.textMuted : secondary ? D.textSoft : '#fff',
+      fontFamily: FONT, fontSize: secondary ? 14 : 16, fontWeight: 700,
+      opacity: disabled ? 0.5 : 1,
+      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+      WebkitTapHighlightColor: 'transparent',
+      boxShadow: (!disabled && !secondary) ? `0 6px 24px ${D.neon1}30, inset 0 1px 0 rgba(255,255,255,0.15)` : 'none',
+      position: 'relative', overflow: 'hidden',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    }}>
+    {!disabled && !secondary && (
+      <div style={{
+        position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+        background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.10) 50%, transparent 60%)',
+        backgroundSize: '200% 100%', animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
+        pointerEvents: 'none',
+      }} />
+    )}
+    <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>{children}</span>
+  </button>
+);
+
+const NOMI_LINGUE_IN_VETRINA = ['Italiano','English','Español','Français','Deutsch','ไทย','中文','日本語','한국어','Português','العربية','Русский'];
 
 export default function WelcomeView({ joinCode, userToken, setAuthStep,
   sendAuthCode, verifyAuthCodeFn, loginWithGoogle, loginWithApple,
@@ -184,36 +232,6 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
     </div>
   );
 
-  // ── CTA Button component ──
-  const CTAButton = ({ onClick, disabled, children, secondary }) => (
-    <button onClick={onClick} disabled={disabled}
-      style={{
-        width: '100%', padding: secondary ? '14px' : '16px', borderRadius: 16,
-        cursor: disabled ? 'default' : 'pointer',
-        background: disabled ? 'rgba(255,255,255,0.04)'
-          : secondary ? 'rgba(255,255,255,0.04)'
-          : `linear-gradient(135deg, ${D.neon1}, ${D.neon2})`,
-        border: secondary ? `1.5px solid ${D.glassBorder}` : 'none',
-        color: disabled ? D.textMuted : secondary ? D.textSoft : '#fff',
-        fontFamily: FONT, fontSize: secondary ? 14 : 16, fontWeight: 700,
-        opacity: disabled ? 0.5 : 1,
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        WebkitTapHighlightColor: 'transparent',
-        boxShadow: (!disabled && !secondary) ? `0 6px 24px ${D.neon1}30, inset 0 1px 0 rgba(255,255,255,0.15)` : 'none',
-        position: 'relative', overflow: 'hidden',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-      }}>
-      {!disabled && !secondary && (
-        <div style={{
-          position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.10) 50%, transparent 60%)',
-          backgroundSize: '200% 100%', animation: 'vtBtnShimmer 2.5s ease-in-out infinite',
-          pointerEvents: 'none',
-        }} />
-      )}
-      <span style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>{children}</span>
-    </button>
-  );
 
   return (
     <div style={{
@@ -305,7 +323,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Google Sign-In Button */}
             <div style={{ width: '100%', marginBottom: 12, ...stagger(6) }}>
-              <CTAButton onClick={() => {
+              <CTAButton D={D} onClick={() => {
                 try {
                   if (window.google?.accounts?.id) {
                     window.google.accounts.id.prompt((notification) => {
@@ -325,7 +343,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Skip — Continue without account */}
             <div style={{ width: '100%', ...stagger(7) }}>
-              <CTAButton secondary onClick={() => setPhase(1)}>
+              <CTAButton D={D} secondary onClick={() => setPhase(1)}>
                 {L('continueWithoutAccount')}
               </CTAButton>
             </div>
@@ -335,14 +353,14 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               display: 'flex', gap: '7px 14px', justifyContent: 'center', flexWrap: 'wrap',
               marginTop: 34, maxWidth: 400, ...stagger(8),
             }}>
-              {['Italiano','English','Español','Français','Deutsch','ไทย','中文','日本語','한국어','Português','العربية','Русский'].map((nome, i) => (
+              {NOMI_LINGUE_IN_VETRINA.map((nome, i) => (
                 <span key={i} style={{
                   fontSize: 11.5, fontWeight: 600, color: D.textDim, letterSpacing: 0.2,
                   opacity: 0.55,
                 }}>{nome}</span>
               ))}
               <span style={{ fontSize: 11.5, fontWeight: 700, color: D.neon2, opacity: 0.8 }}>
-                +33 altre
+                {L('moreLangsCount').replace('{x}', String(LANGS.length - NOMI_LINGUE_IN_VETRINA.length))}
               </span>
             </div>
           </div>
@@ -431,7 +449,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Next */}
             <div style={{ width: '100%', ...stagger(4) }}>
-              <CTAButton onClick={() => setPhase(2)} disabled={!canNextSetup}>
+              <CTAButton D={D} onClick={() => setPhase(2)} disabled={!canNextSetup}>
                 {L('next')} <span style={{ fontSize: 18 }}>{'→'}</span>
               </CTAButton>
             </div>
@@ -534,7 +552,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
 
             {/* Start Button */}
             <div style={{ width: '100%', ...stagger(5) }}>
-              <CTAButton onClick={finishWelcome}>
+              <CTAButton D={D} onClick={finishWelcome}>
                 {L('startUsing')} {''}
               </CTAButton>
             </div>

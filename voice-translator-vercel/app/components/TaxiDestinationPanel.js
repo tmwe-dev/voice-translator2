@@ -25,6 +25,12 @@ const FIELD_CONFIG = [
 
 function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
   // b.138 — errori di ricerca ed etichette erano in italiano fisso.
+  //
+  // b.145 — ne restavano quattro, e sono le prime che si leggono:
+  // l'intestazione ("Dove vai?" e la riga sotto), l'etichetta del campo
+  // dell'indirizzo e quella delle fermate. Erano sfuggite ai giri
+  // precedenti perche non sono in un attributo ne in una tabella: sono
+  // testo nudo fra due tag, e i controlli cercavano i letterali.
   const { L } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
@@ -150,10 +156,10 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
         <div style={{ padding: '0 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: textPrimary, fontFamily: FONT }}>
-              Dove vai?
+              {L('whereTo')}
             </div>
             <div style={{ fontSize: 11, color: textMuted, marginTop: 2 }}>
-              Inserisci la destinazione per il tassista
+              {L('whereToSub')}
             </div>
           </div>
           <button onClick={onClose} aria-label={L('closeWord')} style={{
@@ -169,7 +175,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
           {/* Address search */}
           <div style={{ marginBottom: 12 }}>
             <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 4, display: 'block' }}>
-              Indirizzo destinazione
+              {L('destAddressLabel')}
             </label>
             <div style={{ position: 'relative' }}>
               <input type="text" value={query} onChange={e => handleQueryChange(e.target.value)}
@@ -266,7 +272,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               {/* Stops */}
               <div>
                 <label style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span></span> Fermate intermedie
+                  <span></span> {L('intermediateStops')}
                 </label>
                 {stops.map((stop, i) => (
                   <div key={i} style={{

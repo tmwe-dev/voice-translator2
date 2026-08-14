@@ -41,6 +41,68 @@ const MOTORI_VOCE = [
   { id: 'elevenlabs', nomeKey: 'enginePremiumName', descKey: 'enginePremiumDesc' },
 ];
 
+// ── Mattoni condivisi ──
+//
+// b.145 — STAVANO DENTRO IL CORPO DI SettingsView, ed e lo stesso
+// errore che in b.133 faceva perdere una lettera alla volta al campo
+// nome e in b.140 spegneva le animazioni delle righe dei paesi: una
+// funzione ricreata a ogni disegno e per React un TIPO nuovo, quindi
+// smonta e rimonta tutto il sottoalbero. Qui bastava aprire un menu a
+// tendina perche le ventitre righe rinascessero da capo, transizioni
+// comprese. Fuori dal corpo l'identita e stabile; la tavolozza, che
+// era l'unica cosa presa dalla chiusura, ora arriva come proprieta.
+const Gruppo = ({ c, titolo, children }) => (
+  <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
+    <div style={{ fontSize: 9.5, fontWeight: 800, color: c.textMuted, letterSpacing: '0.35em',
+      textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{titolo}</div>
+    <div style={{ background: c.cardBg, border: `1px solid ${c.cardBorder}`,
+      borderRadius: 18, padding: '2px 14px' }}>{children}</div>
+  </div>
+);
+
+const Riga = ({ c, icona, titolo, sotto, valore, onClick, ultima, aperto, children }) => (
+  <>
+    <button onClick={onClick} disabled={!onClick}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
+        padding: '13px 2px', background: 'none', border: 'none', fontFamily: FONT,
+        cursor: onClick ? 'pointer' : 'default',
+        borderBottom: ultima && !aperto ? 'none' : `1px solid ${c.cardBorder}`,
+        transition: 'opacity 0.2s' }}
+      onMouseOver={(e) => { if (onClick) e.currentTarget.style.opacity = 0.82; }}
+      onMouseOut={(e) => e.currentTarget.style.opacity = 1}>
+      <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: c.overlayBg, border: `1px solid ${c.cardBorder}`, color: c.textSecondary }}>
+        {icona}
+      </span>
+      <span style={{ flex: 1, minWidth: 0 }}>
+        <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>{titolo}</span>
+        {sotto && <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>{sotto}</span>}
+      </span>
+      {valore && <span style={{ fontSize: 12.5, fontWeight: 700, color: c.textSecondary, flexShrink: 0 }}>{valore}</span>}
+      {onClick && <span style={{ color: c.textMuted, flexShrink: 0, lineHeight: 0,
+        transform: aperto ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
+        <IconChevronDown size={15} /></span>}
+    </button>
+    {children}
+  </>
+);
+
+const Scelta = ({ c, attiva, titolo, sotto, onClick }) => (
+  <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+    textAlign: 'left', padding: '10px 12px', marginBottom: 5, borderRadius: 12, cursor: 'pointer',
+    fontFamily: FONT, background: attiva ? c.accent1Bg : 'transparent',
+    border: `1px solid ${attiva ? c.accent1Border : 'transparent'}`, transition: 'all 0.2s' }}>
+    <span style={{ flex: 1, minWidth: 0 }}>
+      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700,
+        color: attiva ? c.accent1 : c.textPrimary }}>{titolo}</span>
+      {sotto && <span style={{ display: 'block', fontSize: 11, color: c.textMuted, marginTop: 1 }}>{sotto}</span>}
+    </span>
+    {attiva && <span style={{ color: c.accent1, lineHeight: 0 }}><IconCheck size={15} /></span>}
+  </button>
+);
+
+
 const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
   const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
   const c = S.colors;
@@ -56,58 +118,6 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
   const linguaUI = getLang(prefs.uiLang || mapLang(prefs.lang || 'en'));
   const motore = MOTORI_VOCE.find(m => m.id === (prefs.voiceEngine || 'auto')) || MOTORI_VOCE[0];
   const nomeMotore = (m) => m.nome || L(m.nomeKey);
-
-  // ── Mattoni condivisi ──
-  const Gruppo = ({ titolo, children }) => (
-    <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
-      <div style={{ fontSize: 9.5, fontWeight: 800, color: c.textMuted, letterSpacing: '0.35em',
-        textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{titolo}</div>
-      <div style={{ background: c.cardBg, border: `1px solid ${c.cardBorder}`,
-        borderRadius: 18, padding: '2px 14px' }}>{children}</div>
-    </div>
-  );
-
-  const Riga = ({ icona, titolo, sotto, valore, onClick, ultima, aperto, children }) => (
-    <>
-      <button onClick={onClick} disabled={!onClick}
-        style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-          padding: '13px 2px', background: 'none', border: 'none', fontFamily: FONT,
-          cursor: onClick ? 'pointer' : 'default',
-          borderBottom: ultima && !aperto ? 'none' : `1px solid ${c.cardBorder}`,
-          transition: 'opacity 0.2s' }}
-        onMouseOver={(e) => { if (onClick) e.currentTarget.style.opacity = 0.82; }}
-        onMouseOut={(e) => e.currentTarget.style.opacity = 1}>
-        <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: c.overlayBg, border: `1px solid ${c.cardBorder}`, color: c.textSecondary }}>
-          {icona}
-        </span>
-        <span style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>{titolo}</span>
-          {sotto && <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>{sotto}</span>}
-        </span>
-        {valore && <span style={{ fontSize: 12.5, fontWeight: 700, color: c.textSecondary, flexShrink: 0 }}>{valore}</span>}
-        {onClick && <span style={{ color: c.textMuted, flexShrink: 0, lineHeight: 0,
-          transform: aperto ? 'rotate(180deg)' : 'none', transition: 'transform 0.3s' }}>
-          <IconChevronDown size={15} /></span>}
-      </button>
-      {children}
-    </>
-  );
-
-  const Scelta = ({ attiva, titolo, sotto, onClick }) => (
-    <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-      textAlign: 'left', padding: '10px 12px', marginBottom: 5, borderRadius: 12, cursor: 'pointer',
-      fontFamily: FONT, background: attiva ? c.accent1Bg : 'transparent',
-      border: `1px solid ${attiva ? c.accent1Border : 'transparent'}`, transition: 'all 0.2s' }}>
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700,
-          color: attiva ? c.accent1 : c.textPrimary }}>{titolo}</span>
-        {sotto && <span style={{ display: 'block', fontSize: 11, color: c.textMuted, marginTop: 1 }}>{sotto}</span>}
-      </span>
-      {attiva && <span style={{ color: c.accent1, lineHeight: 0 }}><IconCheck size={15} /></span>}
-    </button>
-  );
 
   return (
     <div style={S.page}>
@@ -148,13 +158,13 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             titoli scritti a mano in italiano: si vedeva "Settings" sopra
             "Motore voce" e "Timbro". Ora sono tre righe distinte e ogni
             titolo passa da L(). */}
-        <Gruppo titolo={L('settingsGroupVoiceLang')}>
-          <Riga icona={<IconGlobe size={17} />} titolo={L('countryLabel')}
+        <Gruppo c={c} titolo={L('settingsGroupVoiceLang')}>
+          <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('countryLabel')}
             sotto={L('countryLabelDesc')}
             valore={paese ? `${paese.bandiera} ${paese.nome}` : '—'}
             onClick={() => setView('paese')} />
 
-          <Riga icona={<IconGlobe size={17} />} titolo={L('uiLanguage')}
+          <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('uiLanguage')}
             sotto={L('uiLanguageDesc')}
             valore={`${linguaUI.flag} ${linguaUI.name}`}
             aperto={apertoInterfaccia}
@@ -165,7 +175,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
               {LINGUE_INTERFACCIA.map(codice => {
                 const l = getLang(codice);
                 return (
-                  <Scelta key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
+                  <Scelta c={c} key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
                     titolo={`${l.flag}  ${l.name}`}
                     onClick={() => { savePrefs({ ...prefs, uiLang: codice }); setApertoInterfaccia(false); }} />
                 );
@@ -173,7 +183,7 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             </div>
           )}
 
-          <Riga icona={<IconGlobe size={17} />} titolo={L('spokenLanguage')}
+          <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('spokenLanguage')}
             sotto={L('spokenLanguageDesc')}
             valore={`${langInfo.flag} ${langInfo.name}`}
             aperto={apertoLingua}
@@ -182,14 +192,14 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0 10px',
               borderBottom: `1px solid ${c.cardBorder}` }}>
               {LANGS.map(l => (
-                <Scelta key={l.code} attiva={l.code === prefs.lang}
+                <Scelta c={c} key={l.code} attiva={l.code === prefs.lang}
                   titolo={`${l.flag}  ${l.name}`}
                   onClick={() => { savePrefs({ ...prefs, lang: l.code }); setApertoLingua(false); }} />
               ))}
             </div>
           )}
 
-          <Riga icona={<IconMusic size={17} />} titolo={L('voiceEngine')}
+          <Riga c={c} icona={<IconMusic size={17} />} titolo={L('voiceEngine')}
             sotto={L('voiceEngineDesc')}
             valore={nomeMotore(motore)}
             aperto={apertoVoce}
@@ -197,19 +207,19 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
           {apertoVoce && (
             <div style={{ padding: '4px 0 10px', borderBottom: `1px solid ${c.cardBorder}` }}>
               {MOTORI_VOCE.map(m => (
-                <Scelta key={m.id} attiva={m.id === (prefs.voiceEngine || 'auto')}
+                <Scelta c={c} key={m.id} attiva={m.id === (prefs.voiceEngine || 'auto')}
                   titolo={nomeMotore(m)} sotto={L(m.descKey)}
                   onClick={() => { savePrefs({ ...prefs, voiceEngine: m.id }); setApertoVoce(false); }} />
               ))}
             </div>
           )}
 
-          <Riga icona={<IconVolume size={17} />} titolo={L('voiceTimbre')}
+          <Riga c={c} icona={<IconVolume size={17} />} titolo={L('voiceTimbre')}
             sotto={L('voiceTimbreDesc')}
             valore={prefs.voiceGender === 'male' ? L('voiceMale') : L('voiceFemale')}
             onClick={() => savePrefs({ ...prefs, voiceGender: prefs.voiceGender === 'male' ? 'female' : 'male' })} />
 
-          <Riga icona={<IconMic size={17} />} titolo={L('clonedVoice')}
+          <Riga c={c} icona={<IconMic size={17} />} titolo={L('clonedVoice')}
             sotto={L('clonedVoiceDesc')}
             valore={clonedVoiceId ? L('voiceCloneOn') : L('notConfigured')}
             onClick={() => setView('voice-clone')} ultima />
@@ -246,21 +256,21 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </div>
 
         {/* ═══ 4 · ACCOUNT ═══ */}
-        <Gruppo titolo={L('account')}>
-          <Riga icona={<IconCreditCard size={17} />} titolo={L('creditRow')}
+        <Gruppo c={c} titolo={L('account')}>
+          <Riga c={c} icona={<IconCreditCard size={17} />} titolo={L('creditRow')}
             sotto={L('creditRowDesc')}
             onClick={() => setView('credits')} />
-          <Riga icona={<IconKey size={17} />} titolo={L('yourApiKeys')}
+          <Riga c={c} icona={<IconKey size={17} />} titolo={L('yourApiKeys')}
             sotto={L('apiKeysUnlimited')}
             valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : L('noneWord')}
             onClick={() => setView('apikeys')} />
-          <Riga icona={<IconUser size={17} />} titolo={L('contactsRow')}
+          <Riga c={c} icona={<IconUser size={17} />} titolo={L('contactsRow')}
             sotto={L('contactsRowDesc')}
             onClick={() => setView('contacts')} ultima />
         </Gruppo>
 
         {/* ═══ 5 · PRIVACY ═══ */}
-        <Gruppo titolo={L('settingsGroupPrivacy')}>
+        <Gruppo c={c} titolo={L('settingsGroupPrivacy')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px' }}>
             <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -286,14 +296,14 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </Gruppo>
 
         {/* ═══ 6 · STRUMENTI ═══ */}
-        <Gruppo titolo={L('settingsGroupTools')}>
-          <Riga icona={<IconMic size={17} />} titolo={L('tryVoices')}
+        <Gruppo c={c} titolo={L('settingsGroupTools')}>
+          <Riga c={c} icona={<IconMic size={17} />} titolo={L('tryVoices')}
             sotto={L('tryVoicesDesc')}
             onClick={() => setView('voicetest')} />
-          <Riga icona={<IconSparkles size={17} />} titolo={L('aiHub')}
+          <Riga c={c} icona={<IconSparkles size={17} />} titolo={L('aiHub')}
             sotto={L('aiHubDesc')}
             onClick={() => setView('ai')} />
-          <Riga icona={<IconExport size={17} />} titolo={L('exportData')}
+          <Riga c={c} icona={<IconExport size={17} />} titolo={L('exportData')}
             sotto={L('exportDataDesc')}
             onClick={() => {
               try {
@@ -318,14 +328,14 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </Gruppo>
 
         {/* ═══ 7 · INFO ═══ */}
-        <Gruppo titolo={L('settingsGroupInfo')}>
-          <Riga icona={<IconMessageCircle size={17} />} titolo={L('guide')}
+        <Gruppo c={c} titolo={L('settingsGroupInfo')}>
+          <Riga c={c} icona={<IconMessageCircle size={17} />} titolo={L('guide')}
             sotto={L('guideDesc')}
             onClick={() => setView('help')} />
-          <Riga icona={<IconWarning size={17} />} titolo={L('reportProblem')}
+          <Riga c={c} icona={<IconWarning size={17} />} titolo={L('reportProblem')}
             sotto={L('reportProblemDesc')}
             onClick={() => window.open(`mailto:${EMAIL_ASSISTENZA}?subject=${encodeURIComponent(`${L('problemMailSubject')} ${APP_VERSION}`)}`, '_blank')} />
-          <Riga icona={<IconSettings size={17} />} titolo={L('versionRow')}
+          <Riga c={c} icona={<IconSettings size={17} />} titolo={L('versionRow')}
             valore={`BarTalk ${APP_VERSION}`} ultima />
         </Gruppo>
 

@@ -8,6 +8,103 @@ import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 import { useApp } from '../contexts/AppContext.js';
 
+// ── I mattoni della videochiamata ──
+//
+// b.145 — erano tutti e quattro definiti DENTRO VideoCallOverlay, e il
+// piu grave era VolumeControl: contiene un <input type="range">, cioe
+// un elemento con uno stato suo che il browser tiene. Ricreare la
+// funzione a ogni disegno la rendeva un TIPO nuovo per React, che
+// smontava e rimontava il cursore mentre il dito lo stava trascinando —
+// lo stesso meccanismo che in b.133 faceva perdere il fuoco al campo
+// del nome. Fuori dal corpo l'identita e stabile e cio che veniva dalla
+// chiusura passa come proprieta.
+//
+// Nel trasloco sono cadute anche tre frasi in italiano fisso
+// ("sta parlando...", "sta scrivendo...", "ASCOLTO"): le leggeva anche
+// chi ha l'applicazione in coreano.
+const ControlBtn = ({ onClick, active, icon, label, color, activeColor, size = 56 }) => (
+  <button onClick={onClick} style={{
+    width: size, height: size + 16, display: 'flex', flexDirection: 'column',
+    alignItems: 'center', justifyContent: 'center', gap: 3,
+    borderRadius: 16, border: 'none', cursor: 'pointer',
+    background: active ? (activeColor || 'rgba(34,197,94,0.2)') : 'rgba(255,255,255,0.1)',
+    color: active ? (color || PALETTE.green) : '#94a3b8',
+    transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
+  }}>
+    <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeof icon === 'string' ? icon : icon}</span>
+    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</span>
+  </button>
+);
+
+// ── Partner activity badge (shows in both modes) ──
+const PartnerActivityBadge = ({ L, partner, partnerSpeaking, partnerTyping }) => {
+  const isSpeaking = partnerSpeaking;
+  const isTyping = partnerTyping;
+  if (!isSpeaking && !isTyping) return null;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 8,
+      padding: '6px 14px', borderRadius: 24,
+      background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(8px)',
+      animation: 'vtPulse 2s infinite ease-in-out',
+    }}>
+      {isSpeaking ? <IconMic size={14}/> : <IconKeyboard size={14}/>}
+      <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>
+        {partner?.name || 'Partner'} {isSpeaking ? L('isSpeakingNow') : L('isTypingNow')}
+      </span>
+    </div>
+  );
+};
+
+// ── Recording indicator (I'm recording → partner will see message incoming) ──
+const RecordingIndicator = ({ L, recording, isListening }) => {
+  if (!recording && !isListening) return null;
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '4px 12px', borderRadius: 20,
+      background: recording ? 'rgba(239,68,68,0.85)' : 'rgba(234,179,8,0.85)',
+      backdropFilter: 'blur(8px)',
+    }}>
+      <span style={{
+        width: 8, height: 8, borderRadius: 4,
+        background: '#fff',
+        animation: 'vtPulse 1s infinite ease-in-out',
+      }} />
+      <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>
+        {recording ? 'REC' : L('listeningUpper')}
+      </span>
+    </div>
+  );
+};
+
+// ── Volume control component ──
+const VolumeControl = ({ compact, partnerVolume, setPartnerVolume }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: compact ? 6 : 10,
+    padding: compact ? '6px 10px' : '8px 16px',
+    borderRadius: 24, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
+  }}>
+    <button onClick={() => setPartnerVolume(partnerVolume > 0.01 ? 0 : 0.7)}
+      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: compact ? 18 : 22, lineHeight: 1 }}>
+      {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
+    </button>
+    <input type="range" min="0" max="100" step="5"
+      value={Math.round(partnerVolume * 100)}
+      onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
+      style={{
+        width: compact ? 90 : 120, height: compact ? 6 : 8,
+        accentColor: PALETTE.blue, borderRadius: 4,
+      }} />
+    <span style={{
+      fontSize: compact ? 10 : 12, color: '#94a3b8',
+      fontFamily: 'monospace', minWidth: 32, textAlign: 'right', fontWeight: 600,
+    }}>
+      {Math.round(partnerVolume * 100)}%
+    </span>
+  </div>
+);
+
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
  *
@@ -84,89 +181,6 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
 
   if (!webrtc) return null;
 
-  // ── Shared control button component ──
-  const ControlBtn = ({ onClick, active, icon, label, color, activeColor, size = 56 }) => (
-    <button onClick={onClick} style={{
-      width: size, height: size + 16, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 3,
-      borderRadius: 16, border: 'none', cursor: 'pointer',
-      background: active ? (activeColor || 'rgba(34,197,94,0.2)') : 'rgba(255,255,255,0.1)',
-      color: active ? (color || PALETTE.green) : '#94a3b8',
-      transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
-    }}>
-      <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{typeof icon === 'string' ? icon : icon}</span>
-      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.3, textTransform: 'uppercase' }}>{label}</span>
-    </button>
-  );
-
-  // ── Partner activity badge (shows in both modes) ──
-  const PartnerActivityBadge = () => {
-    const isSpeaking = partnerSpeaking;
-    const isTyping = partnerTyping;
-    if (!isSpeaking && !isTyping) return null;
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '6px 14px', borderRadius: 24,
-        background: 'rgba(99,102,241,0.85)', backdropFilter: 'blur(8px)',
-        animation: 'vtPulse 2s infinite ease-in-out',
-      }}>
-        {isSpeaking ? <IconMic size={14}/> : <IconKeyboard size={14}/>}
-        <span style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>
-          {partner?.name || 'Partner'} {isSpeaking ? 'sta parlando...' : 'sta scrivendo...'}
-        </span>
-      </div>
-    );
-  };
-
-  // ── Recording indicator (I'm recording → partner will see message incoming) ──
-  const RecordingIndicator = () => {
-    if (!recording && !isListening) return null;
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6,
-        padding: '4px 12px', borderRadius: 20,
-        background: recording ? 'rgba(239,68,68,0.85)' : 'rgba(234,179,8,0.85)',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <span style={{
-          width: 8, height: 8, borderRadius: 4,
-          background: '#fff',
-          animation: 'vtPulse 1s infinite ease-in-out',
-        }} />
-        <span style={{ fontSize: 10, color: '#fff', fontWeight: 600 }}>
-          {recording ? 'REC' : 'ASCOLTO'}
-        </span>
-      </div>
-    );
-  };
-
-  // ── Volume control component ──
-  const VolumeControl = ({ compact }) => (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: compact ? 6 : 10,
-      padding: compact ? '6px 10px' : '8px 16px',
-      borderRadius: 24, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-    }}>
-      <button onClick={() => setPartnerVolume(partnerVolume > 0.01 ? 0 : 0.7)}
-        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: compact ? 18 : 22, lineHeight: 1 }}>
-        {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
-      </button>
-      <input type="range" min="0" max="100" step="5"
-        value={Math.round(partnerVolume * 100)}
-        onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
-        style={{
-          width: compact ? 90 : 120, height: compact ? 6 : 8,
-          accentColor: PALETTE.blue, borderRadius: 4,
-        }} />
-      <span style={{
-        fontSize: compact ? 10 : 12, color: '#94a3b8',
-        fontFamily: 'monospace', minWidth: 32, textAlign: 'right', fontWeight: 600,
-      }}>
-        {Math.round(partnerVolume * 100)}%
-      </span>
-    </div>
-  );
 
   // ═══════════════════════════════════════════════════════
   // ── FULLSCREEN MODE ──
@@ -268,8 +282,8 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           {/* Recording / Partner activity, sotto la testata */}
           <div style={{ position: 'absolute', top: 'max(64px, calc(env(safe-area-inset-top) + 48px))', right: 16,
             display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', zIndex: 6 }}>
-            <RecordingIndicator />
-            <PartnerActivityBadge />
+            <RecordingIndicator L={L} recording={recording} isListening={isListening} />
+            <PartnerActivityBadge L={L} partner={partner} partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} />
           </div>
 
           {/* Volume control (tap speaker icon to show/hide slider) */}
@@ -277,7 +291,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             position: 'absolute', bottom: 110, right: 16,
             display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end',
           }}>
-            {showVolumeSlider && <VolumeControl compact={false} />}
+            {showVolumeSlider && <VolumeControl compact={false} partnerVolume={partnerVolume} setPartnerVolume={setPartnerVolume} />}
             <button onClick={() => setShowVolumeSlider(!showVolumeSlider)}
               style={{
                 width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
@@ -536,12 +550,12 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
 
         {/* Partner activity badge (top center) */}
         <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)' }}>
-          <PartnerActivityBadge />
+          <PartnerActivityBadge L={L} partner={partner} partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} />
         </div>
 
         {/* Recording indicator (top right) */}
         <div style={{ position: 'absolute', top: 8, right: 8 }}>
-          <RecordingIndicator />
+          <RecordingIndicator L={L} recording={recording} isListening={isListening} />
         </div>
       </div>
 

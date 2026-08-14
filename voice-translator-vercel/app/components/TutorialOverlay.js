@@ -248,7 +248,10 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
             marginTop: 20, fontSize: 11, color: 'rgba(255,255,255,0.30)',
             fontFamily: FONT,
           }}>
-            {'← swipe →'}
+            {/* Le frecce restano fuori dalla chiave: sono il gesto, non la
+                parola, e in arabo la parola si traduce mentre le frecce
+                devono continuare a indicare i due lati dello schermo. */}
+            {'← '}{L('swipeWord')}{' →'}
           </div>
         </div>
       </div>

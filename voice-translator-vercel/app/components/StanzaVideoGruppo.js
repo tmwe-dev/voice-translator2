@@ -52,14 +52,21 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
           </div>
         )}
 
+        {/* b.145 — la targhetta col nome aveva `backdropFilter: blur(6px)`.
+            Sta dentro Riquadro, che si ripete una volta per partecipante:
+            otto video in movimento, otto sfocature del fondo, ed e la
+            stessa moltiplicazione che in b.143 aveva annebbiato l'intera
+            scelta del paese. Il fondo nero al 55% basta a staccare il
+            nome dal video, e non costa un livello di composizione.
+            E "Tu" era in italiano fisso: la chiave c'era gia. */}
         <div style={{
           position: 'absolute', left: 6, bottom: 6,
           padding: '2px 8px', borderRadius: 999,
-          background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(6px)',
+          background: 'rgba(0,0,0,0.55)',
           fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: FONT,
           display: 'flex', alignItems: 'center', gap: 4,
         }}>
-          {l?.flag} {mio ? 'Tu' : nome}
+          {l?.flag} {mio ? L('youWord') : nome}
         </div>
       </div>
 

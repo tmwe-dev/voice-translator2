@@ -26,6 +26,14 @@ import { glossarioPerTesto } from '../lib/glossario.js'; // b.95
 
 const COMMON_LANGS = ['en','it','es','fr','de','pt','zh','ja','ko','ar','hi','ru','tr','th','vi'];
 
+// b.145 — restavano tre scritte in italiano fisso, tutte nel pannello
+// della destinazione: "Nessuna destinazione impostata" al posto della
+// mappa, l'occhiello "DESTINAZIONE" sopra l'indirizzo, e le unita km e
+// min accanto al percorso. Le prime due erano testo nudo fra due tag —
+// la forma che i controlli sui letterali non vedono — e l'occhiello ora
+// prende la maiuscola dallo stile invece che dalla lingua, perche in
+// arabo e in cinese il MAIUSCOLO non esiste e la chiave sarebbe rimasta
+// italiana per forza.
 function SpeakerView({ userToken }) {
   const { L, S, prefs, setView, theme } = useApp();
   const _S = getStyles(theme);
@@ -591,7 +599,7 @@ function SpeakerView({ userToken }) {
                   borderRadius: 16, border: '1px dashed rgba(255,255,255,0.14)',
                   color: 'rgba(255,255,255,0.45)', fontSize: 16, textAlign: 'center', padding: 24,
                 }}>
-                  Nessuna destinazione impostata
+                  {L('noDestinationSet')}
                 </div>
               )}
             </div>
@@ -604,7 +612,7 @@ function SpeakerView({ userToken }) {
                 </div>
                 {routeInfo && (
                   <div style={{ fontSize: 17, fontWeight: 700, color: C.accent, marginTop: 6 }}>
-                    {routeInfo.distKm} km &middot; ~{routeInfo.durationMin} min
+                    {routeInfo.distKm} {L('unitKm')} &middot; ~{routeInfo.durationMin} {L('unitMin')}
                   </div>
                 )}
               </div>
@@ -925,8 +933,8 @@ function SpeakerView({ userToken }) {
           </div>
 
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, marginBottom: 3 }}>
-              DESTINAZIONE
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, marginBottom: 3, textTransform: 'uppercase' }}>
+              {L('destinationWord')}
             </div>
             <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, lineHeight: 1.3,
               display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
@@ -934,7 +942,7 @@ function SpeakerView({ userToken }) {
             </div>
             {routeInfo && (
               <div style={{ fontSize: 11, color: C.accent, fontWeight: 700, marginTop: 3 }}>
-                {routeInfo.distKm} km &middot; ~{routeInfo.durationMin} min
+                {routeInfo.distKm} {L('unitKm')} &middot; ~{routeInfo.durationMin} {L('unitMin')}
               </div>
             )}
           </div>
