@@ -505,8 +505,43 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </div>
       )}
 
-      {/* Text input bar */}
-      <div style={{display:'flex', gap:6, padding:'6px 10px', flexShrink:0,
+      {/* ═══ INIZIO v.154 — risposta citata sopra la riga di input ═══
+          COSA: il blocco "Rispondi a..." si sposta qui, subito sopra
+          il campo di scrittura (prima stava fra ContenutiChat e
+          TalkControls, che ora sono nella stessa riga dell'input).
+          PERCHE: deve restare visivamente legato al campo dove si
+          scrive la risposta, non finire sotto un controllo diverso. */}
+      {rispostaA && (
+        <div style={{
+          margin: '0 10px 6px', padding: '8px 12px', borderRadius: 12,
+          background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
+          display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
+              Rispondi a {rispostaA.nome}
+            </div>
+            <div style={{
+              fontSize: 12, color: S.colors.textMuted,
+              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+            }}>
+              {rispostaA.testo}
+            </div>
+          </div>
+          <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: S.colors.textMuted, fontSize: 16, padding: '0 4px',
+            }}>×</button>
+        </div>
+      )}
+      {/* ═══ FINE v.154 ═══ */}
+
+      {/* Text input bar — v.154: il mic (TalkControls) ora e qui, a
+          destra del bottone invio, non piu in una barra a se stante
+          sotto. Vedi metodo-topografico: dichiarazione WHAT/WHY sopra
+          il render di TalkControls, poco sotto. */}
+      <div style={{display:'flex', alignItems:'center', gap:6, padding:'6px 10px', flexShrink:0,
         background:'rgba(0,0,0,0.15)', borderTop:`1px solid ${S.colors.overlayBorder}`}}>
         <input
           aria-label={L('typePlaceholder')}
@@ -537,6 +572,31 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
           {sendingText ? '...' : '\u2192'}
         </button>
+        {/* ═══ INIZIO v.154 — Il microfono, accanto al campo di testo ═══
+            COSA: TalkControls (il gesto vocale — Parla/Free Talk/alza
+            mano a seconda della modalita) entra nella STESSA riga
+            flessibile dell'input e del bottone invio, invece di stare
+            in una barra a se stante sotto.
+            PERCHE: richiesta di Luca (14/8), confermata per tutte le
+            modalita (Conversazione/Classroom/Free Talk/Simultaneo):
+            "sposta il microfono a destra del campo di testo... [gli
+            extra] di fianco al microfono e sotto sempre a destra del
+            testo". Lo stile interno di TalkControls.js e stato
+            ristrutturato per questo (v.154, vedi quel file): tasto
+            piu piccolo, righe allineate a destra invece che centrate. */}
+        <TalkControls
+          L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
+          canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
+          recording={recording} isListening={isListening}
+          toggleRecording={toggleRecording} cancelRecording={cancelRecording}
+          startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
+          vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
+          vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
+          liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
+          status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
+          endChatAndSave={endChatAndSave} setView={setView}
+        />
+        {/* ═══ FINE v.154 ═══ */}
       </div>
 
       {/* ═══ INIZIO v.154 — Contenuti chat (link condivisi) ═══
@@ -547,46 +607,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           nessun nuovo campo nei messaggi. */}
       <ContenutiChat messages={messages} S={S} L={L} onApri={setSchedaChat} />
       {/* ═══ FINE v.154 ═══ */}
-
-      {/* ═══ Talk Controls ═══ */}
-      {/* Stai rispondendo a qualcuno: si vede a chi, e si puo annullare */}
-      {rispostaA && (
-        <div style={{
-          margin: '0 10px 6px', padding: '8px 12px', borderRadius: 12,
-          background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
-          display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT,
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
-              Rispondi a {rispostaA.nome}
-            </div>
-            <div style={{
-              fontSize: 12, color: S.colors.textMuted,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {rispostaA.testo}
-            </div>
-          </div>
-          <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: S.colors.textMuted, fontSize: 16, padding: '0 4px',
-            }}>×</button>
-        </div>
-      )}
-
-      <TalkControls
-        L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
-        canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
-        recording={recording} isListening={isListening}
-        toggleRecording={toggleRecording} cancelRecording={cancelRecording}
-        startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
-        vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
-        vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
-        liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
-        status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
-        endChatAndSave={endChatAndSave} setView={setView}
-      />
 
       {/* ═══ Provider Badge ═══ */}
       {ProviderBadge && partner && (

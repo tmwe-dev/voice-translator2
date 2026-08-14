@@ -19,8 +19,17 @@ const TalkControls = memo(function TalkControls({
   const [grantingSpeak, setGrantingSpeak] = useState(null);
 
   return (
-    <div style={S.talkBar} role="toolbar" aria-label={L('voiceControls')}>
-      {status && <div style={{fontSize:12, color:S.colors.accent3, marginBottom:6, fontWeight:500}}>{status}</div>}
+    // ═══ INIZIO v.154 — mic accanto al testo, extra sotto-a-destra ═══
+    // COSA: il contenitore non e piu centrato/full-width (S.talkBar
+    // aveva alignItems:'center'); ora e compatto e allineato a destra,
+    // per stare nella stessa riga del campo di scrittura.
+    // PERCHE: richiesta di Luca (14/8) — "sposta il microfono a destra
+    // del campo di testo... [gli extra] di fianco al microfono e sotto
+    // sempre a destra del testo". Vale per tutte le modalita
+    // (Conversazione/Classroom/Free Talk/Simultaneo), confermato.
+    <div style={{...S.talkBar, alignItems:'flex-end', flexShrink:0, width:'auto', padding:'0 10px 6px'}}
+      role="toolbar" aria-label={L('voiceControls')}>
+      {status && <div style={{fontSize:11, color:S.colors.accent3, marginBottom:4, fontWeight:500, textAlign:'right'}}>{status}</div>}
 
       {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
         <>
@@ -36,31 +45,31 @@ const TalkControls = memo(function TalkControls({
                 speravi.
             ORA: un tasto grande, due stati, un contatore che si muove.
             Il posto dell'ANNULLA e sempre occupato, cosi niente salta.
-            Due colori: neutro a riposo, accento mentre registra. */}
-        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:20, padding:'4px 0'}}>
+            Due colori: neutro a riposo, accento mentre registra.
+            v.154 — il tasto e piu piccolo (56 invece di 84) e la fila
+            e allineata a destra: sta accanto al campo di scrittura,
+            non piu al centro di una barra a se stante. */}
+        <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, padding:'4px 0'}}>
           {/* Slot ANNULLA — larghezza riservata anche da fermo: la fila non si muove */}
-          <div style={{width:56, display:'flex', justifyContent:'center'}}>
-            {recording && (
-              <button onClick={() => { vibrate(15); cancelRecording(); }}
-                aria-label={L('cancelRecording')}
-                style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
-                  width:52, height:52, borderRadius:26,
-                  border:'none', background:S.colors.overlayBg, color:S.colors.textMuted,
-                  cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'background 0.15s'}}>
-                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-                <span style={{fontSize:10, fontWeight:600, letterSpacing:0.2}}>{L('cancelWord')}</span>
-              </button>
-            )}
-          </div>
+          {recording && (
+            <button onClick={() => { vibrate(15); cancelRecording(); }}
+              aria-label={L('cancelRecording')}
+              style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:2,
+                width:40, height:40, borderRadius:20,
+                border:'none', background:S.colors.overlayBg, color:S.colors.textMuted,
+                cursor:'pointer', WebkitTapHighlightColor:'transparent', transition:'background 0.15s'}}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={2} strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          )}
 
           {/* Il gesto principale */}
           <button onClick={() => { vibrate(25); toggleRecording(); }}
             aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
-            style={{...S.talkBtn, width:84, height:84, borderRadius:42,
-              display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
+            style={{...S.talkBtn, width:52, height:52, borderRadius:26,
+              display:'flex', alignItems:'center', justifyContent:'center',
               border:'none', cursor:'pointer', WebkitTapHighlightColor:'transparent',
-              transition:'background 0.2s',
+              transition:'background 0.2s', flexShrink:0,
               ...(recording ? {
                 background: S.colors.accent4Bg,
                 color: S.colors.textPrimary,
@@ -69,32 +78,26 @@ const TalkControls = memo(function TalkControls({
                 background: S.colors.overlayBg,
                 color: S.colors.textPrimary,
               })}}>
-            {recording ? <IconSend size={26}/> : <IconMic size={30}/>}
-            <span style={{fontSize:11, fontWeight:600, letterSpacing:0.2}}>
-              {recording ? L('sendBtn') : L('talkBtn')}
-            </span>
+            {recording ? <IconSend size={22}/> : <IconMic size={24}/>}
           </button>
-
-          {/* Slot simmetrico: tiene il microfono al centro esatto */}
-          <div style={{width:56}} aria-hidden="true" />
         </div>
 
         {/* La riga che mancava: mentre registra, si vede che sta ascoltando.
             Senza, l'unico modo di sapere se il tasto aveva funzionato era
             parlare e sperare. */}
         {recording && (
-          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-            fontSize:12, color:S.colors.textMuted, marginTop:6}} aria-live="polite">
+          <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8,
+            fontSize:11, color:S.colors.textMuted, marginTop:4}} aria-live="polite">
+            <span>{L('listeningTapSend')}</span>
             <span style={{width:7, height:7, borderRadius:4, background:S.colors.textPrimary,
               animation:'vtRecordPulse 1.2s ease-in-out infinite'}} />
-            <span>{L('listeningTapSend')}</span>
           </div>
         )}
         {/* La riduzione rumore, con le PAROLE.
             Prima era un quadrato con un'onda e la scritta "RUMORE" da 7
             pixel: nessuno poteva sapere se accendeva il rumore o lo
-            toglieva. Ora dice cosa fa, e sta sotto — e una preferenza,
-            non un gesto da fare mentre si parla. */}
+            toglieva. Ora dice cosa fa, e sta sotto-a-destra — e una
+            preferenza, non un gesto da fare mentre si parla. */}
         {!recording && (
           <button onClick={async () => {
             const next = !liveMode;
@@ -103,13 +106,13 @@ const TalkControls = memo(function TalkControls({
             vibrate(15);
           }}
             aria-pressed={liveMode}
-            style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-              margin:'8px auto 0', padding:'6px 14px', borderRadius:16,
+            style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+              margin:'4px 0 0', padding:'4px 10px', borderRadius:14,
               background: liveMode ? S.colors.accent4Bg : 'transparent',
               color: liveMode ? S.colors.textPrimary : S.colors.textMuted,
-              border:'none', cursor:'pointer', fontSize:12, fontWeight:500,
+              border:'none', cursor:'pointer', fontSize:10.5, fontWeight:500,
               WebkitTapHighlightColor:'transparent', transition:'background 0.15s, color 0.15s'}}>
-            <span style={{width:8, height:8, borderRadius:4,
+            <span style={{width:7, height:7, borderRadius:4,
               background: liveMode ? 'currentColor' : 'transparent',
               border:`1.5px solid currentColor`, transition:'background 0.15s'}} />
             <span>{liveMode ? L('noiseReductionOn') : L('noiseReduction')}</span>
@@ -205,23 +208,22 @@ const TalkControls = memo(function TalkControls({
       )}
 
       {(roomMode === 'freetalk' || roomMode === 'simultaneous') && (
-        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:16, padding:'4px 0'}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10, padding:'4px 0'}}>
           {/* Cancel button */}
           {recording && (
             <button onClick={() => { vibrate(15); cancelRecording(); }}
               title={L('cancelRecording')}
               style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
-                width:52, height:52, borderRadius:14, border:`2px solid ${S.colors.statusError}`,
+                width:36, height:36, borderRadius:12, border:`2px solid ${S.colors.statusError}`,
                 background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
                 cursor:'pointer', justifyContent:'center',
                 WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
-              <span style={{fontSize:20}}>{'\u2716'}</span>
-              <span style={{fontSize:7, fontWeight:700}}>{L('cancelWord').toUpperCase()}</span>
+              <span style={{fontSize:15}}>{'\u2716'}</span>
             </button>
           )}
           {/* VAD Audio Level Bar */}
           {isListening && (
-            <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:40}}>
+            <div style={{display:'flex', flexDirection:'column', alignItems:'center', gap:2, minWidth:32}}>
               {/* b.108 — la barretta si disegna da sola leggendo un
                   riferimento: il livello non passa piu da React, quindi
                   non ridisegna la stanza sessanta volte al secondo. */}
@@ -236,18 +238,18 @@ const TalkControls = memo(function TalkControls({
           {/* MAIN free talk button */}
           <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
             aria-label={isListening ? L('stopWord') : L('startListeningAria')}
-            style={{...S.talkBtn, width:72, height:72, fontSize:30,
+            style={{...S.talkBtn, width:52, height:52, fontSize:22,
               ...(isListening ? S.talkBtnRec : {}),
-              ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),
+              ...(recording ? {boxShadow:`0 0 0 6px ${S.colors.accent3Bg}, 0 0 0 12px ${S.colors.accent3Bg}33`} : {}),
               ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
-                boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {})}}>
-            {isListening ? (recording ? <IconRecord size={28}/> : <IconMic size={28}/>) : <IconMic size={28}/>}
+                boxShadow:`0 0 0 6px ${S.colors.accent3Bg}, 0 0 0 12px ${S.colors.accent3Bg}33`} : {})}}>
+            {isListening ? (recording ? <IconRecord size={22}/> : <IconMic size={22}/>) : <IconMic size={22}/>}
           </button>
         </div>
       )}
 
       {/* Mode label + VAD sensitivity */}
-      <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:6, flexWrap:'wrap'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, marginTop:4, flexWrap:'wrap'}}>
         <span style={{fontSize:10, color:S.colors.textTertiary, fontWeight:500}}>
           {modeInfo.icon} {L(modeInfo.nameKey)}
           {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (
