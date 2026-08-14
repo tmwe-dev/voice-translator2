@@ -77,8 +77,20 @@ export default function InstallaApp({ pwa, theme }) {
       role="dialog"
       aria-label="Installa BarTalk"
       style={{
-        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 900,
-        padding: '16px 16px calc(16px + env(safe-area-inset-bottom))',
+        // b.134-ter — PROVATO NEL BROWSER: COPRIVA LA NAVIGAZIONE.
+        //
+        // Con `bottom: 0` e zIndex 900 questo pannello si sedeva sopra la
+        // BottomNav (fissa, alta 76px, zIndex 50). Home, Chat, Community
+        // e Profilo diventavano tutti inarrivabili: il banner non era un
+        // fastidio, era un muro. Non me ne ero accorto perche l'avevo
+        // provato leggendo il codice, non premendo i pulsanti.
+        //
+        // Ora si appoggia SOPRA la barra invece che addosso. I 76px sono
+        // l'altezza dichiarata in BottomNav.js:98 — se cambia li, va
+        // cambiata anche qui, e il commento serve a ricordarlo.
+        position: 'fixed', left: 0, right: 0, zIndex: 900,
+        bottom: 'calc(76px + env(safe-area-inset-bottom))',
+        padding: '16px',
         background: C.card, borderTop: `1px solid ${C.bordo}`,
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
         fontFamily: FONT,

@@ -368,8 +368,23 @@ export default function getStyles(theme = 'deep') {
       color: colors.textPrimary, fontFamily:FONT, overflow:'hidden' },
     center: { display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
       height:'100%', padding:'16px 16px', boxSizing:'border-box' },
+    // b.135 — L'ULTIMO PEZZO FINIVA SOTTO LA BARRA.
+    //
+    // `page` e fissa fino a bottom:0, e la BottomNav (fissa, 76px) ci
+    // sta sopra. Chi scorreva fino in fondo trovava gli ultimi 76px
+    // coperti: irraggiungibili, per sempre.
+    //
+    // Nella clonazione voce quello spazio conteneva il messaggio
+    // d'ERRORE della creazione. Luca premeva "Crea la tua voce", la
+    // chiamata falliva, e il motivo veniva disegnato dove non si poteva
+    // leggere. Da fuori sembrava che la pagina non salvasse e non
+    // scorresse: erano la stessa cosa.
+    //
+    // Il riempimento va qui e non nel singolo componente perche il
+    // difetto e di chiunque usi questa cornice, non di quella pagina.
     scrollCenter: { display:'flex', flexDirection:'column', alignItems:'center',
-      height:'100%', padding:'12px 16px', boxSizing:'border-box',
+      height:'100%', boxSizing:'border-box',
+      padding:'12px 16px calc(88px + env(safe-area-inset-bottom))',
       overflowY:'auto', WebkitOverflowScrolling:'touch' },
 
     // === TYPOGRAPHY ===

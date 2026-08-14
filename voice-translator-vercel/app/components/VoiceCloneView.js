@@ -348,9 +348,17 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
               {isIT ? 'Costo: 500 crediti (\u20AC5.00)' : 'Cost: 500 credits (\u20AC5.00)'}
             </div>
 
+            {/* b.135 — l'errore si porta sotto gli occhi da solo.
+                Il riempimento in `scrollCenter` lo rende raggiungibile,
+                ma raggiungibile non vuol dire visto: chi ha appena
+                premuto "Crea la tua voce" guarda il bottone, non il
+                fondo della pagina. */}
             {cloneError && (
-              <div style={{marginTop:12, fontSize:12, color:C.accent3 || PALETTE.coral, padding:'10px 14px',
-                borderRadius:10, background:C.accent3Bg || 'rgba(255,107,107,0.1)', textAlign:'center'}}>
+              <div
+                ref={(n) => n?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                role="alert"
+                style={{marginTop:12, fontSize:12, color:C.accent3 || PALETTE.coral, padding:'10px 14px',
+                  borderRadius:10, background:C.accent3Bg || 'rgba(255,107,107,0.1)', textAlign:'center'}}>
                 {cloneError}
               </div>
             )}
