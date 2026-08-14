@@ -155,11 +155,29 @@ export default function useRoomPolling({
 
   // ── Supabase Realtime handlers ──
 
+  // b.128 — passa da un ref: `broadcastAck` nasce dalla destrutturazione
+  // di useRealtimeRoom, che sta piu sotto. Leggerlo direttamente qui
+  // funzionerebbe (la chiusura cattura il legame, non il valore) ma
+  // legherebbe questa callback a un ordine di righe. Il ref lo rende
+  // indipendente, come gia fa l'hook per i propri gestori.
+  const broadcastAckRef = useRef(null);
+
   const handleRealtimeMessage = useCallback((message) => {
     // ── ID-based guard: skip if already processed by another delivery channel ──
     // P2P and Realtime both call this function for the same message.
     // Without this guard, processIncomingMessage would be called twice.
     const alreadyProcessed = processedMsgIdsRef.current.has(message.id);
+
+    // ── b.128 · si conferma di aver ricevuto ──
+    // In chat normale i messaggi arrivano DA QUI, non dal canale P2P: e
+    // il ramo che mancava. La conferma parte una volta sola (solo se il
+    // messaggio e nuovo) e mai per i propri messaggi, altrimenti ci si
+    // confermerebbe da soli e la spunta direbbe di nuovo una bugia.
+    const mioMessaggio = message.sender === (verifiedNameRef.current || prefsRef.current?.name);
+    if (!alreadyProcessed && message.id && !mioMessaggio) {
+      try { broadcastAckRef.current?.(message.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
+    }
+
     if (!alreadyProcessed) {
       processedMsgIdsRef.current.add(message.id);
       // LRU cap
@@ -336,12 +354,47 @@ export default function useRoomPolling({
   }, []);
 
   // ── Supabase Realtime hook ──
+  // ── b.128 · definite QUI, non piu in fondo ──
+  // Servono a `useRealtimeRoom` poche righe sotto, che gira durante il
+  // render: lasciate in fondo al file sarebbero state ancora nella loro
+  // zona morta e la pagina sarebbe esplosa al primo render. C'era gia
+  // andata vicina in b.117, e c'e un test che sorveglia questa classe.
+  // ── Mark a message as read (partner has SEEN it on screen) ──
+  const markRead = useCallback((msgId) => {
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
+      if (idx < 0) return prev;
+      if (prev[idx]._status === 'letto') return prev; // gia segnato
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], _status: 'letto' };
+      return updated;
+    });
+  }, []);
+
+  // ── Mark a message as delivered (partner received it via P2P) ──
+  const markDelivered = useCallback((msgId) => {
+    setMessages(prev => {
+      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
+      if (idx < 0) return prev;
+      // b.120 — 'letto' viene DOPO 'consegnato': una conferma di
+      // consegna arrivata in ritardo non deve far tornare indietro.
+      if (prev[idx]._status === 'consegnato' || prev[idx]._status === 'letto') return prev;
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], _status: 'consegnato' };
+      return updated;
+    });
+  }, []);
+
+
+
   const {
     connected: realtimeConnected,
     subscribe: realtimeSubscribe,
     unsubscribe: realtimeUnsubscribe,
     broadcastMessage,
     broadcastMessageUpdate,
+    broadcastAck,
+    broadcastRead,
     broadcastSpeaking,
     broadcastMemberUpdate,
     broadcastHeartbeat,
@@ -353,7 +406,13 @@ export default function useRoomPolling({
     onSpeakingChange: handleRealtimeSpeaking,
     onMemberUpdate: handleRealtimeMemberUpdate,
     onPresenceChange: handleRealtimePresence,
+    // b.128 — le conferme arrivano anche senza chiamata in corso.
+    onAck: markDelivered,
+    onRead: markRead,
   });
+
+  // b.128 — il ref punta al mittente vero appena esiste.
+  broadcastAckRef.current = broadcastAck;
 
   // ── Polling: safety-net when Realtime is active, primary when not ──
 
@@ -789,32 +848,6 @@ export default function useRoomPolling({
       return [...prev, msg];
     });
   }, []); // setMessages is stable — no deps needed
-
-  // ── Mark a message as read (partner has SEEN it on screen) ──
-  const markRead = useCallback((msgId) => {
-    setMessages(prev => {
-      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
-      if (idx < 0) return prev;
-      if (prev[idx]._status === 'letto') return prev; // gia segnato
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], _status: 'letto' };
-      return updated;
-    });
-  }, []);
-
-  // ── Mark a message as delivered (partner received it via P2P) ──
-  const markDelivered = useCallback((msgId) => {
-    setMessages(prev => {
-      const idx = prev.findIndex(m => m.id === msgId || (m.id?.startsWith('tmp_') && m.id === msgId));
-      if (idx < 0) return prev;
-      // b.120 — 'letto' viene DOPO 'consegnato': una conferma di
-      // consegna arrivata in ritardo non deve far tornare indietro.
-      if (prev[idx]._status === 'consegnato' || prev[idx]._status === 'letto') return prev;
-      const updated = [...prev];
-      updated[idx] = { ...updated[idx], _status: 'consegnato' };
-      return updated;
-    });
-  }, []);
 
   function leaveRoom() {
     stopPolling();

@@ -47,6 +47,37 @@ tempo: non lo si annacqua.
 L'unica interruzione ammessa resta quella del punto 2, e va motivata con
 uno dei tre motivi elencati li.
 
+## 1-ter. Un difetto evidente si ripara, non si annuncia
+
+**E vietato chiedere se risolvere un problema.** Se durante il lavoro
+emerge un difetto — da un collaudo, da un registro, da una lettura del
+codice — lo si CORREGGE e si torna col problema risolto.
+
+Sono vietate tutte queste forme:
+
+- "vuoi che lo aggiusti?"
+- "posso procedere con la correzione?"
+- "se sei d'accordo lo sistemo"
+- "ci vogliono venti minuti, dimmi tu"
+- descrivere il difetto in dettaglio e fermarsi li aspettando un cenno
+
+Il difetto si porta all'utente GIA CORRETTO, con la prova. La sua
+descrizione serve a spiegare cosa e stato fatto, non a chiedere il
+permesso di farlo.
+
+**E vietato risolvere parzialmente.** Non si corregge il ramo comodo
+lasciando l'altro; non si mette una toppa dichiarando che la cura vera
+verra dopo; non si sistema il sintomo lasciando la causa quando la
+causa e alla portata. Se una correzione richiede di toccare tre file,
+si toccano tre file.
+
+L'unica eccezione resta il punto 2, e va motivata con uno dei tre
+motivi elencati li — non con "e delicato" o "preferisco chiedere".
+
+Chiedere il permesso di riparare non e prudenza: e scaricare sulla
+persona una decisione che ha gia preso quando ha chiesto un lavoro
+funzionante.
+
 ## 2. Ci si ferma solo per tre motivi, e si dice quale
 
 Fermarsi e legittimo **solo** in questi casi:

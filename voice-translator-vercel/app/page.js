@@ -1,4 +1,6 @@
 'use client';
+// b.128 — serve per non mandare conferme sul canale sbagliato in Diretta.
+import { isDirectMode } from './lib/sessionGuard.js';
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
@@ -275,9 +277,17 @@ function HomeInner() {
       if (roomPolling.sentByMeRef?.current?.has(message.id)) return;
       // Add to messages list via the same handler used by Realtime
       roomPolling.addIncomingMessage(message);
-      // ── Send delivery ack back to sender via P2P ──
-      if (sendDirectMessageRef.current && message.id) {
-        try { sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }); } catch (e) { /* P2P ack send failed, non-critical */ }
+      // ── b.128 · la conferma di consegna esce comunque ──
+      // Vedi onMessageRead: prima esisteva solo la strada P2P.
+      if (message.id) {
+        let partita = false;
+        if (sendDirectMessageRef.current) {
+          try { partita = sendDirectMessageRef.current({ type: 'msg-ack', msgId: message.id }) !== false; }
+          catch (e) { partita = false; }
+        }
+        if (!partita && !isDirectMode(sessionModeRef.current) && roomPolling.broadcastAck) {
+          try { roomPolling.broadcastAck(message.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
+        }
       }
     }
     // Phase 2: translation update arrived via P2P — forward to same handler as Realtime
@@ -1033,9 +1043,19 @@ function HomeInner() {
       setLiveMode={audio.setLiveMode}
       interpreter={interpreter}
       onMessageRead={(msgId) => {
-        // Send read receipt to partner via P2P DataChannel
-        if (sendDirectMessageRef.current && msgId) {
-          try { sendDirectMessageRef.current({ type: 'msg-read', msgId }); } catch (e) { /* P2P read receipt failed, non-critical */ }
+        if (!msgId) return;
+        // ── b.128 · due strade, non una ──
+        // Prima usciva SOLO dal canale P2P, che esiste solo durante una
+        // chiamata: fuori da li la conferma di lettura non partiva mai e
+        // il mittente restava a una spunta per sempre.
+        // In Diretta resta il canale diretto, dove e giusto che stia.
+        let partita = false;
+        if (sendDirectMessageRef.current) {
+          try { partita = sendDirectMessageRef.current({ type: 'msg-read', msgId }) !== false; }
+          catch (e) { partita = false; }
+        }
+        if (!partita && !isDirectMode(sessionModeRef.current) && roomPolling.broadcastRead) {
+          try { roomPolling.broadcastRead(msgId); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
         }
       }}
       showChatActions={showChatActions} setShowChatActions={setShowChatActions}
