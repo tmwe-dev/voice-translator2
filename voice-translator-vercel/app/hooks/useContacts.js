@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { APP_URL } from '../lib/constants.js';
+import { t } from '../lib/i18n.js';
 import { subscribeTick } from '../lib/ticker.js';
 
 const HEARTBEAT_INTERVAL = 60000; // 60 seconds
@@ -165,13 +166,21 @@ export default function useContacts({ userTokenRef }) {
   // Share invite via different channels
   const shareInvite = useCallback(async (channel, code, lang = 'it', giftAmount = 0) => {
     const inviteUrl = `${APP_URL}?invite=${code}`;
-    const isIT = lang === 'it';
+    // b.136 — QUI L'INVITO PARLAVA DUE LINGUE SU QUINDICI.
+    //
+    //     const isIT = lang === 'it';
+    //
+    // e chi invitava un tailandese o un russo gli mandava un messaggio
+    // in inglese. Peggio: il ramo inglese diceva "the real-time
+    // BarTalk", frase priva di senso nata da una sostituzione
+    // automatica del nome del prodotto sul testo "the real-time voice
+    // translator". E' rimasta li a lungo perche nessuno legge il ramo
+    // che non e il proprio.
+    const T = (chiave) => t(lang, chiave);
     const giftText = giftAmount > 0
-      ? (isIT ? ` Ti regalo ${(giftAmount / 100).toFixed(2)}€ di crediti!` : ` I'm gifting you €${(giftAmount / 100).toFixed(2)} in credits!`)
+      ? ` ${T('inviteGiftPrefix')} ${(giftAmount / 100).toFixed(2)}€ ${T('inviteGiftSuffix')}`
       : '';
-    const text = isIT
-      ? `Ciao! Ti invito a usare BarTalk, il traduttore vocale in tempo reale.${giftText} Unisciti qui: ${inviteUrl}`
-      : `Hi! I invite you to use BarTalk, the real-time BarTalk.${giftText} Join here: ${inviteUrl}`;
+    const text = `${T('inviteShareIntro')}${giftText} ${T('inviteJoinHere')} ${inviteUrl}`;
 
     switch (channel) {
       case 'whatsapp':
@@ -184,7 +193,7 @@ export default function useContacts({ userTokenRef }) {
         window.open(`sms:?body=${encodeURIComponent(text)}`, '_blank');
         break;
       case 'email': {
-        const subject = isIT ? 'Ti invito su BarTalk' : 'BarTalk invitation';
+        const subject = T('inviteEmailSubject');
         window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`, '_blank');
         break;
       }

@@ -19,8 +19,21 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
     }
   }, [authStep, setView]);
 
-  // Language detection
-  const isIT = L('createRoom') === 'Crea Stanza';
+  // b.136 — QUI C'ERA `isIT`, e non era una sciocchezza.
+  //
+  //     const isIT = L('createRoom') === 'Crea Stanza';
+  //
+  // Indovinava la lingua confrontando una traduzione con la sua stringa
+  // italiana, e poi ventidue ternari `isIT ? 'italiano' : 'english'`
+  // sceglievano il testo. Conseguenza: l'applicazione parla quindici
+  // lingue, questa schermata ne conosceva due. Un tedesco vedeva
+  // "Consigliato" tradotto in inglese in mezzo a menu tedeschi.
+  //
+  // Il difetto era anche piu sottile: bastava cambiare la traduzione di
+  // `createRoom` in it.js perche `isIT` diventasse falso per sempre e
+  // TUTTA la schermata passasse all'inglese, in italiano compreso.
+  //
+  // Ora ogni stringa e una chiave in locales/*.js, quindici lingue.
   const googleInitRef = useRef(false);
   const [authError, setAuthError] = useState('');
 
@@ -111,7 +124,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                 setAuthError('');
                 const clientId = typeof window !== 'undefined' ? window.__VT_GOOGLE_CLIENT_ID : '';
                 if (!clientId) {
-                  setAuthError(isIT ? 'Google Sign-In non ancora configurato. Usa il login con email.' : 'Google Sign-In not yet configured. Use email login.');
+                  setAuthError(L('googleNotConfigured'));
                   return;
                 }
                 initGoogleSignIn();
@@ -125,7 +138,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                 } else {
                   dbg.debug('[Auth] Google SDK not loaded, using OAuth popup');
                   if (!googleOAuthPopup()) {
-                    setAuthError(isIT ? 'Google Sign-In non disponibile. Usa il login con email.' : 'Google Sign-In unavailable. Use email login.');
+                    setAuthError(L('googleUnavailable'));
                   }
                 }
               }}>
@@ -174,7 +187,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   script.onload = async () => {
                     const clientId = window.__VT_APPLE_CLIENT_ID;
                     if (!clientId) {
-                      alert(isIT ? 'Apple Sign-In non ancora configurato. Contatta l\'amministratore.' : 'Apple Sign-In not yet configured. Contact administrator.');
+                      alert(L('appleNotConfigured'));
                       return;
                     }
                     window.AppleID.auth.init({
@@ -255,7 +268,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               <div style={{position:'absolute', top:-11, left:18, padding:'3px 14px', borderRadius:8,
                 background:`linear-gradient(135deg, ${S.colors.accent4}, ${S.colors.accent2})`,
                 color:'#0a0e27', fontSize:10, fontWeight:800, letterSpacing:0.5, textTransform:'uppercase'}}>
-                {isIT ? 'Consigliato' : 'Recommended'}
+                {L('recommended')}
               </div>
 
               {/* Header row */}
@@ -271,7 +284,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                     {L('startFreeMode')}
                   </div>
                   <div style={{fontSize:12, color:S.colors.textTertiary, marginTop:2}}>
-                    {isIT ? 'Inizia subito, zero costi' : 'Start now, zero cost'}
+                    {L('startNowZeroCost')}
                   </div>
                 </div>
               </div>
@@ -279,12 +292,12 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               {/* Feature grid */}
               <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px 12px', marginBottom:12, paddingLeft:4}}>
                 {[
-                  { icon:'\u{1F4AC}', text: isIT ? '~1000 msg testo/giorno' : '~1000 text msgs/day' },
-                  { icon:'\u{1F399}\uFE0F', text: isIT ? 'Input vocale illimitato' : 'Unlimited voice input' },
-                  { icon:'\u{1F50A}', text: isIT ? 'Voce browser gratuita' : 'Free browser voice' },
-                  { icon:'\u{1F310}', text: isIT ? '25 lingue disponibili' : '25 languages available' },
-                  { icon:'\u{1F3AF}', text: isIT ? '12 contesti tematici' : '12 topic contexts' },
-                  { icon:'\u{267E}\uFE0F', text: isIT ? 'Si rinnova ogni giorno' : 'Renews every day' },
+                  { icon:'\u{1F4AC}', text: L('freeTextPerDay') },
+                  { icon:'\u{1F399}\uFE0F', text: L('freeVoiceInput') },
+                  { icon:'\u{1F50A}', text: L('freeBrowserVoice') },
+                  { icon:'\u{1F310}', text: L('freeLangsAvailable') },
+                  { icon:'\u{1F3AF}', text: L('freeTopicContexts') },
+                  { icon:'\u{267E}\uFE0F', text: L('freeRenewsDaily') },
                 ].map((f, i) => (
                   <div key={i} style={{display:'flex', alignItems:'center', gap:6}}>
                     <span style={{fontSize:13, width:18, textAlign:'center', flexShrink:0}}>{f.icon}</span>
@@ -296,7 +309,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
               {/* CTA */}
               <div style={{textAlign:'center', padding:'10px 0 4px', borderTop:`1px solid ${S.colors.accent4Border}`}}>
                 <span style={{fontSize:13, fontWeight:800, color:S.colors.accent4, letterSpacing:0.3}}>
-                  {isIT ? 'Inizia Gratis \u2192' : 'Start Free \u2192'}
+                  {L('startFree')} {'\u2192'}
                 </span>
               </div>
             </button>
@@ -305,7 +318,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
             <div style={{display:'flex', alignItems:'center', gap:12, marginBottom:16}}>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
               <div style={{fontSize:10, color:S.colors.textSecondary, fontWeight:700, textTransform:'uppercase', letterSpacing:1.5}}>
-                {isIT ? 'Oppure passa a Pro' : 'Or go Pro'}
+                {L('orGoPro')}
               </div>
               <div style={{flex:1, height:1, background:S.colors.dividerColor}} />
             </div>
@@ -332,16 +345,16 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   <div style={{flex:1}}>
                     <div style={{fontWeight:800, fontSize:16, color:S.colors.accent1}}>{L('starterPack')} — {'\u20AC'}0.90</div>
                     <div style={{fontSize:11, color:S.colors.textSecondary, marginTop:2}}>
-                      {isIT ? '900 testo o 180 voce AI' : '900 text or 180 AI voice msgs'}
+                      {L('starterPackDetail')}
                     </div>
                   </div>
                   <Icon name="chevDown" size={18} color={S.colors.textSecondary} style={{transform:'rotate(-90deg)'}} />
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
-                    { val: '~900', label: isIT ? 'msg testo' : 'text msgs', color:S.colors.accent2 },
-                    { val: '~180', label: isIT ? 'msg voce AI' : 'AI voice msgs', color:S.colors.accent1 },
-                    { val: '6', label: isIT ? 'voci AI OpenAI' : 'OpenAI AI voices', color:S.colors.accent4 },
+                    { val: '~900', label: L('unitTextMsgs'), color:S.colors.accent2 },
+                    { val: '~180', label: L('unitAiVoiceMsgs'), color:S.colors.accent1 },
+                    { val: '6', label: L('unitOpenaiVoices'), color:S.colors.accent4 },
                   ].map((s, i) => (
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.accent1Bg,
@@ -370,16 +383,16 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                   <div style={{flex:1}}>
                     <div style={{fontWeight:700, fontSize:16}}>{L('buyCredits')}</div>
                     <div style={{fontSize:11, color:S.colors.textMuted, marginTop:2}}>
-                      {L('payAsYouGo')} — {L('from')} {'\u20AC'}2 {isIT ? 'a' : 'to'} {'\u20AC'}20
+                      {L('payAsYouGo')} — {L('from')} {'\u20AC'}2 {L('rangeTo')} {'\u20AC'}20
                     </div>
                   </div>
                   <Icon name="chevDown" size={18} color={S.colors.textSecondary} style={{transform:'rotate(-90deg)'}} />
                 </div>
                 <div style={{display:'flex', gap:8, flexWrap:'wrap', paddingLeft:2}}>
                   {[
-                    { val: isIT ? 'fino a 26000' : 'up to 26000', label: isIT ? 'msg testo' : 'text msgs', color:S.colors.accent2 },
-                    { val: isIT ? 'fino a 5200' : 'up to 5200', label: isIT ? 'msg voce AI' : 'AI voice msgs', color:S.colors.accent1 },
-                    { val: isIT ? 'fino a +30%' : 'up to +30%', label: 'bonus', color:S.colors.goldAccent },
+                    { val: `${L('upTo')} 26000`, label: L('unitTextMsgs'), color:S.colors.accent2 },
+                    { val: `${L('upTo')} 5200`, label: L('unitAiVoiceMsgs'), color:S.colors.accent1 },
+                    { val: `${L('upTo')} +30%`, label: 'bonus', color:S.colors.goldAccent },
                   ].map((s, i) => (
                     <div key={i} style={{display:'flex', alignItems:'baseline', gap:4,
                       padding:'4px 10px', borderRadius:8, background:S.colors.inputBg,
@@ -408,7 +421,7 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
                 <div style={{flex:1, textAlign:'left'}}>
                   <div style={{fontWeight:700, fontSize:15}}>{L('useYourKeys')}</div>
                   <div style={{fontSize:11, color:S.colors.textMuted, marginTop:2}}>
-                    {isIT ? 'Messaggi illimitati con le tue API' : 'Unlimited messages with your APIs'}
+                    {L('unlimitedOwnApis')}
                   </div>
                 </div>
                 <Icon name="chevDown" size={18} color={S.colors.textSecondary} style={{transform:'rotate(-90deg)'}} />

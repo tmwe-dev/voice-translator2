@@ -1,6 +1,8 @@
 'use client';
 import { memo, useState } from 'react';
 import { LANGS, THEME_LIST, FONT, getLang, APP_VERSION } from '../lib/constants.js';
+import { getPaese } from '../lib/paesi.js';
+import { LINGUE_INTERFACCIA, mapLang } from '../lib/i18n.js';
 import { IconMic, IconGlobe, IconKey, IconMusic, IconUser, IconVolume, IconCreditCard,
   IconShield, IconExport, IconMessageCircle, IconWarning, IconCheck, IconChevronDown,
   IconSparkles, IconSettings } from './Icons.js';
@@ -28,21 +30,32 @@ import { useApp } from '../contexts/AppContext.js';
 // TODO Luca: metti qui la casella vera, e sara quella ovunque.
 const EMAIL_ASSISTENZA = 'support@voicetranslate.app';
 
+// b.136 — nome e descrizione erano scritti qui in italiano, e in
+// italiano restavano anche con l'applicazione in coreano. Ora la
+// tabella tiene le CHIAVI e il testo lo tira fuori L() al momento del
+// disegno. 'OpenAI' non ha chiave perche e un nome proprio.
 const MOTORI_VOCE = [
-  { id: 'auto', nome: 'Automatica', desc: 'Sceglie il meglio disponibile' },
-  { id: 'edge', nome: 'Standard', desc: 'Veloce, consumo normale' },
-  { id: 'openai', nome: 'OpenAI', desc: 'Naturale, richiede chiave propria' },
-  { id: 'elevenlabs', nome: 'Premium', desc: 'ElevenLabs — consuma 3×' },
+  { id: 'auto', nomeKey: 'engineAuto', descKey: 'engineAutoDesc' },
+  { id: 'edge', nomeKey: 'engineStandard', descKey: 'engineStandardDesc' },
+  { id: 'openai', nome: 'OpenAI', descKey: 'engineOpenaiDesc' },
+  { id: 'elevenlabs', nomeKey: 'enginePremiumName', descKey: 'enginePremiumDesc' },
 ];
 
 const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
   const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
   const c = S.colors;
   const [apertoLingua, setApertoLingua] = useState(false);
+  const [apertoInterfaccia, setApertoInterfaccia] = useState(false);
   const [apertoVoce, setApertoVoce] = useState(false);
 
   const langInfo = getLang(prefs.lang);
+  const paese = getPaese(prefs.country);
+  // Le lingue in cui l'interfaccia esiste davvero: 15, non 44. Mostrare
+  // le altre sarebbe una promessa non mantenuta — si sceglie il danese
+  // e i menu restano in inglese.
+  const linguaUI = getLang(prefs.uiLang || mapLang(prefs.lang || 'en'));
   const motore = MOTORI_VOCE.find(m => m.id === (prefs.voiceEngine || 'auto')) || MOTORI_VOCE[0];
+  const nomeMotore = (m) => m.nome || L(m.nomeKey);
 
   // ── Mattoni condivisi ──
   const Gruppo = ({ titolo, children }) => (
@@ -114,24 +127,57 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             <AvatarImg src={prefs.avatar} size={52} />
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 17, fontWeight: 800, color: c.textPrimary }}>
-                {prefs.name || userAccount?.email?.split('@')[0] || 'Ospite'}
+                {prefs.name || userAccount?.email?.split('@')[0] || L('guestName')}
               </span>
               <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2,
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {userAccount?.email || 'Nessun account collegato'}
+                {userAccount?.email || L('noAccountLinked')}
               </span>
             </span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: c.accent1 }}>Modifica</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: c.accent1 }}>{L('settingsEdit')}</span>
           </button>
         </div>
 
-        {/* ═══ 2 · VOCE E LINGUA ═══ */}
-        <Gruppo titolo="Voce e lingua">
-          <Riga icona={<IconGlobe size={17} />} titolo="La tua lingua"
-            sotto="Quella in cui parli e leggi le traduzioni"
+        {/* ═══ 2 · VOCE E LINGUA ═══
+            b.136 — QUI C'ERA UNA RIGA SOLA, "La tua lingua", che faceva
+            due mestieri incompatibili: era la lingua in cui l'utente
+            parla E la lingua dell'interfaccia. Un italiano che parla con
+            un americano mette "English (US)" perche vuole essere tradotto
+            in inglese, e si ritrovava i menu in inglese — meta, per la
+            precisione, perche questa stessa schermata aveva tutti i
+            titoli scritti a mano in italiano: si vedeva "Settings" sopra
+            "Motore voce" e "Timbro". Ora sono tre righe distinte e ogni
+            titolo passa da L(). */}
+        <Gruppo titolo={L('settingsGroupVoiceLang')}>
+          <Riga icona={<IconGlobe size={17} />} titolo={L('countryLabel')}
+            sotto={L('countryLabelDesc')}
+            valore={paese ? `${paese.bandiera} ${paese.nome}` : '—'}
+            onClick={() => setView('paese')} />
+
+          <Riga icona={<IconGlobe size={17} />} titolo={L('uiLanguage')}
+            sotto={L('uiLanguageDesc')}
+            valore={`${linguaUI.flag} ${linguaUI.name}`}
+            aperto={apertoInterfaccia}
+            onClick={() => { setApertoInterfaccia(!apertoInterfaccia); setApertoLingua(false); setApertoVoce(false); }} />
+          {apertoInterfaccia && (
+            <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0 10px',
+              borderBottom: `1px solid ${c.cardBorder}` }}>
+              {LINGUE_INTERFACCIA.map(codice => {
+                const l = getLang(codice);
+                return (
+                  <Scelta key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
+                    titolo={`${l.flag}  ${l.name}`}
+                    onClick={() => { savePrefs({ ...prefs, uiLang: codice }); setApertoInterfaccia(false); }} />
+                );
+              })}
+            </div>
+          )}
+
+          <Riga icona={<IconGlobe size={17} />} titolo={L('spokenLanguage')}
+            sotto={L('spokenLanguageDesc')}
             valore={`${langInfo.flag} ${langInfo.name}`}
             aperto={apertoLingua}
-            onClick={() => { setApertoLingua(!apertoLingua); setApertoVoce(false); }} />
+            onClick={() => { setApertoLingua(!apertoLingua); setApertoInterfaccia(false); setApertoVoce(false); }} />
           {apertoLingua && (
             <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0 10px',
               borderBottom: `1px solid ${c.cardBorder}` }}>
@@ -143,36 +189,36 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             </div>
           )}
 
-          <Riga icona={<IconMusic size={17} />} titolo="Motore voce"
-            sotto="Come suona la traduzione parlata"
-            valore={motore.nome}
+          <Riga icona={<IconMusic size={17} />} titolo={L('voiceEngine')}
+            sotto={L('voiceEngineDesc')}
+            valore={nomeMotore(motore)}
             aperto={apertoVoce}
             onClick={() => { setApertoVoce(!apertoVoce); setApertoLingua(false); }} />
           {apertoVoce && (
             <div style={{ padding: '4px 0 10px', borderBottom: `1px solid ${c.cardBorder}` }}>
               {MOTORI_VOCE.map(m => (
                 <Scelta key={m.id} attiva={m.id === (prefs.voiceEngine || 'auto')}
-                  titolo={m.nome} sotto={m.desc}
+                  titolo={nomeMotore(m)} sotto={L(m.descKey)}
                   onClick={() => { savePrefs({ ...prefs, voiceEngine: m.id }); setApertoVoce(false); }} />
               ))}
             </div>
           )}
 
-          <Riga icona={<IconVolume size={17} />} titolo="Timbro"
-            sotto="Voce femminile o maschile"
-            valore={prefs.voiceGender === 'male' ? 'Maschile' : 'Femminile'}
+          <Riga icona={<IconVolume size={17} />} titolo={L('voiceTimbre')}
+            sotto={L('voiceTimbreDesc')}
+            valore={prefs.voiceGender === 'male' ? L('voiceMale') : L('voiceFemale')}
             onClick={() => savePrefs({ ...prefs, voiceGender: prefs.voiceGender === 'male' ? 'female' : 'male' })} />
 
-          <Riga icona={<IconMic size={17} />} titolo="La tua voce clonata"
-            sotto="Parla con il tuo timbro in ogni lingua"
-            valore={clonedVoiceId ? 'Attiva' : 'Non configurata'}
+          <Riga icona={<IconMic size={17} />} titolo={L('clonedVoice')}
+            sotto={L('clonedVoiceDesc')}
+            valore={clonedVoiceId ? L('voiceCloneOn') : L('notConfigured')}
             onClick={() => setView('voice-clone')} ultima />
         </Gruppo>
 
         {/* ═══ 3 · ASPETTO ═══ */}
         <div style={{ width: '100%', maxWidth: 440, marginBottom: 16 }}>
           <div style={{ fontSize: 9.5, fontWeight: 800, color: c.textMuted, letterSpacing: '0.35em',
-            textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>Aspetto</div>
+            textTransform: 'uppercase', padding: '0 4px 9px', fontFamily: FONT }}>{L('appearance')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
             background: c.cardBg, border: `1px solid ${c.cardBorder}`, borderRadius: 18, padding: 12 }}>
             {THEME_LIST.map(t => (
@@ -200,21 +246,21 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </div>
 
         {/* ═══ 4 · ACCOUNT ═══ */}
-        <Gruppo titolo="Account">
-          <Riga icona={<IconCreditCard size={17} />} titolo="Credito"
-            sotto="Minuti, ricariche e voucher"
+        <Gruppo titolo={L('account')}>
+          <Riga icona={<IconCreditCard size={17} />} titolo={L('creditRow')}
+            sotto={L('creditRowDesc')}
             onClick={() => setView('credits')} />
-          <Riga icona={<IconKey size={17} />} titolo="Le tue chiavi API"
-            sotto="Con le tue chiavi l'uso è illimitato"
-            valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : 'Nessuna'}
+          <Riga icona={<IconKey size={17} />} titolo={L('yourApiKeys')}
+            sotto={L('apiKeysUnlimited')}
+            valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : L('noneWord')}
             onClick={() => setView('apikeys')} />
-          <Riga icona={<IconUser size={17} />} titolo="Contatti"
-            sotto="Le persone con cui parli spesso"
+          <Riga icona={<IconUser size={17} />} titolo={L('contactsRow')}
+            sotto={L('contactsRowDesc')}
             onClick={() => setView('contacts')} ultima />
         </Gruppo>
 
         {/* ═══ 5 · PRIVACY ═══ */}
-        <Gruppo titolo="Privacy">
+        <Gruppo titolo={L('settingsGroupPrivacy')}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 2px' }}>
             <span style={{ width: 34, height: 34, borderRadius: 11, flexShrink: 0, lineHeight: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -223,10 +269,10 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14, fontWeight: 650, color: c.textPrimary }}>
-                Crittografia E2E
+                {L('e2eTitle')}
               </span>
               <span style={{ display: 'block', fontSize: 11.5, color: c.textMuted, marginTop: 2 }}>
-                Nessuno può leggere i messaggi, nemmeno noi
+                {L('e2eDesc')}
               </span>
             </span>
             <button onClick={() => setPrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
@@ -240,15 +286,15 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </Gruppo>
 
         {/* ═══ 6 · STRUMENTI ═══ */}
-        <Gruppo titolo="Strumenti">
-          <Riga icona={<IconMic size={17} />} titolo="Prova le voci"
-            sotto="Ascolta come suonano prima di usarle"
+        <Gruppo titolo={L('settingsGroupTools')}>
+          <Riga icona={<IconMic size={17} />} titolo={L('tryVoices')}
+            sotto={L('tryVoicesDesc')}
             onClick={() => setView('voicetest')} />
-          <Riga icona={<IconSparkles size={17} />} titolo="AI Hub e glossario"
-            sotto="Modelli, contesti e parole tue"
+          <Riga icona={<IconSparkles size={17} />} titolo={L('aiHub')}
+            sotto={L('aiHubDesc')}
             onClick={() => setView('ai')} />
-          <Riga icona={<IconExport size={17} />} titolo="Esporta i tuoi dati"
-            sotto="Un file con preferenze e conversazioni"
+          <Riga icona={<IconExport size={17} />} titolo={L('exportData')}
+            sotto={L('exportDataDesc')}
             onClick={() => {
               try {
                 // b.89 — la riga prometteva "preferenze E CONVERSAZIONI" ma
@@ -272,25 +318,25 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
         </Gruppo>
 
         {/* ═══ 7 · INFO ═══ */}
-        <Gruppo titolo="Info">
-          <Riga icona={<IconMessageCircle size={17} />} titolo="Guida"
-            sotto="Come funziona, domande frequenti"
+        <Gruppo titolo={L('settingsGroupInfo')}>
+          <Riga icona={<IconMessageCircle size={17} />} titolo={L('guide')}
+            sotto={L('guideDesc')}
             onClick={() => setView('help')} />
-          <Riga icona={<IconWarning size={17} />} titolo="Segnala un problema"
-            sotto="Scrivici: rispondiamo davvero"
-            onClick={() => window.open(`mailto:${EMAIL_ASSISTENZA}?subject=Problema BarTalk ${APP_VERSION}`, '_blank')} />
-          <Riga icona={<IconSettings size={17} />} titolo="Versione"
+          <Riga icona={<IconWarning size={17} />} titolo={L('reportProblem')}
+            sotto={L('reportProblemDesc')}
+            onClick={() => window.open(`mailto:${EMAIL_ASSISTENZA}?subject=${encodeURIComponent(`${L('problemMailSubject')} ${APP_VERSION}`)}`, '_blank')} />
+          <Riga icona={<IconSettings size={17} />} titolo={L('versionRow')}
             valore={`BarTalk ${APP_VERSION}`} ultima />
         </Gruppo>
 
         {/* ═══ Azioni finali ═══ */}
         <div style={{ width: '100%', maxWidth: 440, display: 'flex', gap: 10, marginTop: 4 }}>
           <button onClick={() => { savePrefs(prefs); setView('home'); }}
-            style={{ ...S.btn, flex: 1 }}>Salva e torna</button>
+            style={{ ...S.btn, flex: 1 }}>{L('saveAndBack')}</button>
           <button onClick={() => { logout?.({ clearPrefs: true }); setView('welcome'); }}
             style={{ padding: '13px 20px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
               fontSize: 13.5, fontWeight: 700, background: 'transparent',
-              border: `1px solid ${c.cardBorder}`, color: c.textMuted }}>Esci</button>
+              border: `1px solid ${c.cardBorder}`, color: c.textMuted }}>{L('exitWord')}</button>
         </div>
 
       </div>

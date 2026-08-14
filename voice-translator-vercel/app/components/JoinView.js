@@ -100,7 +100,12 @@ export default function JoinView({ joinCode,
   const [selectedVoicePref, setSelectedVoicePref] = useState(prefs.voice || 'nova');
   const nameInputRef = useRef(null);
 
-  const iL = inviteMsgLang || prefs.lang || 'en';
+  // b.136 — il ripiego era `prefs.lang`, la lingua PARLATA. Qui si
+  // scrivono i testi che l'ospite LEGGE, quindi il ripiego giusto e la
+  // lingua dell'interfaccia: sono due impostazioni distinte da questa
+  // versione. `inviteMsgLang` resta davanti a tutto perche e la lingua
+  // che ha scelto chi invita, e vince (b.115).
+  const iL = inviteMsgLang || prefs.uiLang || prefs.lang || 'en';
   const tI = (key) => t(iL, key);
   const isInvited = !!inviteMsgLang;
   // b.133 — IL GENERE NON E UN REQUISITO PER ENTRARE.

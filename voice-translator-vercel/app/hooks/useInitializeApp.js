@@ -1,6 +1,8 @@
 'use client';
 import { useEffect } from 'react';
 import { LANGS, AVATARS } from '../lib/constants.js';
+import { mapLang } from '../lib/i18n.js';
+import { indovinaPaese } from '../lib/paesi.js';
 import { createLogger } from '../lib/logger.js';
 const dbg = createLogger('init');
 
@@ -32,6 +34,14 @@ export default function useInitializeApp({
         let p; try { p = JSON.parse(saved); } catch { p = null; }
         if (p) {
           if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
+          // b.136 — chi era gia qui prima di questa versione ha salvato
+          // solo `lang`. Se gli si lasciasse `uiLang` vuoto l'interfaccia
+          // cadrebbe sull'inglese al primo caricamento e lui avrebbe
+          // l'impressione di aver perso una impostazione che aveva fatto.
+          // La si ricava dalla lingua parlata, che e cio che faceva
+          // l'applicazione fino a ieri: nessuno vede un cambiamento.
+          if (!p.uiLang) p.uiLang = mapLang(p.lang || 'en');
+          if (!p.country) p.country = indovinaPaese({ lingua: p.lang })?.codice || '';
           setPrefs(p); setMyLang(p.lang);
         }
       }
@@ -59,7 +69,12 @@ export default function useInitializeApp({
             autoPlay: true,
             ...(guestNameParam ? { name: decodeURIComponent(guestNameParam) } : {}),
             ...(guestGenderParam ? { gender: guestGenderParam } : {}),
-            ...(effectiveLang ? { lang: effectiveLang } : {}),
+            // b.136 — l'invitato non passa dalla scelta del paese (e
+            // giusto cosi: e stato invitato a parlare, non a iscriversi),
+            // quindi la lingua dell'interfaccia gliela diamo qui. Senza
+            // questa riga entrerebbe con i menu in inglese anche avendo
+            // ricevuto un invito in italiano.
+            ...(effectiveLang ? { lang: effectiveLang, uiLang: mapLang(effectiveLang) } : {}),
           };
           localStorage.setItem('vt-prefs', JSON.stringify(updated));
           return updated;
@@ -75,7 +90,7 @@ export default function useInitializeApp({
         setInviteMsgLang(langParam);
         setMyLang(langParam);
         setPrefs(p => {
-          const updated = { ...p, lang: langParam };
+          const updated = { ...p, lang: langParam, uiLang: mapLang(langParam) };
           localStorage.setItem('vt-prefs', JSON.stringify(updated));
           return updated;
         });
@@ -179,6 +194,11 @@ export default function useInitializeApp({
               ...(p || {}),
               name: nomeOspite,
               lang: linguaOspite,
+              // b.136 — per l'invitato la lingua dell'interfaccia si
+              // DEDUCE, non si chiede: la stessa da cui si e dedotta
+              // quella parlata, mappata sulle 15 che l'interfaccia ha.
+              uiLang: mapLang(linguaOspite),
+              country: p?.country || indovinaPaese({ lingua: linguaOspite })?.codice || '',
               autoPlay: true,
               avatar: p?.avatar || AVATARS[0],
             };
@@ -211,13 +231,31 @@ export default function useInitializeApp({
       }
 
       // 7. Determine initial view
+      //
+      // ── b.136 · LA LINGUA VIENE PRIMA DI TUTTO ──
+      //
+      // Al primo avvio si andava su 'welcome', che chiedeva la lingua
+      // come seconda delle tre fasi, insieme al nome. Due conseguenze:
+      // la prima schermata che una persona vedeva era gia scritta in
+      // una lingua decisa da noi (l'italiano, o l'inglese di ripiego),
+      // e la lingua scelta li faceva DUE mestieri — parlata e
+      // interfaccia — che ora sono separati.
+      //
+      // Ora la prima schermata e la scelta del paese. Da li discendono
+      // lingua parlata, lingua dell'interfaccia e bandiera, e solo dopo
+      // si passa a 'welcome' per nome e avatar.
+      //
+      // L'ordine dei controlli qui sotto NON e casuale ed e la parte da
+      // non rompere: taxi e invito vengono PRIMA, cosi chi arriva con
+      // un link non vede ne il paese ne il benvenuto. Per lui la lingua
+      // e gia stata dedotta al punto 3/6.
       const pickView = (hasSaved) => {
         if (taxiId) return 'taxi-driver';
         if (roomParam) return 'join';
         if (!hasSaved) {
           const testMode = typeof window !== 'undefined' && window.__VT_TESTING_MODE;
           if (testMode) return 'home';
-          return 'welcome';
+          return 'paese';
         }
         return 'home';
       };

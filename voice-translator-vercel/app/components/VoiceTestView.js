@@ -28,17 +28,23 @@ function injectVTVKeyframes() {
 }
 
 // ── Voice category filters ──
+// b.136 — le etichette erano DUE per filtro, `label` e `labelEN`, e si
+// sceglieva col ternario `isIT ? f.label : f.labelEN`. Due lingue
+// cablate nella struttura dati: per aggiungerne una terza bisognava
+// cambiare la forma dell'oggetto. Ora c'e una chiave sola e le lingue
+// stanno dove stanno tutte le altre, in locales/*.js.
 const CATEGORY_FILTERS = [
-  { id: 'all', label: 'Tutte', labelEN: 'All' },
-  { id: 'premade', label: 'Premade', labelEN: 'Premade' },
-  { id: 'cloned', label: 'Clonate', labelEN: 'Cloned' },
-  { id: 'professional', label: 'Pro', labelEN: 'Pro' },
+  { id: 'all', chiave: 'filterAllVoices' },
+  { id: 'premade', chiave: 'filterPremade' },
+  { id: 'cloned', chiave: 'filterCloned' },
+  { id: 'professional', chiave: 'filterPro' },
 ];
 
+// M e F non si traducono: sono iniziali, e restano le stesse ovunque.
 const GENDER_FILTERS = [
-  { id: 'all', label: 'Tutti', labelEN: 'All' },
-  { id: 'male', label: 'M', labelEN: 'M' },
-  { id: 'female', label: 'F', labelEN: 'F' },
+  { id: 'all', chiave: 'filterAllVoices', fisso: null },
+  { id: 'male', chiave: null, fisso: 'M' },
+  { id: 'female', chiave: null, fisso: 'F' },
 ];
 
 const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
@@ -49,7 +55,6 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   if (typeof document !== 'undefined') injectVTVKeyframes();
 
   const colors = S.colors;
-  const isIT = L('createRoom') === 'Crea Stanza';
 
   const [playingVoice, setPlayingVoice] = useState(null);
   const [testResults, setTestResults] = useState({});
@@ -264,9 +269,9 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2, letterSpacing: 0.3 }}>
                 {elAvailable
                   ? (elevenLabsVoices.length > 0
-                    ? `${elevenLabsVoices.length} ${isIT ? 'voci disponibili' : 'voices available'}`
-                    : (loadingEL ? (isIT ? 'Caricamento...' : 'Loading...') : (isIT ? 'Pronto' : 'Ready')))
-                  : (isIT ? 'Configura API key' : 'Configure API key')}
+                    ? `${elevenLabsVoices.length} ${L('voicesAvailable')}`
+                    : (loadingEL ? L('loading') : L('ready')))
+                  : L('configureApiKey')}
               </div>
             </div>
             {/* Status indicator */}
@@ -298,13 +303,11 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 4 }}>
             <Icon name="speaker" size={17} color={teal} />
             <span style={{ fontSize: 14, fontWeight: 800, color: '#fff' }}>
-              {isIT ? 'Voce standard — gratuita' : 'Standard voice — free'}
+              {L('standardVoiceFree')}
             </span>
           </div>
           <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5, marginBottom: 12 }}>
-            {isIT
-              ? 'È la voce che senti di norma. Tocca una lingua per ascoltarla.'
-              : 'This is the voice you normally hear. Tap a language to listen.'}
+            {L('standardVoiceHint')}
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
             {['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja'].map(codice => {
@@ -366,12 +369,10 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           }}>
             <Icon name="key" size={32} color="rgba(255,255,255,0.3)" />
             <div style={{ fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginTop: 12 }}>
-              {isIT ? 'Chiave API ElevenLabs necessaria' : 'ElevenLabs API key required'}
+              {L('elKeyRequired')}
             </div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 6, lineHeight: 1.5 }}>
-              {isIT
-                ? 'Vai su Impostazioni > API Keys per configurare la tua chiave ElevenLabs'
-                : 'Go to Settings > API Keys to configure your ElevenLabs key'}
+              {L('elKeyRequiredHint')}
             </div>
             <button onClick={() => setView('settings')} style={{
               marginTop: 16, padding: '10px 24px', borderRadius: 14, cursor: 'pointer',
@@ -380,7 +381,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               color: gold, fontSize: 13, fontWeight: 700, fontFamily: FONT,
               WebkitTapHighlightColor: 'transparent',
             }}>
-              <Icon name="settings" size={14} color={gold} /> {isIT ? 'Impostazioni' : 'Settings'}
+              <Icon name="settings" size={14} color={gold} /> {L('settings')}
             </button>
           </div>
         )}
@@ -402,7 +403,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                placeholder={isIT ? 'Cerca voce...' : 'Search voice...'}
+                placeholder={L('searchVoice')}
                 style={{
                   width: '100%', padding: '12px 14px 12px 40px', borderRadius: 16,
                   background: 'rgba(10,13,26,0.8)',
@@ -429,7 +430,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                     fontSize: 11, fontWeight: 600, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
-                  }}>{isIT ? f.label : f.labelEN}</button>
+                  }}>{L(f.chiave)}</button>
                 );
               })}
               <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.06)', alignSelf: 'center', margin: '0 4px' }} />
@@ -444,7 +445,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                     fontSize: 11, fontWeight: 600, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
-                  }}>{isIT ? f.label : f.labelEN}</button>
+                  }}>{f.fisso || L(f.chiave)}</button>
                 );
               })}
             </div>
@@ -469,7 +470,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               <Icon name="refresh" size={24} color={gold} />
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)' }}>
-              {isIT ? 'Caricamento voci ElevenLabs...' : 'Loading ElevenLabs voices...'}
+              {L('loadingELVoices')}
             </div>
           </div>
         )}
@@ -485,7 +486,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '0 4px 4px',
               letterSpacing: 0.5,
             }}>
-              {filteredVoices.length} {isIT ? 'voci' : 'voices'}
+              {filteredVoices.length} {L('voicesWord')}
               {searchQuery && ` — "${searchQuery}"`}
             </div>
 
@@ -599,7 +600,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                         border: `1px solid ${voiceAccent}30`,
                         color: voiceAccent,
                         fontSize: 9, fontWeight: 800, letterSpacing: 0.5,
-                      }}>{isIT ? 'ATTIVA' : 'ACTIVE'}</div>
+                      }}>{L('voiceActive')}</div>
                     )}
                   </div>
                 </button>
@@ -618,7 +619,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             marginBottom: 16,
           }}>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
-              {isIT ? 'Nessuna voce corrisponde ai filtri' : 'No voices match filters'}
+              {L('noVoicesMatch')}
             </div>
             <button onClick={() => { setCategoryFilter('all'); setGenderFilter('all'); setSearchQuery(''); }} style={{
               marginTop: 10, padding: '8px 18px', borderRadius: 12, cursor: 'pointer',
@@ -643,7 +644,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             transition: 'all 0.2s ease',
           }}>
             <Icon name="refresh" size={14} color="rgba(255,255,255,0.4)" />
-            {isIT ? 'Ricarica voci' : 'Reload voices'}
+            {L('reloadVoices')}
           </button>
         )}
 
@@ -658,14 +659,14 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
             fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.25)',
             textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8,
           }}>
-            {isIT ? 'Motori vocali attivi' : 'Active voice engines'}
+            {L('activeVoiceEngines')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {[
-              { name: 'ElevenLabs', ok: elAvailable, note: isIT ? 'Voci premium' : 'Premium voices', color: gold },
-              { name: 'Edge TTS', ok: true, note: isIT ? 'Automatico, gratuito' : 'Automatic, free', color: teal },
-              { name: 'OpenAI TTS', ok: hasApiAccess, note: isIT ? 'Fallback' : 'Fallback', color: purple },
-              { name: 'Browser', ok: typeof speechSynthesis !== 'undefined', note: isIT ? 'Ultimo fallback' : 'Last fallback', color: 'rgba(255,255,255,0.4)' },
+              { name: 'ElevenLabs', ok: elAvailable, note: L('enginePremium'), color: gold },
+              { name: 'Edge TTS', ok: true, note: L('engineAutoFree'), color: teal },
+              { name: 'OpenAI TTS', ok: hasApiAccess, note: L('engineFallback'), color: purple },
+              { name: 'Browser', ok: typeof speechSynthesis !== 'undefined', note: L('engineLastFallback'), color: 'rgba(255,255,255,0.4)' },
             ].map(e => (
               <div key={e.name} style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '4px 0',
@@ -687,9 +688,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           <div style={{
             fontSize: 9, color: 'rgba(255,255,255,0.18)', marginTop: 10, lineHeight: 1.5,
           }}>
-            {isIT
-              ? 'Le voci standard vengono selezionate automaticamente in base alla lingua. ElevenLabs ha la priorità quando disponibile.'
-              : 'Standard voices are selected automatically by language. ElevenLabs takes priority when available.'}
+            {L('voiceEnginesNote')}
           </div>
         </div>
 

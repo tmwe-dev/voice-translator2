@@ -1,6 +1,16 @@
 // Lightweight i18n — loads language packs on demand
 // Fallback languages (en, it) are loaded eagerly; others lazy-loaded
-// Total: 15 languages, 284 keys each
+// Total: 15 languages, 383 keys each
+//
+// b.136 — QUESTA E' LA LINGUA DELL'INTERFACCIA, NON QUELLA PARLATA.
+// Fino a b.135 erano la stessa cosa (`prefs.lang`), e non lo sono: un
+// italiano che parla con un americano vuole i menu in italiano e le
+// traduzioni in inglese. Ora chi chiama t() passa `prefs.uiLang`.
+//
+// Le due liste hanno anche lunghezze diverse, ed e il motivo per cui
+// mapLang() esiste: si parlano 44 lingue (LANGS in constants.js), ma
+// l'interfaccia e tradotta in 15. Chi sceglie il danese parla danese
+// e legge i menu in inglese — non c'e un pacchetto danese da caricare.
 import { createLogger } from './logger.js';
 import en from './locales/en.js';
 
@@ -8,6 +18,13 @@ const log = createLogger('i18n');
 import it from './locales/it.js';
 
 const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
+
+/**
+ * Le lingue in cui l'INTERFACCIA esiste davvero.
+ * Serve a chi disegna un selettore: proporre le 44 lingue parlate come
+ * lingua dei menu sarebbe una promessa non mantenuta.
+ */
+export const LINGUE_INTERFACCIA = SUPPORTED;
 
 /** Cache of loaded language packs */
 const T = { en, it };

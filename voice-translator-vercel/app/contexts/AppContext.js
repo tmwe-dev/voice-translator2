@@ -6,7 +6,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createContext, useContext, useCallback, useMemo } from 'react';
-import { t, preloadLang } from '../lib/i18n.js';
+import { t, mapLang } from '../lib/i18n.js';
 
 const AppContext = createContext(null);
 
@@ -15,8 +15,22 @@ const AppContext = createContext(null);
  * page.js passes all values; child components consume via useApp().
  */
 export function AppProvider({ children, value }) {
-  // Memoize the L function so it doesn't change on every render
-  const L = useCallback((key) => t(value.prefs?.lang || 'it', key), [value.prefs?.lang]);
+  // ── b.136 · L() SEGUE LA LINGUA DELL'INTERFACCIA, NON QUELLA PARLATA ──
+  //
+  // Questa riga diceva:
+  //     t(value.prefs?.lang || 'it', key)
+  //
+  // cioe traduceva i menu nella lingua in cui l'utente PARLA. Sono due
+  // cose diverse e servono a due scopi opposti: un italiano che parla
+  // con un americano mette "en" perche vuole le TRADUZIONI in inglese,
+  // e si ritrovava tutta l'applicazione in inglese.
+  //
+  // Il ripiego su 'it' era il secondo difetto: chi non aveva ancora
+  // scelto niente vedeva l'italiano, non la sua lingua. Ora si ripiega
+  // sulla lingua parlata (mappata sulle 15 dell'interfaccia) e solo in
+  // ultima istanza sull'inglese, che e la lingua di riserva di t().
+  const linguaInterfaccia = value.prefs?.uiLang || mapLang(value.prefs?.lang || 'en');
+  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia]);
 
   const ctx = useMemo(() => ({
     // ── i18n ──

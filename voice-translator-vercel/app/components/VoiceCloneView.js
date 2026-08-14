@@ -11,7 +11,11 @@ const MIN_DURATION = 30; // ElevenLabs requires at least 30s for instant voice c
 
 export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned, creditBalance }) {
   const { L, S, prefs, setView, theme } = useApp();
-  const isIT = L('createRoom') === 'Crea Stanza';
+  // b.136 — via `isIT`: ventitre ternari italiano/inglese, e questa era
+  // la schermata piu compromessa di tutte. Con l'applicazione in
+  // spagnolo o in giapponese usciva INTERAMENTE in inglese — "Clone
+  // Your Voice", "Setup Microphone", "Enable Microphone" — perche
+  // l'unica alternativa all'italiano era l'inglese.
   const [step, setStep] = useState(0); // 0=mic, 1=record, 2=review
   const [cloning, setCloning] = useState(false);
   const [cloneError, setCloneError] = useState('');
@@ -104,7 +108,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             <Icon name="chevDown" size={20} color={C.textMuted} style={{transform:'rotate(90deg)'}} />
           </button>
           <div style={{fontSize:18, fontWeight:800, color:C.textPrimary}}>
-            {isIT ? 'Campiona la tua Voce' : 'Clone Your Voice'}
+            {L('cloneTitle')}
           </div>
           <div style={{width:36}} />
         </div>
@@ -122,18 +126,16 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
           <div style={{...S.card, width:'100%', maxWidth:400, textAlign:'center', padding:'30px 24px'}}>
             <div style={{fontSize:56, marginBottom:16}}>{'\u{1F3A4}'}</div>
             <div style={{fontSize:16, fontWeight:700, color:C.textPrimary, marginBottom:8}}>
-              {isIT ? 'Configura il Microfono' : 'Setup Microphone'}
+              {L('cloneMicSetup')}
             </div>
             <div style={{fontSize:12, color:C.textMuted, marginBottom:20, lineHeight:1.5}}>
-              {isIT
-                ? 'Per creare la tua voce personalizzata, registrerai alcuni paragrafi leggendoli ad alta voce. Assicurati di essere in un ambiente silenzioso.'
-                : 'To create your custom voice, you\'ll record a few paragraphs by reading them aloud. Make sure you\'re in a quiet environment.'}
+              {L('cloneMicIntro')}
             </div>
 
             {recorder.hasPermission === false && (
               <div style={{fontSize:12, color:C.accent3 || PALETTE.coral, marginBottom:12, padding:'8px 12px',
                 borderRadius:10, background:C.accent3Bg || 'rgba(255,107,107,0.1)'}}>
-                {isIT ? 'Permesso microfono negato. Controlla le impostazioni del browser.' : 'Microphone permission denied. Check browser settings.'}
+                {L('cloneMicDenied')}
               </div>
             )}
 
@@ -141,16 +143,16 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
               style={{width:'100%', padding:'14px 20px', borderRadius:14, border:'none', cursor:'pointer',
                 background:`linear-gradient(135deg, ${C.accent1}, ${C.accent2 || C.accent1})`,
                 color:'#fff', fontSize:14, fontWeight:700, fontFamily:FONT}}>
-              {isIT ? 'Attiva Microfono' : 'Enable Microphone'}
+              {L('cloneEnableMic')}
             </button>
 
             {/* Tips */}
             <div style={{marginTop:20, textAlign:'left'}}>
               {[
-                isIT ? 'Ambiente silenzioso, senza eco' : 'Quiet environment, no echo',
-                isIT ? 'Parla a volume normale e naturale' : 'Speak at normal, natural volume',
-                isIT ? 'Tieni il telefono a 15-20 cm dalla bocca' : 'Hold phone 15-20 cm from mouth',
-                isIT ? 'Minimo 30 secondi di registrazione' : 'Minimum 30 seconds of recording',
+                L('cloneTipQuiet'),
+                L('cloneTipVolume'),
+                L('cloneTipDistance'),
+                L('cloneTipMinDuration'),
               ].map((tip, i) => (
                 <div key={i} style={{fontSize:11, color:C.textTertiary, display:'flex', alignItems:'center', gap:6, marginBottom:6}}>
                   <span style={{color:C.accent4 || C.onlineColor}}>{'\u2705'}</span> {tip}
@@ -179,7 +181,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             {/* Teleprompter */}
             <div style={{...S.card, padding:'16px 18px', marginBottom:12, maxHeight:200, overflowY:'auto'}}>
               <div style={{fontSize:10, fontWeight:700, color:C.textMuted, marginBottom:8, textTransform:'uppercase', letterSpacing:0.5}}>
-                {isIT ? `Paragrafo ${currentParagraph + 1} di ${script.paragraphs.length}` : `Paragraph ${currentParagraph + 1} of ${script.paragraphs.length}`}
+                {`${L('cloneParagraph')} ${currentParagraph + 1} ${L('ofWord')} ${script.paragraphs.length}`}
               </div>
               <div style={{fontSize:14, lineHeight:1.6, color:C.textPrimary}}>
                 {script.paragraphs[currentParagraph]}
@@ -223,9 +225,9 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             {/* Progress bar */}
             <div style={{marginBottom:16}}>
               <div style={{display:'flex', justifyContent:'space-between', fontSize:10, color:C.textMuted, marginBottom:4}}>
-                <span>{Math.floor(recorder.totalDuration)}s / {MIN_DURATION}s {isIT ? 'minimo' : 'minimum'}</span>
+                <span>{Math.floor(recorder.totalDuration)}s / {MIN_DURATION}s {L('cloneMinimum')}</span>
                 <span style={{color: ready ? (C.accent4 || C.onlineColor) : C.textMuted}}>
-                  {ready ? (isIT ? 'Pronto!' : 'Ready!') : `${Math.round(pct)}%`}
+                  {ready ? L('cloneReady') : `${Math.round(pct)}%`}
                 </span>
               </div>
               <div style={{height:6, borderRadius:3, background:C.overlayBg || 'rgba(255,255,255,0.05)', overflow:'hidden'}}>
@@ -241,7 +243,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             {recorder.segments.length > 0 && (
               <div style={{marginBottom:12}}>
                 <div style={{fontSize:10, fontWeight:700, color:C.textMuted, marginBottom:6, textTransform:'uppercase'}}>
-                  {isIT ? 'Segmenti registrati' : 'Recorded segments'} ({recorder.segments.length})
+                  {L('cloneRecordedSegments')} ({recorder.segments.length})
                 </div>
                 {recorder.segments.map((seg, i) => (
                   <div key={i} style={{display:'flex', alignItems:'center', gap:8, padding:'8px 10px', marginBottom:4,
@@ -254,7 +256,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                       {playingIdx === i ? '\u23F8' : '\u25B6'}
                     </button>
                     <div style={{flex:1, fontSize:12, color:C.textSecondary}}>
-                      {isIT ? 'Segmento' : 'Segment'} {i + 1} — {Math.floor(seg.duration)}s
+                      {L('cloneSegment')} {i + 1} — {Math.floor(seg.duration)}s
                     </div>
                     <button onClick={() => recorder.deleteSegment(i)}
                       style={{width:24, height:24, borderRadius:6, border:`1px solid ${C.overlayBorder}`,
@@ -273,7 +275,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 style={{width:'100%', padding:'14px 20px', borderRadius:14, border:'none', cursor:'pointer',
                   background:`linear-gradient(135deg, ${C.accent4 || C.onlineColor}, ${C.accent1})`,
                   color:'#fff', fontSize:14, fontWeight:700, fontFamily:FONT}}>
-                {isIT ? 'Prosegui \u2192' : 'Continue \u2192'}
+                {L('cloneContinue')} {'\u2192'}
               </button>
             )}
           </div>
@@ -285,13 +287,13 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             <div style={{...S.card, padding:'20px 18px', marginBottom:16, textAlign:'center'}}>
               <div style={{fontSize:40, marginBottom:12}}>{'\u{1F3B5}'}</div>
               <div style={{fontSize:16, fontWeight:700, color:C.textPrimary, marginBottom:6}}>
-                {isIT ? 'Anteprima Registrazione' : 'Recording Preview'}
+                {L('clonePreview')}
               </div>
               <div style={{fontSize:24, fontWeight:800, color:C.accent1, marginBottom:4}}>
                 {Math.floor(recorder.totalDuration)}s
               </div>
               <div style={{fontSize:11, color:C.textMuted}}>
-                {recorder.segments.length} {isIT ? 'segmenti' : 'segments'}
+                {recorder.segments.length} {L('cloneSegmentsWord')}
               </div>
             </div>
 
@@ -308,7 +310,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 </button>
                 <div style={{flex:1}}>
                   <div style={{fontSize:13, fontWeight:600, color:C.textPrimary}}>
-                    {isIT ? 'Segmento' : 'Segment'} {i + 1}
+                    {L('cloneSegment')} {i + 1}
                   </div>
                   <div style={{fontSize:10, color:C.textMuted}}>{Math.floor(seg.duration)}s</div>
                 </div>
@@ -326,7 +328,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
               style={{width:'100%', marginTop:12, padding:'10px', borderRadius:10,
                 background:'transparent', border:`1px solid ${C.overlayBorder}`,
                 color:C.textSecondary, fontSize:12, cursor:'pointer', fontFamily:FONT}}>
-              {isIT ? '\u{1F3A4} Registra ancora' : '\u{1F3A4} Record more'}
+              {'\u{1F3A4}'} {L('cloneRecordMore')}
             </button>
 
             {/* Clone button */}
@@ -337,15 +339,15 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
                 color:'#fff', fontSize:15, fontWeight:700, fontFamily:FONT,
                 opacity: cloning ? 0.6 : 1, display:'flex', alignItems:'center', justifyContent:'center', gap:8}}>
               {cloning ? (
-                <>{isIT ? 'Creazione voce in corso...' : 'Creating voice...'}</>
+                <>{L('cloneCreating')}</>
               ) : (
-                <><span>{'\u2728'}</span> {isIT ? 'Crea la tua Voce' : 'Create Your Voice'}</>
+                <><span>{'\u2728'}</span> {L('cloneCreateVoice')}</>
               )}
             </button>
 
             {/* Cost info */}
             <div style={{fontSize:10, color:C.textMuted, textAlign:'center', marginTop:8}}>
-              {isIT ? 'Costo: 500 crediti (\u20AC5.00)' : 'Cost: 500 credits (\u20AC5.00)'}
+              {L('cloneCost')}
             </div>
 
             {/* b.135 — l'errore si porta sotto gli occhi da solo.
@@ -371,19 +373,17 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
             <div style={{...S.card, padding:'30px 24px'}}>
               <div style={{fontSize:56, marginBottom:16}}>{'\u{1F389}'}</div>
               <div style={{fontSize:20, fontWeight:800, color:C.accent4 || C.onlineColor, marginBottom:8}}>
-                {isIT ? 'Voce Creata!' : 'Voice Created!'}
+                {L('cloneDone')}
               </div>
               <div style={{fontSize:13, color:C.textSecondary, marginBottom:20, lineHeight:1.5}}>
-                {isIT
-                  ? 'La tua voce personalizzata è pronta. Ora puoi selezionarla nel voice picker della chat come "La mia voce".'
-                  : 'Your custom voice is ready. You can now select it in the chat voice picker as "My Voice".'}
+                {L('cloneDoneDesc')}
               </div>
 
               <button onClick={() => setView('settings')}
                 style={{width:'100%', padding:'14px 20px', borderRadius:14, border:'none', cursor:'pointer',
                   background:`linear-gradient(135deg, ${C.accent1}, ${C.accent4 || C.onlineColor})`,
                   color:'#fff', fontSize:14, fontWeight:700, fontFamily:FONT}}>
-                {isIT ? 'Torna alle Impostazioni' : 'Back to Settings'}
+                {L('cloneBackToSettings')}
               </button>
             </div>
           </div>

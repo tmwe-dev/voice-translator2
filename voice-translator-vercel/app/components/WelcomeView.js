@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
+import { getLang, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
+import { getPaese } from '../lib/paesi.js';
 import AvatarImg from './AvatarImg.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
@@ -13,8 +14,12 @@ import { IconGlobe, IconMic, IconBattery } from './Icons.js';
 //
 // 3-phase progressive onboarding:
 //   Phase 0: HERO — Value proposition + Google Sign-In + Skip
-//   Phase 1: SETUP — Language + Name (combined, compact)
+//   Phase 1: SETUP — Nome (il paese e gia scelto: qui si riepiloga)
 //   Phase 2: PROFILE — Avatar selection + Start
+//
+// b.136 — la fase 1 chiedeva anche la lingua. Non piu: la lingua nasce
+// dal paese, e il paese si sceglie in SceltaPaeseView che gira PRIMA
+// di questa schermata. Qui resta il nome, che nessun'altra schermata sa.
 //
 // Design: Dark ambient glassmorphism, floating orbs,
 //         gradient text, staggered animations
@@ -27,7 +32,6 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
   const [phase, setPhase] = useState(0);
   const [entered, setEntered] = useState(false);
   const [authError, setAuthError] = useState('');
-  const [showAllLangs, setShowAllLangs] = useState(false);
   // Codice regalo/voucher: lo teniamo da parte e la batteria lo riscatta dopo il login
   const [codicePromo, setCodicePromo] = useState('');
 
@@ -111,16 +115,16 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
     return () => clearInterval(t);
   }, [initGoogleSignIn]);
 
-  // Auto-detect browser language
-  const autoDetectedRef = useRef(false);
-  useEffect(() => {
-    if (autoDetectedRef.current) return;
-    autoDetectedRef.current = true;
-    try { const saved = localStorage.getItem('vt-prefs'); if (saved) return; } catch (e) { console.warn('[WelcomeView] localStorage error:', e?.message); }
-    const browserLang = (navigator.language || 'en').split('-')[0];
-    const matched = LANGS.find(l => l.code === browserLang);
-    if (matched) setPrefs(p => ({ ...p, lang: matched.code }));
-  }, []);
+  // b.136 — QUI C'ERA L'INDOVINELLO DELLA LINGUA, ed e stato tolto.
+  //
+  // Leggeva `navigator.language`, tagliava via la regione ("it-IT" ->
+  // "it") e ci scriveva `prefs.lang`. Due difetti: buttava via proprio
+  // l'informazione piu utile — la regione, che dice il PAESE — e
+  // impostava una lingua sola per due mestieri diversi.
+  //
+  // Adesso lo fa SceltaPaeseView, che gira prima di questa schermata e
+  // usa regione e fuso orario insieme. Quando si arriva qui il paese e
+  // gia scelto: questa schermata non lo tocca piu, lo mostra soltanto.
 
   // Transition animation on phase change
   useEffect(() => {
@@ -150,9 +154,9 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
     transition: `all 0.55s cubic-bezier(0.16, 1, 0.3, 1) ${base + i * 0.08}s`,
   });
 
-  // Popular languages
-  const popularLangs = ['it', 'en', 'es', 'fr', 'de', 'th', 'zh', 'ja', 'pt', 'ar', 'ko', 'ru'].map(c => LANGS.find(l => l.code === c)).filter(Boolean);
-  const displayLangs = showAllLangs ? LANGS : popularLangs;
+  // Il paese scelto un attimo prima: qui si mostra, non si ri-chiede.
+  const paese = getPaese(prefs.country);
+  const linguaParlata = getLang(prefs.lang);
 
   // Feature pills — icone MONO a filo sottile, mai emoji
   const features = [
@@ -365,45 +369,39 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               {Lf('setupSubtitle', 'Lingua e nome — 30 secondi')}
             </div>
 
-            {/* Language Grid */}
-            <div style={{ width: '100%', marginBottom: 20, ...stagger(2) }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: D.textMuted, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 1.2 }}>
-                {Lf('yourLanguage', 'La tua lingua')}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-                {displayLangs.map((lang) => {
-                  const isSel = lang.code === prefs.lang;
-                  return (
-                    <button key={lang.code}
-                      onClick={() => { setPrefs({ ...prefs, lang: lang.code }); setShowAllLangs(false); }}
-                      style={{
-                        padding: '10px 4px', borderRadius: 12,
-                        border: isSel ? `2px solid ${D.neon1}` : '2px solid rgba(255,255,255,0.05)',
-                        background: isSel ? `${D.neon1}12` : 'rgba(255,255,255,0.02)',
-                        color: isSel ? D.neon1 : D.textSoft,
-                        fontFamily: FONT, fontSize: 10, fontWeight: 600, cursor: 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                        transition: 'all 0.25s', WebkitTapHighlightColor: 'transparent',
-                        boxShadow: isSel ? `0 4px 12px ${D.neon1}15` : 'none',
-                      }}>
-                      <span style={{ fontSize: 22 }}>{lang.flag}</span>
-                      <span style={{ lineHeight: 1.1 }}>{lang.name.split(' ')[0]}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              {!showAllLangs && (
-                <button onClick={() => setShowAllLangs(true)}
-                  style={{
-                    width: '100%', padding: 10, marginTop: 8, borderRadius: 12,
-                    background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)',
-                    color: D.textMuted, fontFamily: FONT, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    WebkitTapHighlightColor: 'transparent',
-                  }}>
-                  {Lf('showMore', '+ Mostra tutte le lingue')}
-                </button>
-              )}
-            </div>
+            {/* ── b.136 · QUI C'ERA UN SECONDO SELETTORE DI LINGUA ──
+                Una griglia di dodici bandierine che scriveva `prefs.lang`
+                e nient'altro: il paese non lo sapeva, e la lingua
+                dell'interfaccia nemmeno. Chiedere due volte la stessa
+                cosa in due schermate di fila, con due esiti diversi, e
+                il modo piu sicuro di farle divergere.
+                Ora si mostra cosa e stato scelto un attimo prima, con la
+                via per tornare indietro se ci si e sbagliati. */}
+            <button onClick={() => setView('paese')}
+              style={{ width: '100%', marginBottom: 20, padding: '13px 15px', borderRadius: 16,
+                display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left', cursor: 'pointer',
+                background: 'rgba(255,255,255,0.03)', border: `1px solid ${D.glassBorder}`,
+                fontFamily: FONT, WebkitTapHighlightColor: 'transparent', ...stagger(2) }}>
+              <span style={{ fontSize: 27, lineHeight: 1 }}>{paese?.bandiera || linguaParlata.flag}</span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: 1.2,
+                  textTransform: 'uppercase', color: D.textMuted }}>
+                  {Lf('countryLabel', 'Paese')}
+                </span>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: D.text, marginTop: 2 }}>
+                  {paese?.nome || linguaParlata.name}
+                </span>
+                <span style={{ display: 'block', fontSize: 11.5, color: D.textMuted, marginTop: 2 }}>
+                  {linguaParlata.name}
+                </span>
+              </span>
+              {/* Una freccia e non una parola: qui non c'e una chiave
+                  "cambia" in quindici lingue, e inventarne una a meta
+                  sarebbe tornare al problema di partenza. */}
+              <span aria-hidden="true" style={{ fontSize: 20, fontWeight: 700, color: D.neon1, flexShrink: 0, lineHeight: 1 }}>
+                {'›'}
+              </span>
+            </button>
 
             {/* Name Input */}
             <div style={{ width: '100%', marginBottom: 24, ...stagger(3) }}>
@@ -501,7 +499,7 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
               <div>
                 <div style={{ fontSize: 16, fontWeight: 700 }}>{prefs.name}</div>
                 <div style={{ fontSize: 12, color: D.textMuted }}>
-                  {LANGS.find(l => l.code === prefs.lang)?.flag} {LANGS.find(l => l.code === prefs.lang)?.name}
+                  {paese?.bandiera || linguaParlata.flag} {paese?.nome || linguaParlata.name}
                 </div>
               </div>
             </div>

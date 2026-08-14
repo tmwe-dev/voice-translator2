@@ -26,6 +26,9 @@ import useElevenLabsSync from './hooks/useElevenLabsSync.js';
 
 // ═══ CRITICAL PATH: eagerly loaded components (always visible) ═══
 import WelcomeView from './components/WelcomeView.js';
+// b.136 — la scelta del paese e la PRIMA schermata: non puo essere
+// pigra, altrimenti al primo avvio si vede lo spinner al posto suo.
+import SceltaPaeseView from './components/SceltaPaeseView.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -100,7 +103,10 @@ function HomeInner() {
   // LOCAL STATE
   // =============================================
   const [view, setView] = useState('loading');
-  const [prefs, setPrefs] = useState({ name:'', lang:'it', avatar:AVATARS[0], voice:'nova', autoPlay:true });
+  // b.136 — `lang` e la lingua PARLATA, `uiLang` quella dell'INTERFACCIA,
+  // `country` il paese (bandiera del profilo). Prima esisteva solo
+  // `lang` e faceva tutti e tre i mestieri.
+  const [prefs, setPrefs] = useState({ name:'', lang:'it', uiLang:'it', country:'IT', avatar:AVATARS[0], voice:'nova', autoPlay:true });
   const [convHistory, setConvHistory] = useState([]);
   // b.123 — senza account l'archivio sul server non esiste (e non puo
   // esistere: non c'e niente a cui legarlo). Va detto, altrimenti
@@ -983,8 +989,28 @@ function HomeInner() {
   // =============================================
   // i18n — preload language pack when user switches language
   // =============================================
-  useEffect(() => { if (prefs.lang) preloadLang(prefs.lang); }, [prefs.lang]);
-  const L = (key) => t(prefs.lang, key);
+  // b.136 — si precaricava e si traduceva con `prefs.lang`, la lingua
+  // PARLATA. Il pacchetto giusto e quello dell'INTERFACCIA: sono due
+  // impostazioni distinte da questa versione, e chi parla danese non
+  // deve far scaricare un pacchetto danese che non esiste.
+  const linguaInterfaccia = prefs.uiLang || mapLang(prefs.lang || 'en');
+  useEffect(() => { preloadLang(linguaInterfaccia); }, [linguaInterfaccia]);
+  const L = (key) => t(linguaInterfaccia, key);
+
+  // b.136 — la scelta del paese si raggiunge da tre punti diversi: il
+  // primo avvio, il riepilogo nel benvenuto e la riga "Paese" nelle
+  // impostazioni. Mandarli tutti e tre su 'welcome' butterebbe un
+  // utente di vecchia data dentro l'onboarding solo per aver cambiato
+  // bandiera. Si tiene da parte da dove si e venuti.
+  const vistaPrimaDelPaese = useRef('loading');
+  useEffect(() => { if (view !== 'paese') vistaPrimaDelPaese.current = view; }, [view]);
+  const dopoLaSceltaDelPaese = () => {
+    const prima = vistaPrimaDelPaese.current;
+    // 'loading' vuol dire primo avvio: di li si prosegue col benvenuto
+    // (o dritti nella stanza, se c'e un invito in mano).
+    if (prima === 'loading' || prima === 'paese') { setView(joinCode ? 'join' : 'welcome'); return; }
+    setView(prima);
+  };
 
   // ═══ AppProvider — EVERY view is wrapped so useApp() works anywhere ═══
   const appCtxValue = {
@@ -1038,6 +1064,13 @@ function HomeInner() {
         }} />
       </div>
     </div>
+  );
+
+  // b.136 — viene PRIMA di 'welcome', ed e voluto: senza paese non si
+  // sa in che lingua scrivere la schermata di benvenuto. Chi arriva da
+  // un invito non passa di qui (useInitializeApp manda dritto a 'join').
+  if (view === 'paese') return wrap(
+    <SceltaPaeseView onFatto={dopoLaSceltaDelPaese} />
   );
 
   if (view === 'welcome') return wrap(

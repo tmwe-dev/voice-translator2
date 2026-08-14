@@ -41,6 +41,11 @@ function detectLang() {
   try {
     const rawPrefs = localStorage.getItem('vt-prefs') || '{}';
     let prefs; try { prefs = JSON.parse(rawPrefs); } catch { prefs = null; }
+    // b.136 — leggeva solo `prefs.lang`, la lingua PARLATA: chi ha i
+    // menu in italiano e parla inglese si vedeva la pagina pubblica in
+    // inglese. `uiLang` e la lingua in cui legge; `lang` resta come
+    // ripiego per chi ha preferenze salvate da prima di b.136.
+    if (prefs?.uiLang) return mapLang(prefs.uiLang);
     if (prefs?.lang) return mapLang(prefs.lang);
   } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
   // 3. Browser language
