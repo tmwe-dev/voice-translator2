@@ -203,3 +203,53 @@ describe('Mondo solo scritto (b.152)', () => {
     expect(guardie.length).toBe(2); // voce E video: nasconderne uno solo e una mezza regola
   });
 });
+
+// ── b.153: la scheda rispetta gli autori, i video passano dalla via ufficiale ──
+
+describe('Scheda e video (b.153)', () => {
+  const senzaCommentiB153 = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+  it('la scheda usa SOLO l\'embed nocookie di YouTube, mai copie del video', () => {
+    // Sorgente GREZZO: il toglicommenti mangerebbe il "//" dell'URL
+    // (trappola 6 del CLAUDE.md, versione speculare).
+    const src = fs.readFileSync(path.resolve(__dirname, '../app/components/SchedaArgomento.js'), 'utf8');
+    expect(src).toContain('youtube-nocookie.com/embed/');
+  });
+
+  it('la scheda porta sempre alla fonte: "Leggi su" con nome della testata', () => {
+    const src = senzaCommentiB153('../app/components/SchedaArgomento.js');
+    expect(src).toContain("L('schedaLeggiSu')");
+    expect(src).toContain('rel="noopener noreferrer"');
+  });
+
+  it('il riassunto vieta al modello di inventare fatti', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../app/api/topics/riassunto/route.js'), 'utf8');
+    expect(src).toContain('SOLO le informazioni presenti nei dati');
+    expect(src).toContain('deductCredits');
+    expect(src).toContain('trackDailySpend');
+  });
+
+  it('la CSP consente il player nocookie in ENTRAMBE le definizioni', () => {
+    for (const f of ['../middleware.js', '../next.config.mjs']) {
+      expect(fs.readFileSync(path.resolve(__dirname, f), 'utf8')).toContain('youtube-nocookie.com');
+    }
+  });
+
+  it('i video si estraggono dalla pagina risultati, SENZA Data API (ordine di Luca)', async () => {
+    const { estraiVideoDaHtml } = await import('../app/lib/topics/video.js');
+    const campione = '{"videoRenderer":{"videoId":"abcDEF12345","x":1,"title":{"runs":[{"text":"Gran Premio, la sintesi"}]},"ownerText":{"runs":[{"text":"Canale Sport"}]}}}'
+      + '{"videoRenderer":{"videoId":"abcDEF12345","title":{"runs":[{"text":"doppione da scartare"}]}}}'
+      + '{"videoRenderer":{"videoId":"zzzZZZ99900","title":{"runs":[{"text":"Secondo video"}]}}}';
+    const video = estraiVideoDaHtml(campione);
+    expect(video).toHaveLength(2);
+    expect(video[0]).toMatchObject({ id: 'abcDEF12345', titolo: 'Gran Premio, la sintesi', canale: 'Canale Sport' });
+    expect(video[0].miniatura).toBe('https://i.ytimg.com/vi/abcDEF12345/hqdefault.jpg');
+  });
+
+  it('il modulo video non nomina la Data API: niente chiavi, niente quota', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../app/lib/topics/video.js'), 'utf8');
+    expect(src).not.toContain('YOUTUBE_API_KEY');
+    expect(src).not.toContain('googleapis.com');
+  });
+});

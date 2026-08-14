@@ -77,6 +77,7 @@ const LazyFallback = () => (
 // ═══ Navigation ═══
 import BottomNav from './components/BottomNav.js';
 import NewConversationSheet from './components/NewConversationSheet.js';
+import InvitaAmici, { INVITO_AMICI_VISTO } from './components/InvitaAmici.js';
 // TaxiMode is used inside RoomView, not standalone
 const AIView = lazy(() => import('./components/AIView.js'));
 const DetailView = lazy(() => import('./components/DetailView.js'));
@@ -173,6 +174,21 @@ function HomeInner() {
 
   // Tutorial state
   const [showTutorial, setShowTutorial] = useState(false);
+  // b.153 (#12) — il passo "porta i tuoi amici": una volta sola, quando
+  // il tutorial si chiude. Il segnalino sta sul telefono, non sul server.
+  const [showInvitaAmici, setShowInvitaAmici] = useState(false);
+  const tutorialEraAperto = useRef(false);
+  useEffect(() => {
+    if (showTutorial) { tutorialEraAperto.current = true; return; }
+    if (!tutorialEraAperto.current) return;
+    tutorialEraAperto.current = false;
+    try {
+      if (!localStorage.getItem(INVITO_AMICI_VISTO)) {
+        localStorage.setItem(INVITO_AMICI_VISTO, '1');
+        setShowInvitaAmici(true);
+      }
+    } catch { /* storage negato: niente invito, nessun dramma */ }
+  }, [showTutorial]);
   const [autoJoinTriggered, setAutoJoinTriggered] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
 
@@ -1242,6 +1258,7 @@ function HomeInner() {
         <TutorialOverlay tutorialStep={tutorialStep}
           setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} />
       )}
+      <InvitaAmici aperta={showInvitaAmici} onClose={() => setShowInvitaAmici(false)} />
       {bottomNav}
     </>
   );

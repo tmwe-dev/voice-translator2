@@ -18,6 +18,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import SchedaArgomento from './SchedaArgomento.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const CATEGORIE = [
@@ -54,6 +55,10 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const [daCache, setDaCache] = useState(false);
   const [errore, setErrore] = useState(false);
   const [chipAttiva, setChipAttiva] = useState(null);
+  // b.153 — la scheda di lettura/visione e i video di YouTube.
+  const [scheda, setScheda] = useState(null); // { tipo: 'articolo'|'video', dati }
+  const [video, setVideo] = useState(null);   // null = mai cercati
+  const [videoAttivi, setVideoAttivi] = useState(false);
   const abortRef = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -70,9 +75,25 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     }
   }, [L]);
 
+  // b.153 — i video viaggiano in parallelo agli articoli: la stessa
+  // query interroga anche YouTube (se la chiave c'e) e i risultati
+  // compaiono sotto le card. Il fallimento e silenzioso: senza chiave
+  // o senza quota, semplicemente niente sezione video.
+  const cercaVideoPer = useCallback(async (q) => {
+    setVideo(null);
+    try {
+      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`);
+      if (!r.ok) return;
+      const d = await r.json();
+      setVideoAttivi(!!d.disponibile);
+      if (d.disponibile) setVideo(d.video || []);
+    } catch { /* i video sono un di piu, mai un errore in faccia */ }
+  }, [lingua]);
+
   const cerca = useCallback(async (q, cat = 'notizie', fresca = false) => {
     const pulita = (q || '').trim();
     if (!pulita || cercando) return;
+    cercaVideoPer(pulita);
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -112,7 +133,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     } finally {
       setCercando(false);
     }
-  }, [lingua, cercando, descriviStadio]);
+  }, [lingua, cercando, descriviStadio, cercaVideoPer]);
 
   const cercaChip = useCallback((c) => {
     setChipAttiva(c.id);
@@ -268,8 +289,8 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
               riquadro esiste soltanto quando c'e una foto da farci
               stare dentro. */}
           {t.immagine && (
-            <div style={{
-              position: 'relative', aspectRatio: '16/9',
+            <div onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
+              position: 'relative', aspectRatio: '16/9', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
               overflow: 'hidden',
@@ -291,9 +312,11 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           )}
 
           <div style={{ padding: '12px 14px 13px' }}>
-            <h3 style={{
+            {/* b.153 — il titolo apre la scheda di lettura: sintesi
+                BarTalk, citazione attribuita, e "Leggi su [fonte]". */}
+            <h3 onClick={() => { vibrate(8); setScheda({ tipo: 'articolo', dati: t }); }} style={{
               margin: 0, fontSize: 15, fontWeight: 700, lineHeight: 1.35,
-              color: C.textPrimary, letterSpacing: -0.2,
+              color: C.textPrimary, letterSpacing: -0.2, cursor: 'pointer',
             }}>
               {t.titolo}
             </h3>
@@ -347,6 +370,63 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           {L('newsCobraCache')}
         </div>
       )}
+
+      {/* ─── I VIDEO (b.153): YouTube per la via ufficiale ─── */}
+      {videoAttivi && video?.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
+            {L('catVideo')}
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+            {video.slice(0, 8).map(v => (
+              <button key={v.id}
+                onClick={() => { vibrate(8); setScheda({ tipo: 'video', dati: v }); }}
+                style={{
+                  padding: 0, textAlign: 'left', cursor: 'pointer', overflow: 'hidden',
+                  borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`,
+                  fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
+                }}>
+                <div style={{ position: 'relative', aspectRatio: '16/9', background: '#000' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- miniatura YouTube */}
+                  <img src={v.miniatura} alt="" loading="lazy"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <span style={{
+                    position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{
+                      width: 38, height: 38, borderRadius: 19, background: 'rgba(0,0,0,0.55)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Icon name="play" size={16} color="#fff" />
+                    </span>
+                  </span>
+                </div>
+                <div style={{ padding: '8px 10px 10px' }}>
+                  <div style={{
+                    fontSize: 12.5, fontWeight: 600, lineHeight: 1.3, color: C.textPrimary,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {v.titolo}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 3 }}>{v.canale}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── La scheda di lettura/visione ─── */}
+      <SchedaArgomento
+        aperta={!!scheda} tipo={scheda?.tipo} dati={scheda?.dati} C={C}
+        onClose={() => setScheda(null)}
+        onParlane={() => {
+          const d = scheda?.dati;
+          if (d) onParlane?.(scheda.tipo === 'video'
+            ? { titolo: d.titolo, sintesi: d.canale ? `YouTube · ${d.canale}` : '' }
+            : d);
+          setScheda(null);
+        }} />
     </div>
   );
 }
