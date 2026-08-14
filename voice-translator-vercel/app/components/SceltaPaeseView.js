@@ -159,7 +159,18 @@ export default function SceltaPaeseView({ onFatto }) {
   const linguaSchermata = mapLang(attivo?.lingua || prefs.uiLang || 'en');
   const L = (chiave) => t(linguaSchermata, chiave);
 
-  useEffect(() => { preloadLang(linguaSchermata); }, [linguaSchermata]);
+  // b.146 — IL PACCHETTO ARRIVAVA E NESSUNO LO MOSTRAVA.
+  // preloadLang e asincrono: t() intanto ripiega sull'inglese, e quando
+  // il pacchetto arriva NIENTE qui cambia stato, quindi React non
+  // ridisegna. Provato dal vivo: toccando "Deutschland" la pagina
+  // restava in inglese finche qualcos'altro non la ridisegnava.
+  // Il contatore serve solo a forzare quel disegno mancante.
+  const [, setPacchettoArrivato] = useState(0);
+  useEffect(() => {
+    let vivo = true;
+    preloadLang(linguaSchermata).then(() => { if (vivo) setPacchettoArrivato(x => x + 1); });
+    return () => { vivo = false; };
+  }, [linguaSchermata]);
 
   // b.136-bis — L'ITALIA COMPARIVA DUE VOLTE.
   //

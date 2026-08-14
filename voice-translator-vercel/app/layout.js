@@ -129,6 +129,15 @@ export default function RootLayout({ children }) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(DATI_STRUTTURATI) }}
         />
+        {/* b.146 — Luca: "elimina quella barra laterale". Su macOS con
+            "mostra sempre le barre di scorrimento" ogni colonna interna
+            (scrollCenter, chatArea) disegnava una barra grigia spessa
+            accanto al contenuto. L'app ha l'aspetto di un telefono: lo
+            scorrimento resta (rotella, trackpad, touch), sparisce solo
+            l'indicatore. */}
+        <style dangerouslySetInnerHTML={{ __html:
+          `*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{width:0;height:0;display:none}`
+        }} />
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
         <SkipToContent />

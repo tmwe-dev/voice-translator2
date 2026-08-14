@@ -241,7 +241,8 @@ export default function JoinView({ joinCode,
               color: C.textPrimary, fontSize: 14, fontFamily: FONT, outline: 'none',
               boxSizing: 'border-box', appearance: 'none',
             }} value={myLang} onChange={e => { setMyLang(e.target.value); setPrefs(p => ({...p, lang: e.target.value})); }}>
-              {LANGS.map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+              {/* b.146 — elenco in ordine alfabetico, come chiesto da Luca */}
+              {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
 
@@ -484,7 +485,7 @@ export default function JoinView({ joinCode,
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6,
             marginBottom: 18, maxHeight: 240, overflowY: 'auto', padding: 2,
           }}>
-            {LANGS.map(l => (
+            {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => (
               <button key={l.code} onClick={() => { setMyLang(l.code); setPrefs(p => ({...p, lang: l.code})); }}
                 style={{
                   padding: '10px 6px', borderRadius: 12, textAlign: 'center', cursor: 'pointer', fontFamily: FONT,

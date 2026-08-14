@@ -201,7 +201,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   maxHeight: 280, overflowY: 'auto', padding: 6,
                   boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
                 }}>
-                  {LANGS.map(l => {
+                  {/* b.146 — Luca: "i paesi devono essere ordinati in ordine
+                      alfabetico". LANGS ha l'ordine storico del file, non
+                      quello che un occhio si aspetta scorrendo un elenco. */}
+                  {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => {
                     const isSelected = l.code === prefs.lang;
                     return (
                       <button key={l.code}

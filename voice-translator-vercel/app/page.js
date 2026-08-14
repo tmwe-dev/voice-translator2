@@ -901,6 +901,12 @@ function HomeInner() {
         setView('join');
         break;
       case 'stanza-community':
+        // b.146 — BOTTONE MORTO. CreateRoomSheet e montato SOLO dentro
+        // la vista 'mondo': da Home questo setShowCreateRoom accendeva
+        // un interruttore che nessun componente leggeva, e il "+" si
+        // chiudeva senza aprire niente. Provato dal vivo, due volte.
+        // Prima si va nella vista che ospita il foglio, poi lo si apre.
+        setView('mondo');
         setShowCreateRoom(true);
         break;
       case 'contatti':

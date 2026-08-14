@@ -124,7 +124,7 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
       </div>
 
       <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.5, marginBottom: 12 }}>
-        Dieci secondi: questa frase, nella lingua che scegli.
+        {L('demoTenSeconds')}
       </div>
 
       <div style={{

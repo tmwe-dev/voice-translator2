@@ -71,7 +71,7 @@ const TalkControls = memo(function TalkControls({
               })}}>
             {recording ? <IconSend size={26}/> : <IconMic size={30}/>}
             <span style={{fontSize:11, fontWeight:600, letterSpacing:0.2}}>
-              {recording ? 'Invia' : 'Parla'}
+              {recording ? L('sendBtn') : L('talkBtn')}
             </span>
           </button>
 
@@ -112,7 +112,7 @@ const TalkControls = memo(function TalkControls({
             <span style={{width:8, height:8, borderRadius:4,
               background: liveMode ? 'currentColor' : 'transparent',
               border:`1.5px solid currentColor`, transition:'background 0.15s'}} />
-            <span>Riduzione rumore{liveMode ? ' attiva' : ''}</span>
+            <span>{liveMode ? L('noiseReductionOn') : L('noiseReduction')}</span>
           </button>
         )}
         {/* ═══ FINE b.129 ═══ */}
