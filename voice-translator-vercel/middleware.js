@@ -19,14 +19,42 @@ const ALLOWED_ORIGINS = new Set([
   'http://localhost:3001',
 ].filter(Boolean));
 
+// ═══ b.130 · le nostre anteprime erano bloccate dalla nostra regola ═══
+//
+// La regex si aspettava `voice-translator(-hash).vercel.app`. Ma un
+// indirizzo Vercel vero e fatto cosi:
+//
+//     voice-translator2-n6q9te9sj-tmweapps-projects.vercel.app
+//     └── progetto ──┘└─ hash ──┘└──── team ─────┘
+//
+// tre segmenti, non due. E il nome predefinito era `voice-translator`
+// mentre il progetto si chiama `voice-translator2`.
+//
+// Risultato: OGNI anteprima veniva rifiutata dalle proprie API. Il
+// commento diceva "consenti solo le nostre" e non ne consentiva
+// nessuna — scoperto provando a far parlare due deploy fra loro.
+//
+// Il vincolo resta STRETTO, anzi si stringe: prima bastava
+// `progetto-qualcosa`, e chiunque poteva registrare su Vercel un
+// progetto chiamato `voice-translator2-evil` e passare. Ora si esige
+// anche lo slug del team, che non e registrabile da altri.
+const NOME_PROGETTO = process.env.VERCEL_PROJECT_NAME || 'voice-translator2';
+const SLUG_TEAM = process.env.VERCEL_TEAM_SLUG || 'tmweapps-projects';
+
 function isOriginAllowed(origin) {
   if (!origin) return true; // Same-origin requests (no Origin header)
   if (ALLOWED_ORIGINS.has(origin)) return true;
-  // Allow only our own Vercel preview deployments (project-specific pattern)
-  // Must start with exactly 'voice-translator-' followed by alphanumerics/hyphens, not arbitrary subdomains
-  const projectName = process.env.VERCEL_PROJECT_NAME || 'voice-translator';
-  const vercelRegex = new RegExp(`^https:\\/\\/${projectName}(-[a-z0-9]+)?\\.vercel\\.app$`);
-  if (vercelRegex.test(origin)) return true;
+
+  // 1. il dominio del progetto senza suffissi
+  if (origin === `https://${NOME_PROGETTO}.vercel.app`) return true;
+
+  // 2. un'anteprima NOSTRA: progetto + identificativo + team, esatti.
+  //    Lo slug del team e la parte che rende l'indirizzo non imitabile.
+  const anteprima = new RegExp(
+    `^https://${NOME_PROGETTO}-[a-z0-9]+-${SLUG_TEAM}\\.vercel\\.app$`
+  );
+  if (anteprima.test(origin)) return true;
+
   return false;
 }
 
@@ -79,7 +107,15 @@ export function middleware(request) {
 
     // If origin not allowed on API routes, deny
     if (pathname.startsWith('/api/') && !allowedOrigin && origin) {
-      return new NextResponse(null, { status: 403 });
+      // b.130 — prima era `new NextResponse(null, ...)`: un 403 senza
+      // corpo e senza content-type. Chi lo riceveva non aveva modo di
+      // capire cosa fosse successo, e nemmeno che fosse l'applicazione a
+      // rispondere. Ho perso mezz'ora a cercare il difetto nel posto
+      // sbagliato proprio per questo.
+      return new NextResponse(
+        JSON.stringify({ error: 'Origine non consentita', origine: origin }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
 
     return new NextResponse(null, {
@@ -106,8 +142,14 @@ export function middleware(request) {
       const allowedOrigin = origin || '*';
       response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
     } else if (origin) {
-      // Origin not allowed on API routes
-      return new NextResponse(null, { status: 403 });
+      // b.130 — il SECONDO 403 muto, ed e quello che rispondeva davvero
+      // alle richieste vere (il primo copre solo il preflight OPTIONS).
+      // Correggere solo l'altro sarebbe stata mezza correzione: il
+      // sintomo osservato — 403 senza corpo su POST — veniva da qui.
+      return new NextResponse(
+        JSON.stringify({ error: 'Origine non consentita', origine: origin }),
+        { status: 403, headers: { 'Content-Type': 'application/json' } }
+      );
     }
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
