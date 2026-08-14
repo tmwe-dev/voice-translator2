@@ -109,21 +109,46 @@ export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
  * 5xx, rete): un 403 o un 405 possono essere solo antipatia per HEAD,
  * e nel dubbio l'immagine si tiene — il ripiego grafico ora esiste.
  */
+// b.151 — LA VERIFICA MENTIVA SOTTO CARICO. Dal vivo (schermate di
+// Luca): tante card col fondale. Rifatta la prova da sola, la stessa
+// immagine risultava VIVA. Il motivo: durante la raffica (4 operai,
+// fino a 12 richieste in volo) qualche HEAD o qualche DNS sfora i
+// timeout, e il catch diceva "morta" a immagini sane. Tre cure:
+//   · i thumbnailer noti (Bing) non si verificano: e un CDN Microsoft,
+//     se e giu lui la foto e l'ultimo dei problemi;
+//   · per gli altri, un secondo tentativo prima del verdetto;
+//   · il verdetto "morta" solo su risposta CERTA, mai su timeout.
+const HOST_FIDATI = /(^|\.)bing\.com$|(^|\.)gstatic\.com$/;
+
 export async function immagineRaggiungibile(url, { timeoutMs = 4000 } = {}) {
+  let hostname = '';
+  try { hostname = new URL(url).hostname; } catch { return false; }
+  if (HOST_FIDATI.test(hostname)) return true;
+
+  // La SSRF resta fail-closed anche qui: se il DNS non risponde non si
+  // apre — e la regola di COBRA e non si ammorbidisce per una foto.
   try {
     const verdetto = await assertSSRFSafe(url);
     if (!verdetto.safe) return false;
-    const r = await fetch(url, {
-      method: 'HEAD',
-      headers: { 'User-Agent': UA },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (r.status === 404 || r.status === 410 || r.status >= 500) return false;
-    const tipo = r.headers.get('content-type') || '';
-    if (r.ok && tipo && !tipo.startsWith('image/')) return false;
-    return true;
   } catch { return false; }
+
+  for (let tentativo = 0; tentativo < 2; tentativo++) {
+    try {
+      const r = await fetch(url, {
+        method: 'HEAD',
+        headers: { 'User-Agent': UA },
+        redirect: 'follow',
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      if (r.status === 404 || r.status === 410 || r.status >= 500) return false;
+      const tipo = r.headers.get('content-type') || '';
+      if (r.ok && tipo && !tipo.startsWith('image/')) return false;
+      return true;
+    } catch { /* timeout o rete: si riprova una volta, poi si tiene */ }
+  }
+  // Due timeout di fila non sono una prova di morte: nel dubbio la
+  // foto si tiene — il fondale sotto l'immagine (b.149) copre il resto.
+  return true;
 }
 
 /**

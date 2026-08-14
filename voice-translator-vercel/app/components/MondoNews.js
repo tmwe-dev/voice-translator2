@@ -260,35 +260,35 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           marginBottom: 14, borderRadius: 18, overflow: 'hidden',
           background: C.card, border: bordo,
         }}>
-          {/* La miniatura: 16:9, col fondale SEMPRE pronto sotto.
-              b.149 — se l'immagine muore in volo, prima spariva il
-              riquadro (salto di layout) o restava un buco nero: ora
-              sotto ogni foto vive gia il fondale con l'iniziale della
-              fonte, e onError toglie SOLO il livello <img>. */}
-          <div style={{
-            position: 'relative', aspectRatio: t.immagine ? '16/9' : '21/9',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
-            overflow: 'hidden',
-          }}>
-            <span style={{ fontSize: 26, fontWeight: 800, color: `${C.accent}55`, letterSpacing: 1 }}>
-              {(t.fonti[0]?.fonte || '·').slice(0, 1).toUpperCase()}
-            </span>
-            {t.immagine && (
-              <>
-                {/* eslint-disable-next-line @next/next/no-img-element -- immagine
-                    esterna di dominio ignoto: next/image richiederebbe la lista
-                    dei domini, che per le news non esiste */}
-                <img src={t.immagine} alt="" loading="lazy" referrerPolicy="no-referrer"
-                  onError={e => { e.currentTarget.style.display = 'none'; }}
-                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                <div style={{
-                  position: 'absolute', inset: 0, pointerEvents: 'none',
-                  background: 'linear-gradient(180deg, transparent 55%, rgba(5,7,15,0.85))',
-                }} />
-              </>
-            )}
-          </div>
+          {/* La miniatura: 16:9, col fondale pronto SOTTO la foto.
+              b.149 — se l'immagine muore in volo, onError toglie solo
+              il livello <img> e resta il fondale con l'iniziale.
+              b.151 — Luca: "tante pagine vuote". Una card SENZA foto
+              non mostra nessun riquadro: solo testo, compatta. Il
+              riquadro esiste soltanto quando c'e una foto da farci
+              stare dentro. */}
+          {t.immagine && (
+            <div style={{
+              position: 'relative', aspectRatio: '16/9',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`,
+              overflow: 'hidden',
+            }}>
+              <span style={{ fontSize: 26, fontWeight: 800, color: `${C.accent}55`, letterSpacing: 1 }}>
+                {(t.fonti[0]?.fonte || '·').slice(0, 1).toUpperCase()}
+              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element -- immagine
+                  esterna di dominio ignoto: next/image richiederebbe la lista
+                  dei domini, che per le news non esiste */}
+              <img src={t.immagine} alt="" loading="lazy" referrerPolicy="no-referrer"
+                onError={e => { e.currentTarget.style.display = 'none'; }}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{
+                position: 'absolute', inset: 0, pointerEvents: 'none',
+                background: 'linear-gradient(180deg, transparent 55%, rgba(5,7,15,0.85))',
+              }} />
+            </div>
+          )}
 
           <div style={{ padding: '12px 14px 13px' }}>
             <h3 style={{
