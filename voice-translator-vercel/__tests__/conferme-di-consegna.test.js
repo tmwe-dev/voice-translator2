@@ -99,28 +99,38 @@ describe('la conferma parte da tutti e due i modi di ricevere', () => {
     expect(p).toMatch(/type: 'msg-ack', msgId: message\.id/);
   });
 
-  it('e da Realtime, che e come arrivano i messaggi in chat normale', () => {
-    // Era il ramo mancante: correggere solo il P2P avrebbe lasciato il
-    // difetto in piedi proprio nel caso piu comune.
+  it('e da OGNI strada, non solo da Realtime (b.131)', () => {
+    // In b.128 l'ack stava in `handleRealtimeMessage`: una sola delle
+    // due strade. I messaggi arrivano anche dal polling — primario
+    // quando Realtime non e attivo, e l'unico vivo quando la scheda va
+    // in secondo piano. Provato in due schede: Bruno vedeva il
+    // messaggio e Ada restava a una spunta.
+    //
+    // `processIncomingMessage` e l'imbuto che chiamano ENTRAMBI.
+    const s = senzaCommenti(leggi('app/hooks/useRoomPolling.js'));
+    const i = s.indexOf('const processIncomingMessage = useCallback');
+    expect(i, 'l\'imbuto deve esistere').toBeGreaterThan(-1);
+    expect(s.slice(i, i + 1400)).toMatch(/broadcastAckRef\.current\?\.\(msg\.id\)/);
+  });
+
+  it('e NON e rimasto attaccato al solo Realtime', () => {
     const s = senzaCommenti(leggi('app/hooks/useRoomPolling.js'));
     const i = s.indexOf('const handleRealtimeMessage = useCallback');
-    expect(s.slice(i, i + 900)).toMatch(/broadcastAckRef\.current\?\.\(message\.id\)/);
+    expect(s.slice(i, i + 700), 'l\'ack non deve stare qui: e solo una delle strade')
+      .not.toMatch(/broadcastAckRef\.current/);
   });
 
   it('ma non per i propri messaggi', () => {
-    // Confermarsi da soli farebbe comparire ✓✓ senza che nessuno abbia
-    // ricevuto niente: la stessa bugia, con un passaggio in piu.
+    // L'imbuto ha gia i controlli: scarta cio che ho mandato io e cio
+    // che ho gia visto. Confermarsi da soli farebbe comparire ✓✓ senza
+    // che nessuno abbia ricevuto niente.
     const s = senzaCommenti(leggi('app/hooks/useRoomPolling.js'));
-    expect(s).toMatch(/const mioMessaggio = message\.sender ===/);
-    expect(s).toMatch(/!alreadyProcessed && message\.id && !mioMessaggio/);
-  });
-
-  it('e una volta sola per messaggio', () => {
-    // `alreadyProcessed` e la stessa guardia che evita di elaborare due
-    // volte lo stesso messaggio: riusarla evita una seconda conferma.
-    const s = senzaCommenti(leggi('app/hooks/useRoomPolling.js'));
-    const i = s.indexOf('const mioMessaggio');
-    expect(s.slice(i - 200, i + 300)).toMatch(/alreadyProcessed/);
+    const i = s.indexOf('const processIncomingMessage = useCallback');
+    const corpo = s.slice(i, i + 700);
+    expect(corpo).toMatch(/sentByMeRef\.current\.has\(msg\.id\)/);
+    expect(corpo).toMatch(/msg\.sender === myVerifiedName/);
+    expect(corpo.indexOf('return;'), 'gli scarti vengono PRIMA della conferma')
+      .toBeLessThan(corpo.indexOf('broadcastAckRef'));
   });
 });
 

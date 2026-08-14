@@ -95,6 +95,23 @@ export default function useRoomPolling({
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
     if (msg.sender === myVerifiedName) { dbg.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
 
+    // ── b.131 · la conferma parte DA QUI, che e l'imbuto di tutti ──
+    //
+    // In b.128 l'avevo messa in `handleRealtimeMessage`. Sbagliato: e
+    // solo UNA delle due strade. I messaggi arrivano anche dal polling —
+    // che e la strada primaria quando Realtime non e attivo, e quella
+    // che resta viva quando la scheda va in secondo piano e il browser
+    // sospende il canale.
+    //
+    // Provato in due schede: Bruno VEDEVA il messaggio (arrivato col
+    // polling) e Ada restava con una spunta sola. La correzione di b.128
+    // c'era, era deployata, e non serviva a niente meta delle volte.
+    //
+    // `processIncomingMessage` lo chiamano tutti e due i percorsi, e ha
+    // gia i controlli giusti sopra: scarta i miei messaggi e quelli gia
+    // visti. Il posto era questo dall'inizio.
+    try { broadcastAckRef.current?.(msg.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
+
     const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000);
     const contentFingerprint = `${msg.sender}|${msg.original?.substring(0,20)}|${timeWindow}`;
     if (processedForTTSRef.current.has(contentFingerprint)) {
@@ -167,16 +184,6 @@ export default function useRoomPolling({
     // P2P and Realtime both call this function for the same message.
     // Without this guard, processIncomingMessage would be called twice.
     const alreadyProcessed = processedMsgIdsRef.current.has(message.id);
-
-    // ── b.128 · si conferma di aver ricevuto ──
-    // In chat normale i messaggi arrivano DA QUI, non dal canale P2P: e
-    // il ramo che mancava. La conferma parte una volta sola (solo se il
-    // messaggio e nuovo) e mai per i propri messaggi, altrimenti ci si
-    // confermerebbe da soli e la spunta direbbe di nuovo una bugia.
-    const mioMessaggio = message.sender === (verifiedNameRef.current || prefsRef.current?.name);
-    if (!alreadyProcessed && message.id && !mioMessaggio) {
-      try { broadcastAckRef.current?.(message.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
-    }
 
     if (!alreadyProcessed) {
       processedMsgIdsRef.current.add(message.id);
