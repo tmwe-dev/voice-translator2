@@ -181,3 +181,25 @@ describe('miniature Bing (b.147-bis)', async () => {
     expect(ingrandisciMiniaturaBing(u)).toBe(u);
   });
 });
+
+// ── b.152: Mondo solo scritto — il video vive nelle chat private ──
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+describe('Mondo solo scritto (b.152)', () => {
+  const senzaCommenti = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+
+  it('RoomView deriva "stanza di Mondo" da roomType + vaInVetrina', () => {
+    const src = senzaCommenti('../app/components/RoomView.js');
+    expect(src).toContain('vaInVetrina(roomInfo.roomType)');
+    expect(src).toContain('stanzaSoloTesto={stanzaMondo}');
+  });
+
+  it('RoomHeader nasconde ENTRAMBI i bottoni di chiamata nelle stanze solo testo', () => {
+    const src = senzaCommenti('../app/components/RoomHeader.js');
+    const guardie = src.match(/webrtc && !stanzaSoloTesto &&/g) || [];
+    expect(guardie.length).toBe(2); // voce E video: nasconderne uno solo e una mezza regola
+  });
+});

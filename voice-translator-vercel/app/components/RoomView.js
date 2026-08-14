@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
+import { vaInVetrina } from '../lib/decisioni.js';
 import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
 import VoiceCallOverlay from './VoiceCallOverlay.js';
@@ -93,6 +94,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const myL = getLang(myLang);
   const otherL = partner ? getLang(partner.lang) : getLang('en');
   const roomMode = roomInfo?.mode || 'conversation';
+  // b.152 — REGOLA DI PRODOTTO (Luca, 14/8): le stanze della sezione
+  // Mondo sono SOLO SCRITTE, con lettura vocale (TTS) per chi la vuole;
+  // la videochiamata e la chiamata vocale vivono nelle chat private.
+  // Il discriminante e pulito: `roomType` viene scritto sulla stanza
+  // SOLO quando viene pubblicata in vetrina (aggiornaPoliticaPubblica,
+  // chiamata unicamente da /api/mondo). Le stanze da invito/QR/contatti
+  // non ce l'hanno, e li le chiamate restano come sono sempre state.
+  const stanzaMondo = !!roomInfo?.roomType && vaInVetrina(roomInfo.roomType);
   const isHost = isHostVerified !== undefined ? isHostVerified : roomInfo?.host === myName;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
   const canTalk = roomMode === 'classroom' ? isHost : true;
@@ -276,6 +285,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         handleLangChange={handleLangChange}
         audioEnabled={audioEnabled} setAudioEnabled={setAudioEnabled} unlockAudio={unlockAudio}
         webrtc={webrtc} partnerConnected={partnerConnected} realtimeConnected={realtimeConnected}
+        stanzaSoloTesto={stanzaMondo}
         showVideoCall={showVideoCall} setShowVideoCall={setShowVideoCall}
         videoFullscreen={videoFullscreen} setVideoFullscreen={setVideoFullscreen}
         setShowVoiceCall={setShowVoiceCall}
