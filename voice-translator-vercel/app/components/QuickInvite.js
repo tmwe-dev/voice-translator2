@@ -26,10 +26,10 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
     setCreating(true);
     setError('');
     handleCreateRoom(lang)
-      .then(room => { if (room?.id || room?.roomId) setCreatedRoomId(room.id || room.roomId); else setError('Creazione stanza fallita'); })
-      .catch(e => { console.warn('[QuickInvite]', e); setError('Errore di connessione. Riprova.'); })
+      .then(room => { if (room?.id || room?.roomId) setCreatedRoomId(room.id || room.roomId); else setError(L('roomCreateFailed')); })
+      .catch(e => { console.warn('[QuickInvite]', e); setError(L('connErrorRetry')); })
       .finally(() => setCreating(false));
-  }, [createdRoomId, creating, handleCreateRoom, lang]);
+  }, [createdRoomId, creating, handleCreateRoom, lang, L]);
 
   // Auto-create room on mount
   useEffect(() => {
@@ -96,7 +96,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             backgroundClip: 'text',
           }}>
-            Invita
+            {L('inviteShort')}
           </div>
         </div>
       </header>
@@ -115,7 +115,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
               border: '3px solid rgba(38,217,176,0.15)', borderTopColor: PALETTE.teal,
               animation: 'vtSpin 0.8s linear infinite',
             }} />
-            <div style={{ fontSize: 13, color: glass.text.muted }}>Preparazione invito...</div>
+            <div style={{ fontSize: 13, color: glass.text.muted }}>{L('preparingInvite')}</div>
           </div>
         )}
 
@@ -129,7 +129,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 background: 'linear-gradient(135deg, #26D9B0 0%, #1EB898 100%)',
                 color: '#000', fontFamily: FONT, fontSize: 15, fontWeight: 700,
               }}>
-              Riprova
+              {L('retryWord')}
             </button>
           </div>
         )}
@@ -140,7 +140,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
             {/* Lingua invitato */}
             <div style={{ width: '100%', marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: glass.text.muted, marginBottom: 6, textAlign: 'center' }}>
-                Lingua dell'invitato
+                {L('guestLanguage')}
               </div>
               <select
                 value={guestLang}
@@ -187,7 +187,7 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                   fontFamily: FONT, fontSize: 14, fontWeight: 600,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}>
-                {copied ? '✓ Copiato!' : <><Icon name="link" size={14} color="currentColor" /> Copia link</>}
+                {copied ? `✓ ${L('copiedShort')}` : <><Icon name="link" size={14} color="currentColor" /> {L('copyLink')}</>}
               </button>
               <button onClick={() => {
                 if (navigator.share) navigator.share({ title: 'BarTalk', url: getUrl() }).catch(() => {});
@@ -211,11 +211,11 @@ function QuickInvite({ handleCreateRoom, roomId, setViewAfterCreate }) {
                 boxShadow: '0 8px 32px rgba(38,217,176,0.25)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               }}>
-              <Icon name="doorCreate" size={20} color="#000" /> Entra nella stanza
+              <Icon name="doorCreate" size={20} color="#000" /> {L('enterTheRoom')}
             </button>
 
             <div style={{ fontSize: 10, color: glass.text.muted, marginTop: 12, textAlign: 'center', lineHeight: 1.5 }}>
-              L'invitato scansiona il QR — entra subito senza registrazione.
+              {L('guestScansQR')}
             </div>
           </>
         )}

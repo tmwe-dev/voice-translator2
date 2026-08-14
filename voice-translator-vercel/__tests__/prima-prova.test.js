@@ -45,7 +45,7 @@ describe('prima prova', () => {
   });
 
   it('dice cosa sta facendo e cosa è andato storto', () => {
-    expect(src).toMatch(/Traduco/);
+    expect(src).toMatch(/translatingDots/);
     expect(src).toMatch(/Non è riuscita/);
   });
 });

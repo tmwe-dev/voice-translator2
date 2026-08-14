@@ -45,7 +45,7 @@ export function primaProvaGiaFatta() {
 }
 
 export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
-  const { S, prefs } = useApp();
+  const { L, S, prefs } = useApp();
   const C = S?.colors || {};
 
   const miaLingua = prefs?.lang || 'it';
@@ -114,9 +114,9 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
         <Icon name="speaker" size={16} color={C.accent1} />
         <span style={{ fontSize: 13, fontWeight: 800, color: C.textPrimary }}>
-          Sentila funzionare
+          {L('hearItWork')}
         </span>
-        <button onClick={chiudiPerSempre} aria-label="Non mostrare più"
+        <button onClick={chiudiPerSempre} aria-label={L('dontShowAgain')}
           style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
             color: C.textMuted, display: 'flex', padding: 2 }}>
           <Icon name="x" size={14} color={C.textMuted} />
@@ -185,7 +185,7 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
           opacity: stato === 'traduco' ? 0.65 : 1,
         }}>
           <Icon name={stato === 'traduco' ? 'refresh' : stato === 'fatto' ? 'refresh' : 'play'} size={15} color="#fff" />
-          {stato === 'traduco' ? 'Traduco…' : stato === 'fatto' ? 'Un\u2019altra lingua' : 'Ascolta'}
+          {stato === 'traduco' ? L('translatingDots') : stato === 'fatto' ? L('anotherLanguage') : L('listenWord')}
         </button>
 
         {stato === 'fatto' && (

@@ -5,6 +5,8 @@ import {
   addMediaTracks, collectIceCandidates, addIceCandidate, sendViaDataChannel,
 } from '../lib/webrtc.js';
 import { subscribeTick } from '../lib/ticker.js';
+// b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
+import { tFuori } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════════════════════
 // useStanzaVideo — la stanza video di gruppo.
@@ -211,11 +213,11 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
 
       const d = await api('entra');
       if (d?.error === 'stanza piena') {
-        setStanzaPiena(true); setErrore(d.motivo || 'Stanza piena'); setStato('errore');
+        setStanzaPiena(true); setErrore(d.motivo || tFuori('roomFull')); setStato('errore');
         flusso.getTracks().forEach(t => t.stop());
         return;
       }
-      if (!d?.ok) { setErrore('Non riesco a entrare'); setStato('errore'); return; }
+      if (!d?.ok) { setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
 
       setStato('dentro');
       // Propongo solo a chi mi tocca: l'ordine alfabetico evita che due
@@ -223,8 +225,8 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       for (const nome of d.devoChiamare || []) await proponi(nome);
     } catch (e) {
       setErrore(e?.name === 'NotAllowedError'
-        ? 'Serve il permesso per microfono e telecamera.'
-        : 'Non riesco ad accendere microfono o telecamera.');
+        ? tFuori('needMicCamPermission')
+        : tFuori('cannotStartMicCam'));
       setStato('errore');
     }
   }, [roomId, roomSessionToken, conVideo, api, proponi]);

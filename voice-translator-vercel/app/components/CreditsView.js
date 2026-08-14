@@ -10,16 +10,27 @@ import { PACCHETTI, oreIncluse, MOLTIPLICATORE_PREMIUM } from '../wallet/tariffe
 // Un solo listino in tutta l'app (app/wallet/tariffe.js):
 //   Start €4,99 · Viaggio €11,99 · Mondo €24,99 — paghi una volta,
 //   i minuti sono tuoi. Niente abbonamenti, niente "crediti" astratti.
+//
+// ── b.138 · la pagina dove si paga era solo in italiano ──
+//
+// "MINUTI DISPONIBILI", "HAI UN CODICE?", "Crea regalo", "Codice non
+// valido": tutto cablato. E la pagina che decide se una persona spende
+// o se ne va, e uno spagnolo o un giapponese la trovava in una lingua
+// che non capisce, pur avendo scelto la sua nell'impostazione. Adesso
+// ogni testo viene da L(); le scritte in maiuscolo restano maiuscole
+// via CSS (textTransform), perche in cinese e in thai una maiuscola
+// scritta a mano nel testo non esiste.
 // ═══════════════════════════════════════════════
 
 const COLORI = { verde: '#3ddc84', giallo: '#ffc44d', rosso: '#ff5470' };
 
 export default function CreditsView({ userAccount }) {
-  const { S, setView } = useApp();
+  const { L, S, setView } = useApp();
   const tc = S.colors || {};
   const [dati, setDati] = useState(null);
   const [codice, setCodice] = useState('');
   const [esito, setEsito] = useState('');
+  const [esitoOk, setEsitoOk] = useState(false);
   const [caricando, setCaricando] = useState(false);
   const [minutiRegalo, setMinutiRegalo] = useState(30);
   const [esitoRegalo, setEsitoRegalo] = useState('');
@@ -54,7 +65,7 @@ export default function CreditsView({ userAccount }) {
   // Un solo campo per due cose: i codici che iniziano con GIFT- sono
   // regali di un altro utente, gli altri sono voucher promozionali.
   async function usaCodice() {
-    setEsito('...');
+    setEsito('...'); setEsitoOk(false);
     const pulito = codice.trim().toUpperCase();
     const eRegalo = pulito.startsWith('GIFT-');
     const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
@@ -62,7 +73,8 @@ export default function CreditsView({ userAccount }) {
       body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
     });
     const d = await r.json();
-    setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
+    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+    setEsitoOk(!!d.ok);
     if (d.ok) { setCodice(''); carica(); }
   }
 
@@ -77,20 +89,20 @@ export default function CreditsView({ userAccount }) {
         body: JSON.stringify({ azione: 'invia', minuti }),
       });
       const d = await r.json();
-      if (!d.ok) { setEsitoRegalo(d.motivo || 'Non riuscito'); return; }
+      if (!d.ok) { setEsitoRegalo(d.motivo || L('notSucceeded')); return; }
       setRegaloFatto(d);
       setEsitoRegalo('');
       carica();
     } catch {
-      setEsitoRegalo('Connessione assente');
+      setEsitoRegalo(L('noConnection'));
     }
   }
 
   function condividiRegalo() {
     if (!regaloFatto) return;
-    const testo = `Ti regalo ${regaloFatto.testo} di conversazione tradotta su BarTalk: ${regaloFatto.link || regaloFatto.codice}`;
+    const testo = `${L('inviteGiftPrefix')} ${regaloFatto.testo} ${L('giftShareBody')} ${regaloFatto.link || regaloFatto.codice}`;
     if (navigator.share) navigator.share({ text: testo }).catch(() => {});
-    else navigator.clipboard?.writeText(testo).then(() => setEsitoRegalo('Link copiato'), () => {});
+    else navigator.clipboard?.writeText(testo).then(() => setEsitoRegalo(L('linkCopied')), () => {});
   }
 
   const colore = COLORI[dati?.colore] || COLORI.verde;
@@ -100,47 +112,47 @@ export default function CreditsView({ userAccount }) {
   };
 
   return (
-    <main style={S.page} aria-label="Credito e ricariche">
+    <main style={S.page} aria-label={L('creditAndTopups')}>
       <div style={{ ...S.scrollCenter, gap: 14, paddingBottom: 'calc(110px + env(safe-area-inset-bottom))' }}>
         <div style={{ width: '100%', maxWidth: 460 }}>
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 16px' }}>
-            <button onClick={() => setView('settings')} aria-label="Indietro" style={{
+            <button onClick={() => setView('settings')} aria-label={L('backWord')} style={{
               width: 38, height: 38, borderRadius: 12, border: `1px solid ${tc.cardBorder}`,
               background: tc.cardBg, color: tc.textPrimary, cursor: 'pointer', fontSize: 16,
             }}>{'←'}</button>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: tc.textPrimary, fontFamily: FONT, margin: 0 }}>
-              Il tuo credito
+              {L('yourCreditTitle')}
             </h1>
           </div>
 
           {!userAccount && (
             <div style={{ ...card, marginBottom: 14, fontSize: 13, color: tc.textSecondary, fontFamily: FONT }}>
-              Accedi per vedere il tuo credito e ricaricare.
+              {L('signInToSeeCredit')}
             </div>
           )}
 
           {/* Saldo */}
           {dati && (
             <div style={{ ...card, marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT }}>MINUTI DISPONIBILI</div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>{L('creditMinutesAvailable')}</div>
               <div style={{ fontSize: 34, fontWeight: 850, color: colore, fontFamily: FONT }}>{dati.testo}</div>
               <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, color: tc.textSecondary, fontFamily: FONT }}>
-                <span>Oggi: <b>{dati.oggi}</b></span>
-                <span>Questo mese: <b>{dati.mese}</b></span>
+                <span>{L('todayWord')}: <b>{dati.oggi}</b></span>
+                <span>{L('thisMonth')}: <b>{dati.mese}</b></span>
               </div>
             </div>
           )}
 
           {/* Come funziona — una riga, chiara */}
           <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT, lineHeight: 1.5, marginBottom: 14 }}>
-            Paghi una volta, i minuti restano tuoi. La voce premium (ElevenLabs) consuma {MOLTIPLICATORE_PREMIUM}{'×'}.
-            Nuovo account: 30 minuti in regalo.
+            {L('creditRuleA')} {MOLTIPLICATORE_PREMIUM}{'×'}.
+            {L('creditRuleB')}
           </div>
 
           {/* Pacchetti — L'UNICO listino */}
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, marginBottom: 8 }}>RICARICA</div>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, marginBottom: 8, textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
           {PACCHETTI.map(p => {
             const ore = oreIncluse(p);
             return (
@@ -156,10 +168,10 @@ export default function CreditsView({ userAccount }) {
                     {p.nome} {'·'} {ore.standard}
                     {p.consigliato && <span style={{ marginLeft: 8, fontSize: 9, fontWeight: 800, letterSpacing: 1,
                       padding: '3px 8px', borderRadius: 999, color: '#fff',
-                      background: `linear-gradient(90deg, ${tc.accent1 || '#5b8cff'}, ${tc.accent2 || '#38e1ff'})` }}>CONSIGLIATO</span>}
+                      background: `linear-gradient(90deg, ${tc.accent1 || '#5b8cff'}, ${tc.accent2 || '#38e1ff'})`, textTransform: 'uppercase' }}>{L('recommended')}</span>}
                   </div>
                   <div style={{ fontSize: 11.5, color: tc.textMuted, marginTop: 2 }}>
-                    con voce premium: {ore.premium}
+                    {L('withPremiumVoice')} {ore.premium}
                   </div>
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 850, color: tc.accent2 || '#38e1ff' }}>
@@ -170,44 +182,48 @@ export default function CreditsView({ userAccount }) {
           })}
 
           {/* Voucher o regalo ricevuto — un campo solo */}
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px' }}>HAI UN CODICE?</div>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '14px 0 8px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <input value={codice} onChange={(e) => setCodice(e.target.value.toUpperCase())} placeholder="VOUCHER O REGALO"
-              style={{ flex: 1, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14,
+            <input value={codice} onChange={(e) => setCodice(e.target.value.toUpperCase())} placeholder={L('voucherOrGift')}
+              style={{ flex: 1, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14, textTransform: 'uppercase',
                 background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
             <button onClick={usaCodice} disabled={!codice} style={{
               padding: '12px 18px', borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: FONT,
               fontSize: 14, fontWeight: 800, color: '#fff',
               background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
-            }}>Usa</button>
+            }}>{L('useWord')}</button>
           </div>
-          {esito && <div style={{ fontSize: 12, marginTop: 6, fontFamily: FONT, color: esito.startsWith('Fatto') ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
+          {/* b.138 — il colore si decideva con esito.startsWith('Fatto'): tolto
+              l'italiano dal messaggio, quel confronto non avrebbe piu trovato
+              nulla e ogni esito sarebbe diventato rosso, anche quello buono.
+              Ora l'esito porta con se il proprio segno. */}
+          {esito && <div style={{ fontSize: 12, marginTop: 6, fontFamily: FONT, color: esitoOk ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
 
           {/* Regala minuti a qualcuno */}
           {userAccount && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '18px 0 8px' }}>REGALA MINUTI</div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '18px 0 8px', textTransform: 'uppercase' }}>{L('creditGiftMinutes')}</div>
               {!regaloFatto ? (
                 <div style={card}>
                   <div style={{ fontSize: 12.5, color: tc.textSecondary, fontFamily: FONT, lineHeight: 1.5, marginBottom: 10 }}>
-                    I minuti si scalano subito dal tuo credito. Se nessuno li riscatta entro 30 giorni, tornano a te.
+                    {L('giftRule')}
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                     <input type="number" min={1} max={600} value={minutiRegalo}
                       onChange={(e) => setMinutiRegalo(e.target.value)}
                       style={{ width: 92, padding: '12px 14px', borderRadius: 13, fontFamily: FONT, fontSize: 14,
                         background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
-                    <span style={{ fontSize: 13, color: tc.textMuted, fontFamily: FONT, flex: 1 }}>minuti</span>
+                    <span style={{ fontSize: 13, color: tc.textMuted, fontFamily: FONT, flex: 1 }}>{L('minutesWord')}</span>
                     <button onClick={creaRegalo} style={{
                       padding: '12px 18px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
                       fontFamily: FONT, fontSize: 14, fontWeight: 800, color: tc.textPrimary, background: 'transparent',
-                    }}>Crea regalo</button>
+                    }}>{L('createGift')}</button>
                   </div>
                   {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.rosso }}>{esitoRegalo}</div>}
                 </div>
               ) : (
                 <div style={card}>
-                  <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT }}>REGALO PRONTO {'·'} {regaloFatto.testo}</div>
+                  <div style={{ fontSize: 12, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>{L('giftReady')} {'·'} {regaloFatto.testo}</div>
                   <div style={{ fontSize: 20, fontWeight: 850, color: tc.accent2 || '#38e1ff', fontFamily: FONT, letterSpacing: 1, margin: '4px 0 10px' }}>
                     {regaloFatto.codice}
                   </div>
@@ -216,11 +232,11 @@ export default function CreditsView({ userAccount }) {
                       flex: 1, padding: '12px 16px', borderRadius: 13, border: 'none', cursor: 'pointer',
                       fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff',
                       background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
-                    }}>Invia il regalo</button>
+                    }}>{L('sendGift')}</button>
                     <button onClick={() => { setRegaloFatto(null); setEsitoRegalo(''); }} style={{
                       padding: '12px 16px', borderRadius: 13, border: `1px solid ${tc.cardBorder}`, cursor: 'pointer',
                       fontFamily: FONT, fontSize: 14, fontWeight: 700, color: tc.textSecondary, background: 'transparent',
-                    }}>Chiudi</button>
+                    }}>{L('closeWord')}</button>
                   </div>
                   {esitoRegalo && <div style={{ fontSize: 12, marginTop: 8, fontFamily: FONT, color: COLORI.verde }}>{esitoRegalo}</div>}
                 </div>
@@ -231,7 +247,7 @@ export default function CreditsView({ userAccount }) {
           {/* Storico */}
           {dati?.storico?.length > 0 && (
             <>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '16px 0 6px' }}>LE TUE RICARICHE</div>
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, margin: '16px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
               <div style={card}>
                 {dati.storico.map((r, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 2px',
@@ -239,7 +255,7 @@ export default function CreditsView({ userAccount }) {
                     borderBottom: i < dati.storico.length - 1 ? `1px solid ${tc.cardBorder}` : 'none' }}>
                     <span style={{ color: tc.textMuted, minWidth: 74 }}>{r.quando}</span>
                     <span style={{ flex: 1, color: tc.textSecondary }}>
-                      {r.tipo === 'acquisto' ? 'Ricarica' : r.tipo === 'benvenuto' ? 'Benvenuto' : r.tipo === 'omaggio' ? 'Omaggio' : r.tipo === 'regalo_in' ? 'Regalo' : 'Voucher'}
+                      {r.tipo === 'acquisto' ? L('landingRecharge') : r.tipo === 'benvenuto' ? L('histWelcome') : r.tipo === 'omaggio' ? L('histFree') : r.tipo === 'regalo_in' ? L('histGift') : 'Voucher'}
                     </span>
                     <span style={{ fontWeight: 800, color: COLORI.verde }}>{r.testo}</span>
                     {r.euro && <span style={{ color: tc.textMuted }}>{r.euro}</span>}

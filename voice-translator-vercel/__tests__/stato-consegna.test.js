@@ -96,8 +96,11 @@ describe('i cinque stati si distinguono a schermo', () => {
     // saprebbe che vuol dire.
     const s = m();
     expect(s).toMatch(/const ETICHETTA_STATO = \{/);
-    expect(s).toMatch(/aria-label=\{ETICHETTA_STATO/);
-    expect(s).toMatch(/title=\{ETICHETTA_STATO/);
+    // b.138 — la parola c'e ancora, ma ETICHETTA_STATO tiene il NOME
+    // della chiave e la frase la mette L(): prima erano cinque frasi
+    // italiane, e chi ascoltava l'app in un'altra lingua le sentiva cosi.
+    expect(s).toMatch(/aria-label=\{L\(ETICHETTA_STATO/);
+    expect(s).toMatch(/title=\{L\(ETICHETTA_STATO/);
   });
 });
 

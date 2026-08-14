@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { FONT } from '../lib/constants.js';
+import { useApp } from '../contexts/AppContext.js';
 import { COSTANTI_IMPRONTA } from '../lib/improntaChiavi.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -30,7 +31,12 @@ import { COSTANTI_IMPRONTA } from '../lib/improntaChiavi.js';
 // falso.
 // ═══════════════════════════════════════════════════════════════
 
+// b.138 — il pannello che spiega la cifratura era interamente in
+// italiano. E il testo che deve convincere uno sconosciuto che nessuno
+// sta ascoltando: letto in una lingua che non si capisce non convince
+// nessuno, e chi apriva l'app in inglese lo trovava cosi.
 export default function NumeroSicurezza({ numero, C, compatto = false }) {
+  const { L } = useApp();
   const [aperto, setAperto] = useState(false);
   const [verificato, setVerificato] = useState(false);
 
@@ -52,10 +58,10 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
           fontWeight: 700, background: 'transparent', border: `1px solid ${bordo}`,
           color: verificato ? verde : testoMuto,
         }}
-        aria-label={verificato ? 'Conversazione verificata' : 'Verifica con chi stai parlando'}
+        aria-label={verificato ? L('secVerifiedAria') : L('secVerifyAria')}
       >
         <span aria-hidden="true">{verificato ? '✓' : '·'}</span>
-        {verificato ? 'Verificata' : 'Cifrata'}
+        {verificato ? L('secVerified') : L('secEncrypted')}
       </button>
     );
   }
@@ -66,24 +72,21 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
       border: `1px solid ${verificato ? `${verde}40` : bordo}`, fontFamily: FONT,
     }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: testoVivo, marginBottom: 8 }}>
-        Con chi stai parlando
+        {L('secWhoTitle')}
       </div>
 
       {/* Le due frasi, tenute separate apposta. */}
       <div style={{ fontSize: 11, color: testoMuto, lineHeight: 1.6, marginBottom: 12 }}>
         <div style={{ display: 'flex', gap: 7 }}>
           <span aria-hidden="true" style={{ color: verde, fontWeight: 800 }}>✓</span>
-          <span>I messaggi sono cifrati fra i due telefoni. Chi inoltra il
-            traffico non può leggerli.</span>
+          <span>{L('secLine1')}</span>
         </div>
         <div style={{ display: 'flex', gap: 7, marginTop: 6 }}>
           <span aria-hidden="true" style={{ color: verificato ? verde : ambra, fontWeight: 800 }}>
             {verificato ? '✓' : '!'}
           </span>
           <span style={{ color: verificato ? testoMuto : testoVivo }}>
-            {verificato
-              ? 'Avete confrontato il numero: nessuno si è messo in mezzo.'
-              : 'Che sia davvero la persona giusta, però, non lo sa nemmeno il programma. Lo potete sapere solo voi due, confrontando questo numero.'}
+            {verificato ? L('secLine2Ok') : L('secLine2No')}
           </span>
         </div>
       </div>
@@ -100,12 +103,10 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
           </div>
 
           <div style={{ fontSize: 10, color: testoMuto, lineHeight: 1.5, marginTop: 9 }}>
-            Leggetelo a voce, o guardate lo schermo dell’altro. Se i due numeri
-            sono uguali, state parlando davvero fra voi. Se sono diversi,
-            qualcuno è in mezzo: chiudete la conversazione.
+            {L('secReadAloud')}
             <br />
             <span style={{ opacity: 0.75 }}>
-              Vale solo per questa conversazione: le chiavi cambiano ogni volta.
+              {L('secOnlyThisChat')}
             </span>
           </div>
 
@@ -118,13 +119,13 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
                 background: `${verde}18`, border: `1px solid ${verde}40`, color: verde,
               }}
             >
-              I numeri combaciano
+              {L('secNumbersMatch')}
             </button>
           )}
         </>
       ) : (
         <div style={{ fontSize: 11, color: testoMuto, fontStyle: 'italic' }}>
-          Le chiavi si stanno ancora scambiando. Il numero compare fra un istante.
+          {L('secKeysExchanging')}
         </div>
       )}
 
@@ -137,7 +138,7 @@ export default function NumeroSicurezza({ numero, C, compatto = false }) {
             background: 'transparent', border: `1px solid ${bordo}`, color: testoMuto,
           }}
         >
-          Chiudi
+          {L('closeWord')}
         </button>
       )}
     </div>

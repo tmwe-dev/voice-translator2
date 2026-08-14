@@ -82,6 +82,43 @@ export function t(lang, key) {
   return key;
 }
 
+/**
+ * La lingua dell'interfaccia per chi vive FUORI da AppProvider.
+ *
+ * b.138 — la logica era scritta dentro CookieConsent.js, e i due altri
+ * componenti che stanno fuori dal contesto (ToastContainer e
+ * NetworkStatus, montati in page.js sopra <HomeInner/>) non ce l'avevano:
+ * il primo aveva l'etichetta in italiano fisso, il secondo l'avviso
+ * "Sei offline" in italiano per tutti. Ora la funzione e una sola.
+ *
+ * Ordine: la scelta esplicita dell'utente, poi la lingua del browser,
+ * e in ultimo l'inglese — mai l'italiano, che era il ripiego sbagliato
+ * corretto in b.136.
+ */
+export function linguaInterfacciaFuoriContesto() {
+  if (typeof window === 'undefined') return 'en';
+  try {
+    const p = JSON.parse(localStorage.getItem('vt-prefs') || 'null');
+    if (p?.uiLang) return p.uiLang;
+    if (p?.lang) return mapLang(p.lang);
+  } catch { /* preferenze illeggibili: si ripiega sul browser */ }
+  return mapLang((navigator.language || 'en').split('-')[0]);
+}
+
+/**
+ * Traduce una chiave per chi non ha ne il contesto ne un `prefs` a portata.
+ *
+ * b.138 — serve agli hook (useTranslation, useRoomPolling, useStanzaVideo...):
+ * girano DENTRO HomeInner, cioe sopra AppProvider, quindi useApp() li farebbe
+ * cadere. I loro messaggi d'errore finiscono pero sotto gli occhi dell'utente
+ * ("Non riesco a entrare", "Credito esaurito") ed erano rimasti in italiano.
+ */
+export function tFuori(key) {
+  const l = linguaInterfacciaFuoriContesto();
+  preloadLang(l);
+  return t(l, key);
+}
+
 /** Map unsupported language codes to the closest supported one */
 export function mapLang(code) {
   if (T[code] || SUPPORTED.includes(code)) return code;

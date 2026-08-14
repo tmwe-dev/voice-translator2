@@ -112,7 +112,7 @@ export default function SummaryView({ currentConv, summaryLoading, shareSummary,
 
         {currentConv.messages?.length > 0 && (
           <button style={{...S.btn, marginTop:12, width:'100%', maxWidth:380}} onClick={() => setView('detail')}>
-            {L('viewMessages') || 'Vedi messaggi'}
+            {L('viewMessages')}
           </button>
         )}
 

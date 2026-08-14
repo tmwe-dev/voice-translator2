@@ -435,7 +435,7 @@ function HomeInner() {
           await translation.sendTextMessage(msg.text || msg.original);
         });
         if (result.sent > 0) {
-          setStatus(`${result.sent} messaggi offline inviati`);
+          setStatus(`${result.sent} ${L('offlineMessagesSent')}`);
           setTimeout(() => setStatus(''), 3000);
         }
       } catch (e) { console.warn('[Page] Offline message flush failed:', e?.message); }
@@ -602,9 +602,13 @@ function HomeInner() {
       localStorage.removeItem('vt-pending-invite');
       contactsHook.acceptInvite(pendingInvite).then(result => {
         if (result.ok) {
-          setStatus(L('createRoom') === 'Crea Stanza'
-            ? `Contatto aggiunto: ${result.inviter?.name || result.inviter?.email || ''}`
-            : `Contact added: ${result.inviter?.name || result.inviter?.email || ''}`);
+          // b.138 — qui era sopravvissuto l'ULTIMO indovinello di lingua
+          // del vecchio sistema: `L('createRoom') === 'Crea Stanza'` per
+          // capire se l'utente era italiano, con l'inglese per tutti gli
+          // altri tredici. E lo stesso schema che b.136 aveva tolto da
+          // quattro file: cambiare quella riga in it.js avrebbe spento
+          // l'italiano in silenzio.
+          setStatus(`${L('contactAddedLabel')}: ${result.inviter?.name || result.inviter?.email || ''}`);
           setTimeout(() => setStatus(''), 3000);
         }
       });
@@ -636,7 +640,7 @@ function HomeInner() {
     // trovava davanti a un modulo da riempire: nome, lingua, codice.
     const url = `${APP_URL}?room=${roomPolling.roomId}&lang=${inviteLang}&auto=1`;
     if (navigator.share) navigator.share({ title:'BarTalk', text:`${t(inviteLang,'inviteText')}`, url });
-    else { navigator.clipboard.writeText(url); toast.success(L('linkCopied') || 'Link copiato!'); }
+    else { navigator.clipboard.writeText(url); toast.success(L('linkCopied')); }
   }
 
   function exportConversation() {
@@ -826,10 +830,10 @@ function HomeInner() {
   function shareSummary() {
     if (!currentConv?.summary) return;
     const s = currentConv.summary;
-    const text = `${s.title || 'Conversazione'}\n\n${s.summary || ''}\n\n` +
-      (s.keyPoints?.length ? 'Punti chiave:\n' + s.keyPoints.map(p => `\u2022 ${p}`).join('\n') + '\n\n' : '') +
-      `Partecipanti: ${s.participants || ''}\nDurata: ${s.duration || ''}\nMessaggi: ${s.messageCount || 0}`;
-    if (navigator.share) navigator.share({ title: s.title || 'Report', text });
+    const text = `${s.title || L('conversation')}\n\n${s.summary || ''}\n\n` +
+      (s.keyPoints?.length ? `${L('keyPointsLabel')}:\n` + s.keyPoints.map(p => `\u2022 ${p}`).join('\n') + '\n\n' : '') +
+      `${L('participantsLabel')}: ${s.participants || ''}\n${L('durationWord')}: ${s.duration || ''}\n${L('tabMessages')}: ${s.messageCount || 0}`;
+    if (navigator.share) navigator.share({ title: s.title || L('reportWord'), text });
     else { navigator.clipboard.writeText(text); setStatus(L('reportCopied')); setTimeout(() => setStatus(''), 2000); }
   }
 
@@ -864,7 +868,7 @@ function HomeInner() {
       setStatus('');
     } catch (e) {
       setStatus('');
-      toast.error(e.message || 'Impossibile creare la stanza. Riprova.');
+      toast.error(e.message || L('cannotCreateRoom'));
     }
   }
 
@@ -1515,7 +1519,7 @@ function HomeInner() {
               const time = new Date(msg.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
               text += `[${time}] ${msg.sender}:\n  ${msg.original}\n  → ${msg.translated}\n\n`;
             }
-            text += `${'='.repeat(40)}\n${detailMessages.length} messaggi | BarTalk`;
+            text += `${'='.repeat(40)}\n${detailMessages.length} ${L('messages')} | BarTalk`;
             if (navigator.share) navigator.share({ title: `BarTalk - ${convName}`, text });
             else { navigator.clipboard.writeText(text).then(() => { setStatus(L('exportCopied')); setTimeout(() => setStatus(''), 2000); }); }
           }}
@@ -1528,11 +1532,11 @@ function HomeInner() {
             if (!detailConversation?.id) return;
             const link = `${window.location.origin}?room=${detailConversation.id}`;
             if (navigator.share) navigator.share({ title: 'BarTalk', url: link });
-            else navigator.clipboard.writeText(link).then(() => { setStatus('Link copiato!'); setTimeout(() => setStatus(''), 2000); });
+            else navigator.clipboard.writeText(link).then(() => { setStatus(L('linkCopied')); setTimeout(() => setStatus(''), 2000); });
           }}
           onDelete={() => {
             if (!detailConversation?.id) return;
-            if (!confirm('Eliminare questa conversazione?')) return;
+            if (!confirm(L('deleteConvConfirm'))) return;
             fetch('/api/conversation', { method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'delete', convId: detailConversation.id, userToken: auth.userTokenRef?.current || null })
             })
@@ -1544,7 +1548,7 @@ function HomeInner() {
                 // cancellazione che non cancella, dichiarata riuscita.
                 if (!res.ok) {
                   const errore = await res.json().catch(() => ({}));
-                  setStatus(errore.error || 'Non sono riuscito a eliminare');
+                  setStatus(errore.error || L('cannotDelete'));
                   setTimeout(() => setStatus(''), 3000);
                   return;
                 }
@@ -1553,7 +1557,7 @@ function HomeInner() {
               })
               .catch(e => {
                 console.error('Delete error:', e);
-                setStatus('Non sono riuscito a eliminare');
+                setStatus(L('cannotDelete'));
                 setTimeout(() => setStatus(''), 3000);
               });
           }}

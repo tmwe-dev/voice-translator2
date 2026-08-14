@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PALETTE } from '../lib/palette.js';
-import { t, mapLang } from '../lib/i18n.js';
+import { t, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════════════════════
 // L'AVVISO COOKIE PARLAVA SOLO INGLESE (b.136-bis)
@@ -25,14 +25,10 @@ import { t, mapLang } from '../lib/i18n.js';
 // colori nella pagina". Ora usa l'accento di casa.
 // ═══════════════════════════════════════════════════════════════
 
-function linguaSalvata() {
-  if (typeof window === 'undefined') return 'en';
-  try {
-    const p = JSON.parse(localStorage.getItem('vt-prefs') || 'null');
-    if (p?.uiLang) return p.uiLang;
-  } catch { /* preferenze illeggibili: si ripiega sul browser */ }
-  return mapLang((navigator.language || 'en').split('-')[0]);
-}
+// b.138 — la funzione che leggeva la lingua salvata stava qui e serviva
+// solo a questo pannello. Ora e in i18n.js perche anche il contenitore
+// degli avvisi e la barra "sei offline" vivono fuori dal contesto e
+// avevano lo stesso problema, risolto ognuno a modo suo (cioe non risolto).
 
 export default function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -41,7 +37,7 @@ export default function CookieConsent() {
 
   useEffect(() => {
     try {
-      setLingua(linguaSalvata());
+      setLingua(linguaInterfacciaFuoriContesto());
       const consent = localStorage.getItem('vt-cookie-consent');
       if (!consent) {
         setTimeout(() => setVisible(true), 1500);

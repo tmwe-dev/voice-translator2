@@ -3,6 +3,8 @@ import { useEffect } from 'react';
 import { fetchConRiprova } from '../lib/riprova.js';
 import { toast } from '../lib/avvisi.js';
 import { createLogger } from '../lib/logger.js';
+// b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
+import { tFuori } from '../lib/i18n.js';
 
 const log = createLogger('voci-premium');
 
@@ -35,7 +37,7 @@ export default function useElevenLabsSync(auth) {
         suRinuncia: (errore) => {
           if (annullato) return;
           log.warn('voci premium non caricate:', errore?.message);
-          toast.error('Non riesco a caricare le voci premium. Riprova fra poco.');
+          toast.error(tFuori('premiumVoicesFailed'));
         },
       })
       .then((r) => r.json())

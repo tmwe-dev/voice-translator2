@@ -156,7 +156,9 @@ describe('la stanza hot si riconosce da fuori', () => {
   it('si vede nell\'elenco, prima di entrare', () => {
     // Scoprirlo dentro sarebbe un'imboscata.
     expect(app('components/MondoView.js')).toMatch(/room\.hot &&/);
-    expect(app('components/MondoView.js')).toMatch(/Litigio libero/);
+    // b.138 — l'etichetta esiste ancora ma viene da L('freeFight'):
+    // prima era italiano fisso anche per chi leggeva l'app in cinese.
+    expect(app('components/MondoView.js')).toMatch(/L\('freeFight'\)/);
   });
 
   it('una stanza salvata prima di b.111 non diventa hot per sbaglio', () => {

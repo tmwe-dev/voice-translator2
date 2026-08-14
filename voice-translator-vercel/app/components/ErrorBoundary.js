@@ -1,6 +1,6 @@
 'use client';
 import { Component } from 'react';
-import { t, mapLang } from '../lib/i18n.js';
+import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 import { PALETTE } from '../lib/palette.js';
 
 /**
@@ -42,27 +42,25 @@ export default class ErrorBoundary extends Component {
     window.location.reload();
   };
 
-  /** Detect browser language and return localized error strings */
+  // ── b.138 · la schermata di errore aveva un dizionario tutto suo ──
+  //
+  // Qui dentro c'era una tabella di dieci lingue scritta a mano, con
+  // quattro frasi ciascuna: mancavano thai, hindi, russo, turco e
+  // vietnamita, e chi aveva scelto una di quelle vedeva l'inglese pur
+  // avendo l'app tradotta. Peggio: la lingua la deduceva SOLO dal
+  // browser, ignorando prefs.uiLang — un italiano in Germania con il
+  // telefono in tedesco leggeva l'errore in tedesco.
+  //
+  // Ora usa i pacchetti veri (15 lingue) e la stessa funzione degli
+  // altri componenti fuori dal contesto. E una classe, quindi non puo
+  // usare useApp(): la lingua la legge al momento del disegno.
   getErrorText(key) {
-    const TEXTS = {
-      en: { title: 'Something went wrong', desc: 'An unexpected error occurred. Try again or reload the page.', retry: 'Try Again', reload: 'Reload Page' },
-      it: { title: 'Qualcosa è andato storto', desc: 'Si è verificato un errore imprevisto. Riprova o ricarica la pagina.', retry: 'Riprova', reload: 'Ricarica' },
-      es: { title: 'Algo salió mal', desc: 'Ocurrió un error inesperado. Inténtalo de nuevo o recarga la página.', retry: 'Reintentar', reload: 'Recargar' },
-      fr: { title: 'Une erreur est survenue', desc: 'Une erreur inattendue s\'est produite. Réessayez ou rechargez la page.', retry: 'Réessayer', reload: 'Recharger' },
-      de: { title: 'Etwas ist schiefgelaufen', desc: 'Ein unerwarteter Fehler ist aufgetreten. Versuchen Sie es erneut oder laden Sie die Seite neu.', retry: 'Erneut versuchen', reload: 'Neu laden' },
-      pt: { title: 'Algo deu errado', desc: 'Ocorreu um erro inesperado. Tente novamente ou recarregue a página.', retry: 'Tentar novamente', reload: 'Recarregar' },
-      ja: { title: 'エラーが発生しました', desc: '予期しないエラーが発生しました。もう一度お試しいただくか、ページを再読み込みしてください。', retry: '再試行', reload: '再読み込み' },
-      zh: { title: '出现错误', desc: '发生了意外错误。请重试或刷新页面。', retry: '重试', reload: '刷新页面' },
-      ko: { title: '오류가 발생했습니다', desc: '예기치 않은 오류가 발생했습니다. 다시 시도하거나 페이지를 새로고침하세요.', retry: '다시 시도', reload: '새로고침' },
-      ar: { title: 'حدث خطأ', desc: 'حدث خطأ غير متوقع. حاول مرة أخرى أو أعد تحميل الصفحة.', retry: 'إعادة المحاولة', reload: 'إعادة التحميل' },
-    };
     let lang = 'en';
     try {
-      const nav = typeof navigator !== 'undefined' ? (navigator.language || '').slice(0, 2).toLowerCase() : 'en';
-      lang = TEXTS[nav] ? nav : mapLang(nav);
+      lang = linguaInterfacciaFuoriContesto();
+      preloadLang(lang);   // se il pacchetto non c'e ancora, t() ripiega su en
     } catch (e) { console.warn('[ErrorBoundary] Language detection failed:', e?.message); }
-    const strings = TEXTS[lang] || TEXTS.en;
-    return strings[key] || TEXTS.en[key] || key;
+    return t(lang, key);
   }
 
   render() {
@@ -79,10 +77,10 @@ export default class ErrorBoundary extends Component {
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>{'\u26A0\uFE0F'}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 8px', color: '#fff' }}>
-            {this.getErrorText('title')}
+            {this.getErrorText('errorTitle')}
           </h2>
           <p style={{ fontSize: 14, color: '#aaa', maxWidth: 400, lineHeight: 1.5, margin: '0 0 24px' }}>
-            {this.getErrorText('desc')}
+            {this.getErrorText('errorDesc')}
           </p>
           {this.state.error && (
             <pre style={{
@@ -99,14 +97,14 @@ export default class ErrorBoundary extends Component {
               background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14,
               fontWeight: 600, cursor: 'pointer',
             }}>
-              {this.getErrorText('retry')}
+              {this.getErrorText('retryWord')}
             </button>
             <button onClick={this.handleReload} style={{
               padding: '10px 24px', borderRadius: 12, border: 'none',
               background: 'linear-gradient(135deg, #8b5cf6, #06b6d4)', color: '#fff',
               fontSize: 14, fontWeight: 600, cursor: 'pointer',
             }}>
-              {this.getErrorText('reload')}
+              {this.getErrorText('reloadPage')}
             </button>
           </div>
         </div>

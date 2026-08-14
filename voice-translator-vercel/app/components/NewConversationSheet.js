@@ -19,35 +19,18 @@ import Icon from './Icon.js';
 // Se un amico ti detta il codice a voce, prima non c'era modo di usarlo.
 // ═══════════════════════════════════════════════════════════════
 
+// b.138 — le quattro voci erano scritte a mano in italiano. E il
+// pannello del tasto "+", il piu premuto dell'app: chi lo apriva con
+// l'interfaccia in un'altra lingua trovava quattro righe italiane.
 const OPTIONS = [
-  {
-    id: 'entra-codice',
-    icona: 'doorOpen',
-    title: 'Entra con un codice',
-    desc: 'Ti hanno dato un codice a voce o per messaggio',
-  },
-  {
-    id: 'stanza-community',
-    icona: 'globe',
-    title: 'Apri una stanza pubblica',
-    desc: 'Chiunque nel mondo può entrare e parlare',
-  },
-  {
-    id: 'contatti',
-    icona: 'user',
-    title: 'I tuoi contatti',
-    desc: 'Riprendi con chi parli di solito',
-  },
-  {
-    id: 'cronologia',
-    icona: 'history',
-    title: 'Conversazioni salvate',
-    desc: 'Rileggi o riascolta quelle di prima',
-  },
+  { id: 'entra-codice', icona: 'doorOpen', titleKey: 'optCodeTitle', descKey: 'optCodeDesc' },
+  { id: 'stanza-community', icona: 'globe', titleKey: 'optPublicTitle', descKey: 'optPublicDesc' },
+  { id: 'contatti', icona: 'user', titleKey: 'optContactsTitle', descKey: 'optContactsDesc' },
+  { id: 'cronologia', icona: 'history', titleKey: 'optSavedTitle', descKey: 'optSavedDesc' },
 ];
 
 const NewConversationSheet = ({ open, onClose, onSelect }) => {
-  const { S } = useApp();
+  const { L, S } = useApp();
   const C = S?.colors || {};
   const sheetRef = useSheetA11y(open, onClose);
 
@@ -67,7 +50,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
       }}
       role="dialog"
       aria-modal="true"
-      aria-label="Nuova conversazione"
+      aria-label={L('newConversation')}
     >
       <div ref={sheetRef} style={{
         width: '100%', maxWidth: '480px',
@@ -90,7 +73,7 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
           color: C.text || '#fff',
           fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
         }}>
-          Cosa vuoi fare?
+          {L('whatToDo')}
         </h2>
 
         {/* Options */}
@@ -127,13 +110,13 @@ const NewConversationSheet = ({ open, onClose, onSelect }) => {
                   color: C.text || '#fff', marginBottom: '2px',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}>
-                  {opt.title}
+                  {L(opt.titleKey)}
                 </div>
                 <div style={{
                   fontSize: '13px', color: C.textMuted || 'rgba(255,255,255,0.5)',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
                 }}>
-                  {opt.desc}
+                  {L(opt.descKey)}
                 </div>
               </div>
             </button>

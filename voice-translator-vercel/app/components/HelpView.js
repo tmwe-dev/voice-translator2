@@ -12,66 +12,34 @@ import { useApp } from '../contexts/AppContext.js';
 // Glassmorphism design, ambient orb, stagger anim.
 // ═══════════════════════════════════════════════
 
+// ── b.138 · la guida era scritta in italiano, per chiunque ──
+//
+// Le dieci domande e le sei funzioni stavano qui come testo fisso:
+// chi apriva l'Aiuto con l'interfaccia in inglese, in cinese o in
+// arabo si trovava davanti dieci paragrafi in italiano — proprio
+// nella pagina che si apre quando NON si e capito qualcosa. Ora le
+// due liste portano solo i nomi delle chiavi.
 const FAQ_ITEMS = [
-  {
-    q: 'Come funziona la traduzione?',
-    a: 'Parla o scrivi nella tua lingua. BarTalk traduce automaticamente il testo e lo legge ad alta voce nella lingua del destinatario usando voci neurali di alta qualità.',
-    icon: '',
-  },
-  {
-    q: 'TaxiTalk — come si usa?',
-    a: 'Apri TaxiTalk dalla home. Seleziona le lingue, tieni premuto il microfono per parlare, rilascia per tradurre. Usa per mostrare la traduzione specchiata al tassista. Puoi anche aggiungere una destinazione con mappa.',
-    icon: '',
-  },
-  {
-    q: 'Quanto costa BarTalk?',
-    a: 'Provi gratis: ogni nuovo account riceve 30 minuti di conversazione in regalo. Poi ricarichi solo quello che usi (da €4,99 per 3 ore) — nessun abbonamento, i minuti restano tuoi. Con le tue chiavi API personali l’uso è illimitato.',
-    icon: '🆓',
-  },
-  {
-    q: 'Come creo una stanza?',
-    a: 'Dalla home, tocca "Crea Stanza". Scegli la lingua principale, la modalità (Chat, Classroom, Conference...) e condividi il codice o il QR con gli invitati.',
-    icon: '',
-  },
-  {
-    q: 'Quante lingue sono supportate?',
-    a: 'BarTalk supporta 25+ lingue con traduzione e voci neurali: italiano, inglese, spagnolo, francese, tedesco, portoghese, cinese, giapponese, coreano, arabo, hindi, russo, turco, tailandese, vietnamita e altre.',
-    icon: '',
-  },
-  {
-    q: 'La modalità Live è diversa dalla Batch?',
-    a: 'Batch: tieni premuto il mic, parla, rilascia → traduzione completa. Live: tap per attivare traduzione continua in tempo reale con Deepgram. La Live è ideale per conversazioni fluide faccia-a-faccia.',
-    icon: '',
-  },
-  {
-    q: 'Come funziona la modalità Mirror?',
-    a: 'In TaxiTalk, tocca per mostrare lo schermo specchiato. Il testo tradotto appare capovolto così la persona di fronte può leggerlo. Si attiva anche automaticamente capovolgendo il telefono.',
-    icon: '',
-  },
-  {
-    q: 'Posso clonare la mia voce?',
-    a: 'Sì! Vai in Impostazioni → Voice Clone. Registra 30 secondi della tua voce e le traduzioni verranno lette con un timbro simile al tuo. Funziona con ElevenLabs.',
-    icon: '',
-  },
-  {
-    q: 'Come invito qualcuno?',
-    a: 'Dopo aver creato una stanza, usa il pulsante "Invita" per generare un link. Condividilo via WhatsApp, Telegram, SMS o email. L\'invitato si unirà con un click, senza bisogno di account.',
-    icon: '',
-  },
-  {
-    q: 'I messaggi sono privati?',
-    a: 'I messaggi nelle stanze sono crittografati in transito. Le stanze si cancellano automaticamente dopo l\'inattività. Nessun messaggio viene conservato sui nostri server a lungo termine.',
-    icon: '',
-  },
+  { qKey: 'faqHowQ', aKey: 'faqHowA', icon: '' },
+  { qKey: 'faqTaxiQ', aKey: 'faqTaxiA', icon: '' },
+  { qKey: 'faqPriceQ', aKey: 'faqPriceA', icon: '🆓' },
+  { qKey: 'faqRoomQ', aKey: 'faqRoomA', icon: '' },
+  { qKey: 'faqLangsQ', aKey: 'faqLangsA', icon: '' },
+  { qKey: 'faqLiveQ', aKey: 'faqLiveA', icon: '' },
+  { qKey: 'faqMirrorQ', aKey: 'faqMirrorA', icon: '' },
+  { qKey: 'faqCloneQ', aKey: 'faqCloneA', icon: '' },
+  { qKey: 'faqInviteQ', aKey: 'faqInviteA', icon: '' },
+  { qKey: 'faqPrivacyQ', aKey: 'faqPrivacyA', icon: '' },
 ];
 
+// TaxiTalk e Voice Clone sono nomi propri e restano tali: non hanno chiave.
 const FEATURES = [
-  { icon: '', title: 'Traduzione vocale', desc: 'Parla e ascolta traduzioni in tempo reale' },
-  { icon: '', title: 'TaxiTalk', desc: 'Comunica con tassisti e stranieri faccia a faccia' },
-  { icon: '', title: 'Stanze multilingue', desc: 'Chat di gruppo con traduzione automatica' },
-  { icon: '', title: 'Mondo', desc: 'Scopri stanze pubbliche da tutto il mondo' },
-  { icon: '', title: 'Modalità Mirror', desc: 'Mostra la traduzione specchiata a chi hai davanti' },
-  { icon: '', title: 'Voice Clone', desc: 'Le traduzioni parlano con la tua voce' },
+  { icon: '', titleKey: 'helpFeatVoiceTitle', descKey: 'helpFeatVoiceDesc' },
+  { icon: '', title: 'TaxiTalk', descKey: 'helpFeatTaxiDesc' },
+  { icon: '', titleKey: 'helpFeatRoomsTitle', descKey: 'helpFeatRoomsDesc' },
+  { icon: '', titleKey: 'helpFeatWorldTitle', descKey: 'helpFeatWorldDesc' },
+  { icon: '', titleKey: 'helpFeatMirrorTitle', descKey: 'helpFeatMirrorDesc' },
+  { icon: '', title: 'Voice Clone', descKey: 'helpFeatCloneDesc' },
 ];
 
 function HelpView() {
@@ -118,9 +86,9 @@ function HelpView() {
         }}>‹</button>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-            ❓ Aiuto
+            ❓ {L('helpTitle')}
           </div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>FAQ e guida rapida</div>
+          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>{L('helpSubtitle')}</div>
         </div>
       </header>
 
@@ -133,7 +101,7 @@ function HelpView() {
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
-            Funzionalità
+            {L('helpFeaturesTitle')}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
             {FEATURES.map((f, i) => (
@@ -144,8 +112,8 @@ function HelpView() {
                 animation: `vtSlideUp 0.3s ease-out ${i * 0.05}s both`,
               }}>
                 <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{f.title}</div>
-                <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{f.desc}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
+                <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{L(f.descKey)}</div>
               </div>
             ))}
           </div>
@@ -157,7 +125,7 @@ function HelpView() {
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5,
             color: C.textMuted, marginBottom: 10, padding: '0 2px',
           }}>
-            Domande Frequenti
+            {L('landingFaqTitle')}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {FAQ_ITEMS.map((faq, i) => {
@@ -178,7 +146,7 @@ function HelpView() {
                   }}>
                     <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
-                      {faq.q}
+                      {L(faq.qKey)}
                     </span>
                     <span style={{
                       fontSize: 12, color: C.textMuted, flexShrink: 0,
@@ -192,7 +160,7 @@ function HelpView() {
                       fontSize: 12, color: C.textSecondary, lineHeight: 1.6,
                       animation: 'vtFadeIn 0.2s ease-out',
                     }}>
-                      {faq.a}
+                      {L(faq.aKey)}
                     </div>
                   )}
                 </div>
@@ -206,7 +174,7 @@ function HelpView() {
           textAlign: 'center', padding: '16px 0',
           fontSize: 10, color: C.textMuted, opacity: 0.5,
         }}>
-          BarTalk — Traduzione vocale universale
+          {L('helpFooter')}
         </div>
       </div>
 

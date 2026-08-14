@@ -14,38 +14,47 @@ import PrimaProva, { primaProvaGiaFatta } from './PrimaProva.js'; // b.96
 // ═══════════════════════════════════════
 // Action card data
 // ═══════════════════════════════════════
+// ── b.138 · le sei porte non erano piu in italiano per tutti ──
+//
+// Qui c'erano titoli e descrizioni scritti a mano ("Parla con chi hai
+// davanti", "Invia un link via WhatsApp, SMS o email"...). Un cinese o
+// un tedesco che apriva l'app trovava la schermata principale — quella
+// da cui passa TUTTO — in italiano, anche dopo aver scelto la propria
+// lingua dell'interfaccia. Ora l'elenco porta solo i nomi delle chiavi
+// e il testo lo mette L() al momento del disegno.
 const ACTIONS = [
   {
     id: 'face-to-face',
     icon: 'qr',
-    title: 'Parla con chi hai davanti',
-    desc: 'Mostra il QR e parlate ciascuno nella propria lingua',
+    titleKey: 'actFaceTitle',
+    descKey: 'actFaceDesc',
     primary: true,
   },
   {
     id: 'invite',
     icon: 'mail',
-    title: 'Invita una persona',
-    desc: 'Invia un link via WhatsApp, SMS o email',
+    titleKey: 'actInviteTitle',
+    descKey: 'actInviteDesc',
   },
   {
     id: 'videocall',
     icon: 'video',
-    title: 'Videochiamata tradotta',
-    desc: 'Chiamata video con sottotitoli e voce tradotta',
+    titleKey: 'actVideoTitle',
+    descKey: 'actVideoDesc',
   },
   {
     id: 'taxitalk',
     icon: 'car',
+    // TaxiTalk e un nome proprio: non si traduce, e infatti non e una chiave.
     title: 'TaxiTalk',
-    desc: 'Comunica la destinazione al tassista',
+    descKey: 'actTaxiDesc',
   },
   {
     // b.102 — porta separata dalla videochiamata a due, che resta com'e.
     id: 'stanza-video',
     icon: 'video',
-    title: 'Stanza video di gruppo',
-    desc: 'Fino a 8 persone, ognuno parla e legge nella sua lingua',
+    titleKey: 'actRoomTitle',
+    descKey: 'actRoomDesc',
   },
   {
     // b.99 — regalare minuti esisteva e funzionava, ma stava in fondo alla
@@ -53,8 +62,8 @@ const ACTIONS = [
     // non ha una voce dove le persone guardano, per loro non esiste.
     id: 'regala',
     icon: 'gift',
-    title: 'Regala minuti a qualcuno',
-    desc: 'Un link con dentro il tuo credito, per chi non ce l’ha',
+    titleKey: 'actGiftTitle',
+    descKey: 'actGiftDesc',
   },
 ];
 
@@ -225,13 +234,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             color: C.textPrimary, fontFamily: FONT,
             margin: 0, lineHeight: 1.2,
           }}>
-            Con chi vuoi parlare?
+            {L('homeTitle')}
           </h1>
 
           {/* Striscia dei fatti: arricchisce senza appesantire */}
           <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
-            {/* Il numero si conta, non si scrive: diceva 32 quando erano 44. */}
-            {[`${LANGS.length} lingue`, 'Crittografia E2E', 'Voce naturale'].map(f => (
+            {/* Il numero si conta, non si scrive: diceva 32 quando erano 44.
+                b.138 — le tre etichette erano in italiano fisso: chi aveva
+                l'interfaccia in inglese leggeva "44 lingue · Crittografia
+                E2E · Voce naturale" sotto un titolo tradotto. */}
+            {[`${LANGS.length} ${L('landingStatLangs')}`, L('e2eTitle'), L('homeFactVoice')].map(f => (
               <span key={f} style={{
                 fontSize: 11, fontWeight: 650, color: C.textMuted, fontFamily: FONT,
                 display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -294,10 +306,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                    {action.title}
+                    {action.title || L(action.titleKey)}
                   </span>
                   <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                    {action.desc}
+                    {L(action.descKey)}
                   </span>
                 </span>
                 <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
@@ -330,10 +342,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                Il mondo ora
+                {L('worldNowTitle')}
               </span>
               <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                Stanze aperte, discussioni senza barriere
+                {L('worldNowDesc')}
               </span>
             </span>
             <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
@@ -347,11 +359,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               fontSize: 10, fontWeight: 700, color: C.textMuted,
               letterSpacing: 1.5, textTransform: 'uppercase', fontFamily: FONT, marginBottom: 10,
             }}>
-              Chat attive
+              {L('activeChats')}
             </div>
             {activeRooms.map((room) => {
               const timeAgo = Math.floor((Date.now() - room.leftAt) / 60000);
-              const timeStr = timeAgo < 1 ? 'ora' : timeAgo < 60 ? `${timeAgo}m` : `${Math.floor(timeAgo / 60)}h`;
+              const timeStr = timeAgo < 1 ? L('timeNow') : timeAgo < 60 ? `${timeAgo}m` : `${Math.floor(timeAgo / 60)}h`;
               return (
                 <div key={room.roomId}
                   onClick={() => { vibrate(); if (rejoinRoom) rejoinRoom(room.roomId); }}

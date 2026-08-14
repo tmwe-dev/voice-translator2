@@ -70,7 +70,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       try {
         // Check for decryption key — without it, we cannot read the destination
         if (!decryptionKey) {
-          setError('Chiave di decifratura mancante. Scansiona di nuovo il QR completo.');
+          setError(L('taxiMissingKey'));
           setLoading(false);
           return;
         }
@@ -101,7 +101,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       setLoading(false);
     }
     load();
-  }, [destId, decryptionKey]);
+  }, [destId, decryptionKey, L]);
 
   // ── Translate when driver selects language ──
   useEffect(() => {
@@ -301,7 +301,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
           background: C.card, border: `1px solid ${C.cardBorder}`,
           color: C.textMuted, fontSize: 10, fontWeight: 600, fontFamily: FONT,
         }}>
-          Lingua
+          {L('yourLang')}
         </button>
       </header>
 

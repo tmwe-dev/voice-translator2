@@ -134,7 +134,7 @@ describe('5 · archivio: riprendere, condividere, eliminare', () => {
   it('e il client controlla la risposta', () => {
     // Prima non guardava `res.ok`: il server rifiutava e l'utente
     // vedeva la schermata tornare indietro come se fosse riuscito.
-    expect(p()).toMatch(/if \(!res\.ok\)[\s\S]{0,260}Non sono riuscito a eliminare/);
+    expect(p()).toMatch(/if \(!res\.ok\)[\s\S]{0,260}L\('cannotDelete'\)/);
   });
 });
 

@@ -152,13 +152,13 @@ describe('regalare minuti si trova', () => {
   it('c\'e una voce in Home, non solo in fondo alla pagina del credito', () => {
     const home = leggi('components/HomeView.js');
     expect(home).toMatch(/id: 'regala'/);
-    expect(home).toMatch(/Regala minuti a qualcuno/);
+    expect(home).toMatch(/actGiftTitle/);
     expect(home, 'e porta dove i minuti si scalano davvero').toMatch(/case 'regala'/);
   });
 });
 
 describe('la riservatezza e scritta prima di entrare', () => {
   it('la scheda della stanza dice che i messaggi restano', () => {
-    expect(leggi('components/MondoView.js')).toMatch(/i messaggi restano visibili a chi entra dopo/);
+    expect(leggi('components/MondoView.js')).toMatch(/openRoomNotice/);
   });
 });

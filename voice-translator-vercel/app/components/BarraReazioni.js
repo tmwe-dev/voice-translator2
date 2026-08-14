@@ -1,6 +1,7 @@
 'use client';
 import { memo, useCallback } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // BARRA REAZIONI — sotto ogni messaggio, sempre visibile.
@@ -16,13 +17,17 @@ import { FONT, vibrate } from '../lib/constants.js';
 // legge un testo.
 // ═══════════════════════════════════════════════════════════════
 
+// b.138 — le etichette dei tre gesti erano in italiano fisso e finivano
+// nel lettore di schermo: chi ascoltava l'app in inglese sentiva
+// "D'accordo" al posto di "Agree".
 const GESTI = [
-  { tipo: 'su', segno: '\u{1F44D}', etichetta: 'D’accordo' },
-  { tipo: 'giu', segno: '\u{1F44E}', etichetta: 'Non d’accordo' },
-  { tipo: 'cuore', segno: '❤️', etichetta: 'Mi piace' },
+  { tipo: 'su', segno: '\u{1F44D}', chiave: 'reactAgree' },
+  { tipo: 'giu', segno: '\u{1F44E}', chiave: 'reactDisagree' },
+  { tipo: 'cuore', segno: '❤️', chiave: 'reactLike' },
 ];
 
 function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta }) {
+  const { L } = useApp();
   const tocca = useCallback((tipo) => {
     vibrate(10);
     onReagisci?.(msgId, tipo);
@@ -46,8 +51,8 @@ function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta 
         const attivo = !!mie?.[g.tipo];
         return (
           <button key={g.tipo} onClick={() => tocca(g.tipo)}
-            aria-label={g.etichetta} aria-pressed={attivo}
-            title={g.etichetta}
+            aria-label={L(g.chiave)} aria-pressed={attivo}
+            title={L(g.chiave)}
             style={bottone(attivo)}>
             <span style={{ fontSize: compatta ? 12 : 13 }}>{g.segno}</span>
             {n > 0 && <span>{n}</span>}
@@ -57,7 +62,7 @@ function BarraReazioni({ msgId, conte, mie, onReagisci, onRispondi, C, compatta 
 
       {onRispondi && (
         <button onClick={() => { vibrate(10); onRispondi(msgId); }}
-          aria-label="Rispondi a questo messaggio"
+          aria-label={L('replyToMessage')}
           style={{ ...bottone(false), fontWeight: 600 }}>
           Rispondi
           {conte?.risposte > 0 && <span style={{ fontWeight: 800 }}>{conte.risposte}</span>}

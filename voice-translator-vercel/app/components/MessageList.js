@@ -10,12 +10,15 @@ import { velare } from '../lib/velo.js';
 // b.120 — le parole che l'utente legge toccando la spunta. Servono
 // anche a chi usa un lettore di schermo, che altrimenti sentirebbe
 // solo "immagine".
+// b.138 — le cinque etichette erano in italiano fisso: chi ascoltava la
+// chat con un lettore di schermo in un'altra lingua sentiva "Arrivato
+// all'altro telefono" in italiano. Ora sono nomi di chiave.
 const ETICHETTA_STATO = {
-  'in-coda':    'In attesa di partire',
-  'inviato':    'Inviato',
-  'consegnato': 'Arrivato all\'altro telefono',
-  'letto':      'Letto',
-  'fallito':    'Non e partito',
+  'in-coda':    'statusQueued',
+  'inviato':    'statusSent',
+  'consegnato': 'statusDelivered',
+  'letto':      'statusRead',
+  'fallito':    'statusFailed',
 };
 
 // Avvolge la nuvoletta solo quando serve davvero: se non c'e niente da
@@ -163,8 +166,8 @@ const MessageList = memo(function MessageList({
                   {pendingTranslation ? (
                     <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
                       {m._translationError
-                        ? (L('translationFailed') || 'Traduzione fallita \u26A0\uFE0F')
-                        : (L('translating') || 'Traducendo...')}
+                        ? L('translationFailedShort')
+                        : L('translating')}
                     </div>
                   ) : (
                     <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
@@ -206,7 +209,7 @@ const MessageList = memo(function MessageList({
               <div style={{display:'flex', alignItems:'center', gap:4, marginTop:2}}>
                 {hasTranslation && (
                   <button onClick={() => playMessage(m)}
-                    aria-label={playingMsgId === m.id ? 'Stop audio' : 'Play message audio'}
+                    aria-label={playingMsgId === m.id ? L('stopAudio') : L('playMessageAudio')}
                     style={{padding:'2px 8px', borderRadius:8,
                       background:'transparent', border:'none', color:S.colors.textMuted,
                       fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
@@ -215,7 +218,7 @@ const MessageList = memo(function MessageList({
                 )}
                 {/* React button */}
                 <button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id)}
-                  aria-label="Add reaction"
+                  aria-label={L('addReaction')}
                   aria-expanded={reactionPickerMsgId === m.id}
                   style={{padding:'2px 6px', borderRadius:8,
                     background:'transparent', border:'none', color:S.colors.textMuted,
@@ -238,8 +241,8 @@ const MessageList = memo(function MessageList({
                     differenza fra "aspetta" e "e andata". */}
                 {isMine && (
                   <span
-                    title={ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda']}
-                    aria-label={ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda']}
+                    title={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda'])}
+                    aria-label={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda'])}
                     style={{
                       color: m._status === 'fallito' ? (PALETTE.red || '#EF4444')
                         : m._status === 'letto' ? PALETTE.green
@@ -268,7 +271,7 @@ const MessageList = memo(function MessageList({
                 }}>
                   {QUICK_REACTIONS.map(emoji => (
                     <button key={emoji}
-                      aria-label={`React with ${emoji}`}
+                      aria-label={`${L('reactWith')} ${emoji}`}
                       onClick={() => { haptic(); onReaction?.(m.id, emoji); setReactionPickerMsgId(null); }}
                       style={{
                         background:'none', border:'none', fontSize:20, cursor:'pointer',
@@ -312,14 +315,14 @@ const MessageList = memo(function MessageList({
                     <span style={{...S.dot, animationDelay:'0.4s'}}/>
                   </div>
                   <span style={{fontSize:12, color:S.colors.textMuted, fontStyle:'italic'}}>
-                    {L('listening') || 'In ascolto...'}
+                    {L('listening')}
                   </span>
                 </div>
               ) : streamingMsg._whisperProcessing && !streamingMsg.original ? (
                 <div style={{display:'flex', alignItems:'center', gap:8, padding:'4px 0'}}>
                   <IconLoader size={18}/>
                   <span style={{fontSize:12, color:S.colors.textMuted, fontStyle:'italic'}}>
-                    {L('processing') || 'Elaborazione in corso...'}
+                    {L('processing')}
                   </span>
                 </div>
               ) : (

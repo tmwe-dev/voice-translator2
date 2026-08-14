@@ -32,7 +32,7 @@ const DetailView = memo(function DetailView({
   const duration = conversation.duration
     ? `${Math.floor(conversation.duration / 60)}m ${conversation.duration % 60}s`
     : conversation.messageCount
-      ? `${conversation.messageCount} messaggi`
+      ? `${conversation.messageCount} ${L('messages')}`
       : '--';
 
   const filteredMessages = useMemo(() => {
@@ -45,9 +45,10 @@ const DetailView = memo(function DetailView({
   }, [messages, searchQuery]);
 
   const tabs = [
-    { id: 'messages', label: 'Messaggi', icon: '' },
-    { id: 'summary', label: 'Riepilogo', icon: '' },
-    { id: 'stats', label: 'Statistiche', icon: '' },
+    // b.138 — schede, etichette e riepilogo erano in italiano fisso.
+    { id: 'messages', label: L('tabMessages'), icon: '' },
+    { id: 'summary', label: L('tabSummary'), icon: '' },
+    { id: 'stats', label: L('tabStats'), icon: '' },
   ];
 
   return (
@@ -98,10 +99,10 @@ const DetailView = memo(function DetailView({
       {/* Info Cards */}
       <div style={{ padding: '12px 16px', display: 'flex', gap: 10, overflowX: 'auto' }}>
         {[
-          { label: 'Modalità', value: conversation.mode || 'Conversazione', icon: '' },
-          { label: 'Contesto', value: conversation.context || 'Generale', icon: '' },
-          { label: 'Messaggi', value: String(messages.length || conversation.messageCount || 0), icon: '' },
-          { label: 'Costo', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Free', icon: '' },
+          { label: L('mode'), value: conversation.mode || L('conversation'), icon: '' },
+          { label: L('context'), value: conversation.context || L('ctxGeneral'), icon: '' },
+          { label: L('tabMessages'), value: String(messages.length || conversation.messageCount || 0), icon: '' },
+          { label: L('costWord'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord'), icon: '' },
         ].map((card, i) => (
           <div key={i} style={{
             flexShrink: 0, padding: '10px 14px', borderRadius: 14,
@@ -145,7 +146,7 @@ const DetailView = memo(function DetailView({
             }}>
               <span style={{ color: S.colors.textMuted }}></span>
               <input
-                placeholder="Cerca nei messaggi..."
+                placeholder={L('searchInMessages')}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
@@ -201,7 +202,7 @@ const DetailView = memo(function DetailView({
               })}
               {filteredMessages.length === 0 && (
                 <div style={{ textAlign: 'center', padding: 40, color: S.colors.textMuted, fontSize: 13 }}>
-                  {searchQuery ? 'Nessun messaggio trovato' : 'Nessun messaggio in questa conversazione'}
+                  {searchQuery ? L('noMessageFound') : L('noMessagesInConv')}
                 </div>
               )}
             </div>
@@ -216,13 +217,18 @@ const DetailView = memo(function DetailView({
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
               <span style={{ fontSize: 18 }}></span>
               <span style={{ fontSize: 14, fontWeight: 700, color: S.colors.textPrimary }}>
-                Riepilogo AI
+                {L('aiSummary')}
               </span>
             </div>
             <p style={{
               color: S.colors.textSecondary, fontSize: 14, lineHeight: 1.7, margin: 0,
             }}>
-              {conversation.summary || `Conversazione con ${partner?.name || 'partner'} in modalità ${conversation.mode || 'conversazione'}. Scambiati ${messages.length} messaggi tra ${myLangInfo.name} e ${partnerLang.name}.`}
+              {conversation.summary || L('detailSummaryFallback')
+                .replace('{partner}', partner?.name || 'partner')
+                .replace('{mode}', conversation.mode || L('conversation'))
+                .replace('{n}', String(messages.length))
+                .replace('{a}', myLangInfo.name)
+                .replace('{b}', partnerLang.name)}
             </p>
           </div>
         )}
@@ -230,12 +236,12 @@ const DetailView = memo(function DetailView({
         {activeTab === 'stats' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { label: 'Messaggi inviati', value: messages.filter(m => m.sender === prefs.name).length, icon: '' },
-              { label: 'Messaggi ricevuti', value: messages.filter(m => m.sender !== prefs.name).length, icon: '' },
-              { label: 'Lingue', value: `${myLangInfo.name} ⇄ ${partnerLang.name}`, icon: '' },
-              { label: 'Durata', value: duration, icon: '' },
-              { label: 'Costo traduzione', value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : 'Gratuito', icon: '' },
-              { label: 'Contesto', value: conversation.context || 'Generale', icon: '' },
+              { label: L('statsSent'), value: messages.filter(m => m.sender === prefs.name).length, icon: '' },
+              { label: L('statsReceived'), value: messages.filter(m => m.sender !== prefs.name).length, icon: '' },
+              { label: L('languagesWord'), value: `${myLangInfo.name} ⇄ ${partnerLang.name}`, icon: '' },
+              { label: L('durationWord'), value: duration, icon: '' },
+              { label: L('translationCost'), value: conversation.totalCost ? `€${conversation.totalCost.toFixed(4)}` : L('freeWord'), icon: '' },
+              { label: L('context'), value: conversation.context || L('ctxGeneral'), icon: '' },
             ].map((stat, i) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px',

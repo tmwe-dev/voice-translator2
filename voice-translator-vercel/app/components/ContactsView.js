@@ -11,6 +11,15 @@ import { useApp } from '../contexts/AppContext.js';
 //
 // Search, online-first sort, invite share panel,
 // device import, remove confirm, ambient orb.
+//
+// ── b.138 · la rubrica parlava italiano a tutti ──
+//
+// Ogni testo di questa pagina era cablato in italiano: "Nessun
+// contatto", "Cerca contatti...", "Visto 5m fa", perfino l'errore
+// "Inserisci un'email valida". Chi aveva l'interfaccia in tedesco o
+// in arabo vedeva la rubrica in italiano, e con l'arabo il risultato
+// era anche illeggibile per direzione del testo. Ora passa tutto da
+// L(), che segue prefs.uiLang come nel resto dell'app.
 // ═══════════════════════════════════════════════
 
 export default function ContactsView({
@@ -54,17 +63,17 @@ export default function ContactsView({
   useEffect(() => { const cleanup = startPolling(); return cleanup; }, [startPolling]);
 
   async function handleAddContact() {
-    if (!addEmail.trim() || !addEmail.includes('@')) { setAddError('Inserisci un\'email valida'); return; }
+    if (!addEmail.trim() || !addEmail.includes('@')) { setAddError(L('invalidEmail')); return; }
     setAddError(''); setAddSuccess('');
     const result = await addContact(addEmail.trim());
     if (result.ok) {
-      setAddSuccess(`${result.contact.name || addEmail} aggiunto!`);
+      setAddSuccess(`${result.contact.name || addEmail} ${L('contactAddedOk')}`);
       setAddEmail(''); setShowAddSection(false);
       setTimeout(() => setAddSuccess(''), 3000);
     } else if (result.notRegistered) {
-      setAddError('Utente non registrato. Invia un invito!');
+      setAddError(L('userNotRegistered'));
     } else {
-      setAddError(result.error === 'notAuthenticated' ? 'Accedi per aggiungere contatti' : (result.error || 'Errore'));
+      setAddError(result.error === 'notAuthenticated' ? L('signInToAddContacts') : (result.error || L('genericError')));
     }
   }
 
@@ -86,7 +95,7 @@ export default function ContactsView({
     setDeviceImporting(true); setDeviceImportResult(null);
     try {
       const result = await pickDeviceContacts();
-      if (!result.supported) { setDeviceImportResult({ error: 'Rubrica non supportata' }); return; }
+      if (!result.supported) { setDeviceImportResult({ error: L('addressBookUnsupported') }); return; }
       if (result.cancelled || !result.contacts?.length) { setDeviceImporting(false); return; }
       let added = 0, invited = 0;
       for (const c of result.contacts) {
@@ -114,7 +123,7 @@ export default function ContactsView({
   function formatLastSeen(timestamp) {
     if (!timestamp) return '';
     const mins = Math.floor((Date.now() - timestamp) / 60000);
-    if (mins < 1) return 'ora';
+    if (mins < 1) return L('timeNow');
     if (mins < 60) return `${mins}m`;
     const hours = Math.floor(mins / 60);
     if (hours < 24) return `${hours}h`;
@@ -151,12 +160,12 @@ export default function ContactsView({
 
       {/* ═══ HEADER ═══ */}
       <PageHeader
-        title="Contatti"
-        subtitle={`${contacts.length} contatti${onlineCount > 0 ? ` · ${onlineCount} online` : ''}`}
+        title={L('contactsRow')}
+        subtitle={`${contacts.length} ${L('contactsCount')}${onlineCount > 0 ? ` · ${onlineCount} ${L('onlineWord').toLowerCase()}` : ''}`}
         onBack={() => setView('settings')}
         S={{ colors: C }}
         rightAction={
-          <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? 'Chiudi' : 'Aggiungi contatto'} style={{
+          <button onClick={() => setShowAddSection(!showAddSection)} aria-label={showAddSection ? L('closeWord') : L('addContactAria')} style={{
             width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
             background: showAddSection ? `${C.accent}15` : C.card,
             border: `1px solid ${showAddSection ? `${C.accent}25` : C.cardBorder}`,
@@ -179,7 +188,7 @@ export default function ContactsView({
           }}>
             <span style={{ fontSize: 14, opacity: 0.4 }}></span>
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Cerca contatti..."
+              placeholder={L('searchContacts')}
               style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: C.textPrimary, fontSize: 13, fontFamily: FONT }} />
             {search && <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0 }}>×</button>}
           </div>
@@ -195,13 +204,13 @@ export default function ContactsView({
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
           <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: C.textSecondary }}>
-            Aggiungi per email
+            {L('addByEmail')}
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
             <input style={{
               flex: 1, padding: '10px 14px', borderRadius: 12, fontSize: 13, fontFamily: FONT,
               background: C.input, border: `1px solid ${C.inputBorder}`, color: C.textPrimary, outline: 'none',
-            }} type="email" placeholder="Email del contatto..."
+            }} type="email" placeholder={L('contactEmailPlaceholder')}
               value={addEmail} onChange={e => { setAddEmail(e.target.value); setAddError(''); }}
               onKeyDown={e => e.key === 'Enter' && handleAddContact()} />
             <button onClick={handleAddContact} style={{
@@ -222,7 +231,7 @@ export default function ContactsView({
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
                 opacity: deviceImporting ? 0.5 : 1,
               }}>
-                {deviceImporting ? '...' : 'Rubrica'}
+                {deviceImporting ? '...' : L('addressBook')}
               </button>
             )}
             <button onClick={handleCreateInvite} style={{
@@ -231,7 +240,7 @@ export default function ContactsView({
               color: C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
             }}>
-              Invita amico
+              {L('inviteFriend')}
             </button>
           </div>
 
@@ -241,7 +250,7 @@ export default function ContactsView({
               background: deviceImportResult.error ? `${C.red}10` : `${C.green}10`,
               color: deviceImportResult.error ? C.red : C.green,
             }}>
-              {deviceImportResult.error || `${deviceImportResult.added} aggiunti, ${deviceImportResult.invited} invitati`}
+              {deviceImportResult.error || `${deviceImportResult.added} ${L('importedAdded')}, ${deviceImportResult.invited} ${L('importedInvited')}`}
             </div>
           )}
         </div>
@@ -255,8 +264,8 @@ export default function ContactsView({
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           animation: 'vtSlideUp 0.2s ease-out',
         }}>
-          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4, color: C.textSecondary }}>Condividi invito</div>
-          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>Chi riceve il link diventa tuo contatto</div>
+          <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4, color: C.textSecondary }}>{L('shareInvite')}</div>
+          <div style={{ fontSize: 10, color: C.textMuted, marginBottom: 10 }}>{L('shareInviteDesc')}</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 8 }}>
             {[
               { id: 'whatsapp', icon: '', label: 'WhatsApp', color: '#25D366' },
@@ -282,7 +291,7 @@ export default function ContactsView({
               color: linkCopied ? C.green : C.textPrimary, fontSize: 11, fontFamily: FONT,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
             }}>
-              {linkCopied ? '✓ Copiato!' : 'Copia link'}
+              {linkCopied ? `✓ ${L('copiedShort')}` : L('copyLink')}
             </button>
             {typeof navigator !== 'undefined' && navigator.share && (
               <button onClick={() => handleShare('native')} style={{
@@ -291,21 +300,21 @@ export default function ContactsView({
                 color: C.textPrimary, fontSize: 11, fontFamily: FONT,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
               }}>
-                Altro...
+                {L('moreDots')}
               </button>
             )}
           </div>
           <button onClick={() => setShowInvite(false)} style={{
             marginTop: 4, background: 'none', border: 'none', color: C.textMuted,
             fontSize: 10, cursor: 'pointer', fontFamily: FONT, width: '100%', textAlign: 'center', padding: 3,
-          }}>Chiudi</button>
+          }}>{L('closeWord')}</button>
         </div>
       )}
 
       {/* ═══ CONTACTS LIST ═══ */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px', scrollbarWidth: 'none' }}>
         {contactsLoading && contacts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: C.textMuted, fontSize: 12 }}>Caricamento...</div>
+          <div style={{ textAlign: 'center', padding: 40, color: C.textMuted, fontSize: 12 }}>{L('loading')}</div>
         ) : contacts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px 20px' }}>
             <div style={{
@@ -314,9 +323,9 @@ export default function ContactsView({
               border: `1px solid ${C.accent}15`,
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
             }}></div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>Nessun contatto</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>{L('noContacts')}</div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
-              Aggiungi amici per email o invitali con un link!
+              {L('noContactsDesc')}
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
               <button onClick={() => setShowAddSection(true)} style={{
@@ -324,12 +333,12 @@ export default function ContactsView({
                 background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
                 border: 'none', color: '#fff', fontSize: 12, fontWeight: 700, fontFamily: FONT,
                 boxShadow: `0 4px 16px ${C.accent}30`,
-              }}>+ Aggiungi</button>
+              }}>+ {L('addShort')}</button>
               <button onClick={handleCreateInvite} style={{
                 padding: '10px 22px', borderRadius: 14, cursor: 'pointer',
                 background: `${C.purple}12`, border: `1px solid ${C.purple}20`,
                 color: C.textPrimary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
-              }}>Invita</button>
+              }}>{L('inviteShort')}</button>
             </div>
           </div>
         ) : (
@@ -365,7 +374,7 @@ export default function ContactsView({
                     <span style={{ fontSize: 15, flexShrink: 0 }}>{LANGS.find(l => l.code === contact.lang)?.flag || ''}</span>
                   </div>
                   <div style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
-                    {contact.online ? 'Online' : contact.lastSeen ? `Visto ${formatLastSeen(contact.lastSeen)} fa` : 'Offline'}
+                    {contact.online ? L('onlineWord') : contact.lastSeen ? `${L('lastSeenPrefix')} ${formatLastSeen(contact.lastSeen)} ${L('agoWord')}` : L('offlineWord')}
                   </div>
                 </div>
 

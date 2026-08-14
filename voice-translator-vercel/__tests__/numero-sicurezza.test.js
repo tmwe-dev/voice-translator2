@@ -140,10 +140,10 @@ describe('e collegato al codice vivo', () => {
     // seconda cosa garantendo solo la prima.
     const c = app('components/NumeroSicurezza.js');
     expect(c).toMatch(/I messaggi sono cifrati/);
-    expect(c).toMatch(/non lo sa nemmeno il programma/);
+    expect(c).toMatch(/secLine2No/);
     expect(c, 'la spunta si mette a mano').toMatch(/setVerificato\(true\)/);
     expect(c, 'e non si ricorda: le chiavi cambiano ogni volta')
-      .toMatch(/Vale solo per questa conversazione/);
+      .toMatch(/secOnlyThisChat/);
   });
 
   it('nessuna emoji: come nel resto dell\'app', () => {

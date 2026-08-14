@@ -85,7 +85,7 @@ describe('dentro l\'app', () => {
   it('il numero di lingue non è scritto a mano nella Home', () => {
     const home = fs.readFileSync(path.join(RADICE, 'app/components/HomeView.js'), 'utf8');
     expect(home, 'usa LANGS.length, non un numero fisso').not.toMatch(/'\d+ lingue'/);
-    expect(home).toMatch(/LANGS\.length.*lingue/);
+    expect(home).toMatch(/LANGS\.length.*landingStatLangs/);
   });
 });
 

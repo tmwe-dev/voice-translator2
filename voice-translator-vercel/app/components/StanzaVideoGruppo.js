@@ -24,6 +24,11 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
     if (ref.current && stream) ref.current.srcObject = stream;
   }, [stream]);
 
+  // b.138 — questo riquadro aveva tre scritte in italiano fisso
+  // ("Senza video", "In ascolto…", "Parla: ti traduco da solo.") ed e
+  // un sotto-componente: il contesto ce l'ha lo stesso, essendo sotto
+  // AppProvider come tutto il resto della stanza.
+  const { L } = useApp();
   const l = lingua ? getLang(lingua) : null;
 
   return (
@@ -43,7 +48,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
             alignItems: 'center', justifyContent: 'center',
             fontSize: 11.5, color: C.textMuted, fontFamily: FONT,
           }}>
-            {stato === 'collego' ? 'Mi collego…' : 'Senza video'}
+            {stato === 'collego' ? L('connectingDots') : L('noVideo')}
           </div>
         )}
 
@@ -76,7 +81,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
           </>
         ) : (
           <div style={{ fontSize: 11, color: C.textMuted }}>
-            {mio ? 'Parla: ti traduco da solo.' : 'In ascolto…'}
+            {mio ? L('speakITranslate') : L('listeningDots')}
           </div>
         )}
       </div>
@@ -85,7 +90,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
 }
 
 export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, onEsci }) {
-  const { S, prefs, myLang } = useApp();
+  const { L, S, prefs, myLang } = useApp();
   const C = S?.colors || {};
   const miaLingua = myLang || prefs?.lang || 'it';
 
@@ -119,11 +124,11 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
     <div style={{ ...S.page, padding: '12px 12px 20px', fontFamily: FONT }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
         <button onClick={() => { vibrate(); stanza.esci(); onEsci?.(); }}
-          aria-label="Esci dalla stanza video"
+          aria-label={L('exitVideoRoom')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.textPrimary, display: 'flex' }}>
           <Icon name="back" size={20} color={C.textPrimary} />
         </button>
-        <div style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary }}>Stanza video</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: C.textPrimary }}>{L('videoRoom')}</div>
         <div style={{ marginLeft: 'auto', fontSize: 11.5, color: C.textMuted }}>
           {stanza.partecipanti.length + 1}/{stanza.MAX_PARTECIPANTI}
         </div>
@@ -183,10 +188,10 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             {mio.staScrivendo
-              ? 'Ti sto trascrivendo…'
+              ? L('transcribingYou')
               : mio.errore
                 ? mio.errore
-                : 'Quando parli ti traduco da solo, senza premere niente.'}
+                : L('autoTranslateNote')}
           </div>
 
           {stanza.partecipanti.length === 0 && (

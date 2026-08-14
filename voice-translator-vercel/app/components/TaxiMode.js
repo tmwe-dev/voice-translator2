@@ -3,6 +3,7 @@
 import { memo, useEffect, useRef, useCallback } from 'react';
 import { getLang } from '../lib/constants';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 /**
  * TaxiMode Component
@@ -21,6 +22,14 @@ const TaxiMode = memo(function TaxiMode({
   S = {},
   theme = 'dark',
 }) {
+  // ── b.138 · lo schermo che si mostra allo straniero era bilingue a caso ──
+  //
+  // L'intestazione diceva "TAXI MODE" in inglese, i suggerimenti dei
+  // pulsanti "Play text-to-speech" e "Close Taxi Mode" pure, mentre il
+  // pulsante nella barra della chat diceva "Modalita taxi" in italiano.
+  // Tre lingue in una schermata sola, nessuna delle quali scelta
+  // dall'utente. Ora tutto passa da L() come il resto dell'app.
+  const { L } = useApp();
   const containerRef = useRef(null);
   const deviceOrientationListenerRef = useRef(null);
 
@@ -110,8 +119,8 @@ const TaxiMode = memo(function TaxiMode({
           zIndex: 451,
         }}
       >
-        <div style={{ fontSize: '16px', fontWeight: '600', color: textPrimary }}>
-          TAXI MODE
+        <div style={{ fontSize: '16px', fontWeight: '600', color: textPrimary, textTransform: 'uppercase' }}>
+          {L('taxiModeTitle')}
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
@@ -135,7 +144,7 @@ const TaxiMode = memo(function TaxiMode({
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
             }}
-            title="Play text-to-speech"
+            title={L('playTranslation')}
           >
            
           </button>
@@ -163,7 +172,7 @@ const TaxiMode = memo(function TaxiMode({
               e.currentTarget.style.backgroundColor = 'transparent';
               e.currentTarget.style.color = textMuted;
             }}
-            title="Close Taxi Mode"
+            title={L('closeTaxiMode')}
           >
             ✕
           </button>
@@ -227,7 +236,7 @@ const TaxiMode = memo(function TaxiMode({
             hyphens: 'auto',
           }}
         >
-          {translatedText || '(no text)'}
+          {translatedText || L('noTextYet')}
         </div>
 
         {/* Divider */}
@@ -293,7 +302,7 @@ const TaxiMode = memo(function TaxiMode({
             e.currentTarget.style.transform = 'scale(1)';
             e.currentTarget.style.boxShadow = '0 4px 12px rgba(245, 158, 11, 0.3)';
           }}
-          title="Play translation (tap to repeat)"
+          title={L('playTranslationRepeat')}
         >
          
         </button>
@@ -315,6 +324,7 @@ const TaxiMode = memo(function TaxiMode({
 // Ora ha la stessa veste degli altri — cerchio 36, fondo neutro, icona.
 // Chi lo cerca lo trova; chi non lo cerca non ne viene distratto.
 const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' }) {
+  const { L } = useApp();
   const C = S.colors || {};
 
   return (
@@ -329,8 +339,8 @@ const TaxiButton = memo(function TaxiButton({ onClick, S = {}, theme = 'dark' })
         transition: 'background 0.15s, color 0.15s',
         WebkitTapHighlightColor: 'transparent',
       }}
-      title="Modalita taxi"
-      aria-label="Modalita taxi"
+      title={L('taxiModeTitle')}
+      aria-label={L('taxiModeTitle')}
     >
       <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
         strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

@@ -3,6 +3,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { CONTEXTS, getLang, LIVE_TEXT_THROTTLE, TYPING_TIMEOUT, SPEAKING_TIMEOUT } from '../lib/constants.js';
 import useRealtimeRoom from './useRealtimeRoom.js';
 import { createLogger } from '../lib/logger.js';
+// b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
+import { tFuori } from '../lib/i18n.js';
 const dbg = createLogger('polling');
 
 // ═══════════════════════════════════════════════════════════════
@@ -769,7 +771,7 @@ export default function useRoomPolling({
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `Errore server (${res.status})`);
+        throw new Error(errData.error || `${tFuori('serverErrorWord')} (${res.status})`);
       }
       const data = await res.json();
       const { room, roomSessionToken: token } = data;
@@ -807,10 +809,10 @@ export default function useRoomPolling({
         if (res.status === 403 && (err.motivo || err.stato)) {
           const e = new Error(
             err.motivo === 'bloccato'
-              ? 'Non puoi entrare in questa stanza.'
+              ? tFuori('blockedFromRoom')
               : err.stato === 'rifiutato'
-                ? 'La tua richiesta non e stata accettata.'
-                : 'Hai bussato: aspetta che ti aprano.'
+                ? tFuori('requestRejected')
+                : tFuori('knockedWait')
           );
           e.moderazione = err.motivo || err.stato;
           e.inAttesa = !!err.inAttesa;

@@ -101,8 +101,8 @@ describe('il client racconta l\'attesa invece di dire "non funziona"', () => {
 
   it('un 403 di moderazione non diventa "Room not found"', () => {
     expect(hook).toMatch(/res\.status === 403/);
-    expect(hook).toMatch(/Hai bussato/);
-    expect(hook).toMatch(/Non puoi entrare in questa stanza/);
+    expect(hook).toMatch(/knockedWait/);
+    expect(hook).toMatch(/blockedFromRoom/);
   });
 });
 

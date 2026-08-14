@@ -69,7 +69,7 @@ const RoomHeader = memo(function RoomHeader({
             fontSize: 18, padding: '4px 10px', borderRadius: 10,
             display: 'flex', alignItems: 'center', gap: 4,
           }}
-          title={L('leaveTemp') || 'Esci'}>
+          title={L('exitWord')}>
           <IconBack size={16}/>
           <span style={{fontSize: 11, fontWeight: 600}}>{L('exit') || 'Esci'}</span>
         </button>
@@ -90,7 +90,7 @@ const RoomHeader = memo(function RoomHeader({
                  su un oggetto che non c'entrava niente. */
               opacity: partnerConnected ? 1 : 0.35,
               transition:'opacity 0.3s'}}
-              title={partnerConnected ? 'Collegato' : 'Non collegato'}>
+              title={partnerConnected ? L('connectedWord') : L('notConnectedWord')}>
               {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
                 <span key={i}>{flag}</span>
               ))}
@@ -111,7 +111,7 @@ const RoomHeader = memo(function RoomHeader({
                 webrtc.initiateConnection(false);
               }
             }}
-              title="Chiamata vocale" aria-label="Avvia chiamata vocale"
+              title={L('voiceCall')} aria-label={L('startVoiceCall')}
               style={veste(S, webrtc.webrtcConnected && webrtc.callType === 'voice')}>
               <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             </button>
@@ -126,7 +126,7 @@ const RoomHeader = memo(function RoomHeader({
                 setShowVideoCall(false);
               }
             }}
-              title={showVideoCall ? 'Chiudi video' : 'Videochiamata'}
+              title={showVideoCall ? L('closeVideo') : L('videoCallWord')}
               style={veste(S, showVideoCall)}>
               <IconCamera size={18}/>
             </button>
@@ -152,14 +152,14 @@ const RoomHeader = memo(function RoomHeader({
           {!showVideoCall && <BatteryPillSlot />}
           {/* Audio toggle */}
           <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            title={audioEnabled ? 'Disattiva audio traduzioni' : 'Attiva audio traduzioni'}
+            title={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
             style={veste(S, audioEnabled)}>
             {audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}
           </button>
           {/* More menu button */}
           <div style={{position:'relative', flexShrink:0}}>
             <button onClick={() => setShowMoreMenu(!showMoreMenu)}
-              title="Impostazioni"
+              title={L('settings')}
               style={veste(S, showMoreMenu)}>
               <IconSettings size={18}/>
             </button>
@@ -178,7 +178,7 @@ const RoomHeader = memo(function RoomHeader({
                     realtimeConnected={realtimeConnected}
                   />
                   <span style={{fontSize:11, color: partnerConnected ? S.colors.statusOk : S.colors.textMuted, fontWeight:600}}>
-                    {partnerConnected ? (partner?.name || 'Partner') : 'In attesa...'}
+                    {partnerConnected ? (partner?.name || 'Partner') : L('waitingDots')}
                   </span>
                 </div>
                 {/* Captions toggle */}
@@ -187,7 +187,7 @@ const RoomHeader = memo(function RoomHeader({
                     background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
                     fontSize:13, fontWeight:500, textAlign:'left'}}>
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{showCaptions ? 'CC' : 'cc'}</span>
-                  <span>{showCaptions ? 'Nascondi sottotitoli' : 'Mostra sottotitoli'}</span>
+                  <span>{showCaptions ? L('hideCaptions') : L('showCaptions')}</span>
                   {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}>{<IconCheck size={12}/>}</span>}
                 </button>
                 {/* Export */}
@@ -196,7 +196,7 @@ const RoomHeader = memo(function RoomHeader({
                     background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
                     fontSize:13, fontWeight:500, textAlign:'left'}}>
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconClipboard size={15}/>}</span>
-                  <span>{L('exportConversation') || 'Esporta conversazione'}</span>
+                  <span>{L('exportConversation')}</span>
                 </button>
                 {/* Chat AI Actions */}
                 {messages.length >= 3 && (
@@ -233,7 +233,7 @@ const RoomHeader = memo(function RoomHeader({
                     fontSize:13, fontWeight:600, textAlign:'left',
                     borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
                   <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconArchive size={15}/>}</span>
-                  <span>{L('closeArchive') || 'Chiudi e archivia'}</span>
+                  <span>{L('closeArchive')}</span>
                 </button>
                 {/* FREE tier battery */}
                 {isTrial && (() => {

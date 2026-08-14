@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, memo } from 'react';
 import { FONT } from '../lib/constants.js';
+import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════
 // NetworkStatus — Offline banner + sync indicator
@@ -10,14 +11,22 @@ import { FONT } from '../lib/constants.js';
 // and a sync indicator when background sync is running.
 // ═══════════════════════════════════════════════
 
+// b.138 — i due avvisi erano scritti in italiano dentro il JSX. Questo
+// componente sta in page.js SOPRA <HomeInner/>, cioe fuori da
+// AppProvider: L() non ce l'ha, e per questo era rimasto indietro. La
+// lingua se la legge da solo, come fa CookieConsent.
 function NetworkStatus() {
   const [online, setOnline] = useState(true);
   const [showReconnect, setShowReconnect] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [lingua, setLingua] = useState('en');
+  const T = (k) => t(lingua, k);
 
   useEffect(() => {
     // Init
     setOnline(navigator.onLine);
+    const l = linguaInterfacciaFuoriContesto();
+    setLingua(l); preloadLang(l);
 
     const goOffline = () => setOnline(false);
     const goOnline = () => {
@@ -69,7 +78,7 @@ function NetworkStatus() {
           boxShadow: '0 4px 20px rgba(255,59,48,0.3)',
         }}>
           <span>{''}</span>
-          <span>Sei offline — i messaggi verranno inviati quando torni online</span>
+          <span>{T('offlineBanner')}</span>
         </div>
       )}
 
@@ -83,7 +92,7 @@ function NetworkStatus() {
           animation: 'vtSlideDown 0.3s ease-out',
           boxShadow: '0 4px 16px rgba(16,185,129,0.3)',
         }}>
-          {'✓ Connessione ripristinata'}
+          {`✓ ${T('connectionRestored')}`}
         </div>
       )}
 

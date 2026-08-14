@@ -125,7 +125,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
           }}
           onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
-          aria-label="Nuova conversazione"
+          aria-label={L('newConversation')}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/>

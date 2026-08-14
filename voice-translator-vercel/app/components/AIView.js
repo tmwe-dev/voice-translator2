@@ -83,7 +83,7 @@ const AIView = memo(function AIView({
       {/* ── INIZIO b.89 — intestazione con il ritorno a Impostazioni ──
           Prima questa pagina non aveva NESSUN modo di uscire: si restava
           dentro finche non si toccava la barra in basso. */}
-      <PageHeader title="AI e glossario" onBack={() => setView('settings')} S={S} />
+      <PageHeader title={L('aiAndGlossary')} onBack={() => setView('settings')} S={S} />
       {/* ── FINE b.89 ── */}
       <div style={{ marginTop: 8 }}>
         <h2 style={{
@@ -127,25 +127,25 @@ const AIView = memo(function AIView({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <span style={{ fontSize: 18 }}></span>
-            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>Glossario Personale</span>
+            <span style={{ fontSize: 15, fontWeight: 700, color: S.colors.textPrimary }}>{L('personalGlossary')}</span>
             <span style={{
               marginLeft: 'auto', fontSize: 11, padding: '3px 8px', borderRadius: 8,
               background: S.colors.accent2Bg, color: S.colors.accent2, fontWeight: 600,
             }}>
-              {glossaryTerms.length} termini
+              {glossaryTerms.length} {L('termsCount')}
             </span>
           </div>
 
           {/* Add new term */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-            <input placeholder="Termine originale" value={newTermFrom}
+            <input placeholder={L('originalTerm')} value={newTermFrom}
               onChange={e => setNewTermFrom(e.target.value)}
               style={{
                 flex: 1, padding: '8px 12px', borderRadius: 10,
                 background: S.colors.inputBg, border: `1px solid ${S.colors.inputBorder}`,
                 color: S.colors.textPrimary, fontSize: 13, fontFamily: FONT, outline: 'none',
               }} />
-            <input placeholder="Traduzione" value={newTermTo}
+            <input placeholder={L('translationWord')} value={newTermTo}
               onChange={e => setNewTermTo(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addGlossaryTerm(); }}
               style={{

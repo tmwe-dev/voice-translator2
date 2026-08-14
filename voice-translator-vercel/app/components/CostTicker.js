@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { euroDaSecondi } from '../wallet/tariffe.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════
 // CostTicker — il costo della call in EURO, in tempo reale.
@@ -10,6 +11,8 @@ import { euroDaSecondi } from '../wallet/tariffe.js';
 // ═══════════════════════════════════════════════
 
 export default function CostTicker({ attivo = true, vocePremium = false, style = {} }) {
+  // b.138 — l'etichetta per il lettore di schermo era in italiano fisso.
+  const { L } = useApp();
   const [secondi, setSecondi] = useState(0);
   const attivoRef = useRef(attivo);
   attivoRef.current = attivo;
@@ -22,7 +25,7 @@ export default function CostTicker({ attivo = true, vocePremium = false, style =
   }, []);
 
   return (
-    <span aria-label={`Costo della chiamata: ${euroDaSecondi(secondi, vocePremium)}`} style={{
+    <span aria-label={`${L('callCostAria')}: ${euroDaSecondi(secondi, vocePremium)}`} style={{
       display: 'inline-flex', alignItems: 'center', gap: 5,
       padding: '5px 11px', borderRadius: 999, fontSize: 11, fontWeight: 800,
       background: 'rgba(5,7,15,0.7)', border: '1px solid rgba(160,190,255,0.16)',

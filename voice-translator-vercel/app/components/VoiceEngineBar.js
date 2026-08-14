@@ -247,8 +247,8 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                       color:S.colors.textPrimary, transition:'background 0.1s',
                       borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
                       <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1}}>
-                        <span style={{fontWeight:600}}>{'\uD83C\uDFA4'} {clonedVoiceName || 'La mia voce'}</span>
-                        <span style={{fontSize:9, color:S.colors.accent4Border}}>Voce clonata</span>
+                        <span style={{fontWeight:600}}>{'\uD83C\uDFA4'} {clonedVoiceName || L('myVoiceSingular')}</span>
+                        <span style={{fontSize:9, color:S.colors.accent4Border}}>{L('clonedVoiceLabel')}</span>
                       </div>
                       {selectedELVoice === clonedVoiceId && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                     </button>
@@ -262,8 +262,8 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                     border:'none', cursor:'pointer', fontFamily:FONT, fontSize:12,
                     color:S.colors.textPrimary, transition:'background 0.1s'}}>
                     <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:1}}>
-                      <span style={{fontWeight:500}}>Auto (Avatar)</span>
-                      <span style={{fontSize:9, color:S.colors.textMuted}}>Voce basata sull'avatar</span>
+                      <span style={{fontWeight:500}}>{L('autoAvatarVoice')}</span>
+                      <span style={{fontSize:9, color:S.colors.textMuted}}>{L('avatarBasedVoice')}</span>
                     </div>
                     {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                   </button>

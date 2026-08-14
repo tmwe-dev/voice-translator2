@@ -26,7 +26,7 @@ const STILI = {
 // `altezza` accetta anche '100%' per riempire il contenitore.
 // ── FINE b.88 ──
 export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, interattiva = true, raggio = 20 }) {
-  const { theme, S } = useApp();
+  const { L, theme, S } = useApp();
   const boxRef = useRef(null);
   const mapRef = useRef(null);
   const [pronta, setPronta] = useState(false);
@@ -108,16 +108,16 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
       {!pronta && (
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', color: S.colors?.textMuted, fontSize: 13 }}>
-          {comandi ? 'Carico la mappa…' : ''}
+          {comandi ? L('loadingMap') : ''}
         </div>
       )}
       {/* Bottoni zoom grandi (per chi non usa i gesti) — non in miniatura */}
       {comandi && (
         <div style={{ position: 'absolute', right: 10, bottom: 12, display: 'flex',
           flexDirection: 'column', gap: 7, zIndex: 5 }}>
-          <button style={btn} onClick={() => zoom(1)} aria-label="Avvicina">+</button>
-          <button style={btn} onClick={() => zoom(-1)} aria-label="Allontana">−</button>
-          <button style={{ ...btn, fontSize: 15 }} onClick={centra} aria-label="Centra sulla destinazione">◎</button>
+          <button style={btn} onClick={() => zoom(1)} aria-label={L('zoomIn')}>+</button>
+          <button style={btn} onClick={() => zoom(-1)} aria-label={L('zoomOut')}>−</button>
+          <button style={{ ...btn, fontSize: 15 }} onClick={centra} aria-label={L('centerOnDest')}>◎</button>
         </div>
       )}
     </div>

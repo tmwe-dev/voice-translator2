@@ -34,16 +34,20 @@ const ROOM_TYPE_ICONS = {
   temporary: 'history',
 };
 
+// b.138 — le etichette del ruolo erano parole italiane fisse: chi
+// leggeva l'app in un'altra lingua vedeva "Invitato" su una scheda
+// per il resto tradotta. Ora sono chiavi, tranne quelle che restano
+// sigle uguali ovunque.
 const ROLE_BADGES = {
-  owner: { label: 'Host', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
-  moderator: { label: 'Mod', color: '#8B5CF6', bg: 'rgba(139,106,255,0.12)' },
+  owner: { labelKey: 'roleHost', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  moderator: { labelKey: 'roleMod', color: '#8B5CF6', bg: 'rgba(139,106,255,0.12)' },
   participant: null,
   listener: { label: '', color: '#6B7280', bg: 'rgba(107,114,128,0.12)' },
-  invited: { label: 'Invitato', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
+  invited: { labelKey: 'roleInvited', color: '#3B82F6', bg: 'rgba(59,130,246,0.12)' },
 };
 
 const LANG_FILTERS = [
-  { code: 'all', flag: '', name: 'Tutte' },
+  { code: 'all', flag: '', nameKey: 'filterAllVoices' },
   { code: 'it', flag: '🇮🇹', name: 'IT' },
   { code: 'en', flag: '🇺🇸', name: 'EN' },
   { code: 'es', flag: '🇪🇸', name: 'ES' },
@@ -90,9 +94,9 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
       setLoading(true);
       const res = await fetch('/api/mondo');
       if (res.ok) { const data = await res.json(); setRooms(data.rooms || []); setError(null); }
-    } catch { setError('Impossibile caricare le stanze'); }
+    } catch { setError(L('loadRoomsFailed')); }
     finally { setLoading(false); }
-  }, []);
+  }, [L]);
 
   useEffect(() => {
     return subscribeTick(30000, fetchRooms, { immediate: true });
@@ -108,7 +112,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
 
   const timeAgo = (ts) => {
     const mins = Math.floor((Date.now() - ts) / 60000);
-    if (mins < 1) return 'ora';
+    if (mins < 1) return L('timeNow');
     if (mins < 60) return `${mins}m`;
     return `${Math.floor(mins / 60)}h`;
   };
@@ -149,7 +153,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        <button onClick={() => setView('home')} aria-label="Torna indietro" style={{
+        <button onClick={() => setView('home')} aria-label={L('goBack')} style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -163,10 +167,10 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
             Community
           </div>
           <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-            {rooms.length} {rooms.length === 1 ? 'BarTalk attivo' : 'BarTalk attivi'}
+            {rooms.length} {rooms.length === 1 ? L('roomActiveOne') : L('roomActiveMany')}
           </div>
         </div>
-        <button onClick={handleRefresh} aria-label="Aggiorna stanze" style={{
+        <button onClick={handleRefresh} aria-label={L('refreshRooms')} style={{
           width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
           background: `${C.accent}12`, border: `1px solid ${C.accent}20`,
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -178,7 +182,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           {'↻'}
         </button>
         {onCreateRoom && (
-          <button onClick={onCreateRoom} aria-label="Crea un BarTalk" style={{
+          <button onClick={onCreateRoom} aria-label={L('createBarTalk')} style={{
             width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
             background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
             border: 'none',
@@ -202,7 +206,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
         }}>
           <span style={{ fontSize: 14, opacity: 0.4 }}></span>
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Cerca stanze..."
+            placeholder={L('searchRooms')}
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
               color: C.textPrimary, fontSize: 13, fontFamily: FONT,
@@ -235,7 +239,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
             }}>
               <span>{lf.flag}</span>
-              <span>{lf.name}</span>
+              <span>{lf.nameKey ? L(lf.nameKey) : lf.name}</span>
             </button>
           );
         })}
@@ -258,7 +262,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                 fontSize: 10, fontWeight: 600, fontFamily: FONT,
                 WebkitTapHighlightColor: 'transparent',
               }}>
-                {mode === 'all' ? 'Tutte' : `${info?.icon || ''} ${info?.label || mode}`}
+                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${info?.label || mode}`}
               </button>
             );
           })}
@@ -290,7 +294,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               background: `${C.accent}15`, border: `1px solid ${C.accent}25`,
               color: C.accent, fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: FONT,
             }}>
-              Riprova
+              {L('retryWord')}
             </button>
           </div>
         )}
@@ -305,10 +309,10 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36,
             }}><Icon name="globe" size={34} color={C.accent || 'rgba(255,255,255,0.4)'} /></div>
             <div style={{ fontSize: 16, fontWeight: 700, color: C.textPrimary, marginBottom: 6 }}>
-              Nessuna stanza al momento
+              {L('noRoomsYet')}
             </div>
             <div style={{ fontSize: 12, color: C.textMuted, lineHeight: 1.6, maxWidth: 260, margin: '0 auto 20px' }}>
-              Crea una stanza pubblica per farti trovare da persone in tutto il mondo!
+              {L('createPublicRoomDesc')}
             </div>
             <button onClick={onCreateRoom || (() => setView('home'))} style={{
               padding: '12px 28px', borderRadius: 14, cursor: 'pointer',
@@ -316,7 +320,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
               border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, fontFamily: FONT,
               boxShadow: `0 4px 20px ${C.accent}35`,
             }}>
-              Crea un BarTalk
+              {L('createBarTalk')}
             </button>
           </div>
         )}
@@ -326,14 +330,14 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
             <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}></div>
             <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>
-              Nessuna stanza con questi filtri
+              {L('noRoomsFilters')}
             </div>
             <button onClick={() => { setSearch(''); setLangFilter('all'); setModeFilter('all'); }} style={{
               padding: '7px 18px', borderRadius: 10,
               background: 'none', border: `1px solid ${C.cardBorder}`,
               color: C.textSecondary, fontSize: 11, cursor: 'pointer', fontFamily: FONT,
             }}>
-              Resetta filtri
+              {L('resetFilters')}
             </button>
           </div>
         )}
@@ -385,7 +389,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                       padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
                       background: `${PALETTE.amber || '#F59E0B'}18`, color: PALETTE.amber || '#F59E0B',
                     }}>
-                      Su approvazione
+                      {L('onApproval')}
                     </span>
                   )}
                   {/* b.111 — litigio libero. Va detto PRIMA di entrare:
@@ -396,8 +400,8 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                     <span style={{
                       padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
                       background: 'rgba(255,90,60,0.12)', color: '#FF7A5C',
-                    }} title="Qui si può litigare: niente tendina sulle parole pesanti. Minacce e reati restano vietati.">
-                      Litigio libero
+                    }} title={L('freeFightTip')}>
+                      {L('freeFight')}
                     </span>
                   )}
                   {/* Host role badge */}
@@ -407,7 +411,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                       background: ROLE_BADGES[room.myRole].bg,
                       color: ROLE_BADGES[room.myRole].color,
                     }}>
-                      {ROLE_BADGES[room.myRole].label}
+                      {ROLE_BADGES[room.myRole].labelKey ? L(ROLE_BADGES[room.myRole].labelKey) : ROLE_BADGES[room.myRole].label}
                     </span>
                   )}
                   <span style={{
@@ -430,7 +434,7 @@ function MondoView({ onJoinRoom, onCreateRoom }) {
                     a chi arriva di cosa si sta parlando. Le chat private
                     restano cifrate, e sono un'altra cosa. */}
                 <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 3, opacity: 0.85 }}>
-                  Stanza aperta: i messaggi restano visibili a chi entra dopo.
+                  {L('openRoomNotice')}
                 </div>
 
                 {room.description && (

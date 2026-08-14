@@ -77,6 +77,8 @@ describe('creazione stanza Community', () => {
   it('si vede PRIMA di entrare se la stanza e su approvazione', () => {
     // Altrimenti chi tocca crede che la stanza non risponda.
     expect(elenco).toMatch(/room\.suApprovazione/);
-    expect(elenco).toMatch(/Su approvazione/);
+    // b.138 — l'avviso c'e ancora, ma non e piu una scritta italiana nel
+    // JSX: passa da L('onApproval'), come tutto il resto della scheda.
+    expect(elenco).toMatch(/L\('onApproval'\)/);
   });
 });

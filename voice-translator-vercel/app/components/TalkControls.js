@@ -19,7 +19,7 @@ const TalkControls = memo(function TalkControls({
   const [grantingSpeak, setGrantingSpeak] = useState(null);
 
   return (
-    <div style={S.talkBar} role="toolbar" aria-label="Voice controls">
+    <div style={S.talkBar} role="toolbar" aria-label={L('voiceControls')}>
       {status && <div style={{fontSize:12, color:S.colors.accent3, marginBottom:6, fontWeight:500}}>{status}</div>}
 
       {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
@@ -42,7 +42,7 @@ const TalkControls = memo(function TalkControls({
           <div style={{width:56, display:'flex', justifyContent:'center'}}>
             {recording && (
               <button onClick={() => { vibrate(15); cancelRecording(); }}
-                aria-label="Annulla la registrazione"
+                aria-label={L('cancelRecording')}
                 style={{display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4,
                   width:52, height:52, borderRadius:26,
                   border:'none', background:S.colors.overlayBg, color:S.colors.textMuted,
@@ -56,7 +56,7 @@ const TalkControls = memo(function TalkControls({
 
           {/* Il gesto principale */}
           <button onClick={() => { vibrate(25); toggleRecording(); }}
-            aria-label={recording ? 'Invia il messaggio vocale' : 'Tieni premuto per parlare'}
+            aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
             style={{...S.talkBtn, width:84, height:84, borderRadius:42,
               display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:3,
               border:'none', cursor:'pointer', WebkitTapHighlightColor:'transparent',
@@ -87,7 +87,7 @@ const TalkControls = memo(function TalkControls({
             fontSize:12, color:S.colors.textMuted, marginTop:6}} aria-live="polite">
             <span style={{width:7, height:7, borderRadius:4, background:S.colors.textPrimary,
               animation:'vtRecordPulse 1.2s ease-in-out infinite'}} />
-            <span>Ti sto ascoltando — tocca Invia quando hai finito</span>
+            <span>{L('listeningTapSend')}</span>
           </div>
         )}
         {/* La riduzione rumore, con le PAROLE.
@@ -156,10 +156,10 @@ const TalkControls = memo(function TalkControls({
               opacity: handRaising ? 0.6 : 1,
             }}
           >
-            <IconHandRaise size={18} /> {handRaising ? '...' : handRaised ? '✓ Mano alzata' : 'Alza la mano'}
+            <IconHandRaise size={18} /> {handRaising ? '...' : handRaised ? `✓ ${L('handRaised')}` : L('raiseHand')}
           </button>
           <span style={{ color: S.colors.textMuted, fontSize: 12 }}>
-            <IconLock size={12} /> In attesa del permesso
+            <IconLock size={12} /> {L('waitingPermission')}
           </span>
         </div>
       )}
@@ -209,7 +209,7 @@ const TalkControls = memo(function TalkControls({
           {/* Cancel button */}
           {recording && (
             <button onClick={() => { vibrate(15); cancelRecording(); }}
-              title="Annulla registrazione"
+              title={L('cancelRecording')}
               style={{display:'flex', flexDirection:'column', alignItems:'center', gap:3,
                 width:52, height:52, borderRadius:14, border:`2px solid ${S.colors.statusError}`,
                 background:'rgba(239,68,68,0.1)', color:S.colors.statusError,
@@ -235,7 +235,7 @@ const TalkControls = memo(function TalkControls({
           )}
           {/* MAIN free talk button */}
           <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
-            aria-label={isListening ? 'Stop' : 'Avvia ascolto'}
+            aria-label={isListening ? L('stopWord') : L('startListeningAria')}
             style={{...S.talkBtn, width:72, height:72, fontSize:30,
               ...(isListening ? S.talkBtnRec : {}),
               ...(recording ? {boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 0 0 18px ${S.colors.accent3Bg}33`} : {}),

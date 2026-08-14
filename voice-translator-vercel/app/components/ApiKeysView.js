@@ -13,7 +13,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
   const handleSave = async () => {
     if (!userAccount) {
       setSaveStatus('error');
-      setSaveError('Devi fare il login prima di salvare le chiavi');
+      setSaveError(L('loginBeforeKeys'));
       return;
     }
     setSaveStatus(null);

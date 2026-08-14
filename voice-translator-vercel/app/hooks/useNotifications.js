@@ -1,5 +1,7 @@
 'use client';
 import { useRef, useEffect } from 'react';
+// b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
+import { tFuori } from '../lib/i18n.js';
 
 /**
  * useNotifications — Handles in-app notifications, badge updates, and visibility.
@@ -28,7 +30,7 @@ export default function useNotifications({ messages, roomId, myName, notifPermis
           navigator.serviceWorker.controller.postMessage({
             type: 'SHOW_LOCAL_NOTIFICATION',
             title: `${lastMsg.sender || 'Partner'}`,
-            body: lastMsg.translated || lastMsg.original || 'Nuovo messaggio',
+            body: lastMsg.translated || lastMsg.original || tFuori('newMessage'),
             tag: `vt-msg-${roomId}`,
             roomId,
             url: '/'

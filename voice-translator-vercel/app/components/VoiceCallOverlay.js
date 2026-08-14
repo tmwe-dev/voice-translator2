@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════
 // VoiceCallOverlay — Full-screen audio-only call UI
@@ -16,6 +17,9 @@ function VoiceCallOverlay({
   interpreterActive, setInterpreterActive, interpreter,
   onClose, onUpgradeToVideo,
 }) {
+  // b.138 — le sei etichette dei pulsanti erano in italiano fisso e
+  // finivano nei lettori di schermo, in una chiamata fra due lingue diverse.
+  const { L } = useApp();
   const [duration, setDuration] = useState(0);
 
   // Call duration timer
@@ -136,7 +140,7 @@ function VoiceCallOverlay({
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20,
       }}>
         {/* Mute */}
-        <button aria-label={webrtc.audioEnabled ? 'Disattiva microfono' : 'Attiva microfono'} onClick={() => webrtc.toggleAudio()} style={{
+        <button aria-label={webrtc.audioEnabled ? L('micOff') : L('micOn')} onClick={() => webrtc.toggleAudio()} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: webrtc.audioEnabled ? 'rgba(255,255,255,0.08)' : 'rgba(255,80,80,0.2)',
           border: '1px solid rgba(255,255,255,0.12)',
@@ -147,7 +151,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* Interpreter toggle */}
-        <button aria-label={interpreterActive ? 'Disattiva interprete' : 'Attiva interprete'} onClick={() => setInterpreterActive && setInterpreterActive(!interpreterActive)} style={{
+        <button aria-label={interpreterActive ? L('interpreterOff') : L('interpreterOn')} onClick={() => setInterpreterActive && setInterpreterActive(!interpreterActive)} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: interpreterActive ? 'rgba(38,217,176,0.25)' : 'rgba(255,255,255,0.08)',
           border: `1px solid ${interpreterActive ? 'rgba(38,217,176,0.4)' : 'rgba(255,255,255,0.12)'}`,
@@ -157,7 +161,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* Upgrade to video */}
-        <button aria-label="Passa a videochiamata" onClick={onUpgradeToVideo} style={{
+        <button aria-label={L('switchToVideo')} onClick={onUpgradeToVideo} style={{
           width: 52, height: 52, borderRadius: '50%',
           background: 'rgba(255,255,255,0.08)',
           border: '1px solid rgba(255,255,255,0.12)',
@@ -167,7 +171,7 @@ function VoiceCallOverlay({
         </button>
 
         {/* End call */}
-        <button aria-label="Termina chiamata" onClick={() => { webrtc.disconnect(); onClose(); }} style={{
+        <button aria-label={L('endCall')} onClick={() => { webrtc.disconnect(); onClose(); }} style={{
           width: 60, height: 60, borderRadius: '50%',
           background: 'linear-gradient(135deg, #ff4444, #cc0000)',
           border: 'none',

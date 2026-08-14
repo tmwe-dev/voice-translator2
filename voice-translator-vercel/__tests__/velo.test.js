@@ -93,12 +93,14 @@ describe('la tendina in pagina', () => {
   });
 
   it('e si puo richiudere, per chi si pente', () => {
-    expect(velo).toMatch(/Copri di nuovo/);
+    expect(velo).toMatch(/veloCoverAgain/);
   });
 
   it('dice PERCHE e li: una macchia grigia muta sembra un guasto', () => {
-    expect(velo).toMatch(/Linguaggio pesante/);
-    expect(velo).toMatch(/Sta urlando/);
+    // b.138 — la frase c'e ancora, ma sta nei pacchetti lingua: nel
+    // codice si controlla la chiave, non l'italiano.
+    expect(velo).toMatch(/veloHeavy/);
+    expect(velo).toMatch(/veloShouting/);
   });
 
   it('il testo coperto non viene letto dalla sintesi vocale per sbaglio', () => {

@@ -5,6 +5,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import { encryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiQRView — Shows QR code for encrypted taxi destination
@@ -16,7 +17,10 @@ import { subscribeTick } from '../lib/ticker.js';
 // The destination is deleted from Redis after first retrieval.
 // ═══════════════════════════════════════════════════════════════
 
-function generateQRCanvas(canvas, data, size = 280) {
+// b.138 — la scritta di riserva (quando il servizio del QR non risponde)
+// era "Scansiona con la fotocamera" in italiano fisso, e questa funzione
+// vive fuori dal componente: la frase gia tradotta le arriva come argomento.
+function generateQRCanvas(canvas, data, size = 280, etichettaScansiona = '') {
   const ctx = canvas.getContext('2d');
   canvas.width = size; canvas.height = size;
 
@@ -32,13 +36,14 @@ function generateQRCanvas(canvas, data, size = 280) {
       ctx.fillStyle = PALETTE.teal; ctx.font = 'bold 14px system-ui'; ctx.textAlign = 'center';
       ctx.fillText('QR Code', size / 2, size / 2 - 10);
       ctx.font = '10px system-ui';
-      ctx.fillText('Scansiona con la fotocamera', size / 2, size / 2 + 10);
+      ctx.fillText(etichettaScansiona || 'Scan with the camera', size / 2, size / 2 + 10);
       resolve(false);
     };
   });
 }
 
 function TaxiQRView({ destination, onClose, onStartConversation, S }) {
+  const { L } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
   const purple = C.accent2 || PALETTE.violet;
@@ -53,6 +58,10 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
   const [destId, setDestId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
+  // b.138 — prima si controllava `timeLeft === 'Scaduto'` per decidere il
+  // colore: una condizione che si sarebbe rotta in silenzio appena la
+  // scritta smetteva di essere italiana. Lo stato ora e un booleano.
+  const [scaduto, setScaduto] = useState(false);
   const [revoked, setRevoked] = useState(false);
   // Keep the full QR URL (with fragment) for sharing
   const qrUrlRef = useRef('');
@@ -85,7 +94,7 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
 
         // 4. Generate QR
         if (canvasRef.current) {
-          await generateQRCanvas(canvasRef.current, url, 280);
+          await generateQRCanvas(canvasRef.current, url, 280, L('scanWithCamera'));
           setQrReady(true);
         }
       } catch (e) {
@@ -98,32 +107,32 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
 
     saveAndGenerate();
     return () => { cancelled = true; };
-  }, [destination]);
+  }, [destination, L]);
 
   // ── Countdown timer ──
   useEffect(() => {
     if (!destination?.expiresAt) return;
     const update = () => {
       const diff = new Date(destination.expiresAt).getTime() - Date.now();
-      if (diff <= 0) { setTimeLeft('Scaduto'); return; }
+      if (diff <= 0) { setTimeLeft(L('expiredWord')); setScaduto(true); return; }
       const h = Math.floor(diff / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
-      setTimeLeft(`${h}h ${m}m`);
+      setTimeLeft(`${h}h ${m}m`); setScaduto(false);
     };
     return subscribeTick(60000, update, { immediate: true });
-  }, [destination?.expiresAt]);
+  }, [destination?.expiresAt, L]);
 
   // ── Share (includes key in fragment) ──
   const handleShare = useCallback(async () => {
     vibrate(15);
     const url = qrUrlRef.current;
-    const text = `TaxiTalk — Destinazione condivisa`;
+    const text = L('taxiSharedDest');
     if (navigator.share && url) {
       try { await navigator.share({ title: 'TaxiTalk', text, url }); } catch { /* l utente ha annullato, o il permesso non c e */ }
     } else if (url) {
       try { await navigator.clipboard.writeText(url); } catch { /* l utente ha annullato, o il permesso non c e */ }
     }
-  }, []);
+  }, [L]);
 
   // ── Revoke destination ──
   const handleRevoke = useCallback(async () => {
@@ -159,14 +168,14 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
             Mostra al tassista
           </div>
           <div style={{ fontSize: 10, color: textMuted }}>
-            Destinazione cifrata end-to-end
+            {L('destEncryptedE2E')}
           </div>
         </div>
         {timeLeft && !revoked && (
           <span style={{
             padding: '4px 10px', borderRadius: 8, fontSize: 10, fontWeight: 700,
-            background: timeLeft === 'Scaduto' ? 'rgba(255,107,107,0.15)' : `${accent}12`,
-            color: timeLeft === 'Scaduto' ? PALETTE.coral : accent,
+            background: scaduto ? 'rgba(255,107,107,0.15)' : `${accent}12`,
+            color: scaduto ? PALETTE.coral : accent,
           }}>
             ⏱ {timeLeft}
           </span>

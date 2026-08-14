@@ -91,7 +91,7 @@ describe('l\'elenco dell\'archivio non si ottiene con un nome', () => {
     // sono sparite". Sono sul suo telefono, ed e giusto dirlo.
     const h = leggi('app/components/HistoryView.js');
     expect(h).toMatch(/archivioSoloLocale/);
-    expect(h).toMatch(/restano su questo dispositivo/);
+    expect(h).toMatch(/archiveLocalDesc/);
   });
 });
 

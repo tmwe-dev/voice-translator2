@@ -57,7 +57,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
   const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
-  const { prefs } = useApp();
+  const { L, prefs } = useApp();
   const vocePremiumAttiva = prefs?.voiceEngine === 'elevenlabs';
 
   // Attach local video stream to BOTH fullscreen and inline elements
@@ -228,7 +228,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           }}>
             {/* ← Torna alla chat (riduce la call, NON la chiude) */}
             <button onClick={() => setVideoFullscreen(false)}
-              aria-label="Torna alla chat (la chiamata continua)"
+              aria-label={L('backToChatCall')}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '8px 14px', borderRadius: 24, border: 'none', cursor: 'pointer',
@@ -255,7 +255,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             {/* Chiudi chiamata — rosso, sempre raggiungibile anche se la
                 barra in basso finisce sotto la UI del browser */}
             <button onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
-              aria-label="Termina la chiamata"
+              aria-label={L('endCall')}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 40, height: 40, borderRadius: 20, border: 'none', cursor: 'pointer',
@@ -382,14 +382,14 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>PARTNER</span>
                   <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
                     onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
-                    aria-label="Volume voce del partner"
+                    aria-label={L('partnerVolume')}
                     style={{ flex: 1, accentColor: acc, height: 3 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 5 }}>
                   <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>TRADOTTA</span>
                   <input type="range" min="0" max="1" step="0.05" value={volTTS}
                     onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
-                    aria-label="Volume voce tradotta"
+                    aria-label={L('translatedVolume')}
                     style={{ flex: 1, accentColor: acc1, height: 3 }} />
                 </div>
               </div>
@@ -439,7 +439,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           {/* TERMINA — il protagonista, impossibile sbagliarsi */}
           <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
-            aria-label="Termina la chiamata"
+            aria-label={L('endCall')}
             style={{
               width: 72, height: 72, borderRadius: 36, border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
@@ -496,12 +496,12 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           }}>
             <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={64} />
             <span style={{ color: S?.colors?.textMuted || '#94a3b8', fontSize: 13, fontWeight: 500 }}>
-              {webrtc.webrtcState === 'connecting' ? 'Connessione...'
+              {webrtc.webrtcState === 'connecting' ? L('connConnecting')
                 : webrtc.webrtcConnected ? (partner?.name || 'Partner')
-                : 'In attesa...'}
+                : L('waitingDots')}
             </span>
             {webrtc.webrtcConnected && !webrtc.remoteVideoActive && (
-              <span style={{ color: '#475569', fontSize: 11 }}>Camera spenta</span>
+              <span style={{ color: '#475569', fontSize: 11 }}>{L('cameraOff')}</span>
             )}
           </div>
         )}

@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT, SILENCE_DELAY, VAD_THRESHOLD, isWhisperPrimaryLang, STT_CONFIDENCE_THRESHOLD, STT_LOW_CONFIDENCE_COUNT } from '../lib/constants.js';
-import { t } from '../lib/i18n.js';
+import { t, tFuori } from '../lib/i18n.js';
 import useDeepgramSTT from './useDeepgramSTT.js';
 import useTranslationAPI from './useTranslationAPI.js';
 import useFreeTalkVAD from './useFreeTalkVAD.js';
@@ -353,7 +353,7 @@ export default function useTranslation({
     if (res.status === 402) {
       // Credito esaurito: fermiamo la sessione e mostriamo l'avviso batteria
       window.dispatchEvent(new CustomEvent('wallet:esaurito'));
-      throw new Error('Credito esaurito');
+      throw new Error(tFuori('creditExhaustedShort'));
     }
     if (!res.ok) {
       console.error('[processAndSendAudio] Transcribe API error:', res.status);
@@ -617,7 +617,7 @@ export default function useTranslation({
             // consumato. Ma si puo almeno DIRLO, invece di lasciare
             // credere che sia andata.
             dbg.error('[voce] invio fallito:', errore?.message);
-            toast.error('Non sono riuscito a mandare quello che hai detto. Riprova.');
+            toast.error(tFuori('sendVoiceFailed'));
           }
           }
           resolve();
@@ -714,7 +714,7 @@ export default function useTranslation({
             // consumato. Ma si puo almeno DIRLO, invece di lasciare
             // credere che sia andata.
             dbg.error('[voce] invio fallito:', errore?.message);
-            toast.error('Non sono riuscito a mandare quello che hai detto. Riprova.');
+            toast.error(tFuori('sendVoiceFailed'));
           }
         setRecording(false);
         setStreamingMsg(null);

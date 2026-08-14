@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // VELO — la tendina grigia.
@@ -16,7 +17,12 @@ import { FONT, vibrate } from '../lib/constants.js';
 // (aria-hidden) ma trova il pulsante per scoprirlo.
 // ═══════════════════════════════════════════════════════════════
 
+// b.138 — la tendina spiegava il PERCHE solo in italiano: "Linguaggio
+// pesante", "Sta urlando", "Tocca per leggere". Chi leggeva l'app in
+// un'altra lingua vedeva una macchia grigia con due parole incomprensibili,
+// cioe esattamente il guasto che il Velo voleva evitare.
 export default function Velo({ motivo, C, children }) {
+  const { L } = useApp();
   const [scoperto, setScoperto] = useState(false);
 
   if (scoperto) {
@@ -30,7 +36,7 @@ export default function Velo({ motivo, C, children }) {
             background: 'transparent', border: `1px solid ${C.dividerColor || 'rgba(255,255,255,0.1)'}`,
             color: C.textMuted, fontSize: 10.5, fontFamily: FONT, fontWeight: 600,
           }}>
-          Copri di nuovo
+          {L('veloCoverAgain')}
         </button>
       </div>
     );
@@ -46,7 +52,7 @@ export default function Velo({ motivo, C, children }) {
 
       <button
         onClick={() => { vibrate(10); setScoperto(true); }}
-        aria-label={`Contenuto coperto: ${motivo}. Tocca per vedere.`}
+        aria-label={`${L('veiledContent')}: ${motivo === 'sta urlando' ? L('veloShouting') : L('veloHeavy')}. ${L('tapToSee')}`}
         style={{
           position: 'absolute', inset: 0, width: '100%',
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -57,9 +63,9 @@ export default function Velo({ motivo, C, children }) {
           backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
         }}>
         <span style={{ fontSize: 11.5, fontWeight: 800, color: C.textSecondary }}>
-          {motivo === 'sta urlando' ? 'Sta urlando' : 'Linguaggio pesante'}
+          {motivo === 'sta urlando' ? L('veloShouting') : L('veloHeavy')}
         </span>
-        <span style={{ fontSize: 10.5, color: C.textMuted }}>Tocca per leggere</span>
+        <span style={{ fontSize: 10.5, color: C.textMuted }}>{L('veloTapToRead')}</span>
       </button>
     </div>
   );

@@ -48,9 +48,11 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
 
   // Extract time filters
   const timeFilters = [
-    { id: 'today', label: 'Oggi' },
-    { id: 'week', label: 'Questa settimana' },
-    { id: 'month', label: 'Questo mese' },
+    // b.138 — le tre etichette erano italiano fisso sopra un archivio
+    // per il resto gia tradotto.
+    { id: 'today', label: L('todayWord') },
+    { id: 'week', label: L('histWeek') },
+    { id: 'month', label: L('thisMonth') },
   ];
 
   const filtered = useMemo(() => {
@@ -247,7 +249,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
 
       {/* ═══ HEADER ═══ */}
       <PageHeader
-        title="Archivio"
+        title={L('archiveTitle')}
         subtitle={convHistory.length > 0 ? `${filtered.length} / ${convHistory.length}` : undefined}
         onBack={() => setView('home')}
         S={{ colors: C }}
@@ -273,7 +275,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Cerca conversazioni, frasi, contatti..."
+            placeholder={L('searchConversations')}
             style={{
               flex: 1,
               background: 'none',
@@ -436,19 +438,17 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
         {convHistory.length === 0 ? (
           <EmptyState
             icon=""
-            title={archivioSoloLocale ? 'Archivio solo su questo telefono' : 'Nessuna conversazione'}
-            desc={archivioSoloLocale
-              ? 'Senza un account le conversazioni non vengono conservate sui nostri server: restano su questo dispositivo. Accedi per ritrovarle ovunque.'
-              : 'Le tue conversazioni appariranno qui. Inizia una chat o usa TaxiTalk!'}
-            actionLabel={archivioSoloLocale ? 'Accedi' : 'Inizia a parlare'}
+            title={archivioSoloLocale ? L('archiveLocalOnly') : L('noConversations')}
+            desc={archivioSoloLocale ? L('archiveLocalDesc') : L('noConversationsDesc')}
+            actionLabel={archivioSoloLocale ? L('signInWord') : L('startTalking')}
             onAction={() => setView(archivioSoloLocale ? 'profile' : 'home')}
             S={{ colors: C }}
           />
         ) : filtered.length === 0 ? (
           <EmptyState
             icon=""
-            title="Nessun risultato"
-            desc="Prova a cercare con parole diverse"
+            title={L('noResults')}
+            desc={L('noResultsDesc')}
             S={{ colors: C }}
           />
         ) : (

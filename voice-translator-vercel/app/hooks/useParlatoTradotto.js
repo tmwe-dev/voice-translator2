@@ -1,5 +1,7 @@
 'use client';
 import { useRef, useState, useCallback, useEffect } from 'react';
+// b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
+import { tFuori } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════════════════════
 // useParlatoTradotto — chi prende la parola viene tradotto.
@@ -68,7 +70,7 @@ export default function useParlatoTradotto({
       } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
 
       const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
-      if (!r.ok) { setErrore('Non sono riuscito a trascrivere'); return; }
+      if (!r.ok) { setErrore(tFuori('transcribeFailed')); return; }
       const d = await r.json();
       const testo = (d.original || '').trim();
       if (!testo) return;
@@ -121,7 +123,7 @@ export default function useParlatoTradotto({
         registratoreRef.current = reg;
         daQuandoRef.current = Date.now();
       } catch {
-        setErrore('Questo browser non sa registrare');
+        setErrore(tFuori('browserCannotRecord'));
       }
     };
 

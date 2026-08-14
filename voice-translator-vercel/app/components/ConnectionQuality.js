@@ -1,6 +1,7 @@
 'use client';
 import { memo } from 'react';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 /**
  * ConnectionQuality — Glassmorphism signal bars indicator
@@ -12,14 +13,19 @@ import { PALETTE } from '../lib/palette.js';
  * @param {object} [style] - optional style overrides
  */
 const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partnerConnected, realtimeConnected, style }) {
+  // b.138 — "Offline", "In attesa" e "Connessione..." erano italiano
+  // fisso in mezzo a etichette tecniche (P2P, Realtime, Polling) che
+  // restano uguali in tutte le lingue. Il suggerimento diceva
+  // "Connessione: In attesa" anche a chi leggeva l'app in coreano.
+  const { L } = useApp();
   // Determine quality level (0-4)
   let level = 0;
-  let label = 'Offline';
+  let label = L('offlineWord');
   let color = PALETTE.coral;
 
   if (!partnerConnected) {
     level = 0;
-    label = 'In attesa';
+    label = L('connWaiting');
     color = '#888';
   } else if (webrtcState === 'connected') {
     level = 4;
@@ -27,7 +33,7 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
     color = '#4ADE80';
   } else if (webrtcState === 'connecting') {
     level = 1;
-    label = 'Connessione...';
+    label = L('connConnecting');
     color = '#FBBF24';
   } else if (realtimeConnected) {
     level = 3;
@@ -53,8 +59,8 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
       transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
       ...style,
     }}
-      title={`Connessione: ${label}`}
-      aria-label={`Connection quality: ${label}`}
+      title={`${L('connectionWord')}: ${label}`}
+      aria-label={`${L('connQualityAria')}: ${label}`}
     >
       {barHeights.map((h, i) => {
         const isActive = i < level;

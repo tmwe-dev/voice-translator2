@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { PALETTE } from '../lib/palette.js';
 import { ascoltaAvvisi, dismissToast } from '../lib/avvisi.js';
+import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
 
 // ═══════════════════════════════════════════════
 // Toast Notification System
@@ -29,10 +30,15 @@ const COLORS = {
 // Da un colore pieno ricavo fondo e bordo trasparenti, senza riscrivere rgba a mano.
 const velo = (tinta, opacita) => `${tinta}${Math.round(opacita * 255).toString(16).padStart(2, '0')}`;
 
+// b.138 — l'etichetta del pulsante di chiusura era in italiano fisso e
+// finiva nei lettori di schermo. Anche questo contenitore vive fuori da
+// AppProvider (page.js, sopra <HomeInner/>), quindi legge la lingua da se.
 const ToastContainer = memo(function ToastContainer() {
   const [toasts, setToasts] = useState([]);
+  const [lingua, setLingua] = useState('en');
 
   useEffect(() => ascoltaAvvisi(setToasts), []);
+  useEffect(() => { const l = linguaInterfacciaFuoriContesto(); setLingua(l); preloadLang(l); }, []);
 
   if (toasts.length === 0) return null;
 
@@ -78,7 +84,7 @@ const ToastContainer = memo(function ToastContainer() {
             )}
             <button
               onClick={() => dismissToast(t.id)}
-              aria-label="Chiudi notifica"
+              aria-label={t(lingua, 'closeNotification')}
               style={{
                 background: 'none', border: 'none', color: c.text, cursor: 'pointer',
                 fontSize: 14, padding: '2px 4px', opacity: 0.6, flexShrink: 0,

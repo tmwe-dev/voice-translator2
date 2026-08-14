@@ -18,7 +18,7 @@ import { subscribeTick } from '../lib/ticker.js';
 // ═══════════════════════════════════════════════════════════════
 
 export default function PannelloModerazione({ roomId, roomSessionToken, membri = [], mioNome, aperto, onChiudi }) {
-  const { S } = useApp();
+  const { L, S } = useApp();
   const C = S?.colors || {};
 
   const [inAttesa, setInAttesa] = useState([]);
@@ -87,9 +87,9 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
         <Icon name="lock" size={16} color={C.accent1} />
-        <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>Chi entra, chi resta</span>
+        <span style={{ fontSize: 14, fontWeight: 800, color: C.textPrimary }}>{L('modWhoEnters')}</span>
         {onChiudi && (
-          <button onClick={onChiudi} aria-label="Chiudi" style={{
+          <button onClick={onChiudi} aria-label={L('closeWord')} style={{
             marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
             color: C.textMuted, display: 'flex', padding: 2,
           }}>
@@ -98,8 +98,7 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
         )}
       </div>
       <div style={{ fontSize: 11.5, color: C.textMuted, lineHeight: 1.5 }}>
-        Decidi tu chi entra e chi deve restare fuori. Un bloccato non rientra
-        nemmeno col codice.
+        {L('modDesc')}
       </div>
 
       {avviso && (
@@ -107,37 +106,37 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
       )}
 
       {/* ── Chi bussa ── */}
-      <div style={titoletto}>Bussano alla porta ({inAttesa.length})</div>
+      <div style={titoletto}>{L('modKnocking')} ({inAttesa.length})</div>
       {inAttesa.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.textMuted }}>Nessuno in attesa.</div>
+        <div style={{ fontSize: 12, color: C.textMuted }}>{L('modNobodyWaiting')}</div>
       ) : inAttesa.map(nome => (
         <div key={nome} style={riga}>
           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {nome}
           </span>
           <button disabled={!!inCorso} onClick={() => agisci('ammetti', nome)} style={pill(C.accent1 || '#5b8cff', true)}>
-            Ammetti
+            {L('modAdmit')}
           </button>
           <button disabled={!!inCorso} onClick={() => agisci('rifiuta', nome)} style={pill(C.textMuted || '#888', false)}>
-            Rifiuta
+            {L('modReject')}
           </button>
         </div>
       ))}
 
       {/* ── Chi e dentro ── */}
-      <div style={titoletto}>Nella stanza ({altri.length})</div>
+      <div style={titoletto}>{L('modInRoom')} ({altri.length})</div>
       {altri.length === 0 ? (
-        <div style={{ fontSize: 12, color: C.textMuted }}>Per ora sei solo tu.</div>
+        <div style={{ fontSize: 12, color: C.textMuted }}>{L('modOnlyYou')}</div>
       ) : altri.map(nome => (
         <div key={nome} style={riga}>
           <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600, color: C.textPrimary, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {nome}
           </span>
           <button disabled={!!inCorso} onClick={() => agisci('segnala', nome)} style={pill(C.textMuted || '#888', false)}>
-            Segnala
+            {L('modReport')}
           </button>
           <button disabled={!!inCorso} onClick={() => agisci('blocca', nome)} style={pill(C.accent3 || '#e5484d', false)}>
-            Blocca
+            {L('modBlock')}
           </button>
         </div>
       ))}
@@ -145,14 +144,14 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
       {/* ── Chi e fuori ── */}
       {bloccati.length > 0 && (
         <>
-          <div style={titoletto}>Bloccati ({bloccati.length})</div>
+          <div style={titoletto}>{L('modBlocked')} ({bloccati.length})</div>
           {bloccati.map(nome => (
             <div key={nome} style={riga}>
               <span style={{ flex: 1, fontSize: 13.5, color: C.textMuted, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {nome}
               </span>
               <button disabled={!!inCorso} onClick={() => agisci('sblocca', nome)} style={pill(C.accent1 || '#5b8cff', false)}>
-                Sblocca
+                {L('modUnblock')}
               </button>
             </div>
           ))}

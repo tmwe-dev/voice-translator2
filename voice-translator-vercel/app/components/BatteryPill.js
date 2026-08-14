@@ -21,12 +21,20 @@ export function BatteryPillSlot() {
 }
 
 export default function BatteryPill({ utente }) {
-  const { S } = useApp();
+  // ── b.138 · la pila del credito parlava italiano a tutti ──
+  //
+  // E il comando piu visto dell'app — sta in cima a ogni schermata — e
+  // dentro c'era tutta la pagina del credito scritta a mano: "OGGI",
+  // "QUESTO MESE", "HAI UN VOUCHER?", "Codice non valido". Chi aveva
+  // l'interfaccia in un'altra lingua toccava la batteria e trovava
+  // l'italiano.
+  const { L, S } = useApp();
   const tc = S.colors || {};
   const [dati, setDati] = useState(null);      // { testo, colore, percento, oggi, mese }
   const [aperto, setAperto] = useState(false);
   const [codice, setCodice] = useState('');
   const [esito, setEsito] = useState('');
+  const [esitoOk, setEsitoOk] = useState(false);
 
   // Il wallet riconosce l'utente dalla SESSIONE (Bearer), mai da un parametro
   const conToken = useCallback((extra = {}) => {
@@ -68,7 +76,7 @@ export default function BatteryPill({ utente }) {
             const d = await r.json().catch(() => ({}));
             if (d.ok) {
               localStorage.setItem('vt-benvenuto-chiesto', '1');
-              if (d.nuovo) { setEsito(`Benvenuto! ${d.testo} in regalo`); setAperto(true); }
+              if (d.nuovo) { setEsito(L('welcomeGiftMsg').replace('{x}', d.testo)); setEsitoOk(true); setAperto(true); }
             }
           }
         }
@@ -83,7 +91,8 @@ export default function BatteryPill({ utente }) {
             body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pendente } : { codice: pendente }),
           });
           const d = await r.json().catch(() => ({}));
-          setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
+          setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+          setEsitoOk(!!d.ok);
           setAperto(true);
         }
         carica();
@@ -106,20 +115,21 @@ export default function BatteryPill({ utente }) {
 
   // Voucher: manda il codice, mostra l'esito
   async function usaVoucher() {
-    setEsito('...');
+    setEsito('...'); setEsitoOk(false);
     const r = await fetch('/api/wallet/voucher', {
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ codice }),
     });
     const d = await r.json();
-    setEsito(d.ok ? `Fatto! ${d.testo}` : (d.motivo || 'Codice non valido'));
+    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+    setEsitoOk(!!d.ok);
     if (d.ok) { setCodice(''); carica(); }
   }
 
   return (
     <>
       {/* ── La pila in header ── */}
-      <button onClick={() => setAperto(true)} aria-label={`Credito: ${dati.testo}`} style={{
+      <button onClick={() => setAperto(true)} aria-label={`${L('creditRow')}: ${dati.testo}`} style={{
         display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
         background: tc.cardBg || 'rgba(140,170,255,0.06)', border: `1px solid ${tc.cardBorder || 'rgba(160,190,255,0.14)'}`,
         borderRadius: 999, padding: '5px 11px', fontFamily: 'inherit',
@@ -143,26 +153,26 @@ export default function BatteryPill({ utente }) {
           position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.55)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
         }}>
-          <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Il tuo credito" style={{
+          <div onClick={(e) => e.stopPropagation()} role="dialog" aria-label={L('yourCreditTitle')} style={{
             width: '100%', maxWidth: 360, borderRadius: 22, padding: '20px 18px',
             background: tc.popupBg || 'rgba(5,7,15,0.96)', border: `1px solid ${tc.cardBorder}`,
             color: tc.textPrimary, backdropFilter: 'blur(20px)',
           }}>
-            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 2 }}>Il tuo credito</div>
+            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 2 }}>{L('yourCreditTitle')}</div>
             <div style={{ fontSize: 30, fontWeight: 850, color: colore }}>{dati.testo}</div>
 
             <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>
               <div style={{ flex: 1, padding: '9px 11px', borderRadius: 14, background: tc.cardBg, border: `1px solid ${tc.cardBorder}` }}>
-                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted }}>OGGI</div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('todayWord')}</div>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{dati.oggi}</div>
               </div>
               <div style={{ flex: 1, padding: '9px 11px', borderRadius: 14, background: tc.cardBg, border: `1px solid ${tc.cardBorder}` }}>
-                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted }}>QUESTO MESE</div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, textTransform: 'uppercase' }}>{L('thisMonth')}</div>
                 <div style={{ fontSize: 15, fontWeight: 800 }}>{dati.mese}</div>
               </div>
             </div>
 
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '10px 0 6px' }}>RICARICA</div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '10px 0 6px', textTransform: 'uppercase' }}>{L('landingRecharge')}</div>
             {PACCHETTI.map(p => {
               const ore = oreIncluse(p);
               return (
@@ -174,39 +184,43 @@ export default function BatteryPill({ utente }) {
                 }}>
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div style={{ fontSize: 13.5, fontWeight: 800 }}>{p.nome} · {ore.standard}</div>
-                    <div style={{ fontSize: 10.5, color: tc.textMuted }}>voce premium: {ore.premium}{p.consigliato ? ' · consigliato' : ''}</div>
+                    <div style={{ fontSize: 10.5, color: tc.textMuted }}>{L('withPremiumVoice')} {ore.premium}{p.consigliato ? ` · ${L('recommended')}` : ''}</div>
                   </div>
                   <div style={{ fontSize: 14, fontWeight: 800, color: tc.accent2 || '#38e1ff' }}>€{p.euro}</div>
                 </button>
               );
             })}
 
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px' }}>HAI UN VOUCHER?</div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditHaveCode')}</div>
             <div style={{ display: 'flex', gap: 7 }}>
-              <input value={codice} onChange={(e) => setCodice(e.target.value)} placeholder="CODICE"
+              <input value={codice} onChange={(e) => setCodice(e.target.value)} placeholder={L('codeWord')}
                 style={{ flex: 1, padding: '10px 12px', borderRadius: 12, fontFamily: 'inherit', fontSize: 13,
                   background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
               <button onClick={usaVoucher} disabled={!codice} style={{
                 padding: '10px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: 13, fontWeight: 800, color: '#fff',
                 background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
-              }}>Usa</button>
+              }}>{L('useWord')}</button>
             </div>
-            {/* verde per le buone notizie (Fatto!/Benvenuto!), rosso solo per i veri errori */}
+            {/* verde per le buone notizie, rosso solo per i veri errori.
+                b.138 — prima il colore si decideva con /^(Fatto|Benvenuto)/:
+                una espressione regolare sull'italiano, che con l'interfaccia
+                in un'altra lingua avrebbe dipinto di rosso anche gli esiti
+                buoni. Ora l'esito porta con se il proprio segno. */}
             {esito && <div style={{ fontSize: 12, marginTop: 6,
-              color: /^(Fatto|Benvenuto)/.test(esito) ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
+              color: esitoOk ? COLORI.verde : COLORI.rosso }}>{esito}</div>}
 
             {/* ── Storico ricariche ── */}
             {dati.storico?.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px' }}>LE TUE RICARICHE</div>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, margin: '12px 0 6px', textTransform: 'uppercase' }}>{L('creditYourTopups')}</div>
                 <div style={{ maxHeight: 120, overflowY: 'auto' }}>
                   {dati.storico.map((r, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 2px',
                       fontSize: 11.5, borderBottom: `1px solid ${tc.cardBorder}` }}>
                       <span style={{ color: tc.textMuted, minWidth: 68 }}>{r.quando}</span>
                       <span style={{ flex: 1, color: tc.textSecondary, textTransform: 'capitalize' }}>
-                        {r.tipo === 'acquisto' ? 'Ricarica' : r.tipo === 'benvenuto' ? 'Benvenuto' : r.tipo === 'omaggio' ? 'Omaggio' : r.tipo === 'regalo_in' ? 'Regalo' : 'Voucher'}
+                        {r.tipo === 'acquisto' ? L('landingRecharge') : r.tipo === 'benvenuto' ? L('histWelcome') : r.tipo === 'omaggio' ? L('histFree') : r.tipo === 'regalo_in' ? L('histGift') : 'Voucher'}
                       </span>
                       <span style={{ fontWeight: 750, color: COLORI.verde }}>{r.testo}</span>
                       {r.euro && <span style={{ color: tc.textMuted }}>{r.euro}</span>}

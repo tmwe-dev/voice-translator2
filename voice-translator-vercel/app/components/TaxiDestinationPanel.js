@@ -3,6 +3,7 @@ import { memo, useState, useCallback, useRef, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
+import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
 // TaxiDestinationPanel — Structured destination form for TaxiTalk
@@ -21,6 +22,8 @@ const FIELD_CONFIG = [
 ];
 
 function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
+  // b.138 — errori di ricerca ed etichette erano in italiano fisso.
+  const { L } = useApp();
   const C = S?.colors || {};
   const accent = C.accent1 || PALETTE.teal;
   const purple = C.accent2 || PALETTE.violet;
@@ -57,15 +60,15 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
       );
       if (!res.ok) throw new Error('Geocoding failed');
       const data = await res.json();
-      if (data.length === 0) setSearchError('Nessun risultato trovato');
+      if (data.length === 0) setSearchError(L('noResultFound'));
       setSearchResults(data.map(p => ({
         lat: parseFloat(p.lat), lon: parseFloat(p.lon),
         displayName: p.display_name, type: p.type || '',
         address: p.address || {},
       })));
-    } catch { setSearchError('Errore nella ricerca'); }
+    } catch { setSearchError(L('searchError')); }
     setSearching(false);
-  }, [targetLang]);
+  }, [targetLang, L]);
 
   const handleQueryChange = useCallback((val) => {
     setQuery(val);
@@ -129,7 +132,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
       background: 'rgba(0,0,0,0.6)',
       display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
     }} onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-       role="dialog" aria-modal="true" aria-label="Destinazione taxi">
+       role="dialog" aria-modal="true" aria-label={L('taxiDestination')}>
 
       <div ref={sheetRef} style={{
         background: C.bg || PALETTE.bgDeep, borderRadius: '20px 20px 0 0',
@@ -151,7 +154,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
               Inserisci la destinazione per il tassista
             </div>
           </div>
-          <button onClick={onClose} aria-label="Chiudi" style={{
+          <button onClick={onClose} aria-label={L('closeWord')} style={{
             width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
             background: cardBg, border: `1px solid ${cardBorder}`,
             color: textMuted, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -168,7 +171,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             </label>
             <div style={{ position: 'relative' }}>
               <input type="text" value={query} onChange={e => handleQueryChange(e.target.value)}
-                placeholder="Cerca indirizzo, hotel, aeroporto..."
+                placeholder={L('searchAddress')}
                 style={{ ...inputStyle, paddingRight: 36 }}
               />
               {searching && (
@@ -278,7 +281,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
                 ))}
                 <div style={{ display: 'flex', gap: 6 }}>
                   <input type="text" value={newStop} onChange={e => setNewStop(e.target.value)}
-                    placeholder="Aggiungi fermata..."
+                    placeholder={L('addStop')}
                     style={{ ...inputStyle, flex: 1 }}
                     onKeyDown={e => { if (e.key === 'Enter') addStop(); }}
                   />
@@ -306,7 +309,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
             fontSize: 15, fontWeight: 700, fontFamily: FONT,
             boxShadow: selectedPlace ? `0 4px 20px ${accent}35` : 'none',
           }}>
-            {selectedPlace ? 'Genera QR Destinazione' : 'Seleziona una destinazione'}
+            {selectedPlace ? L('generateDestQR') : L('selectDestination')}
           </button>
         </div>
       </div>
