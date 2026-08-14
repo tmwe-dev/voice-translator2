@@ -4,7 +4,18 @@ import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 import { createLogger } from './logger.js';
 import { puoModerare, eMembro, ruoloDi } from './decisioni.js';
+import { MODES } from './constants.js';
 const log = createLogger('roomActions');
+
+// b.155 — audit dei setting di conversazione: handleChangeMode
+// scriveva QUALSIASI stringa arrivasse dal client come modalita della
+// stanza, senza controllare che fosse una delle 4 esistenti
+// (conversation/classroom/freetalk/simultaneous). Non e uno sfruttamento
+// (solo l'host puo chiamarla, vedi puoModerare sotto), ma un valore
+// non valido finiva comunque nel database e nessun ramo della UI lo
+// riconosce — la stanza resta silenziosamente senza controlli vocali
+// per chiunque la apra dopo. Whitelist esplicita.
+const MODE_IDS = new Set(MODES.map(m => m.id));
 
 // ── Helper: resolve identity from token or fallback to name ──
 export async function resolveIdentity(roomSessionToken, name, roomId) {
@@ -99,6 +110,7 @@ export async function handleSpeaking({ roomId, identity, speaking, liveText, typ
 // ── Action: changeMode ──
 export async function handleChangeMode({ roomId, mode, identity }) {
   if (!roomId || !mode) return NextResponse.json({ error: 'roomId and mode required' }, { status: 400 });
+  if (!MODE_IDS.has(mode)) return NextResponse.json({ error: 'Invalid mode' }, { status: 400 });
   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const currentRoom = await getRoom(roomId);
   if (!currentRoom) return NextResponse.json({ error: 'Room not found' }, { status: 404 });

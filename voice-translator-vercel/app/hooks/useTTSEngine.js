@@ -375,6 +375,19 @@ export default function useTTSEngine({
         // 402 = credito insufficiente: si ripiega sulla voce gratuita,
         // che e esattamente cio che la rotta si aspetta.
       } catch { /* voce premium non disponibile: si ripiega su quella gratuita */ }
+    } else if (motore === 'openai') {
+      // b.155 — audit dei setting: CONFERMATO che mancava questo ramo.
+      // Chi sceglieva esplicitamente "OpenAI" come motore vocale
+      // sentiva comunque Edge TTS in OGNI conversazione dal vivo: la
+      // coda vera (accodaConAnticipo, sopra) passa sempre da qui, e
+      // senza questo `else if` "openai" non veniva mai riconosciuto —
+      // finiva dritto nel ripiego Edge qualche riga sotto, in silenzio.
+      // Solo il riascolto manuale di un singolo messaggio (playMessage
+      // in useAudioSystem.js) rispettava davvero la scelta. fetchTTSBlob
+      // e la stessa funzione che usa playTTS, qui presa senza suonare.
+      try {
+        return await fetchTTSBlob(text, langCode);
+      } catch { /* OpenAI non disponibile: si ripiega su Edge sotto */ }
     }
 
     try {

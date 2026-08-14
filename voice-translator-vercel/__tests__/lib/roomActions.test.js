@@ -180,6 +180,18 @@ describe('handleChangeMode', () => {
     const res = await handleChangeMode({ roomId: 'ABC', mode: 'freetalk', identity: null });
     expect(res.status).toBe(401);
   });
+
+  // b.155 — audit dei setting di conversazione: prima non c'era nessuna
+  // whitelist qui, e una stringa qualsiasi finiva scritta come modalita
+  // della stanza (nessun ramo della UI la avrebbe riconosciuta dopo).
+  it('rifiuta una modalita che non e una delle 4 esistenti, anche per l\'host', async () => {
+    mockGetRoom.mockResolvedValue({ id: 'ABC', host: 'Host', members: [{ name: 'Host' }] });
+    const res = await handleChangeMode({
+      roomId: 'ABC', mode: 'modalita-inventata', identity: { name: 'Host', role: 'host', verified: true }
+    });
+    expect(res.status).toBe(400);
+    expect(mockUpdateRoomMode).not.toHaveBeenCalled();
+  });
 });
 
 describe('handleChangeLang', () => {
