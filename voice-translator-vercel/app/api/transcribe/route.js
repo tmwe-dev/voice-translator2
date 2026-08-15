@@ -82,7 +82,7 @@ async function handlePost(req) {
     // Auth: need OpenAI for STT
     // billingEmail = chi paga: userToken → chi parla (Community),
     // roomId → chi ha aperto la conversazione (inviti)
-    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+    const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({
       userToken: userToken || undefined,
       roomId: roomId || undefined,
       roomSessionToken: roomSessionToken || undefined,
@@ -176,7 +176,8 @@ async function handlePost(req) {
     if (!isOwnKey) {
       const costoUsd = calcWhisperCost(buffer.length);
       const costoEurCents = usdToEurCents(costoUsd);
-      trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents)).catch(() => {});
+      // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
+      trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents), riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {});
     }
 
     // ── b.107 · la ricevuta che sostituisce la parola del client ──

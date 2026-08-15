@@ -118,8 +118,14 @@ describe('il contatore di spesa segue la spesa vera', () => {
   });
 
   it('chi legge il contatore non tronca i decimali', () => {
-    expect(auth, 'parseInt("4.7") da 4').not.toMatch(/parseInt\(await redis\('GET', dailyKey\)/);
-    expect(auth).toMatch(/parseFloat\(await redis\('GET', dailyKey\)/);
+    // b.170 — CONFERMATO: non si legge piu il contatore con un GET a se
+    // stante (vedi la riserva-budget atomica in apiAuth.js, sostituisce
+    // il vecchio GET+confronto per chiudere una race concorrente) — ma
+    // il valore che ne esce, dall'INCRBYFLOAT stesso, passa comunque da
+    // parseFloat, mai da parseInt: l'intento (niente decimali troncati)
+    // resta lo stesso, cambia solo dove avviene la lettura.
+    expect(auth, 'parseInt("4.7") da 4').not.toMatch(/parseInt\(await redis\('(GET|INCRBYFLOAT)', dailyKey\)/);
+    expect(auth).toMatch(/parseFloat\(await redis\('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS\)\)/);
     expect(leggi('api/startrek/route.js'))
       .not.toMatch(/parseInt\(await redis\('GET', `daily:/);
   });

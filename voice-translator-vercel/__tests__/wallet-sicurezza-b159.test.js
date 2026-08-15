@@ -37,7 +37,9 @@ describe('translate: isReview non bypassa piu i soldi (b.159)', () => {
 
   it('trackDailySpend non e piu condizionato a !isReview', () => {
     const i = src.indexOf('bgTasks.push(trackDailySpend(billingEmail');
-    const prima = src.slice(Math.max(0, i - 100), i);
+    // b.170 — finestra allargata: fra `if (!isOwnKey)` e questa riga ora
+    // c'e anche il commento sulla riserva-budget nettata (vedi apiAuth.js).
+    const prima = src.slice(Math.max(0, i - 400), i);
     expect(prima).toMatch(/if\s*\(!isOwnKey\)\s*\{/);
     expect(prima).not.toContain('isReview');
   });
@@ -177,7 +179,9 @@ describe('/api/transcribe: durata blindata, tetto giornaliero tracciato (b.159)'
   });
 
   it('trackDailySpend viene chiamato per il costo Whisper', () => {
-    expect(src).toContain('trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents))');
+    // b.170 — trackDailySpend riceve anche la riserva-budget da nettare
+    // (vedi apiAuth.js): l'importo vero passato resta lo stesso.
+    expect(src).toContain('trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents), riservatoUtenteCents, riservatoPiattaformaCents)');
   });
 });
 

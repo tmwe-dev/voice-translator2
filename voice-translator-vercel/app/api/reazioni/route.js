@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { sanitizeRoomId } from '../../lib/validate.js';
-import { verifyRoomSession, getRoom } from '../../lib/store.js';
+import { verifyRoomSession, getRoom, eAncoraMembroStanza } from '../../lib/store.js';
 import { createLogger } from '../../lib/logger.js';
 import { leggiRegole } from '../../lib/moderazione.js';
 import {
@@ -27,6 +27,9 @@ async function chiSei(token, roomId) {
   const s = await verifyRoomSession(token);
   if (!s) return null;
   if (s.roomId && roomId && s.roomId.toUpperCase() !== roomId.toUpperCase()) return null;
+  // b.170 — vedi stanza-video e resolveRoomIdentity in store.js: un
+  // gettone valido non basta, serve essere ancora membro (non espulso).
+  if (!(await eAncoraMembroStanza(roomId, s.name))) return null;
   return s;
 }
 

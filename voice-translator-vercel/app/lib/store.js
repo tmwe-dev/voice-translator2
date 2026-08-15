@@ -56,9 +56,43 @@ export async function resolveRoomIdentity(token, name, roomId) {
   if (!token) return null;
   const session = await verifyRoomSession(token);
   if (session && session.roomId === roomId.toUpperCase()) {
+    // b.170 — CONFERMATO (audit esterno 15/8): il gettone di stanza
+    // (rsess:*) e una chiave Redis a se, con vita propria (24h). Quando
+    // l'host BLOCCA qualcuno (moderazione.js/blocca → removeMember,
+    // b.167), la persona sparisce da room.members ma il suo gettone
+    // resta valido fino a scadenza: qualunque capability che verificava
+    // solo "gettone valido per questa stanza" continuava ad accettarlo —
+    // l'espulsione toglieva dalla lista ma non dalla porta. Ora
+    // l'identita di stanza vale solo se chi la porta e' ANCORA membro
+    // (non bloccato). Un'unica funzione, cosi la stessa regola vale per
+    // ogni consumatore invece di essere ricopiata (e dimenticata) rotta
+    // per rotta.
+    if (!(await eAncoraMembroStanza(roomId, session.name))) return null;
     return { name: session.name, role: session.role, verified: true };
   }
   return null;
+}
+
+// b.170 — "e' ancora dentro questa stanza?" — la domanda che separa
+// avere un gettone valido dall'essere ancora un membro. Import dinamico
+// di moderazione.js (eBloccato) per lo stesso motivo documentato in
+// blocca(): store.js viene caricato presto e non deve dipendere da
+// moderazione al caricamento del modulo. In caso di errore Redis si
+// FALLISCE CHIUSO (return false, l'accesso viene negato): una capability
+// di stanza non e' un servizio da lasciare aperto quando non si riesce a
+// verificare chi la sta usando.
+export async function eAncoraMembroStanza(roomId, nome) {
+  if (!nome) return false;
+  try {
+    const { eBloccato } = await import('./moderazione.js');
+    if (await eBloccato(roomId, nome)) return false;
+    const room = await getRoom(roomId);
+    if (!room || !Array.isArray(room.members)) return false;
+    const n = String(nome).toLowerCase();
+    return room.members.some((m) => String(m.name || '').toLowerCase() === n);
+  } catch {
+    return false; // fail-closed: nel dubbio, non si autorizza
+  }
 }
 
 // b.169 — CONFERMATO (audit esterno 15/8, P0-3): chi (ri)entra in una

@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server';
 const log = createLogger('auth');
 import { getSession, getUser, validateLending } from './users.js';
 import { getRoom, resolveRoomIdentity } from './store.js';
-import { ERRORS, DAILY_LIMITS } from './config.js';
+import { ERRORS, DAILY_LIMITS, BUDGET_RESERVE_CENTS } from './config.js';
 import { redis } from './redis.js';
 import { creditoFinito } from '../wallet/addebita.js';
 
@@ -63,6 +63,8 @@ export async function resolveAuth({
         billingEmail: null,
         isLending: false,
         lendingCodeUsed: null,
+        riservatoUtenteCents: 0,
+        riservatoPiattaformaCents: 0,
       };
     }
   }
@@ -156,7 +158,17 @@ export async function resolveAuth({
     isLending = true;
     lendingCodeUsed = lendingCode;
     const lenderUser = await getUser(lending.lenderEmail);
-    if (lenderUser) {
+    // b.170 — CONFERMATO (audit esterno 15/8): stessa disciplina fail-closed
+    // gia applicata al Path 1 in b.168, mancava qui. Un prestito che punta
+    // a un prestatore sparito (account cancellato, incoerenza Redis) cadeva
+    // fuori dall'`if (lenderUser)` senza throw: `apiKey` restava la chiave
+    // di PIATTAFORMA (default in cima), nessun controllo credito, uso
+    // gratuito. Un pagante dichiarato che non esiste e' un accesso da
+    // rifiutare, non da servire con la chiave BarTalk.
+    if (!lenderUser) {
+      throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
+    }
+    {
       const ownKey = lenderUser.useOwnKeys && lenderUser.apiKeys?.[provider];
       if (ownKey) {
         apiKey = ownKey;
@@ -224,7 +236,18 @@ export async function resolveAuth({
     if (room.hostEmail) {
       billingEmail = room.hostEmail;
       const hostUser = await getUser(billingEmail);
-      if (hostUser) {
+      // b.170 — CONFERMATO (audit esterno 15/8): stessa disciplina
+      // fail-closed del Path 1 (b.168) e del prestito qui sopra. Una
+      // stanza il cui hostEmail non risolve piu a un account (host
+      // cancellato, incoerenza) faceva cadere l'ospite fuori dall'`if
+      // (hostUser)` senza throw: chiave di piattaforma, nessun controllo
+      // credito, traduzioni gratis per gli ospiti di una stanza il cui
+      // host non esiste. Se e' dichiarato un pagante (room.hostEmail) ma
+      // quel pagante non esiste, si rifiuta.
+      if (!hostUser) {
+        throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
+      }
+      {
         const ownKey = hostUser.useOwnKeys && hostUser.apiKeys?.[provider];
         if (ownKey) {
           apiKey = ownKey;
@@ -273,6 +296,27 @@ export async function resolveAuth({
   }
 
   // Check daily spending limits (only for platform credits, not own keys)
+  //
+  // b.170 — CONFERMATO (audit esterno 15/8): qui si leggeva il contatore
+  // (GET) e si confrontava, ma si scriveva l'incremento VERO solo a
+  // chiamata finita (trackDailySpend, sotto) — spesso un secondo o piu
+  // dopo. Richieste concorrenti arrivate in quella finestra leggevano
+  // tutte lo stesso valore "sotto tetto" e passavano tutte: il tetto
+  // sforava di quanto valevano le chiamate in volo in quel momento.
+  //
+  // Decisione dell'utente: non serve precisione assoluta — un margine
+  // di sforamento contenuto (qualche minuto di traffico) e accettabile,
+  // non lo e una finestra senza fondo. Ora si RISERVA atomicamente
+  // BUDGET_RESERVE_CENTS (INCRBYFLOAT, non piu GET+confronto) prima di
+  // ogni chiamata a pagamento: se il totale risultante mostra che il
+  // tetto era GIA superato PRIMA di questa riserva, la si annulla e si
+  // rifiuta — stesso confine di prima (`speso >= tetto`), ma senza la
+  // finestra, perche le richieste concorrenti sono ora serializzate
+  // dall'incremento atomico invece di leggere tutte lo stesso valore
+  // vecchio. trackDailySpend netta questa riserva contro il costo vero
+  // quando lo si conosce (sotto), cosi il contatore resta preciso.
+  let riservatoUtenteCents = 0;
+  let riservatoPiattaformaCents = 0;
   if (!isOwnKey && !skipCreditCheck) {
     try {
       const todayUTC = new Date().toISOString().split('T')[0];
@@ -282,23 +326,30 @@ export async function resolveAuth({
       // qui (lo protegge comunque withApiGuard per IP).
       if (billingEmail) {
         const dailyKey = `daily:${billingEmail}:${todayUTC}`;
-        // b.107 — parseFloat, non parseInt: da quando il contatore somma il
-        // valore vero, i decimali contano. Con parseInt "4.7" diventava 4.
-        const dailySpent = parseFloat(await redis('GET', dailyKey) || '0') || 0;
-
-        if (DAILY_LIMITS.PER_USER > 0 && dailySpent >= DAILY_LIMITS.PER_USER) {
+        const nuovoTotaleUtente = parseFloat(await redis('INCRBYFLOAT', dailyKey, BUDGET_RESERVE_CENTS)) || 0;
+        if (nuovoTotaleUtente <= BUDGET_RESERVE_CENTS + 1e-9) await redis('EXPIRE', dailyKey, 90000);
+        if (DAILY_LIMITS.PER_USER > 0 && (nuovoTotaleUtente - BUDGET_RESERVE_CENTS) >= DAILY_LIMITS.PER_USER) {
+          await redis('INCRBYFLOAT', dailyKey, -BUDGET_RESERVE_CENTS); // annulla la riserva: non si procede
           throw NextResponse.json({ error: ERRORS.DAILY_LIMIT }, { status: 429 });
         }
+        riservatoUtenteCents = BUDGET_RESERVE_CENTS;
       }
 
       // Check platform total daily spend — SEMPRE, anche per l'accesso
       // libero: e l'unico tetto che protegge la piattaforma quando non
       // c'e nessun billingEmail da limitare singolarmente.
       const platformDailyKey = `daily:platform:${todayUTC}`;
-      const platformSpent = parseFloat(await redis('GET', platformDailyKey) || '0') || 0;
-      if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && platformSpent >= DAILY_LIMITS.PLATFORM_TOTAL) {
+      const nuovoTotalePiattaforma = parseFloat(await redis('INCRBYFLOAT', platformDailyKey, BUDGET_RESERVE_CENTS)) || 0;
+      if (nuovoTotalePiattaforma <= BUDGET_RESERVE_CENTS + 1e-9) await redis('EXPIRE', platformDailyKey, 90000);
+      if (DAILY_LIMITS.PLATFORM_TOTAL > 0 && (nuovoTotalePiattaforma - BUDGET_RESERVE_CENTS) >= DAILY_LIMITS.PLATFORM_TOTAL) {
+        await redis('INCRBYFLOAT', platformDailyKey, -BUDGET_RESERVE_CENTS);
+        if (riservatoUtenteCents) {
+          await redis('INCRBYFLOAT', `daily:${billingEmail}:${todayUTC}`, -riservatoUtenteCents);
+          riservatoUtenteCents = 0;
+        }
         throw NextResponse.json({ error: ERRORS.PLATFORM_LIMIT }, { status: 503 });
       }
+      riservatoPiattaformaCents = BUDGET_RESERVE_CENTS;
     } catch (e) {
       // If it's a NextResponse (our own error), re-throw it
       if (e instanceof Response || e?.status) throw e;
@@ -307,57 +358,52 @@ export async function resolveAuth({
     }
   }
 
-  return { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed };
+  return { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed, riservatoUtenteCents, riservatoPiattaformaCents };
 }
 
 /**
  * Track daily spending after a successful API call
  * Call this after deducting credits
+ *
+ * @param {string|null} email
+ * @param {number} amountCents - costo VERO della chiamata appena conclusa
+ * @param {number} riservatoUtenteCents - b.170: quanto resolveAuth aveva
+ *   gia riservato sul contatore personale (0 se non applicabile — vedi
+ *   il campo omonimo restituito da resolveAuth)
+ * @param {number} riservatoPiattaformaCents - b.170: idem, contatore di
+ *   piattaforma
  */
-export async function trackDailySpend(email, amountCents) {
-  if (amountCents <= 0) return;
+export async function trackDailySpend(email, amountCents, riservatoUtenteCents = 0, riservatoPiattaformaCents = 0) {
+  if (amountCents <= 0 && riservatoUtenteCents <= 0 && riservatoPiattaformaCents <= 0) return;
   try {
     const todayUTC = new Date().toISOString().split('T')[0];
-    // b.154 — il tetto di piattaforma (€100/giorno) si controlla ANCHE
-    // per le chiamate anonime (resolveAuth Path 4), ma se qui si
-    // usciva senza `email` il contatore `daily:platform:...` non
-    // veniva MAI incrementato per quelle chiamate: il tetto controllato
-    // in resolveAuth restava sempre a zero, quindi mai vero. Senza
-    // email si aggiorna solo il contatore di piattaforma, non quello
-    // personale (che non esiste, per definizione, per l'anonimo).
-    if (!email) {
-      await (async (chiave) => {
-        const nuovo = parseFloat(await redis('INCRBYFLOAT', chiave, amountCents)) || 0;
-        if (nuovo <= amountCents + 1e-9) await redis('EXPIRE', chiave, 90000);
-      })(`daily:platform:${todayUTC}`);
-      return;
-    }
 
-    // ── b.107 · qui il contatore correva dieci volte piu della spesa ──
-    // Prima c'era INCRBY con Math.ceil(amountCents). INCRBY vuole numeri
-    // interi, e l'arrotondamento serviva a quello — ma l'addebito minimo
-    // di una traduzione e 0,1 centesimi (MIN_CHARGE.TRANSLATE), e
-    // Math.ceil(0.1) fa 1.
-    //
-    // Cioe: si scalava un decimo di centesimo e se ne contava uno intero.
-    // Il tetto di 500 (cinque euro al giorno, DAILY_LIMITS.PER_USER)
-    // scattava dopo 500 traduzioni invece di 5.000, e l'utente leggeva
-    // "limite di spesa giornaliero raggiunto" avendo speso CINQUANTA
-    // CENTESIMI.
-    //
-    // INCRBYFLOAT somma il valore vero senza arrotondare, resta atomico
-    // come INCRBY, e non cambia l'unita di misura: il contatore continua
-    // a essere in centesimi e i tetti restano quelli scritti in config.
-    const somma = async (chiave) => {
-      const nuovo = parseFloat(await redis('INCRBYFLOAT', chiave, amountCents)) || 0;
-      // Prima scrittura della giornata: si dà una scadenza alla chiave.
-      // Il confronto e con tolleranza perche i decimali in virgola mobile
-      // non tornano mai esatti al bit.
-      if (nuovo <= amountCents + 1e-9) await redis('EXPIRE', chiave, 90000); // ~25 ore
+    // b.170 — CONFERMATO (audit esterno 15/8): resolveAuth ora riserva
+    // BUDGET_RESERVE_CENTS PRIMA della chiamata (vedi la nota li). Qui si
+    // netta quella riserva contro il costo VERO — altrimenti ogni
+    // chiamata conterebbe due volte (riserva + costo reale sommati),
+    // gonfiando il contatore di una cifra fissa per chiamata e facendo
+    // scattare i tetti molto prima di quanto sia stato speso davvero.
+    // Se una rotta non e stata aggiornata per passare la riserva
+    // (riservato*Cents omesso, default 0), il comportamento resta quello
+    // di prima: si somma il costo vero, punto.
+    const somma = async (chiave, riservato) => {
+      const delta = amountCents - riservato;
+      if (delta === 0) return;
+      const nuovo = parseFloat(await redis('INCRBYFLOAT', chiave, delta)) || 0;
+      // Scadenza sempre rinfrescata: se resolveAuth ha gia riservato,
+      // questa non e piu la prima scrittura della giornata (la riserva
+      // lo era, e l'ha gia impostata) — EXPIRE su una chiave esistente
+      // si limita ad aggiornare la TTL, innocuo chiamarlo comunque.
+      await redis('EXPIRE', chiave, 90000); // ~25 ore
     };
 
-    await somma(`daily:${email}:${todayUTC}`);
-    await somma(`daily:platform:${todayUTC}`);
+    // b.154 — il tetto di piattaforma (€100/giorno) si controlla ANCHE
+    // per le chiamate anonime (resolveAuth Path 4): senza email si
+    // aggiorna solo il contatore di piattaforma, non quello personale
+    // (che non esiste, per definizione, per l'anonimo).
+    if (email) await somma(`daily:${email}:${todayUTC}`, riservatoUtenteCents);
+    await somma(`daily:platform:${todayUTC}`, riservatoPiattaformaCents);
   } catch (e) {
     log.error('Daily spend tracking error:', e);
   }

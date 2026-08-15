@@ -38,7 +38,10 @@ describe('apiAuth: token invalido e accesso libero (b.154)', () => {
   it('il tetto di spesa DI PIATTAFORMA si controlla sempre, non solo con un billingEmail', () => {
     const iCheck = src.indexOf('Check daily spending limits');
     expect(iCheck).toBeGreaterThan(-1);
-    const blocco = src.slice(iCheck, iCheck + 1600);
+    // b.170 — finestra allargata: qui ora c'e anche la nota estesa sulla
+    // riserva-budget atomica (vedi apiAuth.js), piu lunga del vecchio
+    // GET+confronto che sostituisce.
+    const blocco = src.slice(iCheck, iCheck + 3200);
     // Il vecchio `if (billingEmail && !isOwnKey && !skipCreditCheck)`
     // avvolgeva TUTTO, tetto di piattaforma incluso.
     expect(blocco).toMatch(/if\s*\(!isOwnKey\s*&&\s*!skipCreditCheck\)/);
@@ -48,9 +51,15 @@ describe('apiAuth: token invalido e accesso libero (b.154)', () => {
   it('trackDailySpend conta anche le chiamate senza email (solo il contatore di piattaforma)', () => {
     const iFn = src.indexOf('export async function trackDailySpend');
     expect(iFn).toBeGreaterThan(-1);
-    const corpo = src.slice(iFn, iFn + 900);
-    expect(corpo).toMatch(/if\s*\(!email\)\s*\{/);
+    // b.170 — CONFERMATO: la forma e' cambiata (non piu un `if (!email)`
+    // con ritorno anticipato, vedi la nota su BUDGET_RESERVE_CENTS in
+    // config.js), ma l'intento resta lo stesso: il contatore aggregato
+    // di piattaforma si aggiorna SEMPRE, quello personale solo se c'e
+    // un'email da limitare.
+    const corpo = src.slice(iFn, iFn + 2200);
+    expect(corpo).toMatch(/if\s*\(email\)\s*await\s*somma/);
     expect(corpo).toContain('daily:platform:');
+    expect(corpo).toMatch(/await\s*somma\(`daily:platform:\$\{todayUTC\}`/);
   });
 });
 
@@ -59,7 +68,9 @@ describe('rotte a pagamento: il tracking non e piu condizionato solo a billingEm
     const src = leggi('app/api/translate/route.js');
     const i = src.indexOf('bgTasks.push(trackDailySpend(billingEmail');
     expect(i).toBeGreaterThan(-1);
-    const prima = src.slice(Math.max(0, i - 200), i);
+    // b.170 — finestra allargata: c'e anche la nota sulla riserva-budget
+    // nettata (vedi apiAuth.js) fra il guardiano e questa riga.
+    const prima = src.slice(Math.max(0, i - 400), i);
     // b.159 — la guardia qui era `!isOwnKey && !isReview`: da b.159
     // isReview non ha piu voce in capitolo sui soldi (vedi il file
     // wallet-sicurezza-b159.test.js), quindi resta solo `!isOwnKey`.
@@ -76,12 +87,15 @@ describe('rotte a pagamento: il tracking non e piu condizionato solo a billingEm
     // vedi wallet-sicurezza-b161-bis.test.js).
     const src = leggi('app/api/tts/route.js');
     expect(src).toMatch(/if\s*\(riservaId\)\s*\{\s*try\s*\{\s*await commit/);
-    expect(src).toMatch(/trackDailySpend\(billingEmail, charge\)\.catch/);
+    // b.170 — trackDailySpend riceve anche la riserva-budget da nettare.
+    expect(src).toMatch(/trackDailySpend\(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents\)\.catch/);
   });
 
   it('tts-elevenlabs: stessa correzione su entrambi i punti di addebito', () => {
     const src = leggi('app/api/tts-elevenlabs/route.js');
-    const occorrenze = src.match(/trackDailySpend\(billingEmail, charge1?\)/g) || [];
+    // b.170 — ogni chiamata ora passa anche la riserva-budget da nettare
+    // (vedi apiAuth.js): il regex accetta i due argomenti in piu.
+    const occorrenze = src.match(/trackDailySpend\(billingEmail, charge1?(?:, riservatoUtenteCents, riservatoPiattaformaCents)?\)/g) || [];
     expect(occorrenze.length).toBeGreaterThanOrEqual(2);
   });
 });

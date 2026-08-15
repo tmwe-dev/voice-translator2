@@ -160,7 +160,11 @@ async function handlePost(request) {
     const paganteReale = (provider === 'qwen' || !auth.isOwnKey) ? auth.billingEmail : null;
     if (paganteReale) {
       await addebitaAzioneChat(paganteReale);
-      trackDailySpend(paganteReale, MIN_CHARGE.CHAT_ACTION).catch(() => {});
+      // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
+      // Se il pagante reale e' finito su Qwen mentre l'auth aveva
+      // isOwnKey=true, resolveAuth non aveva riservato nulla (0, il
+      // default): qui si limita a sommare il costo vero, come prima.
+      trackDailySpend(paganteReale, MIN_CHARGE.CHAT_ACTION, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
     }
 
     return NextResponse.json({

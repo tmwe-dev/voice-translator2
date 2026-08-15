@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
-import { verifyRoomSession, getRoom } from '../../lib/store.js';
+import { verifyRoomSession, getRoom, eAncoraMembroStanza } from '../../lib/store.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('stanza-video');
@@ -58,6 +58,14 @@ async function chiSei(token, roomId) {
   const s = await verifyRoomSession(token);
   if (!s) return null;
   if (s.roomId && roomId && s.roomId.toUpperCase() !== roomId.toUpperCase()) return null;
+  // b.170 — CONFERMATO (audit esterno 15/8): questa era una delle
+  // capability che accettava un gettone valido per la stanza senza
+  // ricontrollare l'appartenenza CORRENTE. Chi veniva bloccato (tolto
+  // da room.members) restava in grado di entrare in video, farsi vedere
+  // e vedere gli altri col vecchio gettone fino a scadenza. Ora si
+  // verifica che sia ancora membro, con la stessa funzione usata dalle
+  // rotte a pagamento (resolveRoomIdentity → eAncoraMembroStanza).
+  if (!(await eAncoraMembroStanza(roomId, s.name))) return null;
   return s;
 }
 

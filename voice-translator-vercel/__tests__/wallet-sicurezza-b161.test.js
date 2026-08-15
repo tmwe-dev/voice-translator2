@@ -233,7 +233,10 @@ describe('Rotte a pagamento: roomSessionToken passato a resolveAuth quando si us
   it('translate: roomSessionToken letto dal body grezzo e passato a resolveAuth (schema non lo whitelist-a)', () => {
     const src = leggi('app/api/translate/route.js');
     expect(src).toContain("const roomSessionToken = typeof rawBody.roomSessionToken === 'string' ? rawBody.roomSessionToken : null;");
-    const i = src.indexOf('let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({');
+    // b.170 — resolveAuth restituisce anche la riserva-budget (vedi
+    // apiAuth.js): l'ancora segue la nuova destrutturazione.
+    const i = src.indexOf('let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({');
+    expect(i).toBeGreaterThan(-1);
     expect(src.slice(i, src.indexOf('});', i))).toContain('roomSessionToken,');
   });
 
@@ -246,21 +249,25 @@ describe('Rotte a pagamento: roomSessionToken passato a resolveAuth quando si us
   it('tts: roomSessionToken letto dal body grezzo e passato a resolveAuth', () => {
     const src = leggi('app/api/tts/route.js');
     expect(src).toContain("const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;");
-    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail } = await resolveAuth({');
+    // b.170 — vedi la nota gemella qui sopra sulla nuova destrutturazione.
+    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({');
+    expect(i).toBeGreaterThan(-1);
     expect(src.slice(i, src.indexOf('});', i))).toContain('roomSessionToken,');
   });
 
   it('transcribe: roomSessionToken letto dalla FormData e passato a resolveAuth', () => {
     const src = leggi('app/api/transcribe/route.js');
     expect(src).toContain("const roomSessionToken = formData.get('roomSessionToken') || '';");
-    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail } = await resolveAuth({');
+    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({');
+    expect(i).toBeGreaterThan(-1);
     expect(src.slice(i, src.indexOf('});', i))).toContain('roomSessionToken: roomSessionToken || undefined,');
   });
 
   it('tts-elevenlabs: roomSessionToken destrutturato dal body e passato a resolveAuth', () => {
     const src = leggi('app/api/tts-elevenlabs/route.js');
     expect(src).toMatch(/const\s*\{\s*text,\s*voiceId,\s*langCode,\s*userToken,\s*roomId,\s*roomSessionToken,\s*avatarName\s*\}\s*=\s*await req\.json\(\);/);
-    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail } = await resolveAuth({');
+    const i = src.indexOf('const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({');
+    expect(i).toBeGreaterThan(-1);
     expect(src.slice(i, src.indexOf('});', i))).toContain('roomSessionToken,');
   });
 });

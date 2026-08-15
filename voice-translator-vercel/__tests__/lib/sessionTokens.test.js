@@ -161,12 +161,32 @@ describe('verifyRoomSession', () => {
 });
 
 describe('resolveRoomIdentity', () => {
+  // b.170 — resolveRoomIdentity ora richiede anche l'appartenenza
+  // CORRENTE (non solo un gettone valido): serve una stanza con il
+  // membro dentro. Helper per prepararla nel mock Redis.
+  const stanzaCon = (id, membri) => {
+    redisStore[`room:${id.toUpperCase()}`] = JSON.stringify({
+      id: id.toUpperCase(), members: membri, host: membri[0]?.name,
+    });
+  };
+
   it('prefers token-based identity when valid', async () => {
     const { token } = await createRoomSession('ROOM1', 'Luca', 'host');
+    stanzaCon('ROOM1', [{ name: 'Luca', lang: 'it', role: 'host' }]);
     const identity = await resolveRoomIdentity(token, 'FakeName', 'ROOM1');
     expect(identity.name).toBe('Luca'); // from token, not from fallback
     expect(identity.role).toBe('host');
     expect(identity.verified).toBe(true);
+  });
+
+  // b.170 — P1 dell'audit esterno: un gettone valido di chi e' stato
+  // ESPULSO (tolto da room.members) non deve piu autorizzare nulla.
+  it('respinge un gettone valido se chi lo porta non e piu membro (espulso)', async () => {
+    const { token } = await createRoomSession('ROOM1', 'Mario', 'guest');
+    // La stanza esiste ma Mario NON e' fra i membri: e' stato espulso.
+    stanzaCon('ROOM1', [{ name: 'Luca', lang: 'it', role: 'host' }]);
+    const identity = await resolveRoomIdentity(token, null, 'ROOM1');
+    expect(identity).toBeNull();
   });
 
   it('rejects token for wrong room (returns null, no fallback)', async () => {
@@ -193,6 +213,7 @@ describe('resolveRoomIdentity', () => {
 
   it('is case-insensitive on roomId', async () => {
     const { token } = await createRoomSession('room1', 'Luca', 'host');
+    stanzaCon('ROOM1', [{ name: 'Luca', lang: 'it', role: 'host' }]);
     const identity = await resolveRoomIdentity(token, null, 'Room1');
     expect(identity.name).toBe('Luca');
     expect(identity.verified).toBe(true);

@@ -82,7 +82,7 @@ async function handlePost(req) {
       throw e;
     }
 
-    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+    const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({
       userToken,
       roomId,
       roomSessionToken,
@@ -132,7 +132,8 @@ async function handlePost(req) {
         try { await commit(riservaId, costoPrevisto, { tipo: 'voce_tts', caratteri: text.length }); } catch (e) { log.error('TTS wallet deduct error:', e); }
         riservaId = null;
       }
-      trackDailySpend(billingEmail, charge).catch(() => {});
+      // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
+      trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {});
     }
 
     // ── TTS Router: check if a better engine is available for this language ──

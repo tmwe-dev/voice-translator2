@@ -131,7 +131,7 @@ async function handlePost(req) {
     // gratis a vita, credito a zero compreso. Tolto da qui: resta solo
     // l'uso legittimo in translatePrompt.js (rifinisce il testo del
     // prompt, non tocca mai i soldi).
-    let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
+    let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({
       userToken,
       roomId,
       roomSessionToken,
@@ -491,7 +491,10 @@ async function handlePost(req) {
     // traccia sempre (billingEmail null aggiorna solo il contatore
     // aggregato, vedi trackDailySpend in apiAuth.js).
     if (!isOwnKey) {
-      bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents)).catch(() => {}));
+      // b.170 — si netta la riserva fatta da resolveAuth prima della
+      // chiamata (vedi la nota in apiAuth.js): senza, il contatore
+      // conterebbe due volte per ogni traduzione.
+      bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents), riservatoUtenteCents, riservatoPiattaformaCents).catch(() => {}));
     }
     if (isLending && lendingCodeUsed) {
       const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);

@@ -130,7 +130,7 @@ async function handlePost(req) {
     // b.161 — roomSessionToken ora obbligatorio per il percorso roomId
     // (vedi apiAuth.js, punto 2 del quarto audit): senza, resolveAuth
     // rifiuta con 401 invece di fatturare all'host su un roomId indovinato.
-    const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
+    const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({
       userToken,
       roomId,
       roomSessionToken,
@@ -276,7 +276,8 @@ async function handlePost(req) {
             // scriveva un numero in un campo che nessuno legge piu.
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
-            try { await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
+            // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
+            try { await trackDailySpend(billingEmail, charge1, riservatoUtenteCents, riservatoPiattaformaCents); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
           }
           // b.164 — stesso audio dello stesso testo, solo un modello di
           // riserva: si conferma la STESSA riserva presa sopra, non se
@@ -312,7 +313,8 @@ async function handlePost(req) {
       // b.157 — tolto il doppio addebito sul vecchio user.credits, vedi
       // nota gemella sopra: il commit della riserva (poco sotto) e il conto vero.
       const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
-      try { await trackDailySpend(billingEmail, charge); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
+      // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
+      try { await trackDailySpend(billingEmail, charge, riservatoUtenteCents, riservatoPiattaformaCents); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());

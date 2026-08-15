@@ -72,6 +72,26 @@ export const DAILY_LIMITS = {
   PLATFORM_TOTAL: 10000, // €100/day total platform spend
 };
 
+// b.170 — CONFERMATO (audit esterno 15/8): il controllo dei due tetti
+// sopra in apiAuth.js leggeva il contatore (GET), lo confrontava, e SOLO
+// dopo la chiamata al provider scriveva l'incremento vero (trackDailySpend).
+// Fra le due cose passa la durata intera della chiamata: richieste
+// concorrenti arrivate nella stessa finestra leggono tutte lo stesso
+// valore "sotto tetto" e passano tutte, sforando il budget di quanto
+// valgono le chiamate in volo in quel momento.
+//
+// Decisione dell'utente (15/8): non serve una precisione assoluta — un
+// margine di sforamento di qualche minuto di traffico e accettabile,
+// non lo e lasciare la finestra aperta senza fondo. La correzione:
+// riservare atomicamente questa cifra fissa PRIMA di ogni chiamata a
+// pagamento (INCRBYFLOAT, non piu GET+confronto), e nettarla dal
+// consumo vero quando si conosce (trackDailySpend). Il valore e il piu
+// alto fra i costi minimi reali di una singola chiamata (MIN_CHARGE,
+// sopra) — la voce piu cara oggi e TTS_ELEVENLABS: un'altra chiamata
+// concorrente non puo mai valere piu di questo, quindi la riserva basta
+// a coprirla anche nel caso peggiore.
+export const BUDGET_RESERVE_CENTS = 5;
+
 // =============================================
 // Error messages (standardized, English)
 // =============================================
