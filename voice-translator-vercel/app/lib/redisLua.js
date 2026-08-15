@@ -264,9 +264,16 @@ local translationsJson = ARGV[5]
 local messageId = ARGV[6] or ''
 local msgs = redis.call('LRANGE', key, 0, -1)
 if messageId ~= '' then
+  -- b.166 — CONFERMATO (caccia al tesoro): questo ramo cercava SOLO per
+  -- clientId, senza mai verificare che il messaggio trovato appartenesse
+  -- a chi sta facendo la PATCH. Il clientId non e segreto (torna a tutti
+  -- i membri via GET/polling), quindi qualunque membro della stanza
+  -- poteva riscrivere la traduzione del messaggio di un ALTRO membro.
+  -- Ora si richiede anche m.sender == sender, come gia faceva (per altra
+  -- via) il ramo di ripiego sotto.
   for i = #msgs, 1, -1 do
     local m = cjson.decode(msgs[i])
-    if m.clientId == messageId then
+    if m.clientId == messageId and m.sender == sender then
       if translated ~= '' then m.translated = translated end
       if targetLang ~= '' then m.targetLang = targetLang end
       if translationsJson ~= '' then m.translations = cjson.decode(translationsJson) end

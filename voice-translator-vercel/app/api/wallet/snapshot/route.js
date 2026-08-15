@@ -18,6 +18,16 @@ import { safeCompare } from '../../../lib/apiGuard.js';
 // credenziale, non deducibile dal codice), ma toglie la stessa
 // debolezza di temporizzazione gia corretta altrove.
 export async function GET(req) {
+  // b.166 — CONFERMATO (caccia al tesoro): safeCompare toglie l'attacco a
+  // tempo, ma senza un limite al NUMERO di tentativi un ADMIN_PASS/
+  // CRON_SECRET debole o parzialmente compromesso poteva essere provato
+  // senza freno — a differenza di /api/startrek (5/min) e /api/wallet/
+  // admin (30/min via withApiGuard). Stesso limite di startrek: e' un
+  // controllo password, non il traffico normale del cron.
+  const { checkRateLimit, getRateLimitKey } = await import('../../../lib/rateLimit.js');
+  const rl = await checkRateLimit(getRateLimitKey(req, 'wallet-snapshot'), 5);
+  if (!rl.allowed) return NextResponse.json({ error: 'Too many attempts' }, { status: 429 });
+
   const pass = req.headers.get('x-admin-pass') || req.headers.get('authorization')?.replace('Bearer ', '');
   const ok = safeCompare(pass, process.env.ADMIN_PASS) || safeCompare(pass, process.env.CRON_SECRET);
   if (!ok) return NextResponse.json({ error: 'no' }, { status: 401 });

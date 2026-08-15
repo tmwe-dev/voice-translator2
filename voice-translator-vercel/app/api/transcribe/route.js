@@ -4,6 +4,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
+import { randomUUID } from 'crypto';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
@@ -59,8 +60,13 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'Audio file too large (max 25MB)' }, { status: 413 });
     }
 
-    // Security: validate sourceLang format (e.g., "en", "zh-CN")
-    if (sourceLang && !/^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(sourceLang)) {
+    // Security: validate sourceLang format (e.g., "en", "zh-CN", "fil")
+    // b.166 — CONFERMATO (caccia al tesoro): questo regex era rimasto a
+    // 2 sole lettere mentre schemas.js (LANG_CODE_RE) fu allargato a 2-3
+    // per supportare 'fil' (Filipino, b.110) — la correzione non era mai
+    // arrivata qui. Un utente filippino otteneva 400 su ogni messaggio
+    // vocale. Allineato allo stesso pattern di schemas.js.
+    if (sourceLang && !/^[a-z]{2,3}(-[A-Za-z]{2,4})?$/.test(sourceLang)) {
       return NextResponse.json({ error: 'Invalid sourceLang format' }, { status: 400 });
     }
 
@@ -118,7 +124,12 @@ async function handlePost(req) {
     const openai = new OpenAI({ apiKey });
 
     const ext = audioFile.type?.includes('webm') ? 'webm' : audioFile.type?.includes('mp4') ? 'mp4' : 'webm';
-    const tempPath = join('/tmp', `stt-${Date.now()}.${ext}`);
+    // b.166 — SOSPETTO plausibile (caccia al tesoro), corretto per
+    // prudenza: Date.now() da solo puo ripetersi fra due richieste
+    // concorrenti sulla stessa istanza serverless calda, sovrascrivendo
+    // il file audio dell'altra richiesta (trascrizione sbagliata). Un id
+    // casuale elimina la collisione senza cambiare nient'altro.
+    const tempPath = join('/tmp', `stt-${Date.now()}-${randomUUID()}.${ext}`);
     await writeFile(tempPath, buffer);
 
     let transcription;

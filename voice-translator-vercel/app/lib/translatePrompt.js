@@ -2,10 +2,19 @@ import { PAIR_NOTES } from './translateValidation.js';
 import { buildTTSKnowledgeBase } from './ttsPreprocessor.js';
 
 // Whitelist of valid language codes — prevents prompt injection via lang params
+// b.166 — CONFERMATO (caccia al tesoro): mancavano 'he','ca','sw','af','nb',
+// tutti presenti invece nell'elenco lingue offerto all'utente (constants.js).
+// Per una di queste, sanitizeLangCode() sotto collassava silenziosamente su
+// 'en' (fallback di sicurezza) — chi chiedeva una traduzione in Ebraico
+// riceveva inglese, senza errore visibile. ('fil' non era in realta un
+// problema qui: il suo prefisso di 2 lettere 'fi' e gia in whitelist per il
+// Finlandese, quindi passava intatto per una coincidenza fortunata — non
+// aggiunto per evitare di introdurre un cambiamento non necessario.)
 const VALID_LANG_CODES = new Set([
   'th','en','it','es','fr','de','pt','zh','ja','ko','ar','hi',
   'ru','tr','vi','id','ms','nl','pl','sv','el','cs','ro','hu','fi',
   'bg','da','et','hr','lt','lv','mt','sk','sl','uk','bn','ta','te',
+  'he','ca','sw','af','nb',
   'zh-TW','pt-BR','en-US','en-GB','es-MX','fr-CA',
 ]);
 

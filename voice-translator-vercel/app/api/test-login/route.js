@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { createUser, getUser, createSession, saveApiKeys } from '../../lib/users.js';
+import { createUser, getUser, createSession, saveApiKeys, maskApiKeys } from '../../lib/users.js';
 import { isTestBlocked } from '../../lib/config.js';
+import { safeCompare } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('testLogin');
@@ -20,7 +21,11 @@ export async function POST(req) {
   }
   let body;
   try { body = await req.clone().json(); } catch { body = {}; }
-  if (body.adminPass !== adminPass) {
+  // b.166 — CONFERMATO (caccia al tesoro): confronto diretto (!==) invece
+  // di safeCompare, unica rotta rimasta cosi in tutto il repo. Mitigato dal
+  // gate isTestBlocked() in produzione, ma resta rilevante sui deploy
+  // preview con TESTING_MODE attivo.
+  if (!safeCompare(body.adminPass, adminPass)) {
     return NextResponse.json({ error: 'Admin password required for test login' }, { status: 403 });
   }
 
@@ -48,15 +53,19 @@ export async function POST(req) {
     // Re-fetch user with decrypted keys for response
     user = await getUser(TEST_EMAIL);
 
+    // b.166 — CONFERMATO (caccia al tesoro): questa rotta copia le CHIAVI
+    // REALI DI PIATTAFORMA (OPENAI_API_KEY/ANTHROPIC_API_KEY/ecc, non solo
+    // una chiave personale) nell'utente di test e le rispediva in chiaro
+    // nella risposta — mascherate qui come ovunque.
     return NextResponse.json({
       ok: true,
       token,
-      user: {
+      user: maskApiKeys({
         ...user,
         credits: 99999,
         tier: 'pro',
         useOwnKeys: true,
-      },
+      }),
       platformHasElevenLabs: !!process.env.ELEVENLABS_API_KEY,
     });
   } catch (e) {

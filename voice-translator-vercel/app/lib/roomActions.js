@@ -35,10 +35,33 @@ async function verifyMembership(roomId, identity) {
   return { room };
 }
 
+// b.166 — CONFERMATO (caccia al tesoro): a differenza di quasi ogni altro
+// campo testuale del repo (che passa da sanitizeText/sanitize con un
+// maxLen esplicito), avatar/context/contextPrompt/description arrivavano
+// qui senza alcun limite di lunghezza — solo il tetto generico di 256KB
+// del body in withApiGuard. L'intero oggetto stanza (con TUTTI i membri)
+// viene letto/riscritto per intero ad ogni heartbeat/speaking/join via
+// script Lua sincroni su Redis (single-thread): valori sovradimensionati
+// per membro, moltiplicati fino a CAPIENZA.MAX partecipanti, degradano le
+// performance di TUTTA l'istanza Redis condivisa. Limiti coerenti con
+// quelli gia usati altrove per campi simili (schemas.js: domainContext
+// 100, description 200).
+const MAXLEN_AVATAR = 300;
+const MAXLEN_CONTEXT = 200;
+const MAXLEN_CONTEXT_PROMPT = 500;
+const MAXLEN_DESCRIPTION = 200;
+
 // ── Action: create ──
 export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta, maxPartecipanti }) {
   if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
-  const room = await createRoom(name, lang, mode || 'conversation', avatar || null, context || null, contextPrompt || null, description || null, hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null);
+  const room = await createRoom(
+    name, lang, mode || 'conversation',
+    avatar ? sanitize(avatar, MAXLEN_AVATAR) : null,
+    context ? sanitize(context, MAXLEN_CONTEXT) : null,
+    contextPrompt ? sanitize(contextPrompt, MAXLEN_CONTEXT_PROMPT) : null,
+    description ? sanitize(description, MAXLEN_DESCRIPTION) : null,
+    hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null
+  );
   const { token } = await createRoomSession(room.id, name, 'host');
   return NextResponse.json({ room, roomSessionToken: token });
 }
@@ -46,6 +69,7 @@ export async function handleCreate({ name, lang, mode, avatar, context, contextP
 // ── Action: join ──
 export async function handleJoin({ roomId, name, lang, avatar }) {
   if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
+  avatar = avatar ? sanitize(avatar, MAXLEN_AVATAR) : avatar;
 
   // ── Moderazione: si controlla PRIMA di far entrare ──
   // Un blocco che si applica dopo l'ingresso non e un blocco: la persona

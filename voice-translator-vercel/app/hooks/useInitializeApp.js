@@ -277,14 +277,9 @@ export default function useInitializeApp({
               auth.setCreditBalance(99999);
               auth.setPlatformHasEL(data.platformHasElevenLabs || false);
               auth.setUseOwnKeys(true);
-              if (data.user?.apiKeys) {
-                auth.setApiKeyInputs({
-                  openai: data.user.apiKeys.openai || '',
-                  anthropic: data.user.apiKeys.anthropic || '',
-                  gemini: data.user.apiKeys.gemini || '',
-                  elevenlabs: data.user.apiKeys.elevenlabs || '',
-                });
-              }
+              // b.166 — CONFERMATO (caccia al tesoro): data.user.apiKeys e
+              // ora mascherato dal server, non va piu nel campo modificabile
+              // (vedi useAuth.js, stesso motivo).
               dbg.debug('[TESTING_MODE] Logged in as test@bartalk.dev');
             }
           })
@@ -312,15 +307,12 @@ export default function useInitializeApp({
             auth.setUseOwnKeys(data.user.useOwnKeys || false);
             if (data.referralCode) auth.setReferralCode(data.referralCode);
             if (data.platformHasElevenLabs) auth.setPlatformHasEL(true);
-            if (data.user.useOwnKeys && data.user.apiKeys) {
-              auth.setApiKeyInputs({
-                openai: data.user.apiKeys.openai || '',
-                anthropic: data.user.apiKeys.anthropic || '',
-                gemini: data.user.apiKeys.gemini || '',
-                elevenlabs: data.user.apiKeys.elevenlabs || ''
-              });
-              if (data.user.apiKeys.elevenlabs) auth.setIsTopPro(true);
-            }
+            // b.166 — CONFERMATO (caccia al tesoro): stesso motivo di
+            // useAuth.js — le apiKeys tornano mascherate dal server, il
+            // campo di editing NON va piu precompilato con quel valore.
+            // Si tiene solo il segnale non sensibile "chiave elevenlabs
+            // presente" per lo stato TOP PRO.
+            if (data.user.useOwnKeys && data.user.apiKeys?.elevenlabs) auth.setIsTopPro(true);
             if (data.user.clonedVoiceId) {
               auth.setClonedVoiceId(data.user.clonedVoiceId);
               auth.setClonedVoiceName(data.user.clonedVoiceName || 'My Voice');

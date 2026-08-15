@@ -3,7 +3,9 @@ import { redis } from '../../lib/redis.js';
 import { getClientIP } from '../../lib/validate.js';
 import { createLogger } from '../../lib/logger.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { normalizzaTipoStanza, vaInVetrina, richiedeApprovazione, normalizzaCapienza } from '../../lib/decisioni.js';
+import { normalizzaTipoStanza, vaInVetrina, richiedeApprovazione, normalizzaCapienza, puoModerare } from '../../lib/decisioni.js';
+import { verifyRoomSession, getRoom } from '../../lib/store.js';
+import { leggiRegole } from '../../lib/moderazione.js';
 
 const log = createLogger('mondo');
 
@@ -59,8 +61,30 @@ async function handlePost(req) {
       roomSessionToken, userToken, hot,
     } = await req.json();
     if (!roomId || !host) return NextResponse.json({ error: 'roomId and host required' }, { status: 400 });
-    // Require some form of authentication to prevent spam
-    if (!roomSessionToken && !userToken) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+
+    // b.166 — CONFERMATO (caccia al tesoro): qui si controllava solo che
+    // UN token qualsiasi fosse presente (anche una stringa inventata,
+    // vuota fa eccezione ma non validata) — mai che risolvesse a
+    // un'identita vera, ne che quell'identita fosse davvero l'host di
+    // roomId. Con un roomId reale (indovinabile: e il codice condiviso
+    // per entrare) chiunque poteva pubblicare la stanza in vetrina con
+    // host/description a piacere, E — piu grave — riscrivere le regole
+    // di moderazione (hot, suApprovazione, maxPartecipanti) di una
+    // stanza altrui tramite la funzione che sincronizza la politica
+    // pubblica sulla stanza, piu sotto. Stesso schema gia usato in
+    // /api/moderazione (soloHost): serve un
+    // roomSessionToken valido, per QUESTA stanza, la cui identita
+    // puoModerare() riconosce come host.
+    const stanzaEsistente = await getRoom(roomId);
+    if (!stanzaEsistente) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+    const io = await verifyRoomSession(roomSessionToken);
+    if (!io || !roomId || io.roomId?.toUpperCase() !== roomId.toUpperCase()) {
+      return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
+    }
+    const regoleEsistenti = await leggiRegole(roomId);
+    if (!puoModerare({ identita: io, stanza: stanzaEsistente, regole: regoleEsistenti })) {
+      return NextResponse.json({ error: 'Solo chi ospita puo pubblicare questa stanza' }, { status: 403 });
+    }
 
     // Il nome e obbligatorio: nell'elenco e la prima cosa che si legge.
     const nomePulito = (nome || '').trim().slice(0, 60);

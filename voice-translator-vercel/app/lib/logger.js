@@ -20,12 +20,20 @@ const currentLevel = LEVELS[LOG_LEVEL] || LEVELS.info;
 function formatMsg(level, tag, message, data) {
   if (IS_TEST) return; // silent in tests
 
+  // b.166 — CONFERMATO (caccia al tesoro): quando `data` era una stringa
+  // (es. log.error('X failed:', bodyDiErrore) dove bodyDiErrore viene da
+  // .text()), nessuno dei due spread sotto scattava (non e un oggetto
+  // plain, non e un'Error) — il dettaglio spariva SILENZIOSAMENTE dal
+  // JSON strutturato di produzione. Il log restava solo "X failed:",
+  // esattamente cio che si vedeva nei log Vercel. Ora una stringa finisce
+  // nel campo `detail`, coerente col resto.
   const entry = {
     level,
     tag,
     msg: typeof message === 'string' ? message : JSON.stringify(message),
     ...(data && typeof data === 'object' && !(data instanceof Error) ? data : {}),
     ...(data instanceof Error ? { error: data.message, stack: data.stack } : {}),
+    ...(typeof data === 'string' && data ? { detail: data } : {}),
   };
 
   // In dev, use readable format; in prod, JSON for log aggregation

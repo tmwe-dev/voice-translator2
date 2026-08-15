@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createUser, getUser, createSession, getReferralCode } from '../../../lib/users.js';
+import { createUser, getUser, createSession, getReferralCode, maskApiKeys } from '../../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { redis } from '../../../lib/redis.js';
 import { createLogger } from '../../../lib/logger.js';
@@ -138,11 +138,13 @@ export async function GET(req) {
     const userReferralCode = await getReferralCode(email);
     const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
+    // b.166 — CONFERMATO (caccia al tesoro): stesso mascheramento, questo
+    // finiva persino dentro l'HTML della popup via postMessage.
     // Send result to parent window and close popup
     const result = JSON.stringify({
       ok: true,
       token: sessionToken,
-      user,
+      user: maskApiKeys(user),
       referralCode: userReferralCode,
       platformHasElevenLabs,
       provider: 'google'

@@ -237,6 +237,15 @@ async function handlePost(req) {
     const messages = buildMessages(systemPrompt, text, context);
 
     // Call LLM with fallback chain — if primary fails, try alternatives
+    // b.166 — CONFERMATO (caccia al tesoro): senza maxTokens esplicito,
+    // callLLM() usa il default di 500 — con `text` accettato fino a 10.000
+    // caratteri (schemas.js) e la modalita isReview pensata proprio per
+    // passaggi lunghi, una traduzione poteva troncarsi silenziosamente
+    // (il controllo lunghezza in validateOutput scatta solo sotto il 10%
+    // di rapporto, non su un troncamento proporzionato). Scalato in base
+    // alla lunghezza dell'input, con un tetto per non esplodere il costo
+    // reale sui provider su testi anomali.
+    const maxTokensStimati = Math.min(4096, Math.max(500, Math.ceil(text.length / 2)));
     const primaryOpts = {
       provider: modelInfo.provider,
       model: modelInfo.actual,
@@ -245,6 +254,7 @@ async function handlePost(req) {
       systemPrompt,
       text,
       context,
+      maxTokens: maxTokensStimati,
     };
 
     // Build fallback chain (only providers we have keys for)

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData } from '../../lib/users.js';
+import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData, maskApiKeys } from '../../lib/users.js';
 import { saveUserSettings, getUserSettings, getProfileByEmail } from '../../lib/supabaseAPI.js';
 import { createLogger } from '../../lib/logger.js';
 
@@ -22,17 +22,8 @@ async function handlePost(req) {
     if (action === 'profile') {
       const user = await getUser(email);
       if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-      // Don't send full API keys - mask them
-      const safeUser = { ...user };
-      if (safeUser.apiKeys) {
-        const masked = {};
-        for (const [provider, key] of Object.entries(safeUser.apiKeys)) {
-          if (key) masked[provider] = key.substring(0, 8) + '...' + key.substring(key.length - 4);
-          else masked[provider] = '';
-        }
-        safeUser.apiKeys = masked;
-      }
-      return NextResponse.json({ user: safeUser });
+      // Don't send full API keys - mask them (b.166 — formula centralizzata in users.js)
+      return NextResponse.json({ user: maskApiKeys(user) });
     }
 
     // === UPDATE PROFILE ===

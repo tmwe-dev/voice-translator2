@@ -101,6 +101,26 @@ export async function saveApiKeys(email, keys, useOwnKeys) {
   return user;
 }
 
+// b.166 — CONFERMATO (caccia al tesoro): getUser() decripta sempre le
+// apiKeys prima di restituire l'oggetto utente. Ogni endpoint che
+// rispondeva con `user` grezzo (login email/OTP, Google, Apple,
+// test-login, il check "me" ad ogni apertura app) mandava le chiavi
+// OpenAI/Anthropic/Gemini/ElevenLabs dell'utente IN CHIARO al client
+// a ogni login — in contraddizione con l'intento dichiarato altrove
+// (keyVault.js: "Keys NEVER return to the client after initial save").
+// Solo /api/user (azione 'profile', mai chiamata dal client attuale)
+// le mascherava, con questa stessa formula duplicata inline. Centralizzata
+// qui: ogni endpoint di login/sessione DEVE passare `user` da questa
+// funzione prima di rispondere al client.
+export function maskApiKeys(user) {
+  if (!user || !user.apiKeys) return user;
+  const masked = {};
+  for (const [provider, k] of Object.entries(user.apiKeys)) {
+    masked[provider] = k ? k.substring(0, 8) + '...' + k.substring(k.length - 4) : '';
+  }
+  return { ...user, apiKeys: masked };
+}
+
 // =============================================
 // AUTH — Magic Code
 // =============================================

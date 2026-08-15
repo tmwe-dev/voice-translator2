@@ -56,7 +56,12 @@ describe('2 · un messaggio si identifica col suo id', () => {
     const s = senzaCommenti(leggi('app/lib/redisLua.js'));
     const i = s.indexOf('local messageId = ARGV[6]');
     expect(i, 'il messageId deve arrivare').toBeGreaterThan(-1);
-    expect(s.slice(i, i + 500)).toMatch(/if m\.clientId == messageId then/);
+    // b.166 — CONFERMATO (caccia al tesoro): la ricerca per id ora
+    // richiede ANCHE che il messaggio trovato appartenga a chi sta
+    // facendo la PATCH (m.sender == sender) — altrimenti un membro
+    // qualunque poteva riscrivere la traduzione del messaggio di un
+    // altro (il clientId non e segreto, torna a tutti via polling).
+    expect(s.slice(i, i + 500)).toMatch(/if m\.clientId == messageId and m\.sender == sender then/);
   });
 
   it('il ripiego sul contenuto resta, per i client vecchi', () => {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral } from '../../lib/users.js';
+import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral, maskApiKeys } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { t } from '../../lib/i18n.js';
@@ -150,7 +150,10 @@ async function handler(req) {
       const userReferralCode = await getReferralCode(email);
 
       const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
-      return NextResponse.json({ ok: true, token: sessionToken, user, referralInfo, referralCode: userReferralCode, platformHasElevenLabs, supabaseUserId });
+      // b.166 — CONFERMATO (caccia al tesoro): `user` grezzo conteneva le
+      // apiKeys dell'utente decriptate IN CHIARO, spedite al client a ogni
+      // login. Mascherate qui, coerente con /api/user (azione 'profile').
+      return NextResponse.json({ ok: true, token: sessionToken, user: maskApiKeys(user), referralInfo, referralCode: userReferralCode, platformHasElevenLabs, supabaseUserId });
     }
 
     // === CHECK SESSION (me) ===
@@ -186,7 +189,10 @@ async function handler(req) {
         }
       } catch (e) { /* Supabase not configured, no problem */ }
 
-      return NextResponse.json({ user, referralCode: userReferralCode, platformHasElevenLabs, subscription });
+      // b.166 — stesso mascheramento: 'me' viene chiamata ad ogni apertura
+      // app (restore sessione da localStorage), quindi era il punto piu
+      // frequente di fuga delle chiavi in chiaro.
+      return NextResponse.json({ user: maskApiKeys(user), referralCode: userReferralCode, platformHasElevenLabs, subscription });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

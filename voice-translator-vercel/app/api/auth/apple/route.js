@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createUser, getUser, createSession, getReferralCode, applyReferral } from '../../../lib/users.js';
+import { createUser, getUser, createSession, getReferralCode, applyReferral, maskApiKeys } from '../../../lib/users.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import crypto from 'crypto';
@@ -157,10 +157,12 @@ async function appleHandler(req) {
 
     const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
+    // b.166 — CONFERMATO (caccia al tesoro): stesso mascheramento di
+    // auth/route.js, altrimenti il login Apple spediva le apiKeys in chiaro.
     return NextResponse.json({
       ok: true,
       token: sessionToken,
-      user,
+      user: maskApiKeys(user),
       referralInfo,
       referralCode: userReferralCode,
       platformHasElevenLabs,

@@ -151,6 +151,24 @@ async function handlePost(req) {
         return NextResponse.json({ error: 'Azione sconosciuta' }, { status: 400 });
     }
   } catch (e) {
+    // b.166 — CONFERMATO (caccia al tesoro): quando il circuit breaker su
+    // Redis e aperto, i comandi hash usati qui (HINCRBY/HGETALL/DEL) non
+    // hanno un fallback fail-open in redis.js (a differenza di GET/SET/
+    // INCR/EXPIRE/TTL) e l'errore strutturato (err.code='CIRCUIT_OPEN',
+    // err.retryAfterSec) arrivava fin qui per essere buttato via in un
+    // generico 500 "Internal error" — reazione persa, nessun segnale al
+    // client che dovrebbe riprovare a breve. Ora si distingue: 503 +
+    // Retry-After, cosi il client sa che non e un bug ma un "riprova fra
+    // poco". (L'estensione del fallback fail-open ad altri comandi Redis
+    // e una decisione architetturale piu ampia, non fatta qui — vedi
+    // riepilogo caccia al tesoro.)
+    if (e?.code === 'CIRCUIT_OPEN') {
+      const retryAfter = Math.max(1, e.retryAfterSec || 30);
+      return NextResponse.json(
+        { error: 'Servizio reazioni temporaneamente non disponibile, riprova a breve', retryAfterSec: retryAfter },
+        { status: 503, headers: { 'Retry-After': String(retryAfter) } }
+      );
+    }
     log.error('Errore:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

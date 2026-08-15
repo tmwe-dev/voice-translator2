@@ -248,16 +248,14 @@ export default function useAuth() {
         // referral bonus applied
       }
       setPendingReferralCode(null);
-      // Restore API keys if available
-      if (data.user.useOwnKeys && data.user.apiKeys) {
-        setApiKeyInputs({
-          openai: data.user.apiKeys.openai || '',
-          anthropic: data.user.apiKeys.anthropic || '',
-          gemini: data.user.apiKeys.gemini || '',
-          elevenlabs: data.user.apiKeys.elevenlabs || ''
-        });
-        if (data.user.apiKeys.elevenlabs) setIsTopPro(true);
-      }
+      // b.166 — CONFERMATO (caccia al tesoro): il server ora manda le
+      // apiKeys MASCHERATE ("sk-proj12...abcd"), non piu il valore vero —
+      // prefillare il campo modificabile con quella stringa e rischioso
+      // (un "Salva" senza toccare il campo sovrascriverebbe la chiave vera
+      // con la maschera). Si tiene solo il segnale non sensibile "esiste
+      // una chiave elevenlabs" per lo stato TOP PRO; il campo di editing
+      // resta vuoto finche l'utente non incolla una chiave nuova.
+      if (data.user.useOwnKeys && data.user.apiKeys?.elevenlabs) setIsTopPro(true);
       setAuthStep('choose');
       return true;
     }

@@ -14,6 +14,12 @@ import { createLogger } from './logger.js';
 const log = createLogger('providers');
 
 // Unicode script ranges for output validation
+// b.166 \u2014 CONFERMATO (caccia al tesoro): mancava 'he' (Ebraico, script non
+// latino offerto in constants.js). Senza una voce qui e non essendo in
+// LATIN_LANGS, la validazione sotto (validateOutput) saltava del tutto il
+// controllo di script per l'Ebraico: una traduzione fallita che tornava
+// inglese passava come valida, invece di far scattare il fallback al
+// provider successivo.
 const SCRIPT_RANGES = {
   'th': /[\u0E00-\u0E7F]/,
   'zh': /[\u4E00-\u9FFF]/,
@@ -23,6 +29,7 @@ const SCRIPT_RANGES = {
   'hi': /[\u0900-\u097F]/,
   'ru': /[\u0400-\u04FF]/,
   'el': /[\u0370-\u03FF]/,
+  'he': /[\u0590-\u05FF]/,
 };
 
 const LATIN_LANGS = new Set([
@@ -86,10 +93,19 @@ export function getProviderChain(targetLang, userOverrides) {
   const { primary, secondary, tertiary } = userOverrides;
   if (primary === 'auto' && secondary === 'auto' && tertiary === 'auto') return [...chain];
 
+  // b.166 — CONFERMATO (caccia al tesoro): primary/secondary/tertiary
+  // arrivavano dal body della richiesta SENZA controllo contro l'elenco
+  // provider noto (PROVIDERS). Un chiamante poteva rimettere "microsoft"
+  // nella catena nonostante b.127 lo avesse tolto dal default perche
+  // strutturalmente rotto lato server Microsoft — riattivando lo stesso
+  // crash "Failed to fetch auth token" nei log di produzione. Ora si
+  // accetta solo un provider che esiste davvero in PROVIDERS.
+  const eValido = (p) => p && p !== 'auto' && Object.prototype.hasOwnProperty.call(PROVIDERS, p);
+
   const result = [];
-  if (primary && primary !== 'auto') result.push(primary);
-  if (secondary && secondary !== 'auto') result.push(secondary);
-  if (tertiary && tertiary !== 'auto') result.push(tertiary);
+  if (eValido(primary)) result.push(primary);
+  if (eValido(secondary)) result.push(secondary);
+  if (eValido(tertiary)) result.push(tertiary);
   // Fill remaining from default chain (skip duplicates)
   for (const p of chain) {
     if (!result.includes(p)) result.push(p);

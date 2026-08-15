@@ -163,10 +163,20 @@ async function handlePost(req) {
       riservaId = r.riservaId;
     }
 
+    // b.166 — CONFERMATO (caccia al tesoro): il ramo CosyVoice (poco
+    // sotto) mandava `text` GREZZO al motore, mentre il ramo OpenAI (piu
+    // sotto ancora) lo puliva con preprocessForTTS prima di sintetizzare.
+    // CosyVoice serve proprio le lingue asiatiche (zh/ja/ko/th/vi) piu a
+    // rischio di markdown/emoji letti a voce o testo troppo lungo mai
+    // troncato — cioe esattamente cio che preprocessForTTS previene. Il
+    // calcolo va spostato qui (lang2 e gia disponibile) e usato da
+    // entrambi i rami.
+    const cleanTextAsia = preprocessForTTS(text, lang2);
+
     if (ttsRoute.engine === 'cosyvoice') {
       try {
         const { ttsCosyVoice } = await import('../../lib/ttsAsia.js');
-        const cosyResult = await ttsCosyVoice(text, langCode, {});
+        const cosyResult = await ttsCosyVoice(cleanTextAsia, langCode, {});
         if (cosyResult?.audio) {
           // b.159 — CONFERMATO: questo ramo rispondeva con l'audio e
           // usciva con un `return` PRIMA del blocco di addebito piu
@@ -194,7 +204,7 @@ async function handlePost(req) {
     const selectedVoice = ['alloy','echo','fable','onyx','nova','shimmer','ash','ballad','coral','sage','verse'].includes(voice)
       ? voice : (adminVoice || 'nova');
     const instructions = TTS_INSTRUCTIONS[lang2] || TTS_INSTRUCTIONS['en'];
-    const cleanText = preprocessForTTS(text, lang2);
+    const cleanText = cleanTextAsia; // gia calcolato sopra, stesso testo per entrambi i rami
     const speed = getOpenAISpeedForLang(lang2);
 
     // b.157/b.159 — audit pagamenti: CONFERMATO, questa rotta non
