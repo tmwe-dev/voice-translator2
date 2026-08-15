@@ -170,7 +170,9 @@ describe('/api/transcribe: durata blindata, tetto giornaliero tracciato (b.159)'
   const src = leggi('app/api/transcribe/route.js');
 
   it('la durata e il MASSIMO fra dichiarata e stimata dal peso, non piu un OR', () => {
-    expect(src).toContain('const secondi = Math.max(durataSec, stimaDalPeso);');
+    // b.161-bis: il costo (riserva E commit) usa Math.ceil(Math.max(...)),
+    // non piu una variabile `secondi` separata — vedi wallet-sicurezza-b161.test.js.
+    expect(src).toContain('const costoPrevisto = Math.ceil(Math.max(durataSec, stimaDalPeso));');
     expect(src).not.toMatch(/const secondi = durataSec \|\|/);
   });
 

@@ -20,8 +20,13 @@ describe('/api/tts: addebitaTTS riceve la chiave REALMENTE usata, non isOwnKey a
   const src = leggi('app/api/tts/route.js');
 
   it('addebitaTTS accetta un parametro esplicito, non legge isOwnKey dalla closure per decidere', () => {
+    // b.161-bis: con la chiave propria non si limita piu a "return" —
+    // restituisce anche l'eventuale riserva presa prima del fornitore
+    // (vedi wallet-sicurezza-b161-bis.test.js), ma la decisione resta
+    // lo stesso identico parametro esplicito.
     expect(src).toContain('async function addebitaTTS(usataChiavePropria) {');
-    expect(src).toContain('if (usataChiavePropria) return;');
+    const i = src.indexOf('async function addebitaTTS(usataChiavePropria) {');
+    expect(src.slice(i, i + 200)).toContain('if (usataChiavePropria) {');
   });
 
   it('il ramo CosyVoice passa sempre false: DashScope non ha percorso a chiave propria qui', () => {

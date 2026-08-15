@@ -16,11 +16,18 @@ import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { addebitaTesto, creditoFinito, creditoInsufficiente, preventivoTesto } from '../../wallet/addebita.js';
+import { creditoFinito, preventivoTesto } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
+import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
 
 const log = createLogger('translate');
 
 async function handlePost(req) {
+  // b.161-bis (punto 5) — dichiarata fuori dal try: la rete di sicurezza
+  // nel catch esterno deve poterla rilasciare per QUALUNQUE errore
+  // imprevisto dopo la riserva, anche uno che scoppia prima ancora di
+  // arrivare al blocco try interno piu sotto.
+  let riservaId = null;
   try {
     // ── Direct mode guard ──
     try { assertCloudProcessingAllowed(req); } catch (e) {
@@ -140,11 +147,31 @@ async function handlePost(req) {
     // Il preventivo usa la stessa formula dell'addebito vero (preventivoTesto,
     // su text.length, gia noto qui), cosi non e un controllo separato che
     // puo disallinearsi da quello reale.
+    //
+    // b.161-bis — CONFERMATO (contestazione utente, punto 5 "Reserve →
+    // Provider → Commit/Release non implementato"): questo preventivo
+    // chiudeva il bypass RIPETIBILE ma non la finestra di CORSA fra due
+    // richieste concorrenti dello stesso utente (leggono lo stesso saldo,
+    // lo passano ENTRAMBE, solo l'addebito finale le distingue — la
+    // seconda torna "esaurito" ma il fornitore, per lei, e gia stato
+    // chiamato). Ora il saldo scende SUBITO con una riserva atomica,
+    // PRIMA di chiamare Asia/Global: una seconda richiesta concorrente
+    // vede gia il saldo ridotto. Testo di 300 caratteri, costo noto
+    // per intero da text.length (non dipende dalla risposta del
+    // fornitore): riserva e commit useranno sempre lo stesso numero.
+    let costoPrevisto = 0;
     if (billingEmail && !isOwnKey) {
-      const costoPrevisto = preventivoTesto(text.length);
-      if (await creditoInsufficiente(billingEmail, costoPrevisto, { failClosed: true })) {
+      costoPrevisto = preventivoTesto(text.length);
+      const secondiParlatoPrev = Math.ceil(text.length / CARATTERI_PER_SECONDO);
+      const r = await riserva(billingEmail, costoPrevisto, {
+        tipo: 'testo',
+        caratteri: text.length,
+        costo_cent: costoProviderCent(secondiParlatoPrev, 'gpt-5.4-mini', 'edge-tts'),
+      });
+      if (!r.ok) {
         return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
       }
+      riservaId = r.riservaId;
     }
 
     // ── b.123 · CHI PAGA SI DECIDE PRIMA DI SCEGLIERE IL FORNITORE ──
@@ -335,6 +362,9 @@ async function handlePost(req) {
         // Final check — if still invalid, return original
         const finalCheck = validateOutput(text, translated, targetLang);
         if (!finalCheck.valid) {
+          // b.161-bis — mai un addebito per una traduzione respinta: la
+          // riserva presa piu sopra (se c'era) torna intera nel wallet.
+          if (riservaId) { await release(riservaId, 'validazione_fallita'); riservaId = null; }
           const failureConfidence = calcConfidence(text, text, sourceLang, targetLang);
           return NextResponse.json({
             translated: text,
@@ -381,10 +411,50 @@ async function handlePost(req) {
       } catch (e) { log.warn('ricevuta non verificata:', e?.message); }
     }
 
+    // ── b.161-bis · CONFERMA (o rilascio) della riserva presa sopra ──
+    //
+    // Caso normale: la riserva presa PRIMA del fornitore (billingEmail
+    // e isOwnKey ORIGINALI, prima di ogni fallback) si conferma qui
+    // allo stesso costo (mai un rilascio parziale per questa rotta:
+    // vedi commento sopra sulla riserva).
+    //
+    // Caso "gia pagato": la ricevuta della voce (strappaRicevutaVoce)
+    // dice che questo testo e' gia stato addebitato da /api/transcribe.
+    // La riserva presa sopra (se c'era) va restituita INTERA: non e'
+    // un secondo addebito, e' lo stesso gesto.
+    //
+    // Caso b.159 (isOwnKey passato da true a false per un fallback su
+    // chiave di piattaforma, righe 272-274 sopra): la riserva NON era
+    // stata presa (billingEmail+isOwnKey ORIGINALI dicevano "chiave
+    // propria, nessun controllo"), ma il fornitore vero e' stato
+    // chiamato con la chiave di PIATTAFORMA e va fatturato. Qui non
+    // c'e' piu finestra di corsa da chiudere (il fornitore e' gia
+    // stato chiamato): riserva+commit valgono solo come l'addebito
+    // atomico che c'era prima di questa migrazione (wallet_usa).
     let creditoEsaurito = false;
     if (billingEmail && !isOwnKey && !giaPagatoDavvero) {
-      const esito = await addebitaTesto(billingEmail, text.length);
-      creditoEsaurito = esito === 'esaurito';
+      if (riservaId) {
+        await commit(riservaId, costoPrevisto, { tipo: 'testo', caratteri: text.length });
+        riservaId = null;
+        creditoEsaurito = await creditoFinito(billingEmail);
+      } else {
+        const costoTardivo = preventivoTesto(text.length);
+        const secondiParlatoTardivo = Math.ceil(text.length / CARATTERI_PER_SECONDO);
+        const rTardiva = await riserva(billingEmail, costoTardivo, {
+          tipo: 'testo',
+          caratteri: text.length,
+          costo_cent: costoProviderCent(secondiParlatoTardivo, 'gpt-5.4-mini', 'edge-tts'),
+          nota: 'addebito_tardivo_dopo_fallback_b159',
+        });
+        if (rTardiva.ok) {
+          await commit(rTardiva.riservaId, costoTardivo, { tipo: 'testo', caratteri: text.length });
+        } else {
+          creditoEsaurito = true;
+        }
+      }
+    } else if (riservaId) {
+      await release(riservaId, 'gia_pagato_o_non_dovuto');
+      riservaId = null;
     }
 
     // Calculate confidence score
@@ -450,6 +520,12 @@ async function handlePost(req) {
       ...(creditoEsaurito && { creditoEsaurito: true })
     });
   } catch (e) {
+    // b.161-bis — rete di sicurezza: qualunque errore imprevisto dopo la
+    // riserva ma prima del commit deve restituire il credito, altrimenti
+    // resta bloccato fino alla pulizia periodica (10 minuti). Coerente
+    // con "NON si addebita nulla" gia dichiarato piu sotto per la rete
+    // di sicurezza Google.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     // resolveAuth throws NextResponse objects on auth failure
     if (e instanceof NextResponse) return e;
     log.error('Translate error:', e);

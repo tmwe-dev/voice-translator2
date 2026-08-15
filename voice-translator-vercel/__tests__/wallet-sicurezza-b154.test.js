@@ -67,12 +67,15 @@ describe('rotte a pagamento: il tracking non e piu condizionato solo a billingEm
     expect(prima).not.toMatch(/if\s*\(billingEmail\s*&&\s*!isOwnKey\)/);
   });
 
-  it('tts: l\'addebito personale resta condizionato a billingEmail, il tracking no', () => {
+  it('tts: l\'addebito personale resta condizionato alla riserva presa, il tracking no', () => {
     // b.157 — /api/tts non aveva NESSUN addebito reale (era rimasto
     // solo il vecchio deductCredits su Redis, morto): corretto con
     // addebitaTesto, il vero ponte verso il wallet.
+    // b.161-bis — addebitaTesto e' diventato il commit della riserva
+    // presa prima del fornitore (riservaId, non piu solo billingEmail:
+    // vedi wallet-sicurezza-b161-bis.test.js).
     const src = leggi('app/api/tts/route.js');
-    expect(src).toMatch(/if\s*\(billingEmail\)\s*\{\s*try\s*\{\s*await addebitaTesto/);
+    expect(src).toMatch(/if\s*\(riservaId\)\s*\{\s*try\s*\{\s*await commit/);
     expect(src).toMatch(/trackDailySpend\(billingEmail, charge\)\.catch/);
   });
 

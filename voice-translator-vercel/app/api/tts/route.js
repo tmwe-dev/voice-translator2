@@ -2,7 +2,9 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
-import { addebitaTesto, creditoFinito, creditoInsufficiente, preventivoTesto } from '../../wallet/addebita.js';
+import { preventivoTesto } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
+import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDefaults.js';
@@ -52,6 +54,11 @@ const TTS_INSTRUCTIONS = {
 };
 
 async function handlePost(req) {
+  // b.161-bis (punto 5) — fuori dal try: la rete di sicurezza nel catch
+  // esterno deve poter rilasciare la riserva per QUALUNQUE errore
+  // imprevisto, anche uno che scoppia prima del blocco try interno.
+  let riservaId = null;
+  let costoPrevisto = 0;
   try {
     // ── Direct mode guard ──
     try { assertCloudProcessingAllowed(req); } catch (e) {
@@ -101,13 +108,25 @@ async function handlePost(req) {
     // il ramo CosyVoice passa sempre `false` (non esiste, in questa
     // rotta, un percorso con chiave propria per DashScope); il ramo
     // OpenAI passa il vero `isOwnKey`.
+    // b.161-bis — CONFERMATO (punto 5, "Reserve → Provider →
+    // Commit/Release non implementato"): l'addebito qui era un semplice
+    // addebitaTesto DOPO il fornitore, senza nessuna riserva PRIMA —
+    // stessa finestra di corsa gia chiusa per transcribe/translate. La
+    // riserva vera e' presa piu sotto, prima di scegliere il motore
+    // (CosyVoice o OpenAI): qui si conferma (commit) o si restituisce
+    // (release, se e' stata usata la chiave PROPRIA dell'utente — mai
+    // un addebito in quel caso, come prima).
     async function addebitaTTS(usataChiavePropria) {
-      if (usataChiavePropria) return;
+      if (usataChiavePropria) {
+        if (riservaId) { await release(riservaId, 'chiave_propria'); riservaId = null; }
+        return;
+      }
       const ttsCostUsd = calcTtsCost(text.length);
       const ttsCostEurCents = usdToEurCents(ttsCostUsd);
       const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
-      if (billingEmail) {
-        try { await addebitaTesto(billingEmail, text.length); } catch (e) { log.error('TTS wallet deduct error:', e); }
+      if (riservaId) {
+        try { await commit(riservaId, costoPrevisto, { tipo: 'voce_tts', caratteri: text.length }); } catch (e) { log.error('TTS wallet deduct error:', e); }
+        riservaId = null;
       }
       trackDailySpend(billingEmail, charge).catch(() => {});
     }
@@ -121,15 +140,27 @@ async function handlePost(req) {
     // scattare anche solo per CosyVoice: quel ramo addebita SEMPRE (vedi
     // addebitaTTS(false) piu sotto, isOwnKey e' irrilevante per DashScope),
     // quindi il pagante e' noto una volta scelto il motore, non prima.
+    // b.161-bis — CONFERMATO (punto 5): il preventivo chiudeva il bypass
+    // RIPETIBILE ma non la finestra di CORSA fra richieste concorrenti
+    // (vedi commento gemello in transcribe/route.js e translate/route.js).
+    // Ora il saldo scende SUBITO con una riserva atomica, PRIMA di
+    // scegliere il motore: se CosyVoice fallisce e si ripiega su OpenAI
+    // con la chiave dell'utente, la STESSA riserva viene restituita da
+    // addebitaTTS(true) qui sopra — mai una doppia riserva per lo stesso
+    // giro.
     const pagheraQualcuno = billingEmail && (ttsRoute.engine === 'cosyvoice' || !isOwnKey);
     if (pagheraQualcuno) {
-      if (await creditoFinito(billingEmail, { failClosed: true })) {
-        return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
-      }
-      const costoPrevisto = preventivoTesto(text.length);
-      if (await creditoInsufficiente(billingEmail, costoPrevisto, { failClosed: true })) {
+      costoPrevisto = preventivoTesto(text.length);
+      const secondiParlatoPrev = Math.ceil(text.length / CARATTERI_PER_SECONDO);
+      const r = await riserva(billingEmail, costoPrevisto, {
+        tipo: 'voce_tts',
+        caratteri: text.length,
+        costo_cent: costoProviderCent(secondiParlatoPrev, 'gpt-5.4-mini', ttsRoute.engine === 'cosyvoice' ? 'edge-tts' : 'openai-tts'),
+      });
+      if (!r.ok) {
         return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
       }
+      riservaId = r.riservaId;
     }
 
     if (ttsRoute.engine === 'cosyvoice') {
@@ -214,6 +245,10 @@ async function handlePost(req) {
       }
     });
   } catch (e) {
+    // b.161-bis — rete di sicurezza: se il fornitore (CosyVoice E
+    // OpenAI) fallisce entrambi dopo la riserva, il credito torna
+    // indietro — nessun audio consegnato, nessun addebito dovuto.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     if (e instanceof NextResponse) return e;
     log.error('TTS error:', e);
     return apiError(ErrorCode.TTS_FAILED, e.message);

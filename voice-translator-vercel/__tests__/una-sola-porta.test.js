@@ -139,12 +139,17 @@ describe('chi paga si decide prima di scegliere il fornitore', () => {
   it('e il suo risultato passa dalla stessa contabilita del Global', () => {
     // Duplicare l'addebito nel ramo Asia avrebbe risolto il sintomo e
     // lasciato due contabilita da tenere allineate. Qui ce n'e una.
+    //
+    // b.161-bis: l'addebito vero e' diventato il commit/release della
+    // riserva presa prima del fornitore (vedi wallet-sicurezza-b161-bis
+    // .test.js) — un solo punto di decisione, non piu una singola
+    // chiamata addebitaTesto.
     const s = t();
     const iAsia = s.indexOf('risultatoAsia = {');
-    const iAddebito = s.indexOf('addebitaTesto(billingEmail');
-    expect(iAddebito, 'l\'addebito deve esserci').toBeGreaterThan(-1);
+    const iAddebito = s.indexOf("if (billingEmail && !isOwnKey && !giaPagatoDavvero) {");
+    expect(iAddebito, 'il punto di addebito deve esserci').toBeGreaterThan(-1);
     expect(iAsia, 'il ramo Asia viene prima e prosegue').toBeLessThan(iAddebito);
-    expect((s.match(/addebitaTesto\(/g) || []).length, 'un solo punto di addebito').toBe(1);
+    expect((s.match(/if \(billingEmail && !isOwnKey && !giaPagatoDavvero\) \{/g) || []).length, 'un solo punto di decisione sull\'addebito').toBe(1);
   });
 
   it('il modello non viene chiamato due volte', () => {

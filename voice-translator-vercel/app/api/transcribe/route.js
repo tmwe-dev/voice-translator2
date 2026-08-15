@@ -8,7 +8,9 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { creditoFinito, creditoInsufficiente, addebitaVoce } from '../../wallet/addebita.js';
+import { creditoFinito } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
+import { costoProviderCent } from '../../wallet/provider-costi.js';
 
 const log = createLogger('transcribe');
 
@@ -31,6 +33,7 @@ const log = createLogger('transcribe');
  *      Partner sees translation after: ~1500ms (same as before, but original was shown 800ms earlier)
  */
 async function handlePost(req) {
+  let riservaId = null;
   try {
     // ── Direct mode guard ──
     try { assertCloudProcessingAllowed(req); } catch (e) {
@@ -76,27 +79,40 @@ async function handlePost(req) {
     const bytes = await audioFile.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // ── Wallet: credito finito o insufficiente? Fermiamo PRIMA di lavorare ──
-    // b.161 — CONFERMATO (quarto audit esterno, punto 1): qui c'era gia
-    // `creditoFinito` (saldo>0) ma MAI `creditoInsufficiente` (saldo>=
-    // costo vero) — e per giunta fail-open, per il fornitore che qui
-    // costa di piu (Whisper). La RPC wallet_usa rifiuta un addebito con
-    // saldo insufficiente lasciando il saldo INTATTO (mai una deduzione
-    // parziale, vedi migrazione 006): con un saldo positivo ma sotto il
-    // costo di questa trascrizione, Whisper veniva chiamato e il servizio
-    // consegnato GRATIS, ripetibile all'infinito, perche il saldo non
-    // scendeva mai sotto la soglia che l'avrebbe bloccato. La stima usa
-    // la STESSA regola dell'addebito vero piu sotto (durata dichiarata o
-    // peso dell'audio, il maggiore dei due) — i byte sono gia in memoria,
-    // nessuna chiamata in piu per saperlo.
+    // ── Wallet: RISERVA prima di chiamare il fornitore ──
+    // b.161 — CONFERMATO (quarto audit esterno, punto 1): qui c'era solo
+    // `creditoFinito` (saldo>0), mai un controllo sul costo vero — e
+    // fail-open, per il fornitore che qui costa di piu (Whisper).
+    //
+    // b.161-bis — CONFERMATO (quinto giro, punto 5 "Reserve → Provider →
+    // Commit/Release non implementato"): il preventivo pre-chiamata
+    // (creditoInsufficiente) chiudeva il bypass RIPETIBILE ma non la
+    // finestra di CORSA — due richieste concorrenti leggono lo stesso
+    // saldo, lo passano ENTRAMBE, e solo l'addebito finale (atomico) le
+    // distingue: la seconda torna "esaurito" ma Whisper, per lei, e gia
+    // stato chiamato una volta di troppo. Ora il saldo scende SUBITO,
+    // atomicamente, con la riserva — prima ancora di chiamare Whisper:
+    // una seconda richiesta concorrente vede gia il saldo ridotto.
+    //
+    // La stima usa la STESSA regola dell'addebito vero piu sotto (durata
+    // dichiarata o peso dell'audio, il maggiore dei due) — per questa
+    // rotta il costo e noto per intero PRIMA di chiamare Whisper (non
+    // dipende dalla trascrizione), quindi riserva e commit useranno
+    // sempre lo stesso numero: mai un rilascio parziale da calcolare qui.
     const pagante = isOwnKey ? null : billingEmail;
     const stimaDalPeso = Math.min(120, buffer.length / 4000);
     const costoPrevisto = Math.ceil(Math.max(durataSec, stimaDalPeso));
-    if (pagante && await creditoFinito(pagante, { failClosed: true })) {
-      return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
-    }
-    if (pagante && await creditoInsufficiente(pagante, costoPrevisto, { failClosed: true })) {
-      return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+
+    if (pagante && costoPrevisto > 0) {
+      const r = await riserva(pagante, costoPrevisto, {
+        tipo: 'voce',
+        secondi_audio: costoPrevisto,
+        costo_cent: costoProviderCent(costoPrevisto, 'gpt-5.4-mini', 'edge-tts'),
+      });
+      if (!r.ok) {
+        return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      }
+      riservaId = r.riservaId;
     }
 
     const openai = new OpenAI({ apiKey });
@@ -105,30 +121,33 @@ async function handlePost(req) {
     const tempPath = join('/tmp', `stt-${Date.now()}.${ext}`);
     await writeFile(tempPath, buffer);
 
-    const transcription = await openai.audio.transcriptions.create({
-      file: createReadStream(tempPath),
-      model: 'gpt-4o-mini-transcribe',
-      language: sourceLang || undefined,
-    });
+    let transcription;
+    try {
+      transcription = await openai.audio.transcriptions.create({
+        file: createReadStream(tempPath),
+        model: 'gpt-4o-mini-transcribe',
+        language: sourceLang || undefined,
+      });
+    } catch (e) {
+      // Whisper e' fallito: il servizio non e' stato consegnato, la
+      // riserva torna INTERA nel wallet — non e' un uso, non si paga.
+      await unlink(tempPath).catch(() => {});
+      if (riservaId) { await release(riservaId, 'whisper_fallito'); riservaId = null; }
+      throw e;
+    }
     await unlink(tempPath).catch(() => {});
 
     const original = (transcription.text || '').trim();
 
-    // ── Wallet: addebito DOPO il lavoro riuscito (mai per un errore) ──
-    // Durata dal client; stima dal peso dell'audio (~4KB/s opus) come
-    // PAVIMENTO, non solo come ripiego quando la durata manca.
-    //
-    // b.159 — CONFERMATO (audit b.158, punto 11): con `durataSec ||
-    // stima`, un client che dichiarava una durata qualsiasi (anche
-    // 0.1s, purche diversa da zero) faceva SEMPRE vincere il suo numero
-    // sulla stima dal peso reale dell'audio — un file di 2 minuti
-    // dichiarato "0.1s" veniva addebitato per 0.1s. Ora si prende il
-    // massimo fra i due: la durata dichiarata non puo mai scendere
-    // sotto quello che l'audio pesa davvero.
-    // b.161 — stimaDalPeso e' gia calcolata sopra, per il preventivo:
-    // stesso peso audio, stesso numero, niente da ricalcolare.
-    const secondi = Math.max(durataSec, stimaDalPeso);
-    const esito = await addebitaVoce(pagante, secondi);
+    // ── Wallet: CONFERMA la riserva DOPO il lavoro riuscito ──
+    // Stesso numero della riserva (vedi commento sopra): mai un rilascio
+    // parziale da calcolare per questa rotta.
+    let creditoEsaurito = false;
+    if (riservaId) {
+      await commit(riservaId, costoPrevisto, { tipo: 'voce', secondi_audio: costoPrevisto });
+      riservaId = null; // confermata: la rete di sicurezza nel catch non deve piu toccarla
+      creditoEsaurito = await creditoFinito(pagante);
+    }
 
     // b.159 — CONFERMATO: questa rotta non chiamava MAI trackDailySpend,
     // quindi il costo Whisper/STT non contava mai per il tetto di
@@ -157,9 +176,14 @@ async function handlePost(req) {
       } catch (e) { log.warn('ricevuta non emessa:', e?.message); }
     }
 
-    // esito 'esaurito' = questo era l'ultimo pezzo: il client ferma la sessione
-    return NextResponse.json({ original, ...(esito === 'esaurito' && { creditoEsaurito: true }) });
+    return NextResponse.json({ original, ...(creditoEsaurito && { creditoEsaurito: true }) });
   } catch (e) {
+    // Rete di sicurezza: qualunque errore imprevisto DOPO la riserva ma
+    // PRIMA del commit deve restituire il credito, altrimenti resta
+    // bloccato fino alla pulizia periodica (wallet_rilascia_riserve_scadute,
+    // 10 minuti). Se la riserva era gia stata rilasciata o confermata piu
+    // sopra, riservaId e' gia null e questo non fa nulla.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     if (e instanceof NextResponse) return e;
     log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

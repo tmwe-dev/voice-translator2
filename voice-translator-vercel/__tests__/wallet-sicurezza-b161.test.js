@@ -44,8 +44,11 @@ describe('wallet/addebita.js: preventivoTesto e la STESSA formula di addebitaTes
 describe('/api/translate: saldo positivo ma insufficiente blocca PRIMA del fornitore (b.161, punto 1)', () => {
   const src = leggi('app/api/translate/route.js');
 
-  it('creditoInsufficiente(billingEmail, ...) e chiamato prima del routing Asia/Global', () => {
-    const iCheck = src.indexOf('await creditoInsufficiente(billingEmail');
+  // b.161-bis (punto 5) ha sostituito qui il preventivo creditoInsufficiente
+  // con una vera riserva atomica: vedi il blocco dedicato piu sotto e
+  // wallet-sicurezza-b161-bis.test.js.
+  it('riserva(billingEmail, costoPrevisto, ...) e chiamata prima del routing Asia/Global', () => {
+    const iCheck = src.indexOf('const r = await riserva(billingEmail');
     const iAsiaRouting = src.indexOf("providerRoute.provider === 'asia'");
     expect(iCheck).toBeGreaterThan(-1);
     expect(iAsiaRouting).toBeGreaterThan(-1);
@@ -53,13 +56,53 @@ describe('/api/translate: saldo positivo ma insufficiente blocca PRIMA del forni
   });
 
   it('il preventivo usa preventivoTesto(text.length), la stessa formula dell\'addebito vero', () => {
-    const i = src.indexOf('const costoPrevisto = preventivoTesto(text.length);');
+    const i = src.indexOf('costoPrevisto = preventivoTesto(text.length);');
     expect(i).toBeGreaterThan(-1);
   });
 
-  it('il controllo e fail-closed', () => {
-    const i = src.indexOf('creditoInsufficiente(billingEmail, costoPrevisto');
-    expect(src.slice(i, i + 80)).toContain('failClosed: true');
+  it('un fallimento della riserva blocca con 402, come il vecchio controllo fail-closed', () => {
+    const i = src.indexOf('const r = await riserva(billingEmail');
+    const blocco = src.slice(i, src.indexOf("providerRoute.provider === 'asia'"));
+    expect(blocco).toContain('if (!r.ok) {');
+    expect(blocco).toContain("status: 402 }");
+  });
+});
+
+describe('/api/translate: RESERVE → PROVIDER → COMMIT/RELEASE (b.161-bis, punto 5)', () => {
+  const src = leggi('app/api/translate/route.js');
+
+  it('importa riserva/commit/release, non piu creditoInsufficiente/addebitaTesto', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js';");
+    expect(src).not.toContain('await creditoInsufficiente(');
+    expect(src).not.toContain('await addebitaTesto(');
+  });
+
+  it('una traduzione respinta dalla validazione finale rilascia la riserva (mai un addebito per un output scartato)', () => {
+    const i = src.indexOf('if (!finalCheck.valid) {');
+    const blocco = src.slice(i, src.indexOf('validationFailed: true'));
+    expect(blocco).toContain("release(riservaId, 'validazione_fallita')");
+  });
+
+  it('il ricevuta-gia-pagata (fase 2 di un audio) rilascia la riserva invece di addebitare due volte', () => {
+    const i = src.indexOf('} else if (riservaId) {');
+    const blocco = src.slice(i, i + 150);
+    expect(blocco).toContain("release(riservaId, 'gia_pagato_o_non_dovuto')");
+  });
+
+  it('il caso b.159 (isOwnKey passato a false dopo il fallback, nessuna riserva presa in anticipo) apre una riserva tardiva e la conferma subito', () => {
+    const i = src.indexOf('const costoTardivo = preventivoTesto(text.length);');
+    expect(i).toBeGreaterThan(-1);
+    const blocco = src.slice(i, i + 700);
+    expect(blocco).toContain('nota: \'addebito_tardivo_dopo_fallback_b159\'');
+    expect(blocco).toContain('if (rTardiva.ok) {');
+    expect(blocco).toContain('await commit(rTardiva.riservaId, costoTardivo');
+  });
+
+  it('la rete di sicurezza nel catch esterno rilascia una riserva ancora attiva per qualunque errore imprevisto', () => {
+    const iCatchEsterno = src.indexOf('} catch (e) {\n    // b.161-bis');
+    expect(iCatchEsterno).toBeGreaterThan(-1);
+    const blocco = src.slice(iCatchEsterno, iCatchEsterno + 400);
+    expect(blocco).toContain("release(riservaId, 'errore_imprevisto')");
   });
 });
 
@@ -79,21 +122,90 @@ describe('/api/tts: saldo positivo ma insufficiente blocca PRIMA del fornitore, 
   });
 });
 
+describe('/api/tts: RESERVE → PROVIDER → COMMIT/RELEASE (b.161-bis, punto 5)', () => {
+  const src = leggi('app/api/tts/route.js');
+
+  it('il gate prende una riserva vera, non piu solo creditoFinito/creditoInsufficiente', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js';");
+    const i = src.indexOf('if (pagheraQualcuno) {');
+    const blocco = src.slice(i, i + 600);
+    expect(blocco).toContain('const r = await riserva(billingEmail, costoPrevisto');
+    expect(blocco).toContain('riservaId = r.riservaId;');
+  });
+
+  it('la chiave propria dell\'utente rilascia la riserva invece di addebitare (mai un doppio conto se CosyVoice fallisce e si ripiega su OpenAI a chiave propria)', () => {
+    const i = src.indexOf('async function addebitaTTS(usataChiavePropria) {');
+    const blocco = src.slice(i, i + 250);
+    expect(blocco).toContain("release(riservaId, 'chiave_propria')");
+  });
+
+  it('la rete di sicurezza nel catch esterno rilascia la riserva se ENTRAMBI i fornitori falliscono', () => {
+    const i = src.lastIndexOf('} catch (e) {');
+    const blocco = src.slice(i, i + 300);
+    expect(blocco).toContain("release(riservaId, 'errore_imprevisto')");
+  });
+});
+
 describe('/api/transcribe: saldo positivo ma insufficiente blocca PRIMA di Whisper (b.161, punto 1)', () => {
   const src = leggi('app/api/transcribe/route.js');
 
-  it('creditoInsufficiente usa la stessa stima (durata dichiarata o peso audio, il maggiore) usata poi per addebitare', () => {
+  // b.161-bis (punto 5, "Reserve → Provider → Commit/Release non ancora
+  // implementato") ha sostituito qui il preventivo creditoInsufficiente
+  // con una vera riserva atomica: vedi il blocco dedicato piu sotto.
+  it('la riserva usa la stessa stima (durata dichiarata o peso audio, il maggiore) usata poi per il commit', () => {
     const i = src.indexOf('const costoPrevisto = Math.ceil(Math.max(durataSec, stimaDalPeso));');
     expect(i).toBeGreaterThan(-1);
-    const iCheck = src.indexOf('await creditoInsufficiente(pagante, costoPrevisto');
+    const iCheck = src.indexOf('await riserva(pagante, costoPrevisto');
     expect(iCheck).toBeGreaterThan(i);
     const iTranscribe = src.indexOf('openai.audio.transcriptions.create(');
     expect(iCheck).toBeLessThan(iTranscribe);
+    const iCommit = src.indexOf('await commit(riservaId, costoPrevisto');
+    expect(iCommit).toBeGreaterThan(iTranscribe);
+  });
+});
+
+describe('/api/transcribe: RESERVE → PROVIDER → COMMIT/RELEASE (b.161-bis, punto 5)', () => {
+  const src = leggi('app/api/transcribe/route.js');
+
+  it('importa riserva/commit/release dal nuovo modulo wallet, non piu creditoInsufficiente/addebitaVoce come funzioni usate', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js';");
+    expect(src).not.toContain('import { creditoFinito, creditoInsufficiente, addebitaVoce }');
+    expect(src).not.toContain('await creditoInsufficiente(');
+    expect(src).not.toContain('await addebitaVoce(');
   });
 
-  it('anche creditoFinito e ora fail-closed (era fail-open prima di b.161)', () => {
-    const i = src.indexOf('await creditoFinito(pagante');
-    expect(src.slice(i, i + 60)).toContain('failClosed: true');
+  it('un fallimento della riserva blocca con 402 PRIMA di aprire il file audio o chiamare Whisper', () => {
+    const iRiserva = src.indexOf('const r = await riserva(pagante, costoPrevisto');
+    const i402 = src.indexOf("status: 402 }", iRiserva);
+    const iWriteFile = src.indexOf('await writeFile(tempPath, buffer);');
+    expect(iRiserva).toBeGreaterThan(-1);
+    expect(i402).toBeGreaterThan(iRiserva);
+    expect(i402).toBeLessThan(iWriteFile);
+  });
+
+  it('un fallimento di Whisper rilascia la riserva INTERA prima di rilanciare l\'errore (mai un uso non consegnato addebitato)', () => {
+    const iCatchWhisper = src.indexOf('} catch (e) {\n      // Whisper');
+    expect(iCatchWhisper).toBeGreaterThan(-1);
+    const blocco = src.slice(iCatchWhisper, src.indexOf('throw e;', iCatchWhisper));
+    expect(blocco).toContain("release(riservaId, 'whisper_fallito')");
+    expect(blocco).toContain('riservaId = null');
+  });
+
+  it('la rete di sicurezza nel catch esterno rilascia una riserva ancora attiva per qualunque altro errore imprevisto', () => {
+    const iCatchEsterno = src.lastIndexOf('} catch (e) {');
+    const blocco = src.slice(iCatchEsterno);
+    expect(blocco).toContain("release(riservaId, 'errore_imprevisto')");
+  });
+
+  it('riservaId torna a null subito dopo il commit, cosi la rete di sicurezza non tocca piu una riserva gia confermata', () => {
+    const iCommit = src.indexOf('await commit(riservaId, costoPrevisto');
+    expect(src.slice(iCommit, iCommit + 120)).toContain('riservaId = null');
+  });
+
+  it('creditoEsaurito viene derivato da creditoFinito DOPO il commit, per preservare il segnale UX gia usato dal client', () => {
+    const iCommit = src.indexOf('await commit(riservaId, costoPrevisto');
+    const iCreditoFinito = src.indexOf('creditoEsaurito = await creditoFinito(pagante);');
+    expect(iCreditoFinito).toBeGreaterThan(iCommit);
   });
 });
 

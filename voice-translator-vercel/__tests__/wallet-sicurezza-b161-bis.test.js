@@ -1,0 +1,151 @@
+// ═══════════════════════════════════════════════════════════════
+// GUARDIA — RESERVE → PROVIDER → COMMIT/RELEASE (b.161-bis, punto 5)
+//
+// Nato dalla contestazione diretta dell'utente sul quinto punto rimasto
+// aperto dopo b.161 ("Reserve → Provider → Commit/Release non ancora
+// implementato: rimane una finestra di race fra richieste concorrenti").
+//
+// Il preventivo pre-chiamata (b.161, punto 1: creditoInsufficiente)
+// chiudeva il bypass RIPETIBILE ma non la finestra di CORSA: due
+// richieste concorrenti leggono lo stesso saldo, lo passano ENTRAMBE,
+// e solo l'addebito finale (atomico) le distingue — la seconda torna
+// "esaurito" ma il fornitore, per lei, e gia stato chiamato una volta
+// di troppo. Questa migrazione + questo modulo chiudono la finestra:
+// il saldo scende SUBITO, atomicamente, con la riserva — prima ancora
+// di chiamare il fornitore.
+//
+// Verificato dal vivo (rollback-only) in produzione durante la stesura:
+// riserva riduce il saldo subito, una riserva concorrente sopra il
+// residuo viene rifiutata, commit rimborsa la differenza se il costo
+// vero e minore, il doppio commit e rifiutato, release restituisce
+// l'intera riserva. Zero righe lasciate per l'utente di test.
+// ═══════════════════════════════════════════════════════════════
+import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import path from 'path';
+
+const RADICE = path.join(__dirname, '..');
+const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
+
+describe('Migrazione 010: wallet_riserva/wallet_commit/wallet_release/wallet_rilascia_riserve_scadute', () => {
+  const src = leggi('supabase/migrations/010_wallet_riserva.sql');
+
+  it('crea la tabella wallet_riserve con RLS attiva e nessun accesso da anon/authenticated', () => {
+    expect(src).toContain('CREATE TABLE IF NOT EXISTS wallet_riserve');
+    expect(src).toContain('ALTER TABLE wallet_riserve ENABLE ROW LEVEL SECURITY;');
+    expect(src).toContain('REVOKE ALL ON wallet_riserve FROM PUBLIC, anon, authenticated;');
+    expect(src).toContain('GRANT ALL ON wallet_riserve TO service_role;');
+  });
+
+  it('wallet_riserva usa lo stesso lock per-utente e lo stesso limite di wallet_usa (migrazione 006)', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_riserva');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit'));
+    expect(blocco).toContain('PERFORM pg_advisory_xact_lock(hashtext(p_user_id));');
+    expect(blocco).toContain('IF p_secondi > 100000 THEN');
+    expect(blocco).toContain("SECURITY DEFINER SET search_path = public, pg_temp");
+  });
+
+  it('wallet_riserva scala il saldo SUBITO (INSERT su credit_ledger dentro la stessa transazione della riserva)', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_riserva');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit'));
+    expect(blocco).toContain("INSERT INTO wallet_riserve");
+    expect(blocco).toContain("INSERT INTO credit_ledger (user_id, tipo, secondi, dettaglio)");
+    expect(blocco).toContain("'riserva', -p_secondi");
+  });
+
+  it('wallet_commit non addebita mai piu della riserva (tetto LEAST) e rifiuta un doppio commit', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_release'));
+    expect(blocco).toContain('LEAST(COALESCE(p_secondi_reali, r.secondi), r.secondi)');
+    expect(blocco).toContain("IF r.stato <> 'attiva' THEN");
+    expect(blocco).toContain("'rilascio_parziale'");
+  });
+
+  it('wallet_release restituisce l\'intera riserva e rifiuta anche lui un doppio rilascio', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_release');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_rilascia_riserve_scadute'));
+    expect(blocco).toContain("IF r.stato <> 'attiva' THEN");
+    expect(blocco).toContain("'rilascio', r.secondi");
+  });
+
+  it('wallet_rilascia_riserve_scadute pulisce le riserve attive da piu di 10 minuti (crash serverless a meta)', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_rilascia_riserve_scadute');
+    const blocco = src.slice(i);
+    expect(blocco).toContain("stato = 'attiva' AND created_at < now() - INTERVAL '10 minutes'");
+  });
+
+  it("la CHECK su credit_ledger.tipo accetta 'riserva', 'rilascio' e 'rilascio_parziale' senza perdere le voci esistenti", () => {
+    expect(src).toContain('ALTER TABLE credit_ledger DROP CONSTRAINT IF EXISTS credit_ledger_tipo_check;');
+    const i = src.indexOf('ADD CONSTRAINT credit_ledger_tipo_check');
+    const blocco = src.slice(i, i + 400);
+    for (const tipo of ['acquisto', 'benvenuto', 'voucher', 'regalo_in', 'regalo_out', 'uso', 'rimborso', 'omaggio', 'riserva', 'rilascio', 'rilascio_parziale']) {
+      expect(blocco).toContain(`'${tipo}'`);
+    }
+  });
+
+  it('tutte e 4 le funzioni sono revocate a PUBLIC/anon/authenticated e concesse solo a service_role', () => {
+    for (const fn of ['wallet_riserva(TEXT, INTEGER, JSONB)', 'wallet_commit(BIGINT, INTEGER, JSONB)', 'wallet_release(BIGINT, TEXT)', 'wallet_rilascia_riserve_scadute()']) {
+      expect(src).toContain(`REVOKE EXECUTE ON FUNCTION ${fn} FROM PUBLIC, anon, authenticated;`);
+      expect(src).toContain(`GRANT EXECUTE ON FUNCTION ${fn} TO service_role;`);
+    }
+  });
+});
+
+describe('app/wallet/riserva.js: wrapper JS per riserva/commit/release', () => {
+  const src = leggi('app/wallet/riserva.js');
+
+  it('espone le tre funzioni chiamando le RPC corrispondenti', () => {
+    expect(src).toContain('export async function riserva(');
+    expect(src).toContain("db().rpc('wallet_riserva'");
+    expect(src).toContain('export async function commit(');
+    expect(src).toContain("db().rpc('wallet_commit'");
+    expect(src).toContain('export async function release(');
+    expect(src).toContain("db().rpc('wallet_release'");
+  });
+
+  it('riserva() e fail-closed: un errore o un\'eccezione bloccano (ok:false), non fanno passare la richiesta', () => {
+    const i = src.indexOf('export async function riserva(');
+    const blocco = src.slice(i, src.indexOf('export async function commit('));
+    expect(blocco).toContain("if (error) return { ok: false, motivo: 'errore db: ' + error.message };");
+    expect(blocco).toMatch(/catch \(e\) \{[\s\S]*return \{ ok: false, motivo: 'errore: ' \+ e\.message \};/);
+  });
+
+  it('commit() e release() non propagano mai errori al chiamante (solo log): non devono far cadere una risposta gia pronta', () => {
+    const iCommit = src.indexOf('export async function commit(');
+    const iRelease = src.indexOf('export async function release(');
+    const bloccoCommit = src.slice(iCommit, iRelease);
+    const bloccoRelease = src.slice(iRelease);
+    expect(bloccoCommit).not.toMatch(/return \{ ok: false/);
+    expect(bloccoRelease).not.toMatch(/return \{ ok: false/);
+    expect(bloccoCommit).toContain('console.error');
+    expect(bloccoRelease).toContain('console.error');
+  });
+
+  it('riserva() valida l\'importo prima di toccare il database (nessuna RPC con un numero non valido)', () => {
+    const i = src.indexOf('export async function riserva(');
+    const blocco = src.slice(i, src.indexOf('export async function commit('));
+    const iValidazione = blocco.indexOf("if (!Number.isFinite(importo) || importo <= 0)");
+    const iRpc = blocco.indexOf("db().rpc('wallet_riserva'");
+    expect(iValidazione).toBeGreaterThan(-1);
+    expect(iRpc).toBeGreaterThan(iValidazione);
+  });
+});
+
+describe('/api/wallet/admin: rimborso manuale Stripe (b.162, punto 3)', () => {
+  const src = leggi('app/api/wallet/admin/route.js');
+
+  it("azione 'rimborso' esiste, valida utente e minuti come 'accredita', e scala (secondi negativi)", () => {
+    const i = src.indexOf("if (azione === 'rimborso') {");
+    expect(i).toBeGreaterThan(-1);
+    const blocco = src.slice(i, src.indexOf("if (azione === 'voucher')"));
+    expect(blocco).toContain('utenteEsiste');
+    expect(blocco).toContain("tipo: 'rimborso'");
+    expect(blocco).toContain('secondi: -Math.round(minuti * 60)');
+  });
+
+  it('nessun webhook Stripe automatico: charge.refunded/charge.dispute.created non sono gestiti nel webhook esistente', () => {
+    const webhook = leggi('app/api/stripe/webhook/route.js');
+    expect(webhook).not.toContain("event.type === 'charge.refunded'");
+    expect(webhook).not.toContain("event.type === 'charge.dispute.created'");
+  });
+});

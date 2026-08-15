@@ -92,6 +92,44 @@ async function handlePost(req) {
     return NextResponse.json({ ok: true });
   }
 
+  // ── Rimborso manuale (Stripe rimborsato/contestato, b.162 punto 3) ──
+  // b.162 — CONFERMATO (contestazione utente dopo b.161, "Refund/
+  // chargeback Stripe non hanno ancora una pipeline wallet"): un
+  // pagamento rimborsato o contestato non toccava mai il wallet, i
+  // secondi accreditati da quell'acquisto restavano nel saldo.
+  //
+  // Scelta esplicita dell'utente: nessun webhook Stripe automatico
+  // (charge.refunded/charge.dispute.created) — un rimborso resta una
+  // decisione umana, applicata a mano da qui. L'ammontare lo decide
+  // l'admin caso per caso (stesso principio di 'accredita' qui sopra,
+  // simmetrico: li' l'admin decide quanto REGALARE, qui quanto
+  // TOGLIERE) — per questo non serve una policy fissa "tutto o solo il
+  // residuo": la valuta chi guarda il caso Stripe reale.
+  //
+  // Il saldo PUO scendere sotto zero (come 'accredita' non controlla
+  // un tetto massimo, questo non controlla un pavimento minimo): non
+  // e un rischio di sicurezza, un saldo negativo blocca comunque ogni
+  // nuovo consumo allo stesso modo di un saldo a zero (wallet_usa e
+  // wallet_riserva rifiutano sempre quando saldo < costo, e un costo
+  // positivo e sempre maggiore di un saldo negativo).
+  if (azione === 'rimborso') {
+    if (!utente || !minutiValidi) {
+      return NextResponse.json({ error: 'utente obbligatorio, minuti deve essere fra 0 e ' + MAX_MINUTI_ADMIN }, { status: 400 });
+    }
+    const utenteEsiste = await getUser(String(utente).toLowerCase().trim());
+    if (!utenteEsiste) {
+      return NextResponse.json({ error: 'utente non trovato' }, { status: 404 });
+    }
+    const { error } = await db().from('credit_ledger').insert({
+      user_id: String(utente).toLowerCase().trim(),
+      tipo: 'rimborso',
+      secondi: -Math.round(minuti * 60),
+      dettaglio: { nota: nota || 'rimborso Stripe (manuale)', da: 'sesamo' },
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
   // ── Crea un voucher promozionale ──
   if (azione === 'voucher') {
     // b.161 — CONFERMATO: `!minuti` non respinge un valore NEGATIVO

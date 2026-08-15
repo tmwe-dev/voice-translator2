@@ -67,8 +67,10 @@ describe('se pagare: lo dice una ricevuta, non il client', () => {
   });
 
   it('la trascrizione lascia la ricevuta dopo aver addebitato', () => {
+    // b.161-bis: l'addebito vero e' il commit della riserva (vedi
+    // wallet-sicurezza-b161-bis.test.js), non piu addebitaVoce.
     const t = leggi('api/transcribe/route.js');
-    const posAddebito = t.indexOf('addebitaVoce(pagante');
+    const posAddebito = t.indexOf('commit(riservaId, costoPrevisto');
     const posRicevuta = t.indexOf('ricevutaVoce(');
     expect(posAddebito).toBeGreaterThan(-1);
     expect(posRicevuta, 'la ricevuta si emette DOPO l\'addebito, non prima')
