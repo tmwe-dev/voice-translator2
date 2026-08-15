@@ -7,12 +7,15 @@ import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
-import { addebitaRiassunto, creditoFinito, creditoInsufficiente } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoRiassunto } from '../../wallet/consumo.js';
 
 const log = createLogger('summary');
 
 async function handlePost(req) {
+  // b.171 — riserva wallet dichiarata FUORI dal try, cosi il ramo di
+  // errore la restituisce (release). Stesso schema di tts/route.js.
+  let riservaId = null;
   try {
     const { convId, userToken } = await req.json();
 
@@ -96,13 +99,19 @@ async function handlePost(req) {
     // dopo, il suo esito ('esaurito' compreso) veniva ignorato, e il
     // riassunto veniva restituito comunque. Un wallet a zero non
     // fermava niente: pagava solo la piattaforma.
+    // b.171 — RISERVA prima di OpenAI, non piu "controlla poi addebita".
+    // Il vecchio pre-controllo leggeva il saldo ma non lo bloccava: due
+    // riassunti concorrenti passavano entrambi sullo STESSO saldo e
+    // chiamavano entrambi OpenAI, poi solo l'addebito finale ne
+    // distingueva uno. Ora si blocca il costo fisso SUBITO e atomico,
+    // come translate/tts: commit dopo il successo, release nel catch.
+    const costoR = costoRiassunto();
     if (billingEmail && !isOwnKey) {
-      if (await creditoFinito(billingEmail, { failClosed: true })) {
-        return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
-      }
-      if (await creditoInsufficiente(billingEmail, costoRiassunto(), { failClosed: true })) {
+      const r = await riserva(billingEmail, costoR, { tipo: 'riassunto', convId });
+      if (!r.ok) {
         return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
       }
+      riservaId = r.riservaId;
     }
 
     const openai = new OpenAI({ apiKey });
@@ -152,12 +161,12 @@ Output ONLY valid JSON, no markdown, no code blocks.`
     });
 
     // Calculate cost (per il tetto di piattaforma; il wallet ha il suo
-    // conto fisso, vedi addebitaRiassunto sotto)
+    // conto fisso, confermato dal commit della riserva piu sotto)
     const costUsd = calcGptCost(completion.usage);
     const costEurCents = usdToEurCents(costUsd);
 
     // b.157 — tolto il doppio addebito sul vecchio user.credits: il
-    // wallet (addebitaRiassunto, subito sotto) e il conto vero da tempo.
+    // wallet (il commit della riserva, subito sotto) e il conto vero.
     if (billingEmail && !isOwnKey) {
       try {
         const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
@@ -165,8 +174,14 @@ Output ONLY valid JSON, no markdown, no code blocks.`
       } catch (e) { log.error('Summary daily-spend tracking error:', e); }
     }
 
-    // ── Wallet: riassunto = 10 secondi di credito, addebito dopo il lavoro ──
-    await addebitaRiassunto(isOwnKey ? null : billingEmail);
+    // ── Wallet: conferma la riserva presa prima di OpenAI ──
+    // b.171 — costo fisso, quindi commit allo stesso importo riservato.
+    // Con chiave propria (isOwnKey) non c'era riserva: riservaId resta
+    // null e il wallet non si tocca.
+    if (riservaId) {
+      await commit(riservaId, costoR, { tipo: 'riassunto', convId });
+      riservaId = null;
+    }
 
     let summary;
     try {
@@ -192,6 +207,9 @@ Output ONLY valid JSON, no markdown, no code blocks.`
 
     return NextResponse.json({ summary });
   } catch (e) {
+    // b.171 — riserva attiva + errore = si restituisce il credito. Mai
+    // lasciarlo bloccato per un riassunto che non e stato consegnato.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     if (e instanceof NextResponse) return e;
     log.error('Summary error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

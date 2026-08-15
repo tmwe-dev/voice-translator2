@@ -3,7 +3,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
-import { creditoFinito, creditoInsufficiente, addebitaAzioneChat } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoAzioneChat } from '../../wallet/consumo.js';
 import { MIN_CHARGE, MIN_CREDITS } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
@@ -37,6 +37,10 @@ async function getCallQwen() {
  * Returns: { result: string, provider: string, cost: number }
  */
 async function handlePost(request) {
+  // b.171 — riserva wallet dichiarata FUORI dal try, cosi il ramo di
+  // errore la puo restituire (release) qualunque cosa vada storto dopo
+  // averla presa. Stesso schema di tts/route.js.
+  let riservaId = null;
   try {
     const body = await request.json();
     const { action, messages, members, mode, domain, userToken, lendingCode, roomId, roomSessionToken } = body;
@@ -96,14 +100,22 @@ async function handlePost(request) {
     // guardando quale provider ha risposto per davvero (vedi sotto).
     const possibilePiattaforma = useCJK || !auth.isOwnKey;
     const paganteGate = possibilePiattaforma ? auth.billingEmail : null;
+    // b.171 — RISERVA prima del fornitore, non piu "controlla poi
+    // addebita". Il vecchio pre-controllo (creditoFinito +
+    // creditoInsufficiente) leggeva il saldo ma non lo bloccava: due
+    // azioni chat concorrenti passavano entrambe il controllo sullo
+    // STESSO saldo e chiamavano entrambe GPT, poi solo l'addebito finale
+    // ne distingueva una — l'altra era gia costata. Ora si blocca il
+    // costo fisso SUBITO e atomico (riserva), come translate/tts: se il
+    // fornitore risponde si conferma (commit), se fallisce si restituisce
+    // (release, nel catch). Costo fisso, quindi commit allo stesso importo.
+    const costoAzione = costoAzioneChat();
     if (paganteGate) {
-      const costoPrevisto = costoAzioneChat();
-      if (await creditoFinito(paganteGate, { failClosed: true })) {
-        return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
-      }
-      if (await creditoInsufficiente(paganteGate, costoPrevisto, { failClosed: true })) {
+      const r = await riserva(paganteGate, costoAzione, { tipo: 'azione_chat', azione: action });
+      if (!r.ok) {
         return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
       }
+      riservaId = r.riservaId;
     }
 
     // Build transcript and prompt
@@ -158,12 +170,23 @@ async function handlePost(request) {
     // OpenAI (diretto o di fallback da Qwen fallito) rispetta la vera
     // auth.isOwnKey.
     const paganteReale = (provider === 'qwen' || !auth.isOwnKey) ? auth.billingEmail : null;
+    // b.171 — chiusura della riserva. Se paga la piattaforma (Qwen, o
+    // OpenAI con chiave di piattaforma) si conferma (commit); se invece la
+    // richiesta era CJK — quindi si era riservato — ma il fallback e finito
+    // su OpenAI con la chiave PROPRIA dell'utente, la piattaforma non paga:
+    // si restituisce la riserva (release). Stesso ramo di tts/route.js.
+    if (riservaId) {
+      if (paganteReale) {
+        await commit(riservaId, costoAzione, { tipo: 'azione_chat', azione: action, provider });
+      } else {
+        await release(riservaId, 'chiave_propria');
+      }
+      riservaId = null;
+    }
     if (paganteReale) {
-      await addebitaAzioneChat(paganteReale);
-      // b.170 — netta la riserva fatta da resolveAuth (vedi apiAuth.js).
-      // Se il pagante reale e' finito su Qwen mentre l'auth aveva
-      // isOwnKey=true, resolveAuth non aveva riservato nulla (0, il
-      // default): qui si limita a sommare il costo vero, come prima.
+      // b.170 — netta la riserva del BUDGET GIORNALIERO fatta da
+      // resolveAuth (vedi apiAuth.js): sistema diverso dal wallet qui
+      // sopra (centesimi di budget piattaforma vs secondi di wallet).
       trackDailySpend(paganteReale, MIN_CHARGE.CHAT_ACTION, auth.riservatoUtenteCents, auth.riservatoPiattaformaCents).catch(() => {});
     }
 
@@ -174,6 +197,10 @@ async function handlePost(request) {
       usage: result.usage,
     });
   } catch (err) {
+    // b.171 — se una riserva era attiva e siamo finiti qui (fornitore
+    // fallito, errore imprevisto), la si restituisce: mai lasciare credito
+    // bloccato per una chiamata che non ha prodotto nulla.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     log.error('Error:', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

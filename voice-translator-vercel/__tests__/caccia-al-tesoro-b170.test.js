@@ -177,19 +177,24 @@ describe('Espulsione: un gettone di stanza valido non autorizza piu chi non e pi
 });
 
 // ───────────────────────────────────────────────────────────────
-// 4. Chat Action e Summary: dichiarati NON convertiti (nessun claim falso)
+// 4. Chat Action e Summary: a b.170 erano dichiarati NON convertiti.
+//    b.171 li ha convertiti (vedi caccia-al-tesoro-b171.test.js): qui si
+//    aggiorna la nota storica: NON sono piu check-then-charge.
 // ───────────────────────────────────────────────────────────────
-describe('Chat Action e Summary restano check-then-charge (non convertiti in questo round)', () => {
-  it('chat-action non usa riserva/commit/release (dichiarato apertamente, non un claim di completezza)', () => {
+describe('Chat Action e Summary: convertiti a reservation in b.171 (erano rinviati a b.170)', () => {
+  it('chat-action ora usa riserva/commit/release, non piu addebitaAzioneChat', () => {
     const src = leggi('app/api/chat-action/route.js');
-    expect(src).not.toMatch(/\briserva\(|\bcommit\(|\brelease\(/);
-    // Usa ancora il vecchio schema: addebito dopo il successo.
-    expect(src).toContain('addebitaAzioneChat');
+    expect(src).toMatch(/\briserva\(/);
+    expect(src).toMatch(/\bcommit\(/);
+    expect(src).toMatch(/\brelease\(/);
+    expect(src).not.toContain('addebitaAzioneChat');
   });
 
-  it('summary non usa riserva/commit/release', () => {
+  it('summary ora usa riserva/commit/release, non piu addebitaRiassunto', () => {
     const src = leggi('app/api/summary/route.js');
-    expect(src).not.toMatch(/\briserva\(|\bcommit\(|\brelease\(/);
-    expect(src).toContain('addebitaRiassunto');
+    expect(src).toMatch(/\briserva\(/);
+    expect(src).toMatch(/\bcommit\(/);
+    expect(src).toMatch(/\brelease\(/);
+    expect(src).not.toContain('addebitaRiassunto');
   });
 });

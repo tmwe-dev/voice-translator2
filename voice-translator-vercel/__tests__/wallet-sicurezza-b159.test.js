@@ -68,24 +68,30 @@ describe('translate: isOwnKey riflette la chiave davvero usata dopo un fallback 
 describe('/api/chat-action: ora addebita davvero (b.159)', () => {
   const src = leggi('app/api/chat-action/route.js');
 
-  it('importa addebitaAzioneChat e i controlli di credito', () => {
-    expect(src).toContain("import { creditoFinito, creditoInsufficiente, addebitaAzioneChat } from '../../wallet/addebita.js'");
+  // b.171 — la rotta e passata da "controlla poi addebita" a
+  // riserva/commit/release (vedi caccia-al-tesoro-b171.test.js).
+  // L'intento che questi test proteggono resta lo stesso: c'e un cancello
+  // di credito PRIMA del modello, e l'addebito vero si chiude DOPO — solo
+  // che ora il cancello e la riserva atomica e l'addebito e il commit.
+  it('importa il meccanismo di riserva del wallet', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js'");
   });
 
-  it('controlla il credito PRIMA di chiamare il modello (fail-closed)', () => {
+  it('RISERVA il credito PRIMA di chiamare il modello (blocco atomico, fail-closed)', () => {
     const iAuth = src.indexOf('await resolveAuth(');
     const iChiamata = src.indexOf('buildCompactTranscript(messages)');
     const blocco = src.slice(iAuth, iChiamata);
-    expect(blocco).toMatch(/creditoFinito\(paganteGate,\s*\{\s*failClosed:\s*true\s*\}\)/);
-    expect(blocco).toMatch(/creditoInsufficiente\(paganteGate,\s*costoPrevisto,\s*\{\s*failClosed:\s*true\s*\}\)/);
+    expect(blocco).toMatch(/riserva\(paganteGate,\s*costoAzione/);
+    // la riserva rifiutata blocca prima del modello (402)
+    expect(blocco).toMatch(/if\s*\(!r\.ok\)/);
   });
 
-  it('addebita DOPO la risposta del modello, non prima', () => {
+  it('conferma (commit) DOPO la risposta del modello, non prima', () => {
     const iRisultato = src.lastIndexOf('provider = \'openai\';');
-    const iAddebito = src.indexOf('await addebitaAzioneChat(paganteReale);');
+    const iCommit = src.indexOf('await commit(riservaId, costoAzione');
     const iReturn = src.indexOf('return NextResponse.json({\n      result:');
-    expect(iAddebito).toBeGreaterThan(iRisultato);
-    expect(iAddebito).toBeLessThan(iReturn);
+    expect(iCommit).toBeGreaterThan(iRisultato);
+    expect(iCommit).toBeLessThan(iReturn);
   });
 
   it('consumo.js definisce un costo fisso per le azioni chat', () => {
@@ -136,9 +142,12 @@ describe('/api/tts: CosyVoice addebita, l\'addebito OpenAI arriva dopo il succes
 });
 
 describe('/api/summary e /api/topics/riassunto: gate PRIMA di chiamare OpenAI (b.159)', () => {
-  it('summary: creditoFinito/creditoInsufficiente prima di "new OpenAI"', () => {
+  it('summary: RISERVA il credito prima di "new OpenAI" (b.171: era creditoFinito/creditoInsufficiente)', () => {
+    // b.171 — il cancello prima del fornitore ora e la riserva atomica,
+    // non piu il pre-controllo passivo: stesso intento (non si chiama
+    // OpenAI senza aver prima bloccato il credito), meccanismo piu forte.
     const src = leggi('app/api/summary/route.js');
-    const iGate = src.indexOf('creditoFinito(billingEmail');
+    const iGate = src.indexOf('riserva(billingEmail, costoR');
     const iOpenai = src.indexOf('new OpenAI({ apiKey })');
     expect(iGate).toBeGreaterThan(-1);
     expect(iGate).toBeLessThan(iOpenai);
