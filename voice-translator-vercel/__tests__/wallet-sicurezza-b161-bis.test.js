@@ -149,3 +149,78 @@ describe('/api/wallet/admin: rimborso manuale Stripe (b.162, punto 3)', () => {
     expect(webhook).not.toContain("event.type === 'charge.dispute.created'");
   });
 });
+
+describe('Cron rilascio riserve scadute: la funzione SQL di migrazione 010 non restava orfana (b.162-bis, lacuna del proprio audit)', () => {
+  it("la rotta cron esiste, richiede ADMIN_PASS o CRON_SECRET (timing-safe), chiama wallet_rilascia_riserve_scadute", () => {
+    const src = leggi('app/api/wallet/cron-rilascia-riserve/route.js');
+    expect(src).toContain("import { safeCompare } from '../../../lib/apiGuard.js';");
+    expect(src).toContain('safeCompare(pass, process.env.ADMIN_PASS)');
+    expect(src).toContain('safeCompare(pass, process.env.CRON_SECRET)');
+    expect(src).toContain("db().rpc('wallet_rilascia_riserve_scadute')");
+  });
+
+  it('vercel.json ha una voce cron per la nuova rotta', () => {
+    const conf = JSON.parse(leggi('vercel.json'));
+    const voce = conf.crons.find(c => c.path === '/api/wallet/cron-rilascia-riserve');
+    expect(voce).toBeTruthy();
+  });
+});
+
+describe('Migrazione 011: la riserva confermata diventa la riga "uso" finale, non resta orfana (b.163)', () => {
+  // b.163 — BUG REALE segnalato dall'utente analizzando b.162 (non
+  // trovato da un mio audit): wallet_economics/wallet_totali/
+  // wallet_per_utente e wallet_uso() filtravano solo tipo='uso' (o
+  // "secondi < 0" senza nettare gli offset). Una riserva confermata al
+  // costo pieno restava per sempre di tipo 'riserva': spariva dai
+  // secondi consumati/costi provider/numero_usi dell'Admin. Una
+  // riserva rilasciata (fornitore fallito) veniva invece contata da
+  // wallet_uso() come consumo vero, perche la riga positiva di
+  // compensazione non era mai nettata. Il saldo restava sempre
+  // corretto (per questo non l'avevo notato: avevo verificato SOLO il
+  // saldo, non la contabilita analitica a valle) — la correzione e
+  // stata verificata dal vivo (rollback-only) con 7 asserzioni, vedi
+  // il messaggio di commit.
+  const src = leggi('supabase/migrations/011_wallet_riserva_reporting.sql');
+
+  it('wallet_riserve guadagna un puntatore alla riga di credit_ledger che rappresenta la riserva (ledger_id)', () => {
+    expect(src).toContain('ALTER TABLE wallet_riserve ADD COLUMN IF NOT EXISTS ledger_id BIGINT;');
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_riserva');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit'));
+    expect(blocco).toContain('RETURNING id INTO v_ledger_id;');
+    expect(blocco).toContain('UPDATE wallet_riserve SET ledger_id = v_ledger_id WHERE id = v_id;');
+  });
+
+  it('wallet_commit AGGIORNA la riga esistente a tipo=uso invece di inserirne una nuova (nessuna riga rilascio_parziale)', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_release'));
+    expect(blocco).toContain("UPDATE credit_ledger");
+    expect(blocco).toContain("tipo = 'uso'");
+    expect(blocco).toContain('secondi = -v_reali');
+    expect(blocco).toContain('WHERE id = r.ledger_id');
+    expect(blocco).not.toContain("INSERT INTO credit_ledger");
+    expect(blocco).not.toContain('rilascio_parziale');
+  });
+
+  it('wallet_commit proporziona costo_cent al consumo reale, non lascia il costo dell\'intera riserva', () => {
+    const i = src.indexOf('CREATE OR REPLACE FUNCTION wallet_commit');
+    const blocco = src.slice(i, src.indexOf('CREATE OR REPLACE FUNCTION wallet_release'));
+    expect(blocco).toContain("costo_cent");
+    expect(blocco).toContain('v_costo_orig * v_reali / r.secondi');
+  });
+
+  it('wallet_release e wallet_rilascia_riserve_scadute azzerano la riga esistente (secondi=0) invece di inserirne una di compenso', () => {
+    for (const fn of ['CREATE OR REPLACE FUNCTION wallet_release', 'CREATE OR REPLACE FUNCTION wallet_rilascia_riserve_scadute']) {
+      const i = src.indexOf(fn);
+      const blocco = src.slice(i, i + 1200);
+      expect(blocco).toContain("UPDATE credit_ledger");
+      expect(blocco).toContain("tipo = 'rilascio', secondi = 0");
+      expect(blocco).toContain('WHERE id = r.ledger_id');
+      expect(blocco).not.toContain('INSERT INTO credit_ledger');
+    }
+  });
+
+  it('nessuna modifica alle viste economiche o a wallet_uso(): il fix e solo nel modo in cui la riga finale viene scritta', () => {
+    expect(src).not.toMatch(/CREATE (OR REPLACE )?VIEW/i);
+    expect(src).not.toContain('FUNCTION wallet_uso');
+  });
+});

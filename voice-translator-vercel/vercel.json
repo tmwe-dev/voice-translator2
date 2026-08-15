@@ -7,6 +7,10 @@
     {
       "path": "/api/wallet/cron-rimborso-regali",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/wallet/cron-rilascia-riserve",
+      "schedule": "15 * * * *"
     }
   ]
 }

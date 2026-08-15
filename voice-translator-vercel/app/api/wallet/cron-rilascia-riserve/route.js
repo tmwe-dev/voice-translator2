@@ -1,0 +1,42 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { createLogger } from '../../../lib/logger.js';
+import { safeCompare } from '../../../lib/apiGuard.js';
+
+const log = createLogger('cronRilasciaRiserve');
+
+function db() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false } }
+  );
+}
+
+// ═══ CRON RILASCIO RISERVE SCADUTE — b.162-bis, lacuna trovata nel proprio
+// audit ("cosa manca per il 10"): wallet_rilascia_riserve_scadute()
+// (migrazione 010, b.161-bis) esiste da quando e' stata scritta ma non
+// era mai stata agganciata a nessun cron — release()/commit() coprono
+// gia ogni errore che passa dal catch della stessa invocazione
+// serverless (transcribe/translate/tts), ma una riserva 'attiva' il cui
+// processo muore SENZA passare dal catch (timeout Vercel, OOM) restava
+// bloccata per sempre, non per 10 minuti come il commento della
+// migrazione prometteva. GET (con x-admin-pass o CRON_SECRET): rilascia
+// ogni riserva ancora 'attiva' da piu di 10 minuti. Stesso schema di
+// cron-rimborso-regali (safeCompare, timing-safe).
+export async function GET(req) {
+  const pass = req.headers.get('x-admin-pass') || req.headers.get('authorization')?.replace('Bearer ', '');
+  const ok = safeCompare(pass, process.env.ADMIN_PASS) || safeCompare(pass, process.env.CRON_SECRET);
+  if (!ok) return NextResponse.json({ error: 'no' }, { status: 401 });
+
+  try {
+    const { data, error } = await db().rpc('wallet_rilascia_riserve_scadute');
+    if (error) throw error;
+    const rilasciate = data ?? 0;
+    if (rilasciate > 0) log.info(`Rilasciate ${rilasciate} riserve scadute (>10min attive)`);
+    return NextResponse.json({ rilasciate });
+  } catch (e) {
+    log.error('Rilascio riserve scadute fallito:', e.message);
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
