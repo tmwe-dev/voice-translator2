@@ -3,7 +3,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser } from '../../lib/users.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { creditoInsufficientePerClonazione, addebitaClonazione } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
 import { COSTO_CLONAZIONE_SECONDI } from '../../wallet/tariffe.js';
 import { TESTING_MODE } from '../../lib/config.js';
 
@@ -33,6 +33,10 @@ async function handlePost(req) {
     throw e;
   }
 
+  // b.164 (roadmap utente dopo b.163, punto 2 "Voice Clone idem") —
+  // fuori dal try: la rete di sicurezza nel catch esterno deve poter
+  // rilasciare la riserva per QUALUNQUE errore imprevisto.
+  let riservaId = null;
   try {
     const formData = await req.formData();
     const userToken = formData.get('userToken');
@@ -76,13 +80,27 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'ElevenLabs API key not available' }, { status: 400 });
     }
 
-    // ── Wallet: unico gate reale (skip con chiave propria o in test) ──
+    // ── Wallet: riserva ATOMICA prima di chiamare ElevenLabs ──
+    // b.164 — CONFERMATO (roadmap utente dopo b.163, punto 2): il vecchio
+    // gate (creditoInsufficientePerClonazione, poi addebitaClonazione a
+    // fine chiamata) chiudeva solo il bypass ripetibile, non la finestra
+    // di CORSA fra due clonazioni concorrenti dello stesso utente — stessa
+    // classe di difetto gia chiusa su transcribe/translate/tts/
+    // tts-elevenlabs. Costo fisso (€5,00 = COSTO_CLONAZIONE_SECONDI):
+    // riserva e commit usano sempre lo stesso numero.
     const isOwnKey = user.useOwnKeys && user.apiKeys?.elevenlabs;
-    if (!isOwnKey && !testingMode && await creditoInsufficientePerClonazione(session.email)) {
-      return NextResponse.json({
-        error: `Credito insufficiente. Servono €${CLONE_COST_EURO.toFixed(2)} di credito wallet.`,
-        needEuro: CLONE_COST_EURO,
-      }, { status: 402 });
+    if (!isOwnKey && !testingMode) {
+      const r = await riserva(session.email, COSTO_CLONAZIONE_SECONDI, {
+        tipo: 'clonazione_voce',
+        costo_cent: 500,
+      });
+      if (!r.ok) {
+        return NextResponse.json({
+          error: `Credito insufficiente. Servono €${CLONE_COST_EURO.toFixed(2)} di credito wallet.`,
+          needEuro: CLONE_COST_EURO,
+        }, { status: 402 });
+      }
+      riservaId = r.riservaId;
     }
 
     // If user already has a cloned voice, delete it first
@@ -116,6 +134,8 @@ async function handlePost(req) {
     if (!elRes.ok) {
       const errBody = await elRes.text();
       log.error('ElevenLabs error:', elRes.status, errBody);
+      // b.164 — nessuna voce clonata, la riserva torna intera nel wallet.
+      if (riservaId) { await release(riservaId, 'elevenlabs_fallito'); riservaId = null; }
       return NextResponse.json({
         error: `Voice cloning failed: ${elRes.status}`,
         details: errBody
@@ -126,6 +146,8 @@ async function handlePost(req) {
     const voiceId = elData.voice_id;
 
     if (!voiceId) {
+      // b.164 — stesso discorso: nessun voice_id, nessun addebito.
+      if (riservaId) { await release(riservaId, 'elevenlabs_no_voice_id'); riservaId = null; }
       return NextResponse.json({ error: 'No voice_id returned from ElevenLabs' }, { status: 500 });
     }
 
@@ -136,9 +158,10 @@ async function handlePost(req) {
       clonedVoiceAt: Date.now()
     });
 
-    // ── Wallet: addebito vero, dopo la clonazione riuscita ──
-    if (!isOwnKey) {
-      await addebitaClonazione(session.email);
+    // ── Wallet: CONFERMA la riserva DOPO la clonazione riuscita ──
+    if (riservaId) {
+      await commit(riservaId, COSTO_CLONAZIONE_SECONDI, { tipo: 'clonazione_voce' });
+      riservaId = null;
     }
 
     return NextResponse.json({
@@ -149,6 +172,9 @@ async function handlePost(req) {
     });
 
   } catch (e) {
+    // b.164 — rete di sicurezza: qualunque errore imprevisto dopo la
+    // riserva ma prima del commit deve restituire il credito.
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     log.error('Error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

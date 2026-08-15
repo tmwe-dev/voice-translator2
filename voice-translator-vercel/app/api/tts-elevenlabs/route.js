@@ -7,7 +7,9 @@ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { creditoFinito, creditoInsufficiente, preventivoVocePremium, addebitaVocePremium } from '../../wallet/addebita.js';
+import { creditoFinito, preventivoVocePremium } from '../../wallet/addebita.js';
+import { riserva, commit, release } from '../../wallet/riserva.js';
+import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
 
 const log = createLogger('ttsElevenlabs');
 
@@ -102,6 +104,12 @@ const NATIVE_VOICES_BY_LANG = {
 };
 
 async function handlePost(req) {
+  // b.164 (punto 1 della roadmap dell'utente dopo b.163) — fuori dal
+  // try: la rete di sicurezza nel catch esterno deve poter rilasciare
+  // la riserva per QUALUNQUE errore imprevisto, anche uno che scoppia
+  // prima del blocco try interno.
+  let riservaId = null;
+  let costoPrevisto = 0;
   try {
     // ── Direct mode guard ──
     try { assertCloudProcessingAllowed(req); } catch (e) {
@@ -177,15 +185,34 @@ async function handlePost(req) {
     // consegnato: la voce premium, il servizio piu caro che abbiamo,
     // finiva regalata. Qui si chiede col conto vero, sullo stesso testo
     // che verra fatturato.
+    //
+    // b.164 — CONFERMATO (roadmap utente dopo b.163, punto 1): questo
+    // preventivo chiudeva il bypass RIPETIBILE ma non la finestra di
+    // CORSA fra richieste concorrenti — stessa classe di difetto gia
+    // chiusa su transcribe/translate/tts (b.161-bis/b.162), qui ancora
+    // aperta ed e' il fornitore PIU CARO (moltiplicatore 3x): la voce
+    // premium era, delle rotte non ancora migrate, la piu redditizia
+    // da sfruttare con due richieste in parallelo. Ora il saldo scende
+    // SUBITO con una riserva atomica, prima di chiamare ElevenLabs.
+    // Costo noto per intero da cleanText.length (non dipende dalla
+    // risposta del fornitore): riserva e commit useranno sempre lo
+    // stesso numero, come per transcribe.js.
     if (pagante) {
-      const preventivo = preventivoVocePremium(cleanText.length);
-      if (await creditoInsufficiente(pagante, preventivo, { failClosed: true })) {
+      costoPrevisto = preventivoVocePremium(cleanText.length);
+      const secondiParlatoPrev = Math.ceil(cleanText.length / CARATTERI_PER_SECONDO);
+      const r = await riserva(pagante, costoPrevisto, {
+        tipo: 'voce_premium',
+        caratteri: cleanText.length,
+        costo_cent: costoProviderCent(secondiParlatoPrev, 'gpt-5.4-mini', 'elevenlabs-flash'),
+      });
+      if (!r.ok) {
         return NextResponse.json({
           error: 'Credito insufficiente per la voce premium',
           creditoEsaurito: true,
-          servono: preventivo,
+          servono: costoPrevisto,
         }, { status: 402 });
       }
+      riservaId = r.riservaId;
     }
 
     // ── Adaptive voice settings for tonal languages ──
@@ -240,17 +267,29 @@ async function handlePost(req) {
             // b.154 — vedi nota gemella sotto: il tetto di piattaforma
             // deve contare anche l'anonimo, l'addebito personale no.
             // b.157 — tolto il doppio addebito sul vecchio user.credits:
-            // addebitaVocePremium (poco sotto) e il conto vero, questo
+            // il commit della riserva (poco sotto) e il conto vero, questo
             // scriveva un numero in un campo che nessuno legge piu.
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
             try { await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
           }
-          const esitoFb = await addebitaVocePremium(pagante, cleanText.length);
-          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), ...(esitoFb === 'esaurito' && { 'X-Credito-Esaurito': '1' }) } });
+          // b.164 — stesso audio dello stesso testo, solo un modello di
+          // riserva: si conferma la STESSA riserva presa sopra, non se
+          // ne apre una seconda.
+          let creditoEsauritoFb = false;
+          if (riservaId) {
+            await commit(riservaId, costoPrevisto, { tipo: 'voce_premium', caratteri: cleanText.length });
+            riservaId = null;
+            creditoEsauritoFb = await creditoFinito(pagante);
+          }
+          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), ...(creditoEsauritoFb && { 'X-Credito-Esaurito': '1' }) } });
         }
       }
 
+      // b.164 — ENTRAMBI i modelli hanno fallito (o non c'era fallback):
+      // nessun audio consegnato, la riserva torna intera nel wallet —
+      // mai un addebito per un fornitore che non ha risposto.
+      if (riservaId) { await release(riservaId, 'elevenlabs_fallito'); riservaId = null; }
       return NextResponse.json(
         { error: `ElevenLabs error: ${response.status}`, details: errText },
         { status: response.status }
@@ -266,13 +305,18 @@ async function handlePost(req) {
       // trackDailySpend) deve vedere anche le chiamate senza
       // billingEmail (accesso libero), l'addebito personale no.
       // b.157 — tolto il doppio addebito sul vecchio user.credits, vedi
-      // nota gemella sopra: addebitaVocePremium sotto e il conto vero.
+      // nota gemella sopra: il commit della riserva (poco sotto) e il conto vero.
       const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
       try { await trackDailySpend(billingEmail, charge); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
     }
 
-    // ── Wallet: addebito premium DOPO l'audio riuscito ──
-    const esito = await addebitaVocePremium(pagante, cleanText.length);
+    // ── Wallet: CONFERMA la riserva DOPO l'audio riuscito ──
+    let creditoEsaurito = false;
+    if (riservaId) {
+      await commit(riservaId, costoPrevisto, { tipo: 'voce_premium', caratteri: cleanText.length });
+      riservaId = null;
+      creditoEsaurito = await creditoFinito(pagante);
+    }
 
     const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
@@ -280,10 +324,14 @@ async function handlePost(req) {
         'Content-Type': 'audio/mpeg',
         'Content-Length': buffer.length.toString(),
         // Era l'ultimo: il client passa alla voce standard e avvisa
-        ...(esito === 'esaurito' && { 'X-Credito-Esaurito': '1' })
+        ...(creditoEsaurito && { 'X-Credito-Esaurito': '1' })
       }
     });
   } catch (e) {
+    // b.164 — rete di sicurezza: qualunque errore imprevisto dopo la
+    // riserva ma prima del commit deve restituire il credito, altrimenti
+    // resta bloccato fino alla pulizia periodica (10 minuti).
+    if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});
     if (e instanceof NextResponse) return e;
     log.error('ElevenLabs TTS error:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

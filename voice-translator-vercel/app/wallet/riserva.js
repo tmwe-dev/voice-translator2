@@ -21,6 +21,21 @@
 // funzione e essere la difesa piu affidabile che il wallet abbia,
 // fare fail-open qui vorrebbe dire riaprire esattamente la falla che
 // dovrebbe chiudere.
+//
+// b.164 — nota architetturale (osservazione dell'utente dopo b.163, non
+// un bug: la riga 'riserva' e per definizione provvisoria). La riga di
+// credit_ledger creata da wallet_riserva() e MUTABILE finche la riserva
+// e 'attiva': wallet_commit/wallet_release la aggiornano in place fino
+// al suo stato finale ('uso' o 'rilascio'). Questa e la reservation
+// OPERATIVA — serve a bloccare il saldo subito e a far quadrare la
+// reportistica (migrazione 011) senza una seconda riga di rettifica.
+// Non e un ledger finanziario append-only in senso stretto: una riga
+// 'attiva' puo ancora cambiare id-di-stato prima di chiudersi. Per una
+// certificazione da audit finanziario puro (nessuna riga mai
+// modificata, solo inserita) servirebbe una tabella separata,
+// popolata SOLO da wallet_commit/wallet_release al momento della
+// chiusura definitiva — un cambio di modello dati, non una
+// correzione: va deciso, non e implicito in questo modulo.
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';

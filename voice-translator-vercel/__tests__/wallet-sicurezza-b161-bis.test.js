@@ -224,3 +224,94 @@ describe('Migrazione 011: la riserva confermata diventa la riga "uso" finale, no
     expect(src).not.toContain('FUNCTION wallet_uso');
   });
 });
+
+describe('/api/tts-elevenlabs: RESERVE → PROVIDER → COMMIT/RELEASE esteso alla voce premium (b.164, punto 1 della roadmap utente dopo b.163)', () => {
+  // b.164 — CONFERMATO dall'utente stesso ("ElevenLabs deve entrare
+  // nella reservation... conserva una piccola finestra di concorrenza"),
+  // blocco #1 per arrivare al 10: stessa classe di difetto gia chiusa su
+  // transcribe/translate/tts (b.161-bis/b.162), qui era ancora aperta —
+  // ed e' il fornitore piu caro (moltiplicatore 3x).
+  const src = leggi('app/api/tts-elevenlabs/route.js');
+
+  it('importa riserva/commit/release, non piu addebitaVocePremium/creditoInsufficiente come funzioni usate', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js';");
+    expect(src).not.toContain('await addebitaVocePremium(');
+    expect(src).not.toContain('await creditoInsufficiente(');
+  });
+
+  it('la riserva usa lo stesso costoPrevisto (preventivoVocePremium) poi confermato dal commit, presa PRIMA di chiamare ElevenLabs', () => {
+    const iPreventivo = src.indexOf('costoPrevisto = preventivoVocePremium(cleanText.length);');
+    const iRiserva = src.indexOf('const r = await riserva(pagante, costoPrevisto');
+    const iFetch = src.indexOf('fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`');
+    expect(iPreventivo).toBeGreaterThan(-1);
+    expect(iRiserva).toBeGreaterThan(iPreventivo);
+    expect(iRiserva).toBeLessThan(iFetch);
+  });
+
+  it('un fallimento della riserva blocca con 402 prima di chiamare ElevenLabs', () => {
+    const iRiserva = src.indexOf('const r = await riserva(pagante, costoPrevisto');
+    const i402 = src.indexOf('status: 402 }', iRiserva);
+    const iFetch = src.indexOf('fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`', iRiserva);
+    expect(i402).toBeGreaterThan(iRiserva);
+    expect(i402).toBeLessThan(iFetch);
+  });
+
+  it('se il modello di fallback riesce si conferma la STESSA riserva presa sopra, non se ne apre una seconda', () => {
+    const i = src.indexOf('if (fallback.ok) {');
+    const blocco = src.slice(i, src.indexOf('return new NextResponse(buf,'));
+    expect(blocco).toContain('await commit(riservaId, costoPrevisto');
+    expect(blocco).toContain('riservaId = null;');
+    expect(blocco).not.toContain('await riserva(');
+  });
+
+  it('se ENTRAMBI i modelli falliscono la riserva torna intera nel wallet, mai un addebito per un fornitore che non ha risposto', () => {
+    expect(src).toContain("release(riservaId, 'elevenlabs_fallito')");
+  });
+
+  it('la rete di sicurezza nel catch esterno di handlePost rilascia una riserva ancora attiva per qualunque errore imprevisto', () => {
+    expect(src).toContain("if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});");
+  });
+
+  it('creditoEsaurito viene derivato da creditoFinito DOPO il commit, per preservare il segnale UX gia usato dal client', () => {
+    const iCommit = src.lastIndexOf('await commit(riservaId, costoPrevisto');
+    const iCreditoFinito = src.indexOf('creditoEsaurito = await creditoFinito(pagante);', iCommit);
+    expect(iCreditoFinito).toBeGreaterThan(iCommit);
+  });
+});
+
+describe('/api/voice-clone: RESERVE → PROVIDER → COMMIT/RELEASE esteso alla clonazione voce (b.164, punto 2 della roadmap utente dopo b.163)', () => {
+  const src = leggi('app/api/voice-clone/route.js');
+
+  it('importa riserva/commit/release, non piu addebitaClonazione/creditoInsufficientePerClonazione come funzioni usate', () => {
+    expect(src).toContain("import { riserva, commit, release } from '../../wallet/riserva.js';");
+    expect(src).not.toContain('await addebitaClonazione(');
+    expect(src).not.toContain('await creditoInsufficientePerClonazione(');
+  });
+
+  it('un fallimento della riserva blocca con 402 prima di chiamare ElevenLabs', () => {
+    const iRiserva = src.indexOf('const r = await riserva(session.email, COSTO_CLONAZIONE_SECONDI');
+    expect(iRiserva).toBeGreaterThan(-1);
+    const i402 = src.indexOf('status: 402 }', iRiserva);
+    const iFetch = src.indexOf("fetch('https://api.elevenlabs.io/v1/voices/add'", iRiserva);
+    expect(i402).toBeGreaterThan(iRiserva);
+    expect(i402).toBeLessThan(iFetch);
+  });
+
+  it('un fallimento di ElevenLabs (add o voice_id mancante) rilascia la riserva, mai un addebito per una clonazione non riuscita', () => {
+    const iFetch = src.indexOf("fetch('https://api.elevenlabs.io/v1/voices/add'");
+    const blocco = src.slice(iFetch);
+    expect(blocco).toContain("release(riservaId, 'elevenlabs_fallito')");
+    expect(blocco).toContain("release(riservaId, 'elevenlabs_no_voice_id')");
+  });
+
+  it('la riserva si conferma SOLO dopo che ElevenLabs ha restituito un voice_id valido', () => {
+    const iVoiceIdCheck = src.indexOf('if (!voiceId) {');
+    const iCommit = src.indexOf('await commit(riservaId, COSTO_CLONAZIONE_SECONDI');
+    expect(iVoiceIdCheck).toBeGreaterThan(-1);
+    expect(iCommit).toBeGreaterThan(iVoiceIdCheck);
+  });
+
+  it('la rete di sicurezza nel catch esterno di handlePost rilascia una riserva ancora attiva per qualunque errore imprevisto', () => {
+    expect(src).toContain("if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});");
+  });
+});

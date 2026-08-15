@@ -123,10 +123,16 @@ describe('la voce premium non si regala piu', () => {
   it('si chiede il permesso col conto vero, prima di spendere', () => {
     const r = senzaCommenti(app('api/tts-elevenlabs/route.js'));
     expect(r).toMatch(/preventivoVocePremium\(cleanText\.length\)/);
-    // b.157 — aggiunto {failClosed:true}: la voce premium e' l'unico
-    // fornitore per cui un guasto nella lettura del saldo BLOCCA
-    // invece di procedere gratis (vedi test sotto).
-    expect(r).toMatch(/creditoInsufficiente\(pagante, preventivo, \{ failClosed: true \}\)/);
+    // b.157 — la voce premium e' l'unico fornitore per cui un guasto
+    // nella lettura del saldo BLOCCA invece di procedere gratis (vedi
+    // test sotto: creditoFinito con {failClosed:true} come gate rapido
+    // prima ancora di scegliere la voce).
+    expect(r).toMatch(/creditoFinito\(pagante, \{ failClosed: true \}\)/);
+    // b.164 — il preventivo non si limita piu a un controllo di sola
+    // lettura: apre una riserva ATOMICA (fail-closed di suo, vedi
+    // wallet/riserva.js) che chiude anche la finestra di corsa fra
+    // due richieste concorrenti, non solo il bypass ripetibile.
+    expect(r).toMatch(/riserva\(pagante, costoPrevisto/);
   });
 
   it('il preventivo usa lo STESSO conto dell\'addebito', () => {
