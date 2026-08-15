@@ -26,6 +26,15 @@ const mockResolveRoomIdentity = vi.fn(async (token, name, roomId) => {
   if (name) return { name, role: 'unknown', verified: false };
   return null;
 });
+// b.169 — nuove esportazioni di store.js per il segreto host (vedi
+// roomActions.js): creaSegretoHost e chiamata SEMPRE da handleCreate,
+// va sempre mockata perche il test non si blocchi. verificaSegretoHost
+// di default nega (false): i test di handleJoin qui sotto verificano
+// chi entra come guest o senza chiedere il ruolo host, quindi il
+// default e quello giusto — il caso "segreto valido, torna host" ha
+// il proprio test dedicato piu sotto.
+const mockCreaSegretoHost = vi.fn().mockResolvedValue('test-host-secret');
+const mockVerificaSegretoHost = vi.fn().mockResolvedValue(false);
 
 vi.mock('../../app/lib/store.js', () => ({
   createRoom: (...args) => mockCreateRoom(...args),
@@ -37,6 +46,8 @@ vi.mock('../../app/lib/store.js', () => ({
   changeMemberLang: (...args) => mockChangeMemberLang(...args),
   createRoomSession: (...args) => mockCreateRoomSession(...args),
   resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
+  creaSegretoHost: (...args) => mockCreaSegretoHost(...args),
+  verificaSegretoHost: (...args) => mockVerificaSegretoHost(...args),
 }));
 
 // Mock validate
@@ -79,6 +90,11 @@ describe('handleCreate', () => {
     expect(res.status).toBe(200);
     expect(data.room.id).toBe('XYZ');
     expect(data.roomSessionToken).toBe('test-token');
+    // b.169 — il segreto host si crea e si restituisce SOLO qui, alla
+    // nascita della stanza: e la prova che chi rientrera dichiarando
+    // di essere l'host dovra ripresentare.
+    expect(mockCreaSegretoHost).toHaveBeenCalledWith('XYZ');
+    expect(data.hostSecret).toBe('test-host-secret');
   });
 
   it('rejects without name', async () => {
@@ -105,6 +121,30 @@ describe('handleJoin', () => {
     mockJoinRoom.mockResolvedValue(null);
     const res = await handleJoin({ roomId: 'NOPE', name: 'Guest', lang: 'en' });
     expect(res.status).toBe(404);
+  });
+
+  // b.169 — P0-3 dell'audit esterno: chi dichiara il nome dell'host
+  // NON deve piu ricevere un gettone da host senza il segreto giusto.
+  it('chi dichiara il nome dell\'host SENZA il segreto giusto rientra come guest, non come host', async () => {
+    mockJoinRoom.mockResolvedValue({ id: 'XYZ', members: [{ name: 'Host', role: 'host' }] });
+    mockVerificaSegretoHost.mockResolvedValue(false); // segreto assente o sbagliato
+    await handleJoin({ roomId: 'XYZ', name: 'Host', lang: 'en', hostSecret: 'indovinato-a-caso' });
+    expect(mockVerificaSegretoHost).toHaveBeenCalledWith('XYZ', 'indovinato-a-caso');
+    expect(mockCreateRoomSession).toHaveBeenCalledWith('XYZ', 'Host', 'guest');
+  });
+
+  it('chi dichiara il nome dell\'host CON il segreto giusto rientra come host', async () => {
+    mockJoinRoom.mockResolvedValue({ id: 'XYZ', members: [{ name: 'Host', role: 'host' }] });
+    mockVerificaSegretoHost.mockResolvedValue(true); // il vero host, segreto corretto
+    await handleJoin({ roomId: 'XYZ', name: 'Host', lang: 'en', hostSecret: 'il-segreto-vero' });
+    expect(mockCreateRoomSession).toHaveBeenCalledWith('XYZ', 'Host', 'host');
+  });
+
+  it('un guest normale non ha mai bisogno del segreto host (verificaSegretoHost non si chiama nemmeno)', async () => {
+    mockJoinRoom.mockResolvedValue({ id: 'XYZ', members: [{ name: 'Host', role: 'host' }, { name: 'Guest', role: 'guest' }] });
+    await handleJoin({ roomId: 'XYZ', name: 'Guest', lang: 'en' });
+    expect(mockVerificaSegretoHost).not.toHaveBeenCalled();
+    expect(mockCreateRoomSession).toHaveBeenCalledWith('XYZ', 'Guest', 'guest');
   });
 
   it('rejects without required fields', async () => {

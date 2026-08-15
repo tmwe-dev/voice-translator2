@@ -780,8 +780,23 @@ export default function useRoomPolling({
         throw new Error(errData.error || `${tFuori('serverErrorWord')} (${res.status})`);
       }
       const data = await res.json();
-      const { room, roomSessionToken: token } = data;
+      const { room, roomSessionToken: token, hostSecret } = data;
       if (token) roomSessionTokenRef.current = token;
+      // b.169 — l'unica occasione in cui il server manda questo segreto:
+      // si tiene qui, per poterlo ripresentare a `join` se si perde
+      // roomSessionTokenRef (vive solo in memoria) — ricarica pagina,
+      // nuovo dispositivo, "rientra" dall'elenco stanze lasciate a meta.
+      // Senza, si rientrerebbe sempre come guest anche essendo l'host.
+      if (hostSecret) {
+        try {
+          const mappa = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}');
+          mappa[room.id] = hostSecret;
+          // Tetto a 20 stanze: non deve crescere senza limite nel tempo.
+          const chiavi = Object.keys(mappa);
+          if (chiavi.length > 20) delete mappa[chiavi[0]];
+          localStorage.setItem('vt-host-secrets', JSON.stringify(mappa));
+        } catch { /* navigazione privata o memoria piena: si perde solo la comodita del rientro come host */ }
+      }
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
@@ -795,14 +810,24 @@ export default function useRoomPolling({
 
   async function handleJoinRoom(joinCode, name, lang, avatar) {
     if (!joinCode.trim()) return;
+    const rid = joinCode.trim().toUpperCase();
+    // b.169 — se questo browser ha creato la stanza (o vi e gia rientrato
+    // come host), il segreto e qui: si ripresenta per riprovare a
+    // rientrare come host. Se manca o non combacia piu, il server
+    // assegna guest — vedi verificaSegretoHost in roomActions.js.
+    let hostSecret = null;
+    try {
+      const mappa = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}');
+      hostSecret = mappa[rid] || null;
+    } catch { /* nessun segreto disponibile: si rientra come guest se non si e piu host */ }
     try {
       const res = await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'join',
-          roomId: joinCode.trim().toUpperCase(),
-          name, lang, avatar
+          roomId: rid,
+          name, lang, avatar, hostSecret
         })
       });
       if (!res.ok) {

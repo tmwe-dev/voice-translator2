@@ -27,6 +27,12 @@ const mockResolveRoomIdentity = vi.fn(async (token, name, roomId) => {
   return null;
 });
 
+// b.169 — creaSegretoHost e chiamata sempre da handleCreate (vedi
+// roomActions.js); verificaSegretoHost di default nega, coerente con
+// gli scenari qui sotto che non dichiarano mai un segreto.
+const mockCreaSegretoHost = vi.fn().mockResolvedValue('test-host-secret');
+const mockVerificaSegretoHost = vi.fn().mockResolvedValue(false);
+
 vi.mock('../../app/lib/store.js', () => ({
   createRoom: (...args) => mockCreateRoom(...args),
   getRoom: (...args) => mockGetRoom(...args),
@@ -37,6 +43,8 @@ vi.mock('../../app/lib/store.js', () => ({
   changeMemberLang: (...args) => mockChangeMemberLang(...args),
   createRoomSession: (...args) => mockCreateRoomSession(...args),
   resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
+  creaSegretoHost: (...args) => mockCreaSegretoHost(...args),
+  verificaSegretoHost: (...args) => mockVerificaSegretoHost(...args),
 }));
 
 // Mock validate

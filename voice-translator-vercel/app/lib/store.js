@@ -6,6 +6,7 @@ import { createLogger } from './logger.js';
 import { redis } from './redis.js';
 import { normalizzaCapienza, normalizzaTipoStanza } from './decisioni.js';
 import { randomUUID, randomBytes } from 'crypto';
+import { safeCompare } from './apiGuard.js';
 
 const log = createLogger('store');
 import {
@@ -58,6 +59,55 @@ export async function resolveRoomIdentity(token, name, roomId) {
     return { name: session.name, role: session.role, verified: true };
   }
   return null;
+}
+
+// b.169 — CONFERMATO (audit esterno 15/8, P0-3): chi (ri)entra in una
+// stanza con `join` dichiara solo il proprio NOME. Lo script Lua di
+// join aggiorna lingua/avatar del membro esistente ma non tocca mai il
+// suo `role` in room.members — e prima handleJoin, sotto, chiedeva a
+// `ruoloDi(room, name)` che ruolo dare al NUOVO gettone di sessione e
+// si fidava alla lettera: chiunque scrivesse lo stesso nome dell'host
+// (vedendolo scritto in stanza, per esempio) si ritrovava con un
+// gettone da host, senza aver mai dimostrato di essere la stessa
+// persona che aveva creato la stanza.
+//
+// Serve un rientro per l'host vero: se ricarica la pagina perde
+// roomSessionTokenRef (vive solo in memoria, non su disco) e l'unico
+// modo per tornare dentro e proprio `join` con il proprio nome — e lo
+// stesso vale per "rientra" dall'elenco delle stanze lasciate a meta
+// (rejoinRoom in page.js). Non si puo quindi vietare del tutto il
+// rientro come host via `join`: si puo pero smettere di fidarsi del
+// solo nome.
+//
+// Un secondo segreto, generato SOLO alla creazione della stanza e
+// restituito SOLO nella risposta di quella chiamata (mai dentro
+// l'oggetto `room`, che /api/room GET restituisce per intero a
+// chiunque sia dentro la stanza — mai leggibile dagli altri membri).
+// Chi lo presenta a `join` insieme al nome dell'host prova di essere
+// lo stesso browser che ha creato la stanza; chi non lo presenta (o lo
+// sbaglia) resta guest, anche scrivendo il nome giusto. Stessa idea
+// gia usata per la revoca in TaxiTalk (route.js, b.168): un secondo
+// segreto che non gira mai per i canali che tutti possono leggere.
+//
+// Effetto collaterale dichiarato: un host che perde il segreto (nuovo
+// dispositivo, cache svuotata) NON puo piu rientrare come host da
+// solo — diventa guest, come chiunque altro. E la stessa scelta che si
+// farebbe per qualsiasi credenziale persa: non e un difetto, e il
+// prezzo di chiudere davvero il buco.
+export async function creaSegretoHost(roomId) {
+  const secret = randomUUID();
+  // Stessa TTL della stanza (createRoom, sotto): non ha senso che il
+  // segreto sopravviva alla stanza a cui appartiene, ne che scada prima
+  // mentre la stanza e ancora viva (vedi il refresh in updateHeartbeat).
+  await redis('SET', `roomhost:${roomId.toUpperCase()}`, secret, 'EX', 3600);
+  return secret;
+}
+
+export async function verificaSegretoHost(roomId, secret) {
+  if (!secret || typeof secret !== 'string') return false;
+  const salvato = await redis('GET', `roomhost:${roomId.toUpperCase()}`);
+  if (!salvato) return false;
+  return safeCompare(secret, salvato);
 }
 
 // =============================================
@@ -141,6 +191,12 @@ export async function updateHeartbeat(roomId, memberName) {
   // This prevents race conditions where heartbeat overwrites a concurrent
   // joinRoom operation, effectively removing the guest from the room.
   await redis('EXPIRE', key, 3600);
+  // b.169 — il segreto host (creaSegretoHost, sopra) ha la stessa TTL
+  // iniziale della stanza: senza questo refresh scadrebbe un'ora dopo
+  // la creazione anche se la stanza (e l'host dentro) e ancora viva.
+  // EXPIRE su una chiave assente non fa nulla (nessun errore): innocuo
+  // per le stanze create prima di questa versione, che non ce l'hanno.
+  await redis('EXPIRE', `roomhost:${roomId.toUpperCase()}`, 3600);
   return room;
 }
 

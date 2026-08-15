@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking } from './store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost } from './store.js';
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 import { createLogger } from './logger.js';
@@ -63,11 +63,16 @@ export async function handleCreate({ name, lang, mode, avatar, context, contextP
     hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null
   );
   const { token } = await createRoomSession(room.id, name, 'host');
-  return NextResponse.json({ room, roomSessionToken: token });
+  // b.169 — vedi la nota su creaSegretoHost in store.js: e la sola
+  // occasione in cui questo segreto esce dal server. Il client lo tiene
+  // per se (localStorage) e lo ripresenta a `join` per rientrare come
+  // host dopo aver perso roomSessionTokenRef (che vive solo in memoria).
+  const hostSecret = await creaSegretoHost(room.id);
+  return NextResponse.json({ room, roomSessionToken: token, hostSecret });
 }
 
 // ── Action: join ──
-export async function handleJoin({ roomId, name, lang, avatar }) {
+export async function handleJoin({ roomId, name, lang, avatar, hostSecret }) {
   if (!roomId || !name || !lang) return NextResponse.json({ error: 'roomId, name, lang required' }, { status: 400 });
   avatar = avatar ? sanitize(avatar, MAXLEN_AVATAR) : avatar;
 
@@ -99,7 +104,21 @@ export async function handleJoin({ roomId, name, lang, avatar }) {
       { status: 409 }
     );
   }
-  const { token } = await createRoomSession(room.id, name, ruoloDi(room, name));
+  // b.169 — CONFERMATO (audit esterno 15/8, P0-3): qui si chiedeva a
+  // ruoloDi() che ruolo scrivere sul NUOVO gettone e ci si fidava alla
+  // lettera. Se `name` combacia con un membro segnato come host in
+  // room.members, ora serve ANCHE il segreto host (creaSegretoHost in
+  // store.js, dato solo a chi ha creato la stanza) per ottenere
+  // davvero il ruolo host sul nuovo gettone. Senza segreto valido si
+  // rientra come guest — anche scrivendo il nome giusto. Vedi la nota
+  // estesa su creaSegretoHost in store.js per il perche e per l'effetto
+  // collaterale dichiarato (host che perde il segreto non rientra piu
+  // come host da solo).
+  const ruoloRichiesto = ruoloDi(room, name);
+  const ruoloFinale = (ruoloRichiesto === 'host' && !(await verificaSegretoHost(roomId, hostSecret)))
+    ? 'guest'
+    : ruoloRichiesto;
+  const { token } = await createRoomSession(room.id, name, ruoloFinale);
   return NextResponse.json({ room, roomSessionToken: token });
 }
 

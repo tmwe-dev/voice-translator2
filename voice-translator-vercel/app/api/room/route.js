@@ -112,7 +112,13 @@ async function handlePostRoom(req) {
         });
 
       case 'join':
-        return handleJoin({ roomId, name, lang, avatar: body.avatar });
+        // b.169 — vedi la nota su verificaSegretoHost in roomActions.js:
+        // senza questo campo (o se sbagliato) chi dichiara il nome
+        // dell'host rientra come guest, non come host.
+        return handleJoin({
+          roomId, name, lang, avatar: body.avatar,
+          hostSecret: typeof body.hostSecret === 'string' ? body.hostSecret.slice(0, 100) : null,
+        });
 
       case 'heartbeat':
         return handleHeartbeat({ roomId, identity });
