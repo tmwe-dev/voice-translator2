@@ -310,7 +310,15 @@ async function handlePost(req) {
       try { await trackDailySpend(billingEmail, charge); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
     }
 
-    // ── Wallet: CONFERMA la riserva DOPO l'audio riuscito ──
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    // ── Wallet: CONFERMA la riserva DOPO aver letto l'audio per intero ──
+    // b.164-bis — CONFERMATO dall'utente: committare PRIMA di
+    // arrayBuffer() addebitava anche se lo stream HTTP si interrompeva
+    // DOPO il 200 OK — cliente addebitato, nessun audio consegnato. Ora,
+    // se la lettura fallisce, l'eccezione risale al catch esterno che
+    // rilascia la riserva (stesso ordine gia corretto nel ramo di
+    // fallback qui sopra, che legge il buffer prima del commit).
     let creditoEsaurito = false;
     if (riservaId) {
       await commit(riservaId, costoPrevisto, { tipo: 'voce_premium', caratteri: cleanText.length });
@@ -318,7 +326,6 @@ async function handlePost(req) {
       creditoEsaurito = await creditoFinito(pagante);
     }
 
-    const buffer = Buffer.from(await response.arrayBuffer());
     return new NextResponse(buffer, {
       headers: {
         'Content-Type': 'audio/mpeg',

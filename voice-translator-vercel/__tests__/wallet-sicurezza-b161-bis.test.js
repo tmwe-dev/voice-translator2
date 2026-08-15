@@ -277,6 +277,13 @@ describe('/api/tts-elevenlabs: RESERVE → PROVIDER → COMMIT/RELEASE esteso al
     const iCreditoFinito = src.indexOf('creditoEsaurito = await creditoFinito(pagante);', iCommit);
     expect(iCreditoFinito).toBeGreaterThan(iCommit);
   });
+
+  it('b.164-bis (CONFERMATO dall\'utente): nel percorso primario il commit avviene DOPO aver letto per intero il corpo audio, non prima — altrimenti uno stream interrotto dopo il 200 OK addebita senza consegnare nulla', () => {
+    const iBuffer = src.indexOf('const buffer = Buffer.from(await response.arrayBuffer());');
+    const iCommit = src.lastIndexOf('await commit(riservaId, costoPrevisto');
+    expect(iBuffer).toBeGreaterThan(-1);
+    expect(iCommit).toBeGreaterThan(iBuffer);
+  });
 });
 
 describe('/api/voice-clone: RESERVE → PROVIDER → COMMIT/RELEASE esteso alla clonazione voce (b.164, punto 2 della roadmap utente dopo b.163)', () => {
@@ -313,5 +320,20 @@ describe('/api/voice-clone: RESERVE → PROVIDER → COMMIT/RELEASE esteso alla 
 
   it('la rete di sicurezza nel catch esterno di handlePost rilascia una riserva ancora attiva per qualunque errore imprevisto', () => {
     expect(src).toContain("if (riservaId) await release(riservaId, 'errore_imprevisto').catch(() => {});");
+  });
+
+  it('b.164-bis (CONFERMATO dall\'utente): il commit avviene PRIMA di salvare il record utente, cosi un updateUser fallito non rilascia un costo provider gia sostenuto', () => {
+    const iCommit = src.indexOf('await commit(riservaId, COSTO_CLONAZIONE_SECONDI');
+    const iUpdateUser = src.indexOf('await updateUser(session.email, {');
+    expect(iCommit).toBeGreaterThan(-1);
+    expect(iUpdateUser).toBeGreaterThan(iCommit);
+  });
+
+  it('il salvataggio utente dopo il commit ha un try/catch proprio, cosi un suo fallimento non risale al catch esterno che rilascerebbe un addebito ormai reale', () => {
+    const iUpdateUser = src.indexOf('await updateUser(session.email, {');
+    const blocco = src.slice(Math.max(0, iUpdateUser - 200), iUpdateUser + 300);
+    expect(blocco).toContain('try {');
+    expect(blocco).toContain('catch (e) {');
+    expect(blocco).toContain('BONIFICA MANUALE');
   });
 });

@@ -151,17 +151,33 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'No voice_id returned from ElevenLabs' }, { status: 500 });
     }
 
-    // Save to user record
-    await updateUser(session.email, {
-      clonedVoiceId: voiceId,
-      clonedVoiceName: voiceName,
-      clonedVoiceAt: Date.now()
-    });
-
-    // ── Wallet: CONFERMA la riserva DOPO la clonazione riuscita ──
+    // ── Wallet: CONFERMA la riserva SUBITO dopo il voice_id valido ──
+    // b.164-bis — CONFERMATO dall'utente: l'ordine precedente (salva
+    // utente POI commit) faceva RILASCIARE un costo provider gia
+    // realmente sostenuto se updateUser falliva (il catch esterno
+    // vedeva ancora riservaId valorizzato) — BarTalk pagava ElevenLabs
+    // per una voce clonata mai fatturata al cliente. Da qui in poi il
+    // costo e reale e va confermato, che la scrittura locale funzioni
+    // o no.
     if (riservaId) {
       await commit(riservaId, COSTO_CLONAZIONE_SECONDI, { tipo: 'clonazione_voce' });
       riservaId = null;
+    }
+
+    // Save to user record — un fallimento qui NON deve piu risalire al
+    // catch esterno: l'addebito sopra e gia confermato sul costo REALE,
+    // rilasciarlo lascerebbe BarTalk a pagare ElevenLabs per un
+    // servizio consegnato e mai fatturato. Si logga per bonifica
+    // manuale (voiceId noto e recuperabile lato ElevenLabs); il
+    // cliente riceve comunque voiceId, perche la voce esiste davvero.
+    try {
+      await updateUser(session.email, {
+        clonedVoiceId: voiceId,
+        clonedVoiceName: voiceName,
+        clonedVoiceAt: Date.now()
+      });
+    } catch (e) {
+      log.error('BONIFICA MANUALE — voce clonata e addebitata ma salvataggio utente fallito:', session.email, voiceId, e?.message);
     }
 
     return NextResponse.json({
