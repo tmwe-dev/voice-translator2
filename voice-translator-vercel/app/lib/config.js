@@ -46,6 +46,7 @@ export const MIN_CREDITS = {
   TTS_OPENAI: 0.3,   // OpenAI TTS
   TTS_ELEVENLABS: 6,  // ElevenLabs TTS (premium, ~4x cost → priced for 75% margin)
   SUMMARY: 0.5,      // conversation summary
+  CHAT_ACTION: 1.0,  // b.159 — azioni chat (max 2000 token, ~2.5x il riassunto)
 };
 
 // =============================================
@@ -58,6 +59,7 @@ export const MIN_CHARGE = {
   TTS_OPENAI: 0.3,
   TTS_ELEVENLABS: 5,  // ElevenLabs: real cost ~1.4¢/msg → charge 5¢ for 75% margin
   SUMMARY: 0.5,
+  CHAT_ACTION: 1.0,  // b.159 — vedi MIN_CREDITS.CHAT_ACTION
 };
 
 // =============================================

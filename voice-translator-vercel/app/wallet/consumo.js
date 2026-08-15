@@ -56,3 +56,15 @@ export function costoElevenLabsCaratteri(caratteri) {
 export function costoRiassunto() {
   return 10;
 }
+
+/**
+ * b.159 — CONFERMATO: le "5 azioni chat" (/api/chat-action — riassunto,
+ * report, analisi, consiglio, vocabolario) chiamavano un vero GPT-4o-mini
+ * fino a 2000 token di risposta (vedi chatActions.js) senza NESSUN
+ * addebito: resolveAuth autorizzava, ma nessuna funzione addebita*
+ * veniva mai chiamata. Costo fisso proporzionato al budget di token:
+ * 2.5x quello del riassunto di fine conversazione (10s, max 800 token).
+ */
+export function costoAzioneChat() {
+  return 25;
+}

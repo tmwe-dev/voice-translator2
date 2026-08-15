@@ -60,8 +60,11 @@ describe('rotte a pagamento: il tracking non e piu condizionato solo a billingEm
     const i = src.indexOf('bgTasks.push(trackDailySpend(billingEmail');
     expect(i).toBeGreaterThan(-1);
     const prima = src.slice(Math.max(0, i - 200), i);
-    expect(prima).toMatch(/if\s*\(!isOwnKey\s*&&\s*!isReview\)/);
-    expect(prima).not.toMatch(/if\s*\(billingEmail\s*&&\s*!isOwnKey\s*&&\s*!isReview\)/);
+    // b.159 — la guardia qui era `!isOwnKey && !isReview`: da b.159
+    // isReview non ha piu voce in capitolo sui soldi (vedi il file
+    // wallet-sicurezza-b159.test.js), quindi resta solo `!isOwnKey`.
+    expect(prima).toMatch(/if\s*\(!isOwnKey\)\s*\{/);
+    expect(prima).not.toMatch(/if\s*\(billingEmail\s*&&\s*!isOwnKey\)/);
   });
 
   it('tts: l\'addebito personale resta condizionato a billingEmail, il tracking no', () => {

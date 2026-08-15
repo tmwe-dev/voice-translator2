@@ -105,13 +105,21 @@ async function handlePost(req) {
       : modelInfo.provider === 'gemini' ? 'gemini' : 'openai';
 
     // 3-tier auth: userToken → lendingCode → roomId → reject
-    const { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
+    // b.159 — CONFERMATO (audit b.158, punto indipendente): `isReview` e'
+    // un booleano che arriva intatto dal client (vedi schemas.js,
+    // `isReview: !!body.isReview`) senza nessuna verifica lato server,
+    // a differenza di `giaAddebitato` che da b.107 e' stato tolto dal
+    // client proprio per questa ragione. Usarlo per saltare il controllo
+    // credito voleva dire: basta mandare `isReview: true` per tradurre
+    // gratis a vita, credito a zero compreso. Tolto da qui: resta solo
+    // l'uso legittimo in translatePrompt.js (rifinisce il testo del
+    // prompt, non tocca mai i soldi).
+    let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
       userToken,
       roomId,
       lendingCode: lendingCode || undefined,
       provider: authProvider,
       minCredits: MIN_CREDITS.TRANSLATE,
-      skipCreditCheck: !!isReview,
     });
 
     // ── b.123 · CHI PAGA SI DECIDE PRIMA DI SCEGLIERE IL FORNITORE ──
@@ -207,6 +215,18 @@ async function handlePost(req) {
       ({ translated, usage, wasFallback } = await callLLMWithFallback(primaryOpts, fallbacks, 10000));
     }
 
+    // b.159 — CONFERMATO (audit b.158, punto 10): se il fornitore scelto
+    // ha fallito ed e' scattato il fallback, la chiamata reale e' partita
+    // con una chiave di PIATTAFORMA (vedi llmCaller.js: ogni fallback usa
+    // process.env.*_API_KEY), non piu con la chiave dell'utente. `isOwnKey`
+    // pero restava quello calcolato da resolveAuth prima del fallback: se
+    // l'utente aveva la propria chiave, tutti i controlli di addebito piu
+    // sotto (righe con `!isOwnKey`) vedevano isOwnKey=true e saltavano
+    // l'addebito — una chiamata pagata dalla piattaforma, mai contata.
+    if (wasFallback && isOwnKey) {
+      isOwnKey = false;
+    }
+
     // FASE 9: Validate LLM output — detect garbage, wrong script, meta-text
     const validation = validateOutput(text, translated, targetLang);
     if (!validation.valid) {
@@ -291,7 +311,7 @@ async function handlePost(req) {
     // Ora /api/transcribe lascia una ricevuta legata a chi paga e al testo
     // trascritto, e qui la si strappa: vale una volta sola.
     let giaPagatoDavvero = false;
-    if (billingEmail && !isOwnKey && !isReview) {
+    if (billingEmail && !isOwnKey) {
       try {
         const { strappaRicevutaVoce } = await import('../../lib/ricevute.js');
         giaPagatoDavvero = await strappaRicevutaVoce(billingEmail, text);
@@ -299,7 +319,7 @@ async function handlePost(req) {
     }
 
     let creditoEsaurito = false;
-    if (billingEmail && !isOwnKey && !isReview && !giaPagatoDavvero) {
+    if (billingEmail && !isOwnKey && !giaPagatoDavvero) {
       const esito = await addebitaTesto(billingEmail, text.length);
       creditoEsaurito = esito === 'esaurito';
     }
@@ -322,7 +342,7 @@ async function handlePost(req) {
     // tetto di €100/giorno per la piattaforma non le vedeva mai. Ora si
     // traccia sempre (billingEmail null aggiorna solo il contatore
     // aggregato, vedi trackDailySpend in apiAuth.js).
-    if (!isOwnKey && !isReview) {
+    if (!isOwnKey) {
       bgTasks.push(trackDailySpend(billingEmail, Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents)).catch(() => {}));
     }
     if (isLending && lendingCodeUsed) {

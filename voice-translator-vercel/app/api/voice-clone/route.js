@@ -5,6 +5,7 @@ import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoInsufficientePerClonazione, addebitaClonazione } from '../../wallet/addebita.js';
 import { COSTO_CLONAZIONE_SECONDI } from '../../wallet/tariffe.js';
+import { TESTING_MODE } from '../../lib/config.js';
 
 const log = createLogger('voiceClone');
 
@@ -59,7 +60,12 @@ async function handlePost(req) {
     }
 
     // TESTING_MODE: skip il controllo del credito
-    const testingMode = process.env.TESTING_MODE === 'true';
+    // b.159 — CONFERMATO (audit b.158, punto 13): leggeva la variabile
+    // d'ambiente grezza invece della costante blindata di config.js, che
+    // in produzione (VERCEL_ENV==='production') resta SEMPRE false anche
+    // se TESTING_MODE=true finisse per sbaglio nelle env di prod. Con la
+    // lettura diretta, quella rete di sicurezza non copriva questa rotta.
+    const testingMode = TESTING_MODE;
 
     // Resolve ElevenLabs API key
     let apiKey = process.env.ELEVENLABS_API_KEY;

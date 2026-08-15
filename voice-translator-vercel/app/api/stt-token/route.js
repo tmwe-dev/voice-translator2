@@ -46,14 +46,25 @@ const log = createLogger('sttToken');
 // architetturali, non un difetto da correggere qui.
 // ═══════════════════════════════════════════════
 
+// b.159 — CONFERMATO: se userToken era presente ma getSession falliva
+// (token scaduto/falso), la funzione precedente cadeva silenziosamente
+// al ramo successivo (roomId, poi null) invece di respingere — un
+// gettone invalido finiva trattato come "nessun gettone", e il gate
+// del wallet subito sotto (billingEmail && creditoFinito) diventava un
+// no-op perche billingEmail restava null: chiave Deepgram vera, gratis,
+// a chiunque mandasse un gettone qualsiasi (anche scaduto o inventato).
+// Ora un gettone/stanza PRESENTE ma non risolvibile e' un 401, non un
+// fallthrough verso l'anonimato.
 async function risolviEmailDaFatturare(userToken, roomId) {
   if (userToken) {
     const session = await getSession(userToken);
     if (session?.email) return session.email;
+    return { invalido: true };
   }
   if (roomId) {
     const room = await getRoom(roomId);
     if (room?.hostEmail) return room.hostEmail;
+    return { invalido: true };
   }
   return null;
 }
@@ -81,7 +92,11 @@ async function handler(req) {
   }
 
   // ── Wallet: chi paga? (stesso fail-closed della voce premium — vedi nota sopra) ──
-  const billingEmail = await risolviEmailDaFatturare(userToken, roomId);
+  const risoltoFatturazione = await risolviEmailDaFatturare(userToken, roomId);
+  if (risoltoFatturazione?.invalido) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+  const billingEmail = risoltoFatturazione;
   if (billingEmail && await creditoFinito(billingEmail, { failClosed: true })) {
     return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
   }

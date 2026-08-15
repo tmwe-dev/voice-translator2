@@ -7,7 +7,8 @@ import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { addebitaRiassunto } from '../../wallet/addebita.js';
+import { addebitaRiassunto, creditoFinito, creditoInsufficiente } from '../../wallet/addebita.js';
+import { costoRiassunto } from '../../wallet/consumo.js';
 
 const log = createLogger('summary');
 
@@ -80,6 +81,21 @@ async function handlePost(req) {
     // If summary already exists, return it (no cost)
     if (conv.summary) {
       return NextResponse.json({ summary: conv.summary });
+    }
+
+    // b.159 — CONFERMATO (audit b.158, punto 7): qui non esisteva NESSUN
+    // controllo del credito prima di chiamare OpenAI (a differenza di
+    // tts-elevenlabs, che e il riferimento corretto): l'addebito partiva
+    // dopo, il suo esito ('esaurito' compreso) veniva ignorato, e il
+    // riassunto veniva restituito comunque. Un wallet a zero non
+    // fermava niente: pagava solo la piattaforma.
+    if (billingEmail && !isOwnKey) {
+      if (await creditoFinito(billingEmail, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
+      }
+      if (await creditoInsufficiente(billingEmail, costoRiassunto(), { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
+      }
     }
 
     const openai = new OpenAI({ apiKey });

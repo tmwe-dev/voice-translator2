@@ -15,7 +15,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { saldo, scalaSeDisponibile } from './contabilita.js';
-import { costoConversazione, costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto } from './consumo.js';
+import { costoConversazione, costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto, costoAzioneChat } from './consumo.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from './provider-costi.js';
 import { COSTO_CLONAZIONE_SECONDI } from './tariffe.js';
 
@@ -137,6 +137,18 @@ export async function addebitaTesto(utente, caratteri) {
 export async function addebitaRiassunto(utente) {
   if (!utente) return 'saltato';
   return scala(utente, costoRiassunto(), { tipo: 'riassunto', costo_cent: 0.05 });
+}
+
+/**
+ * b.159 — Azione chat AI (riassunto/report/analisi/consiglio/vocabolario
+ * generati da /api/chat-action, fino a 2000 token di risposta). Prima
+ * NON esisteva nessun addebito per questa rotta: costo fisso, come per
+ * addebitaRiassunto.
+ * @returns {'ok'|'esaurito'|'saltato'}
+ */
+export async function addebitaAzioneChat(utente) {
+  if (!utente) return 'saltato';
+  return scala(utente, costoAzioneChat(), { tipo: 'azione_chat', costo_cent: 0.12 });
 }
 
 /**

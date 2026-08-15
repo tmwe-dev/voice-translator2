@@ -109,7 +109,19 @@ export async function resolveAuth({
         // ── Credito: l'UNICA verità è il wallet (ledger Supabase) ──
         // Il vecchio user.credits (Redis, centesimi) non decide più nulla:
         // chi compra/riceve secondi nel wallet può usare il servizio.
-        if (!isOwnKey && !user.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
+        //
+        // b.159 — CONFERMATO (audit b.158, punto 9): la condizione aveva
+        // ANCHE `&& !user.useOwnKeys`. Se l'utente aveva useOwnKeys=true
+        // ma la chiave vera mancava (mai salvata, cancellata, vault
+        // rotto), `isOwnKey` restava false e `apiKey` ripiegava sulla
+        // chiave di PIATTAFORMA (vedi `defaultKey` in cima) — ma
+        // `!user.useOwnKeys` era false, quindi l'intera condizione era
+        // false e il controllo saltava del tutto: chiave di piattaforma
+        // usata, nessun controllo credito, per chiunque avesse attivato
+        // "usa la tua chiave" senza (piu) averne una valida. Cio che
+        // conta e' quale chiave viene DAVVERO usata (isOwnKey), non la
+        // preferenza dichiarata.
+        if (!isOwnKey && !skipCreditCheck && await creditoFinito(billingEmail)) {
           throw NextResponse.json({ error: ERRORS.NO_CREDITS }, { status: 402 });
         }
       }
@@ -145,7 +157,10 @@ export async function resolveAuth({
         }
       }
       // Credito del prestatore: decide il wallet
-      if (!isOwnKey && !lenderUser.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
+      // b.159 — stesso difetto e stessa correzione del percorso userToken
+      // qui sopra: conta la chiave REALMENTE usata (isOwnKey), non
+      // lenderUser.useOwnKeys.
+      if (!isOwnKey && !skipCreditCheck && await creditoFinito(billingEmail)) {
         throw NextResponse.json({ error: 'Lender has insufficient credits' }, { status: 402 });
       }
     }
@@ -192,7 +207,10 @@ export async function resolveAuth({
           }
         }
         // Credito dell'host (regola inviti: paga chi apre): decide il wallet
-        if (!isOwnKey && !hostUser.useOwnKeys && !skipCreditCheck && await creditoFinito(billingEmail)) {
+        // b.159 — stesso difetto e stessa correzione del percorso userToken
+        // qui sopra: conta la chiave REALMENTE usata (isOwnKey), non
+        // hostUser.useOwnKeys.
+        if (!isOwnKey && !skipCreditCheck && await creditoFinito(billingEmail)) {
           throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
         }
       }

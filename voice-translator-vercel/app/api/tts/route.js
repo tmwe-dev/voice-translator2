@@ -77,6 +77,20 @@ async function handlePost(req) {
     const openai = new OpenAI({ apiKey });
     const lang2 = (langCode || '').replace(/-.*/, '');
 
+    // b.159 — addebito comune, chiamato SOLO dopo un audio davvero
+    // ottenuto (ne CosyVoice ne OpenAI pagano in anticipo: se il
+    // fornitore fallisce non si scala niente).
+    async function addebitaTTS() {
+      if (isOwnKey) return;
+      const ttsCostUsd = calcTtsCost(text.length);
+      const ttsCostEurCents = usdToEurCents(ttsCostUsd);
+      const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
+      if (billingEmail) {
+        try { await addebitaTesto(billingEmail, text.length); } catch (e) { log.error('TTS wallet deduct error:', e); }
+      }
+      trackDailySpend(billingEmail, charge).catch(() => {});
+    }
+
     // ── TTS Router: check if a better engine is available for this language ──
     const ttsRoute = routeTTS(lang2, { hasElevenLabs: false, hasOpenAI: true });
     if (ttsRoute.engine === 'cosyvoice') {
@@ -84,6 +98,12 @@ async function handlePost(req) {
         const { ttsCosyVoice } = await import('../../lib/ttsAsia.js');
         const cosyResult = await ttsCosyVoice(text, langCode, {});
         if (cosyResult?.audio) {
+          // b.159 — CONFERMATO: questo ramo rispondeva con l'audio e
+          // usciva con un `return` PRIMA del blocco di addebito piu
+          // sotto (pensato solo per il ramo OpenAI): ogni TTS instradato
+          // su CosyVoice (lingue asiatiche) costava a DashScope ed era
+          // gratis per chi lo riceveva, saldo wallet incluso.
+          await addebitaTTS();
           const audioBuffer = Buffer.from(cosyResult.audio);
           return new NextResponse(audioBuffer, {
             headers: {
@@ -107,29 +127,15 @@ async function handlePost(req) {
     const cleanText = preprocessForTTS(text, lang2);
     const speed = getOpenAISpeedForLang(lang2);
 
-    // Deduct cost upfront (before streaming)
-    const ttsCostUsd = calcTtsCost(text.length);
-    const ttsCostEurCents = usdToEurCents(ttsCostUsd);
-    // b.157 — audit pagamenti: CONFERMATO, questa rotta non addebitava
-    // MAI il wallet vero. resolveAuth (sopra) autorizza gia leggendo
-    // SOLO il wallet (creditoFinito), ma l'unico addebito qui era sul
-    // vecchio user.credits (Redis) — un campo che l'autorizzazione non
-    // legge piu da quando il wallet e diventato "l'unica verita"
-    // (apiAuth.js). Risultato pratico: bastava un solo centesimo nel
-    // wallet per sbloccare il controllo, e da li in poi il TTS diretto
-    // (non quello dentro una traduzione, che invece passa da
-    // addebitaTesto in /api/translate) era illimitato e gratis — il
-    // saldo mostrato in CreditsView non si muoveva mai. Ora addebita
-    // davvero, con lo stesso conto caratteri->secondi di ogni altro
-    // messaggio vocale.
-    if (!isOwnKey) {
-      const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
-      if (billingEmail) {
-        try { await addebitaTesto(billingEmail, text.length); } catch (e) { log.error('TTS wallet deduct error:', e); }
-      }
-      trackDailySpend(billingEmail, charge).catch(() => {});
-    }
-
+    // b.157/b.159 — audit pagamenti: CONFERMATO, questa rotta non
+    // addebitava MAI il wallet vero (l'unico addebito era sul vecchio
+    // user.credits Redis, morto — corretto in b.157). b.159 ha poi
+    // CONFERMATO un secondo difetto nello stesso punto: l'addebito
+    // partiva PRIMA della chiamata a OpenAI, non dopo — se
+    // `openai.audio.speech.create` falliva (errore del fornitore, rete,
+    // timeout), il cliente aveva gia pagato per un audio mai ricevuto.
+    // Ora si addebita solo dopo una risposta ottenuta davvero, come per
+    // il ramo CosyVoice qui sopra.
     const response = await openai.audio.speech.create({
       model: 'gpt-4o-mini-tts',
       voice: selectedVoice,
@@ -138,6 +144,7 @@ async function handlePost(req) {
       response_format: 'mp3',
       speed,
     });
+    await addebitaTTS();
 
     // ── Try true streaming first, fallback to buffer ──
     if (wantStream && response.body) {

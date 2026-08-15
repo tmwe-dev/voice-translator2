@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
+import { TESTING_MODE } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('glossary');
@@ -34,7 +35,11 @@ async function handlePost(req) {
     const userId = profile.id;
 
     // Check tier (free users can't use glossaries) — skip in TESTING_MODE
-    const testingMode = process.env.TESTING_MODE === 'true';
+    // b.159 — CONFERMATO: stesso difetto di voice-clone/route.js (audit
+    // b.158, punto 13, esteso qui — l'audit citava solo voice-clone ma
+    // la stessa lettura grezza c'era identica anche qui). Ora usa la
+    // costante blindata di config.js.
+    const testingMode = TESTING_MODE;
     if (!testingMode && profile.tier === 'free' && action !== 'list') {
       return NextResponse.json({ error: 'Glossaries require Pro or Business plan' }, { status: 403 });
     }

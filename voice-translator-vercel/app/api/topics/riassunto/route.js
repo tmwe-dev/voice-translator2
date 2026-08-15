@@ -29,7 +29,8 @@ import { trackDailySpend } from '../../../lib/apiAuth.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { normalizzaQuery } from '../../../lib/topics/servizio.js';
-import { addebitaRiassunto } from '../../../wallet/addebita.js';
+import { addebitaRiassunto, creditoFinito, creditoInsufficiente } from '../../../wallet/addebita.js';
+import { costoRiassunto } from '../../../wallet/consumo.js';
 
 const log = createLogger('topics-riassunto');
 
@@ -76,6 +77,18 @@ async function handlePost(req) {
     ...(Array.isArray(fonti) ? fonti.slice(0, 6).map(f =>
       `FONTE ${String(f.fonte || '').slice(0, 60)}: ${String(f.titolo || '').slice(0, 200)}`) : []),
   ].filter(Boolean).join('\n');
+
+  // b.159 — CONFERMATO (audit b.158, punto 7): stesso buco di
+  // /api/summary, stessa correzione — gate prima della chiamata,
+  // niente sintesi gratis quando il wallet e a zero.
+  if (billingEmail && !isOwnKey) {
+    if (await creditoFinito(billingEmail, { failClosed: true })) {
+      return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
+    }
+    if (await creditoInsufficiente(billingEmail, costoRiassunto(), { failClosed: true })) {
+      return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
+    }
+  }
 
   const openai = new OpenAI({ apiKey });
   const completion = await openai.chat.completions.create({

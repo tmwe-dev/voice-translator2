@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { resolveAuth } from '../../lib/apiAuth.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { buildCompactTranscript, getActionPrompt, isCJKConversation } from '../../lib/chatActions.js';
 import { callLLM } from '../../lib/llmCaller.js';
+import { creditoFinito, creditoInsufficiente, addebitaAzioneChat } from '../../wallet/addebita.js';
+import { costoAzioneChat } from '../../wallet/consumo.js';
+import { MIN_CHARGE, MIN_CREDITS } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 
@@ -53,12 +56,29 @@ async function handlePost(request) {
       userToken,
       lendingCode,
       provider: 'openai',
-      minCredits: 0.5,
+      minCredits: MIN_CREDITS.CHAT_ACTION,
       skipCreditCheck: false,
     });
 
     if (!auth?.apiKey) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    // b.159 — CONFERMATO: questa rotta autorizzava (resolveAuth) ma non
+    // addebitava mai nessuno. resolveAuth controlla solo che il credito
+    // NON SIA GIA a zero al momento dell'accesso: qui, come per
+    // tts-elevenlabs, si aggiunge il vero controllo pre-spesa (il costo
+    // fisso dell'azione non deve superare il credito residuo) PRIMA di
+    // pagare la chiamata GPT, poi si addebita dopo il successo.
+    const pagante = !auth.isOwnKey ? auth.billingEmail : null;
+    if (pagante) {
+      const costoPrevisto = costoAzioneChat();
+      if (await creditoFinito(pagante, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
+      }
+      if (await creditoInsufficiente(pagante, costoPrevisto, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
+      }
     }
 
     // Build transcript and prompt
@@ -105,6 +125,14 @@ async function handlePost(request) {
         maxTokens: 2000,
       });
       provider = 'openai';
+    }
+
+    // b.159 — addebito DOPO il successo della chiamata (mai prima: se
+    // GPT fallisce non si paga niente), come da schema gia usato in
+    // tts-elevenlabs. `pagante` e null per chi usa la propria chiave.
+    if (pagante) {
+      await addebitaAzioneChat(pagante);
+      trackDailySpend(pagante, MIN_CHARGE.CHAT_ACTION).catch(() => {});
     }
 
     return NextResponse.json({

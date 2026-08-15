@@ -130,17 +130,45 @@ async function handlePost(req) {
     }
 
     // ── Cancel ──
+    // b.159 — CONFERMATO leggendo il database live (Supabase progetto
+    // myctvixqhfdbgphqxtlp): la tabella `public.profiles` NON esiste in
+    // produzione (le migrazioni 001-003 che la creano non risultano fra
+    // quelle applicate — l'unico schema live e quello del wallet). Con
+    // la versione precedente, `verifiedUserId` restava sempre null
+    // (riga sopra, lookup su profiles fallisce) e questa azione
+    // rispondeva sempre 400 "No Supabase profile found": un cliente con
+    // un abbonamento legacy ANCORA ATTIVO — l'unica azione lasciata
+    // apposta accesa "perche chi avesse gia un abbonamento legacy deve
+    // poter smettere di pagare" (vedi commento in cima al file) — non
+    // poteva disdire. Soldi veri, addebitati ogni mese, senza modo di
+    // fermarli dall'app.
+    //
+    // Non è possibile correggere questo cercando ANCORA in `profiles`
+    // (non esiste): la ricerca dell'abbonamento passa direttamente da
+    // Stripe, per email di sessione verificata — nessuna scrittura di
+    // schema, nessuna decisione di prodotto, stessa email che avrebbe
+    // aperto l'abbonamento in origine.
     if (action === 'cancel') {
-      if (!verifiedUserId) return NextResponse.json({ error: 'No Supabase profile found' }, { status: 400 });
-      if (sb) {
-        const { data: profile } = await sb.from('profiles').select('stripe_subscription_id').eq('id', verifiedUserId).single();
-        if (profile?.stripe_subscription_id) {
-          await getStripe().subscriptions.update(profile.stripe_subscription_id, { cancel_at_period_end: true });
-          await sb.from('profiles').update({ subscription_status: 'canceled' }).eq('id', verifiedUserId);
-          return NextResponse.json({ ok: true, message: 'Subscription will end at period end' });
+      const customers = await getStripe().customers.list({ email: verifiedEmail, limit: 5 });
+      const customerIds = customers.data.map(c => c.id);
+      if (!customerIds.length) {
+        return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
+      }
+      const canceled = [];
+      for (const customerId of customerIds) {
+        const subs = await getStripe().subscriptions.list({ customer: customerId, status: 'active', limit: 10 });
+        for (const s of subs.data) {
+          await getStripe().subscriptions.update(s.id, { cancel_at_period_end: true });
+          canceled.push(s.id);
         }
       }
-      return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
+      if (!canceled.length) {
+        return NextResponse.json({ error: 'No active subscription' }, { status: 400 });
+      }
+      // Se profiles esistesse si aggiornerebbe qui il subscription_status:
+      // non e' piu il caso (vedi nota sopra) — Stripe resta l'unica
+      // fonte di verita per questa azione.
+      return NextResponse.json({ ok: true, message: 'Subscription will end at period end', canceled });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

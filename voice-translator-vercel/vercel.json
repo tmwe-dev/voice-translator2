@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/wallet/snapshot",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

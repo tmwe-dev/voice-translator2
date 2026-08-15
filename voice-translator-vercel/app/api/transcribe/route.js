@@ -4,8 +4,8 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { writeFile, unlink } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { join } from 'path';
-import { resolveAuth } from '../../lib/apiAuth.js';
-import { MIN_CREDITS } from '../../lib/config.js';
+import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoFinito, addebitaVoce } from '../../wallet/addebita.js';
@@ -95,9 +95,29 @@ async function handlePost(req) {
     const original = (transcription.text || '').trim();
 
     // ── Wallet: addebito DOPO il lavoro riuscito (mai per un errore) ──
-    // Durata dal client; se manca, stima prudente dal peso dell'audio (~4KB/s opus).
-    const secondi = durataSec || Math.min(120, buffer.length / 4000);
+    // Durata dal client; stima dal peso dell'audio (~4KB/s opus) come
+    // PAVIMENTO, non solo come ripiego quando la durata manca.
+    //
+    // b.159 — CONFERMATO (audit b.158, punto 11): con `durataSec ||
+    // stima`, un client che dichiarava una durata qualsiasi (anche
+    // 0.1s, purche diversa da zero) faceva SEMPRE vincere il suo numero
+    // sulla stima dal peso reale dell'audio — un file di 2 minuti
+    // dichiarato "0.1s" veniva addebitato per 0.1s. Ora si prende il
+    // massimo fra i due: la durata dichiarata non puo mai scendere
+    // sotto quello che l'audio pesa davvero.
+    const stimaDalPeso = Math.min(120, buffer.length / 4000);
+    const secondi = Math.max(durataSec, stimaDalPeso);
     const esito = await addebitaVoce(pagante, secondi);
+
+    // b.159 — CONFERMATO: questa rotta non chiamava MAI trackDailySpend,
+    // quindi il costo Whisper/STT non contava mai per il tetto di
+    // spesa GIORNALIERO di piattaforma (€100/giorno) — a differenza di
+    // ogni altra rotta a pagamento (translate, tts, tts-elevenlabs...).
+    if (!isOwnKey) {
+      const costoUsd = calcWhisperCost(buffer.length);
+      const costoEurCents = usdToEurCents(costoUsd);
+      trackDailySpend(billingEmail, Math.max(MIN_CHARGE.PROCESS, costoEurCents)).catch(() => {});
+    }
 
     // ── b.107 · la ricevuta che sostituisce la parola del client ──
     // La traduzione che segue questa trascrizione non va riaddebitata: e
