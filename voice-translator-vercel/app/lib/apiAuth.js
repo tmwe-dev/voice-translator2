@@ -91,7 +91,22 @@ export async function resolveAuth({
     {
       billingEmail = session.email;
       const user = await getUser(billingEmail);
-      if (user) {
+      // b.168 — CONFERMATO (audit esterno 15/8): una sessione VALIDA il
+      // cui utente non esiste piu (account cancellato, incoerenza fra
+      // Redis e Supabase) cadeva qui senza mai entrare nell'`if (user)`
+      // sotto — che e anche l'UNICO posto dove sta il controllo credito.
+      // Il risultato: `apiKey` restava la chiave di PIATTAFORMA (il
+      // default in cima alla funzione), `isOwnKey` restava false, e la
+      // funzione tornava normalmente senza throw — uso gratuito, senza
+      // limite, della chiave a pagamento della piattaforma, per chiunque
+      // avesse un gettone di sessione che punta a un utente sparito.
+      // Stessa classe di difetto gia chiusa in b.154 per il token
+      // invalido: un gettone che dichiara un'identita che non risolve a
+      // un account vero non e "nessuno", e un accesso da rifiutare.
+      if (!user) {
+        throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
+      }
+      {
         const ownKey = user.useOwnKeys && user.apiKeys?.[provider];
         if (ownKey) {
           apiKey = ownKey;

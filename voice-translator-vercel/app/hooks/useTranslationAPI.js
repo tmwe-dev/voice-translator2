@@ -351,9 +351,14 @@ export default function useTranslationAPI({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text, sourceLang, targetLang, userEmail: userEmail || undefined,
+            text, sourceLang, targetLang,
             roomId,
             roomSessionToken: roomSessionTokenRef?.current || undefined,
+            // b.168 — l'email non si dichiara piu: il server la ricava da
+            // un token di sessione verificato (se presente). Senza account
+            // (il caso normale qui, e' il percorso "prova gratis") resta
+            // semplicemente assente, come sempre.
+            userToken: getEffectiveToken(),
           })
         });
         if (!res.ok) return { translated: text };
@@ -368,7 +373,6 @@ export default function useTranslationAPI({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text, sourceLang, targetLang,
-          userEmail: userEmail || undefined,
           superfast: translationMode === 'superfast' ? true : undefined,
           userProviderPrefs: translationProviders,
           // b.167 — senza questi il server non puo chiedere alla stanza se
@@ -376,6 +380,8 @@ export default function useTranslationAPI({
           // punto dell'audit del 14/8, stessa correzione.
           roomId,
           roomSessionToken: roomSessionTokenRef?.current || undefined,
+          // b.168 — vedi la nota sopra sulla chiamata a translate-consensus.
+          userToken: getEffectiveToken(),
         })
       });
       if (!res.ok) return { translated: text };
@@ -459,7 +465,10 @@ export default function useTranslationAPI({
     }
 
     return result;
-  }, [roomId, roomSessionTokenRef, isTrialRef, freeCharsRef, prefsRef, getEffectiveToken, trackFreeChars, userEmail]);
+  // b.168 — userEmail non e piu usato qui dentro (l'email va verificata
+  // dal server via userToken, non dichiarata): tolto dalle dipendenze,
+  // il parametro resta nella firma per compatibilita con chi la chiama.
+  }, [roomId, roomSessionTokenRef, isTrialRef, freeCharsRef, prefsRef, getEffectiveToken, trackFreeChars]);
 
   /**
    * Get primary target language info (2-person chat shortcut).

@@ -180,106 +180,22 @@ async function updateBadge(count) {
 }
 
 // =============================================
-// TTS EDGE CACHE — POST caching by body hash
-// Same text + language always produces same audio
+// b.168 — CONFERMATO (audit esterno 15/8): qui stavano handleTTSEdgeCache
+// e handleTranslateCache, due funzioni che mettevano in cache — dentro il
+// Service Worker, quindi sul dispositivo, persistente anche dopo il
+// logout — le risposte di /api/tts-edge e /api/translate: testo di
+// conversazione, gettoni, contesto di stanza. L'unico punto che le
+// avrebbe mai richiamate era gia commentato ("SECURITY: ... DISABLED",
+// vedi FETCH piu sotto) — quindi il codice non era MAI stato eseguito in
+// questa base — ma restava li, intero e funzionante, a un "togli il
+// commento" di distanza da una fuga di dati fra account (32 bit di hash
+// nel nome della chiave: anche solo una collisione basterebbe a servire
+// la traduzione sbagliata a un altro utente). Rimosse insieme alla loro
+// coda offline dedicata (IndexedDB 'vt-offline-queue'/'pending-messages',
+// usata SOLO dal ramo catch di handleTranslateCache): non serviva a
+// nient'altro. La coda offline che l'app usa davvero e un'altra, vive in
+// chatStorage.js lato client — invariata.
 // =============================================
-async function handleTTSEdgeCache(request) {
-  try {
-    const bodyText = await request.clone().text();
-    const cacheKey = new Request(`/_tts_cache/${simpleHash(bodyText)}`);
-    const cache = await caches.open(TTS_CACHE_NAME);
-    const cached = await cache.match(cacheKey);
-    if (cached) return cached;
-
-    const response = await fetch(request);
-    if (response.ok) {
-      const cloned = response.clone();
-      cache.put(cacheKey, cloned);
-      // Cap TTS cache at ~150 entries to avoid storage bloat
-      cache.keys().then(keys => {
-        if (keys.length > 150) {
-          // Remove oldest 50 entries
-          keys.slice(0, 50).forEach(k => cache.delete(k));
-        }
-      });
-    }
-    return response;
-  } catch (e) {
-    return fetch(request).catch(() => new Response('TTS offline', { status: 503 }));
-  }
-}
-
-// =============================================
-// TRANSLATE CACHE — POST caching by body hash
-// Same translation request always produces same result (deterministic)
-// =============================================
-async function handleTranslateCache(request) {
-  try {
-    const bodyText = await request.clone().text();
-    const cacheKey = new Request(`/_translate_cache/${simpleHash(bodyText)}`);
-    const cache = await caches.open(TRANSLATE_CACHE_NAME);
-    const cached = await cache.match(cacheKey);
-    if (cached) return cached;
-
-    const response = await fetch(request);
-    if (response.ok) {
-      const cloned = response.clone();
-      cache.put(cacheKey, cloned);
-      // Cap translation cache at 300 entries
-      cache.keys().then(keys => {
-        if (keys.length > 300) {
-          // Remove oldest 100 entries
-          keys.slice(0, 100).forEach(k => cache.delete(k));
-        }
-      });
-    }
-    return response;
-  } catch (e) {
-    // On offline, store in IndexedDB for later retry
-    try {
-      const bodyText = await request.clone().text();
-      const db = await openOfflineQueueDB();
-      const tx = db.transaction('pending-messages', 'readwrite');
-      const store = tx.objectStore('pending-messages');
-      await store.add({ body: bodyText, timestamp: Date.now() });
-      // Signal SW to register background sync
-      self.registration.sync.register('flush-offline-queue').catch(() => {});
-      return new Response(JSON.stringify({ queued: true }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch (queueErr) {
-      console.warn('[SW] Failed to queue translation:', queueErr);
-      return new Response('Translation offline', { status: 503 });
-    }
-  }
-}
-
-function simpleHash(str) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) - h) + str.charCodeAt(i);
-    h |= 0;
-  }
-  return h.toString(36);
-}
-
-// =============================================
-// IndexedDB — offline queue for failed requests
-// =============================================
-function openOfflineQueueDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open('vt-offline-queue', 1);
-    req.onerror = () => reject(req.error);
-    req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = (evt) => {
-      const db = evt.target.result;
-      if (!db.objectStoreNames.contains('pending-messages')) {
-        db.createObjectStore('pending-messages', { autoIncrement: true });
-      }
-    };
-  });
-}
 
 // =============================================
 // CACHE SIZE MANAGEMENT
@@ -362,12 +278,15 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // SECURITY: TTS and translate caching DISABLED
-  // These endpoints handle private user data (conversation text, tokens, room context).
-  // Caching them in the SW creates: user data persistence after logout, cross-account
-  // data leaks, and 32-bit hash collisions returning wrong translations/audio.
-  // if (request.method === 'POST' && url.pathname === '/api/tts-edge') { ... }
-  // if (request.method === 'POST' && url.pathname === '/api/translate') { ... }
+  // SECURITY (b.168) — /api/tts-edge e /api/translate NON vanno mai
+  // messe in cache qui: portano dati privati (testo di conversazione,
+  // gettoni, contesto di stanza), che nella cache del Service Worker
+  // sopravviverebbero al logout e potrebbero, con una collisione
+  // dell'hash a 32 bit usato come chiave, finire serviti a un altro
+  // utente. Il codice che lo faceva e stato rimosso del tutto (non solo
+  // commentato): vedi la nota piu sotto, dove stava. Sono comunque
+  // rotte '/api/', quindi il ramo "API requests — network only" qui
+  // sotto le esclude comunque dal resto della cache.
 
   // Skip non-GET, extensions, chrome internals
   if (request.method !== 'GET') return;

@@ -9,6 +9,19 @@ import { getSimpleHash } from '../../lib/translateValidation.js';
 
 const log = createLogger('translateConsensus');
 
+// b.168 — vedi la stessa nota in translate-free/route.js: l'email va
+// verificata da una sessione, non dichiarata dal client.
+async function emailVerificata(userToken) {
+  if (!userToken || typeof userToken !== 'string') return null;
+  try {
+    const { getSession } = await import('../../lib/users.js');
+    const sessione = await getSession(userToken);
+    return sessione?.email || null;
+  } catch {
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════
 // Consensus Translation — "Guaranteed" mode
 //
@@ -44,7 +57,9 @@ async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
-    const { text, sourceLang, targetLang, userEmail, threshold, roomId, roomSessionToken } = await req.json();
+    const { text, sourceLang, targetLang, threshold, roomId, roomSessionToken, userToken } = await req.json();
+    // b.168 — non piu il valore dichiarato dal body: vedi emailVerificata sopra.
+    const userEmail = await emailVerificata(userToken);
 
     // ── Direct mode guard ──
     // b.167 — CONFERMATO (audit esterno 15/8): come translate-free, si

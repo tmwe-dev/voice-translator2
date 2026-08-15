@@ -56,6 +56,10 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
   const canvasRef = useRef(null);
   const [qrReady, setQrReady] = useState(false);
   const [destId, setDestId] = useState(null);
+  // b.168 — segreto di revoca: non entra MAI nel QR (vedi piu sotto), resta
+  // solo qui. Senza, chiunque leggesse il QR (il tassista, o chi lo
+  // intercettasse) poteva revocare la destinazione al posto del passeggero.
+  const revokeSecretRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   // b.138 — prima si controllava `timeLeft === 'Scaduto'` per decidere il
@@ -84,9 +88,10 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
           body: JSON.stringify({ ciphertext }),
         });
         if (!res.ok) throw new Error('Save failed');
-        const { id } = await res.json();
+        const { id, revokeSecret } = await res.json();
         if (cancelled) return;
         setDestId(id);
+        revokeSecretRef.current = revokeSecret || null;
 
         // 3. Build URL with key in fragment — fragment is NEVER sent to server
         const url = `${window.location.origin}/taxi/${id}#k=${key}`;
@@ -139,7 +144,8 @@ function TaxiQRView({ destination, onClose, onStartConversation, S }) {
     if (!destId) return;
     vibrate(20);
     try {
-      const res = await fetch(`/api/taxi/destination?id=${destId}`, { method: 'DELETE' });
+      const segreto = revokeSecretRef.current ? `&revokeSecret=${encodeURIComponent(revokeSecretRef.current)}` : '';
+      const res = await fetch(`/api/taxi/destination?id=${destId}${segreto}`, { method: 'DELETE' });
       if (res.ok) setRevoked(true);
     } catch { /* il dispositivo non vibra: non cambia nulla */ }
   }, [destId]);

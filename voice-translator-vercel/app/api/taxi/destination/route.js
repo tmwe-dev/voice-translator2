@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { redis } from '../../../lib/redis.js';
 import { createLogger } from '../../../lib/logger.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
+import { safeCompare } from '../../../lib/apiGuard.js';
 import { randomUUID } from 'crypto';
 
 const log = createLogger('taxi-dest');
@@ -49,14 +50,24 @@ async function handlePost(req) {
 
     const id = randomUUID().split('-').slice(0, 2).join('');
     const key = `taxi:dest:${id}`;
+    // b.168 — CONFERMATO (audit esterno 15/8): la revoca (DELETE, sotto)
+    // chiedeva solo lo stesso `id` che il passeggero condivide col
+    // tassista via QR (per il GET). Chiunque leggesse quel QR — il
+    // tassista stesso, o chi lo intercettasse — poteva anche revocare la
+    // destinazione al posto del passeggero. Ora POST genera un secondo
+    // segreto, che NON entra mai nel QR (vedi TaxiQRView.js: solo `id` e
+    // la chiave di cifratura ci vanno) e resta solo nello stato del
+    // componente di chi ha creato la destinazione — l'unico che deve
+    // poterla revocare.
+    const revokeSecret = randomUUID();
 
     // Store ONLY the opaque ciphertext — no metadata, no coordinates
-    await redis('SET', key, ciphertext, 'EX', effectiveTtl);
+    await redis('SET', key, JSON.stringify({ ciphertext, revokeSecret }), 'EX', effectiveTtl);
 
     // Log only the ID and TTL — NEVER log destination content or coordinates
     log.info('Encrypted destination stored', { id, ttlSeconds: effectiveTtl });
 
-    return NextResponse.json({ id });
+    return NextResponse.json({ id, revokeSecret });
   } catch (e) {
     log.error('Store failed', { error: e?.message });
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
@@ -87,15 +98,34 @@ async function handleGet(req) {
 
     // Atomic GET + DELETE: retrieve and delete in one operation
     // Use GETDEL (Redis 6.2+) for atomicity
-    let ciphertext;
+    let raw;
     try {
-      ciphertext = await redis('GETDEL', key);
+      raw = await redis('GETDEL', key);
     } catch {
       // Fallback for older Redis: GET then DEL
-      ciphertext = await redis('GET', key);
-      if (ciphertext) await redis('DEL', key);
+      raw = await redis('GET', key);
+      if (raw) await redis('DEL', key);
     }
 
+    if (!raw) {
+      return NextResponse.json(
+        { error: 'Destination not found, expired, or already retrieved' },
+        { status: 404 }
+      );
+    }
+
+    // b.168 — il valore salvato ora e { ciphertext, revokeSecret } (vedi
+    // POST): al tassista si manda SOLO il ciphertext, il segreto di
+    // revoca non deve mai lasciare il server verso chi legge, solo verso
+    // chi ha creato la destinazione (gia lo riceve dalla risposta POST).
+    let ciphertext;
+    try {
+      ciphertext = JSON.parse(raw).ciphertext;
+    } catch {
+      // Compatibilita con voci scritte prima di b.168 (ciphertext salvato
+      // come stringa nuda, non JSON): si legge cosi com'e.
+      ciphertext = raw;
+    }
     if (!ciphertext) {
       return NextResponse.json(
         { error: 'Destination not found, expired, or already retrieved' },
@@ -128,14 +158,29 @@ async function handleDelete(req) {
 
   const url = new URL(req.url);
   const id = url.searchParams.get('id');
+  const revokeSecret = url.searchParams.get('revokeSecret') || '';
   if (!id || typeof id !== 'string' || id.length > 40) {
     return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
   }
 
   try {
     const key = `taxi:dest:${id}`;
-    const deleted = await redis('DEL', key);
+    // b.168 — CONFERMATO (audit esterno 15/8): prima bastava conoscere lo
+    // stesso `id` condiviso col tassista (via QR) per revocare al posto
+    // del passeggero. Ora si legge il valore, si verifica il segreto
+    // (confronto a tempo costante) PRIMA di cancellare — un id senza il
+    // segreto giusto non revoca niente.
+    const raw = await redis('GET', key);
+    if (!raw) {
+      return NextResponse.json({ error: 'Not found or already expired' }, { status: 404 });
+    }
+    let secretSalvato = null;
+    try { secretSalvato = JSON.parse(raw).revokeSecret; } catch { /* voce pre-b.168, senza segreto */ }
+    if (secretSalvato && !safeCompare(revokeSecret, secretSalvato)) {
+      return NextResponse.json({ error: 'Not authorized to revoke' }, { status: 403 });
+    }
 
+    const deleted = await redis('DEL', key);
     if (deleted === 0) {
       return NextResponse.json({ error: 'Not found or already expired' }, { status: 404 });
     }

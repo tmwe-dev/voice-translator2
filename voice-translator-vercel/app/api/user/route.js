@@ -55,11 +55,22 @@ async function handlePost(req) {
     }
 
     // === GDPR: DELETE ALL DATA ===
+    // b.168 — CONFERMATO (audit esterno 15/8): il messaggio dichiarava
+    // "All your data has been deleted" in modo assoluto, ma
+    // deleteUserData() cancella solo le chiavi su Redis (profilo,
+    // pagamenti CACHE locale, referral, prestiti) e la sessione CORRENTE
+    // — non tocca il ledger del wallet su Supabase (obbligo di
+    // conservazione contabile legittimo: non e un difetto cancellarlo
+    // dopo, e un dato che si sceglie di non cancellare) ne le sessioni
+    // aperte su ALTRI dispositivi (scadono da sole entro 7 giorni, ma non
+    // vengono revocate subito qui — servirebbe un indice sessioni-per-
+    // utente che oggi non esiste). Il messaggio ora dice esattamente
+    // questo, non di piu.
     if (action === 'delete-data') {
       const result = await deleteUserData(email, token);
       return NextResponse.json({
         ok: true,
-        message: 'All your data has been deleted (GDPR Art. 17)',
+        message: 'Your profile, current session, referrals and lending tokens have been deleted. Wallet accounting records are retained for legal/bookkeeping obligations. Sessions open on other devices are not revoked immediately and expire naturally within 7 days.',
         deleted: result.deleted,
       });
     }

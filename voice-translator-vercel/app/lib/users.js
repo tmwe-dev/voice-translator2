@@ -128,31 +128,49 @@ export function maskApiKeys(user) {
 export async function createAuthCode(email) {
   // SECURITY: use cryptographically secure random instead of Math.random
   const code = crypto.randomInt(100000, 999999).toString();
-  await redis('SET', `authcode:${email.toLowerCase()}`, JSON.stringify({ code, attempts: 0, created: Date.now() }), 'EX', 600);
+  const emailKey = email.toLowerCase();
+  await redis('SET', `authcode:${emailKey}`, JSON.stringify({ code, created: Date.now() }), 'EX', 600);
+  // b.168 — CONFERMATO (audit esterno 15/8): il contatore tentativi viveva
+  // dentro lo stesso JSON (GET → controlla → incrementa → SET, tre
+  // round-trip separati). Richieste concorrenti (non in sequenza: piu
+  // guess dello stesso codice sparati insieme) potevano leggere tutte lo
+  // STESSO valore vecchio prima che una sola scrivesse l'incremento — il
+  // tetto di 5 tentativi si aggirava aumentando il parallelismo. Ora il
+  // contatore e una chiave separata, incrementata con INCR (atomico in
+  // Redis per costruzione): un nuovo codice azzera anche questa.
+  await redis('DEL', `authcode:attempts:${emailKey}`);
   return code;
 }
 
 export async function verifyAuthCode(email, code) {
-  const key = `authcode:${email.toLowerCase()}`;
+  const emailKey = email.toLowerCase();
+  const key = `authcode:${emailKey}`;
+  const attemptsKey = `authcode:attempts:${emailKey}`;
   const data = await redis('GET', key);
   if (!data) return false;
   let stored; try { stored = JSON.parse(data); } catch { return false; }
 
-  // SECURITY: brute-force protection — max 5 attempts per code
-  if (stored.attempts >= 5) {
+  // SECURITY: brute-force protection — max 5 attempts per code.
+  // L'incremento avviene PRIMA del confronto, sempre: e questo che rende
+  // il conteggio corretto anche sotto richieste concorrenti (vedi nota
+  // sopra in createAuthCode).
+  const tentativi = await redis('INCR', attemptsKey);
+  if (tentativi === 1) {
+    const ttl = await redis('TTL', key);
+    await redis('EXPIRE', attemptsKey, ttl > 0 ? ttl : 600);
+  }
+  if (tentativi > 5) {
     await redis('DEL', key);
+    await redis('DEL', attemptsKey);
     return false;
   }
 
   if (stored.code !== code) {
-    // Increment attempt counter
-    stored.attempts = (stored.attempts || 0) + 1;
-    const ttl = await redis('TTL', key);
-    await redis('SET', key, JSON.stringify(stored), 'EX', ttl > 0 ? ttl : 600);
     return false;
   }
 
   await redis('DEL', key);
+  await redis('DEL', attemptsKey);
   return true;
 }
 

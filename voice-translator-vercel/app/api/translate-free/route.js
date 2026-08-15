@@ -9,6 +9,27 @@ import { getSimpleHash } from '../../lib/translateValidation.js';
 
 const log = createLogger('translateFree');
 
+// b.168 — CONFERMATO (audit esterno 15/8): `userEmail` arrivava dal body,
+// cioe da quello che il CLIENT dichiara — mai verificato. providers.js lo
+// usa per la quota PERSONALE di MyMemory (10k parole/giorno per email,
+// vedi il commento in tryMyMemoryTranslate: "protects other users from
+// hitting shared limits"). Un client poteva dichiarare un'email
+// qualunque — anche quella vera di un altro utente BarTalk — e consumare
+// la SUA quota, o ruotare email finte per aggirare il limite. Ora si usa
+// l'email solo se risolta da un token di sessione verificato; altrimenti
+// si tratta come assente (MyMemory viene semplicemente saltato, la
+// catena di fornitori prosegue sugli altri — nessuna traduzione si rompe).
+async function emailVerificata(userToken) {
+  if (!userToken || typeof userToken !== 'string') return null;
+  try {
+    const { getSession } = await import('../../lib/users.js');
+    const sessione = await getSession(userToken);
+    return sessione?.email || null;
+  } catch {
+    return null;
+  }
+}
+
 // ═══════════════════════════════════════════════
 // FREE Translation — Multi-provider with dynamic routing
 //
@@ -70,7 +91,9 @@ async function handlePost(req) {
     const text = typeof body.text === 'string' ? body.text : '';
     const sourceLang = typeof body.sourceLang === 'string' ? body.sourceLang.slice(0, 10) : '';
     const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
-    const { userEmail, superfast, userProviderPrefs, roomId, roomSessionToken } = body;
+    const { superfast, userProviderPrefs, roomId, roomSessionToken, userToken } = body;
+    // b.168 — vedi la nota su emailVerificata sopra: non piu body.userEmail.
+    const userEmail = await emailVerificata(userToken);
 
     // ── Direct mode guard ──
     // b.167 — CONFERMATO (audit esterno 15/8): questa rotta e anche il
