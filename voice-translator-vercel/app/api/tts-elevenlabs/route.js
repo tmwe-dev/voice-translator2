@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { deductCredits } from '../../lib/users.js';
 import { getSession, getUser } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
@@ -123,8 +122,12 @@ async function handlePost(req) {
     });
 
     // ── Wallet: la voce premium costa 3x — blocco PRIMA di chiamare ElevenLabs ──
+    // b.157 — audit pagamenti: qui il guasto-nella-lettura-del-saldo va
+    // in BLOCCO (failClosed), non in via libera come per gli altri
+    // fornitori. E il servizio piu caro: un'interruzione di Supabase
+    // non deve trasformarsi in ElevenLabs illimitato e gratis.
     const pagante = isOwnKey ? null : billingEmail;
-    if (pagante && await creditoFinito(pagante)) {
+    if (pagante && await creditoFinito(pagante, { failClosed: true })) {
       return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
     }
 
@@ -172,7 +175,7 @@ async function handlePost(req) {
     // che verra fatturato.
     if (pagante) {
       const preventivo = preventivoVocePremium(cleanText.length);
-      if (await creditoInsufficiente(pagante, preventivo)) {
+      if (await creditoInsufficiente(pagante, preventivo, { failClosed: true })) {
         return NextResponse.json({
           error: 'Credito insufficiente per la voce premium',
           creditoEsaurito: true,
@@ -232,11 +235,11 @@ async function handlePost(req) {
           if (!isOwnKey) {
             // b.154 — vedi nota gemella sotto: il tetto di piattaforma
             // deve contare anche l'anonimo, l'addebito personale no.
+            // b.157 — tolto il doppio addebito sul vecchio user.credits:
+            // addebitaVocePremium (poco sotto) e il conto vero, questo
+            // scriveva un numero in un campo che nessuno legge piu.
             const cost = usdToEurCents(calcElevenLabsCost(cleanText.length));
             const charge1 = Math.max(MIN_CHARGE.TTS_ELEVENLABS, cost);
-            if (billingEmail) {
-              try { await deductCredits(billingEmail, charge1); } catch (e) { log.warn('Fallback credit deduct failed:', e?.message); }
-            }
             try { await trackDailySpend(billingEmail, charge1); } catch (e) { log.warn('Fallback daily-spend tracking failed:', e?.message); }
           }
           const esitoFb = await addebitaVocePremium(pagante, cleanText.length);
@@ -258,10 +261,9 @@ async function handlePost(req) {
       // b.154 — stessa correzione: il tetto di piattaforma (dentro
       // trackDailySpend) deve vedere anche le chiamate senza
       // billingEmail (accesso libero), l'addebito personale no.
+      // b.157 — tolto il doppio addebito sul vecchio user.credits, vedi
+      // nota gemella sopra: addebitaVocePremium sotto e il conto vero.
       const charge = Math.max(MIN_CHARGE.TTS_ELEVENLABS, elCostEurCents);
-      if (billingEmail) {
-        try { await deductCredits(billingEmail, charge); } catch (e) { log.error('ElevenLabs credit deduct error:', e); }
-      }
       try { await trackDailySpend(billingEmail, charge); } catch (e) { log.error('ElevenLabs daily-spend tracking error:', e); }
     }
 

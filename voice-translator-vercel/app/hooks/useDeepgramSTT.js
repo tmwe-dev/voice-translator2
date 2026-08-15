@@ -22,6 +22,7 @@ export default function useDeepgramSTT({
   setRecording,
   setSpeakingState,
   roomId,
+  userToken,
   unlockAudio,
   speakingKeepAliveRef,
 }) {
@@ -33,10 +34,21 @@ export default function useDeepgramSTT({
   const deepgramKeyRef = useRef(null);
 
   // Check Deepgram availability on mount
+  // b.157 — audit pagamenti: CONFERMATO, questa richiesta non mandava
+  // MAI un corpo — e /api/stt-token risponde 401 senza userToken ne
+  // roomSessionToken. La funzione era invisibilmente rotta per
+  // chiunque: il ramo Deepgram non si attivava mai, si ripiegava
+  // sempre sul riconoscimento del browser, silenziosamente. Corretto
+  // qui e nel punto in cui il gettone puo cambiare (login), da cui la
+  // dipendenza qui sotto.
   useEffect(() => {
     async function checkDeepgram() {
       try {
-        const res = await fetch('/api/stt-token', { method: 'POST' });
+        const res = await fetch('/api/stt-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userToken, roomId }),
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.key) {
@@ -53,7 +65,7 @@ export default function useDeepgramSTT({
       deepgramAvailableRef.current = false;
     }
     checkDeepgram();
-  }, []);
+  }, [userToken, roomId]);
 
   /**
    * Start Deepgram WebSocket streaming STT.

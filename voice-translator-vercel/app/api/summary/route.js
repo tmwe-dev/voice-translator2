@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getConversation, updateConversationSummary } from '../../lib/store.js';
-import { getSession, getUser, deductCredits } from '../../lib/users.js';
+import { getSession, getUser } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
@@ -128,16 +128,18 @@ Output ONLY valid JSON, no markdown, no code blocks.`
       max_tokens: 800
     });
 
-    // Calculate and deduct cost
+    // Calculate cost (per il tetto di piattaforma; il wallet ha il suo
+    // conto fisso, vedi addebitaRiassunto sotto)
     const costUsd = calcGptCost(completion.usage);
     const costEurCents = usdToEurCents(costUsd);
 
+    // b.157 — tolto il doppio addebito sul vecchio user.credits: il
+    // wallet (addebitaRiassunto, subito sotto) e il conto vero da tempo.
     if (billingEmail && !isOwnKey) {
       try {
         const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
-        await deductCredits(billingEmail, charge);
         await trackDailySpend(billingEmail, charge);
-      } catch (e) { log.error('Summary credit deduct error:', e); }
+      } catch (e) { log.error('Summary daily-spend tracking error:', e); }
     }
 
     // ── Wallet: riassunto = 10 secondi di credito, addebito dopo il lavoro ──

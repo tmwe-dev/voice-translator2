@@ -65,8 +65,11 @@ describe('rotte a pagamento: il tracking non e piu condizionato solo a billingEm
   });
 
   it('tts: l\'addebito personale resta condizionato a billingEmail, il tracking no', () => {
+    // b.157 — /api/tts non aveva NESSUN addebito reale (era rimasto
+    // solo il vecchio deductCredits su Redis, morto): corretto con
+    // addebitaTesto, il vero ponte verso il wallet.
     const src = leggi('app/api/tts/route.js');
-    expect(src).toMatch(/if\s*\(billingEmail\)\s*\{\s*try\s*\{\s*await deductCredits/);
+    expect(src).toMatch(/if\s*\(billingEmail\)\s*\{\s*try\s*\{\s*await addebitaTesto/);
     expect(src).toMatch(/trackDailySpend\(billingEmail, charge\)\.catch/);
   });
 
@@ -101,9 +104,29 @@ describe('Stripe webhook: idempotenza e payment_status (b.154)', () => {
     const src = leggi('app/wallet/stripe.js');
     const i = src.indexOf('export function estraiPagamento');
     expect(i).toBeGreaterThan(-1);
-    const corpo = src.slice(i, i + 700);
+    const corpo = src.slice(i, i + 2200);
     expect(corpo).toMatch(/payment_status/);
-    expect(corpo).toMatch(/!==\s*'paid'/);
+    // b.158 — CONFERMATO, il vecchio controllo era
+    // `if (payment_status && payment_status !== 'paid') return null`:
+    // un campo ASSENTE saltava il controllo e passava. Ora si richiede
+    // la stringa esatta 'paid' — assente o diversa, blocca sempre.
+    expect(corpo).toMatch(/payment_status\s*!==\s*'paid'/);
+    expect(corpo, 'il vecchio "campo assente = passa" non deve tornare')
+      .not.toMatch(/payment_status\s*&&\s*evento\.data\.object\.payment_status\s*!==\s*'paid'/);
+  });
+
+  it('estraiPagamento accetta anche async_payment_succeeded (pagamenti differiti, es. SEPA)', () => {
+    // b.158 — CONFERMATO: prima solo 'checkout.session.completed' era
+    // ammesso. Per un metodo di pagamento differito, quell'evento
+    // arriva con payment_status 'unpaid' (scartato, giustamente) e il
+    // pagamento vero va a buon fine DOPO con un evento separato — che
+    // prima non era nemmeno nell'elenco ammesso: chi pagava con un
+    // metodo differito non riceveva mai i secondi acquistati.
+    const src = leggi('app/wallet/stripe.js');
+    const i = src.indexOf('export function estraiPagamento');
+    const corpo = src.slice(i, i + 2200);
+    expect(corpo).toMatch(/checkout\.session\.completed/);
+    expect(corpo).toMatch(/checkout\.session\.async_payment_succeeded/);
   });
 
   it('esiste un vincolo DB di unicita sul Stripe Session ID (migration applicata in produzione)', () => {

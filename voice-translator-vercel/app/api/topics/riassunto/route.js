@@ -8,20 +8,28 @@
 // non va nella sintesi.
 //
 // SOLDI — stesso ordine di /api/summary: autorizzazione (sessione) ->
-// fornitore (OpenAI) -> esecuzione -> contabilita (deductCredits +
+// fornitore (OpenAI) -> esecuzione -> contabilita (wallet +
 // trackDailySpend). E la cache CONDIVISA per topic+lingua (24h): la
 // sintesi la paga il primo che la chiede, gli altri la leggono gratis.
+//
+// b.157 — audit pagamenti: CONFERMATO, prima l'unico addebito qui era
+// sul vecchio user.credits (Redis), che l'autorizzazione non legge
+// piu da tempo (vedi apiAuth.js — "l'UNICA verita e il wallet"). Ogni
+// utente con sessione valida generava sintesi con costo OpenAI reale
+// per la piattaforma e ZERO addebito sul wallet, per sempre. Ora usa
+// addebitaRiassunto, lo stesso conto gia in uso da /api/summary.
 // ═══════════════════════════════════════════════════════════════
 
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { redis } from '../../../lib/redis.js';
-import { getSession, getUser, deductCredits } from '../../../lib/users.js';
+import { getSession, getUser } from '../../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../../lib/config.js';
 import { trackDailySpend } from '../../../lib/apiAuth.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { normalizzaQuery } from '../../../lib/topics/servizio.js';
+import { addebitaRiassunto } from '../../../wallet/addebita.js';
 
 const log = createLogger('topics-riassunto');
 
@@ -96,10 +104,11 @@ REGOLE INVIOLABILI:
   if (billingEmail && !isOwnKey) {
     try {
       const charge = Math.max(MIN_CHARGE.SUMMARY, costEurCents);
-      await deductCredits(billingEmail, charge);
       await trackDailySpend(billingEmail, charge);
-    } catch (e) { log.error('addebito sintesi fallito:', e); }
+    } catch (e) { log.error('tracking sintesi fallito:', e); }
   }
+  // ── Wallet: addebito vero, stesso conto fisso di /api/summary ──
+  await addebitaRiassunto(isOwnKey ? null : billingEmail);
 
   try { await redis('SET', k, testo, 'EX', TTL_SINTESI); } catch { /* senza cache si vive */ }
   return NextResponse.json({ sintesi: testo, daCache: false });

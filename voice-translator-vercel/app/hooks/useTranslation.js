@@ -119,6 +119,7 @@ export default function useTranslation({
     setRecording,
     setSpeakingState,
     roomId,
+    userToken: getEffectiveToken(),
     unlockAudio,
     speakingKeepAliveRef,
   });

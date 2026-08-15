@@ -69,10 +69,10 @@ export default function useStreamingInterpreter({
 
   // ═══ FETCH DEEPGRAM KEY ═══
   useEffect(() => {
-    fetch('/api/stt-token', { method: 'POST' }).then(r => r.ok ? r.json() : null)
+    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId }) }).then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.key) deepgramKeyRef.current = d.key; })
       .catch(e => console.warn('[Interpreter] STT token failed:', e.message));
-  }, []);
+  }, [userToken, roomId]);
 
   // ═══ INCREMENTAL TRANSLATION ═══
   // Traduce un frammento di frase con il conversation context
@@ -276,7 +276,7 @@ export default function useStreamingInterpreter({
     if (!deepgramKeyRef.current) {
       // Try to get key
       try {
-        const res = await fetch('/api/stt-token', { method: 'POST' });
+        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId }) });
         if (res.ok) {
           const d = await res.json();
           if (d?.key) deepgramKeyRef.current = d.key;
@@ -380,7 +380,7 @@ export default function useStreamingInterpreter({
       console.error('[StreamInterp] Start failed:', e);
       return false;
     }
-  }, [myLang, handleTranscript, handleUtteranceEnd]);
+  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId]);
 
   // ═══ STOP STREAMING ═══
   const stop = useCallback(() => {

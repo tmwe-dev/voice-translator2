@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addCost } from '../../lib/store.js';
-import { deductCredits, deductLendingTokens } from '../../lib/users.js';
+import { deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { redis } from '../../lib/redis.js';
@@ -274,15 +274,14 @@ async function handlePost(req) {
     const msgCostUsd = gptCost + ttsCost;
     const msgCostEurCents = usdToEurCents(msgCostUsd);
 
-    // Deduct credits (must await — affects billing)
-    let remainingCredits = undefined;
-    if (billingEmail && !isOwnKey && !isReview) {
-      try {
-        const charge = Math.max(MIN_CHARGE.TRANSLATE, msgCostEurCents);
-        const updatedUser = await deductCredits(billingEmail, charge);
-        if (updatedUser) remainingCredits = updatedUser.credits;
-      } catch (e) { log.error('Credit deduct error:', e); }
-    }
+    // b.157 — audit pagamenti: qui c'era ANCHE un addebito sul vecchio
+    // user.credits (Redis), in parallelo a quello vero sul wallet subito
+    // sotto. apiAuth.js dice da tempo che "l'UNICA verita e il wallet":
+    // l'autorizzazione (resolveAuth/creditoFinito) legge gia solo il
+    // wallet, quindi quel secondo addebito non decideva piu niente — solo
+    // due scritture per ogni traduzione invece di una, e un numero
+    // (remainingCredits, mai letto da nessun client) che non descriveva
+    // il saldo vero mostrato in CreditsView. Tolto.
 
     // ── Wallet: addebito del messaggio (salvo fase 2 di un audio già pagato) ──
     //
@@ -365,7 +364,6 @@ async function handlePost(req) {
       confidence,
       cost: roundCost(msgCostUsd),
       costEurCents: roundEurCents(msgCostEurCents),
-      ...(remainingCredits !== undefined ? { remainingCredits } : {}),
       ...(creditoEsaurito && { creditoEsaurito: true })
     });
   } catch (e) {

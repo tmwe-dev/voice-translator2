@@ -61,6 +61,15 @@ export function oreIncluse(pacchetto) {
 // Derivato dal pacchetto medio: €11,99 / 480 min ≈ 2,5 cent/min standard.
 export const PREZZO_VENDITA_CENT_MIN = { standard: 2.5, premium: 7.5 };
 
+// ── Clonazione voce (ElevenLabs, una tantum) ──
+// b.157 — prima il prezzo (500 "crediti" = €5,00) viveva SOLO nel
+// vecchio sistema Redis (CLONE_COST_CREDITS in api/voice-clone), un
+// campo che per chi paga col wallet resta sempre a zero: la clonazione
+// risultava "credito insufficiente" per chiunque avesse pagato con la
+// ricarica vera, anche con il saldo pieno. Stesso prezzo di sempre
+// (€5,00), convertito nei secondi del wallet alla tariffa standard.
+export const COSTO_CLONAZIONE_SECONDI = Math.round((500 / PREZZO_VENDITA_CENT_MIN.standard) * 60);
+
 /** Da secondi consumati a euro (per il contatore live nelle call). */
 export function euroDaSecondi(secondi, vocePremium = false) {
   const centMin = vocePremium ? PREZZO_VENDITA_CENT_MIN.premium : PREZZO_VENDITA_CENT_MIN.standard;

@@ -57,19 +57,45 @@ export async function leggiWebhook(corpoGrezzo, firmaHeader) {
 
 /**
  * Da un evento webhook, estrae i dati che servono per accreditare.
- * Ritorna null se l'evento non è un pagamento completato.
+ * Ritorna null se l'evento non è un pagamento completato e pagato.
  */
 export function estraiPagamento(evento) {
-  if (evento.type !== 'checkout.session.completed') return null;
+  // b.158 — CONFERMATO, secondo difetto nello stesso punto (b.154 ne
+  // aveva corretto solo meta'). Prima si accettava SOLO
+  // 'checkout.session.completed'. Ma per i metodi di pagamento
+  // differiti (es. SEPA) quell'evento arriva con payment_status
+  // 'unpaid' — e veniva correttamente scartato dal controllo sotto.
+  // Il problema e' che il pagamento POI va a buon fine con un evento
+  // SEPARATO, 'checkout.session.async_payment_succeeded', che questa
+  // funzione non ammetteva nemmeno in cima: quell'evento veniva
+  // scartato subito, PRIMA di arrivare al controllo su
+  // payment_status. Risultato pratico: chi pagava con un metodo
+  // differito pagava per davvero e non riceveva MAI i secondi — un
+  // furto involontario ai danni del cliente, non della piattaforma.
+  // 'checkout.session.async_payment_failed' resta correttamente
+  // ignorato (non e' nell'elenco sotto): il pagamento non e' andato a
+  // buon fine, non c'e' niente da accreditare.
+  const tipiPagamentoConfermato = [
+    'checkout.session.completed',
+    'checkout.session.async_payment_succeeded',
+  ];
+  if (!tipiPagamentoConfermato.includes(evento.type)) return null;
+
   // b.154 — CONFERMATO: mancava questo controllo. Stripe distingue
-  // 'paid' da 'unpaid'/'no_payment_required' dentro payment_status,
-  // e per i metodi di pagamento differiti il Checkout può dirsi
-  // "completed" prima che i fondi siano arrivati davvero (in quel
-  // caso arriva poi un evento separato async_payment_succeeded/
-  // failed). Accreditare su "completed" da solo, senza guardare
+  // 'paid' da 'unpaid'/'no_payment_required' dentro payment_status.
+  // Accreditare su "completed" da solo, senza guardare
   // payment_status, rischia di pagare un acquisto mai andato a buon
   // fine con un metodo differito.
-  if (evento.data.object.payment_status && evento.data.object.payment_status !== 'paid') return null;
+  //
+  // b.158 — CONFERMATO, difetto residuo nella stessa riga: il
+  // controllo era `if (payment_status && payment_status !== 'paid')`
+  // — se il campo era ASSENTE (falsy), l'intero controllo veniva
+  // saltato e si accreditava comunque, senza nessuna verifica.
+  // Il campo non e' documentato come sempre presente da Stripe per
+  // ogni tipo di evento: un evento senza quel campo doveva bloccare,
+  // non passare in silenzio. Ora si richiede la stringa esatta
+  // 'paid': assente, o qualunque altro valore, blocca l'accredito.
+  if (evento.data.object.payment_status !== 'paid') return null;
   const m = evento.data.object.metadata || {};
   if (!m.utente_id || !m.secondi) return null;
   return {

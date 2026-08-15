@@ -224,9 +224,17 @@ describe('Scheda e video (b.153)', () => {
   });
 
   it('il riassunto vieta al modello di inventare fatti', () => {
+    // b.157 — CONFERMATO, difetto critico: l'unico addebito qui era il
+    // vecchio deductCredits (Redis), che l'autorizzazione non legge
+    // piu (vedi apiAuth.js). Sintesi AI illimitate e gratis per
+    // chiunque avesse sessione valida, costo OpenAI reale a carico
+    // della piattaforma. Corretto con addebitaRiassunto, lo stesso
+    // conto gia in uso da /api/summary.
     const src = fs.readFileSync(path.resolve(__dirname, '../app/api/topics/riassunto/route.js'), 'utf8');
     expect(src).toContain('SOLO le informazioni presenti nei dati');
-    expect(src).toContain('deductCredits');
+    expect(src).toContain('addebitaRiassunto');
+    expect(src, 'il vecchio addebito morto (Redis) non deve tornare')
+      .not.toContain('deductCredits');
     expect(src).toContain('trackDailySpend');
   });
 

@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { getSession } from '../../lib/users.js';
+import { getRoom } from '../../lib/store.js';
+import { creditoFinito } from '../../wallet/addebita.js';
 
 const log = createLogger('sttToken');
 
@@ -11,7 +14,49 @@ const log = createLogger('sttToken');
 //
 // Requires: DEEPGRAM_API_KEY env var
 // Rate limit: 10 req/min (one per recording session)
+//
+// b.157 — audit pagamenti, DUE difetti confermati leggendo il codice:
+//
+// 1. Nessun client di questa app manda MAI un corpo nella richiesta
+//    (i 5 punti che la chiamano: SpeakerView.js x2, useDeepgramSTT.js,
+//    useStreamingInterpreter.js x2 — tutti `fetch(..., {method:'POST'})`
+//    senza body). Il controllo sotto rispondeva quindi SEMPRE 401: il
+//    ramo Deepgram (STT "di livello server", piu preciso) non si
+//    attivava MAI, in produzione, per nessuno — si ripiegava sempre
+//    e solo sul riconoscimento del browser o su Whisper, in silenzio.
+//    Corretto qui E in tutti e 5 i punti che chiamano questa rotta.
+//
+// 2. Anche a chiamata corretta, questa rotta non guardava il wallet:
+//    chiunque avesse un token (di sessione o di stanza) riceveva una
+//    chiave Deepgram vera, fatturata a BarTalk, senza nessun controllo
+//    di credito — e Deepgram, a differenza di OpenAI/ElevenLabs, non
+//    ha qui un percorso "chiave propria": ogni streaming costa alla
+//    piattaforma, sempre. Aggiunto lo stesso gate delle altre rotte
+//    (fail-closed: un guasto nella lettura del saldo blocca, non
+//    procede gratis — stessa scelta della voce premium).
+//
+// NON RISOLTO qui, e serve una decisione di prodotto: questo e un
+// GATE (blocca se il saldo e a zero), non un CONTATORE — il client
+// parla direttamente con Deepgram via WebSocket, il server non vede
+// mai quanti secondi vengono davvero trasmessi, quindi non puo
+// scalare il wallet in proporzione all'uso reale (a differenza di
+// TTS/traduzione, dove il server calcola il costo dopo il fatto).
+// Misurare per-secondo richiederebbe o un proxy audio lato server o
+// un resoconto del client di cui fidarsi — entrambe scelte
+// architetturali, non un difetto da correggere qui.
 // ═══════════════════════════════════════════════
+
+async function risolviEmailDaFatturare(userToken, roomId) {
+  if (userToken) {
+    const session = await getSession(userToken);
+    if (session?.email) return session.email;
+  }
+  if (roomId) {
+    const room = await getRoom(roomId);
+    if (room?.hostEmail) return room.hostEmail;
+  }
+  return null;
+}
 
 async function handler(req) {
   // ── b.111 · la falla piu grande, e non era nemmeno nell'elenco ──
@@ -27,15 +72,19 @@ async function handler(req) {
     throw e;
   }
 
-  // Auth guard: require room session token or user token
-  try {
-    const body = await req.clone().json().catch(() => ({}));
-    const hasRoomToken = !!body.roomSessionToken;
-    const hasUserToken = !!body.userToken;
-    if (!hasRoomToken && !hasUserToken) {
-      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
-    }
-  } catch { /* allow if body parse fails — rate limit will catch abuse */ }
+  // Auth guard: require room id or user token
+  const body = await req.clone().json().catch(() => ({}));
+  const userToken = body.userToken || null;
+  const roomId = body.roomId || null;
+  if (!userToken && !roomId) {
+    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  // ── Wallet: chi paga? (stesso fail-closed della voce premium — vedi nota sopra) ──
+  const billingEmail = await risolviEmailDaFatturare(userToken, roomId);
+  if (billingEmail && await creditoFinito(billingEmail, { failClosed: true })) {
+    return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
+  }
 
   const deepgramKey = process.env.DEEPGRAM_API_KEY;
   if (!deepgramKey) {

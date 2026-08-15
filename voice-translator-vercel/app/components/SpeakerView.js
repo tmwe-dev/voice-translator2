@@ -142,11 +142,19 @@ function SpeakerView({ userToken }) {
   // ── FINE b.95 ──
 
   // ── Fetch Deepgram key on mount ──
+  // b.157 — audit pagamenti: questa richiesta non mandava mai un corpo,
+  // e /api/stt-token risponde 401 senza userToken ne roomSessionToken:
+  // il ramo Deepgram non si attivava mai, si ripiegava sempre e solo
+  // sulla registrazione a blocchi senza che nessuno se ne accorgesse.
   useEffect(() => {
-    fetch('/api/stt-token', { method: 'POST' }).then(r => r.ok ? r.json() : null)
+    fetch('/api/stt-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userToken: userToken || '' }),
+    }).then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.key) dgKeyRef.current = d.key; })
       .catch(e => console.warn('[SpeakerView] STT token fetch failed:', e.message));
-  }, []);
+  }, [userToken]);
 
   // ── Auto-scroll history ──
   useEffect(() => {
@@ -423,7 +431,14 @@ function SpeakerView({ userToken }) {
   const startLiveMode = useCallback(async () => {
     vibrate();
     if (!dgKeyRef.current) {
-      try { const res = await fetch('/api/stt-token', { method: 'POST' }); if (res.ok) { const d = await res.json(); if (d?.key) dgKeyRef.current = d.key; } } catch (e) { console.warn('[SpeakerView] STT retry failed:', e.message); }
+      try {
+        const res = await fetch('/api/stt-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userToken: userToken || '' }),
+        });
+        if (res.ok) { const d = await res.json(); if (d?.key) dgKeyRef.current = d.key; }
+      } catch (e) { console.warn('[SpeakerView] STT retry failed:', e.message); }
     }
     if (!dgKeyRef.current) { setMode('batch'); startBatchRecord(); return; }
     setRecording(true); setLiveText(''); setTranslatedText(''); sentenceRef.current = '';
@@ -489,7 +504,7 @@ function SpeakerView({ userToken }) {
         } catch (e) { console.warn('[SpeakerView] WebSocket message handling failed:', e?.message); }
       };
     } catch (e) { console.warn('[SpeakerView] WebSocket setup failed:', e?.message); setRecording(false); }
-  }, [sourceLang, targetLang, translateText, playTTS, startBatchRecord]);
+  }, [sourceLang, targetLang, translateText, playTTS, startBatchRecord, userToken]);
 
   const stopLiveMode = useCallback(() => {
     if (sentenceRef.current.trim()) {

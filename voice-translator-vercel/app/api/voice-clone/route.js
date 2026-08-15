@@ -1,12 +1,22 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { getSession, getUser, updateUser, deductCredits } from '../../lib/users.js';
+import { getSession, getUser, updateUser } from '../../lib/users.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { creditoInsufficientePerClonazione, addebitaClonazione } from '../../wallet/addebita.js';
+import { COSTO_CLONAZIONE_SECONDI } from '../../wallet/tariffe.js';
 
 const log = createLogger('voiceClone');
 
-const CLONE_COST_CREDITS = 500; // 500 cents = €5.00
+// b.157 — audit pagamenti: CONFERMATO DOPPIO DIFETTO. Questa rotta
+// non usava resolveAuth: gate e addebito guardavano SOLO il vecchio
+// user.credits (Redis). Per chi paga col wallet (la ricarica vera,
+// da tempo l'unico sistema che CreditsView mostra) user.credits e
+// SEMPRE zero — quindi la clonazione rispondeva "credito
+// insufficiente" a chiunque avesse pagato regolarmente, saldo pieno
+// compreso. Ora gate e addebito guardano il wallet vero, stesso
+// prezzo (€5,00) di sempre.
+const CLONE_COST_EURO = 5;
 
 // ═══════════════════════════════════════
 // POST /api/voice-clone — Clone a voice
@@ -48,13 +58,8 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check tier — must be PRO or TOP PRO (not trial/free)
-    // TESTING_MODE: skip tier check
+    // TESTING_MODE: skip il controllo del credito
     const testingMode = process.env.TESTING_MODE === 'true';
-    const isTrial = !user.credits && !user.useOwnKeys;
-    if (isTrial && !testingMode) {
-      return NextResponse.json({ error: 'Voice cloning requires PRO plan' }, { status: 403 });
-    }
 
     // Resolve ElevenLabs API key
     let apiKey = process.env.ELEVENLABS_API_KEY;
@@ -65,12 +70,12 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'ElevenLabs API key not available' }, { status: 400 });
     }
 
-    // Check credits (skip if using own key or TESTING_MODE)
+    // ── Wallet: unico gate reale (skip con chiave propria o in test) ──
     const isOwnKey = user.useOwnKeys && user.apiKeys?.elevenlabs;
-    if (!isOwnKey && !testingMode && (user.credits || 0) < CLONE_COST_CREDITS) {
+    if (!isOwnKey && !testingMode && await creditoInsufficientePerClonazione(session.email)) {
       return NextResponse.json({
-        error: `Insufficient credits. Need ${CLONE_COST_CREDITS} credits (€${(CLONE_COST_CREDITS / 100).toFixed(2)})`,
-        needCredits: CLONE_COST_CREDITS
+        error: `Credito insufficiente. Servono €${CLONE_COST_EURO.toFixed(2)} di credito wallet.`,
+        needEuro: CLONE_COST_EURO,
       }, { status: 402 });
     }
 
@@ -125,16 +130,16 @@ async function handlePost(req) {
       clonedVoiceAt: Date.now()
     });
 
-    // Deduct credits (unless own key)
+    // ── Wallet: addebito vero, dopo la clonazione riuscita ──
     if (!isOwnKey) {
-      await deductCredits(session.email, CLONE_COST_CREDITS);
+      await addebitaClonazione(session.email);
     }
 
     return NextResponse.json({
       ok: true,
       voiceId,
       name: voiceName,
-      cost: isOwnKey ? 0 : CLONE_COST_CREDITS
+      cost: isOwnKey ? 0 : CLONE_COST_EURO
     });
 
   } catch (e) {

@@ -123,7 +123,10 @@ describe('la voce premium non si regala piu', () => {
   it('si chiede il permesso col conto vero, prima di spendere', () => {
     const r = senzaCommenti(app('api/tts-elevenlabs/route.js'));
     expect(r).toMatch(/preventivoVocePremium\(cleanText\.length\)/);
-    expect(r).toMatch(/creditoInsufficiente\(pagante, preventivo\)/);
+    // b.157 — aggiunto {failClosed:true}: la voce premium e' l'unico
+    // fornitore per cui un guasto nella lettura del saldo BLOCCA
+    // invece di procedere gratis (vedi test sotto).
+    expect(r).toMatch(/creditoInsufficiente\(pagante, preventivo, \{ failClosed: true \}\)/);
   });
 
   it('il preventivo usa lo STESSO conto dell\'addebito', () => {
@@ -135,11 +138,18 @@ describe('la voce premium non si regala piu', () => {
     expect(a).toMatch(/addebitaVocePremium[\s\S]{0,200}costoElevenLabsCaratteri/);
   });
 
-  it('senza saldo leggibile non si blocca nessuno', () => {
+  it('senza saldo leggibile non si blocca nessuno, salvo chi lo chiede espressamente', () => {
     // Meglio un uso non fatturato che un servizio rotto: l'addebito
-    // vero dopo resta comunque il controllo definitivo.
-    expect(app('wallet/addebita.js'))
-      .toMatch(/creditoInsufficiente[\s\S]{0,400}catch[\s\S]{0,120}return false/);
+    // vero dopo resta comunque il controllo definitivo. b.157 — questa
+    // resta la regola di DEFAULT (opzioni = {} → !!undefined → false):
+    // solo chi passa {failClosed:true} esplicitamente (oggi solo la
+    // voce premium ElevenLabs, vedi test sopra) blocca sul guasto.
+    const a = app('wallet/addebita.js');
+    expect(a).toMatch(/creditoFinito\(utente, opzioni = \{\}\)/);
+    expect(a).toMatch(/creditoInsufficiente\(utente, costoPrevisto, opzioni = \{\}\)/);
+    expect(a).toMatch(/creditoFinito[\s\S]{0,400}catch[\s\S]{0,150}return !!opzioni\.failClosed/);
+    expect(a)
+      .toMatch(/creditoInsufficiente[\s\S]{0,400}catch[\s\S]{0,150}return !!opzioni\.failClosed/);
   });
 });
 

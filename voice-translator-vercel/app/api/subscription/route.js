@@ -7,34 +7,17 @@ import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('subscription');
 
-// SECURITY: Validate returnUrl against allowed origins to prevent open redirect
-const ALLOWED_ORIGINS = [
-  'https://voice-translator2.vercel.app',
-  'https://bartalk.app',
-  process.env.NEXT_PUBLIC_URL,
-].filter(Boolean);
-
-function sanitizeReturnUrl(url) {
-  if (!url) return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
-  try {
-    const parsed = new URL(url);
-    if (ALLOWED_ORIGINS.some(origin => parsed.origin === new URL(origin).origin)) {
-      return url;
-    }
-  } catch { /* un indirizzo malformato non e valido: si usa quello predefinito */ }
-  // Reject unrecognized domains — fall back to app URL
-  return process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
-}
-
 // ═══════════════════════════════════════════════
 // Subscription Management API
 //
 // Actions:
 //   plans       — list available plans (public)
-//   subscribe   — create Stripe checkout (auth required)
-//   portal      — create Stripe customer portal (auth required)
+//   subscribe   — DISATTIVATA b.158 (vedi nota sotto)
+//   portal      — DISATTIVATA b.158 (vedi nota sotto)
 //   status      — get current subscription status (auth required)
-//   cancel      — cancel subscription (auth required)
+//   cancel      — cancel subscription (auth required) — lasciata attiva
+//                 apposta: chi avesse gia' un abbonamento legacy deve
+//                 poter smettere di pagare
 //
 // Auth: Session token required for all actions except 'plans'
 // ═══════════════════════════════════════════════
@@ -83,7 +66,7 @@ const PLANS = {
 
 async function handlePost(req) {
   try {
-    const { action, token, userEmail, userId, plan, period, returnUrl } = await req.json();
+    const { action, token } = await req.json();
 
     if (!action) return NextResponse.json({ error: 'No action' }, { status: 400 });
 
@@ -116,59 +99,22 @@ async function handlePost(req) {
       verifiedUserId = profile?.id || null;
     }
 
-    // ── Subscribe ──
-    if (action === 'subscribe') {
-      if (!plan || !PLANS[plan]) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
-
-      const selectedPlan = PLANS[plan];
-      const billingPeriod = period === 'yearly' ? 'yearly' : 'monthly';
-      const priceId = selectedPlan[billingPeriod];
-
-      // Get or create Stripe customer (using verified identity)
-      let customerId;
-      if (sb && verifiedUserId) {
-        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', verifiedUserId).single();
-        customerId = profile?.stripe_customer_id;
-      }
-      if (!customerId) {
-        const customer = await getStripe().customers.create({ email: verifiedEmail, metadata: { userId: verifiedUserId || '', plan } });
-        customerId = customer.id;
-        if (sb && verifiedUserId) {
-          await sb.from('profiles').update({ stripe_customer_id: customerId }).eq('id', verifiedUserId);
-        }
-      }
-
-      const checkoutSession = await getStripe().checkout.sessions.create({
-        customer: customerId,
-        mode: 'subscription',
-        payment_method_types: ['card'],
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${sanitizeReturnUrl(returnUrl)}/?subscription=success`,
-        cancel_url: `${sanitizeReturnUrl(returnUrl)}/?subscription=cancel`,
-        metadata: { userId: verifiedUserId || '', plan, period: billingPeriod },
-        subscription_data: {
-          metadata: { userId: verifiedUserId || '', plan },
-        },
-      });
-
-      return NextResponse.json({ url: checkoutSession.url, sessionId: checkoutSession.id });
-    }
-
-    // ── Customer Portal ──
-    if (action === 'portal') {
-      if (!verifiedUserId) return NextResponse.json({ error: 'No Supabase profile found' }, { status: 400 });
-      let customerId;
-      if (sb) {
-        const { data: profile } = await sb.from('profiles').select('stripe_customer_id').eq('id', verifiedUserId).single();
-        customerId = profile?.stripe_customer_id;
-      }
-      if (!customerId) return NextResponse.json({ error: 'No billing account' }, { status: 400 });
-
-      const portalSession = await getStripe().billingPortal.sessions.create({
-        customer: customerId,
-        return_url: sanitizeReturnUrl(returnUrl),
-      });
-      return NextResponse.json({ url: portalSession.url });
+    // b.158 — CONFERMATO, difetto critico letto nel codice: 'subscribe'
+    // e 'portal' aprono un vero addebito/vera gestione Stripe (carta
+    // vera, abbonamento vero, rinnovo automatico vero), ma NESSUNA
+    // funzione a pagamento del prodotto legge mai profiles.tier o
+    // subscription_status per concedere qualcosa (resolveAuth guarda
+    // solo il wallet — vedi apiAuth.js). Come /api/stripe (vedi li'),
+    // questa rotta e' pubblica, non ha piu nessuna voce che la chiami
+    // dall'interfaccia viva, ma resta raggiungibile chiamando l'API
+    // direttamente: un cliente che la trovasse pagherebbe un
+    // abbonamento reale, ricorrente, per un tier che il prodotto non
+    // applica mai. Disattivate qui le due azioni che aprono un vero
+    // addebito o una vera gestione dell'addebito.
+    if (action === 'subscribe' || action === 'portal') {
+      return NextResponse.json({
+        error: 'Gli abbonamenti non sono piu attivi. Usa il wallet in-app per ricaricare il credito.',
+      }, { status: 410 });
     }
 
     // ── Subscription Status ──

@@ -268,6 +268,12 @@ const TalkControls = memo(function TalkControls({
           <>
             <span style={{color:S.colors.overlayBorder}}>|</span>
             {[
+              /* b.158 — CONFERMATO, difetto di prodotto: VAD_PRESETS.auto
+                 (constants.js) esiste da tempo, si autotara sul rumore
+                 ambientale (vedi calibraRumore.js), ma non compariva mai
+                 qui: nessuno poteva mai selezionarlo. Aggiunto come prima
+                 opzione. */
+              { id: 'auto', short: 'Auto' },
               { id: 'quiet', short: 'Silenzio' },
               { id: 'normal', short: 'Normale' },
               { id: 'noisy', short: 'Rumore' },

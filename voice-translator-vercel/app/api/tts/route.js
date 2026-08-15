@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { deductCredits } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+import { addebitaTesto } from '../../wallet/addebita.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDefaults.js';
@@ -110,15 +110,22 @@ async function handlePost(req) {
     // Deduct cost upfront (before streaming)
     const ttsCostUsd = calcTtsCost(text.length);
     const ttsCostEurCents = usdToEurCents(ttsCostUsd);
-    // b.154 — l'addebito personale serve solo con un billingEmail (non
-    // si scala nessuno), ma il conteggio verso il tetto DI PIATTAFORMA
-    // deve vedere anche le chiamate anonime: prima trackDailySpend
-    // viveva solo dentro questo `if`, quindi la modalita libera non
-    // veniva mai contata nel tetto di €100/giorno.
+    // b.157 — audit pagamenti: CONFERMATO, questa rotta non addebitava
+    // MAI il wallet vero. resolveAuth (sopra) autorizza gia leggendo
+    // SOLO il wallet (creditoFinito), ma l'unico addebito qui era sul
+    // vecchio user.credits (Redis) — un campo che l'autorizzazione non
+    // legge piu da quando il wallet e diventato "l'unica verita"
+    // (apiAuth.js). Risultato pratico: bastava un solo centesimo nel
+    // wallet per sbloccare il controllo, e da li in poi il TTS diretto
+    // (non quello dentro una traduzione, che invece passa da
+    // addebitaTesto in /api/translate) era illimitato e gratis — il
+    // saldo mostrato in CreditsView non si muoveva mai. Ora addebita
+    // davvero, con lo stesso conto caratteri->secondi di ogni altro
+    // messaggio vocale.
     if (!isOwnKey) {
       const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
       if (billingEmail) {
-        try { await deductCredits(billingEmail, charge); } catch (e) { log.error('TTS credit deduct error:', e); }
+        try { await addebitaTesto(billingEmail, text.length); } catch (e) { log.error('TTS wallet deduct error:', e); }
       }
       trackDailySpend(billingEmail, charge).catch(() => {});
     }

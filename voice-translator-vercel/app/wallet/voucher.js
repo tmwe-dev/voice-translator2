@@ -5,10 +5,16 @@
 // L'utente inserisce il codice → riceve i secondi → riga nel ledger.
 // Un codice può avere usi massimi e scadenza. Un utente può usare
 // lo stesso codice UNA volta sola (garantito dalla funzione SQL).
+//
+// b.157 — la riga nel ledger veniva scritta con una SECONDA chiamata
+// da JS, dopo che wallet_riscatta_voucher aveva gia marcato il
+// codice come usato: un guasto proprio in mezzo lasciava il voucher
+// "consumato" senza che nessuno fosse stato accreditato. Ora la
+// scrittura vive nella STESSA transazione della funzione SQL
+// (migration 008).
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import { registraMovimento } from './contabilita.js';
 
 function db() {
   return createClient(
@@ -27,7 +33,8 @@ export async function riscattaVoucher(utenteId, codice) {
   if (!pulito) return { ok: false, motivo: 'Codice vuoto' };
 
   // La funzione SQL fa tutto in un colpo solo (atomico):
-  // verifica esistenza, scadenza, usi rimasti, doppio riscatto.
+  // verifica esistenza, scadenza, usi rimasti, doppio riscatto, E
+  // scrive il movimento nel ledger — stessa transazione (migration 008).
   const { data, error } = await db()
     .rpc('wallet_riscatta_voucher', { p_user_id: utenteId, p_codice: pulito });
   if (error) return { ok: false, motivo: 'Errore: ' + error.message };
@@ -35,7 +42,5 @@ export async function riscattaVoucher(utenteId, codice) {
     return { ok: false, motivo: data?.[0]?.motivo || 'Codice non valido' };
   }
 
-  const secondi = data[0].secondi;
-  await registraMovimento(utenteId, 'voucher', secondi, { codice: pulito });
-  return { ok: true, secondi };
+  return { ok: true, secondi: data[0].secondi };
 }
