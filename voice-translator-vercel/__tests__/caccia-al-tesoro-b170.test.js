@@ -158,9 +158,27 @@ describe('Espulsione: un gettone di stanza valido non autorizza piu chi non e pi
     expect(await eAncoraMembroStanza('ABC', 'Mario')).toBe(false);
   });
 
-  it('eAncoraMembroStanza: falso (fail-closed) se la stanza non esiste', async () => {
+  // b.171-bis — CORRETTO: la stanza assente NON prova un'espulsione
+  // (espellere non cancella la stanza; la stanza scade in 1h, il gettone
+  // in 24h). Fallire chiuso qui buttava fuori utenti legittimi e la loro
+  // video call a ogni stanza scaduta o intoppo Redis. Ora: nessuna prova
+  // contraria → si resta dentro.
+  it('eAncoraMembroStanza: VERO se la stanza non esiste (nessuna prova di espulsione)', async () => {
     const { eAncoraMembroStanza } = await import('../app/lib/store.js');
-    expect(await eAncoraMembroStanza('NOPE', 'Luca')).toBe(false);
+    expect(await eAncoraMembroStanza('NOPE', 'Luca')).toBe(true);
+  });
+
+  it('eAncoraMembroStanza: VERO (fail-open) se Redis e irraggiungibile — un guasto non e un\'espulsione', async () => {
+    const { eAncoraMembroStanza } = await import('../app/lib/store.js');
+    // Il prossimo comando Redis lancia (simula circuit OPEN su Upstash).
+    mockRedis.mockImplementationOnce(async () => { throw new Error('Circuit OPEN for redis:upstash'); });
+    expect(await eAncoraMembroStanza('ABC', 'Luca')).toBe(true);
+  });
+
+  it('kick REALE resta efficace: stanza ESISTE ma il nome non e tra i membri → negato', async () => {
+    const { eAncoraMembroStanza } = await import('../app/lib/store.js');
+    store['room:ABC'] = JSON.stringify({ id: 'ABC', members: [{ name: 'Luca', role: 'host' }] });
+    expect(await eAncoraMembroStanza('ABC', 'EspulsoMario')).toBe(false);
   });
 
   it('resolveRoomIdentity richiama il controllo di appartenenza (codice)', () => {

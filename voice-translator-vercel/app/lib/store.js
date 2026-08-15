@@ -77,21 +77,43 @@ export async function resolveRoomIdentity(token, name, roomId) {
 // avere un gettone valido dall'essere ancora un membro. Import dinamico
 // di moderazione.js (eBloccato) per lo stesso motivo documentato in
 // blocca(): store.js viene caricato presto e non deve dipendere da
-// moderazione al caricamento del modulo. In caso di errore Redis si
-// FALLISCE CHIUSO (return false, l'accesso viene negato): una capability
-// di stanza non e' un servizio da lasciare aperto quando non si riesce a
-// verificare chi la sta usando.
+// moderazione al caricamento del modulo.
+//
+// b.171-bis — CORRETTO (regressione introdotta da b.170, trovata dal
+// vivo): la versione precedente FALLIVA CHIUSA su qualunque intoppo —
+// errore Redis o stanza non trovata → accesso negato. Ma:
+//   · la stanza ha TTL 1h, il gettone di sessione 24h;
+//   · espellere qualcuno toglie da room.members ma NON cancella la stanza.
+// Quindi "stanza assente" NON prova un'espulsione: prova solo che la
+// stanza e scaduta/sfrattata o che Redis ha avuto un intoppo. Fallire
+// chiuso li trasformava ogni blip di Redis (visto nei log: circuit OPEN
+// su Upstash) e ogni stanza inattiva in "sei fuori", facendo cadere
+// heartbeat, identita di stanza e VIDEO CALL per utenti perfettamente
+// legittimi — la classe di bug "le stanze sparivano".
+//
+// Regola corretta: si NEGA solo con una PROVA POSITIVA di non
+// appartenenza — la stanza ESISTE e il nome non e tra i suoi membri, o
+// il nome risulta bloccato. Quando non si puo provare il contrario
+// (stanza assente, Redis giu), si resta dentro col gettone valido, come
+// prima di b.170. L'obiettivo di sicurezza resta intatto: chi viene
+// espulso trova una stanza che ESISTE senza il suo nome → negato; la
+// finestra riaperta (un espulso mentre Redis e giu) e minima e in quel
+// momento non c'e comunque nulla da abusare.
 export async function eAncoraMembroStanza(roomId, nome) {
   if (!nome) return false;
   try {
     const { eBloccato } = await import('./moderazione.js');
     if (await eBloccato(roomId, nome)) return false;
     const room = await getRoom(roomId);
-    if (!room || !Array.isArray(room.members)) return false;
+    // Nessuna prova contraria (stanza scaduta/sfrattata): si resta dentro.
+    if (!room || !Array.isArray(room.members)) return true;
     const n = String(nome).toLowerCase();
     return room.members.some((m) => String(m.name || '').toLowerCase() === n);
   } catch {
-    return false; // fail-closed: nel dubbio, non si autorizza
+    // Redis irraggiungibile: non e una prova di espulsione. Fail-OPEN,
+    // come prima di b.170: un guasto infrastrutturale non deve buttare
+    // fuori chi ha un gettone valido (e con esso la sua video call).
+    return true;
   }
 }
 
