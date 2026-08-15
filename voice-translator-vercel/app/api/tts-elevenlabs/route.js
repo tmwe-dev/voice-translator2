@@ -109,14 +109,18 @@ async function handlePost(req) {
       throw e;
     }
 
-    const { text, voiceId, langCode, userToken, roomId, avatarName } = await req.json();
+    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
     // 3-tier auth: userToken → roomId → reject
     // Any PRO user with credits can use ElevenLabs (platform key), not just TOP PRO
+    // b.161 — roomSessionToken ora obbligatorio per il percorso roomId
+    // (vedi apiAuth.js, punto 2 del quarto audit): senza, resolveAuth
+    // rifiuta con 401 invece di fatturare all'host su un roomId indovinato.
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
       roomId,
+      roomSessionToken,
       provider: 'elevenlabs',
       minCredits: MIN_CREDITS.TTS_ELEVENLABS,
     });

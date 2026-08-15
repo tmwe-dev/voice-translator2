@@ -16,7 +16,7 @@ import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { addebitaTesto } from '../../wallet/addebita.js';
+import { addebitaTesto, creditoFinito, creditoInsufficiente, preventivoTesto } from '../../wallet/addebita.js';
 
 const log = createLogger('translate');
 
@@ -52,6 +52,11 @@ async function handlePost(req) {
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
             roomMode, nativeLang, conversationContext,
             glossario } = { ...rawBody, ...inputValidation.data }; // b.95
+    // b.161 — non ancora nello schema (vedi schemas.js): stesso trattamento
+    // gia riservato a `glossario` qui sopra, un gettone opaco non ha
+    // bisogno di sanificazione testuale, solo del controllo tipo fatto
+    // da resolveRoomIdentity in store.js.
+    const roomSessionToken = typeof rawBody.roomSessionToken === 'string' ? rawBody.roomSessionToken : null;
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 
@@ -117,10 +122,30 @@ async function handlePost(req) {
     let { apiKey, isOwnKey, billingEmail, isLending, lendingCodeUsed } = await resolveAuth({
       userToken,
       roomId,
+      roomSessionToken,
       lendingCode: lendingCode || undefined,
       provider: authProvider,
       minCredits: MIN_CREDITS.TRANSLATE,
     });
+
+    // ── b.161 · saldo positivo ma insufficiente: si blocca PRIMA, non dopo ──
+    // CONFERMATO (quarto audit esterno, punto 1): resolveAuth chiede solo
+    // "il saldo e a zero?" (creditoFinito). Con un saldo positivo ma sotto
+    // il costo di QUESTA traduzione, il fornitore (Asia o Global, poco
+    // sotto) veniva chiamato e la traduzione consegnata comunque: l'addebito
+    // vero, piu in basso, arrivava DOPO il lavoro e la RPC wallet_usa lo
+    // rifiuta senza scalare nulla (vedi migrazione 006) — quindi il saldo
+    // non scende mai sotto la soglia che lo bloccherebbe. Risultato: traduzioni
+    // gratis a ripetizione per chiunque tenesse il saldo appena sopra zero.
+    // Il preventivo usa la stessa formula dell'addebito vero (preventivoTesto,
+    // su text.length, gia noto qui), cosi non e un controllo separato che
+    // puo disallinearsi da quello reale.
+    if (billingEmail && !isOwnKey) {
+      const costoPrevisto = preventivoTesto(text.length);
+      if (await creditoInsufficiente(billingEmail, costoPrevisto, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      }
+    }
 
     // ── b.123 · CHI PAGA SI DECIDE PRIMA DI SCEGLIERE IL FORNITORE ──
     //
@@ -204,6 +229,27 @@ async function handlePost(req) {
       fallbacks.push({ provider: 'anthropic', model: 'claude-3-haiku-20240307', apiKey: process.env.ANTHROPIC_API_KEY });
     }
 
+    // b.160 — CONFERMATO (secondo audit esterno, punto 4): correggere
+    // isOwnKey DOPO il fallback (b.159) chiude l'addebito mancante solo
+    // per chi ha credito nel wallet. Per chi dichiara "uso la mia
+    // chiave" con una chiave FALSA o rotta e wallet a ZERO, resolveAuth
+    // salta il controllo credito in partenza (isOwnKey=true a quel
+    // punto), la chiamata vera fallisce sempre, il fallback di
+    // piattaforma la completa comunque, e l'addebito a valle fallisce
+    // ('esaurito') ma la traduzione viene restituita lo stesso: un
+    // trucco ripetibile all'infinito (nessun controllo credito su
+    // NESSUna richiesta, perche isOwnKey resta true all'inizio di ogni
+    // chiamata) — non una race isolata come per un utente normale che
+    // esaurisce il credito a meta (li' resolveAuth blocca dalla
+    // richiesta successiva). Se l'utente dichiarava una chiave propria
+    // e il wallet e' gia a zero, il fallback di piattaforma NON si
+    // tenta: niente chiave propria valida + niente credito = errore
+    // esplicito, non un giro gratis pagato da BarTalk.
+    if (isOwnKey && fallbacks.length && billingEmail) {
+      const senzaCredito = await creditoFinito(billingEmail, { failClosed: true });
+      if (senzaCredito) fallbacks.length = 0;
+    }
+
     // Se Asia ha gia tradotto, il modello non si chiama: si sarebbe
     // pagata due volte la stessa frase.
     let translated, usage, wasFallback;
@@ -244,13 +290,30 @@ async function handlePost(req) {
             // Need OpenAI key for retry — resolve if using different provider
             let retryKey = apiKey;
             if (modelInfo.provider !== 'openai') {
+              // b.161 — CONFERMATO (terzo audit esterno, punto 3): questa
+              // seconda resolveAuth passava `skipCreditCheck:true` a
+              // prescindere, e il suo `isOwnKey` non veniva mai riportato
+              // sulla `isOwnKey` esterna. Se il provider originale era a
+              // chiave propria (isOwnKey=true, es. Anthropic) e la
+              // traduzione falliva la validazione, questo retry poteva
+              // usare la chiave OpenAI di PIATTAFORMA (nessuna chiave
+              // OpenAI propria salvata) senza ALCUN controllo credito e
+              // senza che l'addebito piu sotto se ne accorgesse mai — la
+              // stessa classe di difetto del fallback, corretta in b.159,
+              // ma qui dimenticata. Ora il controllo credito e' quello
+              // vero (skipCreditCheck tolto: se isOwnKey risulta true per
+              // questo retry, il controllo si salta comunque da solo,
+              // come sempre) e isOwnKey esterna si allinea al risultato.
               try {
                 const retryAuth = await resolveAuth({
-                  userToken, roomId, provider: 'openai',
-                  minCredits: 0, skipCreditCheck: true,
+                  userToken, roomId, roomSessionToken, provider: 'openai',
+                  minCredits: 0,
                 });
                 retryKey = retryAuth.apiKey;
-              } catch { /* use existing key */ }
+                if (isOwnKey && !retryAuth.isOwnKey) {
+                  isOwnKey = false;
+                }
+              } catch { /* wallet esaurito o chiave assente: niente retry pagato, si tiene il testo originale */ }
             }
             const retryOpenai = new OpenAI({ apiKey: retryKey });
             const retryCompletion = await retryOpenai.chat.completions.create({

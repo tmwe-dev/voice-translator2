@@ -2,7 +2,7 @@ import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
-import { addebitaTesto } from '../../wallet/addebita.js';
+import { addebitaTesto, creditoFinito, creditoInsufficiente, preventivoTesto } from '../../wallet/addebita.js';
 import { MIN_CREDITS, MIN_CHARGE, calcTtsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getOpenAIVoiceForLang, getOpenAISpeedForLang } from '../../lib/voiceDefaults.js';
@@ -66,10 +66,15 @@ async function handlePost(req) {
       return apiError(ErrorCode.INVALID_INPUT, validation.error);
     }
     const { text, voice, userToken, roomId, langCode, wantStream } = validation.data;
+    // b.161 — non e' nello schema di validateTTSInput (un gettone opaco
+    // non ha bisogno di sanificazione testuale): letto dal body grezzo,
+    // come roomSessionToken in translate/route.js.
+    const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
 
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,
       roomId,
+      roomSessionToken,
       provider: 'openai',
       minCredits: MIN_CREDITS.TTS_OPENAI,
     });
@@ -80,8 +85,24 @@ async function handlePost(req) {
     // b.159 — addebito comune, chiamato SOLO dopo un audio davvero
     // ottenuto (ne CosyVoice ne OpenAI pagano in anticipo: se il
     // fornitore fallisce non si scala niente).
-    async function addebitaTTS() {
-      if (isOwnKey) return;
+    //
+    // b.160 — CONFERMATO (secondo audit esterno, punto 2): la vecchia
+    // versione controllava `if (isOwnKey) return`, ma `isOwnKey` descrive
+    // la chiave OpenAI risolta da resolveAuth — non la credenziale
+    // REALMENTE usata per la chiamata che si sta addebitando. CosyVoice
+    // (vedi ttsAsia.js: `opts.apiKey || DASHSCOPE_API_KEY`) non riceve
+    // MAI una chiave propria da questa rotta: usa SEMPRE la chiave
+    // DashScope di piattaforma, anche quando l'utente ha una propria
+    // chiave OpenAI (isOwnKey=true per il ramo OpenAI, irrilevante per
+    // CosyVoice). Risultato: un utente con chiave OpenAI propria che
+    // traduce verso una lingua instradata su CosyVoice otteneva TTS
+    // reale, fatturato a BarTalk da DashScope, senza addebito wallet.
+    // Ora la funzione riceve esplicitamente CHI ha pagato la chiamata:
+    // il ramo CosyVoice passa sempre `false` (non esiste, in questa
+    // rotta, un percorso con chiave propria per DashScope); il ramo
+    // OpenAI passa il vero `isOwnKey`.
+    async function addebitaTTS(usataChiavePropria) {
+      if (usataChiavePropria) return;
       const ttsCostUsd = calcTtsCost(text.length);
       const ttsCostEurCents = usdToEurCents(ttsCostUsd);
       const charge = Math.max(MIN_CHARGE.TTS_OPENAI, ttsCostEurCents);
@@ -93,6 +114,24 @@ async function handlePost(req) {
 
     // ── TTS Router: check if a better engine is available for this language ──
     const ttsRoute = routeTTS(lang2, { hasElevenLabs: false, hasOpenAI: true });
+
+    // ── b.161 · saldo positivo ma insufficiente: si blocca PRIMA, non dopo ──
+    // CONFERMATO (quarto audit esterno, punto 1): resolveAuth controllava
+    // solo `creditoFinito` (saldo>0), mai il costo vero. Qui il gate deve
+    // scattare anche solo per CosyVoice: quel ramo addebita SEMPRE (vedi
+    // addebitaTTS(false) piu sotto, isOwnKey e' irrilevante per DashScope),
+    // quindi il pagante e' noto una volta scelto il motore, non prima.
+    const pagheraQualcuno = billingEmail && (ttsRoute.engine === 'cosyvoice' || !isOwnKey);
+    if (pagheraQualcuno) {
+      if (await creditoFinito(billingEmail, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
+      }
+      const costoPrevisto = preventivoTesto(text.length);
+      if (await creditoInsufficiente(billingEmail, costoPrevisto, { failClosed: true })) {
+        return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      }
+    }
+
     if (ttsRoute.engine === 'cosyvoice') {
       try {
         const { ttsCosyVoice } = await import('../../lib/ttsAsia.js');
@@ -103,7 +142,7 @@ async function handlePost(req) {
           // sotto (pensato solo per il ramo OpenAI): ogni TTS instradato
           // su CosyVoice (lingue asiatiche) costava a DashScope ed era
           // gratis per chi lo riceveva, saldo wallet incluso.
-          await addebitaTTS();
+          await addebitaTTS(false); // CosyVoice usa sempre la chiave DashScope di piattaforma
           const audioBuffer = Buffer.from(cosyResult.audio);
           return new NextResponse(audioBuffer, {
             headers: {
@@ -144,7 +183,7 @@ async function handlePost(req) {
       response_format: 'mp3',
       speed,
     });
-    await addebitaTTS();
+    await addebitaTTS(isOwnKey); // ramo OpenAI: isOwnKey riflette davvero la chiave usata qui
 
     // ── Try true streaming first, fallback to buffer ──
     if (wantStream && response.body) {

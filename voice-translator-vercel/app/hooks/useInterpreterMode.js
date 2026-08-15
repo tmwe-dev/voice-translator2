@@ -25,7 +25,7 @@ const dbg = createLogger('interpreter');
 const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
 
 export default function useInterpreterMode({
-  webrtc, myLang, partnerLang, roomId, userToken, useOwnKeys,
+  webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken, useOwnKeys,
   startDucking, stopDucking,
   conversationContext,  // NEW: { getContext, addMessage } from useConversationContext
 }) {
@@ -159,6 +159,9 @@ export default function useInterpreterMode({
       formData.append('sourceLang', myLang);
       if (userToken) formData.append('userToken', userToken);
       if (roomId) formData.append('roomId', roomId);
+      // b.161 — senza questo, resolveAuth rifiuta con 401 il percorso
+      // roomId (vedi apiAuth.js, punto 2 quarto audit).
+      if (roomId && roomSessionTokenRef?.current) formData.append('roomSessionToken', roomSessionTokenRef.current);
 
       const sttRes = await apiCircuitBreaker.execute('interpreter-stt', () =>
         fetch('/api/transcribe', { method: 'POST', body: formData })
@@ -183,6 +186,7 @@ export default function useInterpreterMode({
             targetLang: partnerLang,
             userToken: userToken || '',
             roomId,
+            roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
           }),
         })
       );
@@ -259,7 +263,7 @@ export default function useInterpreterMode({
     } finally {
       processingRef.current = false;
     }
-  }, [myLang, partnerLang, roomId, userToken, webrtc]);
+  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc]);
 
   // Keep processChunkRef in sync so recorder.ondataavailable always calls latest version
   // (avoids stale closure if myLang/partnerLang/userToken change mid-recording)
@@ -348,7 +352,7 @@ export default function useInterpreterMode({
 
   // ═══ STREAMING INTERPRETER (subtitle-first pipeline) ═══
   const streaming = useStreamingInterpreter({
-    webrtc, myLang, partnerLang, roomId, userToken,
+    webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken,
     conversationContext,
     startDucking, stopDucking,
   });

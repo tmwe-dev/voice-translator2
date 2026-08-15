@@ -24,6 +24,7 @@ export default function useTTSEngine({
   selectedELVoice,
   clonedVoiceIdRef,
   roomIdRef,
+  roomSessionTokenRef,
   getEffectiveToken,
   audioReady,
   getPersistentAudio,
@@ -281,6 +282,9 @@ export default function useTTSEngine({
             langCode: langCode || undefined,
             userToken: getEffectiveToken(),
             roomId: roomIdRef.current || undefined,
+            // b.161 — senza questo, resolveAuth rifiuta con 401 il
+            // percorso roomId (vedi apiAuth.js, punto 2 quarto audit).
+            roomSessionToken: roomSessionTokenRef?.current || undefined,
           })
         });
         if (!res.ok) { if (attempt < retries) continue; throw new Error(`TTS ${res.status}`); }
@@ -322,7 +326,8 @@ export default function useTTSEngine({
           langCode: langCode || undefined,
           avatarName: getAvatarName(),
           userToken: getEffectiveToken(),
-          roomId: roomIdRef.current || undefined
+          roomId: roomIdRef.current || undefined,
+          roomSessionToken: roomSessionTokenRef?.current || undefined,
         })
       });
       if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
@@ -369,6 +374,7 @@ export default function useTTSEngine({
             avatarName: getAvatarName(),
             userToken: getEffectiveToken(),
             roomId: roomIdRef.current || undefined,
+            roomSessionToken: roomSessionTokenRef?.current || undefined,
           }),
         });
         if (res.ok) return await res.blob();

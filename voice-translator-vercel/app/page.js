@@ -202,6 +202,11 @@ function HomeInner() {
   const roomInfoRef = useRef(null);
   const roomContextRef = useRef({ contextId: 'general', contextPrompt: '', description: '' });
   const roomIdRef = useRef(null);
+  // b.161 — gemello di roomIdRef: useAudioSystem/useTTSEngine nascono PRIMA
+  // di roomPolling (poco sotto), quindi non possono leggere direttamente
+  // roomPolling.roomSessionTokenRef. Sincronizzato in un useEffect, come
+  // gia si fa per roomIdRef.current piu in basso.
+  const roomSessionTokenRef = useRef(null);
 
   // ── Session mode: 'direct' | 'translate' ──
   // Direct mode: E2E only, no server processing. Translate mode: full cloud pipeline.
@@ -269,6 +274,7 @@ function HomeInner() {
     selectedELVoice: auth.selectedELVoice,
     clonedVoiceIdRef,
     roomIdRef,
+    roomSessionTokenRef,
     getEffectiveToken: auth.getEffectiveToken
   });
   const roomPolling = useRoomPolling({
@@ -391,6 +397,7 @@ function HomeInner() {
     myLang,
     partnerLang,
     roomId: roomPolling.roomId,
+    roomSessionTokenRef: roomPolling.roomSessionTokenRef,
     userToken: auth.userToken,
     useOwnKeys: auth.useOwnKeys,
     startDucking: audio.startDucking,
@@ -416,6 +423,11 @@ function HomeInner() {
   useEffect(() => { myLangRef.current = myLang; }, [myLang]);
   useEffect(() => { roomInfoRef.current = roomPolling.roomInfo; }, [roomPolling.roomInfo]);
   useEffect(() => { roomIdRef.current = roomPolling.roomId; }, [roomPolling.roomId]);
+  // b.161 — stesso schema di roomIdRef qui sopra: roomPolling.roomSessionTokenRef
+  // e' gia un ref (non stato), valorizzato da handleCreateRoom/handleJoinRoom
+  // nello stesso momento in cui roomId cambia — quindi si aggancia alla
+  // stessa dipendenza.
+  useEffect(() => { roomSessionTokenRef.current = roomPolling.roomSessionTokenRef?.current || null; }, [roomPolling.roomId, roomPolling.roomSessionTokenRef]);
   useEffect(() => { clonedVoiceIdRef.current = auth.clonedVoiceId || null; }, [auth.clonedVoiceId]);
 
   // ── b.109 · qui c'era il "ponte" verso stores/appStore.js ──

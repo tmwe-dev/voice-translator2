@@ -78,3 +78,23 @@ export async function riscattaRegalo(aUtenteId, codice) {
 
   return { ok: true, secondi: data[0].secondi };
 }
+
+/**
+ * b.161 — CONFERMATO (quarto audit esterno, punto 8): wallet_rimborsa_regali
+ * esisteva gia (migration 004), gia blindata (permessi solo a service_role,
+ * migration 006) e gia coperta da un test che verifica quei permessi
+ * (wallet-sicurezza-b154.test.js) — ma NULLA la chiamava mai. Nessuna
+ * rotta API, nessuna voce in vercel.json. Chi regalava minuti mai
+ * riscattati non li rivedeva indietro: restavano scalati per sempre nel
+ * suo wallet, senza errore e senza nessun segnale.
+ *
+ * Rimborsa (atomico, dentro la funzione SQL stessa: marca rimborsato E
+ * accredita in un colpo solo) tutti i regali non riscattati da oltre
+ * 30 giorni. Da chiamare una volta al giorno (vedi vercel.json).
+ * @returns {number} quanti regali sono stati rimborsati in questo giro
+ */
+export async function rimborsaRegaliScaduti() {
+  const { data, error } = await db().rpc('wallet_rimborsa_regali');
+  if (error) throw new Error('Rimborso regali fallito: ' + error.message);
+  return data ?? 0;
+}

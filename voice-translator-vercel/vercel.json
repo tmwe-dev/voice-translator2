@@ -3,6 +3,10 @@
     {
       "path": "/api/wallet/snapshot",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/wallet/cron-rimborso-regali",
+      "schedule": "0 3 * * *"
     }
   ]
 }

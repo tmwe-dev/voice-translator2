@@ -8,7 +8,7 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
-import { creditoFinito, addebitaVoce } from '../../wallet/addebita.js';
+import { creditoFinito, creditoInsufficiente, addebitaVoce } from '../../wallet/addebita.js';
 
 const log = createLogger('transcribe');
 
@@ -44,6 +44,7 @@ async function handlePost(req) {
     const userToken = formData.get('userToken') || '';
     const roomId = formData.get('roomId') || '';
     const lendingCode = formData.get('lendingCode') || '';
+    const roomSessionToken = formData.get('roomSessionToken') || '';
     // Durata della registrazione in secondi (la manda il client, che la conosce)
     const durataSec = Math.min(120, Math.max(0, parseFloat(formData.get('durata')) || 0));
 
@@ -66,21 +67,40 @@ async function handlePost(req) {
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken: userToken || undefined,
       roomId: roomId || undefined,
+      roomSessionToken: roomSessionToken || undefined,
       lendingCode: lendingCode || undefined,
       provider: 'openai',
       minCredits: MIN_CREDITS.PROCESS,
     });
 
-    // ── Wallet: credito finito? Fermiamo PRIMA di lavorare ──
+    const bytes = await audioFile.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    // ── Wallet: credito finito o insufficiente? Fermiamo PRIMA di lavorare ──
+    // b.161 — CONFERMATO (quarto audit esterno, punto 1): qui c'era gia
+    // `creditoFinito` (saldo>0) ma MAI `creditoInsufficiente` (saldo>=
+    // costo vero) — e per giunta fail-open, per il fornitore che qui
+    // costa di piu (Whisper). La RPC wallet_usa rifiuta un addebito con
+    // saldo insufficiente lasciando il saldo INTATTO (mai una deduzione
+    // parziale, vedi migrazione 006): con un saldo positivo ma sotto il
+    // costo di questa trascrizione, Whisper veniva chiamato e il servizio
+    // consegnato GRATIS, ripetibile all'infinito, perche il saldo non
+    // scendeva mai sotto la soglia che l'avrebbe bloccato. La stima usa
+    // la STESSA regola dell'addebito vero piu sotto (durata dichiarata o
+    // peso dell'audio, il maggiore dei due) — i byte sono gia in memoria,
+    // nessuna chiamata in piu per saperlo.
     const pagante = isOwnKey ? null : billingEmail;
-    if (pagante && await creditoFinito(pagante)) {
+    const stimaDalPeso = Math.min(120, buffer.length / 4000);
+    const costoPrevisto = Math.ceil(Math.max(durataSec, stimaDalPeso));
+    if (pagante && await creditoFinito(pagante, { failClosed: true })) {
       return NextResponse.json({ error: 'Credito esaurito', creditoEsaurito: true }, { status: 402 });
+    }
+    if (pagante && await creditoInsufficiente(pagante, costoPrevisto, { failClosed: true })) {
+      return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
     }
 
     const openai = new OpenAI({ apiKey });
 
-    const bytes = await audioFile.arrayBuffer();
-    const buffer = Buffer.from(bytes);
     const ext = audioFile.type?.includes('webm') ? 'webm' : audioFile.type?.includes('mp4') ? 'mp4' : 'webm';
     const tempPath = join('/tmp', `stt-${Date.now()}.${ext}`);
     await writeFile(tempPath, buffer);
@@ -105,7 +125,8 @@ async function handlePost(req) {
     // dichiarato "0.1s" veniva addebitato per 0.1s. Ora si prende il
     // massimo fra i due: la durata dichiarata non puo mai scendere
     // sotto quello che l'audio pesa davvero.
-    const stimaDalPeso = Math.min(120, buffer.length / 4000);
+    // b.161 — stimaDalPeso e' gia calcolata sopra, per il preventivo:
+    // stesso peso audio, stesso numero, niente da ricalcolare.
     const secondi = Math.max(durataSec, stimaDalPeso);
     const esito = await addebitaVoce(pagante, secondi);
 

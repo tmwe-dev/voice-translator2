@@ -119,6 +119,7 @@ export default function useTranslation({
     setRecording,
     setSpeakingState,
     roomId,
+    roomSessionTokenRef,
     userToken: getEffectiveToken(),
     unlockAudio,
     speakingKeepAliveRef,
@@ -342,6 +343,9 @@ export default function useTranslation({
     form.append('audio', blob, 'audio.webm');
     form.append('sourceLang', myL.code);
     if (roomId) form.append('roomId', roomId);
+    // b.161 — senza questo, resolveAuth rifiuta con 401 il percorso roomId
+    // (vedi apiAuth.js, punto 2 quarto audit).
+    if (roomId && roomSessionTokenRef?.current) form.append('roomSessionToken', roomSessionTokenRef.current);
     const effectiveToken = getEffectiveToken();
     if (effectiveToken) form.append('userToken', effectiveToken);
     // Durata della registrazione: serve al wallet per l'addebito in secondi

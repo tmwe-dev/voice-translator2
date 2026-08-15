@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { withApiGuard } from '../../../lib/apiGuard.js';
+import { withApiGuard, safeCompare } from '../../../lib/apiGuard.js';
+import { getUser } from '../../../lib/users.js';
 
 // ═══ MONITOR ADMIN — protetto da ADMIN_PASS ═══
 // GET  ?pass=... → economics (oggi/mese/totali) + config servizi
@@ -10,8 +11,16 @@ function db() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } });
 }
+// b.161 — CONFERMATO (quarto audit esterno, punto 10): confrontava
+// ADMIN_PASS con `===`, l'unica rotta admin a farlo — tutte le altre
+// (debug, translate-test, tts-test, startrek) usano gia safeCompare
+// (timingSafeEqual), proprio perche un confronto carattere-per-carattere
+// con tempo variabile permette in teoria di indovinare la password un
+// carattere alla volta misurando la latenza delle risposte. Qui, la
+// password piu sensibile di tutte (accredita denaro reale a chi vuole),
+// era anche l'unica non protetta.
 function autorizzato(pass) {
-  return process.env.ADMIN_PASS && pass === process.env.ADMIN_PASS;
+  return !!process.env.ADMIN_PASS && safeCompare(pass, process.env.ADMIN_PASS);
 }
 
 async function handleGet(req) {
@@ -45,10 +54,33 @@ async function handlePost(req) {
   const { pass, azione, chiave, valore, attivo, codice, minuti, usi, scade, utente, nota } = await req.json();
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
 
+  // b.161 — CONFERMATO (quarto audit esterno, punto 10): il tetto
+  // sotto (100000 minuti, ~69 giorni) non e una regola di business —
+  // e un paracadute contro il refuso: un admin che digita uno zero di
+  // troppo mintava crediti/voucher arbitrariamente grandi, scritti con
+  // un INSERT diretto che scavalca wallet_usa/wallet_regala (le uniche
+  // funzioni che oggi validano un tetto, 100000 SECONDI per operazione
+  // singola — qui e 60x quello, pensato per un accredito/voucher
+  // massivo, non per singolo utente). Ne le tabelle credit_ledger/
+  // vouchers hanno un CHECK a livello DB: la difesa oggi e SOLO qui.
+  const MAX_MINUTI_ADMIN = 100000;
+  const minutiValidi = Number.isFinite(minuti) && minuti > 0 && minuti <= MAX_MINUTI_ADMIN;
+
   // ── Accredita minuti a un utente (regalo diretto dell'admin) ──
   if (azione === 'accredita') {
-    if (!utente || !minuti || minuti <= 0) {
-      return NextResponse.json({ error: 'utente e minuti obbligatori' }, { status: 400 });
+    if (!utente || !minutiValidi) {
+      return NextResponse.json({ error: 'utente obbligatorio, minuti deve essere fra 0 e ' + MAX_MINUTI_ADMIN }, { status: 400 });
+    }
+    // b.161 — CONFERMATO: nessuna verifica che 'utente' esistesse
+    // davvero. Non c'e una tabella profiles in produzione (vedi
+    // MESSAGGIO-COMMIT-b159.txt) e credit_ledger.user_id e TEXT senza
+    // FK: un'email sbagliata per un carattere accreditava comunque,
+    // senza errore — il credito finiva in un ledger orfano, di fatto
+    // perso. L'identita vera degli utenti vive in Redis (users.js),
+    // non in Supabase: si verifica li.
+    const utenteEsiste = await getUser(String(utente).toLowerCase().trim());
+    if (!utenteEsiste) {
+      return NextResponse.json({ error: 'utente non trovato' }, { status: 404 });
     }
     const { error } = await db().from('credit_ledger').insert({
       user_id: String(utente).toLowerCase().trim(),
@@ -62,7 +94,15 @@ async function handlePost(req) {
 
   // ── Crea un voucher promozionale ──
   if (azione === 'voucher') {
-    if (!codice || !minuti) return NextResponse.json({ error: 'codice e minuti obbligatori' }, { status: 400 });
+    // b.161 — CONFERMATO: `!minuti` non respinge un valore NEGATIVO
+    // (`!(-50)` e' `false`): un voucher con secondi negativi veniva
+    // creato senza errore, e chi lo riscattava (wallet/voucher/route.js)
+    // si vedeva TOGLIERE credito invece di riceverlo, in silenzio —
+    // wallet_riscatta_voucher non valida il segno di cio che legge
+    // dalla tabella. Ora si usa lo stesso controllo di 'accredita'.
+    if (!codice || !minutiValidi) {
+      return NextResponse.json({ error: 'codice obbligatorio, minuti deve essere fra 0 e ' + MAX_MINUTI_ADMIN }, { status: 400 });
+    }
     const { error } = await db().from('vouchers').insert({
       codice: String(codice).toUpperCase().trim(),
       secondi: Math.round(minuti * 60),

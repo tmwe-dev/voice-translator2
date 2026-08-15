@@ -74,13 +74,13 @@ describe('/api/chat-action: ora addebita davvero (b.159)', () => {
     const iAuth = src.indexOf('await resolveAuth(');
     const iChiamata = src.indexOf('buildCompactTranscript(messages)');
     const blocco = src.slice(iAuth, iChiamata);
-    expect(blocco).toMatch(/creditoFinito\(pagante,\s*\{\s*failClosed:\s*true\s*\}\)/);
-    expect(blocco).toMatch(/creditoInsufficiente\(pagante,\s*costoPrevisto,\s*\{\s*failClosed:\s*true\s*\}\)/);
+    expect(blocco).toMatch(/creditoFinito\(paganteGate,\s*\{\s*failClosed:\s*true\s*\}\)/);
+    expect(blocco).toMatch(/creditoInsufficiente\(paganteGate,\s*costoPrevisto,\s*\{\s*failClosed:\s*true\s*\}\)/);
   });
 
   it('addebita DOPO la risposta del modello, non prima', () => {
     const iRisultato = src.lastIndexOf('provider = \'openai\';');
-    const iAddebito = src.indexOf('await addebitaAzioneChat(pagante);');
+    const iAddebito = src.indexOf('await addebitaAzioneChat(paganteReale);');
     const iReturn = src.indexOf('return NextResponse.json({\n      result:');
     expect(iAddebito).toBeGreaterThan(iRisultato);
     expect(iAddebito).toBeLessThan(iReturn);
@@ -103,7 +103,11 @@ describe('/api/stt-token: un gettone invalido non e piu "nessuno" (b.159)', () =
   it('userToken/roomId presenti ma non risolvibili tornano 401, non billingEmail null', () => {
     const i = src.indexOf('async function risolviEmailDaFatturare');
     const corpo = src.slice(i, src.indexOf('async function handler'));
-    expect(corpo.match(/return\s*\{\s*invalido:\s*true\s*\}/g) || []).toHaveLength(2);
+    // b.161 — un terzo caso si e' aggiunto (roomId con roomSessionToken
+    // assente o non valido per quella stanza, punto 2 quarto audit): la
+    // stessa sentinella 'invalido' rifiuta anche questo, non solo i due
+    // di prima (userToken rotto, host senza email).
+    expect(corpo.match(/return\s*\{\s*invalido:\s*true\s*\}/g) || []).toHaveLength(3);
   });
 
   it('il chiamante rifiuta esplicitamente il caso invalido con 401', () => {
@@ -114,16 +118,16 @@ describe('/api/stt-token: un gettone invalido non e piu "nessuno" (b.159)', () =
 describe('/api/tts: CosyVoice addebita, l\'addebito OpenAI arriva dopo il successo (b.159)', () => {
   const src = leggi('app/api/tts/route.js');
 
-  it('il ramo cosyvoice chiama addebitaTTS() prima del return con l\'audio', () => {
+  it('il ramo cosyvoice chiama addebitaTTS(...) prima del return con l\'audio', () => {
     const i = src.indexOf("ttsRoute.engine === 'cosyvoice'");
     const iReturn = src.indexOf('X-TTS-Engine\': \'cosyvoice\'', i);
     const blocco = src.slice(i, iReturn);
-    expect(blocco).toContain('await addebitaTTS();');
+    expect(blocco).toContain('await addebitaTTS(false);');
   });
 
   it('il ramo OpenAI addebita SOLO dopo che audio.speech.create ha risposto', () => {
     const iChiamata = src.indexOf('await openai.audio.speech.create(');
-    const iAddebito = src.indexOf('await addebitaTTS();', iChiamata);
+    const iAddebito = src.indexOf('await addebitaTTS(isOwnKey);', iChiamata);
     expect(iChiamata).toBeGreaterThan(-1);
     expect(iAddebito).toBeGreaterThan(iChiamata);
   });

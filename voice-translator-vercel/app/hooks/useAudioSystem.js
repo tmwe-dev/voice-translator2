@@ -27,6 +27,7 @@ export default function useAudioSystem({
   selectedELVoice,
   clonedVoiceIdRef,
   roomIdRef,
+  roomSessionTokenRef,
   getEffectiveToken
 }) {
   const [audioReady, setAudioReady] = useState(false);
@@ -89,6 +90,7 @@ export default function useAudioSystem({
     selectedELVoice,
     clonedVoiceIdRef,
     roomIdRef,
+    roomSessionTokenRef,
     getEffectiveToken,
     audioReady,
     getPersistentAudio,

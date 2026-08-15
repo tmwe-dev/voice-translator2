@@ -29,6 +29,7 @@ export default function useStreamingInterpreter({
   myLang,
   partnerLang,
   roomId,
+  roomSessionTokenRef,
   userToken,
   conversationContext,  // { getContext, addMessage }
   startDucking,
@@ -69,10 +70,12 @@ export default function useStreamingInterpreter({
 
   // ═══ FETCH DEEPGRAM KEY ═══
   useEffect(() => {
-    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId }) }).then(r => r.ok ? r.json() : null)
+    // b.161 — roomSessionToken obbligatorio per il percorso roomId (vedi
+    // stt-token/route.js, punto 2 quarto audit).
+    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) }).then(r => r.ok ? r.json() : null)
       .then(d => { if (d?.key) deepgramKeyRef.current = d.key; })
       .catch(e => console.warn('[Interpreter] STT token failed:', e.message));
-  }, [userToken, roomId]);
+  }, [userToken, roomId, roomSessionTokenRef]);
 
   // ═══ INCREMENTAL TRANSLATION ═══
   // Traduce un frammento di frase con il conversation context
@@ -91,6 +94,9 @@ export default function useStreamingInterpreter({
           targetLangName: getLang(partnerLang)?.name || partnerLang,
           userToken: userToken || '',
           roomId,
+          // b.161 — obbligatorio per il percorso roomId (vedi apiAuth.js,
+          // punto 2 quarto audit).
+          roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
           conversationContext: context,
           // Hint per il modello: frammento parziale vs frase completa
           fragmentHint: isFinal ? undefined : 'partial',
@@ -102,7 +108,7 @@ export default function useStreamingInterpreter({
     } catch {
       return '';
     }
-  }, [myLang, partnerLang, roomId, userToken]);
+  }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken]);
 
   // ═══ SEND SUBTITLE TO PARTNER ═══
   const sendSubtitleToPartner = useCallback((translatedText, originalText, isFinal) => {
@@ -276,7 +282,7 @@ export default function useStreamingInterpreter({
     if (!deepgramKeyRef.current) {
       // Try to get key
       try {
-        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId }) });
+        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) });
         if (res.ok) {
           const d = await res.json();
           if (d?.key) deepgramKeyRef.current = d.key;
@@ -380,7 +386,7 @@ export default function useStreamingInterpreter({
       console.error('[StreamInterp] Start failed:', e);
       return false;
     }
-  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId]);
+  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId, roomSessionTokenRef]);
 
   // ═══ STOP STREAMING ═══
   const stop = useCallback(() => {

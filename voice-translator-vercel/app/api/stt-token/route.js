@@ -3,7 +3,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
 import { getSession } from '../../lib/users.js';
-import { getRoom } from '../../lib/store.js';
+import { getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { creditoFinito } from '../../wallet/addebita.js';
 
 const log = createLogger('sttToken');
@@ -55,13 +55,22 @@ const log = createLogger('sttToken');
 // a chiunque mandasse un gettone qualsiasi (anche scaduto o inventato).
 // Ora un gettone/stanza PRESENTE ma non risolvibile e' un 401, non un
 // fallthrough verso l'anonimato.
-async function risolviEmailDaFatturare(userToken, roomId) {
+// b.161 — CONFERMATO (quarto audit esterno, punto 2, stessa classe di
+// difetto delle rotte translate/tts/transcribe): il ramo roomId fatturava
+// all'host fidandosi del solo roomId, senza verificare che chi chiama
+// abbia davvero un roomSessionToken valido per QUELLA stanza — un roomId
+// indovinato (8 esadecimali, 32 bit) bastava per farsi consegnare una
+// chiave Deepgram vera, con il gate di credito controllato sul wallet
+// dell'host. Stessa correzione delle altre rotte a pagamento: resolveRoomIdentity.
+async function risolviEmailDaFatturare(userToken, roomId, roomSessionToken) {
   if (userToken) {
     const session = await getSession(userToken);
     if (session?.email) return session.email;
     return { invalido: true };
   }
   if (roomId) {
+    const identita = await resolveRoomIdentity(roomSessionToken, null, roomId);
+    if (!identita) return { invalido: true };
     const room = await getRoom(roomId);
     if (room?.hostEmail) return room.hostEmail;
     return { invalido: true };
@@ -87,12 +96,13 @@ async function handler(req) {
   const body = await req.clone().json().catch(() => ({}));
   const userToken = body.userToken || null;
   const roomId = body.roomId || null;
+  const roomSessionToken = body.roomSessionToken || null;
   if (!userToken && !roomId) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }
 
   // ── Wallet: chi paga? (stesso fail-closed della voce premium — vedi nota sopra) ──
-  const risoltoFatturazione = await risolviEmailDaFatturare(userToken, roomId);
+  const risoltoFatturazione = await risolviEmailDaFatturare(userToken, roomId, roomSessionToken);
   if (risoltoFatturazione?.invalido) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   }

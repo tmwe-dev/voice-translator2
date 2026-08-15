@@ -22,6 +22,7 @@ export default function useDeepgramSTT({
   setRecording,
   setSpeakingState,
   roomId,
+  roomSessionTokenRef,
   userToken,
   unlockAudio,
   speakingKeepAliveRef,
@@ -47,7 +48,10 @@ export default function useDeepgramSTT({
         const res = await fetch('/api/stt-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userToken, roomId }),
+          // b.161 — senza questo, resolveAuth/risolviEmailDaFatturare
+          // rifiuta con 401 il percorso roomId (vedi apiAuth.js e
+          // stt-token/route.js, punto 2 quarto audit).
+          body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }),
         });
         if (res.ok) {
           const data = await res.json();
@@ -65,7 +69,7 @@ export default function useDeepgramSTT({
       deepgramAvailableRef.current = false;
     }
     checkDeepgram();
-  }, [userToken, roomId]);
+  }, [userToken, roomId, roomSessionTokenRef]);
 
   /**
    * Start Deepgram WebSocket streaming STT.

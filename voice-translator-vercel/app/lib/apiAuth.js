@@ -8,7 +8,7 @@ import { NextResponse } from 'next/server';
 
 const log = createLogger('auth');
 import { getSession, getUser, validateLending } from './users.js';
-import { getRoom } from './store.js';
+import { getRoom, resolveRoomIdentity } from './store.js';
 import { ERRORS, DAILY_LIMITS } from './config.js';
 import { redis } from './redis.js';
 import { creditoFinito } from '../wallet/addebita.js';
@@ -19,6 +19,10 @@ import { creditoFinito } from '../wallet/addebita.js';
  * @param {Object} opts
  * @param {string} opts.userToken - session token (authenticated user)
  * @param {string} opts.roomId - room ID (guest billing to host)
+ * @param {string} opts.roomSessionToken - b.161: gettone di sessione della
+ *   stanza (vedi createRoomSession/resolveRoomIdentity in store.js).
+ *   OBBLIGATORIO quando si usa roomId: senza, il percorso roomId viene
+ *   rifiutato (401). Vedi commento nel blocco Path 3 qui sotto.
  * @param {string} opts.provider - 'openai' or 'elevenlabs'
  * @param {number} opts.minCredits - minimum credits required (euro-cents)
  * @param {boolean} opts.skipCreditCheck - skip credit check (e.g. for review passes)
@@ -30,6 +34,7 @@ import { creditoFinito } from '../wallet/addebita.js';
 export async function resolveAuth({
   userToken,
   roomId,
+  roomSessionToken = null,
   lendingCode = null,
   provider = 'openai',
   minCredits = 0.1,
@@ -166,8 +171,26 @@ export async function resolveAuth({
     }
   } else if (roomId) {
     // Path 3: Guest in a room - bill to host
+    //
+    // b.161 — CONFERMATO (quarto audit esterno, punto 2): questo percorso
+    // fatturava all'host della stanza fidandosi del solo `roomId` — 8
+    // caratteri esadecimali (32 bit, vedi randomBytes(4) in
+    // createRoom/store.js), enumerabile per forza bruta. Chiunque
+    // indovinasse il roomId di una stanza PRO/TOP-PRO otteneva
+    // traduzione/TTS/trascrizione REALI, fatturate al wallet dell'host,
+    // senza mai essere entrato nella stanza. Ogni ALTRA rotta che opera
+    // su una stanza (messages, room, moderazione, video...) richiede gia
+    // un roomSessionToken verificato (resolveRoomIdentity, gia in
+    // store.js da prima di questa correzione) — qui, sulle rotte a
+    // pagamento, mancava del tutto. Ora si verifica ALLO STESSO MODO,
+    // prima di decidere chi paga: un gettone assente o non valido per
+    // QUESTA stanza rifiuta con 401, come un roomId inesistente.
     const room = await getRoom(roomId);
     if (!room) {
+      throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
+    }
+    const identitaStanza = await resolveRoomIdentity(roomSessionToken, null, roomId);
+    if (!identitaStanza) {
       throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
     }
 

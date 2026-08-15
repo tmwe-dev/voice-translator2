@@ -115,6 +115,27 @@ export async function addebitaVocePremium(utente, caratteri) {
 }
 
 /**
+ * Quanto costera (in secondi di credito) un messaggio di testo di N
+ * caratteri? STESSA formula di addebitaTesto, cosi il preventivo non
+ * puo mai disallinearsi dall'addebito vero.
+ *
+ * b.161 — CONFERMATO (quarto audit esterno, punto 1 dell'ordine di
+ * intervento): resolveAuth controllava solo `creditoFinito` (saldo>0)
+ * prima di chiamare translate/tts, mai il costo vero. La RPC
+ * wallet_usa (migrazione 006) e atomica ma NON parziale: un saldo
+ * positivo ma sotto il costo viene rifiutato lasciando il saldo
+ * INTATTO — quindi non scende mai sotto la soglia che lo bloccherebbe,
+ * e il servizio (gia consegnato dal fornitore quando l'addebito
+ * scatta, DOPO la risposta) resta gratis, ripetibile all'infinito.
+ * Questo preventivo permette di chiedere PRIMA di chiamare il
+ * fornitore, come gia faceva la voce premium ElevenLabs.
+ */
+export function preventivoTesto(caratteri) {
+  const secondiParlato = Math.ceil((caratteri || 0) / CARATTERI_PER_SECONDO);
+  return Math.max(costoMessaggioTesto(), secondiParlato);
+}
+
+/**
  * Un messaggio tradotto (testo scritto o voce riconosciuta nel browser).
  * Costo: i caratteri diventano secondi (~17 car = 1s), minimo 5 secondi.
  * @returns {'ok'|'esaurito'|'saltato'}
@@ -122,7 +143,7 @@ export async function addebitaVocePremium(utente, caratteri) {
 export async function addebitaTesto(utente, caratteri) {
   if (!utente || !caratteri) return 'saltato';
   const secondiParlato = Math.ceil(caratteri / CARATTERI_PER_SECONDO);
-  const costo = Math.max(costoMessaggioTesto(), secondiParlato);
+  const costo = preventivoTesto(caratteri);
   return scala(utente, costo, {
     tipo: 'testo',
     caratteri,
@@ -154,9 +175,19 @@ export async function addebitaAzioneChat(utente) {
 /**
  * Il credito basta per clonare una voce (costo fisso, €5,00)?
  * Da chiamare PRIMA di parlare con ElevenLabs, come per la voce premium.
+ *
+ * b.160 — CONFERMATO (secondo audit esterno, punto 7): chiamava
+ * creditoInsufficiente SENZA {failClosed:true}. La clonazione con
+ * chiave di piattaforma e' esattamente lo stesso caso della voce
+ * premium ElevenLabs (nessun percorso "chiave propria" per chi non ne
+ * ha una — qui la propria chiave, quando c'e, salta questo controllo
+ * a monte, vedi voice-clone/route.js): un guasto Supabase diventava
+ * "credito sempre sufficiente", ElevenLabs veniva chiamato (costo
+ * reale, €5 equivalenti), e l'addebito successivo poteva fallire in
+ * silenzio ('saltato'). Ora fail-closed, come tts-elevenlabs.
  */
 export async function creditoInsufficientePerClonazione(utente) {
-  return creditoInsufficiente(utente, COSTO_CLONAZIONE_SECONDI);
+  return creditoInsufficiente(utente, COSTO_CLONAZIONE_SECONDI, { failClosed: true });
 }
 
 /**

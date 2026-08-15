@@ -387,6 +387,10 @@ export default function useTranslationAPI({
           sourceLangName,
           targetLangName,
           roomId,
+          // b.161 — senza questo, resolveAuth rifiuta con 401 il percorso
+          // roomId (vedi apiAuth.js, punto 2 quarto audit): il roomId da
+          // solo non basta piu a fatturare all'host della stanza.
+          roomSessionToken: roomSessionTokenRef?.current || undefined,
           aiModel: prefsRef.current?.aiModel || undefined,
           ...options,
           userToken: getEffectiveToken(),
@@ -442,7 +446,7 @@ export default function useTranslationAPI({
     }
 
     return result;
-  }, [roomId, isTrialRef, freeCharsRef, prefsRef, getEffectiveToken, trackFreeChars, userEmail]);
+  }, [roomId, roomSessionTokenRef, isTrialRef, freeCharsRef, prefsRef, getEffectiveToken, trackFreeChars, userEmail]);
 
   /**
    * Get primary target language info (2-person chat shortcut).
