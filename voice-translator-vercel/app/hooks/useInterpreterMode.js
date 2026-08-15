@@ -204,6 +204,10 @@ export default function useInterpreterMode({
           body: JSON.stringify({
             text: translated,
             langCode: partnerLang,
+            // b.167 — vedi la POST verso /api/translate poco sopra: stesso
+            // motivo, stesso schema.
+            roomId,
+            roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
           }),
         })
       );

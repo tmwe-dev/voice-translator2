@@ -12,7 +12,7 @@ import { routeTTS } from '../../lib/ttsRouter.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { validateTTSInput } from '../../lib/schemas.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('tts');
 
@@ -60,12 +60,6 @@ async function handlePost(req) {
   let riservaId = null;
   let costoPrevisto = 0;
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     // Validate input
     const body = await req.json();
     const validation = validateTTSInput(body);
@@ -77,6 +71,16 @@ async function handlePost(req) {
     // non ha bisogno di sanificazione testuale): letto dal body grezzo,
     // come roomSessionToken in translate/route.js.
     const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
+
+    // ── Direct mode guard ──
+    // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
+    // chiedeva solo all'intestazione, ora chiede anche alla stanza.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
 
     const { apiKey, isOwnKey, billingEmail } = await resolveAuth({
       userToken,

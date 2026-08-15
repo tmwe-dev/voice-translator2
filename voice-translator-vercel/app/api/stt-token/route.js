@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { getSession } from '../../lib/users.js';
 import { getRoom, resolveRoomIdentity } from '../../lib/store.js';
 import { creditoFinito } from '../../wallet/addebita.js';
@@ -85,13 +85,6 @@ async function handler(req) {
   // voce, dal vivo, verso un terzo — mentre all'utente si prometteva
   // che niente lasciava il telefono. Non aveva la guardia e non era
   // fra le rotte vietate: due dimenticanze sullo stesso punto.
-  try { assertCloudProcessingAllowed(req); } catch (e) {
-    if (e instanceof DirectModeError) {
-      return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
-    }
-    throw e;
-  }
-
   // Auth guard: require room id or user token
   const body = await req.clone().json().catch(() => ({}));
   const userToken = body.userToken || null;
@@ -99,6 +92,17 @@ async function handler(req) {
   const roomSessionToken = body.roomSessionToken || null;
   if (!userToken && !roomId) {
     return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  }
+
+  // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
+  // chiedeva solo all'intestazione, ora chiede anche alla stanza.
+  try {
+    await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+  } catch (e) {
+    if (e instanceof DirectModeError) {
+      return NextResponse.json({ error: e.message, direct: true }, { status: 403 });
+    }
+    throw e;
   }
 
   // ── Wallet: chi paga? (stesso fail-closed della voce premium — vedi nota sopra) ──

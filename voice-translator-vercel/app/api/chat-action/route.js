@@ -7,7 +7,7 @@ import { creditoFinito, creditoInsufficiente, addebitaAzioneChat } from '../../w
 import { costoAzioneChat } from '../../wallet/consumo.js';
 import { MIN_CHARGE, MIN_CREDITS } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('chatAction');
 
@@ -38,17 +38,25 @@ async function getCallQwen() {
  */
 async function handlePost(request) {
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(request); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     const body = await request.json();
-    const { action, messages, members, mode, domain, userToken, lendingCode } = body;
+    const { action, messages, members, mode, domain, userToken, lendingCode, roomId, roomSessionToken } = body;
 
     if (!action || !messages?.length) {
       return NextResponse.json({ error: 'action and messages required' }, { status: 400 });
+    }
+
+    // ── Direct mode guard ──
+    // b.167 — CONFERMATO (audit esterno 15/8): mancava del tutto, in
+    // qualunque forma. Un'azione chat (riassunto/report/analisi) su una
+    // stanza Diretta mandava l'intera trascrizione al provider cloud
+    // senza che il server potesse mai saperlo — non c'era nemmeno
+    // l'intestazione a fermarla. Ora c'e la guardia autorevole, come le
+    // altre rotte che toccano contenuto.
+    try {
+      await assertElaborazioneConsentita(request, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
     }
 
     // Auth (requires credits or own keys)
@@ -64,19 +72,36 @@ async function handlePost(request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
+    // Route to appropriate provider — deciso PRIMA del gate: serve per
+    // sapere se questa richiesta potrebbe finire su Qwen (vedi sotto).
+    const useCJK = isCJKConversation(messages);
+
     // b.159 — CONFERMATO: questa rotta autorizzava (resolveAuth) ma non
     // addebitava mai nessuno. resolveAuth controlla solo che il credito
     // NON SIA GIA a zero al momento dell'accesso: qui, come per
     // tts-elevenlabs, si aggiunge il vero controllo pre-spesa (il costo
     // fisso dell'azione non deve superare il credito residuo) PRIMA di
     // pagare la chiamata GPT, poi si addebita dopo il successo.
-    const pagante = !auth.isOwnKey ? auth.billingEmail : null;
-    if (pagante) {
+    //
+    // b.160 — CONFERMATO (secondo audit esterno, punto 3): la vecchia
+    // versione decideva "chi paga" SOLO da auth.isOwnKey (la chiave
+    // OpenAI dichiarata), ma per le conversazioni CJK questa rotta puo
+    // instradare su Qwen/DashScope (vedi llmAsia.js: nessun percorso a
+    // chiave propria, usa sempre DASHSCOPE_API_KEY di piattaforma). Un
+    // utente con chiave OpenAI propria su una conversazione CJK otteneva
+    // un'azione chat via Qwen — costo reale per BarTalk — senza nessun
+    // addebito wallet, perche auth.isOwnKey=true faceva sembrare che
+    // pagasse lui. Il pre-controllo ora scatta anche solo per il
+    // sospetto (conversazione CJK), l'addebito vero e' deciso DOPO,
+    // guardando quale provider ha risposto per davvero (vedi sotto).
+    const possibilePiattaforma = useCJK || !auth.isOwnKey;
+    const paganteGate = possibilePiattaforma ? auth.billingEmail : null;
+    if (paganteGate) {
       const costoPrevisto = costoAzioneChat();
-      if (await creditoFinito(pagante, { failClosed: true })) {
+      if (await creditoFinito(paganteGate, { failClosed: true })) {
         return NextResponse.json({ error: 'Credito esaurito' }, { status: 402 });
       }
-      if (await creditoInsufficiente(pagante, costoPrevisto, { failClosed: true })) {
+      if (await creditoInsufficiente(paganteGate, costoPrevisto, { failClosed: true })) {
         return NextResponse.json({ error: 'Credito insufficiente' }, { status: 402 });
       }
     }
@@ -85,8 +110,6 @@ async function handlePost(request) {
     const transcript = buildCompactTranscript(messages);
     const systemPrompt = getActionPrompt(action, { members, mode, domain });
 
-    // Route to appropriate provider
-    const useCJK = isCJKConversation(messages);
     let result;
     let provider;
 
@@ -129,10 +152,15 @@ async function handlePost(request) {
 
     // b.159 — addebito DOPO il successo della chiamata (mai prima: se
     // GPT fallisce non si paga niente), come da schema gia usato in
-    // tts-elevenlabs. `pagante` e null per chi usa la propria chiave.
-    if (pagante) {
-      await addebitaAzioneChat(pagante);
-      trackDailySpend(pagante, MIN_CHARGE.CHAT_ACTION).catch(() => {});
+    // tts-elevenlabs.
+    // b.160 — chi paga si decide sul provider REALMENTE eseguito: Qwen
+    // e' sempre a carico di piattaforma (vedi nota sopra), il ramo
+    // OpenAI (diretto o di fallback da Qwen fallito) rispetta la vera
+    // auth.isOwnKey.
+    const paganteReale = (provider === 'qwen' || !auth.isOwnKey) ? auth.billingEmail : null;
+    if (paganteReale) {
+      await addebitaAzioneChat(paganteReale);
+      trackDailySpend(paganteReale, MIN_CHARGE.CHAT_ACTION).catch(() => {});
     }
 
     return NextResponse.json({

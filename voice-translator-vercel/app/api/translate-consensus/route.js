@@ -4,7 +4,7 @@ import { redis } from '../../lib/redis.js';
 import { tryProvider, getProviderChain, validateTranslation, scoreTranslation } from '../../lib/providers.js';
 import { findConsensus } from '../../lib/consensus.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { getSimpleHash } from '../../lib/translateValidation.js';
 
 const log = createLogger('translateConsensus');
@@ -44,13 +44,18 @@ async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
+    const { text, sourceLang, targetLang, userEmail, threshold, roomId, roomSessionToken } = await req.json();
+
     // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
+    // b.167 — CONFERMATO (audit esterno 15/8): come translate-free, si
+    // fidava solo dell'intestazione.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
       if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
       throw e;
     }
 
-    const { text, sourceLang, targetLang, userEmail, threshold } = await req.json();
     if (!text?.trim()) {
       return NextResponse.json({ translated: '', guaranteed: false }, { headers: cors });
     }

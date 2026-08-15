@@ -6,7 +6,7 @@ import { getSession, getUser } from '../../lib/users.js';
 import { MIN_CHARGE, ERRORS, calcGptCost, usdToEurCents } from '../../lib/config.js';
 import { trackDailySpend } from '../../lib/apiAuth.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { addebitaRiassunto, creditoFinito, creditoInsufficiente } from '../../wallet/addebita.js';
 import { costoRiassunto } from '../../wallet/consumo.js';
 
@@ -14,15 +14,22 @@ const log = createLogger('summary');
 
 async function handlePost(req) {
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     const { convId, userToken } = await req.json();
 
     if (!convId) return NextResponse.json({ error: 'convId required' }, { status: 400 });
+
+    // ── Direct mode guard ──
+    // b.167 — CONFERMATO (audit esterno 15/8): mancava la domanda alla
+    // stanza vera. convId E roomId (stessa chiave, vedi saveConversation
+    // in store.js): una stanza Diretta non dovrebbe avere messaggi salvati
+    // da riassumere, ma il controllo va fatto comunque qui, non dedotto
+    // per assenza — e la stessa disciplina gia applicata alle altre rotte.
+    try {
+      await assertElaborazioneConsentita(req, { roomId: convId });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
 
     // Authentication required (no guest/room path for summaries)
     if (!userToken) {

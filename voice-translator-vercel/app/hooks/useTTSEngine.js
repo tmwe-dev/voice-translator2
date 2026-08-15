@@ -240,6 +240,11 @@ export default function useTTSEngine({
           body: JSON.stringify({
             text, langCode: langCode || 'en',
             gender: gender || prefsRef.current?.edgeTtsVoiceGender || 'female',
+            // b.167 — senza questo il server non puo sapere di quale stanza
+            // si tratta e verificare se e Diretta: vedi fetchTTSBlob sopra,
+            // stesso schema gia in uso li.
+            roomId: roomIdRef.current || undefined,
+            roomSessionToken: roomSessionTokenRef?.current || undefined,
           }),
           signal: controller.signal
         });

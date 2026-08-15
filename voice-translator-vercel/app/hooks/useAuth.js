@@ -314,6 +314,20 @@ export default function useAuth() {
   }
 
   function logout(opts = {}) {
+    // b.167 — CONFERMATO (audit esterno 15/8): prima si puliva solo lo
+    // stato locale, mai la sessione sul server. Un token copiato prima
+    // del logout restava valido per i 7 giorni interi. Il DELETE parte
+    // per primo (fire-and-forget, non blocca l'uscita: se la rete cade
+    // l'utente deve poter uscire comunque), la pulizia locale segue
+    // subito come prima.
+    const tokenUscente = userTokenRef.current;
+    if (tokenUscente) {
+      fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'logout', token: tokenUscente }),
+      }).catch(() => {});
+    }
     localStorage.removeItem('vt-token');
     if (opts.clearPrefs) {
       localStorage.removeItem('vt-prefs');

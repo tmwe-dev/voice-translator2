@@ -15,7 +15,7 @@ import { routeProvider } from '../../lib/providerRouter.js';
 import { validateTranslateInput } from '../../lib/schemas.js';
 import { ErrorCode, apiError } from '../../lib/errors.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoFinito, preventivoTesto } from '../../wallet/addebita.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
@@ -29,12 +29,6 @@ async function handlePost(req) {
   // arrivare al blocco try interno piu sotto.
   let riservaId = null;
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     // ── b.106 · qui c'era un SECONDO limitatore sulla STESSA chiave ──
     // withApiGuard, in fondo al file, conta gia su "translate:IP" con
     // tetto 120. Questa riga contava di nuovo sulla stessa chiave con
@@ -64,6 +58,17 @@ async function handlePost(req) {
     // bisogno di sanificazione testuale, solo del controllo tipo fatto
     // da resolveRoomIdentity in store.js.
     const roomSessionToken = typeof rawBody.roomSessionToken === 'string' ? rawBody.roomSessionToken : null;
+
+    // ── Direct mode guard ──
+    // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
+    // chiedeva solo all'intestazione x-session-mode (mandata dal client),
+    // ora chiede anche alla stanza vera, come /api/reazioni gia faceva.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
 
     if (!text) return apiError(ErrorCode.MISSING_FIELD, 'No text provided');
 

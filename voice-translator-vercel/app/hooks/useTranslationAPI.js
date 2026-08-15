@@ -350,7 +350,11 @@ export default function useTranslationAPI({
         const res = await fetch('/api/translate-consensus', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, sourceLang, targetLang, userEmail: userEmail || undefined })
+          body: JSON.stringify({
+            text, sourceLang, targetLang, userEmail: userEmail || undefined,
+            roomId,
+            roomSessionToken: roomSessionTokenRef?.current || undefined,
+          })
         });
         if (!res.ok) return { translated: text };
         const data = await res.json();
@@ -367,6 +371,11 @@ export default function useTranslationAPI({
           userEmail: userEmail || undefined,
           superfast: translationMode === 'superfast' ? true : undefined,
           userProviderPrefs: translationProviders,
+          // b.167 — senza questi il server non puo chiedere alla stanza se
+          // e Diretta: vedi la nota su roomSessionToken piu sotto, stesso
+          // punto dell'audit del 14/8, stessa correzione.
+          roomId,
+          roomSessionToken: roomSessionTokenRef?.current || undefined,
         })
       });
       if (!res.ok) return { translated: text };
@@ -419,7 +428,11 @@ export default function useTranslationAPI({
         const freeRes = await fetch('/api/translate-free', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, sourceLang, targetLang })
+          body: JSON.stringify({
+            text, sourceLang, targetLang,
+            roomId,
+            roomSessionToken: roomSessionTokenRef?.current || undefined,
+          })
         });
         if (freeRes.ok) {
           result = await freeRes.json();

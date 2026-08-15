@@ -20,6 +20,8 @@ function ChatActionsPanel({
   domain,
   userToken,
   lendingCode,
+  roomId,
+  roomSessionToken,
   onClose,
   t = (k) => k,
 }) {
@@ -69,6 +71,10 @@ function ChatActionsPanel({
           domain,
           userToken,
           lendingCode,
+          // b.167 — senza questi il server non puo chiedere alla stanza se
+          // e in modalita Diretta, e si fida solo dell'intestazione.
+          roomId,
+          roomSessionToken,
         }),
       });
 
@@ -84,7 +90,7 @@ function ChatActionsPanel({
     } finally {
       setLoading(null);
     }
-  }, [messages, members, mode, domain, userToken, lendingCode]);
+  }, [messages, members, mode, domain, userToken, lendingCode, roomId, roomSessionToken]);
 
   const actionName = CHAT_ACTIONS.find(a => a.id === result?.action)?.name || '';
 

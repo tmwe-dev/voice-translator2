@@ -130,7 +130,13 @@ export default function useStreamingInterpreter({
       const ttsRes = await fetch('/api/tts-edge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: translatedText, langCode: partnerLang }),
+        body: JSON.stringify({
+          text: translatedText, langCode: partnerLang,
+          // b.167 — stesso motivo delle altre chiamate di questo file
+          // verso /api/stt-token qualche riga sopra.
+          roomId,
+          roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
+        }),
       });
       if (!ttsRes.ok) return;
 
@@ -164,7 +170,7 @@ export default function useStreamingInterpreter({
     } catch (e) {
       console.warn('[StreamInterp] TTS error:', e);
     }
-  }, [partnerLang, webrtc]);
+  }, [partnerLang, webrtc, roomId, roomSessionTokenRef]);
 
   // ═══ TTS QUEUE PROCESSOR ═══
   // Processa la coda TTS sequenzialmente (una frase alla volta)

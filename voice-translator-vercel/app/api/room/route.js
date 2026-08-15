@@ -26,6 +26,34 @@ async function emailDallaSessione(userToken) {
   }
 }
 
+// b.167 — CONFERMATO (audit esterno 15/8): come sopra per hostEmail, ma
+// era rimasto aperto sul campo gemello. `hostTier` arrivava da
+// `body.hostTier`, cioe da quello che il CLIENT dichiara — non da un
+// account verificato. Un client alterato poteva chiedere una stanza
+// "TOP PRO" senza mai autenticarsi: senza userToken, emailDallaSessione
+// sopra restituisce null, quindi hostEmail resta null (nessun wallet da
+// addebitare), ma resolveAuth in apiAuth.js lascia comunque passare gli
+// ospiti perche hostTier non e FREE — la chiamata viene pagata dalla
+// chiave di piattaforma, senza che nessun account reale ne risponda.
+// Ora il livello si ricava dalla sessione, con lo stesso criterio gia
+// usato lato client in useAuth.js (chi e loggato non e mai trial → PRO
+// come base, TOP PRO solo per gli account business/top_pro): senza una
+// sessione valida la stanza e SEMPRE FREE.
+async function tierDallaSessione(userToken) {
+  if (!userToken || typeof userToken !== 'string') return 'FREE';
+  try {
+    const { getSession, getUser } = await import('../../lib/users.js');
+    const sessione = await getSession(userToken);
+    if (!sessione?.email) return 'FREE';
+    const utente = await getUser(sessione.email);
+    if (!utente) return 'FREE';
+    const livelloAccount = utente.tier || utente.subscription_plan || 'free';
+    return (livelloAccount === 'business' || livelloAccount === 'top_pro') ? 'TOP PRO' : 'PRO';
+  } catch {
+    return 'FREE';
+  }
+}
+
 // POST /api/room - Create, join, or manage a room
 async function handlePostRoom(req) {
   try {
@@ -61,7 +89,11 @@ async function handlePostRoom(req) {
         return handleCreate({
           name, lang, mode: body.mode, avatar: body.avatar,
           context: body.context, contextPrompt: body.contextPrompt,
-          description: body.description, hostTier: body.hostTier,
+          description: body.description,
+          // b.167 — vedi la nota su tierDallaSessione sopra: non piu
+          // `body.hostTier` (il client si poteva dichiarare TOP PRO senza
+          // conto e senza pagare).
+          hostTier: await tierDallaSessione(body.userToken),
           // b.113 — Stanza Diretta: viaggia con la stanza, cosi chi entra
           // dopo lo sa senza doverlo indovinare.
           diretta: body.diretta,

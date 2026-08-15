@@ -644,6 +644,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         <ChatActionsPanel
           theme={theme} messages={messages} members={roomInfo?.members || []}
           mode={roomMode} domain={roomInfo?.context} userToken={null} lendingCode={null}
+          roomId={roomId} roomSessionToken={roomSessionToken}
           onClose={() => setShowChatActions(false)} t={L}
         />
       )}

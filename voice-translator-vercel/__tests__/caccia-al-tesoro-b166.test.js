@@ -23,7 +23,11 @@ describe('Fuga di credenziali: le apiKeys non tornano piu in chiaro al login', (
 
   it('auth/route.js maschera sia su verify che su me', () => {
     const src = leggi('app/api/auth/route.js');
-    expect(src).toContain("import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral, maskApiKeys } from '../../lib/users.js';");
+    // b.167 — l'import ha guadagnato deleteSession (azione 'logout', vedi
+    // caccia-al-tesoro-b167.test.js): qui basta verificare che maskApiKeys
+    // sia ancora importata, non l'elenco letterale completo.
+    expect(src).toContain('maskApiKeys');
+    expect(src).toContain("from '../../lib/users.js';");
     expect(src).toMatch(/token: sessionToken, user: maskApiKeys\(user\)/);
     expect(src).toMatch(/user: maskApiKeys\(user\), referralCode: userReferralCode/);
   });

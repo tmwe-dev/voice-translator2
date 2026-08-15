@@ -148,6 +148,33 @@ return encoded
 // membri gia "granted" da una sessione precedente, senza che l'host
 // avesse concesso nulla stavolta. Si azzera ad ogni cambio modalita,
 // qualunque sia la modalita di destinazione.
+/**
+ * Atomic removeMember — b.167 (audit esterno 15/8, "blocca" senza espellere).
+ * KEYS[1] = room key, ARGV[1] = memberName (confronto case-insensitive,
+ * stessa normalizzazione usata da moderazione.js prima di chiamare).
+ * Toglie il membro dall'elenco, se presente; non tocca nient'altro.
+ */
+export const REMOVE_MEMBER = `
+local data = redis.call('GET', KEYS[1])
+if not data then return nil end
+local room = cjson.decode(data)
+local target = string.lower(ARGV[1])
+local nuovi = {}
+local trovato = false
+for i, m in ipairs(room.members) do
+  if string.lower(m.name) == target then
+    trovato = true
+  else
+    table.insert(nuovi, m)
+  end
+end
+if not trovato then return nil end
+room.members = nuovi
+local encoded = cjson.encode(room)
+redis.call('SET', KEYS[1], encoded, 'EX', 3600)
+return encoded
+`;
+
 export const UPDATE_ROOM_MODE = `
 local data = redis.call('GET', KEYS[1])
 if not data then return nil end

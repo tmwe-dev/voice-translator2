@@ -4,7 +4,7 @@ import { redis } from '../../lib/redis.js';
 import { runProviderChain, validateTranslation } from '../../lib/providers.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { getSimpleHash } from '../../lib/translateValidation.js';
 
 const log = createLogger('translateFree');
@@ -54,12 +54,6 @@ async function handlePost(req) {
   const cors = getCorsHeaders(req);
 
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     // ── Rate limit: 30 req/min per IP (bypassed in DEV_MODE) ──
     if (process.env.DEV_MODE !== 'true') {
       const rlKey = getRateLimitKey(req, 'free-translate');
@@ -76,7 +70,21 @@ async function handlePost(req) {
     const text = typeof body.text === 'string' ? body.text : '';
     const sourceLang = typeof body.sourceLang === 'string' ? body.sourceLang.slice(0, 10) : '';
     const targetLang = typeof body.targetLang === 'string' ? body.targetLang.slice(0, 10) : '';
-    const { userEmail, superfast, userProviderPrefs } = body;
+    const { userEmail, superfast, userProviderPrefs, roomId, roomSessionToken } = body;
+
+    // ── Direct mode guard ──
+    // b.167 — CONFERMATO (audit esterno 15/8): questa rotta e anche il
+    // ripiego automatico quando /api/translate fallisce o finisce il
+    // credito (vedi useTranslationAPI.js), quindi passa contenuto vero di
+    // stanza, non solo prove gratuite fuori stanza. Prima si fidava solo
+    // dell'intestazione.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
+
     if (!text?.trim()) return NextResponse.json({ translated: '', charsUsed: 0 }, { headers: cors });
 
     const trimmed = text.trim().slice(0, 10000); // Cap at 10K chars

@@ -6,7 +6,7 @@ import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../.
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoFinito, preventivoVocePremium } from '../../wallet/addebita.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-costi.js';
@@ -111,13 +111,18 @@ async function handlePost(req) {
   let riservaId = null;
   let costoPrevisto = 0;
   try {
+    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName } = await req.json();
+
     // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
+    // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
+    // chiedeva solo all'intestazione, ora chiede anche alla stanza.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
       if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
       throw e;
     }
 
-    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName } = await req.json();
     if (!text?.trim()) return NextResponse.json({ error: 'No text' }, { status: 400 });
 
     // 3-tier auth: userToken → roomId → reject

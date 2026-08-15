@@ -3,7 +3,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 
 const log = createLogger('ttsEdge');
 
@@ -13,15 +13,26 @@ const log = createLogger('ttsEdge');
 
 async function handlePost(req) {
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
-    const { text, langCode, gender } = await req.json();
+    const { text, langCode, gender, roomId, roomSessionToken } = await req.json();
     if (!text?.trim()) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
+    }
+
+    // ── Direct mode guard ──
+    // b.167 — CONFERMATO (audit esterno 15/8): questa rotta non riceveva
+    // affatto roomId/roomSessionToken, quindi non poteva mai chiedere alla
+    // stanza — si fidava per intero dell'intestazione x-session-mode
+    // mandata dal client. Ora i tre hook che la chiamano da dentro una
+    // stanza (useTTSEngine, useInterpreterMode, useStreamingInterpreter)
+    // mandano anche questi due campi; le chiamate di prova senza stanza
+    // (SpeakerView/VoiceTestView/PrimaProva) restano semplicemente senza
+    // roomId, e la guardia si comporta come prima (nessuna stanza da
+    // interrogare, nessun rischio: non c'e niente da tenere riservato).
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
     }
 
     const lang2 = (langCode || '').replace(/-.*/, '');

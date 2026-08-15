@@ -10,7 +10,7 @@ import { randomUUID, randomBytes } from 'crypto';
 const log = createLogger('store');
 import {
   JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE, AGGIORNA_POLITICA_PUBBLICA,
-  CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
+  CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING, REMOVE_MEMBER,
   UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
 } from './redisLua.js';
 
@@ -156,6 +156,21 @@ export async function updateRoomMode(roomId, newMode) {
   const result = await redis('EVAL', UPDATE_ROOM_MODE, 1, key, newMode);
   if (!result) return null;
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse updateRoomMode result:', e.message); return null; }
+}
+
+// b.167 — CONFERMATO (audit esterno 15/8): "blocca" scriveva solo in
+// blacklist (impedisce l'ingresso FUTURO) ma non toccava chi era GIA'
+// dentro — restava con un roomSessionToken valido e piena capability
+// finche non scadeva da solo. Chiamata da blocca() in moderazione.js,
+// SOLO quando chi blocca puo moderare (stesso controllo gia in vigore
+// li). Se il nome non e (piu) fra i membri non e un errore: nessun
+// utente da buttare fuori, l'esito e comunque "bloccato".
+export async function removeMember(roomId, name) {
+  if (!roomId || !name) return null;
+  const key = `room:${roomId.toUpperCase()}`;
+  const result = await redis('EVAL', REMOVE_MEMBER, 1, key, name);
+  if (!result) return null;
+  try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse removeMember result:', e.message); return null; }
 }
 
 // ═══════════════════════════════════════════════════════════════

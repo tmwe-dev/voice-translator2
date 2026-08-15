@@ -8,7 +8,7 @@ import { randomUUID } from 'crypto';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcWhisperCost, usdToEurCents } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
-import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
+import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoFinito } from '../../wallet/addebita.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { costoProviderCent } from '../../wallet/provider-costi.js';
@@ -36,12 +36,6 @@ const log = createLogger('transcribe');
 async function handlePost(req) {
   let riservaId = null;
   try {
-    // ── Direct mode guard ──
-    try { assertCloudProcessingAllowed(req); } catch (e) {
-      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
-      throw e;
-    }
-
     const formData = await req.formData();
     const audioFile = formData.get('audio');
     const sourceLang = formData.get('sourceLang');
@@ -51,6 +45,21 @@ async function handlePost(req) {
     const roomSessionToken = formData.get('roomSessionToken') || '';
     // Durata della registrazione in secondi (la manda il client, che la conosce)
     const durataSec = Math.min(120, Math.max(0, parseFloat(formData.get('durata')) || 0));
+
+    // ── Direct mode guard ──
+    // b.167 — CONFERMATO (audit esterno 15/8): qui si chiedeva solo
+    // all'intestazione x-session-mode, mandata dal client. Un client
+    // alterato/vecchio poteva dichiarare una modalita diversa da quella
+    // vera della stanza e far transitare l'audio lo stesso. Ora si chiede
+    // anche alla stanza, quando roomId/roomSessionToken sono presenti —
+    // per un client onesto non cambia niente (la richiesta in Diretta non
+    // parte nemmeno), cambia per chi mente.
+    try {
+      await assertElaborazioneConsentita(req, { roomId, roomSessionToken });
+    } catch (e) {
+      if (e instanceof DirectModeError) return NextResponse.json({ error: e.message }, { status: 403 });
+      throw e;
+    }
 
     if (!audioFile) return NextResponse.json({ error: 'No audio' }, { status: 400 });
 

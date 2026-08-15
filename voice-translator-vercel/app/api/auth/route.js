@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, getReferralCode, applyReferral, maskApiKeys } from '../../lib/users.js';
+import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, deleteSession, getReferralCode, applyReferral, maskApiKeys } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { t } from '../../lib/i18n.js';
@@ -193,6 +193,21 @@ async function handler(req) {
       // app (restore sessione da localStorage), quindi era il punto piu
       // frequente di fuga delle chiavi in chiaro.
       return NextResponse.json({ user: maskApiKeys(user), referralCode: userReferralCode, platformHasElevenLabs, subscription });
+    }
+
+    // === LOGOUT ===
+    // b.167 — CONFERMATO (audit esterno 15/8): il logout di useAuth.js
+    // cancellava solo il token da localStorage e lo stato React. La
+    // sessione su Redis (`session:${token}`) restava viva per i suoi 7
+    // giorni interi: un token gia copiato (dispositivo condiviso, storage
+    // letto da un'estensione, ecc.) continuava a funzionare anche dopo che
+    // l'utente aveva premuto "esci". `deleteSession` esisteva gia in
+    // users.js ma non veniva mai chiamata da nessuna rotta. Non fallisce
+    // se il token e gia scaduto/assente: un logout deve poter sempre
+    // "riuscire" dal punto di vista del client.
+    if (action === 'logout') {
+      if (token) await deleteSession(token);
+      return NextResponse.json({ ok: true });
     }
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

@@ -169,9 +169,17 @@ describe('una sola verita sulla modalita, non due', () => {
   it('la guardia sul server resta: il client non e la difesa', () => {
     // Il cancello sul telefono si puo smontare. Quello che conta e che
     // il server continui a rifiutare.
+    //
+    // b.167 — CONFERMATO (audit esterno 15/8): l'intestazione da sola
+    // (assertCloudProcessingAllowed) si fida di quel che dichiara il
+    // client — un client alterato poteva mentire. translate/transcribe/
+    // tts/stt-token sono passate alla guardia autorevole
+    // (assertElaborazioneConsentita, chiede alla stanza vera), come
+    // /api/messages e /api/reazioni gia facevano. La verifica qui accetta
+    // l'una o l'altra: cio che conta e che UNA guardia server-side resti.
     for (const r of ['translate', 'transcribe', 'tts', 'messages', 'stt-token']) {
       expect(app(`api/${r}/route.js`), `/api/${r} deve conservare la guardia`)
-        .toMatch(/assertCloudProcessingAllowed/);
+        .toMatch(/assertCloudProcessingAllowed|assertElaborazioneConsentita/);
     }
   });
 

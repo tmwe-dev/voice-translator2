@@ -90,6 +90,19 @@ export async function blocca(roomId, nome) {
   // Un bloccato non deve restare in coda fra le richieste in attesa.
   await redis('SREM', chiave.richieste(roomId), n);
   await redis('SET', chiave.esito(roomId, n), 'bloccato', 'EX', TTL_STANZA);
+  // b.167 — CONFERMATO (audit esterno 15/8): fin qui si impediva solo
+  // l'ingresso FUTURO. Chi era GIA' dentro restava con piena capability
+  // (parlare, essere ascoltato, e col suo roomSessionToken ancora valido)
+  // finche non scadeva da solo. "Bloccare" deve voler dire anche
+  // "espellere ora": import dinamico per evitare un ciclo store↔moderazione
+  // al caricamento del modulo (store.js non importa mai moderazione.js,
+  // ma questo file e importato PRESTO, prima che l'ordine di init sia
+  // garantito). Se fallisce, il blocco resta comunque applicato (sopra):
+  // non entrera piu, anche se stavolta l'espulsione immediata non e riuscita.
+  try {
+    const { removeMember } = await import('./store.js');
+    await removeMember(roomId, nome);
+  } catch { /* il blocco vale comunque; vedi nota sopra */ }
   return true;
 }
 
