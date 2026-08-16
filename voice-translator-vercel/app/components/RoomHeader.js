@@ -96,8 +96,14 @@ const RoomHeader = memo(function RoomHeader({
           nessun handler cambia — i bottoni sono stati SPOSTATI dentro il
           menu con lo STESSO onClick di prima; il motore WebRTC/microfono
           NON e toccato. */}
+      {/* b.174 — quando il menu ••• e aperto, la barra sale sopra lo
+          sfondo-chiusura (z99). La barra ha backdrop-filter, che crea un
+          contesto d'impilamento: senza questo, il menu (z100) resta
+          intrappolato SOTTO lo sfondo trasparente e i click sulle voci
+          finivano sullo sfondo (che chiude il menu) invece che sui
+          comandi — il menu si apriva ma i comandi non partivano. */}
       <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:6, padding:'8px 10px',
-        display:'flex', alignItems:'center'}} role="banner">
+        display:'flex', alignItems:'center', zIndex: showMoreMenu ? 200 : undefined}} role="banner">
 
         {/* ── Sinistra: indietro ── */}
         <button onClick={() => { if (leaveRoomTemporary) leaveRoomTemporary(); }}
