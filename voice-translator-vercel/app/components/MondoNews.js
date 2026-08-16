@@ -182,7 +182,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
       const r = await fetch('/api/mondo/discussioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          azione: 'crea', userToken,
+          azione: 'crea', userToken, nick: prefs?.mondoNick || '',
           title: t.titolo || '', titleLang: lingua, lang: lingua,
           topic: chipAttiva || null, media,
         }),

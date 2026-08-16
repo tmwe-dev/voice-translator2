@@ -78,7 +78,12 @@ async function handlePost(req) {
   const session = userToken ? await getSession(userToken) : null;
   if (!session?.email) return NextResponse.json({ error: 'serve un account' }, { status: 401 });
   const authorEmail = session.email;
-  const authorName = session.name || '';
+  // b.190 — NICKNAME: in una piazza pubblica non si mostra il nome vero.
+  // Il client manda il nickname pubblico scelto dall'utente; se c'e, e
+  // quello il nome mostrato. L'email non compare mai (l'autore resta un
+  // id opaco), e senza nickname si ripiega sul nome dell'account.
+  const nick = (body.nick || '').toString().trim().replace(/[<>]/g, '').slice(0, 40);
+  const authorName = nick || session.name || '';
 
   try {
     switch (azione) {

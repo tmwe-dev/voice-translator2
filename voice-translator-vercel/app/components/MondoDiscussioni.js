@@ -17,9 +17,12 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 
 function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
-  const { L, S, prefs, userToken } = useApp();
+  const { L, S, prefs, userToken, savePrefs } = useApp();
   const C = S?.colors || {};
   const mia = prefs?.lang || 'it';
+  // b.190 — nickname pubblico: il nome mostrato nel Mondo, al posto del
+  // nome vero. Vive nelle preferenze; se vuoto, il server usa il nome.
+  const [nick, setNick] = useState(prefs?.mondoNick || '');
 
   const [disc, setDisc] = useState(null);
   const [commenti, setCommenti] = useState([]);
@@ -78,14 +81,14 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     try {
       const r = await fetch('/api/mondo/discussioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ azione: 'commenta', userToken, discussionId, text: t, lang: mia }),
+        body: JSON.stringify({ azione: 'commenta', userToken, discussionId, text: t, lang: mia, nick: nick.trim() }),
       });
       if (r.status === 401) { setErrore(L('accessToCreate')); }
       else if (!r.ok) { setErrore(L('loadingError')); }
       else { setTesto(''); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
     } catch { setErrore(L('networkError')); }
     setInviando(false);
-  }, [testo, inviando, userToken, discussionId, mia, L, carica]);
+  }, [testo, inviando, userToken, discussionId, mia, nick, L, carica]);
 
   // b.187 — segui/smetti di seguire una persona (ottimistico, poi conferma)
   const toggleSegui = useCallback(async (publicId) => {
@@ -186,6 +189,10 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       {/* Composer */}
       <div style={{ padding: '10px 16px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
         {errore && <div style={{ fontSize: 11, color: '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
+        <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
+          onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
+          placeholder={L('publicNickname')}
+          style={{ width: '100%', marginBottom: 8, padding: '8px 10px', borderRadius: 10, background: C.inputBg || 'rgba(14,18,32,0.6)', border: bordo, color: testoP, fontSize: 12, fontFamily: FONT, outline: 'none', boxSizing: 'border-box' }} />
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <textarea value={testo} onChange={e => setTesto(e.target.value)} rows={1}
             placeholder={L('writeComment')}
