@@ -56,11 +56,16 @@ describe('il QR ha una porta dove atterrare', () => {
     expect(p).toMatch(/<Home \/>/);
   });
 
-  it('l\'indirizzo generato dal QR combacia con quello che il client sa leggere', () => {
-    // E il punto: le due meta esistevano gia entrambe, e non si
-    // incontravano. Se una delle due cambia forma, questo test lo dice.
-    expect(leggi('app/components/TaxiQRView.js'))
-      .toMatch(/\$\{window\.location\.origin\}\/taxi\/\$\{id\}#k=\$\{key\}/);
+  // b.182 — il QR della mappa NON punta piu alla nostra app: e un link
+  // diretto a una mappa vera (Google Maps: dir/?api=1&destination=). Cosi
+  // spariscono i due difetti provati dal vivo (pagina tassista a 404 e
+  // mappa nostra che non si disegnava). La rotta /taxi resta in piedi per
+  // l'eventuale QR "chat tradotta", e il client la sa ancora leggere.
+  it('il QR mappa contiene un link a una mappa vera, non l\'URL della nostra app', () => {
+    const view = leggi('app/components/TaxiQRView.js');
+    expect(view).toContain('buildMapsUrl');
+    expect(view).not.toMatch(/\/taxi\/\$\{id\}#k=/);
+    expect(leggi('app/lib/mapsLink.js')).toMatch(/google\.com\/maps|geo:|maps\.apple\.com/);
     expect(leggi('app/hooks/useInitializeApp.js'))
       .toMatch(/pathname\.match\(\/\^\\\/taxi\\\/\(\[a-z0-9\]\+\)\$\/i\)/);
   });

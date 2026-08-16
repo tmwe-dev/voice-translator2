@@ -107,13 +107,16 @@ describe('Taxi: la revoca non basta piu conoscere l\'id condiviso via QR', () =>
     expect(delBlock).toMatch(/if \(secretSalvato && !safeCompare/);
   });
 
-  it('TaxiQRView tiene il segreto in memoria (ref), non lo mette mai nell\'URL del QR', () => {
+  // b.182 — il QR del Taxi non porta piu dentro la nostra app e non cifra
+  // niente: contiene un link diretto alla mappa (Google Maps). Quindi
+  // TaxiQRView non genera piu l'URL /taxi ne maneggia un segreto di
+  // revoca. Il segreto di revoca resta solo un dettaglio del ROUTE server
+  // (verificato dai test qui sopra), non del QR.
+  it('TaxiQRView genera un link mappa diretto, non l\'URL della nostra app ne un segreto', () => {
     const view = leggi('app/components/TaxiQRView.js');
-    expect(view).toContain('revokeSecretRef');
-    const qrUrlLine = view.split('\n').find((r) => r.includes('window.location.origin') && r.includes('/taxi/'));
-    expect(qrUrlLine, 'riga di costruzione URL QR non trovata').toBeTruthy();
-    expect(qrUrlLine).not.toMatch(/revokeSecret/);
-    expect(view).toMatch(/revokeSecret=\$\{encodeURIComponent\(revokeSecretRef\.current\)\}/);
+    expect(view).toContain('buildMapsUrl');
+    expect(view).not.toMatch(/\/taxi\/\$\{id\}/);
+    expect(view).not.toContain('revokeSecret');
   });
 });
 
