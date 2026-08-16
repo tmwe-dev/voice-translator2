@@ -55,6 +55,20 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
   const [showDetails, setShowDetails] = useState(false);
   const searchTimerRef = useRef(null);
   const sheetRef = useSheetA11y(true, onClose);
+  // b.181 — la posizione del passeggero, presa all'apertura del pannello,
+  // serve a far salire in cima i risultati vicini.
+  const [userPos, setUserPos] = useState(null);
+
+  // ── INIZIO b.181 — appena si apre "Dove vai?" so gia dove sei ──
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (p) => setUserPos({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => {},
+      { timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+  // ── FINE b.181 ──
 
   // ── Debounced search ──
   const doSearch = useCallback(async (q) => {
@@ -62,8 +76,13 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
     setSearching(true); setSearchError('');
     try {
       const encoded = encodeURIComponent(q.trim());
+      // b.181 — riquadro di ~55km attorno alla posizione (non vincolante):
+      // i posti vicini salgono in cima. Senza posizione, ricerca globale.
+      const bias = userPos
+        ? `&viewbox=${userPos.lon - 0.5},${userPos.lat + 0.5},${userPos.lon + 0.5},${userPos.lat - 0.5}`
+        : '';
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encoded}&format=json&limit=5&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/search?q=${encoded}${bias}&format=json&limit=5&addressdetails=1`,
         { headers: { 'Accept-Language': targetLang || 'en' } }
       );
       if (!res.ok) throw new Error('Geocoding failed');
@@ -76,7 +95,7 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
       })));
     } catch { setSearchError(L('searchError')); }
     setSearching(false);
-  }, [targetLang, L]);
+  }, [targetLang, L, userPos]);
 
   const handleQueryChange = useCallback((val) => {
     setQuery(val);

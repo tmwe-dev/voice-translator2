@@ -175,9 +175,30 @@ function SpeakerView({ userToken }) {
     return () => window.removeEventListener('deviceorientation', handleOrientation);
   }, []);
 
+  // ── INIZIO b.181 — all'apertura del Taxi so gia dove sei ──
+  // Prima la posizione si chiedeva SOLO dopo aver scelto una destinazione
+  // (per calcolare la rotta). Ma serve gia PRIMA: se so dove sei, la
+  // ricerca dell'indirizzo mette in cima i posti vicini invece di
+  // sparpagliarli per il mondo. Quindi la chiedo una volta all'apertura,
+  // in modo indipendente dalla destinazione.
+  useEffect(() => {
+    if (userPos || typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (p) => setUserPos({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => {},
+      { timeout: 10000, maximumAge: 60000 }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // solo all'apertura
+  // ── FINE b.181 ──
+
   // ── GPS + route when destination is set ──
   useEffect(() => {
-    if (!destCoords) { setUserPos(null); setRouteInfo(null); return; }
+    // b.181 — la posizione (userPos) e ora indipendente dalla destinazione:
+    // qui si azzera solo la ROTTA quando la destinazione sparisce, non la
+    // posizione, altrimenti la ricerca perderebbe il vantaggio della
+    // prossimita appena si cancella una destinazione.
+    if (!destCoords) { setRouteInfo(null); return; }
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -308,8 +329,14 @@ function SpeakerView({ userToken }) {
     setDestLoading(true); setDestError(''); setSearchResults([]);
     try {
       const q = encodeURIComponent(query.trim());
+      // b.181 — se conosco la posizione, do a Nominatim un riquadro di
+      // ~55km attorno a te (viewbox, non vincolante): i posti vicini
+      // salgono in cima. Senza posizione, ricerca globale come prima.
+      const bias = userPos
+        ? `&viewbox=${userPos.lon - 0.5},${userPos.lat + 0.5},${userPos.lon + 0.5},${userPos.lat - 0.5}`
+        : '';
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=5&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/search?q=${q}${bias}&format=json&limit=5&addressdetails=1`,
         { headers: { 'Accept-Language': targetLang || 'en' } }
       );
       if (!res.ok) throw new Error('Geocoding failed');
@@ -329,7 +356,7 @@ function SpeakerView({ userToken }) {
       }
     } catch { setDestError(L('searchError')); setDestCoords(null); }
     setDestLoading(false);
-  }, [targetLang, L]);
+  }, [targetLang, L, userPos]);
 
   const selectSearchResult = useCallback((result) => {
     setDestCoords(result); setSearchResults([]); setDestError(''); setShowDestPanel(false);
