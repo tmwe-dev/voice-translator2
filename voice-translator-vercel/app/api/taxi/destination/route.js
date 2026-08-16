@@ -96,18 +96,26 @@ async function handleGet(req) {
   try {
     const key = `taxi:dest:${id}`;
 
-    // Atomic GET + DELETE: retrieve and delete in one operation
-    // Use GETDEL (Redis 6.2+) for atomicity
-    let raw;
-    try {
-      raw = await redis('GETDEL', key);
-    } catch {
-      // Fallback for older Redis: GET then DEL
-      raw = await redis('GET', key);
-      if (raw) await redis('DEL', key);
-    }
+    // ── INIZIO b.180 — IL TASSISTA VEDEVA SEMPRE "Destinazione scaduta" ──
+    //
+    // Provato dal vivo (15/8): aprendo il link del QR, la pagina del
+    // tassista dava SEMPRE 404 "gia letta o non trovata", e non mostrava
+    // ne indirizzo ne mappa. Causa: qui si usava GETDEL, cioe la
+    // destinazione veniva CANCELLATA alla PRIMA lettura. Ma una prima
+    // lettura non e mai garantita essere quella del tassista: un refresh
+    // della pagina, un prefetch, o un ri-render che rifa la fetch bastano
+    // a consumarla, e il tassista trova il vuoto. Un link che si
+    // autodistrugge alla prima apertura e incompatibile con "dai al
+    // tassista un link alla sua mappa": il link deve poter essere riaperto.
+    //
+    // Ora la lettura NON cancella piu: la destinazione resta leggibile
+    // finche non scade (TTL, default 4h) o finche il passeggero non la
+    // revoca (DELETE, con segreto). La privacy resta: contenuto cifrato,
+    // scadenza breve, revoca a portata del passeggero.
+    const raw = await redis('GET', key);
 
     if (!raw) {
+    // ── FINE b.180 ──
       return NextResponse.json(
         { error: 'Destination not found, expired, or already retrieved' },
         { status: 404 }
@@ -133,7 +141,7 @@ async function handleGet(req) {
       );
     }
 
-    log.info('Destination retrieved and deleted', { id });
+    log.info('Destination retrieved', { id }); // b.180 — non piu cancellata alla lettura
 
     const response = NextResponse.json({ ciphertext });
     // Prevent any caching of sensitive data

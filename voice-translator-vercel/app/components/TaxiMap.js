@@ -38,12 +38,21 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
     let mappa, gps;
 
     // Import dinamico: MapLibre si carica solo quando serve la mappa
-    import('maplibre-gl').then(({ default: maplibregl }) => {
+    // ── INIZIO b.179 — LA MAPPA NON SI VEDEVA PIU ──
+    // maplibre-gl e passato a v6: e un pacchetto SOLO-ESM, e il suo build
+    // NON esporta piu un `default`. Il vecchio `({ default: maplibregl })`
+    // dava quindi `maplibregl === undefined`, e `new maplibregl.Map(...)`
+    // esplodeva: la mappa non veniva disegnata (ne dal tassista ne altrove).
+    // Ora si prende il namespace: `Map`/`Marker` sono export nominati.
+    // `mod.default ?? mod` regge anche eventuali versioni vecchie col default.
+    import('maplibre-gl').then((mod) => {
+      const maplibregl = mod.default ?? mod;
+    // ── FINE b.179 ──
       // CSS di MapLibre (una volta sola)
       if (!document.getElementById('maplibre-css')) {
         const link = document.createElement('link');
         link.id = 'maplibre-css'; link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css';
+        link.href = 'https://unpkg.com/maplibre-gl@6/dist/maplibre-gl.css'; // b.179 — era @4, disallineato col JS v6
         document.head.appendChild(link);
       }
 
