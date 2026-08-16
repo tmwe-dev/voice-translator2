@@ -153,6 +153,11 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const [mostraTesto, setMostraTesto] = useState(true);
   const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
   const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
+  // b.176 — Versione B: due interruttori grandi. "Avanzate" nasconde i
+  // controlli fini (modi SENTI + volume partner). Il ref ricorda il
+  // volume voce prima di spegnerla, per ripristinarlo alla riaccensione.
+  const [mostraAvanzate, setMostraAvanzate] = useState(false);
+  const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs } = useApp();
   const vocePremiumAttiva = prefs?.voiceEngine === 'elevenlabs';
@@ -372,40 +377,88 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   </div>
                 )}
 
-                {/* ── Comandi: cosa VEDI e cosa SENTI ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap',
+                {/* ═══ INIZIO b.176 — Versione B: due interruttori grandi ═══
+                    COSA: al posto di "Testo" + 3 modi SENTI + 2 slider
+                    (confusi), due sole levette — "Vedi i sottotitoli" e
+                    "Ascolta la voce" — con il volume che compare SOLO se la
+                    voce e accesa. I controlli fini (modi SENTI + volume
+                    partner) restano sotto "Avanzate": nessun handler perso.
+                    PERCHE: "non si capisce come configurare testo/traduzione,
+                    infiniti tasti" (Luca). Scelta versione B. */}
+                <div style={{ display: 'flex', flexDirection: 'column',
                   paddingTop: 8, borderTop: '1px solid rgba(160,190,255,0.12)' }}>
-                  <button onClick={() => setMostraTesto(v => !v)}
-                    aria-pressed={mostraTesto} style={mostraTesto ? pillOn : pillOff}>
-                    {'\u{1F4AC}'} {L('textWord')}
-                  </button>
-                  <span style={{ width: 1, height: 16, background: 'rgba(160,190,255,0.15)' }} />
-                  <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>SENTI</span>
-                  {PRESET_ATTENUAZIONE.map(p => (
-                    <button key={p.id}
-                      onClick={() => { setAttenuazione(p.valore); setLivelloAtt(p.valore); if (setVideoDucking) setVideoDucking(p.valore < 0.5); }}
-                      aria-pressed={livelloAtt === p.valore}
-                      style={livelloAtt === p.valore ? pillOn : pillOff}>
-                      {L(p.chiave)}
-                    </button>
-                  ))}
-                </div>
 
-                {/* ── Due volumi separati: partner e voce tradotta ── */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                  <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>PARTNER</span>
-                  <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
-                    onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
-                    aria-label={L('partnerVolume')}
-                    style={{ flex: 1, accentColor: acc, height: 3 }} />
+                  {/* Interruttore 1 — sottotitoli */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px' }}>
+                    <span style={{ fontSize: 22 }}>{'\u{1F4D6}'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 750 }}>Vedi i sottotitoli</div>
+                      <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.5)' }}>Il testo tradotto sullo schermo</div>
+                    </div>
+                    <button onClick={() => setMostraTesto(v => !v)} aria-pressed={mostraTesto} aria-label="Vedi i sottotitoli"
+                      style={{ width: 52, height: 30, borderRadius: 16, border: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative',
+                        background: mostraTesto ? `linear-gradient(90deg, ${acc1}, ${acc})` : 'rgba(255,255,255,0.14)', transition: 'background .2s' }}>
+                      <span style={{ position: 'absolute', top: 3, left: mostraTesto ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
+                    </button>
+                  </div>
+
+                  {/* Interruttore 2 — voce tradotta */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px', borderTop: '1px solid rgba(160,190,255,0.08)' }}>
+                    <span style={{ fontSize: 22 }}>{'\u{1F50A}'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 750 }}>Ascolta la voce</div>
+                      <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.5)' }}>Una voce traduce ad alta voce</div>
+                    </div>
+                    <button aria-pressed={volTTS > 0.01} aria-label="Ascolta la voce"
+                      onClick={() => {
+                        if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); }
+                        else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
+                      }}
+                      style={{ width: 52, height: 30, borderRadius: 16, border: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative',
+                        background: volTTS > 0.01 ? `linear-gradient(90deg, ${acc1}, ${acc})` : 'rgba(255,255,255,0.14)', transition: 'background .2s' }}>
+                      <span style={{ position: 'absolute', top: 3, left: volTTS > 0.01 ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
+                    </button>
+                  </div>
+
+                  {/* Volume voce — solo se la voce e accesa */}
+                  {volTTS > 0.01 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px 8px' }}>
+                      <span style={{ fontSize: 15 }}>{'\u{1F508}'}</span>
+                      <input type="range" min="0" max="1" step="0.05" value={volTTS}
+                        onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
+                        aria-label={L('translatedVolume')} style={{ flex: 1, accentColor: acc1, height: 3 }} />
+                      <span style={{ fontSize: 15 }}>{'\u{1F50A}'}</span>
+                    </div>
+                  )}
+
+                  {/* Avanzate — modi "come senti il partner" + volume partner (niente perso) */}
+                  <button onClick={() => setMostraAvanzate(v => !v)}
+                    style={{ background: 'none', border: 'none', color: 'rgba(56,225,255,0.9)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '6px 2px', textAlign: 'left' }}>
+                    {'⚙︎'} {mostraAvanzate ? 'Nascondi avanzate' : 'Avanzate'}
+                  </button>
+                  {mostraAvanzate && (
+                    <div style={{ padding: '2px 2px 6px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 8 }}>
+                        <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>SENTI</span>
+                        {PRESET_ATTENUAZIONE.map(p => (
+                          <button key={p.id}
+                            onClick={() => { setAttenuazione(p.valore); setLivelloAtt(p.valore); if (setVideoDucking) setVideoDucking(p.valore < 0.5); }}
+                            aria-pressed={livelloAtt === p.valore}
+                            style={livelloAtt === p.valore ? pillOn : pillOff}>
+                            {L(p.chiave)}
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>PARTNER</span>
+                        <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
+                          onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
+                          aria-label={L('partnerVolume')} style={{ flex: 1, accentColor: acc, height: 3 }} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 5 }}>
-                  <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>TRADOTTA</span>
-                  <input type="range" min="0" max="1" step="0.05" value={volTTS}
-                    onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
-                    aria-label={L('translatedVolume')}
-                    style={{ flex: 1, accentColor: acc1, height: 3 }} />
-                </div>
+                {/* ═══ FINE b.176 ═══ */}
               </div>
             );
           })()}
