@@ -36,6 +36,11 @@ async function handleGet(req) {
   const lang = LINGUE.has(url.searchParams.get('lang')) ? url.searchParams.get('lang') : 'en';
   const cat = CATEGORIE.has(url.searchParams.get('cat')) ? url.searchParams.get('cat') : 'notizie';
   const fresca = url.searchParams.get('fresh') === '1';
+  // b.185 — seconda modalita opt-in: ?deep=1 apre piu fonti (Wikipedia
+  // accanto alle notizie); &fonti=N (3..10) dice quanto approfondire.
+  const profonda = url.searchParams.get('deep') === '1';
+  const fontiRaw = parseInt(url.searchParams.get('fonti') || '6', 10);
+  const fonti = Number.isFinite(fontiRaw) ? Math.max(3, Math.min(fontiRaw, 10)) : 6;
 
   if (!q.trim()) {
     return new Response(JSON.stringify({ stadio: 'errore', motivo: 'query vuota' }) + '\n', {
@@ -52,7 +57,7 @@ async function handleGet(req) {
       };
       try {
         const esito = await cercaArgomenti(q, lang, {
-          categoria: cat, fresca,
+          categoria: cat, fresca, profonda, fonti,
           racconta: (stadio, dati) => riga({ stadio, ...dati }),
         });
         riga({ stadio: 'fine', ...esito });

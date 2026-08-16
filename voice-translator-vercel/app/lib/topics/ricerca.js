@@ -115,8 +115,22 @@ async function scaricaRss(url) {
   return await risposta.text();
 }
 
+// b.184 — chiave del titolo per togliere i doppioni: la STESSA notizia
+// arriva da piu siti con lo stesso titolo (o quasi). Minuscolo, via la
+// punteggiatura, spazi compressi, primi 70 caratteri: basta a riconoscere
+// "Formula 1: Verstappen vince a Monza" ripetuto da cinque testate.
+function chiaveTitolo(t) {
+  return (t || '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 70);
+}
+
 function normalizzaItem(grezzi) {
   const visti = new Set();
+  const titoliVisti = new Set(); // b.184 — anche per titolo, non solo per URL
   const puliti = [];
   for (const it of grezzi) {
     const url = sbucciaUrlBing(it.url);
@@ -124,6 +138,12 @@ function normalizzaItem(grezzi) {
     try { dominio = new URL(url).hostname.replace(/^www\./, ''); } catch { continue; }
     if (visti.has(url)) continue;
     visti.add(url);
+    // b.184 — stesso titolo gia visto (altra testata) → si salta il doppione
+    const kt = chiaveTitolo(it.titolo);
+    if (kt.length >= 12) {
+      if (titoliVisti.has(kt)) continue;
+      titoliVisti.add(kt);
+    }
     // Il testo che arriva dal web si pulisce PRIMA che tocchi cache o UI.
     const titolo = pulisciTestoWeb(it.titolo).testo;
     const descrizione = pulisciTestoWeb(it.descrizione).testo;

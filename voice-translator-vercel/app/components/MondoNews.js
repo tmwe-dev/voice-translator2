@@ -59,6 +59,10 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const [scheda, setScheda] = useState(null); // { tipo: 'articolo'|'video', dati }
   const [video, setVideo] = useState(null);   // null = mai cercati
   const [videoAttivi, setVideoAttivi] = useState(false);
+  // b.185 — seconda modalita: Veloce (default) o Approfondita (piu fonti,
+  // Wikipedia in testa). `numFonti` = quanto approfondire (3/6/10).
+  const [profonda, setProfonda] = useState(false);
+  const [numFonti, setNumFonti] = useState(6);
   const abortRef = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -100,8 +104,9 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     setCercando(true); setErrore(false); setProcesso([]); setDaCache(false);
     vibrate(10);
     try {
+      const paramProfonda = profonda ? `&deep=1&fonti=${numFonti}` : '';
       const res = await fetch(
-        `/api/topics/search?q=${encodeURIComponent(pulita)}&lang=${lingua}&cat=${cat}${fresca ? '&fresh=1' : ''}`,
+        `/api/topics/search?q=${encodeURIComponent(pulita)}&lang=${lingua}&cat=${cat}${fresca ? '&fresh=1' : ''}${paramProfonda}`,
         { signal: ac.signal });
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.getReader();
@@ -133,7 +138,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     } finally {
       setCercando(false);
     }
-  }, [lingua, cercando, descriviStadio, cercaVideoPer]);
+  }, [lingua, cercando, descriviStadio, cercaVideoPer, profonda, numFonti]);
 
   const cercaChip = useCallback((c) => {
     setChipAttiva(c.id);
@@ -187,6 +192,45 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           }}>
           {L('newsUpdate')}
         </button>
+      </div>
+
+      {/* ─── b.185 · Modalita: Veloce / Approfondita + quante fonti ─── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 4, background: C.card, border: bordo, borderRadius: 999, padding: 3 }}>
+          <button onClick={() => { setProfonda(false); vibrate(10); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+              background: !profonda ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
+              border: 'none', color: !profonda ? '#fff' : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            <Icon name="zap" size={13} color={!profonda ? '#fff' : C.textMuted} /> {L('newsModeFast')}
+          </button>
+          <button onClick={() => { setProfonda(true); vibrate(10); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+              background: profonda ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
+              border: 'none', color: profonda ? '#fff' : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
+              WebkitTapHighlightColor: 'transparent',
+            }}>
+            <Icon name="graduation" size={13} color={profonda ? '#fff' : C.textMuted} /> {L('newsModeDeep')}
+          </button>
+        </div>
+        {profonda && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 11, color: C.textMuted, fontFamily: FONT }}>{L('newsSourcesShort')}</span>
+            {[3, 6, 10].map(n => (
+              <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
+                style={{
+                  width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                  background: numFonti === n ? `${C.accent}20` : C.card,
+                  border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
+                  color: numFonti === n ? C.accent : C.textSecondary,
+                  WebkitTapHighlightColor: 'transparent',
+                }}>{n}</button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ─── Scorciatoie ─── */}

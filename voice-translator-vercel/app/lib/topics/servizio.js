@@ -19,6 +19,7 @@
 
 import { redis } from '../redis.js';
 import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
+import { cercaWikipedia } from './wikipedia.js';
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
 
@@ -66,6 +67,10 @@ export async function stanzeCheNeParlano(query) {
  */
 export async function cercaArgomenti(query, lingua = 'en', {
   categoria = 'notizie', fresca = false, racconta = () => {},
+  // b.185 — la seconda modalita, opt-in: piu fonti (oggi Wikipedia
+  // accanto alle notizie), i FATTI in testa. `fonti` = quanto
+  // approfondire (piu voci enciclopediche). La veloce resta identica.
+  profonda = false, fonti = 6,
 } = {}) {
   const q = normalizzaQuery(query);
   if (!q) return { argomenti: [], stanze: [], daCache: false, quando: Date.now() };
@@ -75,7 +80,9 @@ export async function cercaArgomenti(query, lingua = 'en', {
   const stanze = await stanzeCheNeParlano(q);
 
   // LIVELLO 1 — la cache condivisa. "Aggiorna" (fresca=true) la salta.
-  const chiave = chiaveCache(q, lingua);
+  // b.185 — la cache della profonda e SEPARATA da quella veloce (chiave
+  // diversa): due modalita, due risultati, non si sovrascrivono.
+  const chiave = profonda ? `${chiaveCache(q, lingua)}:deep${fonti}` : chiaveCache(q, lingua);
   if (!fresca) {
     try {
       const salvato = await redis('GET', chiave);
@@ -89,25 +96,48 @@ export async function cercaArgomenti(query, lingua = 'en', {
 
   // LIVELLO 2 — il lavoro vero.
   racconta('cerca', { query: q });
-  const articoli = await cercaNotizie(q, lingua, { massimo: 20 });
-  racconta('fonti', { quante: articoli.length });
+  // b.185 — in modalita profonda si aprono PIU porte in parallelo:
+  // le notizie (Bing/Google) E l'enciclopedia (Wikipedia). `fonti`
+  // decide quante voci enciclopediche (2..6). Nella veloce, wiki = 0.
+  const wikiMax = profonda ? Math.max(2, Math.min(Math.round(fonti / 2), 6)) : 0;
+  const [articoli, wiki] = await Promise.all([
+    cercaNotizie(q, lingua, { massimo: 20 }),
+    profonda ? cercaWikipedia(q, lingua, { massimo: wikiMax }).catch(() => []) : Promise.resolve([]),
+  ]);
+  racconta('fonti', { quante: articoli.length + wiki.length });
   // b.150 — se e entrata la riserva Google, i rimbalzi si sbucciano
   // fino al dominio vero: senza questo, niente og:image e card nude.
   await risolviLinkGoogle(articoli, {
     quanti: 10,
     suRisolto: (dominio) => racconta('leggo', { dominio }),
   });
-  if (articoli.length === 0) {
-    return { argomenti: [], stanze, daCache: false, quando: Date.now() };
+
+  if (articoli.length > 0) {
+    await arricchisci(articoli, {
+      quanti: 10,
+      suProgresso: (dominio) => racconta('leggo', { dominio }),
+    });
   }
 
-  await arricchisci(articoli, {
-    quanti: 10,
-    suProgresso: (dominio) => racconta('leggo', { dominio }),
-  });
-
   racconta('raggruppo');
-  const argomenti = raggruppaInArgomenti(articoli).slice(0, 12);
+  const cardsNotizie = raggruppaInArgomenti(articoli).slice(0, 12);
+  // b.185 — le voci enciclopediche diventano card come le altre, ma
+  // marcate tipo:'enciclopedia' e messe IN TESTA in modalita profonda:
+  // il fatto verificato prima della notizia del giorno.
+  const cardsWiki = wiki.map((v, i) => ({
+    id: `w${i}`,
+    titolo: v.titolo,
+    sintesi: v.descrizione || '',
+    immagine: v.immagine || '',
+    url: v.url,
+    fonti: [{ dominio: v.dominio, fonte: 'Wikipedia', url: v.url, titolo: v.titolo }],
+    pubblicato: null,
+    tipo: 'enciclopedia',
+  }));
+  const argomenti = profonda ? [...cardsWiki, ...cardsNotizie] : cardsNotizie;
+  if (argomenti.length === 0) {
+    return { argomenti: [], stanze, daCache: false, quando: Date.now() };
+  }
 
   const risultato = { argomenti, quando: Date.now() };
   try {
