@@ -19,6 +19,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import SchedaArgomento from './SchedaArgomento.js';
+import MondoDiscussioni from './MondoDiscussioni.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const CATEGORIE = [
@@ -44,8 +45,12 @@ const QUERY_RAPIDE = {
 };
 
 function MondoNews({ C, onJoinRoom, onParlane }) {
-  const { L, prefs } = useApp();
+  const { L, prefs, userToken } = useApp();
   const lingua = prefs.uiLang || 'en';
+  // b.186 — "cerca -> apri discussione col link": la discussione pubblica
+  // persistente aperta da una card (id) e il flag di creazione in corso.
+  const [discAperta, setDiscAperta] = useState(null);
+  const [creando, setCreando] = useState(false);
 
   const [query, setQuery] = useState('');
   const [cercando, setCercando] = useState(false);
@@ -146,6 +151,30 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     setQuery('');
     cerca(q, c.cat);
   }, [lingua, cerca]);
+
+  // b.186 — crea una discussione pubblica PERSISTENTE da una card di
+  // ricerca (con dentro il link/foto) e apre subito il thread. Serve un
+  // account: chi non ce l'ha riceve l'avviso.
+  const apriDiscussione = useCallback(async (t) => {
+    if (creando) return;
+    if (!userToken) { setErrore(true); return; }
+    setCreando(true); vibrate(12);
+    try {
+      const media = t.url ? { url: t.url, thumb: t.immagine || '', source: (t.fonti?.[0]?.dominio) || '' } : {};
+      const r = await fetch('/api/mondo/discussioni', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          azione: 'crea', userToken,
+          title: t.titolo || '', titleLang: lingua, lang: lingua,
+          topic: chipAttiva || null, media,
+        }),
+      });
+      const d = await r.json();
+      if (r.ok && d.id) setDiscAperta(d.id);
+      else setErrore(true);
+    } catch { setErrore(true); }
+    setCreando(false);
+  }, [creando, userToken, lingua, chipAttiva]);
 
   const quando = (ts) => {
     if (!ts) return '';
@@ -405,6 +434,17 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
                 {L('newsTalkAbout')}
               </button>
             </div>
+            {/* b.186 — apri una discussione pubblica PERSISTENTE col link */}
+            <button onClick={() => apriDiscussione(t)} disabled={creando}
+              style={{
+                width: '100%', marginTop: 8, padding: '9px 0', borderRadius: 11, cursor: 'pointer',
+                background: `${C.accent}12`, border: `1px solid ${C.accent}30`, color: C.accent,
+                fontSize: 12, fontWeight: 700, fontFamily: FONT,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                opacity: creando ? 0.6 : 1, WebkitTapHighlightColor: 'transparent',
+              }}>
+              <Icon name="doorCreate" size={13} color={C.accent} /> {L('openDiscussion')}
+            </button>
           </div>
         </article>
       ))}
@@ -471,6 +511,11 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
             : d);
           setScheda(null);
         }} />
+
+      {/* b.186 — il thread di una discussione pubblica persistente */}
+      {discAperta && (
+        <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)} />
+      )}
     </div>
   );
 }

@@ -1,0 +1,105 @@
+// ═══════════════════════════════════════════════════════════════
+// /api/mondo/discussioni — le discussioni pubbliche persistenti (Fase 1)
+//
+// LETTURE (GET) — pubbliche, niente token:
+//   ?disc=ID            una discussione + i suoi commenti (e +1 vista)
+//   (senza disc)        il feed caldo, filtri &topic= &country= &lang=
+//
+// SCRITTURE (POST) — servono un account (userToken -> email di sessione):
+//   { azione:'crea',     title, titleLang, topic, country, lang, media, roomId }
+//   { azione:'commenta', discussionId, text, lang, parentId }
+//   { azione:'like',     commentId }
+//   { azione:'segui'|'smetti', followedPublicId }
+//
+// Il PRIVATO non si tocca: questa rotta e solo la piazza pubblica.
+// ═══════════════════════════════════════════════════════════════
+
+import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../../lib/apiGuard.js';
+import { getSession } from '../../../lib/users.js';
+import { createLogger } from '../../../lib/logger.js';
+import {
+  elencoDiscussioni, getDiscussione, contaVista, commenti,
+  creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire,
+} from '../../../lib/mondoDB.js';
+
+const log = createLogger('mondo-disc');
+
+async function handleGet(req) {
+  const url = new URL(req.url);
+  const disc = url.searchParams.get('disc');
+  try {
+    if (disc) {
+      const discussione = await getDiscussione(disc);
+      if (!discussione) return NextResponse.json({ error: 'non trovata' }, { status: 404 });
+      const lista = await commenti(disc);
+      contaVista(disc).catch(() => {}); // vista non bloccante
+      return NextResponse.json({ discussione, commenti: lista });
+    }
+    const topic = url.searchParams.get('topic') || null;
+    const country = url.searchParams.get('country') || null;
+    const lang = url.searchParams.get('lang') || null;
+    const discussioni = await elencoDiscussioni({ topic, country, lang });
+    return NextResponse.json({ discussioni });
+  } catch (e) {
+    log.error('GET:', e.message);
+    return NextResponse.json({ discussioni: [] }, { status: 200 });
+  }
+}
+
+async function handlePost(req) {
+  let body;
+  try { body = await req.json(); } catch { return NextResponse.json({ error: 'body non valido' }, { status: 400 }); }
+  const { azione, userToken } = body || {};
+
+  // Ogni scrittura richiede un account: l'autore e la sua email di sessione.
+  const session = userToken ? await getSession(userToken) : null;
+  if (!session?.email) return NextResponse.json({ error: 'serve un account' }, { status: 401 });
+  const authorEmail = session.email;
+  const authorName = session.name || '';
+
+  try {
+    switch (azione) {
+      case 'crea': {
+        const id = await creaDiscussione({
+          authorEmail, authorName,
+          title: (body.title || '').slice(0, 300),
+          titleLang: body.titleLang || null,
+          topic: body.topic || null,
+          country: body.country || null,
+          lang: body.lang || null,
+          media: body.media || {},
+          roomId: body.roomId || null,
+        });
+        return NextResponse.json({ id });
+      }
+      case 'commenta': {
+        if (!body.discussionId) return NextResponse.json({ error: 'discussionId mancante' }, { status: 400 });
+        const id = await commenta({
+          discussionId: body.discussionId, authorEmail, authorName,
+          text: body.text || '', lang: body.lang || null, parentId: body.parentId || null,
+        });
+        return NextResponse.json({ id });
+      }
+      case 'like': {
+        if (!body.commentId) return NextResponse.json({ error: 'commentId mancante' }, { status: 400 });
+        await mettiMiPiace({ commentId: body.commentId, email: authorEmail });
+        return NextResponse.json({ ok: true });
+      }
+      case 'segui':
+        await segui(authorEmail, body.followedPublicId);
+        return NextResponse.json({ ok: true });
+      case 'smetti':
+        await smettiSeguire(authorEmail, body.followedPublicId);
+        return NextResponse.json({ ok: true });
+      default:
+        return NextResponse.json({ error: 'azione sconosciuta' }, { status: 400 });
+    }
+  } catch (e) {
+    log.error('POST', azione, ':', e.message);
+    return NextResponse.json({ error: 'operazione fallita' }, { status: 500 });
+  }
+}
+
+export const GET = withApiGuard(handleGet, { maxRequests: 30, prefix: 'mondo-disc-get', skipBodyCheck: true });
+export const POST = withApiGuard(handlePost, { maxRequests: 20, prefix: 'mondo-disc-post' });
