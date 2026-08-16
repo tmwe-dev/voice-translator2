@@ -514,42 +514,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </div>
       )}
 
-      {/* ═══ INIZIO v.154 — risposta citata sopra la riga di input ═══
-          COSA: il blocco "Rispondi a..." si sposta qui, subito sopra
-          il campo di scrittura (prima stava fra ContenutiChat e
-          TalkControls, che ora sono nella stessa riga dell'input).
-          PERCHE: deve restare visivamente legato al campo dove si
-          scrive la risposta, non finire sotto un controllo diverso. */}
-      {rispostaA && (
-        <div style={{
-          margin: '0 10px 6px', padding: '8px 12px', borderRadius: 12,
-          background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
-          display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT,
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
-              Rispondi a {rispostaA.nome}
-            </div>
-            <div style={{
-              fontSize: 12, color: S.colors.textMuted,
-              whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            }}>
-              {rispostaA.testo}
-            </div>
-          </div>
-          <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
-            style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: S.colors.textMuted, fontSize: 16, padding: '0 4px',
-            }}>×</button>
-        </div>
-      )}
-      {/* ═══ FINE v.154 ═══ */}
-
-      {/* Text input bar — v.154: il mic (TalkControls) ora e qui, a
-          destra del bottone invio, non piu in una barra a se stante
-          sotto. Vedi metodo-topografico: dichiarazione WHAT/WHY sopra
-          il render di TalkControls, poco sotto. */}
       {/* ═══ INIZIO b.173 — parte bassa ridisegnata (template C, voce-first) ═══
           COSA: da UNA riga [input · invio · mic] — in cui TalkControls
           (colonna alta) sforava e sparpagliava i controlli — a una
@@ -574,6 +538,26 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
           endChatAndSave={endChatAndSave} setView={setView}
         />
+
+        {/* Risposta citata — subito sopra la riga di testo, legata all'input */}
+        {rispostaA && (
+          <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 12,
+            background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
+            display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
+                Rispondi a {rispostaA.nome}
+              </div>
+              <div style={{ fontSize: 12, color: S.colors.textMuted,
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {rispostaA.testo}
+              </div>
+            </div>
+            <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer',
+                color: S.colors.textMuted, fontSize: 16, padding: '0 4px' }}>×</button>
+          </div>
+        )}
         <div style={{display:'flex', alignItems:'center', gap:8, marginTop:10,
           background:S.colors.inputBg, border:`1px solid ${S.colors.inputBorder}`,
           borderRadius:22, padding:'5px 6px 5px 14px'}}>
