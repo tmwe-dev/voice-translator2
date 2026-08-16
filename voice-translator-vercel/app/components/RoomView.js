@@ -231,9 +231,22 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     if (remoteAudioRef.current) remoteAudioRef.current.volume = partnerVolume;
   }, [partnerVolume]);
 
+  // b.177 — FIX Android: l'ospite non sentiva la voce del partner in
+  // chiamata. Questo muto e un anti-eco pensato per i messaggi vocali
+  // async (mentre registri/ascolti, azzera l'audio in arrivo cosi il
+  // microfono non lo ri-trascrive). Ma in Android il riconoscimento del
+  // browser gira in ascolto CONTINUO: `isListening` resta true, quindi
+  // il partner restava muto PER SEMPRE. Su iPhone si usa Whisper
+  // push-to-talk, isListening quasi sempre false, e si sentiva — ecco
+  // l'asimmetria Apple/Android.
+  // In CHIAMATA (c'e un remoteStream) il partner NON si azzera mai:
+  // l'eco lo gestisce gia echoCancellation del microfono. Fuori chiamata
+  // l'anti-eco resta identico a prima: nessuna regressione sull'async.
   useEffect(() => {
-    if (remoteAudioRef.current) remoteAudioRef.current.muted = !!(recording || isListening);
-  }, [recording, isListening]);
+    if (!remoteAudioRef.current) return;
+    const inChiamata = !!webrtc?.remoteStream;
+    remoteAudioRef.current.muted = !inChiamata && !!(recording || isListening);
+  }, [recording, isListening, webrtc?.remoteStream]);
 
   // Helper: get translation for viewer's language
   function getTranslationForMe(msg) {
