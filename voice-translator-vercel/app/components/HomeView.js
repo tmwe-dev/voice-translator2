@@ -173,7 +173,22 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         <div style={{ paddingTop: 'max(24px, env(safe-area-inset-top))', marginBottom: 24 }}>
           {/* Language selector + batteria credito */}
           <div style={{ position: 'relative', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <BatteryPillSlot />
+            {/* b.191 — icona in alto a sinistra che porta al Mondo (Luca) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button
+                onClick={() => { vibrate(); setView('mondo'); }}
+                aria-label={L('worldNowTitle')}
+                style={{
+                  width: 40, height: 40, borderRadius: 20, flexShrink: 0,
+                  background: C.cardBg, border: `1px solid ${C.accent}30`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                }}
+              >
+                <Icon name="globe" size={20} color={C.accent} />
+              </button>
+              <BatteryPillSlot />
+            </div>
             <button
               onClick={() => { vibrate(); setShowLangPicker(!showLangPicker); }}
               style={{
