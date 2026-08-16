@@ -2,9 +2,8 @@
 import { memo, useState } from 'react';
 import { LANGS, FONT, getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import ConnectionQuality from './ConnectionQuality.js';
-import { TaxiButton } from './TaxiMode.js';
-import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconSettings, IconCheck,
-  IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconChevronDown, IconBrainAI } from './Icons.js';
+import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
+  IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 
@@ -41,6 +40,15 @@ const veste = (S, attivo) => ({
 });
 // ═══ FINE b.129 ═══
 
+// b.173 — stile riga di menu, condiviso da tutte le voci del menu ••• .
+const rigaMenu = (S) => ({
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px',
+  background: 'none', border: 'none', cursor: 'pointer', borderRadius: 8,
+  color: S.colors.textPrimary, fontSize: 13, fontWeight: 500, textAlign: 'left',
+  WebkitTapHighlightColor: 'transparent', fontFamily: FONT,
+});
+const iconaMenu = { fontSize: 15, width: 24, textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+
 const RoomHeader = memo(function RoomHeader({
   L, S, myLang, myL, otherL, otherMembers, partner,
   showLangPicker, setShowLangPicker, handleLangChange,
@@ -59,232 +67,242 @@ const RoomHeader = memo(function RoomHeader({
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
+  // b.173 — attivazione Taxi: identica a prima (era dentro TaxiButton),
+  // ora invocata da una voce di menu. Nessun cambiamento di logica.
+  const attivaTaxi = () => {
+    const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+    if (lastMsg) {
+      const original = lastMsg.original || '';
+      const translated = lastMsg.translated || '';
+      const fromLang = lastMsg.sourceLang || myLang;
+      const toLang = lastMsg.targetLang || 'en';
+      if (setTaxiData) setTaxiData({ original, translated, fromLang, toLang });
+    }
+    setTaxiVisible(true);
+  };
+
+  const flagsPartner = otherMembers.length > 0
+    ? [...new Set(otherMembers.map(m => getLang(m.lang).flag))]
+    : null;
+
   return (
     <>
-      {/* ═══ Header ═══ */}
-      <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:4, padding:'6px 8px'}} role="banner">
-        {/* ── Left: Back button ── */}
+      {/* ═══ INIZIO b.173 — Top bar "Immersive" (template C, scelto da Luca) ═══
+          COSA: barra ridotta all'essenziale — indietro, la coppia di
+          lingue GRANDE e centrata, e un unico menu ••• che raccoglie
+          TUTTO il resto (chiamata vocale, videochiamata, Taxi, audio,
+          credito e le impostazioni che erano gia qui).
+          PERCHE: massimo spazio alla conversazione. Metodo topografico:
+          nessun handler cambia — i bottoni sono stati SPOSTATI dentro il
+          menu con lo STESSO onClick di prima; il motore WebRTC/microfono
+          NON e toccato. */}
+      <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:6, padding:'8px 10px',
+        display:'flex', alignItems:'center'}} role="banner">
+
+        {/* ── Sinistra: indietro ── */}
         <button onClick={() => { if (leaveRoomTemporary) leaveRoomTemporary(); }}
-          style={{
-            ...S.backBtnSmall,
-            fontSize: 18, padding: '4px 10px', borderRadius: 10,
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}
-          title={L('exitWord')}>
-          <IconBack size={16}/>
-          <span style={{fontSize: 11, fontWeight: 600}}>{L('exit')}</span>
+          style={{...veste(S, false), width:38, height:38, borderRadius:12}}
+          title={L('exit')} aria-label={L('exit')}>
+          <IconBack size={18}/>
         </button>
 
-        {/* ── Center: Language flags ── */}
-        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:6, minWidth:0}}>
+        {/* ── Centro: coppia di lingue, grande ── */}
+        <div style={{flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:10, minWidth:0}}>
           <button onClick={() => setShowLangPicker(!showLangPicker)}
-            style={{fontSize:18, background:'none', border:'none', cursor:'pointer', padding:'2px 6px',
-              borderRadius:8, transition:'background 0.15s', flexShrink:0,
-              outline: showLangPicker ? `2px solid ${S.colors.accent4Border}` : 'none'}}>
+            style={{fontSize:24, lineHeight:1, background:'none', border:'none', cursor:'pointer', padding:'2px 4px',
+              borderRadius:10, transition:'outline 0.15s', flexShrink:0,
+              outline: showLangPicker ? `2px solid ${S.colors.accent4Border}` : 'none'}}
+            title={L('yourLang')} aria-label={L('yourLang')}>
             {myL.flag}
           </button>
-          <span style={{color:S.colors.textTertiary, fontSize:14, flexShrink:0}}>{<IconSwap size={14}/>}</span>
-          {otherMembers.length > 0 ? (
-            <span style={{fontSize:18, display:'flex', gap:2, flexShrink:0,
-              /* b.129 — il partner assente si vede sulla SUA bandiera, smorzata.
-                 Prima era un pallino rosso sull'ingranaggio: un colore d'allarme
-                 su un oggetto che non c'entrava niente. */
-              opacity: partnerConnected ? 1 : 0.35,
-              transition:'opacity 0.3s'}}
+          <span style={{color:S.colors.accent4Border || S.colors.textTertiary, display:'flex', alignItems:'center', flexShrink:0}}>
+            <IconSwap size={16}/>
+          </span>
+          {flagsPartner ? (
+            <span style={{fontSize:24, lineHeight:1, display:'flex', gap:3, flexShrink:0,
+              /* b.129 — il partner assente si vede sulla SUA bandiera, smorzata. */
+              opacity: partnerConnected ? 1 : 0.35, transition:'opacity 0.3s'}}
               title={partnerConnected ? L('connectedWord') : L('notConnectedWord')}>
-              {[...new Set(otherMembers.map(m => getLang(m.lang).flag))].map((flag, i) => (
-                <span key={i}>{flag}</span>
-              ))}
+              {flagsPartner.map((flag, i) => (<span key={i}>{flag}</span>))}
             </span>
           ) : (
-            <span style={{fontSize:18, flexShrink:0}}>{otherL.flag}</span>
+            <span style={{fontSize:24, lineHeight:1, flexShrink:0}}>{otherL.flag}</span>
           )}
         </div>
 
-        {/* ── Right: Primary actions ── */}
-        <div style={{display:'flex', alignItems:'center', gap:6, flexShrink:0}}>
-          {/* Voice call button.
-              b.152 — nelle stanze di Mondo (stanzaSoloTesto) chiamate e
-              video NON compaiono: la regola di prodotto e "solo scritto,
-              TTS opzionale; il video vive nelle chat private". Qui si
-              nasconde l'ingresso, non si tocca il motore WebRTC. */}
-          {webrtc && !stanzaSoloTesto && (
-            <button onClick={() => {
-              if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
-                setShowVoiceCall(true);
-              } else if (webrtc.webrtcState === 'idle') {
-                webrtc.initiateConnection(false);
-              }
-            }}
-              title={L('voiceCall')} aria-label={L('startVoiceCall')}
-              style={veste(S, webrtc.webrtcConnected && webrtc.callType === 'voice')}>
-              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-            </button>
-          )}
-          {/* Video call button — vedi nota b.152 sopra */}
-          {webrtc && !stanzaSoloTesto && (
-            <button onClick={() => {
-              if (!showVideoCall) {
-                setShowVideoCall(true);
-                if (webrtc.webrtcState === 'idle') webrtc.initiateConnection(true);
-              } else {
-                setShowVideoCall(false);
-              }
-            }}
-              title={showVideoCall ? L('closeVideo') : L('videoCallWord')}
-              style={veste(S, showVideoCall)}>
-              <IconCamera size={18}/>
-            </button>
-          )}
-          {/* Taxi Mode toggle — solo in chat: durante una chiamata non ha senso */}
-          {setTaxiVisible && !showVideoCall && (
-            <TaxiButton
-              onClick={() => {
-                const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-                if (lastMsg) {
-                  const original = lastMsg.original || '';
-                  const translated = lastMsg.translated || '';
-                  const fromLang = lastMsg.sourceLang || myLang;
-                  const toLang = lastMsg.targetLang || 'en';
-                  if (setTaxiData) setTaxiData({ original, translated, fromLang, toLang });
-                }
-                setTaxiVisible(true);
-              }}
-              S={S}
-            />
-          )}
-          {/* Batteria credito: la vedi DOVE consumi */}
-          {!showVideoCall && <BatteryPillSlot />}
-          {/* Audio toggle */}
-          <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-            title={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
-            style={veste(S, audioEnabled)}>
-            {audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}
+        {/* ── Destra: un solo menu ••• ── */}
+        <div style={{position:'relative', flexShrink:0}}>
+          <button onClick={() => setShowMoreMenu(!showMoreMenu)}
+            title={L('settings')} aria-label={L('settings')}
+            style={{...veste(S, showMoreMenu), width:38, height:38, borderRadius:12}}>
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/>
+            </svg>
           </button>
-          {/* More menu button */}
-          <div style={{position:'relative', flexShrink:0}}>
-            <button onClick={() => setShowMoreMenu(!showMoreMenu)}
-              title={L('settings')}
-              style={veste(S, showMoreMenu)}>
-              <IconSettings size={18}/>
-            </button>
-            {/* ── Overflow menu dropdown ── */}
-            {showMoreMenu && (
-              <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:4,
-                background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
-                borderRadius:12, padding:6, minWidth:220, backdropFilter:'blur(12px)',
-                boxShadow:'0 8px 32px rgba(0,0,0,0.3)'}}>
-                {/* Connection quality */}
-                <div style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
-                  borderBottom:`1px solid ${S.colors.overlayBorder}`, marginBottom:4}}>
-                  <ConnectionQuality
-                    webrtcState={webrtc?.webrtcState || 'idle'}
-                    partnerConnected={partnerConnected}
-                    realtimeConnected={realtimeConnected}
-                  />
-                  <span style={{fontSize:11, color: partnerConnected ? S.colors.statusOk : S.colors.textMuted, fontWeight:600}}>
-                    {partnerConnected ? (partner?.name || 'Partner') : L('waitingDots')}
+
+          {/* ── Menu a tendina ── */}
+          {showMoreMenu && (
+            <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:6,
+              background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
+              borderRadius:14, padding:6, minWidth:236, backdropFilter:'blur(12px)',
+              boxShadow:'0 12px 40px rgba(0,0,0,0.38)'}}>
+
+              {/* Stato connessione + credito */}
+              <div style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
+                borderBottom:`1px solid ${S.colors.overlayBorder}`, marginBottom:4}}>
+                <ConnectionQuality
+                  webrtcState={webrtc?.webrtcState || 'idle'}
+                  partnerConnected={partnerConnected}
+                  realtimeConnected={realtimeConnected}
+                />
+                <span style={{fontSize:11, color: partnerConnected ? S.colors.statusOk : S.colors.textMuted, fontWeight:600}}>
+                  {partnerConnected ? (partner?.name || 'Partner') : L('waitingDots')}
+                </span>
+                {!showVideoCall && <span style={{marginLeft:'auto'}}><BatteryPillSlot /></span>}
+              </div>
+
+              {/* b.173 — AZIONI spostate qui dalla barra (stesso onClick).
+                  Chiamata vocale e video restano nascoste nelle stanze
+                  solo-testo di Mondo, come prima (regola b.152). */}
+              {webrtc && !stanzaSoloTesto && (
+                <button onClick={() => {
+                    if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
+                      setShowVoiceCall(true);
+                    } else if (webrtc.webrtcState === 'idle') {
+                      webrtc.initiateConnection(false);
+                    }
+                    setShowMoreMenu(false);
+                  }}
+                  style={rigaMenu(S)} aria-label={L('startVoiceCall')}>
+                  <span style={iconaMenu}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                  </span>
+                  <span>{L('voiceCall')}</span>
+                  {webrtc.webrtcConnected && webrtc.callType === 'voice' &&
+                    <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
+                </button>
+              )}
+              {webrtc && !stanzaSoloTesto && (
+                <button onClick={() => {
+                    if (!showVideoCall) {
+                      setShowVideoCall(true);
+                      if (webrtc.webrtcState === 'idle') webrtc.initiateConnection(true);
+                    } else {
+                      setShowVideoCall(false);
+                    }
+                    setShowMoreMenu(false);
+                  }}
+                  style={rigaMenu(S)} aria-label={showVideoCall ? L('closeVideo') : L('videoCallWord')}>
+                  <span style={iconaMenu}><IconCamera size={16}/></span>
+                  <span>{showVideoCall ? L('closeVideo') : L('videoCallWord')}</span>
+                  {showVideoCall && <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
+                </button>
+              )}
+              {setTaxiVisible && !showVideoCall && (
+                <button onClick={() => { attivaTaxi(); setShowMoreMenu(false); }}
+                  style={rigaMenu(S)} aria-label="TaxiTalk">
+                  <span style={iconaMenu}>
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 0 .01M19 17a2 2 0 1 0 0 .01M6 17l1.5-5h9L18 17M9 12V9h6v3M10 6h4"/></svg>
+                  </span>
+                  <span>TaxiTalk</span>
+                </button>
+              )}
+              {/* Audio on/off */}
+              <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
+                style={rigaMenu(S)} aria-label={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}>
+                <span style={iconaMenu}>{audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}</span>
+                <span>{audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}</span>
+              </button>
+
+              <div style={{height:1, background:S.colors.overlayBorder, margin:'4px 0'}} />
+
+              {/* Sottotitoli */}
+              <button onClick={() => { setShowCaptions(!showCaptions); setShowMoreMenu(false); }}
+                style={rigaMenu(S)}>
+                <span style={iconaMenu}>{showCaptions ? 'CC' : 'cc'}</span>
+                <span>{showCaptions ? L('hideCaptions') : L('showCaptions')}</span>
+                {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
+              </button>
+              {/* Esporta */}
+              <button onClick={() => { exportConversation(); setShowMoreMenu(false); }}
+                style={rigaMenu(S)}>
+                <span style={iconaMenu}><IconClipboard size={15}/></span>
+                <span>{L('exportConversation')}</span>
+              </button>
+              {/* Azioni AI */}
+              {messages.length >= 3 && (
+                <button onClick={() => { setShowChatActions(true); setShowMoreMenu(false); }}
+                  style={rigaMenu(S)}>
+                  <span style={iconaMenu}><IconBrainAI size={15}/></span>
+                  <span>{L('aiActionsTitle')}</span>
+                </button>
+              )}
+              {/* Audio Ducking */}
+              <div style={{padding:'8px 12px'}}>
+                <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
+                  <span style={iconaMenu}><IconMusic size={15}/></span>
+                  <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>{L('audioDuckingLabel')}</span>
+                  <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
+                    {Math.round((duckingLevel || 0.2) * 100)}%
                   </span>
                 </div>
-                {/* Captions toggle */}
-                <button onClick={() => { setShowCaptions(!showCaptions); setShowMoreMenu(false); }}
-                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
-                    background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
-                    fontSize:13, fontWeight:500, textAlign:'left'}}>
-                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{showCaptions ? 'CC' : 'cc'}</span>
-                  <span>{showCaptions ? L('hideCaptions') : L('showCaptions')}</span>
-                  {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}>{<IconCheck size={12}/>}</span>}
-                </button>
-                {/* Export */}
-                <button onClick={() => { exportConversation(); setShowMoreMenu(false); }}
-                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
-                    background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
-                    fontSize:13, fontWeight:500, textAlign:'left'}}>
-                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconClipboard size={15}/>}</span>
-                  <span>{L('exportConversation')}</span>
-                </button>
-                {/* Chat AI Actions */}
-                {messages.length >= 3 && (
-                  <button onClick={() => { setShowChatActions(true); setShowMoreMenu(false); }}
-                    style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
-                      background:'none', border:'none', cursor:'pointer', borderRadius:8, color:S.colors.textPrimary,
-                      fontSize:13, fontWeight:500, textAlign:'left'}}>
-                    <span style={{fontSize:15, width:24, textAlign:'center'}}><IconBrainAI size={15}/></span>
-                    <span>{L('aiActionsTitle')}</span>
-                  </button>
-                )}
-                {/* Audio Ducking */}
-                <div style={{padding:'8px 12px'}}>
-                  <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
-                    <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconMusic size={15}/>}</span>
-                    <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>{L('audioDuckingLabel')}</span>
-                    <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
-                      {Math.round((duckingLevel || 0.2) * 100)}%
-                    </span>
-                  </div>
-                  <input type="range" min="5" max="80" step="5"
-                    value={Math.round((duckingLevel || 0.2) * 100)}
-                    onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
-                    style={{width:'100%', accentColor:S.colors.accent4Border, height:4}} />
-                  <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
-                    {L('duckingHint')}
-                  </div>
-                </div>
-                {/* Close & Archive */}
-                <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
-                  style={{display:'flex', alignItems:'center', gap:10, width:'100%', padding:'10px 12px',
-                    background:'none', border:'none', cursor:'pointer', borderRadius:8,
-                    color: S.colors.statusError || PALETTE.coral,
-                    fontSize:13, fontWeight:600, textAlign:'left',
-                    borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
-                  <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconArchive size={15}/>}</span>
-                  <span>{L('closeArchive')}</span>
-                </button>
-                {/* FREE tier battery */}
-                {isTrial && (() => {
-                  const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
-                  const remaining = 100 - pct;
-                  const battColor = freeLimitExceeded ? S.colors.statusError
-                    : remaining <= 20 ? S.colors.statusError
-                    : remaining <= 50 ? S.colors.statusWarning
-                    : S.colors.statusOk;
-                  return (
-                    <div style={{padding:'8px 12px', borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4}}>
-                      <div style={{display:'flex', alignItems:'center', gap:10}}>
-                        <span style={{fontSize:15, width:24, textAlign:'center'}}>{<IconBattery size={15}/>}</span>
-                        <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
-                          {freeLimitExceeded ? L('freeDailyLimitHit') : L('freePlan')}
-                        </span>
-                        <span style={{marginLeft:'auto', fontSize:12, fontWeight:700, color:battColor, fontFamily:'monospace'}}>
-                          {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
-                        </span>
-                      </div>
-                      <div style={{marginTop:6, height:4, borderRadius:2, background:`${S.colors.overlayBorder}`,
-                        overflow:'hidden'}}>
-                        <div style={{height:'100%', borderRadius:2, width:`${remaining}%`,
-                          background:battColor, transition:'width 0.5s ease'}} />
-                      </div>
-                      <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
-                        {Math.round(freeCharsUsed/1000)}K / {FREE_DAILY_LIMIT/1000}K caratteri
-                        {freeResetTime && ` • Reset: ${freeResetTime}`}
-                      </div>
-                    </div>
-                  );
-                })()}
+                <input type="range" min="5" max="80" step="5"
+                  value={Math.round((duckingLevel || 0.2) * 100)}
+                  onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
+                  style={{width:'100%', accentColor:S.colors.accent4Border, height:4}} />
+                <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>{L('duckingHint')}</div>
               </div>
-            )}
-          </div>
+              {/* Chiudi e archivia */}
+              <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
+                style={{...rigaMenu(S), color: S.colors.statusError || PALETTE.coral, fontWeight:600,
+                  borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4, paddingTop:12}}>
+                <span style={iconaMenu}><IconArchive size={15}/></span>
+                <span>{L('closeArchive')}</span>
+              </button>
+              {/* Batteria FREE */}
+              {isTrial && (() => {
+                const pct = Math.min(100, (freeCharsUsed / FREE_DAILY_LIMIT) * 100);
+                const remaining = 100 - pct;
+                const battColor = freeLimitExceeded ? S.colors.statusError
+                  : remaining <= 20 ? S.colors.statusError
+                  : remaining <= 50 ? S.colors.statusWarning
+                  : S.colors.statusOk;
+                return (
+                  <div style={{padding:'8px 12px', borderTop:`1px solid ${S.colors.overlayBorder}`, marginTop:4}}>
+                    <div style={{display:'flex', alignItems:'center', gap:10}}>
+                      <span style={iconaMenu}><IconBattery size={15}/></span>
+                      <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>
+                        {freeLimitExceeded ? L('freeDailyLimitHit') : L('freePlan')}
+                      </span>
+                      <span style={{marginLeft:'auto', fontSize:12, fontWeight:700, color:battColor, fontFamily:'monospace'}}>
+                        {freeLimitExceeded ? '0%' : `${Math.round(remaining)}%`}
+                      </span>
+                    </div>
+                    <div style={{marginTop:6, height:4, borderRadius:2, background:`${S.colors.overlayBorder}`, overflow:'hidden'}}>
+                      <div style={{height:'100%', borderRadius:2, width:`${remaining}%`, background:battColor, transition:'width 0.5s ease'}} />
+                    </div>
+                    <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
+                      {Math.round(freeCharsUsed/1000)}K / {FREE_DAILY_LIMIT/1000}K caratteri
+                      {freeResetTime && ` • Reset: ${freeResetTime}`}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
-      {/* Backdrop to close menus */}
+      {/* ═══ FINE b.173 ═══ */}
+
+      {/* Sfondo per chiudere il menu */}
       {showMoreMenu && (
         <div onClick={() => { setShowMoreMenu(false); }}
           style={{position:'fixed', inset:0, zIndex:99, background:'transparent'}} />
       )}
 
-      {/* Language picker dropdown */}
+      {/* Selettore lingua */}
       {showLangPicker && (
-        <div style={{position:'absolute', top:48, left:'50%', transform:'translateX(-50%)', zIndex:100,
+        <div style={{position:'absolute', top:52, left:'50%', transform:'translateX(-50%)', zIndex:100,
           background:S.colors.glassCard,
           border:`1px solid ${S.colors.cardBorder}`,
           borderRadius:14, padding:'6px 0', maxHeight:280, overflowY:'auto', width:200,
