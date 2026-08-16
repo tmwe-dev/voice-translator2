@@ -18,12 +18,27 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { getSession } from '../../../lib/users.js';
 import { createLogger } from '../../../lib/logger.js';
+import { redis } from '../../../lib/redis.js';
 import {
   elencoDiscussioni, getDiscussione, contaVista, commenti,
-  creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire,
+  creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire, archiviaInattive,
 } from '../../../lib/mondoDB.js';
 
 const log = createLogger('mondo-disc');
+
+// b.187 — RETENTION senza cron esterno: quando si legge il feed, una
+// volta all'ora si archiviano le discussioni ferme da oltre 15 giorni
+// (restano leggibili, escono dal caldo). Un flag su Redis fa da throttle,
+// e il tutto e a prova di errore: la manutenzione non rompe mai la lettura.
+async function archiviaThrottled() {
+  try {
+    const last = await redis('GET', 'mondo:archive:last');
+    if (last && Date.now() - Number(last) < 3600_000) return;
+    await redis('SET', 'mondo:archive:last', String(Date.now()));
+    const n = await archiviaInattive();
+    if (n) log.info('discussioni archiviate', { n });
+  } catch { /* la manutenzione non deve mai far fallire una lettura */ }
+}
 
 async function handleGet(req) {
   const url = new URL(req.url);
@@ -36,6 +51,7 @@ async function handleGet(req) {
       contaVista(disc).catch(() => {}); // vista non bloccante
       return NextResponse.json({ discussione, commenti: lista });
     }
+    archiviaThrottled().catch(() => {}); // manutenzione pigra, non bloccante
     const topic = url.searchParams.get('topic') || null;
     const country = url.searchParams.get('country') || null;
     const lang = url.searchParams.get('lang') || null;

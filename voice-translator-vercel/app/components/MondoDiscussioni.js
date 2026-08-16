@@ -29,6 +29,8 @@ function MondoDiscussioni({ discussionId, onClose }) {
   const [errore, setErrore] = useState('');
   // traduzioni a richiesta, per id (titolo = 'title'), in memoria
   const [tradotti, setTradotti] = useState({});
+  // b.187 — chi seguo, per id pubblico (stato ottimistico di sessione)
+  const [seguiti, setSeguiti] = useState(() => new Set());
   const scrollRef = useRef(null);
 
   const carica = useCallback(async () => {
@@ -84,6 +86,23 @@ function MondoDiscussioni({ discussionId, onClose }) {
     } catch { setErrore(L('networkError')); }
     setInviando(false);
   }, [testo, inviando, userToken, discussionId, mia, L, carica]);
+
+  // b.187 — segui/smetti di seguire una persona (ottimistico, poi conferma)
+  const toggleSegui = useCallback(async (publicId) => {
+    if (!publicId) return;
+    if (!userToken) { setErrore(L('accessToCreate')); return; }
+    const gia = seguiti.has(publicId);
+    setSeguiti(s => { const n = new Set(s); if (gia) n.delete(publicId); else n.add(publicId); return n; });
+    vibrate(8);
+    try {
+      await fetch('/api/mondo/discussioni', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
+      });
+    } catch {
+      setSeguiti(s => { const n = new Set(s); if (gia) n.add(publicId); else n.delete(publicId); return n; });
+    }
+  }, [userToken, seguiti, L]);
 
   const bg = C.bg || '#0a0e1a';
   const card = C.glassCard || 'rgba(12,16,30,0.65)';
@@ -141,6 +160,10 @@ function MondoDiscussioni({ discussionId, onClose }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: testoP }}>{c.author_name || '—'}</span>
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
+              <button onClick={() => toggleSegui(c.author_user_id)} style={{
+                marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,
+                fontSize: 10, fontWeight: 700, color: seguiti.has(c.author_user_id) ? muto : accent,
+              }}>{seguiti.has(c.author_user_id) ? L('following') : L('follow')}</button>
             </div>
             <div style={{ fontSize: 14, color: testoP, lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>
               {tradotti[c.id] && tradotti[c.id] !== '…' ? tradotti[c.id] : c.text}

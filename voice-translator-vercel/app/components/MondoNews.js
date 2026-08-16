@@ -51,6 +51,8 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   // persistente aperta da una card (id) e il flag di creazione in corso.
   const [discAperta, setDiscAperta] = useState(null);
   const [creando, setCreando] = useState(false);
+  // b.187 — il FEED sfogliabile delle discussioni pubbliche persistenti.
+  const [feed, setFeed] = useState(null);
 
   const [query, setQuery] = useState('');
   const [cercando, setCercando] = useState(false);
@@ -71,6 +73,19 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const abortRef = useRef(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // b.187 — carica il feed delle discussioni: all'avvio, quando cambi
+  // argomento, e quando chiudi un thread (per vedere quello appena aperto).
+  useEffect(() => {
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/mondo/discussioni${chipAttiva ? `?topic=${encodeURIComponent(chipAttiva)}` : ''}`);
+        if (r.ok && vivo) { const d = await r.json(); setFeed(d.discussioni || []); }
+      } catch { /* il feed e un di piu, mai un errore in faccia */ }
+    })();
+    return () => { vivo = false; };
+  }, [chipAttiva, discAperta]);
 
   const descriviStadio = useCallback((r) => {
     switch (r.stadio) {
@@ -349,6 +364,30 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           velo per card, ripetuto per tutte, diventa nebbia sull'intera
           pagina. Il fondo translucido basta; il blur vive solo su
           elementi singoli come il pannello COBRA. */}
+      {/* ─── b.187 · Feed delle discussioni pubbliche persistenti ─── */}
+      {feed && feed.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+            {L('worldNowTitle')}
+          </div>
+          {feed.slice(0, 12).map(d => (
+            <button key={d.id} onClick={() => { vibrate(8); setDiscAperta(d.id); }}
+              style={{
+                width: '100%', textAlign: 'left', display: 'flex', gap: 10, alignItems: 'center',
+                padding: '10px 12px', marginBottom: 8, borderRadius: 12, background: C.card, border: bordo,
+                cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
+              }}>
+              {d.media?.thumb && <img src={d.media.thumb} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || '—'}</span>
+                <span style={{ display: 'block', fontSize: 11, color: C.textMuted }}>{d.comment_count} · {d.author_name || ''}</span>
+              </span>
+              <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {argomenti !== null && argomenti.map(t => (
         <article key={t.id} style={{
           marginBottom: 14, borderRadius: 18, overflow: 'hidden',
