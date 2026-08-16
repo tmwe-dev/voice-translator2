@@ -34,42 +34,29 @@ export default function useDeepgramSTT({
   const deepgramAudioCtxRef = useRef(null);
   const deepgramKeyRef = useRef(null);
 
-  // Check Deepgram availability on mount
-  // b.157 — audit pagamenti: CONFERMATO, questa richiesta non mandava
-  // MAI un corpo — e /api/stt-token risponde 401 senza userToken ne
-  // roomSessionToken. La funzione era invisibilmente rotta per
-  // chiunque: il ramo Deepgram non si attivava mai, si ripiegava
-  // sempre sul riconoscimento del browser, silenziosamente. Corretto
-  // qui e nel punto in cui il gettone puo cambiare (login), da cui la
-  // dipendenza qui sotto.
+  // b.172 — DEEPGRAM DISATTIVATO su richiesta esplicita dell'utente
+  // ("non voglio Deepgram"). Deepgram e la dettatura vocale (voce→testo)
+  // di un fornitore esterno, in questa app dal 6/3/2026: NON serve, e in
+  // produzione la sua rotta /api/stt-token falliva (401/403 identita e,
+  // soprattutto, 503 perche la creazione della chiave temporanea
+  // Deepgram non andava — chiave assente/senza permesso/quota). Quei
+  // fallimenti riempivano la console di "high error count".
+  //
+  // La dettatura NON si perde: la catena di ripiego in useTranslation.js
+  // usa gia il riconoscimento del browser e soprattutto Whisper
+  // (/api/transcribe, OpenAI — gia pagato), che funziona anche su
+  // telefono. Qui si evita del tutto la chiamata a /api/stt-token
+  // segnando la disponibilita a false: il ramo Deepgram in
+  // useTranslation.js (`if (deepgramAvailableRef.current && ...)`) non
+  // scatta mai, e non parte nessuna richiesta verso il fornitore.
+  //
+  // Reversibile: per riattivarlo si ripristina la fetch qui sotto e si
+  // configura DEEPGRAM_API_KEY (con permesso di creare chiavi temporanee)
+  // su Vercel. Le funzioni start/stopDeepgramStreaming restano nel file,
+  // inerti finche availableRef e false.
   useEffect(() => {
-    async function checkDeepgram() {
-      try {
-        const res = await fetch('/api/stt-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          // b.161 — senza questo, resolveAuth/risolviEmailDaFatturare
-          // rifiuta con 401 il percorso roomId (vedi apiAuth.js e
-          // stt-token/route.js, punto 2 quarto audit).
-          body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.key) {
-            deepgramAvailableRef.current = true;
-            deepgramKeyRef.current = data.key;
-            dbg.debug('[DeepgramSTT] Available, key obtained');
-            return;
-          }
-        }
-        console.warn('[DeepgramSTT] Token endpoint returned', res.status);
-      } catch (e) {
-        console.warn('[DeepgramSTT] Check failed:', e.message);
-      }
-      deepgramAvailableRef.current = false;
-    }
-    checkDeepgram();
-  }, [userToken, roomId, roomSessionTokenRef]);
+    deepgramAvailableRef.current = false;
+  }, []);
 
   /**
    * Start Deepgram WebSocket streaming STT.
