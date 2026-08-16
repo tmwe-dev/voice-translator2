@@ -28,17 +28,17 @@ const TalkControls = memo(function TalkControls({
   const myHandRaised = !!roomInfo?.members?.find(m => m.name === myName)?.handRaised;
 
   return (
-    // ═══ INIZIO v.154 — mic accanto al testo, extra sotto-a-destra ═══
-    // COSA: il contenitore non e piu centrato/full-width (S.talkBar
-    // aveva alignItems:'center'); ora e compatto e allineato a destra,
-    // per stare nella stessa riga del campo di scrittura.
-    // PERCHE: richiesta di Luca (14/8) — "sposta il microfono a destra
-    // del campo di testo... [gli extra] di fianco al microfono e sotto
-    // sempre a destra del testo". Vale per tutte le modalita
-    // (Conversazione/Classroom/Free Talk/Simultaneo), confermato.
-    <div style={{...S.talkBar, alignItems:'flex-end', flexShrink:0, width:'auto', padding:'0 10px 6px'}}
+    // ═══ INIZIO b.173 — microfono-eroe, centrato (template C) ═══
+    // COSA: il contenitore torna centrato e a piena larghezza: il
+    // microfono e i suoi extra (riduzione rumore, modalita, sensibilita,
+    // ricarica) si dispongono in colonna centrata sotto la chat, non piu
+    // compressi a destra del campo di testo (v.154).
+    // PERCHE: richiesta esplicita — la parte bassa "non e allineata, non
+    // e messa in modo funzionale"; template C scelto: "il microfono e
+    // l'eroe". Nessun gesto/handler toccato: solo allineamento.
+    <div style={{...S.talkBar, alignItems:'center', flexShrink:0, width:'100%', padding:'2px 10px 0'}}
       role="toolbar" aria-label={L('voiceControls')}>
-      {status && <div style={{fontSize:11, color:S.colors.accent3, marginBottom:4, fontWeight:500, textAlign:'right'}}>{status}</div>}
+      {status && <div style={{fontSize:11, color:S.colors.accent3, marginBottom:4, fontWeight:500, textAlign:'center'}}>{status}</div>}
 
       {(roomMode === 'conversation' || roomMode === 'classroom') && canTalk && (
         <>
@@ -58,7 +58,7 @@ const TalkControls = memo(function TalkControls({
             v.154 — il tasto e piu piccolo (56 invece di 84) e la fila
             e allineata a destra: sta accanto al campo di scrittura,
             non piu al centro di una barra a se stante. */}
-        <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, padding:'4px 0'}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'4px 0'}}>
           {/* Slot ANNULLA — larghezza riservata anche da fermo: la fila non si muove */}
           {recording && (
             <button onClick={() => { vibrate(15); cancelRecording(); }}
@@ -75,27 +75,35 @@ const TalkControls = memo(function TalkControls({
           {/* Il gesto principale */}
           <button onClick={() => { vibrate(25); toggleRecording(); }}
             aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
-            style={{...S.talkBtn, width:52, height:52, borderRadius:26,
+            style={{...S.talkBtn, width:64, height:64, borderRadius:32,
               display:'flex', alignItems:'center', justifyContent:'center',
               border:'none', cursor:'pointer', WebkitTapHighlightColor:'transparent',
-              transition:'background 0.2s', flexShrink:0,
+              transition:'background 0.2s, box-shadow 0.2s', flexShrink:0,
               ...(recording ? {
                 background: S.colors.accent4Bg,
                 color: S.colors.textPrimary,
+                boxShadow:`0 0 0 8px ${S.colors.accent4Bg}22, 0 10px 26px rgba(0,0,0,0.35)`,
                 animation:'vtRecordPulse 1.5s ease-in-out infinite',
               } : {
-                background: S.colors.overlayBg,
+                background: S.colors.btnGradient,
                 color: S.colors.textPrimary,
+                boxShadow:`0 0 0 8px ${S.colors.accent3Bg}, 0 12px 28px rgba(0,0,0,0.35)`,
               })}}>
-            {recording ? <IconSend size={22}/> : <IconMic size={24}/>}
+            {recording ? <IconSend size={26}/> : <IconMic size={28}/>}
           </button>
         </div>
+        {/* Suggerimento "tieni premuto per parlare", come nel template C */}
+        {!recording && (
+          <div style={{fontSize:11, color:S.colors.textMuted, fontWeight:600, marginTop:7, textAlign:'center'}}>
+            {L('holdToSpeak')}
+          </div>
+        )}
 
         {/* La riga che mancava: mentre registra, si vede che sta ascoltando.
             Senza, l'unico modo di sapere se il tasto aveva funzionato era
             parlare e sperare. */}
         {recording && (
-          <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8,
+          <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8,
             fontSize:11, color:S.colors.textMuted, marginTop:4}} aria-live="polite">
             <span>{L('listeningTapSend')}</span>
             <span style={{width:7, height:7, borderRadius:4, background:S.colors.textPrimary,
@@ -116,7 +124,7 @@ const TalkControls = memo(function TalkControls({
           }}
             aria-pressed={liveMode}
             style={{display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-              margin:'4px 0 0', padding:'4px 10px', borderRadius:14,
+              margin:'8px auto 0', padding:'4px 10px', borderRadius:14,
               background: liveMode ? S.colors.accent4Bg : 'transparent',
               color: liveMode ? S.colors.textPrimary : S.colors.textMuted,
               border:'none', cursor:'pointer', fontSize:10.5, fontWeight:500,
@@ -216,7 +224,7 @@ const TalkControls = memo(function TalkControls({
       )}
 
       {(roomMode === 'freetalk' || roomMode === 'simultaneous') && (
-        <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10, padding:'4px 0'}}>
+        <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'4px 0'}}>
           {/* Cancel button */}
           {recording && (
             <button onClick={() => { vibrate(15); cancelRecording(); }}
@@ -246,7 +254,7 @@ const TalkControls = memo(function TalkControls({
           {/* MAIN free talk button */}
           <button onClick={() => { vibrate(25); isListening ? stopFreeTalk() : startFreeTalk(); }}
             aria-label={isListening ? L('stopWord') : L('startListeningAria')}
-            style={{...S.talkBtn, width:52, height:52, fontSize:22,
+            style={{...S.talkBtn, width:64, height:64, fontSize:22,
               ...(isListening ? S.talkBtnRec : {}),
               ...(recording ? {boxShadow:`0 0 0 6px ${S.colors.accent3Bg}, 0 0 0 12px ${S.colors.accent3Bg}33`} : {}),
               ...(roomMode === 'simultaneous' && isListening ? {background:S.colors.btnGradient,
@@ -257,7 +265,7 @@ const TalkControls = memo(function TalkControls({
       )}
 
       {/* Mode label + VAD sensitivity */}
-      <div style={{display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8, marginTop:4, flexWrap:'wrap'}}>
+      <div style={{display:'flex', alignItems:'center', justifyContent:'center', gap:8, marginTop:6, flexWrap:'wrap'}}>
         <span style={{fontSize:10, color:S.colors.textTertiary, fontWeight:500}}>
           {modeInfo.icon} {L(modeInfo.nameKey)}
           {(roomMode === 'freetalk' || roomMode === 'simultaneous') && isListening && (

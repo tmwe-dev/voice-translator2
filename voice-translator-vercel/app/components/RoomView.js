@@ -550,13 +550,37 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           destra del bottone invio, non piu in una barra a se stante
           sotto. Vedi metodo-topografico: dichiarazione WHAT/WHY sopra
           il render di TalkControls, poco sotto. */}
-      <div style={{display:'flex', alignItems:'center', gap:6, padding:'6px 10px', flexShrink:0,
-        background:'rgba(0,0,0,0.15)', borderTop:`1px solid ${S.colors.overlayBorder}`}}>
+      {/* ═══ INIZIO b.173 — parte bassa ridisegnata (template C, voce-first) ═══
+          COSA: da UNA riga [input · invio · mic] — in cui TalkControls
+          (colonna alta) sforava e sparpagliava i controlli — a una
+          COLONNA allineata: microfono-eroe centrato in alto (con i suoi
+          extra), riga di testo (input + invio) in un pill unico sotto.
+          Sostituisce la disposizione v.154 (mic a destra del testo).
+          NESSUN handler toccato: stessi onClick, solo riorganizzati.
+          PERCHE: "gli elementi in basso non sono allineati, non sono
+          messi in modo funzionale" + template C ("il microfono e l'eroe"). */}
+      <div style={{display:'flex', flexDirection:'column', flexShrink:0,
+        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.20) 100%)',
+        borderTop:`1px solid ${S.colors.overlayBorder}`, padding:'8px 10px 10px'}}>
+        <TalkControls
+          L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
+          canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
+          recording={recording} isListening={isListening}
+          toggleRecording={toggleRecording} cancelRecording={cancelRecording}
+          startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
+          vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
+          vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
+          liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
+          status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
+          endChatAndSave={endChatAndSave} setView={setView}
+        />
+        <div style={{display:'flex', alignItems:'center', gap:8, marginTop:10,
+          background:S.colors.inputBg, border:`1px solid ${S.colors.inputBorder}`,
+          borderRadius:22, padding:'5px 6px 5px 14px'}}>
         <input
           aria-label={L('typePlaceholder')}
-          style={{flex:1, padding:'8px 12px', borderRadius:20, background:S.colors.inputBg,
-            border:`1px solid ${S.colors.inputBorder}`, color:S.colors.textPrimary, fontSize:14, outline:'none',
-            fontFamily:FONT, boxSizing:'border-box'}}
+          style={{flex:1, background:'transparent', border:'none', color:S.colors.textPrimary,
+            fontSize:14, outline:'none', fontFamily:FONT, minWidth:0}}
           placeholder={L('typePlaceholder')}
           value={textInput}
           onChange={e => {
@@ -581,32 +605,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
           {sendingText ? '...' : '\u2192'}
         </button>
-        {/* ═══ INIZIO v.154 — Il microfono, accanto al campo di testo ═══
-            COSA: TalkControls (il gesto vocale — Parla/Free Talk/alza
-            mano a seconda della modalita) entra nella STESSA riga
-            flessibile dell'input e del bottone invio, invece di stare
-            in una barra a se stante sotto.
-            PERCHE: richiesta di Luca (14/8), confermata per tutte le
-            modalita (Conversazione/Classroom/Free Talk/Simultaneo):
-            "sposta il microfono a destra del campo di testo... [gli
-            extra] di fianco al microfono e sotto sempre a destra del
-            testo". Lo stile interno di TalkControls.js e stato
-            ristrutturato per questo (v.154, vedi quel file): tasto
-            piu piccolo, righe allineate a destra invece che centrate. */}
-        <TalkControls
-          L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
-          canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
-          recording={recording} isListening={isListening}
-          toggleRecording={toggleRecording} cancelRecording={cancelRecording}
-          startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
-          vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
-          vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
-          liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
-          status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
-          endChatAndSave={endChatAndSave} setView={setView}
-        />
-        {/* ═══ FINE v.154 ═══ */}
+        </div>
       </div>
+      {/* ═══ FINE b.173 ═══ */}
 
       {/* ═══ INIZIO v.154 — Contenuti chat (link condivisi) ═══
           COSA: striscia scorrevole subito sotto il campo di scrittura.
