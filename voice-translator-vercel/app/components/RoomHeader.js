@@ -136,6 +136,17 @@ const RoomHeader = memo(function RoomHeader({
           )}
         </div>
 
+        {/* ── Destra: speaker (accesso rapido) + menu ••• ── */}
+        {/* b.175 — l'icona speaker torna VISIBILE in barra: durante una
+            chiamata serve a portata di dito per attivare/disattivare la
+            voce delle traduzioni, non sepolta nel menu. Stesso handler. */}
+        <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
+          title={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
+          aria-label={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
+          style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0}}>
+          {audioEnabled ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
+        </button>
+
         {/* ── Destra: un solo menu ••• ── */}
         <div style={{position:'relative', flexShrink:0}}>
           <button onClick={() => setShowMoreMenu(!showMoreMenu)}
@@ -147,11 +158,15 @@ const RoomHeader = memo(function RoomHeader({
           </button>
 
           {/* ── Menu a tendina ── */}
+          {/* b.175 — la tendina era trasparente e si mischiava con lo
+              sfondo: overlayBg2 non esiste nel tema, cadeva su overlayBg
+              (alpha 0.04). Ora usa headerBg (quasi opaco) + blur forte,
+              cosi si legge su qualunque sfondo. */}
           {showMoreMenu && (
             <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:6,
-              background:S.colors.overlayBg2 || S.colors.overlayBg, border:`1px solid ${S.colors.overlayBorder}`,
-              borderRadius:14, padding:6, minWidth:236, backdropFilter:'blur(12px)',
-              boxShadow:'0 12px 40px rgba(0,0,0,0.38)'}}>
+              background:S.colors.headerBg, border:`1px solid ${S.colors.overlayBorder}`,
+              borderRadius:14, padding:6, minWidth:236, backdropFilter:'blur(24px) saturate(1.1)',
+              boxShadow:'0 12px 40px rgba(0,0,0,0.55)'}}>
 
               {/* Stato connessione + credito */}
               <div style={{display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
@@ -213,12 +228,8 @@ const RoomHeader = memo(function RoomHeader({
                   <span>TaxiTalk</span>
                 </button>
               )}
-              {/* Audio on/off */}
-              <button onClick={() => { if (!audioEnabled) unlockAudio(); setAudioEnabled(!audioEnabled); }}
-                style={rigaMenu(S)} aria-label={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}>
-                <span style={iconaMenu}>{audioEnabled ? <IconVolume size={16}/> : <IconVolumeOff size={16}/>}</span>
-                <span>{audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}</span>
-              </button>
+              {/* b.175 — audio traduzioni NON piu qui: l'icona speaker e
+                  tornata VISIBILE in barra (accesso rapido). Doppione tolto. */}
 
               <div style={{height:1, background:S.colors.overlayBorder, margin:'4px 0'}} />
 
