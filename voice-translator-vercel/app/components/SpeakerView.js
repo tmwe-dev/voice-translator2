@@ -120,13 +120,12 @@ function SpeakerView({ userToken }) {
     && !!window.matchMedia?.('(min-width: 768px) and (pointer: fine)')?.matches
   ), []);
 
-  const inviaTesto = useCallback(() => {
-    sendTextMessage();
-    if (!suComputer()) return;
-    // Dopo il ridisegno, altrimenti si mette a fuoco il campo di prima
-    // e il cambio di ramo lo porta via subito dopo.
-    setTimeout(() => { try { campoTestoRef.current?.focus(); } catch (e) { /* il campo puo essere sparito uscendo dalla stanza: non e un errore da mostrare */ } }, 0);
-  }, [sendTextMessage, suComputer]);
+  // b.178 — FIX CRASH: `inviaTesto` era qui ma usa `sendTextMessage`, che
+  // e dichiarato piu sotto (riga ~380). L'array di dipendenze si valuta
+  // SUBITO a render → si toccava `sendTextMessage` prima che esistesse →
+  // "Cannot access 'sendTextMessage' before initialization": SpeakerView
+  // (nel chunk del TaxiTalk / "Parla con chi hai davanti") crashava con
+  // il riquadro "Qualcosa e andato storto". Spostato DOPO sendTextMessage.
 
   // ── INIZIO b.95 — STATO PARLANTE ──
   // Prima: premevi il microfono, parlavi, rilasciavi, e poi SILENZIO.
@@ -385,6 +384,16 @@ function SpeakerView({ userToken }) {
     }
     setProcessing(false); setTextMessage('');
   }, [textMessage, translateText, sourceLang, targetLang, destCoords, playTTS, L]);
+
+  // b.178 — spostato qui da sopra: ora `sendTextMessage` esiste gia,
+  // niente piu TDZ nell'array di dipendenze.
+  const inviaTesto = useCallback(() => {
+    sendTextMessage();
+    if (!suComputer()) return;
+    // Dopo il ridisegno, altrimenti si mette a fuoco il campo di prima
+    // e il cambio di ramo lo porta via subito dopo.
+    setTimeout(() => { try { campoTestoRef.current?.focus(); } catch (e) { /* il campo puo essere sparito uscendo dalla stanza: non e un errore da mostrare */ } }, 0);
+  }, [sendTextMessage, suComputer]);
 
   // ── Batch recording (Web Speech API) ──
   const startBatchRecord = useCallback(async () => {
