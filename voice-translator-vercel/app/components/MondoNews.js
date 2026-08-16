@@ -20,6 +20,7 @@ import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import SchedaArgomento from './SchedaArgomento.js';
 import MondoDiscussioni from './MondoDiscussioni.js';
+import MondoPersona from './MondoPersona.js';
 import { useApp } from '../contexts/AppContext.js';
 
 const CATEGORIE = [
@@ -53,6 +54,8 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const [creando, setCreando] = useState(false);
   // b.187 — il FEED sfogliabile delle discussioni pubbliche persistenti.
   const [feed, setFeed] = useState(null);
+  // b.188 — il profilo di una persona aperto dal thread (id pubblico).
+  const [personaAperta, setPersonaAperta] = useState(null);
 
   const [query, setQuery] = useState('');
   const [cercando, setCercando] = useState(false);
@@ -553,7 +556,14 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
 
       {/* b.186 — il thread di una discussione pubblica persistente */}
       {discAperta && (
-        <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)} />
+        <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)}
+          onOpenPersona={(id) => setPersonaAperta(id)} />
+      )}
+
+      {/* b.188 — il profilo pubblico di una persona (sopra il thread) */}
+      {personaAperta && (
+        <MondoPersona publicId={personaAperta} onClose={() => setPersonaAperta(null)}
+          onOpenDiscussione={(id) => { setPersonaAperta(null); setDiscAperta(id); }} />
       )}
     </div>
   );

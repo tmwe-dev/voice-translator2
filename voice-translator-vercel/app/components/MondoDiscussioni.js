@@ -16,7 +16,7 @@ import { useApp } from '../contexts/AppContext.js';
 // cache): niente traduzione di massa.
 // ═══════════════════════════════════════════════════════════════
 
-function MondoDiscussioni({ discussionId, onClose }) {
+function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const { L, S, prefs, userToken } = useApp();
   const C = S?.colors || {};
   const mia = prefs?.lang || 'it';
@@ -158,7 +158,10 @@ function MondoDiscussioni({ discussionId, onClose }) {
         ) : commenti.map(c => (
           <div key={c.id} style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 12, background: card, border: bordo }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: testoP }}>{c.author_name || '—'}</span>
+              <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, color: testoP, fontFamily: FONT,
+              }}>{c.author_name || '—'}</button>
               {c.like_count > 0 && <span style={{ fontSize: 10, color: muto }}>· {c.like_count} ♥</span>}
               <button onClick={() => toggleSegui(c.author_user_id)} style={{
                 marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', padding: 0,

@@ -22,6 +22,7 @@ import { redis } from '../../../lib/redis.js';
 import {
   elencoDiscussioni, getDiscussione, contaVista, commenti,
   creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire, archiviaInattive,
+  profiloPersona,
 } from '../../../lib/mondoDB.js';
 
 const log = createLogger('mondo-disc');
@@ -43,7 +44,12 @@ async function archiviaThrottled() {
 async function handleGet(req) {
   const url = new URL(req.url);
   const disc = url.searchParams.get('disc');
+  const persona = url.searchParams.get('persona');
   try {
+    if (persona) {
+      const profilo = await profiloPersona(persona);
+      return NextResponse.json({ profilo });
+    }
     if (disc) {
       const discussione = await getDiscussione(disc);
       if (!discussione) return NextResponse.json({ error: 'non trovata' }, { status: 404 });

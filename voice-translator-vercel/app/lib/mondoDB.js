@@ -169,6 +169,24 @@ export async function seguo(followerEmail, followedPublicId) {
   return !!data;
 }
 
+// Il nome piu recente con cui una persona ha firmato (snapshot).
+export async function nomePersona(publicId) {
+  const { data } = await db().from('mondo_comments').select('author_name')
+    .eq('author_user_id', publicId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (data?.author_name) return data.author_name;
+  const { data: d2 } = await db().from('mondo_discussions').select('author_name')
+    .eq('author_user_id', publicId).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  return d2?.author_name || '';
+}
+
+// Il profilo pubblico completo: nome, seguaci, e cosa ha fatto.
+export async function profiloPersona(publicId) {
+  const [nome, seguaci, attivita] = await Promise.all([
+    nomePersona(publicId), contaSeguaci(publicId), attivitaPersona(publicId),
+  ]);
+  return { publicId, nome, seguaci, ...attivita };
+}
+
 // La "persona": dove ha commentato / cosa ha aperto (profilo pubblico).
 export async function attivitaPersona(publicId, { limit = 30 } = {}) {
   const [disc, com] = await Promise.all([
