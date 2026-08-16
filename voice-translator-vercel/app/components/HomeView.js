@@ -22,6 +22,12 @@ import PrimaProva, { primaProvaGiaFatta } from './PrimaProva.js'; // b.96
 // da cui passa TUTTO — in italiano, anche dopo aver scelto la propria
 // lingua dell'interfaccia. Ora l'elenco porta solo i nomi delle chiavi
 // e il testo lo mette L() al momento del disegno.
+// ── b.183 — la home aveva troppe porte ──
+// Via la videochiamata come voce a se: non si lancia dalla home, si
+// chiama da dentro la chat/contatti. Il regalo esce dall'elenco e va in
+// fondo, staccato, col fiocco (vedi GIFT sotto). Restano le porte che
+// servono davvero all'inizio: parlare con chi hai davanti, invitare,
+// TaxiTalk, e la stanza.
 const ACTIONS = [
   {
     id: 'face-to-face',
@@ -37,12 +43,6 @@ const ACTIONS = [
     descKey: 'actInviteDesc',
   },
   {
-    id: 'videocall',
-    icon: 'video',
-    titleKey: 'actVideoTitle',
-    descKey: 'actVideoDesc',
-  },
-  {
     id: 'taxitalk',
     icon: 'car',
     // TaxiTalk e un nome proprio: non si traduce, e infatti non e una chiave.
@@ -56,16 +56,18 @@ const ACTIONS = [
     titleKey: 'actRoomTitle',
     descKey: 'actRoomDesc',
   },
-  {
-    // b.99 — regalare minuti esisteva e funzionava, ma stava in fondo alla
-    // pagina del credito: nessuno ci arrivava per caso. Se una funzione
-    // non ha una voce dove le persone guardano, per loro non esiste.
-    id: 'regala',
-    icon: 'gift',
-    titleKey: 'actGiftTitle',
-    descKey: 'actGiftDesc',
-  },
 ];
+
+// b.183 — il regalo, in fondo e col fiocco. Resta una voce della Home
+// (id 'regala', porta a 'credits' dove i minuti si scalano), ma staccato
+// dalle azioni principali: e un pensiero per qualcun altro, non una
+// funzione che usi per te.
+const GIFT = {
+  id: 'regala',
+  icon: 'gift',
+  titleKey: 'actGiftTitle',
+  descKey: 'actGiftDesc',
+};
 
 
 
@@ -137,9 +139,6 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         break;
       case 'invite':
         setView('quickinvite');
-        break;
-      case 'videocall':
-        handleCreateRoom(); // Creates room, video activated from within
         break;
       case 'taxitalk':
         setView('speaker');
@@ -397,6 +396,39 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             })}
           </div>
         )}
+
+        {/* ═══ b.183 — Il regalo, in fondo, col fiocco ═══ */}
+        <button
+          onClick={() => handleAction(GIFT.id)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+            padding: '13px 16px', marginTop: 'auto', marginBottom: 8,
+            background: `linear-gradient(135deg, ${C.accent}0F, ${C.accent2}0A)`,
+            border: `1px solid ${C.accent}25`, borderRadius: 16,
+            cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+            transition: 'opacity 0.2s',
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = 0.85}
+          onMouseOut={(e) => e.currentTarget.style.opacity = 1}
+        >
+          <span style={{
+            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+            background: `${C.accent}18`, border: `1px solid ${C.accent}30`,
+          }}>
+            {/* il fiocco: l'icona regalo */}
+            <Icon name="gift" size={20} color={C.accent} />
+          </span>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+              {L(GIFT.titleKey)}
+            </span>
+            <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+              {L(GIFT.descKey)}
+            </span>
+          </span>
+          <span style={{ color: C.accent, fontSize: 14, flexShrink: 0 }}>›</span>
+        </button>
 
       </div>
 
