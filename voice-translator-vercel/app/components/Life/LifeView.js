@@ -70,12 +70,16 @@ function LifeView({ onApriStanza }) {
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ].map((t) => {
           const on = scheda === t.id;
+          // b.210 — contrasto: gli inattivi erano grigio tenue e sparivano sul
+          // fondo scuro. Ora l'inattivo è testo pieno ad alto contrasto,
+          // l'attivo è in accento con sottolineatura.
+          const colore = on ? accent : testoP;
           return (
             <button key={t.id} onClick={() => { vibrate(8); setScheda(t.id); }}
               aria-label={t.label} aria-current={on ? 'page' : undefined}
               style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-                padding: '4px 2px', background: 'none', border: 'none', cursor: 'pointer', color: on ? accent : muto, fontFamily: FONT }}>
-              <Icon name={t.icon} size={26} color={on ? accent : muto} />
+                padding: '4px 2px', background: 'none', border: 'none', cursor: 'pointer', color: colore, opacity: on ? 1 : 0.92, fontFamily: FONT }}>
+              <Icon name={t.icon} size={26} color={colore} />
               <span style={{ fontSize: 10.5, fontWeight: on ? 800 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{t.label}</span>
               <span style={{ width: 16, height: 2, borderRadius: 2, background: on ? accent : 'transparent' }} />
             </button>
