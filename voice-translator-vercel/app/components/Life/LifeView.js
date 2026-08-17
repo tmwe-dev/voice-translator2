@@ -38,12 +38,6 @@ function LifeView({ onApriStanza }) {
   const card = C.glassCard || 'rgba(12,16,30,0.65)';
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.08)'}`;
 
-  const bottone = (attivo) => ({
-    flex: '1 1 88px', minWidth: 88, padding: '10px 8px', borderRadius: 12, border: bordo, cursor: 'pointer',
-    background: attivo ? accent : 'transparent', color: attivo ? '#04121c' : testoP,
-    fontWeight: 700, fontSize: 13, fontFamily: FONT,
-  });
-
   return (
     // ── INIZIO b.205 — lo scroll di Life non arrivava al tasto Salva ──
     // Il <body> ha overflow:hidden (layout.js): ogni vista deve scrollare
@@ -64,14 +58,29 @@ function LifeView({ onApriStanza }) {
         <span style={{ fontSize: 20, fontWeight: 800 }}>Life</span>
       </div>
 
-      {/* Schede */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <button style={bottone(scheda === 'podcast')} onClick={() => { vibrate(8); setScheda('podcast'); }}>🎙️ {L('lifePodcast')}</button>
-        <button style={bottone(scheda === 'amico')} onClick={() => { vibrate(8); setScheda('amico'); }}>💬 {L('lifeFriendTab')}</button>
-        <button style={bottone(scheda === 'tavolo')} onClick={() => { vibrate(8); setScheda('tavolo'); }}>🗣️ {L('lifeTableTab')}</button>
-        <button style={bottone(scheda === 'dossier')} onClick={() => { vibrate(8); setScheda('dossier'); }}>📄 {L('lifeDossierTab')}</button>
-        <button style={bottone(scheda === 'impara')} onClick={() => { vibrate(8); setScheda('impara'); }}>📚 {L('lifeLearn')}</button>
-        <button style={bottone(scheda === 'compagni')} onClick={() => { vibrate(8); setScheda('compagni'); }}>✨ {L('lifeCompanionsTab')}</button>
+      {/* ── b.208 — Schede senza box: icone SVG monocolore più grandi.
+          Niente pulsante intorno; attivo = colore accento + sottolineatura. ── */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
+        {[
+          { id: 'podcast', icon: 'mic', label: L('lifePodcast') },
+          { id: 'amico', icon: 'chat', label: L('lifeFriendTab') },
+          { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
+          { id: 'dossier', icon: 'doc', label: L('lifeDossierTab') },
+          { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
+          { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
+        ].map((t) => {
+          const on = scheda === t.id;
+          return (
+            <button key={t.id} onClick={() => { vibrate(8); setScheda(t.id); }}
+              aria-label={t.label} aria-current={on ? 'page' : undefined}
+              style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                padding: '4px 2px', background: 'none', border: 'none', cursor: 'pointer', color: on ? accent : muto, fontFamily: FONT }}>
+              <Icon name={t.icon} size={26} color={on ? accent : muto} />
+              <span style={{ fontSize: 10.5, fontWeight: on ? 800 : 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{t.label}</span>
+              <span style={{ width: 16, height: 2, borderRadius: 2, background: on ? accent : 'transparent' }} />
+            </button>
+          );
+        })}
       </div>
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
