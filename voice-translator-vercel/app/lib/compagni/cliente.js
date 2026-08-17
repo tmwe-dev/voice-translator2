@@ -61,6 +61,11 @@ export function parlaAmico({ compagnoId, messaggi, lingua, userToken }) {
   return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken });
 }
 
+/** Tavolo: tu + più Compagni. Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
+export function parlaTavolo({ compagni, messaggi, lingua, userToken }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken });
+}
+
 // ── Dossier: argomento → articolo → (discussione) → report ──
 export function preparaBriefing({ argomento, lingua, userToken }) {
   return postJSON('/api/compagni/dossier', { azione: 'briefing', argomento, lingua, userToken });

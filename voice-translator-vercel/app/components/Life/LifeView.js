@@ -8,6 +8,7 @@ import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
 import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import AmicoChat from './AmicoChat.js';
+import Tavolo from './Tavolo.js';
 import Dossier from './Dossier.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -59,6 +60,7 @@ function LifeView({ onApriStanza }) {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button style={bottone(scheda === 'podcast')} onClick={() => { vibrate(8); setScheda('podcast'); }}>🎙️ {L('lifePodcast')}</button>
         <button style={bottone(scheda === 'amico')} onClick={() => { vibrate(8); setScheda('amico'); }}>💬 {L('lifeFriendTab')}</button>
+        <button style={bottone(scheda === 'tavolo')} onClick={() => { vibrate(8); setScheda('tavolo'); }}>🗣️ {L('lifeTableTab')}</button>
         <button style={bottone(scheda === 'dossier')} onClick={() => { vibrate(8); setScheda('dossier'); }}>📄 {L('lifeDossierTab')}</button>
         <button style={bottone(scheda === 'impara')} onClick={() => { vibrate(8); setScheda('impara'); }}>📚 {L('lifeLearn')}</button>
         <button style={bottone(scheda === 'compagni')} onClick={() => { vibrate(8); setScheda('compagni'); }}>✨ {L('lifeCompanionsTab')}</button>
@@ -66,6 +68,7 @@ function LifeView({ onApriStanza }) {
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'tavolo' && <Tavolo compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
