@@ -57,6 +57,14 @@ export function AppProvider({ children, value }) {
     // ── Status ──
     status: value.status,
     setStatus: value.setStatus,
+    // b.216 — CAUSA RADICE (trovata dal vivo): LifeView e 4 componenti di
+    // Mondo leggono `userToken` dal LIVELLO TOP di useApp(), ma qui era
+    // solo dentro `auth`. Risultato: userToken = undefined ovunque in Life,
+    // e Amico/Tavolo/salvataggio Compagni tornavano 401 anche da loggato,
+    // mentre Podcast/generazione reggevano perché l'endpoint tollera l'ospite.
+    // Lo espongo anche al top level. Il sotto-oggetto `auth` resta perché
+    // BatteryPill legge `useApp().auth`.
+    userToken: value.auth?.userToken,
     // ── Auth (read-only summary) ──
     auth: {
       userToken: value.auth?.userToken,
