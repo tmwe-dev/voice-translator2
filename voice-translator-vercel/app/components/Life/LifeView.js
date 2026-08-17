@@ -229,7 +229,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
-  }, [argomento, categoria, livello, docenteId, lingua, userToken, L]);
+    // b.217 — `linguaCorso` andava nelle deps: il callback lo usa ma prima
+    // elencava `lingua` (la lingua app, che non cambia mai). Chi cambiava
+    // SOLO la lingua del corso e generava mandava ancora la lingua iniziale.
+  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
 
   const apri = useCallback(async (lezione) => {
     setLavoro(true); setErrore('');
@@ -239,7 +242,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
-  }, [argomento, categoria, livello, docenteId, lingua, userToken, L]);
+    // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
+  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
 
   const quiz = useCallback(async () => {
     if (!aperta) return;
@@ -250,7 +254,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
-  }, [aperta, lingua, userToken, L]);
+    // b.217 — mancavano `linguaCorso` e `livello`: il quiz usa entrambi
+    // (lingua del corso e registro bambino) ma le deps non li elencavano.
+  }, [aperta, linguaCorso, livello, userToken, L]);
 
   if (aperta) {
     return (

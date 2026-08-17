@@ -2,7 +2,7 @@
 import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import { COMPAGNI_PREDEFINITI, compagnoVuoto, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
+import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
 import { salvaMio, cancellaMio, parlaTurno, generaAgente } from '../../lib/compagni/cliente.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 
@@ -58,6 +58,8 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
         ruolo: a.ruolo || '',
         personalita: componiPersonalita(a.personalita || '', nb),
         liberta: a.liberta || 'balanced',
+        // b.217 — la voce segue il genere generato (prima restava Adam per tutti).
+        voce: voceDaGenere(a.genere),
       });
       setDescAg('');
     } catch (e) {

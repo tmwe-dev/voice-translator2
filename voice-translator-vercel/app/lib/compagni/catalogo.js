@@ -136,6 +136,16 @@ export function compagnoVuoto() {
 
 export { VOCI as VOCI_COMPAGNI };
 
+// b.217 — la creazione automatica produceva un `genere` che poi veniva
+// BUTTATO: ogni Compagno generato riceveva la voce maschile di default
+// (Adam), anche una "Marie Curie" o una "Marilyn Monroe". Qui il genere
+// scelto dal modello diventa una voce coerente. Resta tutto modificabile.
+export function voceDaGenere(genere) {
+  if (genere === 'female') return VOCI.Elena;   // Sarah
+  if (genere === 'neutral') return VOCI.Yuki;   // Charlotte (timbro neutro)
+  return VOCI.Marcus;                            // Adam (maschile, default)
+}
+
 // ── Liste per il form "Crea il tuo Compagno" ──
 export const VOCI_ELENCO = Object.values(VOCI); // [{id, nome}]
 export const AVATAR_SCELTE = Array.from({ length: 9 }, (_, i) => `/avatars/${i + 1}.png`);
