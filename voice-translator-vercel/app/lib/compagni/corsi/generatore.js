@@ -34,10 +34,20 @@ function vestePocente(docente) {
   return `${p}Sei ${docente.nome || 'il docente'} e insegni questo corso con la tua voce.`;
 }
 
+// b.213 — registro e SICUREZZA per i bambini. Attivo quando il livello è
+// 'bambino': parole semplici, tono da compagno di viaggio, e paletti sui
+// contenuti inadatti ai minori. La lingua richiesta va rispettata SEMPRE,
+// con vocabolario adatto all'età.
+function registroBambini(livello, lingua) {
+  if (livello !== 'bambino') return '';
+  return `
+STAI INSEGNANDO A UN BAMBINO. Usa parole semplici e frasi brevi, tono caldo, incoraggiante e giocoso, come un compagno di viaggio. Spiega con esempi concreti e immagini mentali; introduci un termine nuovo solo dopo averlo spiegato con parole facili. VIETATO qualunque contenuto spaventoso, violento, sessuale o comunque inadatto ai minori. Scrivi SOLO in lingua ${lingua}, con un vocabolario adatto all'età.`;
+}
+
 // ── PROMPT: syllabus (elenco lezioni) ──
 export function promptSyllabus({ argomento, livello = 'base', categoria = 'altro', direzione = '', nLezioni = 5, lingua = 'it', docente = null } = {}) {
   const system = `${vestePocente(docente)}
-Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${lingua}.`;
+Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
   const dir = direzione ? ` Taglio richiesto: ${direzione}.` : '';
   const prompt =
 `Progetta il syllabus di un corso su "${argomento}" (categoria: ${categoria}, livello: ${livello}).${dir}
@@ -51,7 +61,7 @@ Niente testo fuori dal JSON.`;
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
 export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [] } = {}) {
   const system = `${vestePocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${lingua}.`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -65,8 +75,8 @@ Struttura: una breve introduzione, il corpo con esempi concreti, e una chiusura 
 }
 
 // ── PROMPT: quiz di verifica ──
-export function promptQuiz({ lezione, lingua = 'it', nDomande = 3 } = {}) {
-  const system = `Sei un valutatore didattico. Scrivi in lingua: ${lingua}.`;
+export function promptQuiz({ lezione, lingua = 'it', nDomande = 3, livello = '' } = {}) {
+  const system = `Sei un valutatore didattico. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
   const prompt =
 `Sulla lezione "${lezione?.titolo || ''}", crea ${nDomande} domande a risposta multipla.
 Rispondi SOLO con JSON valido:
@@ -105,8 +115,8 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 }
 
 /** Genera il quiz di una lezione. */
-export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3 } = {}) {
-  const { system, prompt } = promptQuiz({ lezione, lingua, nDomande });
+export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '' } = {}) {
+  const { system, prompt } = promptQuiz({ lezione, lingua, nDomande, livello });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 600 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);

@@ -59,7 +59,7 @@ async function handlePost(req) {
     if (azione === 'quiz') {
       const lezione = body.lezione;
       if (!lezione?.titolo) return NextResponse.json({ error: 'Serve la lezione' }, { status: 400 });
-      const r = await generaQuiz(lezione, { lingua, userToken });
+      const r = await generaQuiz(lezione, { lingua, userToken, livello });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
     }

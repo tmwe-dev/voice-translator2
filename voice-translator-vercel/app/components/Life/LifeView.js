@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { FONT, vibrate } from '../../lib/constants.js';
+import { FONT, LANGS, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
@@ -210,6 +210,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [argomento, setArgomento] = useState('');
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
+  const [linguaCorso, setLinguaCorso] = useState(lingua || 'it'); // b.213 — lingua del corso, scelta esplicita (conta per i bambini)
   const [docenteId, setDocenteId] = useState('');
   const [lezioni, setLezioni] = useState([]);
   const [lavoro, setLavoro] = useState(false);
@@ -223,7 +224,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (!argomento.trim()) { setErrore(L('lifeNeedTopic')); return; }
     setLavoro(true);
     try {
-      const d = await generaSyllabus({ argomento: argomento.trim(), categoria, livello, docenteId: docenteId || undefined, lingua, userToken });
+      const d = await generaSyllabus({ argomento: argomento.trim(), categoria, livello, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setLezioni(d.lezioni || []);
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -233,7 +234,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const apri = useCallback(async (lezione) => {
     setLavoro(true); setErrore('');
     try {
-      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua, userToken });
+      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -244,7 +245,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (!aperta) return;
     setLavoro(true);
     try {
-      const d = await generaQuiz({ lezione: aperta.lezione, lingua, userToken });
+      const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello });
       setAperta((a) => ({ ...a, domande: d.domande || [] }));
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -296,6 +297,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           {LIVELLI.map((l) => <option key={l.id} value={l.id}>{l.icona} {l.etichetta}</option>)}
         </select>
       </div>
+
+      {/* b.213 — lingua del corso: scelta esplicita. Conta soprattutto per i
+          bambini (registro e vocabolario adatti nella loro lingua). */}
+      <select value={linguaCorso} onChange={(e) => setLinguaCorso(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 10 }}>
+        {LANGS.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
+      </select>
 
       <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 12 }}>
         <option value="">{L('lifeTeacher')}…</option>

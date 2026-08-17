@@ -46,8 +46,8 @@ export function generaLezione({ argomento, categoria, livello, lezione, docenteI
 }
 
 /** Genera il quiz di una lezione. */
-export function generaQuiz({ lezione, lingua, userToken }) {
-  return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken });
+export function generaQuiz({ lezione, lingua, userToken, livello }) {
+  return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken, livello });
 }
 
 // ── I miei Compagni (creazione/gestione) ──
