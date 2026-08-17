@@ -93,7 +93,8 @@ function HelpView() {
       </header>
 
       {/* ═══ CONTENT ═══ */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 24px', scrollbarWidth: 'none' }}>
+      {/* b.206 — bottom alzato: fine contenuto finiva sotto la BottomNav */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
 
         {/* Feature cards grid */}
         <div style={{ marginBottom: 20 }}>

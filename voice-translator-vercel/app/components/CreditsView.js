@@ -118,10 +118,12 @@ export default function CreditsView({ userAccount }) {
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0 16px' }}>
+            {/* b.206 — pulsante indietro uniforme: glifo ‹ come le altre pagine */}
             <button onClick={() => setView('settings')} aria-label={L('backWord')} style={{
               width: 38, height: 38, borderRadius: 12, border: `1px solid ${tc.cardBorder}`,
-              background: tc.cardBg, color: tc.textPrimary, cursor: 'pointer', fontSize: 16,
-            }}>{'←'}</button>
+              background: tc.cardBg, color: tc.textPrimary, cursor: 'pointer', fontSize: 18,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>{'‹'}</button>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: tc.textPrimary, fontFamily: FONT, margin: 0 }}>
               {L('yourCreditTitle')}
             </h1>

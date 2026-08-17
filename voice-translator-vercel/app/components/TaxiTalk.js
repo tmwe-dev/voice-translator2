@@ -229,14 +229,15 @@ function TaxiTalk({ userToken }) {
   const miniBtn = (on) => ({ padding: '0 16px', borderRadius: 13, border: 'none', cursor: on ? 'pointer' : 'default', background: on ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: on ? '#04121c' : C.muted, fontWeight: 800, fontFamily: FONT, fontSize: 13, opacity: on ? 1 : 0.6 });
 
   return (
-    <div style={{ height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', color: C.text, fontFamily: FONT, background: 'transparent', padding: '0 14px 30px' }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', color: C.text, fontFamily: FONT, background: 'transparent', padding: '0 14px 100px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 2px 6px' }}>
+        {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
         <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('back') || 'Indietro'}
-          style={{ width: 38, height: 38, borderRadius: 12, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="back" size={18} color={C.muted} />
+          style={{ width: 38, height: 38, borderRadius: 12, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {'‹'}
         </button>
-        <div style={{ fontSize: 19, fontWeight: 800, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
+        <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
         <button onClick={() => { vibrate(8); setPickerLingua(true); }}
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 12, cursor: 'pointer', color: C.text }}>
           <span style={{ fontSize: 16 }}>{driverInfo?.flag || '🏳️'}</span>

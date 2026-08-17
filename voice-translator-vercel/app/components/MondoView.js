@@ -310,7 +310,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
       {/* ═══ ROOM LIST ═══ */}
       {tab === 'stanze' && (
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px', scrollbarWidth: 'none' }}>
+      // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
 
         {/* Loading skeleton */}
         {loading && rooms.length === 0 && (

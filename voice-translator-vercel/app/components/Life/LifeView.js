@@ -55,9 +55,10 @@ function LifeView({ onApriStanza }) {
     {/* ── FINE b.205 ── */}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
         <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('lifeBack')}
-          style={{ background: card, border: bordo, borderRadius: 10, padding: 8, cursor: 'pointer' }}>
-          <Icon name="back" size={18} color={testoP} />
+          style={{ width: 38, height: 38, borderRadius: 12, background: card, border: bordo, color: testoP, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {'‹'}
         </button>
         <Icon name="star" size={20} color={accent} />
         <span style={{ fontSize: 20, fontWeight: 800 }}>Life</span>

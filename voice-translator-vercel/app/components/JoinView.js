@@ -183,7 +183,7 @@ export default function JoinView({ joinCode,
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         minHeight: '100dvh', padding: '20px 16px',
-        background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+        background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         {/* Ambient orb */}
         <div style={{
@@ -267,7 +267,7 @@ export default function JoinView({ joinCode,
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         minHeight: '100dvh', padding: '20px 16px',
-        background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+        background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         <div style={{
           position: 'absolute', top: '-10%', left: '10%', width: '80vw', height: '80vw',
@@ -298,7 +298,7 @@ export default function JoinView({ joinCode,
       <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         minHeight: '100dvh', padding: '20px 16px',
-        background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
+        background: C.bg, fontFamily: FONT, position: 'relative', overflowY: 'auto', overflowX: 'hidden',
       }}>
         {/* Ambient glow */}
         <div style={{

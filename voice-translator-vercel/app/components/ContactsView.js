@@ -312,7 +312,8 @@ export default function ContactsView({
       )}
 
       {/* ═══ CONTACTS LIST ═══ */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 16px', scrollbarWidth: 'none' }}>
+      {/* b.206 — bottom alzato: gli ultimi contatti finivano sotto la BottomNav */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
         {contactsLoading && contacts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: 40, color: C.textMuted, fontSize: 12 }}>{L('loading')}</div>
         ) : contacts.length === 0 ? (
