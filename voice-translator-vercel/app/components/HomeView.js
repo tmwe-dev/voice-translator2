@@ -371,6 +371,34 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </button>
         </div>
 
+        {/* ═══ b.198 · Life — Podcast, tutor e corsi coi Compagni ═══ */}
+        <div style={{
+          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
+          borderRadius: 18, padding: '2px 14px', marginBottom: 20,
+        }}>
+          <button
+            onClick={() => { vibrate(); setView('life'); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+              padding: '13px 2px', background: 'none', textAlign: 'left',
+              border: 'none', cursor: 'pointer',
+            }}
+          >
+            <span style={{ display: 'inline-flex', flexShrink: 0, width: 40, justifyContent: 'center' }}>
+              <Icon name="star" size={20} color={C.accent1 || C.accent} />
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+                {L('lifeEntry')}
+              </span>
+              <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+                {L('lifeEntryDesc')}
+              </span>
+            </span>
+            <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
+          </button>
+        </div>
+
         {/* ═══ Active Rooms ═══ */}
         {activeRooms.length > 0 && (
           <div style={{ marginBottom: 20 }}>

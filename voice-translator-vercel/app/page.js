@@ -57,6 +57,7 @@ const VoiceTestView = lazy(() => import('./components/VoiceTestView.js'));
 const ContactsView = lazy(() => import('./components/ContactsView.js'));
 const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
 const MondoView = lazy(() => import('./components/MondoView.js'));
+const LifeView = lazy(() => import('./components/Life/LifeView.js'));
 const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
 const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
 const HelpView = lazy(() => import('./components/HelpView.js'));
@@ -1383,6 +1384,12 @@ function HomeInner() {
   if (view === 'taxi-driver') return wrap(
     <Suspense fallback={<LazyFallback />}>
       <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} />
+    </Suspense>
+  );
+
+  if (view === 'life') return wrap(
+    <Suspense fallback={<LazyFallback />}>
+      <LifeView />
     </Suspense>
   );
 
