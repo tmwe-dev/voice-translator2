@@ -29,6 +29,12 @@ export function generaPodcast({ argomento, compagni, round, lingua, userToken })
   return postJSON('/api/compagni/podcast', { argomento, compagni, round, lingua, userToken });
 }
 
+/** Costruisce un Compagno completo da una descrizione/nome (o a sorpresa). */
+export async function generaAgente({ descrizione, sorpresa, lingua, userToken }) {
+  const d = await postJSON('/api/compagni/genera', { descrizione, sorpresa: !!sorpresa, lingua, userToken });
+  return d.agente;
+}
+
 /** Genera l'elenco lezioni di un corso. */
 export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, userToken });

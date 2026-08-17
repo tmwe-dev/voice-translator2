@@ -3,7 +3,19 @@ import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
-import { salvaMio, cancellaMio, parlaTurno } from '../../lib/compagni/cliente.js';
+import { salvaMio, cancellaMio, parlaTurno, generaAgente } from '../../lib/compagni/cliente.js';
+import { componiPersonalita } from '../../lib/compagni/genera.js';
+
+// b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
+const BARRE = [
+  { k: 'tono', nome: 'Tono', a: 'Formale', b: 'Informale' },
+  { k: 'calore', nome: 'Calore', a: 'Distaccato', b: 'Caloroso' },
+  { k: 'sintesi', nome: 'Sintesi', a: 'Conciso', b: 'Prolisso' },
+  { k: 'umorismo', nome: 'Umorismo', a: 'Serio', b: 'Spiritoso' },
+  { k: 'assertivita', nome: 'Assertività', a: 'Cauto', b: 'Deciso' },
+  { k: 'creativita', nome: 'Libertà creativa', a: 'Preciso', b: 'Creativo' },
+];
+const BARRE_NEUTRE = { tono: 50, calore: 60, sintesi: 40, umorismo: 40, assertivita: 55, creativita: 50 };
 
 // ═══════════════════════════════════════════════════════════════
 // GestioneCompagni — la sezione dedicata per CREARE e GESTIRE i tuoi
@@ -16,10 +28,41 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const [bozza, setBozza] = useState(null); // null = lista; oggetto = form aperto
   const [salvando, setSalvando] = useState(false);
   const [errore, setErrore] = useState('');
+  const [barre, setBarre] = useState(BARRE_NEUTRE); // carattere a barre (aiuto di creazione)
+  const [descAg, setDescAg] = useState('');         // "Crea da un personaggio"
+  const [generando, setGenerando] = useState(false);
 
-  const nuovo = () => { setErrore(''); setBozza(compagnoVuoto()); };
-  const modifica = (c) => { setErrore(''); setBozza({ ...c }); };
-  const daBase = (c) => { setErrore(''); setBozza({ ...c, id: '', nome: `${c.nome} (mio)`, predefinito: false }); };
+  const nuovo = () => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza(compagnoVuoto()); };
+  const modifica = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c }); };
+  const daBase = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c, id: '', nome: `${c.nome} (mio)`, predefinito: false }); };
+
+  // ── Costruzione automatica del Compagno (stile RadioChat) ──
+  const crea = useCallback(async (sorpresa) => {
+    if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
+    setGenerando(true); setErrore('');
+    try {
+      const a = await generaAgente({ descrizione: descAg, sorpresa, lingua, userToken });
+      const nb = { ...BARRE_NEUTRE, ...(a.barre || {}) };
+      setBarre(nb);
+      setBozza({
+        ...compagnoVuoto(),
+        nome: a.nome || descAg.trim() || '',
+        ruolo: a.ruolo || '',
+        personalita: componiPersonalita(a.personalita || '', nb),
+        liberta: a.liberta || 'balanced',
+      });
+      setDescAg('');
+    } catch (e) {
+      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
+    } finally { setGenerando(false); }
+  }, [descAg, lingua, userToken, L]);
+
+  // Trascinando una barra ricompongo la riga di stile dentro la personalità.
+  const cambiaBarra = (k) => (e) => {
+    const nb = { ...barre, [k]: Number(e.target.value) };
+    setBarre(nb);
+    setBozza((b) => b ? { ...b, personalita: componiPersonalita(b.personalita, nb) } : b);
+  };
 
   const campo = (v) => (e) => setBozza((b) => ({ ...b, [v]: e.target.value }));
 
@@ -65,6 +108,23 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
         <label style={etich}>{L('lifePersonality')}</label>
         <textarea value={bozza.personalita} onChange={campo('personalita')} rows={5} style={{ ...input, resize: 'vertical' }}
           placeholder="Come parla, cosa sa, cosa evita…" />
+
+        {/* b.212 — carattere a barre (stile ElevenLabs): regoli a vista */}
+        <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: card, border: bordo }}>
+          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 700 }}>{L('lifeCharacter') || 'Carattere'}</div>
+          {BARRE.map((s) => (
+            <div key={s.k} style={{ margin: '9px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: testoP, marginBottom: 3 }}>
+                <span style={{ fontWeight: 700 }}>{s.nome}</span>
+              </div>
+              <input type="range" min={0} max={100} value={barre[s.k]} onChange={cambiaBarra(s.k)}
+                style={{ width: '100%', accentColor: accent, cursor: 'pointer' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: muto }}>
+                <span>{s.a}</span><span>{s.b}</span>
+              </div>
+            </div>
+          ))}
+        </div>
 
         <label style={etich}>{L('lifeAvatar')}</label>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -141,8 +201,27 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
 
   return (
     <div>
-      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, marginBottom: 16 }}>
-        ✨ {L('lifeCreateCompanion')}
+      {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
+      <div style={{ padding: 14, borderRadius: 16, background: card, border: bordo, marginBottom: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{L('lifeCreateFrom') || 'Crea da un personaggio'}</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !generando) crea(false); }}
+            placeholder={L('lifeCreateFromPh') || 'Es. Elvis Presley, oppure "una coach diretta"'}
+            style={{ ...input, flex: 1 }} />
+          <button onClick={() => crea(false)} disabled={generando}
+            style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1 }}>
+            {generando ? '…' : `✨ ${L('lifeCreate') || 'Crea'}`}
+          </button>
+        </div>
+        <button onClick={() => crea(true)} disabled={generando}
+          style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
+          🎲 {L('lifeSurprise') || 'Sorprendimi'}
+        </button>
+      </div>
+
+      <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 700, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
+        {L('lifeCreateManual') || 'Crea a mano'}
       </button>
 
       {miei.length > 0 && <>
