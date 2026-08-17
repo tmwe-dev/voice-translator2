@@ -12,6 +12,15 @@
 
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
+import { getLang } from '../../constants.js';
+
+// b.214 — la lingua andava al modello come CODICE ("es"), e il modello non
+// lo rispettava (un corso "es" tornava in italiano). Ora si passa il NOME
+// leggibile: "Spagnolo (Español) [es]". Provato dal vivo.
+function nomeLingua(code) {
+  const l = getLang(code);
+  return l ? `${l.name} [${code}]` : String(code || 'it');
+}
 
 // ── Estrazione JSON tollerante dall'output del modello ──
 // I modelli a volte avvolgono il JSON in ```json ... ``` o aggiungono una
@@ -41,13 +50,13 @@ function vestePocente(docente) {
 function registroBambini(livello, lingua) {
   if (livello !== 'bambino') return '';
   return `
-STAI INSEGNANDO A UN BAMBINO. Usa parole semplici e frasi brevi, tono caldo, incoraggiante e giocoso, come un compagno di viaggio. Spiega con esempi concreti e immagini mentali; introduci un termine nuovo solo dopo averlo spiegato con parole facili. VIETATO qualunque contenuto spaventoso, violento, sessuale o comunque inadatto ai minori. Scrivi SOLO in lingua ${lingua}, con un vocabolario adatto all'età.`;
+STAI INSEGNANDO A UN BAMBINO. Usa parole semplici e frasi brevi, tono caldo, incoraggiante e giocoso, come un compagno di viaggio. Spiega con esempi concreti e immagini mentali; introduci un termine nuovo solo dopo averlo spiegato con parole facili. VIETATO qualunque contenuto spaventoso, violento, sessuale o comunque inadatto ai minori. Scrivi SOLO in lingua ${nomeLingua(lingua)}, con un vocabolario adatto all'età.`;
 }
 
 // ── PROMPT: syllabus (elenco lezioni) ──
 export function promptSyllabus({ argomento, livello = 'base', categoria = 'altro', direzione = '', nLezioni = 5, lingua = 'it', docente = null } = {}) {
   const system = `${vestePocente(docente)}
-Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
+Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const dir = direzione ? ` Taglio richiesto: ${direzione}.` : '';
   const prompt =
 `Progetta il syllabus di un corso su "${argomento}" (categoria: ${categoria}, livello: ${livello}).${dir}
@@ -61,7 +70,7 @@ Niente testo fuori dal JSON.`;
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
 export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [] } = {}) {
   const system = `${vestePocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -76,7 +85,7 @@ Struttura: una breve introduzione, il corpo con esempi concreti, e una chiusura 
 
 // ── PROMPT: quiz di verifica ──
 export function promptQuiz({ lezione, lingua = 'it', nDomande = 3, livello = '' } = {}) {
-  const system = `Sei un valutatore didattico. Scrivi in lingua: ${lingua}.${registroBambini(livello, lingua)}`;
+  const system = `Sei un valutatore didattico. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const prompt =
 `Sulla lezione "${lezione?.titolo || ''}", crea ${nDomande} domande a risposta multipla.
 Rispondi SOLO con JSON valido:

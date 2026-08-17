@@ -32,6 +32,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const [descAg, setDescAg] = useState('');         // "Crea da un personaggio"
   const [generando, setGenerando] = useState(false);
 
+  // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
+  // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
+  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+
   const nuovo = () => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza(compagnoVuoto()); };
   const modifica = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c }); };
   const daBase = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c, id: '', nome: `${c.nome} (mio)`, predefinito: false }); };
@@ -111,7 +115,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
 
         {/* b.212 — carattere a barre (stile ElevenLabs): regoli a vista */}
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: card, border: bordo }}>
-          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 700 }}>{L('lifeCharacter') || 'Carattere'}</div>
+          <div style={{ fontSize: 11, color: muto, marginBottom: 6, fontWeight: 700 }}>{tt('lifeCharacter', 'Carattere')}</div>
           {BARRE.map((s) => (
             <div key={s.k} style={{ margin: '9px 0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: testoP, marginBottom: 3 }}>
@@ -203,25 +207,25 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     <div>
       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
       <div style={{ padding: 14, borderRadius: 16, background: card, border: bordo, marginBottom: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{L('lifeCreateFrom') || 'Crea da un personaggio'}</div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && !generando) crea(false); }}
-            placeholder={L('lifeCreateFromPh') || 'Es. Elvis Presley, oppure "una coach diretta"'}
+            placeholder={tt('lifeCreateFromPh', 'Es. Elvis Presley, oppure una coach diretta')}
             style={{ ...input, flex: 1 }} />
           <button onClick={() => crea(false)} disabled={generando}
             style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: generando ? 0.6 : 1 }}>
-            {generando ? '…' : `✨ ${L('lifeCreate') || 'Crea'}`}
+            {generando ? '…' : `✨ ${tt('lifeCreate', 'Crea')}`}
           </button>
         </div>
         <button onClick={() => crea(true)} disabled={generando}
           style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
-          🎲 {L('lifeSurprise') || 'Sorprendimi'}
+          🎲 {tt('lifeSurprise', 'Sorprendimi')}
         </button>
       </div>
 
       <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 700, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
-        {L('lifeCreateManual') || 'Crea a mano'}
+        {tt('lifeCreateManual', 'Crea a mano')}
       </button>
 
       {miei.length > 0 && <>
