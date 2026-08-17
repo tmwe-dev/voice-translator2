@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
-import { getCompagnoPredefinito } from '../../../lib/compagni/catalogo.js';
+import { getSession } from '../../../lib/users.js';
+import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 
@@ -28,9 +29,9 @@ async function handlePost(req) {
     const userToken = typeof body.userToken === 'string' ? body.userToken : null;
     const ids = Array.isArray(body.compagni) ? body.compagni.slice(0, PODCAST_LIMITI.MAX_COMPAGNI) : [];
 
-    // Per ora dai predefiniti; i Compagni creati dall'utente arriveranno
-    // dalla tabella Supabase (passo 5 del piano).
-    const compagni = ids.map(getCompagnoPredefinito).filter(Boolean);
+    // Predefiniti + Compagni creati dall'utente (risolti dal suo token).
+    const sessione = userToken ? await getSession(userToken) : null;
+    const compagni = await risolviCompagni(ids, sessione?.email);
 
     const val = validaPodcast({ compagni, argomento });
     if (!val.ok) {

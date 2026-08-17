@@ -1,11 +1,12 @@
 'use client';
-import { memo, useState, useRef, useCallback } from 'react';
+import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno } from '../../lib/compagni/cliente.js';
+import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
+import GestioneCompagni from './GestioneCompagni.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
@@ -19,6 +20,14 @@ function LifeView() {
   const C = S?.colors || {};
   const lingua = prefs?.uiLang || prefs?.lang || 'it';
   const [scheda, setScheda] = useState('podcast');
+  const [miei, setMiei] = useState([]);
+
+  const caricaMiei = useCallback(async () => {
+    if (!userToken) { setMiei([]); return; }
+    try { setMiei(await elencoMiei(userToken)); } catch { /* senza login o senza rete: solo i predefiniti */ }
+  }, [userToken]);
+  useEffect(() => { caricaMiei(); }, [caricaMiei]);
+  const tutti = [...COMPAGNI_PREDEFINITI, ...miei];
 
   const testoP = C.textPrimary || '#eef2ff';
   const muto = C.textMuted || 'rgba(242,244,247,0.6)';
@@ -48,11 +57,12 @@ function LifeView() {
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button style={bottone(scheda === 'podcast')} onClick={() => { vibrate(8); setScheda('podcast'); }}>🎙️ {L('lifePodcast')}</button>
         <button style={bottone(scheda === 'impara')} onClick={() => { vibrate(8); setScheda('impara'); }}>📚 {L('lifeLearn')}</button>
+        <button style={bottone(scheda === 'compagni')} onClick={() => { vibrate(8); setScheda('compagni'); }}>✨ {L('lifeCompanionsTab')}</button>
       </div>
 
-      {scheda === 'podcast'
-        ? <Podcast {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />
-        : <Impara {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
   );
 }
@@ -60,7 +70,7 @@ function LifeView() {
 // ─────────────────────────────────────────────────────────────────
 // SCHEDA PODCAST
 // ─────────────────────────────────────────────────────────────────
-function Podcast({ L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
   const [argomento, setArgomento] = useState('');
   const [scelti, setScelti] = useState([]);
   const [round, setRound] = useState(3);
@@ -110,7 +120,7 @@ function Podcast({ L, lingua, userToken, testoP, muto, accent, card, bordo }) {
 
       <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifeCompanions')}</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 8, marginBottom: 14 }}>
-        {COMPAGNI_PREDEFINITI.map((c) => {
+        {compagni.map((c) => {
           const on = scelti.includes(c.id);
           return (
             <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
@@ -165,7 +175,7 @@ function Podcast({ L, lingua, userToken, testoP, muto, accent, card, bordo }) {
 // ─────────────────────────────────────────────────────────────────
 // SCHEDA IMPARA (corsi)
 // ─────────────────────────────────────────────────────────────────
-function Impara({ L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
   const [argomento, setArgomento] = useState('');
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
@@ -258,7 +268,7 @@ function Impara({ L, lingua, userToken, testoP, muto, accent, card, bordo }) {
 
       <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 12 }}>
         <option value="">{L('lifeTeacher')}…</option>
-        {COMPAGNI_PREDEFINITI.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
+        {compagni.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
       </select>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}

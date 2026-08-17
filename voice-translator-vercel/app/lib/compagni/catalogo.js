@@ -135,3 +135,18 @@ export function compagnoVuoto() {
 }
 
 export { VOCI as VOCI_COMPAGNI };
+
+// ── Liste per il form "Crea il tuo Compagno" ──
+export const VOCI_ELENCO = Object.values(VOCI); // [{id, nome}]
+export const AVATAR_SCELTE = Array.from({ length: 9 }, (_, i) => `/avatars/${i + 1}.png`);
+// Modelli offerti nel form. Il default gratuito è gpt-4o-mini; gli altri
+// funzionano al meglio con chiave propria, ma la scelta resta dell'utente.
+export const MODELLI = [
+  { provider: 'openai',    modello: 'gpt-4o-mini', label: 'Veloce (predefinito)' },
+  { provider: 'openai',    modello: 'gpt-4o',      label: 'OpenAI · più preciso' },
+  { provider: 'anthropic', modello: 'claude-haiku', label: 'Claude · caldo' },
+  { provider: 'gemini',    modello: 'gemini-flash', label: 'Gemini · rapido' },
+];
+export const LIBERTA_ETICHETTE = {
+  strict: 'Fedele', balanced: 'Equilibrato', creative: 'Creativo', autonomous: 'Autonomo',
+};

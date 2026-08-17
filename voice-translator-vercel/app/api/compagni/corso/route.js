@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
-import { getCompagnoPredefinito } from '../../../lib/compagni/catalogo.js';
+import { getSession } from '../../../lib/users.js';
+import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
 import { lezioniPerLivello } from '../../../lib/compagni/corsi/catalogo.js';
 import { generaSyllabus, generaLezione, generaQuiz } from '../../../lib/compagni/corsi/generatore.js';
 
@@ -30,7 +31,8 @@ async function handlePost(req) {
     const argomento = typeof body.argomento === 'string' ? body.argomento.trim().slice(0, 200) : '';
     const categoria = typeof body.categoria === 'string' ? body.categoria : 'altro';
     const livello = typeof body.livello === 'string' ? body.livello : 'base';
-    const docente = body.docenteId ? getCompagnoPredefinito(body.docenteId) : null;
+    const sessione = userToken ? await getSession(userToken) : null;
+    const docente = body.docenteId ? await risolviCompagno(body.docenteId, sessione?.email) : null;
 
     const rispostaEsito = (r) => {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });

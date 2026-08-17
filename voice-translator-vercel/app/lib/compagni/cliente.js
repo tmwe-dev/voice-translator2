@@ -44,6 +44,18 @@ export function generaQuiz({ lezione, lingua, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken });
 }
 
+// ── I miei Compagni (creazione/gestione) ──
+export async function elencoMiei(userToken) {
+  const d = await postJSON('/api/compagni/mie', { azione: 'elenco', userToken });
+  return d.compagni || [];
+}
+export function salvaMio(compagno, userToken) {
+  return postJSON('/api/compagni/mie', { azione: 'salva', compagno, userToken });
+}
+export function cancellaMio(id, userToken) {
+  return postJSON('/api/compagni/mie', { azione: 'cancella', id, userToken });
+}
+
 /**
  * Riproduce un turno con la voce ElevenLabs del Compagno. Ritorna una
  * Promise che si risolve quando l'audio è finito (o subito se il TTS non è
