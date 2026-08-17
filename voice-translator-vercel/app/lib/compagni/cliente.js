@@ -56,6 +56,19 @@ export function cancellaMio(id, userToken) {
   return postJSON('/api/compagni/mie', { azione: 'cancella', id, userToken });
 }
 
+/** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }. */
+export function parlaAmico({ compagnoId, messaggi, lingua, userToken }) {
+  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken });
+}
+
+// ── Dossier: argomento → articolo → (discussione) → report ──
+export function preparaBriefing({ argomento, lingua, userToken }) {
+  return postJSON('/api/compagni/dossier', { azione: 'briefing', argomento, lingua, userToken });
+}
+export function reportFinale({ argomento, briefing, discussione, lingua, userToken }) {
+  return postJSON('/api/compagni/dossier', { azione: 'report', argomento, briefing, discussione, lingua, userToken });
+}
+
 /**
  * Riproduce un turno con la voce ElevenLabs del Compagno. Ritorna una
  * Promise che si risolve quando l'audio è finito (o subito se il TTS non è

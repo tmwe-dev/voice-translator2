@@ -30,7 +30,7 @@ function daRiga(r) {
     id: r.id, nome: r.nome, ruolo: r.ruolo || '', emoji: r.emoji || '✨', colore: r.colore || '#26D9B0',
     avatar: r.avatar || '/avatars/9.png', voce: { id: r.voce_id, nome: r.voce_nome || '' },
     provider: r.provider, modello: r.modello, liberta: r.liberta, personalita: r.personalita || '',
-    lingua: r.lingua || '', predefinito: false,
+    lingua: r.lingua || '', memoria: !!r.memoria, predefinito: false,
   };
 }
 
@@ -65,6 +65,7 @@ export async function salvaCompagno(email, c) {
     modello: c.modello || 'gpt-4o-mini',
     liberta: c.liberta || 'balanced',
     lingua: (c.lingua || '').slice(0, 8) || null,
+    memoria: !!c.memoria,
     personalita: (c.personalita || '').slice(0, 4000),
     updated_at: new Date().toISOString(),
   };

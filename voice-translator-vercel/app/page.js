@@ -1389,7 +1389,13 @@ function HomeInner() {
 
   if (view === 'life') return wrap(
     <Suspense fallback={<LazyFallback />}>
-      <LifeView />
+      <LifeView
+        // b.201 — dal Dossier si apre una stanza sull'argomento: si imposta
+        // lo stesso preset di Mondo (nome + descrizione) e si va a Mondo,
+        // dove il foglio di creazione che funziona è già montato. Nessuna
+        // duplicazione del foglio (le sue prop differiscono fra i punti).
+        onApriStanza={({ nome, descrizione }) => { setTopicPreset({ nome, descrizione }); setShowCreateRoom(true); setView('mondo'); }}
+      />
     </Suspense>
   );
 

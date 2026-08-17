@@ -139,7 +139,7 @@ Regola pratica: se un file di Life importa qualcosa di BarTalk che **non** sia `
 | 4 | Podcast player (coda audio sequenziale, chi parla, transcript) | basso | dopo 3 |
 | 5 | Persistenza Compagni utente (tabella Supabase `compagni`, RLS) | dati persistenti (CK6) | quando serve salvare i creati |
 | 6 | **Impara/Corsi**: catalogo + generatore (syllabus/lezione/quiz) + rotta — §8 | medio | **BACKEND FATTO** (testato); manca UI |
-| 7 | **Amico/Coach — memoria** persistente (3 livelli) — §9 | dati sensibili | dopo i corsi |
+| 7 | **Amico/Coach — memoria** persistente (3 livelli) — §9 | dati sensibili | **FATTO** (backend+UI, tabelle provate live); prompt estrazione ripreso da RadioChat |
 | 8 | Ponte: invita Compagni in stanza | **tocca il flusso stanza (regola §8 di CLAUDE.md)** | ULTIMO, con collaudo 2 dispositivi |
 
 ---

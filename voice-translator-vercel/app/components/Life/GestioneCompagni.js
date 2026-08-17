@@ -105,6 +105,14 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
           {MODELLI.map((m) => <option key={`${m.provider}|${m.modello}`} value={`${m.provider}|${m.modello}`}>{m.label}</option>)}
         </select>
 
+        <label style={{ ...etich, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginTop: 14 }}
+          onClick={() => setBozza((b) => ({ ...b, memoria: !b.memoria }))}>
+          <span style={{ width: 42, height: 24, borderRadius: 999, background: bozza.memoria ? accent : card, border: bordo, position: 'relative', flexShrink: 0, transition: 'background 0.15s' }}>
+            <span style={{ position: 'absolute', top: 2, left: bozza.memoria ? 20 : 2, width: 18, height: 18, borderRadius: '50%', background: '#fff', transition: 'left 0.15s' }} />
+          </span>
+          <span><b style={{ color: testoP }}>{L('lifeMemory')}</b> — {L('lifeMemoryHint')}</span>
+        </label>
+
         {errore && <div style={{ color: '#f87171', fontSize: 13, margin: '10px 0' }}>{errore}</div>}
 
         <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1 }}>

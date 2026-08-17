@@ -1,0 +1,132 @@
+// ═══════════════════════════════════════════════════════════════
+// MEMORIA — l'amico che ricorda (Luca)
+//
+// Un Compagno con `memoria` accesa ti riconosce nel tempo. Memoria a
+// livelli: RECENTE (sempre nel prompt), CONSOLIDATA (fatti importanti,
+// cercati per tag). Dopo ogni scambio, un'estrazione tira fuori i ricordi
+// nuovi e li salva.
+//
+// Il prompt di estrazione e la tassonomia dei tag sono ripresi VERBATIM da
+// RadioChat (src/lib/lifeTutor/extraction.ts): stringhe già collaudate,
+// riusate invece di reinventarle.
+//
+// Privacy — dati personali sensibili: RLS server-only, mai in modalità
+// Diretta, per-utente e per-Compagno, cancellabili. (Vedi il piano §9.)
+// ═══════════════════════════════════════════════════════════════
+
+import { getSupabaseAdmin } from '../supabase.js';
+import { idUtente } from './persistenza.js';
+import { generaTesto } from './ponte.js';
+
+export const TAG_MEMORIA = ['famiglia', 'lavoro', 'studio', 'emozione', 'successo', 'difficolta', 'salute', 'hobby', 'relazioni', 'obiettivi', 'evento', 'preferenza', 'opinione', 'aneddoto', 'progresso', 'altro'];
+
+// Ripreso verbatim da RadioChat (lifeTutor/extraction.ts): stringa collaudata.
+export const PROMPT_ESTRAZIONE = `Sei un analista di conversazioni per il sistema Life Tutor. Il tuo compito è estrarre INFORMAZIONI SIGNIFICATIVE da questa conversazione.
+
+Per ogni ricordo, fornisci:
+- content: il ricordo completo (1-3 frasi)
+- summary: riassunto brevissimo (max 80 caratteri)
+- tags: array di tag tra: famiglia, lavoro, studio, emozione, successo, difficolta, salute, hobby, relazioni, obiettivi, evento, preferenza, opinione, aneddoto, progresso, altro
+- importance: 1-5 (5 = fatto cruciale sulla vita della persona)
+- emotion: stato emotivo associato (felice, triste, ansioso, motivato, frustrato, soddisfatto, neutro, eccitato, pensieroso)
+- layer: "recent" per fatti recenti, "consolidated" per fatti importanti permanenti
+
+Estrai SOLO fatti personali significativi (vita, emozioni, obiettivi, sfide, successi, preferenze, progressi, dati identificativi). NON estrarre contenuto didattico generico, domande tecniche senza contesto personale, saluti e convenevoli.
+
+Rispondi SOLO con JSON valido:
+{ "memories": [ { "content": "...", "summary": "...", "tags": ["..."], "importance": 3, "emotion": "neutro", "layer": "recent" } ] }
+Se non c'è nulla di significativo, rispondi { "memories": [] }.`;
+
+/** Salva una lista di ricordi (dall'estrazione) per utente+Compagno. */
+export async function aggiungiRicordi(email, compagnoId, ricordi) {
+  const owner = idUtente(email);
+  if (!owner || !compagnoId || !Array.isArray(ricordi) || ricordi.length === 0) return 0;
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  const righe = ricordi
+    .filter(m => m && m.content)
+    .slice(0, 20)
+    .map(m => ({
+      owner, compagno_id: compagnoId,
+      content: String(m.content).slice(0, 1000),
+      summary: (m.summary || '').slice(0, 120),
+      tags: Array.isArray(m.tags) ? m.tags.filter(t => TAG_MEMORIA.includes(t)).slice(0, 8) : [],
+      importance: Math.max(1, Math.min(5, Number(m.importance) || 3)),
+      emotion: (m.emotion || '').slice(0, 24),
+      layer: m.layer === 'consolidated' ? 'consolidated' : 'recent',
+    }));
+  if (righe.length === 0) return 0;
+  const { error } = await sb.from('compagno_memorie').insert(righe);
+  return error ? 0 : righe.length;
+}
+
+/**
+ * I ricordi da mettere nel prompt: i più recenti SEMPRE, più i consolidati
+ * che combaciano coi tag rilevanti al messaggio. Tetto per non gonfiare.
+ */
+export async function ricordiPerContesto(email, compagnoId, tagsRilevanti = []) {
+  const owner = idUtente(email);
+  if (!owner || !compagnoId) return [];
+  const sb = getSupabaseAdmin();
+  if (!sb) return [];
+  const { data: recenti } = await sb.from('compagno_memorie')
+    .select('content, summary, tags, importance, layer')
+    .eq('owner', owner).eq('compagno_id', compagnoId)
+    .order('created_at', { ascending: false }).limit(8);
+  let consolidati = [];
+  if (Array.isArray(tagsRilevanti) && tagsRilevanti.length) {
+    const { data } = await sb.from('compagno_memorie')
+      .select('content, summary, tags, importance, layer')
+      .eq('owner', owner).eq('compagno_id', compagnoId).eq('layer', 'consolidated')
+      .overlaps('tags', tagsRilevanti)
+      .order('importance', { ascending: false }).limit(6);
+    consolidati = data || [];
+  }
+  // Unione senza duplicati (per content).
+  const visti = new Set();
+  const uniti = [];
+  for (const m of [...(recenti || []), ...consolidati]) {
+    if (visti.has(m.content)) continue;
+    visti.add(m.content); uniti.push(m);
+  }
+  return uniti.slice(0, 12);
+}
+
+/** Trasforma i ricordi in un blocco da iniettare nel prompt del Compagno. */
+export function contestoMemoria(ricordi) {
+  if (!ricordi || ricordi.length === 0) return '';
+  const righe = ricordi.map(m => `- ${m.summary || m.content}`).join('\n');
+  return `\n\nCosa ricordi di questa persona (usalo con naturalezza, non elencarlo):\n${righe}`;
+}
+
+/**
+ * Estrae i ricordi nuovi da uno scambio, via la cerniera (fatturato).
+ * Ritorna un array di ricordi (può essere vuoto). Non lancia: la memoria è
+ * un di più, non deve far cadere la risposta.
+ */
+export async function estraiRicordi(messaggi, { userToken } = {}) {
+  const testo = (messaggi || []).slice(-12).map(m => `[${m.ruolo || m.role}]: ${m.testo || m.content}`).join('\n');
+  if (!testo.trim()) return [];
+  const r = await generaTesto({
+    system: PROMPT_ESTRAZIONE,
+    prompt: `Analizza questa conversazione ed estrai le informazioni significative:\n\n${testo}`,
+    userToken, maxTokens: 700,
+  });
+  if (!r.ok) return [];
+  try {
+    const m = r.testo.match(/\{[\s\S]*\}/);
+    if (!m) return [];
+    const dati = JSON.parse(m[0]);
+    return Array.isArray(dati.memories) ? dati.memories : [];
+  } catch { return []; }
+}
+
+/** Cancella la memoria di un Compagno (diritto dell'utente). */
+export async function dimentica(email, compagnoId) {
+  const owner = idUtente(email);
+  if (!owner || !compagnoId) return false;
+  const sb = getSupabaseAdmin();
+  if (!sb) return false;
+  const { error } = await sb.from('compagno_memorie').delete().eq('owner', owner).eq('compagno_id', compagnoId);
+  return !error;
+}

@@ -7,6 +7,8 @@ import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
 import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
+import AmicoChat from './AmicoChat.js';
+import Dossier from './Dossier.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
@@ -15,7 +17,7 @@ import GestioneCompagni from './GestioneCompagni.js';
 // La voce passa dal TTS esistente; tutto passa dal wallet lato server.
 // ═══════════════════════════════════════════════════════════════
 
-function LifeView() {
+function LifeView({ onApriStanza }) {
   const { L, S, prefs, userToken, setView } = useApp();
   const C = S?.colors || {};
   const lingua = prefs?.uiLang || prefs?.lang || 'it';
@@ -36,7 +38,7 @@ function LifeView() {
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.08)'}`;
 
   const bottone = (attivo) => ({
-    flex: 1, padding: '10px 8px', borderRadius: 12, border: bordo, cursor: 'pointer',
+    flex: '1 1 88px', minWidth: 88, padding: '10px 8px', borderRadius: 12, border: bordo, cursor: 'pointer',
     background: attivo ? accent : 'transparent', color: attivo ? '#04121c' : testoP,
     fontWeight: 700, fontSize: 13, fontFamily: FONT,
   });
@@ -54,13 +56,17 @@ function LifeView() {
       </div>
 
       {/* Schede */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button style={bottone(scheda === 'podcast')} onClick={() => { vibrate(8); setScheda('podcast'); }}>🎙️ {L('lifePodcast')}</button>
+        <button style={bottone(scheda === 'amico')} onClick={() => { vibrate(8); setScheda('amico'); }}>💬 {L('lifeFriendTab')}</button>
+        <button style={bottone(scheda === 'dossier')} onClick={() => { vibrate(8); setScheda('dossier'); }}>📄 {L('lifeDossierTab')}</button>
         <button style={bottone(scheda === 'impara')} onClick={() => { vibrate(8); setScheda('impara'); }}>📚 {L('lifeLearn')}</button>
         <button style={bottone(scheda === 'compagni')} onClick={() => { vibrate(8); setScheda('compagni'); }}>✨ {L('lifeCompanionsTab')}</button>
       </div>
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
