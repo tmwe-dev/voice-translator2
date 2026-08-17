@@ -94,9 +94,17 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     try { await cancellaMio(id, userToken); if (onCambiato) await onCambiato(); } catch { /* rete assente: la lista si aggiorna al prossimo caricamento */ }
   }, [userToken, onCambiato]);
 
+  // b.219 — l'anteprima voce diceva sempre la frase generica ("Ciao, sono il
+  // tuo Compagno"). Ora, se il Compagno ha un nome, la voce PRONUNCIA nome e
+  // ruolo: così si sente la voce legata a QUEL personaggio (es. la voce
+  // femminile che dice "Marilyn Monroe. Icona del cinema..."). Nome e ruolo
+  // sono già nella lingua dell'app; se mancano, si torna alla frase generica.
   const provaVoce = useCallback((voceId) => {
-    parlaTurno({ voceId, testo: L('lifeVoiceSample'), lingua, userToken });
-  }, [lingua, userToken, L]);
+    const nome = (bozza?.nome || '').trim();
+    const ruolo = (bozza?.ruolo || '').trim();
+    const campione = nome ? `${nome}.${ruolo ? ' ' + ruolo + '.' : ''}` : L('lifeVoiceSample');
+    parlaTurno({ voceId, testo: campione, lingua, userToken });
+  }, [bozza, lingua, userToken, L]);
 
   const input = { width: '100%', padding: 11, borderRadius: 10, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' };
   const etich = { fontSize: 12, color: muto, margin: '10px 0 4px', display: 'block' };
