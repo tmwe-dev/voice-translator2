@@ -97,6 +97,29 @@ function LifeView({ onApriStanza }) {
   );
 }
 
+// b.222 — le lezioni arrivano in markdown leggero (### titoli, **grassetto**,
+// elenchi con -). Prima si vedevano i simboli grezzi ("### Cuerpo", "**La
+// vaca**"). Piccolo renderer senza dipendenze: titoli, grassetto, elenchi.
+function inlineGrassetto(s, keyBase) {
+  return String(s).split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+    (p.startsWith('**') && p.endsWith('**') && p.length > 4)
+      ? <strong key={`${keyBase}-${i}`}>{p.slice(2, -2)}</strong>
+      : <span key={`${keyBase}-${i}`}>{p}</span>);
+}
+function TestoRicco({ testo, testoP, muto }) {
+  const righe = String(testo || '').split('\n');
+  const blocchi = righe.map((r, i) => {
+    const t = r.trim();
+    if (/^#{3,}\s+/.test(t)) return <div key={i} style={{ fontSize: 16, fontWeight: 800, color: testoP, margin: '14px 0 4px' }}>{inlineGrassetto(t.replace(/^#{3,}\s+/, ''), i)}</div>;
+    if (/^##\s+/.test(t))    return <div key={i} style={{ fontSize: 18, fontWeight: 800, color: testoP, margin: '16px 0 6px' }}>{inlineGrassetto(t.replace(/^##\s+/, ''), i)}</div>;
+    if (/^#\s+/.test(t))     return <div key={i} style={{ fontSize: 20, fontWeight: 800, color: testoP, margin: '16px 0 6px' }}>{inlineGrassetto(t.replace(/^#\s+/, ''), i)}</div>;
+    if (/^[-*]\s+/.test(t))  return <div key={i} style={{ display: 'flex', gap: 8, margin: '3px 0' }}><span style={{ color: muto }}>•</span><span>{inlineGrassetto(t.replace(/^[-*]\s+/, ''), i)}</span></div>;
+    if (t === '')            return <div key={i} style={{ height: 8 }} />;
+    return <div key={i} style={{ margin: '3px 0' }}>{inlineGrassetto(t, i)}</div>;
+  });
+  return <div style={{ fontSize: 15, color: testoP, lineHeight: 1.6 }}>{blocchi}</div>;
+}
+
 // ─────────────────────────────────────────────────────────────────
 // SCHEDA PODCAST
 // ─────────────────────────────────────────────────────────────────
@@ -265,7 +288,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
         <h3 style={{ color: testoP, margin: '4px 0 12px' }}>{aperta.lezione.titolo}</h3>
-        <div style={{ fontSize: 15, color: testoP, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{aperta.contenuto}</div>
+        <TestoRicco testo={aperta.contenuto} testoP={testoP} muto={muto} />
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
