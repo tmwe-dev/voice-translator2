@@ -59,6 +59,7 @@ const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
 const MondoView = lazy(() => import('./components/MondoView.js'));
 const LifeView = lazy(() => import('./components/Life/LifeView.js'));
 const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
+const TaxiTalk = lazy(() => import('./components/TaxiTalk.js')); // b.205 — TaxiTalk rifatto
 const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
 const HelpView = lazy(() => import('./components/HelpView.js'));
 const TaxiDriverView = lazy(() => import('./components/TaxiDriverView.js'));
@@ -1092,7 +1093,7 @@ function HomeInner() {
   //
   // SpatialBackdrop resta ovunque: sono due sfumature animate dal CSS,
   // le muove la scheda grafica e non tolgono niente a nessuno.
-  const SCHERMATE_SENZA_VELO = new Set(['room', 'speaker', 'join']);
+  const SCHERMATE_SENZA_VELO = new Set(['room', 'speaker', 'taxi-chat', 'join']); // b.205 — taxi-chat come speaker
   const wrap = (node) => (
     <AppProvider value={appCtxValue}>
       <SpatialBackdrop />
@@ -1495,7 +1496,20 @@ function HomeInner() {
     </>
   );
 
+  // ── INIZIO b.205 — TaxiTalk rifatto: la vista 'speaker' apre la
+  // schermata nuova e semplice (indirizzo+mappa+QR, parla→ribalta). La
+  // conversazione tradotta di prima resta disponibile come CHAT opzionale
+  // sotto 'taxi-chat' (riusa la maschera che già funziona). ── (Luca)
   if (view === 'speaker') return wrap(
+    <>
+      <Suspense fallback={<LazyFallback />}>
+      <TaxiTalk userToken={auth.userToken} />
+      </Suspense>
+      {bottomNav}
+    </>
+  );
+
+  if (view === 'taxi-chat') return wrap(
     <>
       <Suspense fallback={<LazyFallback />}>
       <SpeakerView userToken={auth.userToken} />
@@ -1503,6 +1517,7 @@ function HomeInner() {
       {bottomNav}
     </>
   );
+  // ── FINE b.205 ──
 
   if (view === 'quickinvite') return wrap(
     <>

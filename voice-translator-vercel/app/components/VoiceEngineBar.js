@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { FONT, MODES, CONTEXTS, AI_MODELS, VOICES } from '../lib/constants.js';
 import { IconCheck, IconChevronDown } from './Icons.js';
+import { bandieraVoce, ordinaVociPerPaese } from '../lib/bandiereVoci.js';
 
 const VoiceEngineBar = memo(function VoiceEngineBar({
   L, S, prefs, savePrefs, isTrial, isTopPro, canUseElevenLabs,
@@ -276,33 +277,60 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                       { label: '\u2642 Maschile', voices: males },
                       ...(other.length > 0 ? [{ label: 'Altro', voices: other }] : []),
                     ];
-                    return groups.map(g => g.voices.length > 0 && (
-                      <div key={g.label}>
-                        <div style={{padding:'4px 12px', fontSize:8, fontWeight:700, color:S.colors.textMuted,
-                          textTransform:'uppercase', letterSpacing:0.5, background:S.colors.overlayBg,
-                          borderTop:`1px solid ${S.colors.overlayBorder}`}}>
-                          {g.label} ({g.voices.length})
+                    // \u2500\u2500 INIZIO b.205 \u2014 la tendina voci era disallineata, senza
+                    // bandiere e senza ordine. Ora: dentro ogni genere le voci
+                    // sono ORDINATE PER PAESE, con un'intestazione bandiera+paese
+                    // ad ogni cambio, e ogni riga \u00e8 allineata a sinistra con la
+                    // bandiera davanti al nome. \u2500\u2500 (Luca)
+                    return groups.map(g => {
+                      if (g.voices.length === 0) return null;
+                      const ordinate = ordinaVociPerPaese(g.voices);
+                      let paeseCorr = null;
+                      return (
+                        <div key={g.label}>
+                          <div style={{padding:'4px 12px', fontSize:8, fontWeight:700, color:S.colors.textMuted,
+                            textTransform:'uppercase', letterSpacing:0.5, background:S.colors.overlayBg,
+                            borderTop:`1px solid ${S.colors.overlayBorder}`}}>
+                            {g.label} ({g.voices.length})
+                          </div>
+                          {ordinate.map(v => {
+                            const bv = bandieraVoce(v);
+                            const nuovoPaese = bv.p !== paeseCorr;
+                            paeseCorr = bv.p;
+                            return (
+                              <div key={v.id}>
+                                {nuovoPaese && (
+                                  <div style={{display:'flex', alignItems:'center', gap:6, padding:'5px 12px 3px',
+                                    fontSize:9, fontWeight:700, color:S.colors.textSecondary || S.colors.textMuted,
+                                    textTransform:'uppercase', letterSpacing:0.4}}>
+                                    <span style={{fontSize:12}}>{bv.f}</span>{bv.p}
+                                  </div>
+                                )}
+                                <button onClick={() => {
+                                  if (setSelectedELVoice) setSelectedELVoice(v.id);
+                                  setShowVoicePicker(false);
+                                }} style={{display:'flex', alignItems:'center', gap:9,
+                                  width:'100%', padding:'6px 12px 6px 16px', textAlign:'left',
+                                  background: selectedELVoice === v.id ? S.colors.accent4Bg : 'transparent',
+                                  border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
+                                  color:S.colors.textPrimary, transition:'background 0.1s'}}>
+                                  <span style={{fontSize:14, flexShrink:0, width:18, textAlign:'center'}}>{bv.f}</span>
+                                  <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:0, flex:1, minWidth:0}}>
+                                    <span style={{fontWeight:500, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'100%', display:'block'}}>{v.name}</span>
+                                    {v.useCase && (
+                                      <span style={{fontSize:8, color:S.colors.textMuted, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:'100%', display:'block'}}>
+                                        {String(v.useCase).replace(/_/g, ' ')}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12, flexShrink:0}}>{<IconCheck size={12}/>}</span>}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
-                        {g.voices.map(v => (
-                          <button key={v.id} onClick={() => {
-                            if (setSelectedELVoice) setSelectedELVoice(v.id);
-                            setShowVoicePicker(false);
-                          }} style={{display:'flex', alignItems:'center', justifyContent:'space-between',
-                            width:'100%', padding:'6px 12px',
-                            background: selectedELVoice === v.id ? S.colors.accent4Bg : 'transparent',
-                            border:'none', cursor:'pointer', fontFamily:FONT, fontSize:11,
-                            color:S.colors.textPrimary, transition:'background 0.1s'}}>
-                            <div style={{display:'flex', flexDirection:'column', alignItems:'flex-start', gap:0}}>
-                              <span style={{fontWeight:500}}>{v.name}</span>
-                              <span style={{fontSize:8, color:S.colors.textMuted}}>
-                                {[v.accent, v.useCase].filter(Boolean).join(' \u2022 ')}
-                              </span>
-                            </div>
-                            {selectedELVoice === v.id && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
-                          </button>
-                        ))}
-                      </div>
-                    ));
+                      );
+                    });
                   })()}
                   {(!elevenLabsVoices || elevenLabsVoices.length === 0) && (
                     <div style={{padding:'10px 12px', fontSize:10, color:S.colors.textMuted, textAlign:'center'}}>
