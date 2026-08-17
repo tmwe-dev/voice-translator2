@@ -51,6 +51,17 @@ export async function generaTesto({
   system = '', prompt = '', provider = 'openai', modello = 'gpt-4o-mini',
   userToken = null, roomId = null, roomSessionToken = null,
   maxTokens = 400,
+  // ── INIZIO b.205 — i contenuti di Life si troncavano a metà ──
+  // callLLMWithFallback, senza terzo argomento, usava il timeout di
+  // DIFETTO di 10s, tarato sulla TRADUZIONE (una frase, ~1-2s). Ma una
+  // lezione (900 token), un quiz o un syllabus con gpt-4o-mini superano
+  // spesso i 10s: scattava il timeout, fallivano primary+fallback
+  // ("All LLM providers failed") e il circuit breaker apriva, facendo poi
+  // fallire a raffica anche le chiamate corte. Il Podcast si salvava solo
+  // perché ogni turno è di 1-2 frasi. Ora la generazione lunga di Life ha
+  // il suo tetto ampio; la traduzione resta sul suo percorso a 10s.
+  timeoutMs = 45000,
+  // ── FINE b.205 ──
 } = {}) {
   if (!prompt) return { ok: false, motivo: 'prompt-mancante' };
 
@@ -89,6 +100,7 @@ export async function generaTesto({
     const { translated } = await callLLMWithFallback(
       { provider, model: modello, apiKey, messages: messaggi, systemPrompt: system, text: prompt, maxTokens, temperature: 0.7 },
       fallbacks,
+      timeoutMs, // b.205 — tetto ampio per i contenuti lunghi di Life
     );
 
     const testo = (translated || '').trim();

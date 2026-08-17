@@ -51,4 +51,6 @@ async function handlePost(req) {
 }
 
 // Genera contenuto AI (ricerca + scrittura): tetto di frequenza basso.
+// b.205 — la generazione lunga di Life puo superare i 15s: diamo tempo alla funzione.
+export const maxDuration = 60;
 export const POST = withApiGuard(handlePost, { maxRequests: 12, prefix: 'compagni-dossier' });

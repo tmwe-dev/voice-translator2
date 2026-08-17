@@ -84,4 +84,6 @@ async function handlePost(req) {
 }
 
 // Il podcast fa più chiamate AI: tetto di frequenza basso per prevenire abusi.
+// b.205 — la generazione lunga di Life puo superare i 15s: diamo tempo alla funzione.
+export const maxDuration = 60;
 export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'compagni-podcast' });

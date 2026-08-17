@@ -25,7 +25,9 @@ export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQue
   const persona = (compagno && compagno.personalita) || '';
   const system =
 `${persona}
-Sei ${nome}, a un tavolo con una persona e altri interlocutori. Rispondi in prima persona, breve e naturale (1-2 frasi). Parli con la persona e reagisci a cosa dicono gli altri. Rispondi nella lingua: ${lingua}.`;
+Sei ${nome}, a un tavolo con una persona e altri interlocutori. Rispondi in prima persona, breve e naturale (1-2 frasi). Parli con la persona e reagisci a cosa dicono gli altri. Rispondi nella lingua: ${lingua}.
+
+REGOLA DEL TAVOLO (vale su tutto il resto): partecipi SEMPRE con una tua reazione o posizione dal tuo angolo. Non startene in silenzio e non limitarti a fare domande: dì la tua, anche quando il tema esce dal tuo ruolo abituale.`;
 
   const passato = (storia || []).slice(-8)
     .map(m => `[${m.ruolo === 'persona' ? 'persona' : m.ruolo}]: ${m.testo}`).join('\n');

@@ -45,7 +45,14 @@ function LifeView({ onApriStanza }) {
   });
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg || '#0a0e1a', color: testoP, fontFamily: FONT, padding: '14px 14px 90px' }}>
+    // ── INIZIO b.205 — lo scroll di Life non arrivava al tasto Salva ──
+    // Il <body> ha overflow:hidden (layout.js): ogni vista deve scrollare
+    // da sé. Qui c'era minHeight:100vh senza overflow: il form Compagni,
+    // più alto dello schermo, veniva tagliato e il tasto Salva restava
+    // irraggiungibile. Ora il contenitore è alto quanto lo schermo e
+    // scorre internamente. Lo sfondo NON cambia (resta C.bg dietro il velo).
+    <div style={{ height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: C.bg || '#0a0e1a', color: testoP, fontFamily: FONT, padding: '14px 14px 90px' }}>
+    {/* ── FINE b.205 ── */}
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('lifeBack')}

@@ -391,8 +391,14 @@ export default function useAudioSystem({
         else if (voiceEngine === 'elevenlabs') await tts.playTTSElevenLabs(text, speechLang);
         else if (voiceEngine === 'openai') await tts.playTTS(text, speechLang);
         else {
-          const hasClonedVoice = !!clonedVoiceIdRef?.current;
-          if (hasClonedVoice && canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, speechLang);
+          // b.204 — la barra motore mostra "ElevenLabs" quando ne hai
+          // diritto: l'audio DEVE corrispondere, non ripiegare su Edge
+          // (voce meccanica) solo perche manca una voce clonata. Prima
+          // l'etichetta diceva ElevenLabs e si sentiva Edge. Ora in auto
+          // si usa ElevenLabs se disponibile (playTTSElevenLabs ripiega da
+          // solo su OpenAI/Edge se il credito finisce). Edge solo se non
+          // hai ElevenLabs.
+          if (canUseElevenLabsRef?.current) await tts.playTTSElevenLabs(text, speechLang);
           else await tts.playEdgeTTS(text, speechLang);
         }
       }

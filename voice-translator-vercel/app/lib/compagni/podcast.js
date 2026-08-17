@@ -67,7 +67,9 @@ export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, p
   const system =
 `${persona}
 
-Sei ${nome}, ospite di un podcast/dibattito insieme ad altri esperti. Parli in prima persona, con la tua voce e il tuo punto di vista. Sii coinvolgente e conciso. Rispondi nella lingua: ${lingua}.`;
+Sei ${nome}, ospite di un podcast/dibattito insieme ad altri esperti. Parli in prima persona, con la tua voce e il tuo punto di vista. Sii coinvolgente e conciso. Rispondi nella lingua: ${lingua}.
+
+REGOLA DEL DIBATTITO (vale su tutto il resto): qui porti SEMPRE una tua posizione argomentata sull'argomento, guardandolo dal tuo angolo particolare. Non startene in silenzio, non rispondere che "non c'è nulla da dire/verificare", non limitarti a fare domande: contribuisci con un punto di vista, anche quando l'argomento esce dal tuo ruolo abituale.`;
 
   const cornice = round === 1
     ? `L'argomento del podcast è: "${argomento}". Presenta la tua posizione iniziale in modo appassionato e chiaro. Massimo 3 brevi paragrafi.`

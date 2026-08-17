@@ -364,8 +364,13 @@ export default function useTTSEngine({
   /** Va a prendere l'audio. Non suona niente. @returns {Promise<Blob|null>} */
   async function procuraVoce(text, langCode) {
     const motore = prefsRef.current?.voiceEngine || 'auto';
+    // b.204 — in auto la barra mostra "ElevenLabs" quando ne hai diritto:
+    // la coda della conversazione dal vivo deve suonarla davvero, non solo
+    // con una voce clonata. Prima l'auto senza voce clonata cadeva su Edge
+    // (meccanica) pur mostrando ElevenLabs. Il ripiego 402/errore resta
+    // (sotto: Edge, poi browser).
     const premium = motore === 'elevenlabs'
-      || (motore === 'auto' && !!clonedVoiceIdRef?.current && !!canUseElevenLabsRef?.current);
+      || (motore === 'auto' && !!canUseElevenLabsRef?.current);
 
     if (premium) {
       try {
