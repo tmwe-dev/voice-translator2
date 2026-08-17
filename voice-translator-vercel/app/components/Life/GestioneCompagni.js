@@ -127,7 +127,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo }}>
       <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.emoji} {c.nome}</div>
+        <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome}</div>
         <div style={{ fontSize: 11, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
       </div>
       {mio

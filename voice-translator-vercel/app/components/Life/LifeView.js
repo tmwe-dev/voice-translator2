@@ -152,7 +152,8 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
             <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
               style={{ padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
                 background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : (bordo.split(' ').pop())}`, fontFamily: FONT }}>
-              <div style={{ fontSize: 22 }}>{c.emoji}</div>
+              {/* b.208 — avatar del Compagno, non l'emoji */}
+              <img src={c.avatar} alt="" width={46} height={46} style={{ borderRadius: 12, display: 'block', margin: '0 auto 6px', objectFit: 'cover' }} />
               <div style={{ fontSize: 12, fontWeight: 700, color: testoP }}>{c.nome}</div>
               <div style={{ fontSize: 10, color: muto }}>{c.ruolo}</div>
             </button>
@@ -294,7 +295,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
       <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 12 }}>
         <option value="">{L('lifeTeacher')}…</option>
-        {compagni.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.nome}</option>)}
+        {compagni.map((c) => <option key={c.id} value={c.id}>{c.nome} — {c.ruolo}</option>)}
       </select>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}

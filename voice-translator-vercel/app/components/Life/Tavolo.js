@@ -36,7 +36,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken });
       for (const r of (d.risposte || [])) {
         const c = perId.get(r.compagnoId) || {};
-        setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, emoji: c.emoji, colore: c.colore }]);
+        setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);
       }
       // voci in sequenza
       for (const r of (d.risposte || [])) {
@@ -58,7 +58,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             return (
               <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
                 style={{ padding: '10px 6px', borderRadius: 12, cursor: 'pointer', textAlign: 'center', background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : bordo.split(' ').pop()}`, fontFamily: FONT }}>
-                <div style={{ fontSize: 22 }}>{c.emoji}</div>
+                <img src={c.avatar} alt="" width={46} height={46} style={{ borderRadius: 12, display: 'block', margin: '0 auto 6px', objectFit: 'cover' }} />
                 <div style={{ fontSize: 12, fontWeight: 700, color: testoP }}>{c.nome}</div>
               </button>
             );
@@ -80,7 +80,11 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <button onClick={() => setAvviato(false)} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
           <Icon name="back" size={16} color={testoP} />
         </button>
-        <span style={{ fontWeight: 700, color: testoP }}>{scelti.map(id => perId.get(id)?.emoji).join(' ')}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          {scelti.map(id => perId.get(id)).filter(Boolean).map(c => (
+            <img key={c.id} src={c.avatar} alt="" width={26} height={26} style={{ borderRadius: 7, display: 'block', objectFit: 'cover' }} />
+          ))}
+        </span>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -88,7 +92,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           const mio = m.ruolo === 'persona';
           return (
             <div key={i} style={{ alignSelf: mio ? 'flex-end' : 'flex-start', maxWidth: '84%' }}>
-              {!mio && <div style={{ fontSize: 11, fontWeight: 700, color: m.colore || accent, margin: '0 4px 2px' }}>{m.emoji} {m.ruolo}</div>}
+              {!mio && <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: m.colore || accent, margin: '0 4px 2px' }}>{m.avatar && <img src={m.avatar} alt="" width={16} height={16} style={{ borderRadius: 5, objectFit: 'cover' }} />}{m.ruolo}</div>}
               <div style={{ padding: '9px 12px', borderRadius: 14, fontSize: 14, lineHeight: 1.45, fontFamily: FONT,
                 background: mio ? accent : card, color: mio ? '#04121c' : testoP, border: mio ? 'none' : bordo }}>
                 {m.testo}

@@ -73,7 +73,7 @@ function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, a
             return (
               <button key={c.id} onClick={() => { vibrate(6); toggle(c.id); }}
                 style={{ padding: '8px 4px', borderRadius: 12, cursor: 'pointer', textAlign: 'center', background: on ? `${c.colore}22` : card, border: `1px solid ${on ? c.colore : bordo.split(' ').pop()}`, fontFamily: FONT }}>
-                <div style={{ fontSize: 20 }}>{c.emoji}</div>
+                <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 11, display: 'block', margin: '0 auto 5px', objectFit: 'cover' }} />
                 <div style={{ fontSize: 11, fontWeight: 700, color: testoP }}>{c.nome}</div>
               </button>
             );

@@ -43,7 +43,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
           {compagni.map((c) => (
             <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi([]); }}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
-              <span style={{ fontSize: 22 }}>{c.emoji}</span>
+              <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome} {c.memoria ? '🧠' : ''}</span>
                 <span style={{ display: 'block', fontSize: 11, color: muto }}>{c.ruolo}</span>
@@ -63,7 +63,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         <button onClick={() => setScelto(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
           <Icon name="back" size={16} color={testoP} />
         </button>
-        <span style={{ fontSize: 22 }}>{scelto.emoji}</span>
+        <img src={scelto.avatar} alt="" width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
         <span style={{ fontWeight: 700, color: testoP }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
       </div>
 
