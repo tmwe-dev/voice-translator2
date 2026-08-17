@@ -195,6 +195,14 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
       background: 'linear-gradient(180deg, #060810 0%, #0A0D1A 50%, #060810 100%)',
     }}>
       <div style={S.scrollCenter}>
+        {/* ── INIZIO b.211 — wrapper non comprimibile ──
+            scrollCenter è una COLONNA flex: senza questo wrapper le card
+            figlie (flex-shrink di default 1) venivano schiacciate quando il
+            contenuto superava lo schermo, e il loro contenuto sbordava —
+            la hero "ElevenLabs" finiva SOTTO la card "Voce standard".
+            Il wrapper con flexShrink:0 tiene l'altezza naturale; scorre lo
+            scrollCenter. Sfondo e colori invariati. ── */}
+        <div style={{ width: '100%', maxWidth: 400, display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0 }}>
 
         {/* ── Top bar ── */}
         <div style={{
@@ -424,9 +432,9 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 return (
                   <button key={f.id} onClick={() => setCategoryFilter(f.id)} style={{
                     padding: '6px 14px', borderRadius: 12, cursor: 'pointer',
-                    background: active ? `${gold}18` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${active ? gold + '40' : 'rgba(255,255,255,0.06)'}`,
-                    color: active ? gold : 'rgba(255,255,255,0.5)',
+                    background: active ? `${gold}18` : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${active ? gold + '40' : 'rgba(255,255,255,0.12)'}`,
+                    color: active ? gold : 'rgba(255,255,255,0.75)', // b.211 — contrasto: era 0.5, poco visibile
                     fontSize: 11, fontWeight: 600, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
@@ -439,9 +447,9 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                 return (
                   <button key={f.id} onClick={() => setGenderFilter(f.id)} style={{
                     padding: '6px 12px', borderRadius: 12, cursor: 'pointer',
-                    background: active ? `${purple}18` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${active ? purple + '40' : 'rgba(255,255,255,0.06)'}`,
-                    color: active ? purple : 'rgba(255,255,255,0.5)',
+                    background: active ? `${purple}18` : 'rgba(255,255,255,0.05)',
+                    border: `1px solid ${active ? purple + '40' : 'rgba(255,255,255,0.12)'}`,
+                    color: active ? purple : 'rgba(255,255,255,0.75)', // b.211 — contrasto: era 0.5
                     fontSize: 11, fontWeight: 600, fontFamily: FONT,
                     transition: 'all 0.2s ease',
                     WebkitTapHighlightColor: 'transparent',
@@ -692,6 +700,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
           </div>
         </div>
 
+        </div>{/* ── FINE b.211 — chiude il wrapper non comprimibile ── */}
       </div>
     </div>
   );
