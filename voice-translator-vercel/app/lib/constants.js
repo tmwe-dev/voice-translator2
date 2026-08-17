@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.196';
+export const APP_VERSION = 'b.197';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
