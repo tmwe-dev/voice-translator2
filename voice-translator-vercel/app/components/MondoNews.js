@@ -98,6 +98,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
       case 'fonti':     return L('newsCobraFound').replace('{x}', r.quante);
       case 'leggo':     return L('newsCobraReading').replace('{x}', r.dominio);
       case 'raggruppo': return L('newsCobraCluster');
+      case 'riordino':  return L('newsCobraRerank');
       default: return null;
     }
   }, [L]);

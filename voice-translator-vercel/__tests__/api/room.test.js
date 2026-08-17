@@ -155,9 +155,11 @@ describe('POST /api/room', () => {
 
   describe('changeMode', () => {
     it('allows host to change mode', async () => {
+      // b.195 — l'host passa col RUOLO firmato (token), non per nome: il
+      // mock torna role:'host' quando c'e un token, come in produzione.
       mockGetRoom.mockResolvedValue({ id: 'ABC', host: 'Luca', members: [{ name: 'Luca', role: 'host' }] });
       mockUpdateRoomMode.mockResolvedValue({ id: 'ABC', mode: 'freetalk' });
-      const res = await POST(makeReq({ action: 'changeMode', roomId: 'ABC', mode: 'freetalk', name: 'Luca' }));
+      const res = await POST(makeReq({ action: 'changeMode', roomId: 'ABC', mode: 'freetalk', name: 'Luca', roomSessionToken: 'valid-host-token' }));
       expect(res.status).toBe(200);
     });
 

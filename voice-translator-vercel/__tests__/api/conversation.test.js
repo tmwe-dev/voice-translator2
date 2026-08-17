@@ -73,13 +73,16 @@ describe('POST /api/conversation', () => {
       expect(data.conversation).toBeTruthy();
     });
 
-    it('ends room with name-based identity (backward compat)', async () => {
+    it('b.195 — il nome da solo NON chiude piu la stanza (niente host per nome)', async () => {
+      // In produzione resolveRoomIdentity senza token torna null (401);
+      // anche se un'identita per nome arrivasse, senza role:'host' firmato
+      // puoModerare la respinge. Il nome coincidente con l'host non basta.
       mockGetRoom.mockResolvedValue({ id: 'ABC', host: 'Luca', members: [{ name: 'Luca' }] });
       mockSaveConversation.mockResolvedValue({ id: 'conv1' });
       const res = await POST(makeReq({
         action: 'end', roomId: 'ABC', userName: 'Luca'
       }));
-      expect(res.status).toBe(200);
+      expect(res.status).toBe(403);
     });
 
     it('rejects end from non-host (verified guest token)', async () => {

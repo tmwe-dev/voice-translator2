@@ -51,8 +51,10 @@ const ACTIONS = [
   },
   {
     // b.102 — porta separata dalla videochiamata a due, che resta com'e.
+    // b.194 — non e piu una "stanza video": e una chat di gruppo che
+    // dentro puo diventare video (icona a fumetto, copy aggiornata).
     id: 'stanza-video',
-    icon: 'video',
+    icon: 'chat',
     titleKey: 'actRoomTitle',
     descKey: 'actRoomDesc',
   },

@@ -22,6 +22,7 @@ import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { cercaWikipedia } from './wikipedia.js';
 import { arricchisci } from './estrai.js';
 import { raggruppaInArgomenti } from './raggruppa.js';
+import { riordina } from './riordino.js';
 
 const TTL_CACHE = {
   notizie: 15 * 60,      // breaking: 15 minuti
@@ -134,7 +135,16 @@ export async function cercaArgomenti(query, lingua = 'en', {
     pubblicato: null,
     tipo: 'enciclopedia',
   }));
-  const argomenti = profonda ? [...cardsWiki, ...cardsNotizie] : cardsNotizie;
+  // b.194 — FASE 2 della ricerca: solo in APPROFONDITA le card passano
+  // dal riordino (corroborazione + direttorio fonti di settore +
+  // pertinenza + freschezza). La veloce resta identica, ordinata da
+  // raggruppaInArgomenti. Il riordino e puro (nessuna rete): l'istante
+  // di riferimento glielo passiamo noi.
+  let argomenti = profonda ? [...cardsWiki, ...cardsNotizie] : cardsNotizie;
+  if (profonda && argomenti.length > 1) {
+    racconta('riordino');
+    argomenti = riordina(argomenti, { query: q, nowMs: Date.now() });
+  }
   if (argomenti.length === 0) {
     return { argomenti: [], stanze, daCache: false, quando: Date.now() };
   }

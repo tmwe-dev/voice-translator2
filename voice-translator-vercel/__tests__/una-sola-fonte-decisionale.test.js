@@ -153,42 +153,43 @@ describe('3 · conservazione: il caso su cui le due copie si contraddicevano', (
 // ═══════════════════════════════════════════════════════════════
 describe('4 · chi puo moderare: cinque copie diventate una', () => {
 
-  it('il ruolo firmato dal server basta', () => {
+  it('SOLO il ruolo firmato dal server concede la moderazione', () => {
     expect(puoModerare({ identita: { name: 'Luca', role: 'host' } })).toBe(true);
     expect(puoModerare({ identita: { name: 'Luca', role: 'guest' } })).toBe(false);
   });
 
-  it('vale anche l\'host scritto sulla stanza — anche fuori dalla vetrina', () => {
-    // Era il buco di `eHost()`: senza regole di vetrina rispondeva "no"
-    // anche a chi la stanza l'aveva creata.
+  it('b.195 — il nome sulla stanza NON concede piu privilegi a un guest', () => {
+    // Era l'escalation confermata dall'audit: un estraneo che entra con
+    // lo stesso nome dell'host (gettone role:'guest', perche senza segreto
+    // host il join non firma 'host') NON deve poter moderare.
     expect(puoModerare({
       identita: { name: 'Luca', role: 'guest' },
       stanza: { host: 'Luca' },
-    })).toBe(true);
+    })).toBe(false);
   });
 
-  it('e l\'host dichiarato nelle regole della stanza', () => {
+  it('b.195 — nemmeno l\'host dichiarato nelle regole di vetrina, per nome', () => {
     expect(puoModerare({
       identita: { name: 'Luca', role: 'guest' },
       regole: { hostNome: 'luca' },
-    })).toBe(true);
+    })).toBe(false);
   });
 
-  it('i nomi si confrontano sempre normalizzati, in tutti e tre i casi', () => {
-    // roomActions confrontava alla lettera, moderazione normalizzato:
-    // "Luca " e "luca" erano due persone per uno e una per l'altro.
+  it('b.195 — l\'host vero passa per RUOLO, non per nome coincidente', () => {
+    // Chi ospita davvero porta role:'host' firmato (creazione o rientro
+    // col segreto). Il nome puo essere qualunque: conta la firma.
     expect(normalizzaNome('  Luca  ')).toBe('luca');
-    expect(puoModerare({ identita: { name: ' LUCA ' }, stanza: { host: 'luca' } })).toBe(true);
-    expect(puoModerare({ identita: { name: 'Luca' }, regole: { hostNome: ' LUCA' } })).toBe(true);
+    expect(puoModerare({ identita: { name: 'Chiunque', role: 'host' } })).toBe(true);
+    expect(puoModerare({ identita: { name: ' LUCA ', role: 'host' } })).toBe(true);
   });
 
-  it('un nome vuoto non modera mai', () => {
+  it('un nome vuoto non modera mai, nemmeno col ruolo host', () => {
     expect(puoModerare({ identita: { name: '', role: 'host' } })).toBe(false);
     expect(puoModerare({ identita: null })).toBe(false);
     expect(puoModerare({})).toBe(false);
-    // E soprattutto: un host vuoto non fa passare tutti.
-    expect(puoModerare({ identita: { name: 'Chiunque' }, regole: { hostNome: '' } })).toBe(false);
-    expect(puoModerare({ identita: { name: 'Chiunque' }, stanza: { host: '' } })).toBe(false);
+    // E il nome da solo, senza ruolo firmato, non fa passare mai nessuno.
+    expect(puoModerare({ identita: { name: 'Chiunque' }, regole: { hostNome: 'Chiunque' } })).toBe(false);
+    expect(puoModerare({ identita: { name: 'Chiunque' }, stanza: { host: 'Chiunque' } })).toBe(false);
   });
 
   it('nessuno dei cinque punti riscrive piu la regola a mano', () => {
@@ -553,14 +554,14 @@ describe('11 · chi fa parte della stanza: cinque copie della stessa riga', () =
     expect(eMembro(stanza, undefined)).toBe(false);
   });
 
-  it('il confronto e ALLA LETTERA, e non e una svista', () => {
-    // `puoModerare` normalizza perche chiede "sei la stessa PERSONA?" e
-    // deve resistere a chi cambia una maiuscola. Qui la domanda e "esiste
-    // questa VOCE nell'elenco?", e l'elenco lo scrive lo script Lua con
-    // `m.name == name`: normalizzare qui e non li vorrebbe dire essere
-    // piu permissivi del punto che crea il dato.
+  it('il confronto di appartenenza e ALLA LETTERA, e non e una svista', () => {
+    // `eMembro` chiede "esiste questa VOCE nell'elenco?", e l'elenco lo
+    // scrive lo script Lua con `m.name == name`: normalizzare qui vorrebbe
+    // dire essere piu permissivi del punto che crea il dato.
+    // (La moderazione, invece, da b.195 non guarda piu il nome affatto:
+    // solo il ruolo firmato — vedi la sezione 4.)
     expect(eMembro(stanza, 'luca')).toBe(false);
-    expect(puoModerare({ identita: { name: 'LUCA' }, stanza: { host: 'Luca' } })).toBe(true);
+    expect(puoModerare({ identita: { name: 'LUCA', role: 'guest' }, stanza: { host: 'Luca' } })).toBe(false);
     expect(JOIN_ROOM).toContain('if m.name == name then');
   });
 

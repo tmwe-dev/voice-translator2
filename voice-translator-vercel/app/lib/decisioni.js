@@ -186,34 +186,38 @@ export function normalizzaNome(nome) {
 }
 
 /**
- * ── ANCHE QUI C'ERANO DUE REGOLE ──
+ * ── b.195 · IL NOME NON CONCEDE PIU NIENTE (audit esterno, CONFERMATO) ──
  *
- *   · roomActions.js (cambio modalita, parola in classe): host se
- *     `identita.role === 'host'`, confrontando i nomi ALLA LETTERA nel
- *     ramo di riserva.
- *   · moderazione.js `eHost()`: host se il nome NORMALIZZATO combacia con
- *     `regole.hostNome` — che pero esiste solo per le stanze pubblicate
- *     in vetrina. In una stanza privata `eHost()` risponde NO anche a chi
- *     la stanza l'ha creata.
+ * Fino a b.194 questa funzione concedeva la moderazione anche solo perche
+ * il NOME del chiamante combaciava con `regole.hostNome` o `stanza.host`,
+ * pur con un gettone che portava `role:'guest'`. Era una escalation di
+ * privilegi reale e sfruttabile:
  *
- * /api/moderazione le sommava a mano (`role === 'host' || eHost(...)`) e
- * per questo il difetto non si vedeva: la somma copriva il buco di
- * ognuna delle due. Ma la somma era scritta in un punto solo, e chi
- * avesse usato `eHost()` da solo altrove avrebbe ereditato il buco.
+ *   1. l'host crea "ABC" come "Luca" → room.host = "Luca"
+ *      (e regole.hostNome = "Luca" se la stanza e pubblicata in Community);
+ *   2. un estraneo entra in "ABC" scrivendo lo stesso nome "Luca". Il join
+ *      (handleJoin, b.169) NON gli firma il ruolo host, perche non ha il
+ *      segreto host: il suo gettone porta `role:'guest'`;
+ *   3. MA `puoModerare` guardava ancora il nome (rami 2 e 3) e rispondeva
+ *      "si". L'estraneo moderava: ammetteva, rifiutava, bloccava.
  *
- * Qui la somma e la regola, e i nomi si confrontano sempre normalizzati.
+ * I due meccanismi si contraddicevano: il join si rifiuta di firmare host
+ * senza segreto, e poi qui l'host si concedeva lo stesso, per nome.
+ *
+ * La regola corretta e una sola: il PRIVILEGIO viene SOLO dal ruolo
+ * firmato nel gettone di sessione (che il server scrive all'ingresso e
+ * non e falsificabile da fuori). Il displayName non concede mai niente.
+ *
+ * Chi ospita davvero riceve `role:'host'` alla creazione (handleCreate) e
+ * lo riottiene rientrando col segreto host (handleJoin). Chi non ha il
+ * segreto non e host: e la decisione gia presa in b.169, non una novita.
+ * Quindi i rami per nome non servivano a nessun host legittimo — servivano
+ * solo all'attacco. Tolti.
  */
-export function puoModerare({ identita, stanza, regole } = {}) {
-  const nome = normalizzaNome(identita && identita.name);
-  if (!nome) return false;
-  // 1. Il ruolo nel gettone di sessione: e la prova piu forte, la firma
-  //    il server quando si entra e non si puo scrivere da fuori.
-  if (identita && identita.role === 'host') return true;
-  // 2. L'host dichiarato nelle regole della stanza (solo Community).
-  if (regole && normalizzaNome(regole.hostNome) === nome) return true;
-  // 3. L'host scritto sulla stanza stessa: vale anche fuori dalla vetrina.
-  if (stanza && normalizzaNome(stanza.host) === nome) return true;
-  return false;
+export function puoModerare({ identita } = {}) {
+  // L'unica prova che vale: il ruolo firmato dal server nel gettone di
+  // stanza. Niente confronto sul nome, in nessun ramo.
+  return !!(identita && identita.role === 'host' && normalizzaNome(identita.name));
 }
 
 // ───────────────────────────────────────────────────────────────
