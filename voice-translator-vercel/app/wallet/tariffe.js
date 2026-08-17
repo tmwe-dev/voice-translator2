@@ -70,6 +70,14 @@ export const PREZZO_VENDITA_CENT_MIN = { standard: 2.5, premium: 7.5 };
 // (€5,00), convertito nei secondi del wallet alla tariffa standard.
 export const COSTO_CLONAZIONE_SECONDI = Math.round((500 / PREZZO_VENDITA_CENT_MIN.standard) * 60);
 
+// ── Avatar generato (OpenAI gpt-image-1, una tantum per immagine) ──
+// b.221 — la generazione dell'immagine dell'avatar costa (gpt-image-1, qualità
+// 'low' ≈ 3-4 cent a immagine). La si fattura dal wallet come tutto il resto,
+// così il "numero limitato" chiesto è naturale: quando il credito finisce, 402.
+// Stessa formula della clonazione: cent → secondi alla tariffa standard.
+export const COSTO_AVATAR_CENT = 4;
+export const COSTO_AVATAR_SECONDI = Math.round((COSTO_AVATAR_CENT / PREZZO_VENDITA_CENT_MIN.standard) * 60);
+
 /** Da secondi consumati a euro (per il contatore live nelle call). */
 export function euroDaSecondi(secondi, vocePremium = false) {
   const centMin = vocePremium ? PREZZO_VENDITA_CENT_MIN.premium : PREZZO_VENDITA_CENT_MIN.standard;

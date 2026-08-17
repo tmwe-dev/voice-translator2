@@ -35,6 +35,12 @@ export async function generaAgente({ descrizione, sorpresa, lingua, userToken })
   return d.agente;
 }
 
+/** b.221 — genera l'IMMAGINE dell'avatar (gpt-image-1). Ritorna un data URL. */
+export async function generaAvatar({ nome, ruolo, genere, descrizione, riferimentoDataUrl, userToken }) {
+  const d = await postJSON('/api/compagni/avatar', { nome, ruolo, genere, descrizione, riferimentoDataUrl, userToken });
+  return d.dataUrl;
+}
+
 /** Genera l'elenco lezioni di un corso. */
 export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, userToken });

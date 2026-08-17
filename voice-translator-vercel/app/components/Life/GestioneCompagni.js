@@ -3,7 +3,7 @@ import { memo, useState, useCallback } from 'react';
 import { FONT, LANGS, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
-import { salvaMio, cancellaMio, parlaTurno, generaAgente } from '../../lib/compagni/cliente.js';
+import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
@@ -16,6 +16,9 @@ const BARRE = [
   { k: 'creativita', nome: 'Libertà creativa', a: 'Preciso', b: 'Creativo' },
 ];
 const BARRE_NEUTRE = { tono: 50, calore: 60, sintesi: 40, umorismo: 40, assertivita: 55, creativita: 50 };
+// b.221 — tetto lato client alle rigenerazioni immagine per sessione di form
+// (il tetto vero sul costo è il wallet: 402 quando il credito finisce).
+const MAX_GEN_IMG = 6;
 
 // ═══════════════════════════════════════════════════════════════
 // GestioneCompagni — la sezione dedicata per CREARE e GESTIRE i tuoi
@@ -31,6 +34,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const [barre, setBarre] = useState(BARRE_NEUTRE); // carattere a barre (aiuto di creazione)
   const [descAg, setDescAg] = useState('');         // "Crea da un personaggio"
   const [generando, setGenerando] = useState(false);
+  // b.221 — generazione immagine avatar (gpt-image-1)
+  const [genImg, setGenImg] = useState(false);
+  const [errImg, setErrImg] = useState('');
+  const [nGenImg, setNGenImg] = useState(0);
 
   // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
   // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
@@ -60,9 +67,12 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
         liberta: a.liberta || 'balanced',
         // b.217 — la voce segue il genere generato (prima restava Adam per tutti).
         voce: voceDaGenere(a.genere),
-        // b.220 — anche l'avatar segue il genere (una donna non resta un uomo).
+        // b.220 — anche l'avatar (template) segue il genere.
         avatar: avatarDaGenere(a.genere),
+        // b.221 — il genere resta sulla bozza: serve al prompt dell'immagine.
+        genere: a.genere || 'neutral',
       });
+      setErrImg(''); setNGenImg(0);
       setDescAg('');
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
@@ -107,6 +117,28 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     const campione = nome ? `${nome}.${ruolo ? ' ' + ruolo + '.' : ''}` : L('lifeVoiceSample');
     parlaTurno({ voceId, testo: campione, lingua, userToken });
   }, [bozza, lingua, userToken, L]);
+
+  // b.221 — genera l'IMMAGINE dell'avatar col personaggio (gpt-image-1).
+  // Il costo lo regge il wallet; qui un tetto morbido per sessione di form.
+  const creaAvatar = useCallback(async () => {
+    if (genImg || nGenImg >= MAX_GEN_IMG) return;
+    setGenImg(true); setErrImg('');
+    try {
+      const dataUrl = await generaAvatar({
+        nome: (bozza?.nome || '').trim(),
+        ruolo: (bozza?.ruolo || '').trim(),
+        genere: bozza?.genere || 'neutral',
+        userToken,
+      });
+      if (dataUrl) { setBozza((b) => ({ ...b, avatar: dataUrl })); setNGenImg((n) => n + 1); }
+      else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+    } catch (e) {
+      setErrImg(e.creditoEsaurito ? L('lifeNoCredit')
+        : e.status === 401 ? L('lifeLoginNeeded')
+        : e.status === 422 ? tt('lifeAvatarRifiuto', 'Il modello ha rifiutato l’immagine: prova a cambiare nome o descrizione.')
+        : tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+    } finally { setGenImg(false); }
+  }, [bozza, userToken, genImg, nGenImg, L]);
 
   const input = { width: '100%', padding: 11, borderRadius: 10, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' };
   const etich = { fontSize: 12, color: muto, margin: '10px 0 4px', display: 'block' };
@@ -155,6 +187,20 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
             </button>
           ))}
         </div>
+
+        {/* b.221 — genera l'IMMAGINE dell'avatar col personaggio (gpt-image-1).
+            L'immagine generata diventa l'avatar corrente (mostrata a sinistra);
+            resta modificabile scegliendo un template qui sopra. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+          <img src={bozza.avatar} alt="" width={48} height={48}
+            style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover', border: `2px solid ${bozza.avatar?.startsWith('data:') ? accent : bordo}` }} />
+          <button onClick={creaAvatar} disabled={genImg || nGenImg >= MAX_GEN_IMG}
+            style={{ padding: '0 14px', height: 42, borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
+            {genImg ? '…' : (bozza.avatar?.startsWith('data:') ? `↻ ${tt('lifeAvatarRegen', 'Rigenera')}` : `✨ ${tt('lifeAvatarGen', 'Genera avatar')}`)}
+          </button>
+          {nGenImg > 0 && <span style={{ fontSize: 11, color: muto }}>{nGenImg}/{MAX_GEN_IMG}</span>}
+        </div>
+        {errImg && <div style={{ color: '#f87171', fontSize: 12, marginTop: 6 }}>{errImg}</div>}
 
         <label style={etich}>{L('lifeVoice')}</label>
         <div style={{ display: 'flex', gap: 8 }}>

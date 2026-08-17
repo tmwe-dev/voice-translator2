@@ -62,6 +62,27 @@ RISPONDI SOLO con JSON valido, senza markdown, senza backtick, solo il JSON, con
   return { system, prompt: richiesta };
 }
 
+/**
+ * b.221 — Prompt per l'IMMAGINE dell'avatar (gpt-image-1). Punta a uno stile
+ * coerente coi 9 avatar esistenti (illustrazione vettoriale pulita, mezzo busto,
+ * sfondo chiaro), col genere giusto e ispirato al personaggio — ma come
+ * caricatura illustrata, NON un ritratto fotografico di una persona reale (per
+ * evitare rifiuti del modello e questioni di copyright). Lo stile è in inglese
+ * perché i modelli immagine lo seguono meglio; nome/ruolo restano come sono.
+ */
+export function promptAvatar({ nome = '', ruolo = '', genere = 'neutral', descrizione = '' } = {}) {
+  const chi = (String(descrizione || '').trim() || `${nome}${ruolo ? ', ' + ruolo : ''}`).trim();
+  const sesso = genere === 'female' ? 'female' : genere === 'male' ? 'male' : 'person';
+  return [
+    'Illustrated avatar portrait, head and shoulders, clean modern flat vector cartoon style,',
+    'soft cel shading, smooth lines, plain very light neutral background, friendly confident expression,',
+    'centered composition, matching a set of professional "companion" avatars.',
+    `Subject: a ${sesso} — ${chi}.`,
+    nome ? `Tasteful illustrated caricature inspired by ${nome} (their era, look and vibe), NOT a photograph and NOT an exact copy of a real person's face.` : '',
+    'No text, no watermark, no logo.',
+  ].filter(Boolean).join(' ');
+}
+
 // ── Estrazione tollerante del JSON dall'output del modello ──
 export function estraiAgente(testo) {
   if (!testo) return null;

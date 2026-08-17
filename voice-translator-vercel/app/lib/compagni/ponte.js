@@ -22,9 +22,11 @@
 //   NON è chiave propria dell'utente. Sull'errore, release().
 // ═══════════════════════════════════════════════════════════════
 
+import OpenAI, { toFile } from 'openai';
 import { resolveAuth } from '../apiAuth.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { preventivoTesto } from '../../wallet/addebita.js';
+import { COSTO_AVATAR_SECONDI } from '../../wallet/tariffe.js';
 import { callLLMWithFallback } from '../llmCaller.js';
 import { cercaArgomenti } from '../topics/servizio.js';
 
@@ -146,5 +148,61 @@ export async function cerca(query, { lingua = 'it', profonda = false, fonti = 6 
     return (r && r.argomenti) || [];
   } catch {
     return [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// b.221 — genera l'IMMAGINE dell'avatar (OpenAI gpt-image-1).
+//
+// Meccanica ripresa da Funnemail (edge funnemail-openai): il modello crea
+// un'immagine da un PROMPT; se si passa un RIFERIMENTO, il volto/identità
+// arriva da lì e il prompt lo riadatta (stile/scena) — "il prompt è la scena,
+// il personaggio dal riferimento". Qui la generazione vive lato server (route
+// nostra + questa cerniera), non nel client. Addebito dal wallet come il testo.
+// La chiave OpenAI passa da resolveAuth (piattaforma o chiave dell'utente).
+// ═══════════════════════════════════════════════════════════════
+export async function generaAvatar({ prompt = '', userToken = null, riferimentoDataUrl = null, dimensione = '1024x1024', qualita = 'low' } = {}) {
+  if (!prompt) return { ok: false, motivo: 'prompt-mancante' };
+
+  let auth;
+  try {
+    auth = await resolveAuth({ userToken, provider: 'openai' });
+  } catch {
+    return { ok: false, motivo: 'non-autorizzato', status: 401 };
+  }
+  const { apiKey, isOwnKey, billingEmail } = auth;
+
+  // Riserva a costo fisso (un'immagine). Solo se paga la piattaforma.
+  let riservaId = null;
+  const paga = billingEmail && !isOwnKey;
+  if (paga) {
+    const r = await riserva(billingEmail, COSTO_AVATAR_SECONDI, { tipo: 'avatar' });
+    if (!r.ok) return { ok: false, motivo: 'credito-insufficiente', status: 402 };
+    riservaId = r.riservaId;
+  }
+
+  try {
+    const openai = new OpenAI({ apiKey });
+    let resp;
+    if (riferimentoDataUrl) {
+      // Reference-based: il volto arriva dal riferimento, il prompt lo riadatta.
+      const b64 = String(riferimentoDataUrl).replace(/^data:image\/\w+;base64,/, '');
+      const file = await toFile(Buffer.from(b64, 'base64'), 'riferimento.png', { type: 'image/png' });
+      resp = await openai.images.edit({ model: 'gpt-image-1', image: file, prompt, size: dimensione, quality: qualita, n: 1 });
+    } else {
+      resp = await openai.images.generate({ model: 'gpt-image-1', prompt, size: dimensione, quality: qualita, n: 1 });
+    }
+    const out = resp?.data?.[0]?.b64_json;
+    if (!out) {
+      if (riservaId) await release(riservaId, 'nessuna-immagine').catch(() => {});
+      return { ok: false, motivo: 'nessuna-immagine' };
+    }
+    if (riservaId) await commit(riservaId, COSTO_AVATAR_SECONDI, { tipo: 'avatar' });
+    return { ok: true, dataUrl: `data:image/png;base64,${out}` };
+  } catch (e) {
+    if (riservaId) await release(riservaId, 'errore-immagine').catch(() => {});
+    // gpt-image-1 può rifiutare (es. volto di persona reale): lo diciamo pulito.
+    const rifiuto = e?.status === 400 || /safety|moderation|rejected/i.test(e?.message || '');
+    return { ok: false, motivo: rifiuto ? 'rifiutata' : 'errore-immagine: ' + (e?.message || 'ignoto'), status: e?.status };
   }
 }
