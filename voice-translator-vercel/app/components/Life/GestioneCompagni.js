@@ -41,8 +41,12 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const daBase = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c, id: '', nome: `${c.nome} (mio)`, predefinito: false }); };
 
   // ── Costruzione automatica del Compagno (stile RadioChat) ──
+  // b.215 — la GENERAZIONE non richiede account: gira sul wallet come Podcast
+  // e le altre sezioni Life (l'API /genera risponde 200 anche da ospite).
+  // Prima un `if(!userToken) return` bloccava tutto in silenzio (l'errore non
+  // era nemmeno reso nella lista): pulsante morto. Il gate resta solo sul
+  // SALVATAGGIO (/mie), che richiede l'email di sessione.
   const crea = useCallback(async (sorpresa) => {
-    if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
     setGenerando(true); setErrore('');
     try {
       const a = await generaAgente({ descrizione: descAg, sorpresa, lingua, userToken });
@@ -222,6 +226,9 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
           style={{ marginTop: 8, background: 'none', border: 'none', color: accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, padding: 4 }}>
           🎲 {tt('lifeSurprise', 'Sorprendimi')}
         </button>
+        {/* b.215 — la lista non rendeva mai `errore`: un fallimento di
+            generazione (credito, rete, 401) spariva in silenzio. Ora si vede. */}
+        {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
 
       <button onClick={() => { vibrate(8); nuovo(); }} style={{ width: '100%', padding: 13, borderRadius: 14, border: bordo, cursor: 'pointer', background: 'transparent', color: testoP, fontWeight: 700, fontSize: 14, fontFamily: FONT, marginBottom: 16 }}>
