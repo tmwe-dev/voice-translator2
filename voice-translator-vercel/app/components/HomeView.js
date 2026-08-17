@@ -163,10 +163,18 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
       <div style={{
         ...S.scrollCenter,
         display: 'flex', flexDirection: 'column',
-        minHeight: '100dvh',
+        // ── b.218 — la home non scrollava ──
+        // S.scrollCenter è già `height:100%` (del genitore fisso S.page) con
+        // overflowY:auto: il pattern che scorre. Qui sopra c'era
+        // `minHeight:100dvh`, che FORZAVA il contenitore a crescere col
+        // contenuto oltre il viewport: così overflow:auto non si attivava mai
+        // e S.page (overflow:hidden) tagliava il resto — pagina bloccata.
+        // Tolto il minHeight. E il `padding:'0 20px'` shorthand cancellava il
+        // fondo (88px per la BottomNav): ora solo left/right, il fondo resta.
+        boxSizing: 'border-box',
         paddingTop: 'max(24px, env(safe-area-inset-top))',
-        paddingBottom: 100, boxSizing: 'border-box',
-        padding: '0 20px',
+        paddingBottom: 100,
+        paddingLeft: 20, paddingRight: 20,
         /* Colonna unica allineata: su desktop niente card che dilagano */
         width: '100%', maxWidth: 680, margin: '0 auto',
       }}>
