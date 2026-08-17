@@ -322,7 +322,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         freeLimitExceeded={freeLimitExceeded} freeResetTime={freeResetTime}
         endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary}
         taxiVisible={taxiVisible} setTaxiVisible={setTaxiVisible} setTaxiData={setTaxiData}
-        myName={myName}
+        myName={myName} roomId={roomId}
       />
 
       {/* ═══ Audio unlock — compact banner (does NOT block video call) ═══ */}

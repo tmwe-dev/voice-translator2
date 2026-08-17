@@ -73,7 +73,15 @@ const TalkControls = memo(function TalkControls({
           )}
 
           {/* Il gesto principale */}
-          <button onClick={() => { vibrate(25); toggleRecording(); }}
+          {/* b.192 — il campionamento parte alla PRESSIONE, non al rilascio.
+              Prima era onClick (pointerUp): fra il tocco e l'avvio del
+              riconoscimento passava il tempo del rilascio, e la prima
+              parola si perdeva. Con onPointerDown la registrazione comincia
+              nell'istante in cui il dito tocca — preciso e immediato, come
+              promette la scritta "Tieni premuto per parlare". Il mic e gia
+              caldo (requestMicEarly all'unlock), quindi cattura subito.
+              onPointerDown e comunque un gesto valido per il browser. */}
+          <button onPointerDown={(e) => { e.preventDefault(); vibrate(25); toggleRecording(); }}
             aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
             style={{...S.talkBtn, width:64, height:64, borderRadius:32,
               display:'flex', alignItems:'center', justifyContent:'center',

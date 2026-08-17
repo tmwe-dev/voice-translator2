@@ -1,5 +1,6 @@
 'use client';
 import { glossarioPerTesto } from '../lib/glossario.js';
+import { tracciaConsumo } from '../lib/consumo.js';
 import { useRef, useCallback } from 'react';
 import { getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 // b.139 — la regola su quali strade puo prendere un messaggio era scritta a
@@ -363,7 +364,7 @@ export default function useTranslationAPI({
         });
         if (!res.ok) return { translated: text };
         const data = await res.json();
-        if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+        if (data.charsUsed > 0) { trackFreeChars(data.charsUsed); tracciaConsumo(roomId, data.charsUsed); }
         return data;
       }
 
@@ -386,7 +387,7 @@ export default function useTranslationAPI({
       });
       if (!res.ok) return { translated: text };
       const data = await res.json();
-      if (data.charsUsed > 0) trackFreeChars(data.charsUsed);
+      if (data.charsUsed > 0) { trackFreeChars(data.charsUsed); tracciaConsumo(roomId, data.charsUsed); }
       return data;
     }
 

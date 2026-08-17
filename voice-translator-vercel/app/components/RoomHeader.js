@@ -6,6 +6,7 @@ import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { BatteryPillSlot } from './BatteryPill.js';
+import ConsumoChip from './ConsumoChip.js';
 
 // ═══ INIZIO b.129 — due colori, una forma ═══
 //
@@ -63,7 +64,7 @@ const RoomHeader = memo(function RoomHeader({
   duckingLevel, setDuckingLevel,
   isTrial, freeCharsUsed, freeLimitExceeded, freeResetTime,
   endChatAndSave, leaveRoomTemporary,
-  taxiVisible, setTaxiVisible, setTaxiData, myName,
+  taxiVisible, setTaxiVisible, setTaxiData, myName, roomId,
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -135,6 +136,9 @@ const RoomHeader = memo(function RoomHeader({
             <span style={{fontSize:24, lineHeight:1, flexShrink:0}}>{otherL.flag}</span>
           )}
         </div>
+
+        {/* ── b.193 · Consumo sempre a vista (cresce dal vivo) ── */}
+        <ConsumoChip roomId={roomId} />
 
         {/* ── Destra: speaker (accesso rapido) + menu ••• ── */}
         {/* b.175 — l'icona speaker torna VISIBILE in barra: durante una
