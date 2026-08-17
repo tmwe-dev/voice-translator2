@@ -3,6 +3,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno } from '../../lib/compagni/cliente.js';
+import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Tavolo — tu + 2-4 Compagni che conversano insieme. Scrivi, e ognuno
@@ -33,7 +34,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // messaggi per il server: {ruolo, testo} (persona o nome del Compagno)
     const perServer = storia.map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken });
+      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi() });
       for (const r of (d.risposte || [])) {
         const c = perId.get(r.compagnoId) || {};
         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);

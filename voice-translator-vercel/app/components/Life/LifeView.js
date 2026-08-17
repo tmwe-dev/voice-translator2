@@ -7,6 +7,7 @@ import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
 import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
+import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
 import Dossier from './Dossier.js';
@@ -67,6 +68,7 @@ function LifeView({ onApriStanza }) {
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
           { id: 'dossier', icon: 'doc', label: L('lifeDossierTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
+          { id: 'obiettivi', icon: 'target', label: (L('lifeGoalsTab') && L('lifeGoalsTab') !== 'lifeGoalsTab') ? L('lifeGoalsTab') : 'Obiettivi' },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ].map((t) => {
           const on = scheda === t.id;
@@ -92,6 +94,7 @@ function LifeView({ onApriStanza }) {
       {scheda === 'tavolo' && <Tavolo compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
   );

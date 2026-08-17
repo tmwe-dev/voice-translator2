@@ -68,14 +68,16 @@ export function cancellaMio(id, userToken) {
   return postJSON('/api/compagni/mie', { azione: 'cancella', id, userToken });
 }
 
-/** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }. */
-export function parlaAmico({ compagnoId, messaggi, lingua, userToken }) {
-  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken });
+/** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }.
+ *  b.224 — `obiettivi` (attivi, dal dispositivo) rende il Compagno consapevole
+ *  degli obiettivi di vita della persona. */
+export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi }) {
+  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi });
 }
 
 /** Tavolo: tu + più Compagni. Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
-export function parlaTavolo({ compagni, messaggi, lingua, userToken }) {
-  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken });
+export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi });
 }
 
 // ── Dossier: argomento → articolo → (discussione) → report ──

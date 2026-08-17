@@ -4,6 +4,7 @@ import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { promptTavolo, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
+import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 
 const log = createLogger('compagni-tavolo');
@@ -25,6 +26,8 @@ async function handlePost(req) {
     const lingua = typeof body.lingua === 'string' ? body.lingua.slice(0, 8) : 'it';
     const ids = Array.isArray(body.compagni) ? body.compagni.slice(0, TAVOLO_MAX) : [];
     const messaggi = Array.isArray(body.messaggi) ? body.messaggi.slice(-20) : [];
+    // b.224 — obiettivi di vita nel prompt: anche al tavolo i Compagni li conoscono.
+    const bloccoObiettivi = formattaObiettivi(Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : []);
 
     const sessione = userToken ? await getSession(userToken) : null;
     const compagni = await risolviCompagni(ids, sessione?.email);
@@ -38,7 +41,7 @@ async function handlePost(req) {
     const altriQuestoGiro = [];
     for (const c of compagni) {
       const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, lingua });
-      const r = await generaTesto({ system, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 220 });
+      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 220 });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

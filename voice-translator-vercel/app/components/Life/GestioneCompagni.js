@@ -1,9 +1,10 @@
 'use client';
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, LANGS, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
 import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
+import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
@@ -38,6 +39,9 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const [genImg, setGenImg] = useState(false);
   const [errImg, setErrImg] = useState('');
   const [nGenImg, setNGenImg] = useState(0);
+  // b.223 — upload della propria immagine + galleria su dispositivo (IndexedDB)
+  const [galleria, setGalleria] = useState([]);
+  const fileRef = useRef(null);
 
   // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
   // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
@@ -118,27 +122,71 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     parlaTurno({ voceId, testo: campione, lingua, userToken });
   }, [bozza, lingua, userToken, L]);
 
-  // b.221 — genera l'IMMAGINE dell'avatar col personaggio (gpt-image-1).
-  // Il costo lo regge il wallet; qui un tetto morbido per sessione di form.
-  const creaAvatar = useCallback(async () => {
+  // b.223 — carica la galleria locale (IndexedDB) quando si apre un form.
+  const apertoForm = !!bozza;
+  useEffect(() => {
+    if (!apertoForm) return;
+    let vivo = true;
+    elencoImmagini(12).then((l) => { if (vivo) setGalleria(l); });
+    return () => { vivo = false; };
+  }, [apertoForm]);
+
+  // Converte un URL (template /avatars/N.png o remoto) in data URL, per usarlo
+  // come RIFERIMENTO nella rigenerazione (tap-to-restyle).
+  const urlToDataUrl = useCallback(async (url) => {
+    if (!url) return null;
+    if (url.startsWith('data:')) return url;
+    try {
+      const blob = await fetch(url).then((r) => r.blob());
+      return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
+    } catch { return null; }
+  }, []);
+
+  // b.221/b.223 — genera l'IMMAGINE dell'avatar (gpt-image-1). Se `riferimento`
+  // è un data URL, il volto arriva da lì (tap-to-restyle); altrimenti nasce dal
+  // prompt (nome/ruolo/genere). Il costo lo regge il wallet; tetto morbido per
+  // sessione. Ogni immagine riuscita finisce nella galleria SUL DISPOSITIVO.
+  const creaAvatar = useCallback(async (riferimento = null) => {
     if (genImg || nGenImg >= MAX_GEN_IMG) return;
     setGenImg(true); setErrImg('');
     try {
+      const rif = riferimento ? await urlToDataUrl(riferimento) : null;
       const dataUrl = await generaAvatar({
         nome: (bozza?.nome || '').trim(),
         ruolo: (bozza?.ruolo || '').trim(),
         genere: bozza?.genere || 'neutral',
+        riferimentoDataUrl: rif,
         userToken,
       });
-      if (dataUrl) { setBozza((b) => ({ ...b, avatar: dataUrl })); setNGenImg((n) => n + 1); }
-      else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+      if (dataUrl) {
+        setBozza((b) => ({ ...b, avatar: dataUrl }));
+        setNGenImg((n) => n + 1);
+        salvaImmagine(dataUrl, { nome: bozza?.nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
+      } else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
     } catch (e) {
       setErrImg(e.creditoEsaurito ? L('lifeNoCredit')
         : e.status === 401 ? L('lifeLoginNeeded')
         : e.status === 422 ? tt('lifeAvatarRifiuto', 'Il modello ha rifiutato l’immagine: prova a cambiare nome o descrizione.')
         : tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
     } finally { setGenImg(false); }
-  }, [bozza, userToken, genImg, nGenImg, L]);
+  }, [bozza, userToken, genImg, nGenImg, urlToDataUrl, L]);
+
+  // b.223 — carica una tua immagine come avatar (resta sul dispositivo).
+  const caricaImmagine = useCallback((e) => {
+    const file = e.target?.files?.[0];
+    if (e.target) e.target.value = '';
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { setErrImg(tt('lifeAvatarTipo', 'Serve un’immagine (PNG/JPEG).')); return; }
+    if (file.size > 6 * 1024 * 1024) { setErrImg(tt('lifeAvatarPesante', 'Immagine troppo grande (max 6MB).')); return; }
+    const fr = new FileReader();
+    fr.onload = () => {
+      const dataUrl = fr.result;
+      setBozza((b) => ({ ...b, avatar: dataUrl }));
+      setErrImg('');
+      salvaImmagine(dataUrl, { nome: bozza?.nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
+    };
+    fr.readAsDataURL(file);
+  }, [bozza, L]);
 
   const input = { width: '100%', padding: 11, borderRadius: 10, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' };
   const etich = { fontSize: 12, color: muto, margin: '10px 0 4px', display: 'block' };
@@ -188,19 +236,41 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
           ))}
         </div>
 
-        {/* b.221 — genera l'IMMAGINE dell'avatar col personaggio (gpt-image-1).
-            L'immagine generata diventa l'avatar corrente (mostrata a sinistra);
-            resta modificabile scegliendo un template qui sopra. */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10 }}>
+        {/* b.221/b.223 — immagine dell'avatar: genera dal personaggio
+            (gpt-image-1), ridisegna dallo stesso volto (tap-to-restyle),
+            oppure carica la tua. Le immagini restano sul dispositivo. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
           <img src={bozza.avatar} alt="" width={48} height={48}
             style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover', border: `2px solid ${bozza.avatar?.startsWith('data:') ? accent : bordo}` }} />
-          <button onClick={creaAvatar} disabled={genImg || nGenImg >= MAX_GEN_IMG}
+          <button onClick={() => creaAvatar(null)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
             style={{ padding: '0 14px', height: 42, borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
-            {genImg ? '…' : (bozza.avatar?.startsWith('data:') ? `↻ ${tt('lifeAvatarRegen', 'Rigenera')}` : `✨ ${tt('lifeAvatarGen', 'Genera avatar')}`)}
+            {genImg ? '…' : `✨ ${tt('lifeAvatarGen', 'Genera avatar')}`}
           </button>
+          <button onClick={() => creaAvatar(bozza.avatar)} disabled={genImg || nGenImg >= MAX_GEN_IMG}
+            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, opacity: (genImg || nGenImg >= MAX_GEN_IMG) ? 0.55 : 1 }}>
+            ↻ {tt('lifeAvatarRestyle', 'Ridisegna')}
+          </button>
+          <button onClick={() => fileRef.current?.click()} disabled={genImg}
+            style={{ padding: '0 12px', height: 42, borderRadius: 10, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+            ⤒ {tt('lifeAvatarUpload', 'Carica')}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" onChange={caricaImmagine} style={{ display: 'none' }} />
           {nGenImg > 0 && <span style={{ fontSize: 11, color: muto }}>{nGenImg}/{MAX_GEN_IMG}</span>}
         </div>
         {errImg && <div style={{ color: '#f87171', fontSize: 12, marginTop: 6 }}>{errImg}</div>}
+
+        {/* b.223 — galleria delle immagini salvate sul dispositivo: riusale senza ripagare. */}
+        {galleria.length > 0 && <>
+          <div style={{ fontSize: 11, color: muto, margin: '10px 0 4px' }}>{tt('lifeAvatarGallery', 'Le tue immagini (sul dispositivo)')}</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {galleria.map((g) => (
+              <button key={g.id} onClick={() => setBozza((b) => ({ ...b, avatar: g.dataUrl }))}
+                style={{ padding: 0, borderRadius: 10, cursor: 'pointer', border: `2px solid ${bozza.avatar === g.dataUrl ? accent : 'transparent'}`, background: 'none' }}>
+                <img src={g.dataUrl} alt="" width={44} height={44} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
+              </button>
+            ))}
+          </div>
+        </>}
 
         <label style={etich}>{L('lifeVoice')}</label>
         <div style={{ display: 'flex', gap: 8 }}>

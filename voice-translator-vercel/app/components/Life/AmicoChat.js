@@ -3,6 +3,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
+import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
 // ═══════════════════════════════════════════════════════════════
 // AmicoChat — parla con un Compagno. Se ha la memoria accesa (🧠) ti
@@ -26,7 +27,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
     const nuovi = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(nuovi); setTesto(''); setAttende(true);
     try {
-      const d = await parlaAmico({ compagnoId: scelto.id, messaggi: nuovi, lingua, userToken });
+      const d = await parlaAmico({ compagnoId: scelto.id, messaggi: nuovi, lingua, userToken, obiettivi: obiettiviAttivi() });
       setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
       if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken });
     } catch (e) {

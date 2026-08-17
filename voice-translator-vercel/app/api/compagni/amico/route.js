@@ -4,6 +4,7 @@ import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
 import { ricordiPerContesto, contestoMemoria, estraiRicordi, aggiungiRicordi } from '../../../lib/compagni/memoria.js';
+import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 
 const log = createLogger('compagni-amico');
@@ -25,6 +26,9 @@ async function handlePost(req) {
     const compagnoId = typeof body.compagnoId === 'string' ? body.compagnoId : '';
     const lingua = typeof body.lingua === 'string' ? body.lingua.slice(0, 8) : 'it';
     const messaggi = Array.isArray(body.messaggi) ? body.messaggi.slice(-20) : [];
+    // b.224 — gli obiettivi di vita arrivano dal client (vivono sul dispositivo)
+    // e finiscono nel prompt: così il Compagno LI CONOSCE e ti accompagna.
+    const obiettivi = Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : [];
 
     const sessione = userToken ? await getSession(userToken) : null;
     if (!sessione?.email) return NextResponse.json({ error: 'Accedi per parlare col tuo Compagno' }, { status: 401 });
@@ -44,7 +48,8 @@ async function handlePost(req) {
     }
 
     const storia = messaggi.slice(0, -1).map(m => `[${m.ruolo === 'compagno' ? compagno.nome : 'persona'}]: ${m.testo}`).join('\n');
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}`;
+    const bloccoObiettivi = formattaObiettivi(obiettivi);
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
     const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500 });
