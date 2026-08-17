@@ -146,6 +146,17 @@ export function voceDaGenere(genere) {
   return VOCI.Marcus;                            // Adam (maschile, default)
 }
 
+// b.220 — anche l'AVATAR seguiva il default (maschile, /avatars/9.png) per
+// tutti: una "Marilyn Monroe" restava con la faccia di un uomo. Ora la donna
+// riceve un avatar femminile. Resta modificabile: l'utente sceglie il suo.
+// Riferimento AVATAR_NAMES (constants): 2 Elena, 4 Aisha, 7 Yuki, 8 Margaret
+// sono femminili; 1 Marcus, 3 Omar, 5 Alex, 6 Thomas, 9 Leo maschili.
+export function avatarDaGenere(genere) {
+  if (genere === 'female') return '/avatars/8.png';   // Margaret (femminile)
+  if (genere === 'neutral') return '/avatars/9.png';  // default neutro
+  return '/avatars/1.png';                            // Marcus (maschile)
+}
+
 // ── Liste per il form "Crea il tuo Compagno" ──
 export const VOCI_ELENCO = Object.values(VOCI); // [{id, nome}]
 export const AVATAR_SCELTE = Array.from({ length: 9 }, (_, i) => `/avatars/${i + 1}.png`);
