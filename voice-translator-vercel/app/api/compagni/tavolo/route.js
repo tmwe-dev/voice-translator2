@@ -3,7 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
-import { promptTavolo, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
+import { promptTavolo, promptSintesi, istruzioneConvergenza, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 
@@ -26,6 +26,9 @@ async function handlePost(req) {
     const lingua = typeof body.lingua === 'string' ? body.lingua.slice(0, 8) : 'it';
     const ids = Array.isArray(body.compagni) ? body.compagni.slice(0, TAVOLO_MAX) : [];
     const messaggi = Array.isArray(body.messaggi) ? body.messaggi.slice(-20) : [];
+    // b.226 — DEBATE: obiettivo comune della tavola + azione 'sintesi'.
+    const obiettivo = typeof body.obiettivo === 'string' ? body.obiettivo.slice(0, 300).trim() : '';
+    const azione = typeof body.azione === 'string' ? body.azione : 'giro';
     // b.224 — obiettivi di vita nel prompt: anche al tavolo i Compagni li conoscono.
     const bloccoObiettivi = formattaObiettivi(Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : []);
 
@@ -33,15 +36,29 @@ async function handlePost(req) {
     const compagni = await risolviCompagni(ids, sessione?.email);
     if (compagni.length < 2) return NextResponse.json({ error: 'Scegli almeno due Compagni' }, { status: 400 });
 
+    // b.226 — SINTESI: chiude la tavola in un risultato condiviso (neutrale).
+    if (azione === 'sintesi') {
+      const { system, prompt } = promptSintesi({ obiettivo, discussione: messaggi.map(m => ({ ruolo: m.ruolo, nome: m.nome, testo: m.testo })), lingua });
+      const r = await generaTesto({ system, prompt, userToken, maxTokens: 500 });
+      if (!r.ok) {
+        if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+        return NextResponse.json({ error: 'Sintesi non riuscita' }, { status: 502 });
+      }
+      return NextResponse.json({ ok: true, sintesi: r.testo });
+    }
+
     const ultimoUmano = messaggi.length ? (messaggi[messaggi.length - 1].testo || '') : '';
     if (!ultimoUmano.trim()) return NextResponse.json({ error: 'Serve un messaggio' }, { status: 400 });
     const storia = messaggi.slice(0, -1);
+    // Convergenza in base al numero di scambi già avvenuti (anti-stagnazione).
+    const giro = messaggi.filter(m => m.ruolo === 'persona').length - 1;
+    const convergenza = istruzioneConvergenza(giro);
 
     const risposte = [];
     const altriQuestoGiro = [];
     for (const c of compagni) {
-      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, lingua });
-      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 220 });
+      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua });
+      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260 });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

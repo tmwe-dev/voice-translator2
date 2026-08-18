@@ -2,7 +2,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import { parlaTavolo, parlaTurno } from '../../lib/compagni/cliente.js';
+import { parlaTavolo, parlaTurno, sintesiTavolo } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -11,14 +11,16 @@ import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 // autonoma: NON è una stanza WebRTC. (Luca)
 // ═══════════════════════════════════════════════════════════════
 
-function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, obiettivoIniziale = '' }) {
   const [scelti, setScelti] = useState([]);
   const [avviato, setAvviato] = useState(false);
   const [messaggi, setMessaggi] = useState([]); // {ruolo:'persona'|nome, testo, emoji, colore}
   const [testo, setTesto] = useState('');
   const [attende, setAttende] = useState(false);
   const [errore, setErrore] = useState('');
+  const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
   const fondo = useRef(null);
+  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
 
   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
 
@@ -34,7 +36,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // messaggi per il server: {ruolo, testo} (persona o nome del Compagno)
     const perServer = storia.map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi() });
+      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo });
       for (const r of (d.risposte || [])) {
         const c = perId.get(r.compagnoId) || {};
         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);
@@ -46,7 +48,20 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { setAttende(false); }
-  }, [testo, attende, messaggi, scelti, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // b.226 — Debate: chiude la tavola con la SINTESI (risultato condiviso).
+  const concludi = useCallback(async () => {
+    if (attende || messaggi.length < 2) return;
+    setErrore(''); setAttende(true);
+    try {
+      const perServer = messaggi.map(m => ({ ruolo: m.ruolo, nome: m.ruolo === 'persona' ? undefined : m.ruolo, testo: m.testo }));
+      const s = await sintesiTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivo });
+      if (s) setMessaggi((m) => [...m, { ruolo: '__sintesi', testo: s }]);
+    } catch (e) {
+      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
+    } finally { setAttende(false); }
+  }, [attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Scelta dei partecipanti ──
   if (!avviato) {
@@ -65,9 +80,13 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             );
           })}
         </div>
+        {/* b.226 — Debate: l'obiettivo comune della tavola (facoltativo). */}
+        <input value={obiettivo} onChange={(e) => setObiettivo(e.target.value)}
+          placeholder={tt('lifeDebateGoalPh', 'Obiettivo del confronto (facoltativo): a cosa volete arrivare?')}
+          style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 10 }} />
         <button onClick={() => { if (scelti.length >= 2) { vibrate(8); setAvviato(true); setMessaggi([]); } else setErrore(L('lifeNeedCompanions')); }}
           style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT }}>
-          💬 {L('lifeTableStart')}
+          ⚖️ {tt('lifeDebateStart', 'Apri il Debate')}
         </button>
         {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
@@ -90,6 +109,14 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {messaggi.map((m, i) => {
+          if (m.ruolo === '__sintesi') {
+            return (
+              <div key={i} style={{ alignSelf: 'stretch', margin: '6px 0', padding: '12px 14px', borderRadius: 14, background: `${accent}18`, border: `1px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>⚖️ {tt('lifeDebateSynthesis', 'Conclusione condivisa')}</div>
+                {m.testo}
+              </div>
+            );
+          }
           const mio = m.ruolo === 'persona';
           return (
             <div key={i} style={{ alignSelf: mio ? 'flex-end' : 'flex-start', maxWidth: '84%' }}>
@@ -106,6 +133,12 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       </div>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, padding: '6px 0' }}>{errore}</div>}
+
+      {messaggi.length >= 2 && (
+        <button onClick={concludi} disabled={attende} style={{ alignSelf: 'center', margin: '6px 0', padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+          ⚖️ {tt('lifeDebateConclude', 'Concludi: conclusione condivisa')}
+        </button>
+      )}
 
       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}

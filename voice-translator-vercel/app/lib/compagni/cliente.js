@@ -75,9 +75,16 @@ export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi 
   return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi });
 }
 
-/** Tavolo: tu + più Compagni. Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
-export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi }) {
-  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi });
+/** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.
+ *  Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
+export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo });
+}
+
+/** Sintesi del Debate: la conclusione condivisa verso l'obiettivo. */
+export async function sintesiTavolo({ compagni, messaggi, lingua, userToken, obiettivo }) {
+  const d = await postJSON('/api/compagni/tavolo', { azione: 'sintesi', compagni, messaggi, lingua, userToken, obiettivo });
+  return d.sintesi;
 }
 
 // ── Dossier: argomento → articolo → (discussione) → report ──
