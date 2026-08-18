@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { costiPerFornitore, fornitoriCiechi, listinoAttuale } from '../../../wallet/costi-fornitori.js';
 import { createClient } from '@supabase/supabase-js';
 import { withApiGuard, safeCompare } from '../../../lib/apiGuard.js';
 import { getUser } from '../../../lib/users.js';
@@ -27,12 +28,19 @@ async function handleGet(req) {
   const pass = req.headers.get('x-admin-pass');
   if (!autorizzato(pass)) return NextResponse.json({ error: 'no' }, { status: 401 });
 
-  const [economia, totali, config, utenti, voucher] = await Promise.all([
+  // b.246 — CONTROLLO COSTI PER FORNITORE. Prima il pannello diceva solo
+  // "quanto abbiamo speso in tutto": se un fornitore fosse rincarato, il
+  // totale saliva e non si sapeva dove guardare. Ora si vede chi spende,
+  // con che modello, su quali coppie di lingue — e QUALI fornitori non
+  // riusciamo a leggere dall'esterno (che e' l'informazione che mancava).
+  const [economia, totali, config, utenti, voucher, costi, ciechi] = await Promise.all([
     db().from('wallet_economics').select('*').limit(31),
     db().from('wallet_totali').select('*').single(),
     db().from('ai_config').select('*').order('chiave'),
     db().from('wallet_per_utente').select('*').limit(100), // top 100 per consumo
     db().from('vouchers').select('*').order('created_at', { ascending: false }).limit(50),
+    costiPerFornitore({ giorni: 30 }).catch((e) => ({ fornitori: [], coppie: [], totaleUsd: 0, errore: e?.message })),
+    fornitoriCiechi().catch(() => []),
   ]);
 
   const t = totali.data || {};
@@ -43,6 +51,14 @@ async function handleGet(req) {
     utile_euro: (t.euro_incassati_totale || 0) - (t.euro_costi_totale || 0),
     crediti_inutilizzati_secondi: t.secondi_in_circolo || 0,   // passività
     consumato_secondi: t.secondi_consumati_totale || 0,
+    // Chi spende, quanto, e su cosa (ultimi 30 giorni, dai NOSTRI conti).
+    costi_per_fornitore: costi.fornitori || [],
+    coppie_lingua: (costi.coppie || []).slice(0, 20),
+    costo_usd_30gg: costi.totaleUsd || 0,
+    traduzioni_30gg: costi.chiamate || 0,
+    // Fornitori che non riusciamo a interrogare: NON sono "senza consumi".
+    fornitori_non_leggibili: (ciechi || []).filter((f) => !f.leggibile),
+    listino_in_uso: listinoAttuale(),
     per_giorno: economia.data || [],
     servizi: config.data || [],
     utenti: utenti.data || [],   // per-utente: saldo, consumato, speso, costi, ultima attività

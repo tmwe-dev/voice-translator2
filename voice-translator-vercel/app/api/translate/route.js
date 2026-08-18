@@ -556,7 +556,14 @@ async function handlePost(req) {
                 duration_ms: Date.now() - _t0, cost_usd: roundCost(msgCostUsd),
                 cost_eur_cents: roundEurCents(msgCostEurCents),
                 is_cached: false, context_type: domainContext || 'general',
-              }).catch(() => {});
+              }).catch((e) => {
+                // b.246 — prima era `.catch(() => {})`: la tabella
+                // `translations` NON ESISTEVA e ogni insert falliva in
+                // silenzio, da mesi. Registrare i consumi e poi buttare
+                // l'errore e' peggio che non registrarli: si crede di avere
+                // uno storico e non si ha niente.
+                log.warn('storico traduzione non salvato:', e?.message);
+              });
               trackUsage(profile.id, {
                 translations: 1, costCents: Math.round(msgCostEurCents),
                 tokens: (usage?.prompt_tokens || 0) + (usage?.completion_tokens || 0),

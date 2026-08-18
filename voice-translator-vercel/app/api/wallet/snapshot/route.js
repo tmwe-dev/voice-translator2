@@ -36,8 +36,12 @@ export async function GET(req) {
 
   const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false } });
+  // b.246 — anche i fornitori che NON si riescono a leggere vanno registrati.
+  // Prima `if (l.errore) continue` li saltava in silenzio: in provider_snapshots
+  // c'era solo ElevenLabs e sembrava che gli altri non avessero consumi, mentre
+  // semplicemente nessuno era riuscito a interrogarli. Un buco nel controllo
+  // costi che si presentava come "tutto a posto".
   for (const l of letture) {
-    if (l.errore) continue;
     await db.from('provider_snapshots').insert({ provider: l.provider, dati: l });
   }
   return NextResponse.json({ letture });
