@@ -23,6 +23,7 @@ import { costoProviderCent, CARATTERI_PER_SECONDO } from '../../wallet/provider-
 const log = createLogger('translate');
 
 async function handlePost(req) {
+  const _t0 = Date.now(); // b.235 — timer per le metriche di latenza per coppia
   // b.161-bis (punto 5) — dichiarata fuori dal try: la rete di sicurezza
   // nel catch esterno deve poterla rilasciare per QUALUNQUE errore
   // imprevisto dopo la riserva, anche uno che scoppia prima ancora di
@@ -200,43 +201,69 @@ async function handlePost(req) {
     // Ora l'autorizzazione e sopra, e il risultato di Asia non esce piu
     // dalla porta di servizio: prosegue nello stesso percorso del
     // Global, dove la contabilita gia c'e ed e sola.
-    const providerRoute = routeProvider(sourceLang, targetLang);
+    // b.235 — CONTRATTO DI TRADUZIONE UNICO. Il system prompt (glossario,
+    // dominio, contesto della conversazione, modalità) va costruito PRIMA del
+    // routing, così Asia e Global usano lo STESSO contratto pur con modelli
+    // diversi. Prima Asia girava con opts {} vuoto → niente glossario né
+    // dominio: due livelli di qualità. Il Global lo usa come prima (stesso
+    // prompt, stesso punto di chiamata: nessun cambio di comportamento).
+    let systemPrompt = buildSystemPrompt({
+      sourceLang, targetLang, sourceLangName, targetLangName,
+      roomMode, nativeLang, domainContext, description, isReview, conversationContext,
+      glossario, // b.95 — i termini dell'utente pesano sulla traduzione
+    });
+    // Glossary injection — la richiesta è partita in cima (chiestoGlossario);
+    // qui c'è già la risposta. Vale sia per Asia sia per Global.
+    let glossaryInjected = false;
+    try {
+      const glossaryCheck = await chiestoGlossario;
+      if (glossaryCheck) { systemPrompt += glossaryCheck; glossaryInjected = true; }
+    } catch { /* glossary injection is optional */ }
+
+    // b.235 — CONTESTO RICCO: se c'è anche solo un elemento fra glossario,
+    // dominio, contesto conversazione, descrizione, review o modalità aula, la
+    // traduzione NON è semplice → niente Qwen-MT secco (ignorerebbe tutto): si
+    // usa il contratto completo (Qwen LLM per Asia, oppure Global). Qwen-MT
+    // resta il fast path SOLO per il semplice (testo + coppia lingue).
+    const contestoRicco = glossaryInjected || !!domainContext || !!conversationContext
+      || !!description || !!isReview || roomMode === 'classroom';
+
+    // b.235 — P0 ECONOMIA + scelta utente: se l'utente usa la PROPRIA chiave
+    // (isOwnKey) il router NON deve andare in Asia — userebbe la chiave
+    // DashScope della PIATTAFORMA mentre il sistema crede sia la chiave utente,
+    // e BarTalk pagherebbe senza addebito al wallet. E la scelta di provider
+    // dell'utente vince. Quindi: chiave propria → Global.
+    const providerRoute = routeProvider(sourceLang, targetLang, {
+      userPreference: isOwnKey ? 'global' : undefined,
+      model: aiModel,
+    });
     let risultatoAsia = null;
+    let fallbackDaAsia = false;
 
     if (providerRoute.provider === 'asia' && providerRoute.confidence >= 0.85) {
-      // Qwen-MT per le coppie CJK: piu veloce e meno caro.
       try {
         const { translateAsia } = await import('../../lib/translateAsia.js');
-        const asiaResult = await translateAsia(text, sourceLang, targetLang, {});
+        // Ricco → contratto completo (Qwen LLM). Semplice → Qwen-MT veloce.
+        const asiaResult = await translateAsia(text, sourceLang, targetLang,
+          contestoRicco ? { systemPrompt, context: domainContext } : {});
         if (asiaResult?.translated && validateOutput(text, asiaResult.translated, targetLang).valid) {
           risultatoAsia = {
             translated: asiaResult.translated,
             provider: asiaResult.provider || 'qwen',
             cost: asiaResult.cost || 0,
           };
+        } else {
+          fallbackDaAsia = true; // Asia ha risposto ma non valido → si prova il Global
         }
       } catch (asiaErr) {
+        fallbackDaAsia = true;
         log.warn('Asia provider failed, falling back to global:', asiaErr.message);
       }
     }
 
 
-    // Build system prompt using extracted module
-    let systemPrompt = buildSystemPrompt({
-      sourceLang, targetLang, sourceLangName, targetLangName,
-      roomMode, nativeLang, domainContext, description, isReview, conversationContext,
-      glossario, // b.95 — i termini dell'utente pesano sulla traduzione
-    });
-
-    // Glossary injection — if user has active glossaries for this language pair
-    // NOTE: This is a self-referencing fetch that adds 200-500ms latency.
-    // Only do it if the user likely has glossaries (check Redis first).
-    // b.111 — la richiesta e partita in cima, insieme a quella della
-    // cache: qui c'e gia la risposta e non si aspetta piu niente.
-    try {
-      const glossaryCheck = await chiestoGlossario;
-      if (glossaryCheck) systemPrompt += glossaryCheck;
-    } catch { /* glossary injection is optional */ }
+    // b.235 — il system prompt (con glossario) è già stato costruito sopra,
+    // PRIMA del routing, così Asia e Global condividono lo stesso contratto.
 
     // Build messages array
     const messages = buildMessages(systemPrompt, text, context);
@@ -520,9 +547,13 @@ async function handlePost(req) {
                 source_lang: sourceLang, target_lang: targetLang,
                 source_text: text.substring(0, 500),
                 translated_text: (translated || '').substring(0, 500),
-                provider: modelInfo.provider, ai_model: modelInfo.actual,
+                // b.235 — provider/model REALI (motore effettivo), non il
+                // modello Global selezionato: prima una traduzione Qwen veniva
+                // registrata come openai/gpt-4o-mini, falsando le statistiche.
+                provider: motoreUsato,
+                ai_model: risultatoAsia ? (risultatoAsia.provider || 'qwen') : modelInfo.actual,
                 tokens_in: usage?.prompt_tokens || 0, tokens_out: usage?.completion_tokens || 0,
-                duration_ms: 0, cost_usd: roundCost(msgCostUsd),
+                duration_ms: Date.now() - _t0, cost_usd: roundCost(msgCostUsd),
                 cost_eur_cents: roundEurCents(msgCostEurCents),
                 is_cached: false, context_type: domainContext || 'general',
               }).catch(() => {});
@@ -536,6 +567,28 @@ async function handlePost(req) {
     } catch (e) { log.warn('Supabase tracking setup failed:', e?.message); }
     // Fire all background tasks without awaiting
     if (bgTasks.length > 0) Promise.allSettled(bgTasks).catch(() => {});
+
+    // b.235 — METRICHE PER COPPIA LINGUISTICA (audit #3): provider scelto →
+    // fallback → latenza → validation → qualità. Emesse in produzione (warn,
+    // che in prod è attivo) SOLO sugli eventi notevoli — fallback, validation
+    // fallita, latenza alta, uso di Asia/Qwen — così i log restano
+    // interrogabili (group_by per route/coppia) senza rumore a ogni frase.
+    const _lat = Date.now() - _t0;
+    const _notevole = !!wasFallback || fallbackDaAsia || validation?.valid === false || _lat > 4000
+      || String(motoreUsato).startsWith('qwen') || motoreUsato === 'asia' || motoreUsato === 'global-fallback';
+    if (_notevole) {
+      log.warn('translate_metrics', {
+        pair: `${sourceLang}>${targetLang}`,
+        route: providerRoute.provider,        // dove il router voleva mandare
+        provider: motoreUsato,                 // chi ha DAVVERO tradotto
+        fallback: !!wasFallback || fallbackDaAsia,
+        fallbackFrom: fallbackDaAsia ? 'qwen' : (wasFallback ? modelInfo.provider : null),
+        validationOk: validation?.valid !== false,
+        latencyMs: _lat,
+        confidence,
+        chars: text.length,
+      });
+    }
 
     return NextResponse.json({
       translated,

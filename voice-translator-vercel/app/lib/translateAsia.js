@@ -33,6 +33,25 @@ export async function translateAsia(text, sourceLang, targetLang, opts = {}) {
     throw new Error('Asia translation unavailable: no DashScope API key');
   }
 
+  // b.235 — CONTRATTO UNICO: se il percorso principale passa il systemPrompt
+  // completo (glossario, dominio, contesto conversazione, modalità), si usa il
+  // Qwen LLM con QUEL prompt. qwen-mt-turbo è un modello di traduzione secca:
+  // ignorerebbe glossario e contesto. Così Asia diventa semanticamente
+  // equivalente al Global, pur usando un modello diverso.
+  if (opts.systemPrompt) {
+    const r = await callQwen({
+      model: QWEN_MODELS.flash,
+      messages: [{ role: 'user', content: text }],
+      systemPrompt: opts.systemPrompt,
+      temperature: 0.2,
+      maxTokens: 1000,
+      apiKey: opts.apiKey,
+    });
+    const cost = ((r.usage.prompt_tokens * 0.30) + (r.usage.completion_tokens * 0.60)) / 1_000_000;
+    return { translated: r.translated, provider: 'qwen-llm', cost };
+  }
+
+  // Nessun contratto fornito: Qwen-MT (veloce, coppie semplici) con fallback LLM.
   // Try Qwen-MT first (cheaper, faster for supported pairs)
   try {
     const result = await translateQwenMT(text, sourceLang, targetLang, opts.apiKey);

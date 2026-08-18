@@ -122,7 +122,7 @@ describe('chi paga si decide prima di scegliere il fornitore', () => {
   it('resolveAuth viene PRIMA di routeProvider', () => {
     const s = t();
     const iAuth = s.indexOf('await resolveAuth({');
-    const iRoute = s.indexOf('routeProvider(sourceLang, targetLang)');
+    const iRoute = s.indexOf('routeProvider(sourceLang, targetLang'); // b.235 — ora accetta un 3° arg (opts)
     expect(iAuth, 'resolveAuth deve esserci').toBeGreaterThan(-1);
     expect(iRoute, 'routeProvider deve esserci').toBeGreaterThan(-1);
     expect(iAuth, 'mai il fornitore prima dell\'autorizzazione').toBeLessThan(iRoute);
