@@ -211,7 +211,16 @@ const RoomHeader = memo(function RoomHeader({
                 <button onClick={() => {
                     if (!showVideoCall) {
                       setShowVideoCall(true);
-                      if (webrtc.webrtcState === 'idle') webrtc.initiateConnection(true);
+                      // ── b.245 · il pulsante VIDEO non giudica piu lo stato ──
+                      // C'era `if (webrtcState === 'idle')`: dopo una chiamata
+                      // caduta lo stato resta 'failed', e premere Video non
+                      // faceva PIU NIENTE — sembrava che tentasse, e invece
+                      // non partiva nessuna chiamata. Il pulsante AUDIO, due
+                      // righe sopra, non ha mai avuto questa guardia: era solo
+                      // il video a restare bloccato.
+                      // Chi decide se si puo chiamare e' initiateConnection,
+                      // che gia rifiuta 'connecting' e 'connected'.
+                      webrtc.initiateConnection(true);
                     } else {
                       setShowVideoCall(false);
                     }

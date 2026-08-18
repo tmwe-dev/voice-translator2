@@ -36,6 +36,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Call type: 'voice' | 'video' | null ──
   const [callType, setCallType] = useState(null);
   const callTypeRef = useRef(null);
+  // b.245 — il tipo dell'ULTIMA chiamata, che sopravvive al cleanup: serve
+  // alla riconnessione per ricostruire un video come video.
+  const tipoChiamataPrecedenteRef = useRef(null);
 
   // ── Incoming call state ──
   const [incomingCall, setIncomingCall] = useState(null); // { from: string, withVideo: boolean } or null
@@ -123,6 +126,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setVideoEnabledState(false);
     setRemoteVideoActive(false);
     setCallType(null);
+    // b.245 — il tipo di chiamata si RICORDA prima di azzerarlo: era il
+    // difetto per cui una VIDEOchiamata caduta si riconnetteva come audio.
+    // `cleanup()` smonta la connessione (tecnica); il contesto della
+    // chiamata (logico) deve sopravvivere alla riconnessione.
+    if (callTypeRef.current) tipoChiamataPrecedenteRef.current = callTypeRef.current;
     callTypeRef.current = null;
   }, []);
 
@@ -349,7 +357,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       try {
         // Send a new call-request — partner should auto-accept since we were connected before
         pendingCallRef.current = true;
-        await sendSignal('call-request', { withVideo: callTypeRef.current === 'video', reconnect: true });
+        // b.245 — si usa il tipo RICORDATO: `callTypeRef` qui e' gia stato
+        // azzerato da cleanup(), e una videochiamata tornava audio.
+        const tipoDaRipristinare = callTypeRef.current || tipoChiamataPrecedenteRef.current;
+        callTypeRef.current = tipoDaRipristinare;
+        await sendSignal('call-request', { withVideo: tipoDaRipristinare === 'video', reconnect: true });
         timeoutRef.current = setTimeout(() => {
           if (pendingCallRef.current) {
             pendingCallRef.current = false;
@@ -485,6 +497,28 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
 
     if (type === 'call-request') {
+      // ── b.245 · una RICONNESSIONE non e' una chiamata nuova ──
+      // Chi cade manda `reconnect: true` — ma qui non veniva letto, e il
+      // caso piu probabile dopo una caduta e' proprio questo: A vede la
+      // linea giu e richiama, B si crede ancora 'connected' e risponde
+      // BUSY. La riconnessione si autosabotava, ed era il motivo per cui
+      // l'ospite non si riallacciava piu.
+      // Ora: si smonta la vecchia connessione morta e si riaccetta, senza
+      // far ricomparire il banner "chiamata in arrivo".
+      if (payload?.reconnect && (stateRef.current === 'connected' || stateRef.current === 'connecting')) {
+        dbg.debug('[WebRTC] riconnessione del partner: smonto la vecchia e riaccetto');
+        cleanup();
+        const eraVideo = !!payload.withVideo || tipoChiamataPrecedenteRef.current === 'video';
+        const tipo = eraVideo ? 'video' : 'voice';
+        chiusuraVolutaRef.current = false;
+        setCallType(tipo);
+        callTypeRef.current = tipo;
+        setWebrtcState('connecting');
+        stateRef.current = 'connecting';
+        // Si riaccetta subito: nessun banner, e' la stessa chiamata di prima.
+        sendSignal('call-accepted', {}).catch((e) => console.warn('[WebRTC] riaccetto:', e.message));
+        return;
+      }
       // Someone wants to call us — show incoming call banner
       if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
         // Already busy
@@ -682,6 +716,13 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   // ── Request call (sends call-request, waits for acceptance) ──
   const initiateConnection = useCallback(async (withVideo = false) => {
     if (stateRef.current === 'connecting' || stateRef.current === 'connected') return;
+    // b.245 — da 'failed' si riparte, ma prima si butta via cio che era
+    // rimasto in piedi della chiamata caduta: senza questo la nuova
+    // chiamata nascerebbe sopra una PeerConnection morta.
+    if (stateRef.current === 'failed') {
+      cleanup(); // annulla anche il timer di riconnessione
+      autoReconnectAttemptRef.current = 0; // e' una chiamata NUOVA: i tentativi ripartono
+    }
     // b.116 — una chiamata NUOVA e una scelta nuova: si riapre la porta
     // che CHIUDI aveva sbarrato. Senza questa riga, dopo aver chiuso una
     // volta non si potrebbe piu chiamare per il resto della sessione —
