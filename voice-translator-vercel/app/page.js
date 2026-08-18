@@ -494,7 +494,10 @@ function HomeInner() {
     return () => window.removeEventListener('online', onOnline);
   }, [roomPolling.roomId]);
 
-  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
+  // b.250 — lo scroll segue anche il messaggio IN COMPOSIZIONE (dettatura
+  // live / "sto traducendo"), non solo i messaggi arrivati: senza, il campo
+  // di scrittura copriva l'ultima bolla mentre la si stava scrivendo.
+  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages, translation.streamingMsg]);
 
   // ── Escape key: back navigation from any view ──
   useEffect(() => {

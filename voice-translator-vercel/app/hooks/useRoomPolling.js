@@ -70,6 +70,8 @@ export default function useRoomPolling({
     }
   };
   const pollErrorCountRef = useRef(0);
+  // b.250 — contatore dei 401/403 consecutivi del battito (vedi sotto).
+  const auth401CountRef = useRef(0);
   const [pollError, setPollError] = useState(false);
   const roomSessionTokenRef = useRef(null);
   const verifiedNameRef = useRef(null);
@@ -581,12 +583,49 @@ export default function useRoomPolling({
         }
 
         // Heartbeat (always needed to keep room alive and detect members)
-        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current, name: prefsRef.current.name };
+        // b.250 — lingua e avatar viaggiano col battito: servono al server
+        // SOLO per riammettere chi e stato potato mentre era vivo (schermo
+        // spento → battiti oltre i 60s). Vedi riammettiConGettone in store.js.
+        const heartbeatBody = {
+          action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current,
+          name: prefsRef.current.name, lang: prefsRef.current.lang || myLangRef?.current,
+          avatar: prefsRef.current.avatar || null,
+        };
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(heartbeatBody)
         });
+        // b.250 — il 401 non e piu muto. Prima di questa versione il
+        // telefono di Luca ha battuto per MEZZ'ORA ogni 18 secondi
+        // ricevendo 401 senza che nessuno — ne lui ne il codice — se ne
+        // accorgesse: niente messaggi, niente traduzioni, nessun avviso.
+        // Se il gettone non vale piu (scaduto, o stanza rinata), si
+        // riprova UNA volta a rientrare con nome/lingua/segreto-host; se
+        // anche il rientro fallisce si dichiara l'errore di linea.
+        if (rRes.status === 401 || rRes.status === 403) {
+          auth401CountRef.current++;
+          if (auth401CountRef.current === 2) {
+            let hostSecret = null;
+            try { hostSecret = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}')[rid] || null; } catch { /* nessun segreto: si rientra da guest */ }
+            try {
+              const ri = await fetch('/api/room', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'join', roomId: rid, name: prefsRef.current.name,
+                  lang: prefsRef.current.lang || 'en', avatar: prefsRef.current.avatar || null, hostSecret }),
+              });
+              if (ri.ok) {
+                const dati = await ri.json();
+                if (dati.roomSessionToken) roomSessionTokenRef.current = dati.roomSessionToken;
+                auth401CountRef.current = 0;
+              } else {
+                setPollError(true);
+              }
+            } catch { setPollError(true); }
+          }
+        } else if (auth401CountRef.current > 0 && rRes.ok) {
+          auth401CountRef.current = 0;
+        }
         if (rRes.ok) {
           const { room, verifiedName, isHost: hostFlag } = await rRes.json();
           if (verifiedName) verifiedNameRef.current = verifiedName;

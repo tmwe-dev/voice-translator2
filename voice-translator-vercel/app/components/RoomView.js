@@ -381,6 +381,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         totalCost={totalCost} msgCount={msgCount} modeInfo={modeInfo} roomCtx={roomCtx}
         showModeSelector={showModeSelector} setShowModeSelector={setShowModeSelector}
         changeRoomMode={changeRoomMode}
+        badge={ProviderBadge && partner
+          ? <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
+          : null}
       />
 
       {/* Animations */}
@@ -627,12 +630,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       <ContenutiChat messages={messages} S={S} L={L} onApri={setSchedaChat} />
       {/* ═══ FINE v.154 ═══ */}
 
-      {/* ═══ Provider Badge ═══ */}
-      {ProviderBadge && partner && (
-        <div style={{position:'absolute', top:50, left:8, zIndex:10}}>
-          <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
-        </div>
-      )}
+      {/* ═══ INIZIO b.250 — Provider Badge nel flusso, non piu sospeso ═══
+          COSA: via il contenitore position:absolute (top:50, left:8).
+          PERCHE: atterrava ESATTAMENTE sopra la riga "💬 Conversazione"
+          della barra modalita — i tasti in alto a sinistra sovrapposti
+          visti dal vivo sul telefono. Ora il badge viaggia dentro
+          VoiceEngineBar, nella stessa riga, come elemento di flusso. */}
+      {/* ═══ FINE b.250 ═══ */}
 
       {/* ═══ Interpreter View Overlay ═══ */}
       {interpreterActive && interpreter?.active && webrtc?.remoteStream && (

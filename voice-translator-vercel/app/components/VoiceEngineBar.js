@@ -10,7 +10,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
   elevenLabsVoices, selectedELVoice, setSelectedELVoice,
   clonedVoiceId, clonedVoiceName,
   audioEnabled, roomMode, roomInfo, isHost, myLang,
-  totalCost, msgCount, modeInfo, roomCtx,
+  totalCost, msgCount, modeInfo, roomCtx, badge,
   showModeSelector, setShowModeSelector, changeRoomMode,
 }) {
   const [showAiPicker, setShowAiPicker] = useState(false);
@@ -38,6 +38,9 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
           )}
         </button>
         <div style={{display:'flex', alignItems:'center', gap:6}}>
+          {/* b.250 — il badge del fornitore sta QUI, nella riga: prima era
+              un absolute in RoomView che copriva il selettore modalita. */}
+          {badge}
           {isHost && (
             <span style={{fontSize:9, fontWeight:700, letterSpacing:0.5, padding:'2px 8px', borderRadius:6,
               background: isTrial ? S.colors.accent4Bg : isTopPro ? `${S.colors.goldAccent}26` : S.colors.accent3Bg,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost, potaMembriAssenti } from './store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost, potaMembriAssenti, riammettiConGettone } from './store.js';
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 import { createLogger } from './logger.js';
@@ -123,8 +123,16 @@ export async function handleJoin({ roomId, name, lang, avatar, hostSecret }) {
 }
 
 // ── Action: heartbeat ──
-export async function handleHeartbeat({ roomId, identity }) {
+// b.250 — `riammissione` = { token, lang, avatar }: se l'identita manca
+// perche la potatura presenza (b.248) ha espulso un membro vivo (schermo
+// spento → battiti rallentati dal browser oltre i 60s), il gettone ancora
+// valido lo riammette qui, nell'unico punto che batte comunque ogni giro.
+// Vedi riammettiConGettone in store.js per il perche completo.
+export async function handleHeartbeat({ roomId, identity, riammissione }) {
   if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+  if (!identity && riammissione?.token) {
+    identity = await riammettiConGettone(roomId, riammissione.token, riammissione.lang, riammissione.avatar);
+  }
   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
   const room = await updateHeartbeat(roomId, identity.name);
   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });

@@ -198,7 +198,12 @@ async function handlePostRoom(req) {
         });
 
       case 'heartbeat':
-        return handleHeartbeat({ roomId, identity });
+        // b.250 — lingua e avatar servono SOLO alla riammissione del
+        // potato vivo (vedi handleHeartbeat): senza, si rientra con 'en'.
+        return handleHeartbeat({ roomId, identity, riammissione: {
+          token: roomSessionToken, lang,
+          avatar: typeof body.avatar === 'string' ? body.avatar.slice(0, 200) : null,
+        } });
 
       case 'speaking':
         return handleSpeaking({

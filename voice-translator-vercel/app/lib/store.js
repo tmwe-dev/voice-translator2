@@ -73,6 +73,38 @@ export async function resolveRoomIdentity(token, name, roomId) {
   return null;
 }
 
+// ═══ INIZIO b.250 — la riammissione del potato vivo ═══
+// TROVATO DAL COLLAUDO DAL VIVO (telefono di Luca, log Vercel): con lo
+// schermo spento il browser rallenta i timer fino a ~1 battito al minuto.
+// La potatura b.248 (60s) espelleva quindi un membro VIVO; da quel
+// momento resolveRoomIdentity rispondeva null (non e piu membro) e OGNI
+// battito e OGNI lettura messaggi era 401 — per sempre, in silenzio:
+// il telefono continuava a interrogare ogni 18s e non riceveva piu ne
+// messaggi ne traduzioni. E il "non arriva il testo tradotto" visto dal vivo.
+//
+// La cura: chi si presenta con un GETTONE ANCORA VALIDO per questa
+// stanza e NON e bloccato non e un intruso, e un potato per errore.
+// Lo si riammette con lo stesso join atomico di sempre. Un bloccato
+// resta fuori: la potatura non e un blocco, ma il blocco resta blocco.
+export async function riammettiConGettone(roomId, token, lang, avatar) {
+  if (!token || typeof token !== 'string') return null;
+  const session = await verifyRoomSession(token);
+  if (!session || session.roomId !== roomId.toUpperCase()) return null;
+  try {
+    const { eBloccato } = await import('./moderazione.js');
+    if (await eBloccato(roomId, session.name)) return null;
+  } catch (e) {
+    // fallimento del controllo blocchi: si nega la riammissione (chiusa),
+    // il giro dopo si riprova. Meglio un battito perso che un bloccato dentro.
+    log.warn('controllo blocco non riuscito in riammissione:', e.message);
+    return null;
+  }
+  const esito = await joinRoom(roomId, session.name, lang || 'en', avatar || null);
+  if (!esito || esito.piena) return null;
+  return { name: session.name, role: session.role, verified: true, riammesso: true };
+}
+// ═══ FINE b.250 ═══
+
 // b.170 — "e' ancora dentro questa stanza?" — la domanda che separa
 // avere un gettone valido dall'essere ancora un membro. Import dinamico
 // di moderazione.js (eBloccato) per lo stesso motivo documentato in
