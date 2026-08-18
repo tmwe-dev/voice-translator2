@@ -98,7 +98,10 @@ export default function Home() {
       {/* Skip-to-content link lives in layout.js (<SkipToContent />) — do not duplicate here */}
       <NetworkStatus />
       <ToastContainer />
-      <div id="main-content" role="main">
+      {/* b.233 — niente più `id="main-content" role="main"` qui: era DUPLICATO
+          del <main id="main-content"> del layout (id ripetuto + due landmark
+          main annidati). Il salta-al-contenuto punta a quello del layout. */}
+      <div>
         <HomeInner />
       </div>
     </ErrorBoundary>

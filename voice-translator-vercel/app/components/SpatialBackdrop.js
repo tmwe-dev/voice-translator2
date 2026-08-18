@@ -64,8 +64,13 @@ const SpatialBackdrop = memo(function SpatialBackdrop() {
     }}>
       {/* Keyframes globali (vtWave, vtSlideUp, ecc.) — iniettate UNA volta qui,
           il backdrop è montato in tutte le view. Bug pre-esistente: erano
-          iniettate solo nel TutorialOverlay. */}
-      <style>{keyframes}{`
+          iniettate solo nel TutorialOverlay.
+          b.233 — `href`+`precedence`: React 19 sposta i <style> nell'<head> e
+          li DEDUPLICA per href, rendendoli identici fra server e client. Senza,
+          server e client divergevano e partiva l'errore di idratazione #418 a
+          OGNI caricamento (che costringeva React a rigenerare l'albero, con la
+          prima interazione persa). */}
+      <style href="vt-keyframes-globali" precedence="default">{keyframes}{`
         @keyframes sbDrift { to { transform: translate(-3%, 2.5%) scale(1.06) rotate(2deg); } }
         @keyframes sbTwinkle { to { opacity: 0.4; } }
       `}</style>
