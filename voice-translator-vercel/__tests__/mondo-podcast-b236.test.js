@@ -23,18 +23,28 @@ const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
 const senzaCommenti = (s) =>
   s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-describe('podcast — il tetto dei turni regge dentro i 60 secondi', () => {
-  it('MAX_ROUND non supera 4 finché la rotta è sincrona', () => {
-    expect(PODCAST_LIMITI.MAX_ROUND).toBeLessThanOrEqual(4);
+describe('podcast — nessun turno puo scadere', () => {
+  // b.244 — il tetto di 4 round era una TOPPA contro il timeout: tutti i
+  // turni si generavano in una richiesta sola. Ora se ne genera uno per
+  // volta, il timeout non esiste piu e il tetto e tornato a 10. Cio che
+  // deve restare vero non e piu "quanti round", ma che la rotta offra il
+  // percorso a turni — altrimenti il difetto rientra dalla finestra.
+  it('la rotta genera UN turno per volta', () => {
+    const s = senzaCommenti(leggi('app/api/compagni/podcast/route.js'));
+    expect(s).toMatch(/body\.azione === 'turno'/);
+    expect(s).toMatch(/indice/);
   });
 
-  it('nel caso peggiore i turni totali restano ≤ 16', () => {
+  it('e il client li incatena, ascoltando mentre genera', () => {
+    const s = senzaCommenti(leggi('app/components/Life/LifeView.js'));
+    expect(s).toMatch(/generaTurnoPodcast\(/);
+    expect(s).not.toMatch(/const d = await generaPodcast\(/);
+  });
+
+  it('i turni restano comunque limitati: MAX_COMPAGNI x MAX_ROUND', () => {
     const compagni = ['a', 'b', 'c', 'd'].map(id => ({ id }));
     const turni = ordineTurni(compagni, 999); // chiede 999 round: viene stretto
-    expect(turni.length).toBeLessThanOrEqual(
-      PODCAST_LIMITI.MAX_COMPAGNI * PODCAST_LIMITI.MAX_ROUND
-    );
-    expect(turni.length).toBeLessThanOrEqual(16);
+    expect(turni.length).toBe(PODCAST_LIMITI.MAX_COMPAGNI * PODCAST_LIMITI.MAX_ROUND);
   });
 });
 

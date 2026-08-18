@@ -31,6 +31,15 @@ export function generaPodcast({ argomento, compagni, round, lingua, userToken })
   return postJSON('/api/compagni/podcast', { argomento, compagni, round, lingua, userToken });
 }
 
+/**
+ * b.244 — UN TURNO del podcast. Il client li incatena: cosi nessuna richiesta
+ * puo scadere, e il numero di round non e piu limitato dal timeout.
+ * Ritorna { turno } oppure { fine:true } quando il podcast e finito.
+ */
+export function generaTurnoPodcast({ argomento, compagni, round, lingua, userToken, indice, precedenti }) {
+  return postJSON('/api/compagni/podcast', { azione: 'turno', argomento, compagni, round, lingua, userToken, indice, precedenti });
+}
+
 /** Costruisce un Compagno completo da una descrizione/nome (o a sorpresa). */
 export async function generaAgente({ descrizione, sorpresa, lingua, userToken }) {
   const d = await postJSON('/api/compagni/genera', { descrizione, sorpresa: !!sorpresa, lingua, userToken });
@@ -76,6 +85,20 @@ export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere,
   });
 }
 
+/**
+ * b.244 — SEGNALA un contenuto della piazza o della libreria. Chiunque abbia
+ * un account, una volta sola: a 3 segnalazioni sparisce da solo.
+ * `tipo`: 'discussione' | 'commento' | 'corso'.
+ */
+export function segnalaContenuto({ tipo, contenuto, motivo, userToken }) {
+  return postJSON('/api/mondo/discussioni', { azione: 'segnala', tipo, contenuto, motivo, userToken });
+}
+
+/** b.244 — nascondi/riapri a mano: solo admin o chi ha aperto la discussione. */
+export function moderaContenuto({ tipo, contenuto, nascondi = true, userToken }) {
+  return postJSON('/api/mondo/discussioni', { azione: 'modera', tipo, contenuto, nascondi, userToken });
+}
+
 /** b.228 — libreria condivisa: elenco corsi disponibili (sfoglia). */
 export async function corsiDisponibili({ soloBambini, linguaFiltro, categoriaFiltro } = {}) {
   const d = await postJSON('/api/compagni/corso', { azione: 'disponibili', soloBambini, linguaFiltro, categoriaFiltro });
@@ -104,7 +127,10 @@ export function cancellaMio(id, userToken) {
  *  b.224 — `obiettivi` (attivi, dal dispositivo) rende il Compagno consapevole
  *  degli obiettivi di vita della persona. */
 export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi }) {
-  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi });
+  // b.244-bis — `totale` e la lunghezza VERA della conversazione: la rotta
+  // taglia i messaggi a 20 e senza questo il throttle della memoria si
+  // rompeva dopo il ventesimo scambio (estraeva a ogni turno).
+  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi, totale: Array.isArray(messaggi) ? messaggi.length : 0 });
 }
 
 /** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.

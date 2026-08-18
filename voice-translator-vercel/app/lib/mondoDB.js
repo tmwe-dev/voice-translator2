@@ -33,8 +33,20 @@ function db() {
 }
 
 // id pubblico opaco: stabile per email, non reversibile, senza email.
+// b.244 — HMAC al posto di sha256 nudo. L'impronta era il digest di un dato
+// INDOVINABILE (l'email): chiunque poteva verificare "questo id e di Luca?"
+// provando le email, o costruirsi una tabella per enumerare le persone della
+// piazza. Con l'HMAC serve anche il segreto, che sta solo sul server.
+// Le tabelle Mondo erano a ZERO righe: la migrazione non e costata nulla.
+// Senza MONDO_ID_SECRET si ricade sul vecchio schema (dichiarato) per non
+// spegnere la piazza: va impostato in produzione.
 export function idPubblico(email) {
   if (!email) return null;
+  const segreto = process.env.MONDO_ID_SECRET;
+  if (segreto) {
+    return 'u_' + crypto.createHmac('sha256', segreto)
+      .update(String(email).trim().toLowerCase()).digest('hex').slice(0, 24);
+  }
   return 'u_' + crypto.createHash('sha256')
     .update(String(email).trim().toLowerCase())
     .digest('hex').slice(0, 24);
@@ -63,6 +75,9 @@ export async function elencoDiscussioni({ topic = null, country = null, lang = n
   let q = db().from('mondo_discussions')
     .select('id, author_user_id, author_name, title, title_lang, topic, country, lang, media, comment_count, view_count, created_at, last_activity_at')
     .eq('archived', false)
+    // b.244 — cio che e stato nascosto (3 segnalazioni o un moderatore) esce
+    // dal feed: prima il campo non esisteva nemmeno sulle discussioni.
+    .eq('hidden', false)
     .order('last_activity_at', { ascending: false })
     .limit(Math.min(limit, 60));
   if (topic) q = q.eq('topic', topic);

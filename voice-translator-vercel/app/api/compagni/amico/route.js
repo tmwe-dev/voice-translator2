@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { dopo } from '../../../lib/dopo.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
@@ -94,13 +95,27 @@ async function handlePost(req) {
 
     // Dopo la risposta: estrae e salva i ricordi nuovi (throttle leggero
     // per non estrarre a ogni singola battuta e non gonfiare i costi).
+    //
+    // b.244 — ora DOPO DAVVERO: l'estrazione e una seconda chiamata al
+    // modello, e stava DENTRO il turno — chi parlava aspettava in silenzio
+    // che il Compagno finisse di prendere appunti. Con `after()` la risposta
+    // parte subito e gli appunti si scrivono a sipario chiuso.
+    // b.244-bis — CONFERMATO da un audit esterno, ed era un difetto vero: il
+    // conteggio si faceva su `messaggi`, che la rotta taglia a 20. Superati i
+    // venti scambi la lunghezza restava SEMPRE 20 (+1 con la risposta = 21) e
+    // 21 % 3 === 0: da quel momento la memoria si estraeva a OGNI turno —
+    // l'esatto contrario del "throttle leggero" che il commento prometteva.
+    // Ora si conta sul totale vero, che il client conosce e dichiara.
     if (compagno.memoria) {
       const conRisposta = [...messaggi, { ruolo: 'compagno', testo: rispostaPulita }];
-      if (conRisposta.length >= 4 && conRisposta.length % 3 === 0) {
-        try {
-          const ricordi = await estraiRicordi(conRisposta, { userToken });
-          if (ricordi.length) await aggiungiRicordi(email, compagno.id, ricordi);
-        } catch { /* la memoria è un di più: se l'estrazione fallisce, la chat resta valida */ }
+      const totaleTurni = (Number(body.totale) > 0 ? Number(body.totale) : messaggi.length) + 1;
+      if (totaleTurni >= 4 && totaleTurni % 3 === 0) {
+        dopo(async () => {
+          try {
+            const ricordi = await estraiRicordi(conRisposta, { userToken });
+            if (ricordi.length) await aggiungiRicordi(email, compagno.id, ricordi);
+          } catch { /* la memoria è un di più: se l'estrazione fallisce, la chat resta valida */ }
+        });
       }
     }
 

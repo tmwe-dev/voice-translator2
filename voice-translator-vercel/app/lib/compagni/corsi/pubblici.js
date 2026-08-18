@@ -58,7 +58,10 @@ export async function pubblicaCorso(email, corso = {}) {
 export async function elencaCorsiPubblici({ soloBambini = false, lingua = null, categoria = null, limite = 40 } = {}) {
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  let q = sb.from('corsi_pubblici').select('*').order('created_at', { ascending: false }).limit(Math.min(80, limite));
+  // b.244 — un corso nascosto (3 segnalazioni o un moderatore) esce dallo
+  // scaffale. Conta doppio qui: la libreria e aperta anche ai bambini.
+  let q = sb.from('corsi_pubblici').select('*').eq('hidden', false)
+    .order('created_at', { ascending: false }).limit(Math.min(80, limite));
   if (soloBambini) q = q.eq('per_bambini', true);
   if (lingua) q = q.eq('lingua', lingua);
   if (categoria && categoria !== 'altro') q = q.eq('categoria', categoria);
@@ -72,7 +75,7 @@ export async function getCorsoPubblico(id) {
   if (!id) return null;
   const sb = getSupabaseAdmin();
   if (!sb) return null;
-  const { data, error } = await sb.from('corsi_pubblici').select('*').eq('id', id).single();
+  const { data, error } = await sb.from('corsi_pubblici').select('*').eq('id', id).eq('hidden', false).single();
   if (error || !data) return null;
   return daRiga(data);
 }

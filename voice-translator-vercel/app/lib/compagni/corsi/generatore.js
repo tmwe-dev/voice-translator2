@@ -13,7 +13,7 @@
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
-import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contestoStudente, riassuntoProgresso } from './imparare.js';
+import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 
 import { getLang } from '../../constants.js';
@@ -100,7 +100,9 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
 `Corso: "${argomento}" (livello ${livello}). Scrivi la lezione: "${lezione?.titolo || ''}".
 Obiettivi: ${obiettivi}.
 ${RITMO_LEZIONE}
-Tono adatto al livello.${bloccoFonti}`;
+Tono adatto al livello.${bloccoFonti}
+
+${ISTRUZIONE_APPUNTO}`;
   return { system, prompt };
 }
 
@@ -156,7 +158,11 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
   const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 900 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
-  return { ok: true, contenuto: r.testo, fonti };
+  // b.244 — l'appunto del Maestro si stacca qui: non deve MAI comparire nella
+  // lezione. Le osservazioni NUOVE tornano al chiamante, che le salva (il
+  // nome è diverso da `osservazioni` in ingresso, che sono quelle già note).
+  const { testo, osservazioni: appunto } = staccaAppunto(r.testo);
+  return { ok: true, contenuto: testo, fonti, osservazioni: appunto };
 }
 
 /** Genera il quiz di una lezione. */

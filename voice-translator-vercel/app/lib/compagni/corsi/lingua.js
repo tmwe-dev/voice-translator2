@@ -26,6 +26,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { LANGS, getLang } from '../../constants.js';
+import { ISTRUZIONE_PRONUNCIA } from './pronuncia.js';
 
 // Nomi con cui una lingua viene chiamata nelle lingue che contano per noi.
 // Serve solo dove il nome non si deduce da LANGS (che è già in lingua madre).
@@ -118,6 +119,8 @@ Esempi: «La parola [L2: beautiful] significa bello.» · «Prova a dire [L2: Ho
 Marca SOLO la parte in ${studiata}, anche quando è una parola sola dentro una frase in ${parlata}. Senza tag, quella parola verrebbe letta con l'accento sbagliato — cioè insegneresti una pronuncia scorretta.
 
 FALLA PARLARE: non limitarti a spiegare. Metti la persona in una situazione vera (ordinare al ristorante, chiedere indicazioni, un colloquio) e recita tu l'altra parte, in ${studiata}. Chiedile di rispondere. Alza la difficoltà quando regge — anche con un imprevisto — e abbassala quando fatica.
+
+${ISTRUZIONE_PRONUNCIA}
 
 QUANDO SBAGLIA, non fermare la conversazione per una lezione di grammatica. Scegli: se l'errore non impedisce di capirsi, lascialo correre per ora; se conta, correggilo NEL FLUSSO ripetendo bene la frase ("Ah, [L2: you went yesterday]! E poi?"); e tieni da parte le due o tre cose importanti per dirle alla fine, insieme.`;
 }

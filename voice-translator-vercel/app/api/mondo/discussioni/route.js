@@ -19,10 +19,11 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { getSession } from '../../../lib/users.js';
 import { createLogger } from '../../../lib/logger.js';
 import { redis } from '../../../lib/redis.js';
+import { segnala, impostaVisibilita, autoreDi, puoModerareContenuto, tipoValido, SOGLIA_NASCONDI } from '../../../lib/moderazioneMondo.js';
 import {
   elencoDiscussioni, getDiscussione, contaVista, commenti,
   creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire, archiviaInattive,
-  profiloPersona,
+  profiloPersona, idPubblico,
 } from '../../../lib/mondoDB.js';
 
 const log = createLogger('mondo-disc');
@@ -122,6 +123,33 @@ async function handlePost(req) {
         await mettiMiPiace({ commentId: body.commentId, email: authorEmail });
         return NextResponse.json({ ok: true });
       }
+      // b.244 — SEGNALA: chiunque abbia un account, una volta sola per
+      // contenuto. A SOGLIA_NASCONDI segnalazioni sparisce da solo.
+      case 'segnala': {
+        const tipo = body.tipo;
+        if (!tipoValido(tipo) || !body.contenuto) return NextResponse.json({ error: 'segnalazione non valida' }, { status: 400 });
+        const r = await segnala({ tipo, contenuto: body.contenuto, segnalante: idPubblico(authorEmail), motivo: body.motivo || '' });
+        if (!r.ok) return NextResponse.json({ error: 'segnalazione non riuscita' }, { status: 500 });
+        return NextResponse.json({ ok: true, segnalazioni: r.segnalazioni, nascosto: r.nascosto, soglia: SOGLIA_NASCONDI });
+      }
+
+      // b.244 — MODERA a mano: solo l'amministratore o chi ha aperto la
+      // discussione. Nascondere non cancella: si puo sempre riaprire.
+      case 'modera': {
+        const tipo = body.tipo;
+        if (!tipoValido(tipo) || !body.contenuto) return NextResponse.json({ error: 'richiesta non valida' }, { status: 400 });
+        const idAutore = await autoreDi({ tipo, contenuto: body.contenuto });
+        const permesso = puoModerareContenuto({
+          idUtente: idPubblico(authorEmail),
+          idAutore,
+          emailUtente: authorEmail,
+          emailAdmin: process.env.ADMIN_EMAIL,
+        });
+        if (!permesso) return NextResponse.json({ error: 'Solo chi ha aperto la discussione, o l\'amministratore' }, { status: 403 });
+        const fatto = await impostaVisibilita({ tipo, contenuto: body.contenuto, nascondi: body.nascondi !== false });
+        return NextResponse.json({ ok: fatto, nascosto: body.nascondi !== false });
+      }
+
       case 'segui':
         await segui(authorEmail, body.followedPublicId);
         return NextResponse.json({ ok: true });

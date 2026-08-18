@@ -41,6 +41,42 @@ async function handlePost(req) {
     }
 
     const perId = new Map(compagni.map(c => [c.id, c]));
+
+    // ── b.244 · UN TURNO PER VOLTA ──
+    // Prima questa rotta generava TUTTI i turni in una sola richiesta: con 4
+    // Compagni erano 16 chiamate al modello in fila dentro un limite di 60
+    // secondi. O andava in timeout a meta (avendo gia addebitato i turni
+    // fatti), oppure obbligava a tenere basso il numero di round.
+    // Ora il client chiede un turno alla volta e li incatena da se: nessun
+    // turno puo scadere, e il tetto dei round non e piu legato al timeout.
+    if (body.azione === 'turno') {
+      const totRound = Math.max(PODCAST_LIMITI.MIN_ROUND, Math.min(Number(round) || PODCAST_LIMITI.ROUND_PREDEFINITI, PODCAST_LIMITI.MAX_ROUND));
+      const tutti = ordineTurni(compagni, totRound);
+      const i = Math.max(0, Number(body.indice) || 0);
+      if (i >= tutti.length) return NextResponse.json({ ok: true, fine: true, totale: tutti.length });
+      const t = tutti[i];
+      const c = perId.get(t.compagnoId);
+      if (!c) return NextResponse.json({ ok: true, saltato: true, indice: i, totale: tutti.length });
+      const precedentiClient = Array.isArray(body.precedenti) ? body.precedenti.slice(-6) : [];
+      const { system, user } = promptTurno({
+        compagno: c, argomento, round: t.round, totaleRound: totRound,
+        precedenti: precedentiClient, lingua,
+      });
+      const esito = await generaTesto({
+        system, prompt: user, provider: c.provider, modello: c.modello,
+        userToken, maxTokens: t.round === 1 ? 420 : 320,
+        temperature: temperaturaLiberta(c.liberta),
+      });
+      if (!esito.ok) {
+        if (esito.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
+        if (esito.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+        return NextResponse.json({ ok: true, saltato: true, indice: i, totale: tutti.length });
+      }
+      return NextResponse.json({
+        ok: true, indice: i, totale: tutti.length,
+        turno: { ordine: t.ordine, round: t.round, compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo: esito.testo },
+      });
+    }
     const totaleRound = Math.max(PODCAST_LIMITI.MIN_ROUND, Math.min(Number(round) || PODCAST_LIMITI.ROUND_PREDEFINITI, PODCAST_LIMITI.MAX_ROUND));
     const turni = ordineTurni(compagni, totaleRound);
 

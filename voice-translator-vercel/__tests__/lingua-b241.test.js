@@ -153,7 +153,9 @@ describe('il tag L2 arriva alla voce, e non arriva mai agli occhi', () => {
   const ui = () => leggi('app/components/Life/LifeView.js');
 
   it('a schermo la lezione passa da testoVisibile: niente "[L2:" scritto', () => {
-    expect(ui()).toMatch(/TestoRicco testo=\{testoVisibile\(aperta\.contenuto\)\}/);
+    // b.244 — al testo visibile si toglie anche l'esercizio di pronuncia, che
+    // apre un pannello a parte: entrambi i tag restano fuori dagli occhi.
+    expect(ui()).toMatch(/TestoRicco testo=\{staccaEsercizio\(testoVisibile\(aperta\.contenuto\)\)\.testo\}/);
   });
 
   it('e la lezione si puo ASCOLTARE con la voce doppia', () => {

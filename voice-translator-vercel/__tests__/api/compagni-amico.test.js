@@ -71,6 +71,9 @@ describe('POST /api/compagni/amico', () => {
     // 5 messaggi in ingresso → con la risposta diventano 6 → 6 % 3 === 0 → estrae
     const messaggi = [1, 2, 3, 4, 5].map((n) => ({ ruolo: n % 2 ? 'persona' : 'compagno', testo: 't' + n }));
     await POST(makeReq({ compagnoId: 'c1', messaggi, userToken: 't' }));
+    // b.244 — l'estrazione ora e rimandata a dopo la risposta (`dopo()`):
+    // fuori da una richiesta parte subito, ma va lasciata finire.
+    await new Promise((r) => setTimeout(r, 0));
     expect(mockEstrai).toHaveBeenCalled();
     expect(mockAggiungi).toHaveBeenCalled();
   });

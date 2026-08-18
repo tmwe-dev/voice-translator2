@@ -5,8 +5,10 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
+import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
+import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
@@ -159,14 +161,25 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
     if (scelti.length < 2) { setErrore(L('lifeNeedCompanions')); return; }
     setStato('genero'); setCopioni([]); setAttuale(-1); fermatoRef.current = false;
     try {
-      const d = await generaPodcast({ argomento: argomento.trim(), compagni: scelti, round, lingua, userToken });
-      const lista = d.copioni || [];
-      setCopioni(lista);
+      // ── b.244 · un turno per volta, e si ascolta mentre si genera ──
+      // Prima si aspettava che TUTTI i turni fossero pronti (fino a 16
+      // chiamate in fila, col rischio di timeout) e solo dopo partiva la
+      // voce. Ora il primo turno si sente quasi subito, e mentre parla si
+      // prepara il successivo: nessuna richiesta puo scadere.
+      const lista = [];
       setStato('ascolto');
-      for (let i = 0; i < lista.length; i++) {
+      for (let i = 0; ; i++) {
         if (fermatoRef.current) break;
-        setAttuale(i);
-        await parlaTurno({ voceId: lista[i].voceId, testo: lista[i].testo, lingua, userToken }, (a) => { audioRef.current = a; });
+        const d = await generaTurnoPodcast({
+          argomento: argomento.trim(), compagni: scelti, round, lingua, userToken,
+          indice: i, precedenti: lista.slice(-6).map((t) => ({ nome: t.nome, testo: t.testo })),
+        });
+        if (d.fine) break;
+        if (d.saltato || !d.turno) { if (i >= (d.totale || 0) - 1) break; continue; }
+        lista.push(d.turno);
+        setCopioni([...lista]);
+        setAttuale(lista.length - 1);
+        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken }, (a) => { audioRef.current = a; });
       }
       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
     } catch (e) {
@@ -412,7 +425,24 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* b.242-bis — il tag [L2:...] non si mostra MAI: e un'istruzione per
             la voce, non testo da leggere. Senza questo, in un corso di lingua
             si vedeva "[L2: beautiful]" scritto nella lezione. */}
-        <TestoRicco testo={testoVisibile(aperta.contenuto)} testoP={testoP} muto={muto} />
+        <TestoRicco testo={staccaEsercizio(testoVisibile(aperta.contenuto)).testo} testoP={testoP} muto={muto} />
+        {/* b.244 — se il Maestro ha proposto [PRONUNCIA: ...], qui si dice ad
+            alta voce e si scopre subito com'e andata. L'esito torna a lui:
+            le parole sbagliate ricompaiono piu avanti, dentro altre frasi. */}
+        {(() => {
+          const es = staccaEsercizio(testoVisibile(aperta.contenuto)).esercizio;
+          if (!es) return null;
+          const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          return <PannelloPronuncia frase={es} lingua={l2 || linguaCorso} userToken={userToken}
+            onEsito={({ punteggio, daRivedere }) => {
+              registraEsito({
+                argomento: argomento.trim(),
+                lezioneIndice: Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo)),
+                punteggio, daRivedere, userToken,
+              }).catch(() => { /* il ricordo e un di piu */ });
+            }}
+            {...{ testoP, muto, accent, card, bordo }} />;
+        })()}
         {/* La lezione si ASCOLTA: nei corsi di lingua le parti in lingua
             straniera le dice una voce madrelingua (voce doppia, b.241) —
             e' tutto il senso del tag L2. */}

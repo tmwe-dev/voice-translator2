@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
@@ -61,6 +61,11 @@ async function handlePost(req) {
         : [[], []];
       const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso }, { userToken });
       if (!r.ok) return rispostaEsito(r);
+      // b.244 — quello che il Maestro ha notato di questa persona si salva
+      // DOPO aver risposto: la lezione non deve aspettare.
+      if (sessione?.email && r.osservazioni?.length) {
+        after(() => aggiungiOsservazioni(sessione.email, r.osservazioni).catch(() => {}));
+      }
       return NextResponse.json({ ok: true, contenuto: r.contenuto, fonti: r.fonti });
     }
 
@@ -77,6 +82,13 @@ async function handlePost(req) {
       const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento, docente, osservazioni: oss, progresso: prog });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
+    }
+
+    // b.244 — il CAMMINO fatto: serve alla vista del progresso e a sapere
+    // quali lezioni sono aperte.
+    if (azione === 'progresso') {
+      if (!sessione?.email) return NextResponse.json({ ok: true, progresso: [] });
+      return NextResponse.json({ ok: true, progresso: await leggiProgresso(sessione.email, argomento) });
     }
 
     // b.242 — REGISTRA com'e andata: e cio che rende possibili la
