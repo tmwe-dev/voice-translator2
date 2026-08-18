@@ -231,7 +231,13 @@ export default function useTTSEngine({
 
   async function fetchEdgeTTSBlob(text, langCode, gender) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    // b.251 — 5s erano troppo pochi: la rotta importa edge-tts a runtime e
+    // parla con Microsoft; su rete mobile, o alla prima voce dopo un cold
+    // start, si superano regolarmente. Ogni sforamento diventava la voce
+    // ROBOTICA del browser (il ripiego) al posto della voce neurale.
+    // Otto secondi restano sotto la soglia di attesa percepita e coprono
+    // il caso normale; oltre, il ripiego resta giusto.
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
     try {
       try {
         const res = await fetch('/api/tts-edge', {
