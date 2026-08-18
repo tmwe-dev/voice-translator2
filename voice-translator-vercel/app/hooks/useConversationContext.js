@@ -164,7 +164,23 @@ export default function useConversationContext() {
 
     // Cap allMessages to prevent unbounded growth — keep only last 500
     if (allMessagesRef.current.length > 500) {
+      // b.247 — era uno slice(-500) secco: il buffer perdeva i messaggi più
+      // vecchi ma summarizedUpToRef restava un indice riferito all'array
+      // VECCHIO. Dopo il taglio, middleEnd resta inchiodato a 490 mentre
+      // l'indice non scende mai: "unsummarized" non tornava più ≥ 5 e il
+      // riassunto smetteva di avanzare per sempre (o, prima di fermarsi,
+      // prendeva lotti a offset slittati, cioè i messaggi sbagliati).
+      // Scelta: si riallinea l'indice sottraendo quanti elementi sono stati
+      // tolti (la forma meno invasiva: un numero di sequenza per messaggio
+      // avrebbe richiesto di toccare anche getContext e resetContext), con
+      // pavimento a EARLY_FULL_COUNT perché le prime 10 posizioni del buffer
+      // attuale sono quelle che getContext mostra integre.
+      const rimossi = allMessagesRef.current.length - 500;
       allMessagesRef.current = allMessagesRef.current.slice(-500);
+      summarizedUpToRef.current = Math.max(
+        EARLY_FULL_COUNT,
+        summarizedUpToRef.current - rimossi
+      );
     }
 
     // ── Check if we need to summarize a new batch ──
@@ -175,11 +191,19 @@ export default function useConversationContext() {
     // Only summarize if we have more than early + recent + batch
     if (totalCount > EARLY_FULL_COUNT + RECENT_FULL_COUNT) {
       const middleEnd = totalCount - RECENT_FULL_COUNT;
-      const unsummarized = middleEnd - summarizedUpToRef.current;
+      // b.247 — era batchStart = summarizedUpToRef.current secco: il ref parte
+      // da 0, quindi il PRIMO lotto riassumeva i messaggi 0..4 — proprio i
+      // primi EARLY_FULL_COUNT che la struttura promette di conservare
+      // integri (middleStart veniva calcolato ma mai usato). Risultato: i
+      // primi messaggi comparivano due volte nel contesto (integri E
+      // riassunti), sprecando righe del budget e sporcando il riassunto.
+      // Il lotto ora parte dal massimo fra l'inizio del "centro" e quanto
+      // già riassunto: il riassunto non mangia mai i primi 10.
+      const batchStart = Math.max(middleStart, summarizedUpToRef.current);
+      const unsummarized = middleEnd - batchStart;
 
       if (unsummarized >= SUMMARY_BATCH_SIZE) {
         // Summarize the next batch
-        const batchStart = summarizedUpToRef.current;
         const batchEnd = batchStart + SUMMARY_BATCH_SIZE;
         const batch = allMessagesRef.current.slice(batchStart, batchEnd);
         const summary = summarizeBatch(batch);

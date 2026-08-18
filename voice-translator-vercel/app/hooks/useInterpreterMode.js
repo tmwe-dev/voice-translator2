@@ -24,6 +24,12 @@ const dbg = createLogger('interpreter');
 
 const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
 
+// b.247 — tetto della coda dei blocchi audio in attesa di essere tradotti.
+// Dodici blocchi da 3 secondi sono 36 secondi di parlato accumulato: oltre
+// quella soglia non si e piu in ritardo, si e in un'altra conversazione, e
+// consegnare quella roba serve solo a confondere. Vedi `accodaChunk`.
+const MAX_CODA_CHUNK = 12;
+
 export default function useInterpreterMode({
   webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken, useOwnKeys,
   startDucking, stopDucking,
@@ -40,6 +46,9 @@ export default function useInterpreterMode({
   const activeRef = useRef(false);
   const processingRef = useRef(false);
   const processChunkRef = useRef(null);
+  // b.247 — coda FIFO dei blocchi audio (vedi `accodaChunk`)
+  const codaChunkRef = useRef([]);
+  const accodaChunkRef = useRef(null);
 
   // Keep refs in sync
   useEffect(() => { activeRef.current = active; }, [active]);
@@ -146,11 +155,21 @@ export default function useInterpreterMode({
   }, [playBase64Audio]);
 
   // Process a single audio chunk: STT → Translate → TTS → Send
+  //
+  // b.247 — qui c'era `if (!activeRef.current || processingRef.current) return;`
+  // e quel `processingRef.current` BUTTAVA VIA il blocco. Il MediaRecorder ne
+  // consegna uno ogni 3 secondi (CHUNK_DURATION), ma la catena
+  // STT → traduzione → TTS → base64 → DataChannel spesso ci mette di piu: il
+  // blocco successivo arrivava mentre il precedente era ancora in viaggio e
+  // spariva senza un rigo di registro. Su rete lenta si perdevano frasi
+  // intere, in silenzio — in un interprete e il difetto peggiore possibile,
+  // perche chi parla non ha modo di accorgersene.
+  // Ora chi decide l'ordine e la coda (`accodaChunk` / `elaboraCoda`) e
+  // `processingRef` serve solo a garantire che si elabori uno per volta.
   const processChunk = useCallback(async (blob) => {
-    if (!activeRef.current || processingRef.current) return;
-    if (blob.size < 1000) return; // Skip tiny/silent chunks
+    if (!activeRef.current) return;
+    if (!blob || blob.size < 1000) return; // Skip tiny/silent chunks
 
-    processingRef.current = true;
     try {
       // 1. STT — Transcribe audio
       // /api/transcribe reads userToken + sourceLang from formData (NOT headers)
@@ -167,9 +186,9 @@ export default function useInterpreterMode({
         fetch('/api/transcribe', { method: 'POST', body: formData })
       );
 
-      if (!sttRes.ok) { processingRef.current = false; return; }
+      if (!sttRes.ok) { return; }
       const { original: transcript } = await sttRes.json();
-      if (!transcript || transcript.trim().length < 2) { processingRef.current = false; return; }
+      if (!transcript || transcript.trim().length < 2) { return; }
 
       // Add to my subtitles
       const mySub = { text: transcript, lang: myLang, ts: Date.now() };
@@ -191,9 +210,9 @@ export default function useInterpreterMode({
         })
       );
 
-      if (!translateRes.ok) { processingRef.current = false; return; }
+      if (!translateRes.ok) { return; }
       const { translated } = await translateRes.json();
-      if (!translated) { processingRef.current = false; return; }
+      if (!translated) { return; }
 
       // 3. TTS — Generate audio of translation
       // /api/tts-edge expects langCode (not lang)
@@ -212,7 +231,7 @@ export default function useInterpreterMode({
         })
       );
 
-      if (!ttsRes.ok) { processingRef.current = false; return; }
+      if (!ttsRes.ok) { return; }
       const ttsBlob = await ttsRes.blob();
       const ttsBuffer = await ttsBlob.arrayBuffer();
       // Convert to base64 in chunks to avoid "Maximum call stack size exceeded"
@@ -264,14 +283,53 @@ export default function useInterpreterMode({
       }
     } catch (e) {
       console.warn('[Interpreter] Process chunk error:', e);
-    } finally {
-      processingRef.current = false;
     }
   }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc]);
 
   // Keep processChunkRef in sync so recorder.ondataavailable always calls latest version
   // (avoids stale closure if myLang/partnerLang/userToken change mid-recording)
   useEffect(() => { processChunkRef.current = processChunk; }, [processChunk]);
+
+  // ═══ CODA FIFO DEI BLOCCHI AUDIO (b.247) ═══
+  // Elabora la coda un blocco alla volta, in ordine di arrivo. Non salta
+  // niente: se e in corso un'elaborazione questa chiamata torna subito e il
+  // ciclo gia avviato prendera in carico anche i blocchi appena accodati.
+  const elaboraCoda = useCallback(async () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
+    try {
+      while (codaChunkRef.current.length > 0 && activeRef.current) {
+        const blob = codaChunkRef.current.shift();
+        await processChunkRef.current?.(blob);
+      }
+    } finally {
+      processingRef.current = false;
+      // Se nel frattempo l'interprete e stato spento, quello che resta in
+      // coda e roba di una conversazione finita: non si consegna.
+      if (!activeRef.current) codaChunkRef.current = [];
+    }
+  }, []);
+
+  // Accoda un blocco e fa ripartire l'elaborazione.
+  // Il tetto MAX_CODA_CHUNK esiste perche una coda che cresce all'infinito
+  // e un altro modo di rompersi: si finisce a tradurre, con un minuto di
+  // ritardo, frasi a cui nessuno risponde piu. Quando si supera si butta il
+  // PIU VECCHIO (la conversazione recente conta piu di quella vecchia) e lo
+  // si DICHIARA in console: il difetto originale non era lo scarto, era lo
+  // scarto in SILENZIO.
+  const accodaChunk = useCallback((blob) => {
+    if (!activeRef.current) return;
+    if (!blob || blob.size < 1000) return; // blocchi vuoti o di solo silenzio
+    codaChunkRef.current.push(blob);
+    if (codaChunkRef.current.length > MAX_CODA_CHUNK) {
+      const scartati = codaChunkRef.current.length - MAX_CODA_CHUNK;
+      codaChunkRef.current.splice(0, scartati);
+      console.warn(`[Interpreter] b.247 — coda STT piena (max ${MAX_CODA_CHUNK}): scartati ${scartati} blocchi audio, i piu vecchi. La catena STT/traduzione/TTS non tiene il passo del microfono.`);
+    }
+    elaboraCoda();
+  }, [elaboraCoda]);
+
+  useEffect(() => { accodaChunkRef.current = accodaChunk; }, [accodaChunk]);
 
   // Start recording + processing loop
   const startInterpreter = useCallback(async () => {
@@ -298,13 +356,18 @@ export default function useInterpreterMode({
       const recorder = new MediaRecorder(recordStream, { mimeType });
       recorderRef.current = recorder;
 
-      // Use ref to always call latest processChunk (avoids stale closure)
+      // b.247 — il blocco non si elabora piu qui: si ACCODA. Prima veniva
+      // passato dritto a processChunk, che lo buttava via se era ancora
+      // occupato con il precedente.
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0 && activeRef.current) {
-          processChunkRef.current?.(e.data);
+          accodaChunkRef.current?.(e.data);
         }
       };
 
+      // La coda parte vuota: quello che era rimasto da una sessione
+      // precedente non ha piu niente a che fare con questa.
+      codaChunkRef.current = [];
       recorder.start(CHUNK_DURATION);
       setActive(true);
       dbg.debug('[Interpreter] Started');
@@ -312,11 +375,17 @@ export default function useInterpreterMode({
       console.error('[Interpreter] Failed to start:', e);
       setActive(false);
     }
-  }, [processChunk]);
+  }, []);
 
   // Stop recording
   const stopInterpreter = useCallback(() => {
     setActive(false);
+    // b.247 — activeRef si allinea solo al render successivo: qui lo si
+    // mette a posto subito, altrimenti un blocco consegnato in questo
+    // istante dal MediaRecorder finirebbe ancora in coda. Poi la coda si
+    // svuota: e parlato di una conversazione chiusa.
+    activeRef.current = false;
+    codaChunkRef.current = [];
     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
       try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
     }
@@ -335,6 +404,10 @@ export default function useInterpreterMode({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // b.247 — vedi stopInterpreter: chi se ne va non deve lasciare blocchi
+      // audio in attesa di essere tradotti.
+      activeRef.current = false;
+      codaChunkRef.current = [];
       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
         try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       }

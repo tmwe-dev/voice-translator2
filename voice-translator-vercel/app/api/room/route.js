@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { verifyRoomSession, getRoom } from '../../lib/store.js';
+import { verifyRoomSession, getRoom, removeMember } from '../../lib/store.js';
 import { sanitizeRoomId, sanitizeName, getClientIP } from '../../lib/validate.js';
 import {
   resolveIdentity,
@@ -54,6 +54,72 @@ async function tierDallaSessione(userToken) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// USCIRE DALLA STANZA (b.247)
+//
+// CONFERMATO leggendo lo switch qui sotto: /api/room accettava
+// create, join, heartbeat, speaking, changeMode, changeLang,
+// raiseHand, grantSpeak e check — ma NON esisteva `leave`. Uscire
+// era una faccenda tutta del client: `leaveRoom()` in
+// useRoomPolling.js azzerava roomSessionTokenRef, roomId e roomInfo
+// e basta. Il server non veniva mai avvisato, e `room.members` non
+// ha alcuna scadenza per membro (verificato: nessun `lastSeen`,
+// nessuna potatura dei membri fermi; l'unica scadenza e la TTL di
+// un'ora della stanza intera, per giunta rinnovata a ogni battito
+// di chi e rimasto dentro).
+//
+// Quindi chi usciva restava dentro fino a un'ora:
+//   · membri fantasma nell'elenco dei partecipanti;
+//   · capienza falsata — lo script Lua di join rifiuta col
+//     "La stanza e al completo" contando anche chi se n'e andato;
+//   · presenza falsa — `partnerConnected` nasce da
+//     `room.members.length >= 2`: l'ultimo rimasto continua a
+//     vedere "ospite connesso" con la stanza vuota;
+//   · e chi preme Video chiama un fantasma e aspetta una risposta
+//     che nessuno puo dare.
+//
+// `leave` non sostituisce niente: affianca la TTL rendendo
+// l'uscita IMMEDIATA invece che ritardata di un'ora.
+//
+// SICUREZZA: stesso identico controllo delle altre azioni protette
+// (heartbeat, speaking, changeLang...): l'azione e nell'elenco
+// `needsIdentity`, quindi passa da resolveIdentity → resolveRoomIdentity,
+// che pretende un roomSessionToken valido PER QUESTA STANZA (il
+// confronto session.roomId === roomId) e che chi lo porta sia ancora
+// membro (b.170). Un gettone di un'altra stanza, o nessun gettone,
+// non basta: senza identita si esce con 401. Il nome dichiarato nel
+// corpo non viene mai usato — se bastasse quello, chiunque potrebbe
+// far uscire chiunque altro.
+//
+// LA STANZA CHE SI SVUOTA: non si inventa nulla di nuovo. Ci si
+// comporta come gia fa l'unico altro punto che toglie un membro —
+// `blocca()` in moderazione.js, che chiama lo stesso removeMember:
+// la stanza resta con l'elenco piu corto e la sua TTL di un'ora, e
+// se non rientra nessuno scade da sola. Chiudere la stanza qui
+// sarebbe un comportamento NUOVO, e butterebbe fuori chi sta
+// rientrando in quel momento.
+// ═══════════════════════════════════════════════════════════════
+async function handleLeave({ roomId, identity }) {
+  if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+  if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+  // Rimozione ATOMICA: removeMember passa dallo script Lua REMOVE_MEMBER
+  // (leggi-modifica-riscrivi in un colpo solo su Redis). Farlo qui con
+  // getRoom + filtro + SET perderebbe l'ingresso di chi entra nello
+  // stesso istante — il difetto gia visto con l'heartbeat.
+  const room = await removeMember(roomId, identity.name);
+  // removeMember torna null in due casi innocui: la stanza non c'e piu
+  // (scaduta) oppure il nome non era piu fra i membri (uscita doppia,
+  // o gia espulso). In tutti e due l'esito voluto e lo stesso — quella
+  // persona non e piu dentro — e chi esce non deve mai vedere un errore
+  // per un'uscita andata a buon fine.
+  return NextResponse.json({
+    ok: true,
+    uscito: true,
+    room: room || null,
+    membersCount: Array.isArray(room?.members) ? room.members.length : 0,
+  });
+}
+
 // POST /api/room - Create, join, or manage a room
 async function handlePostRoom(req) {
   try {
@@ -78,7 +144,10 @@ async function handlePostRoom(req) {
     const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
 
     // For actions that require identity, resolve once
-    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'raiseHand', 'grantSpeak'];
+    // b.247 — `leave` sta in questo elenco apposta: e cosi che si eredita
+    // il controllo di sicurezza delle altre azioni protette invece di
+    // scriverne uno nuovo (e piu debole) solo per l'uscita.
+    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'raiseHand', 'grantSpeak', 'leave'];
     let identity = null;
     if (needsIdentity.includes(action)) {
       identity = await resolveIdentity(roomSessionToken, name, roomId);
@@ -140,6 +209,10 @@ async function handlePostRoom(req) {
 
       case 'grantSpeak':
         return handleGrantSpeak({ roomId, identity, targetMember: body.targetMember });
+
+      // b.247 — l'azione che mancava: vedi la nota estesa su handleLeave.
+      case 'leave':
+        return handleLeave({ roomId, identity });
 
       case 'check':
         return handleCheck({ roomId });

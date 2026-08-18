@@ -775,7 +775,9 @@ function SpeakerView({ userToken }) {
       // e diventava invisibile: si vedeva il suggerimento "Scrivi
       // messaggio" ma non c'era modo di scrivere.
       boxSizing: 'border-box',
-      paddingBottom: 'calc(88px + env(safe-area-inset-bottom))', // b.206 — margine dal FAB sporgente della BottomNav
+      // b.247 — stessi 88px di b.206, ma scritti come 76px di menu + 12px
+      // di margine dal FAB sporgente: cosi si legge da dove viene il numero.
+      paddingBottom: 'calc(76px + 12px + env(safe-area-inset-bottom))',
       // ── FINE b.90 ──
     }}>
 

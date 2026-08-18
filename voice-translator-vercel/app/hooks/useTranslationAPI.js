@@ -14,6 +14,12 @@ import { puoPartire } from '../lib/reati.js';
 import { toast } from '../lib/avvisi.js';
 const dbg = createLogger('translation-api');
 
+// b.247 — lo stesso formato che accetta /api/messages (POST e PATCH).
+// Un identificativo che il server rifiuterebbe non deve nemmeno partire:
+// altrimenti la fase 2 andrebbe a cercare per contenuto senza dirlo a
+// nessuno, che e esattamente il difetto che questo giro elimina.
+const FORMATO_ID_SPEDIZIONE = /^tmp_[\w-]{1,60}$/;
+
 /**
  * Translation API hook — handles all translation calls with caching and multi-target support.
  *
@@ -59,13 +65,27 @@ export default function useTranslationAPI({
   const lastServerSaveRef = useRef(null);
 
   // ── Ultimo testo inviato (freno anti doppio invio VAD+tasto) ──
+  // b.247 — resta SOLO come ripiego per chi non dichiara l'origine
+  // dell'invio: vedi la nota lunga dentro `sendMessage`.
   const lastSentTextRef = useRef({ testo: '', quando: 0 });
-  // ── b.126 · quale spedizione portava questo testo ──
-  // `sendMessage` assegna a ogni invio un `tempId` (`tmp_...`) e il
-  // server lo salva sul messaggio. La fase 2 avviene in un'altra
-  // funzione, che quel valore non lo riceve: invece di cambiare tutte le
-  // firme fino a chi chiama, lo si tiene qui — le due funzioni vivono
-  // nello stesso hook, e distano meno di un secondo.
+  // ── b.247 · il registro delle spedizioni: la chiave e l'IDENTITA ──
+  //
+  // Da b.126 a b.246 questa mappa era TESTO → id (`set(original, tempId)`).
+  // Era sbagliata nel verso: se una persona scriveva "ok" due volte, la
+  // seconda voce SOVRASCRIVEVA la chiave della prima. L'identita del
+  // primo messaggio spariva, e quando le traduzioni tornavano fuori
+  // ordine la PATCH del PRIMO messaggio portava l'identificativo del
+  // SECONDO: la traduzione finiva sul messaggio sbagliato. E' lo stesso
+  // difetto gia corretto sul server in b.126, rimasto qui sul client
+  // perche la mappa lo reintroduceva un attimo prima di parlare.
+  //
+  // Ora la chiave e l'identificativo della spedizione (`tmp_...`, lo
+  // stesso che viaggia fino al server come `clientId`) e il valore dice
+  // a quale messaggio appartiene. Il contenuto non identifica piu niente:
+  // il testo non e l'identita di un evento.
+  //
+  // Lo stesso registro fa da memoria per l'anti doppio invio: una
+  // spedizione gia partita si riconosce dal SUO identificativo.
   const idSpedizioneRef = useRef(new Map());
 
   /**
@@ -78,7 +98,12 @@ export default function useTranslationAPI({
    *
    * Server save always happens in parallel for persistence.
    */
-  const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
+  // b.247 — `opzioni.idCattura` e l'identificativo dell'EVENTO di cattura,
+  // generato all'origine (la dettatura, il blocco audio, il tocco sul
+  // tasto) da chi quel testo lo ha raccolto. Da qui in poi accompagna il
+  // messaggio fino al server come `clientId` e torna nella fase 2: non
+  // viene mai ricostruito dal contenuto.
+  const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations, opzioni = {}) => {
     if (!roomId) return null;
 
     // ── b.111 · il confine, prima di tutto il resto ──
@@ -100,28 +125,57 @@ export default function useTranslationAPI({
       return { bloccato: true, categoria: confine.categoria, motivo: confine.motivo };
     }
 
-    // ── Freno anti doppio invio ──
-    // Parlando, l'auto-invio del VAD (silenzio) e il tocco sul tasto possono
-    // scattare quasi insieme: due invii VERI dello stesso testo → messaggio
-    // raddoppiato. Stesso testo entro 2,5s = un solo invio.
+    // ── b.247 · il freno anti doppio invio guarda l'EVENTO, non il testo ──
+    //
+    // Prima era: "stesso testo entro 2,5 s = blocca". Era nato per il
+    // doppio scatto — parlando, l'auto-invio del VAD (silenzio) e il
+    // tocco sul tasto partono quasi insieme e mandano DUE VOLTE la
+    // stessa cattura — ma non sapeva distinguerlo da una persona che
+    // dice davvero "si" due volte di fila. Il secondo "si" spariva:
+    // niente errore, niente messaggio, nessun modo di capirlo. E'
+    // esattamente il difetto corretto sul server in b.126, che qui sul
+    // client era rimasto in piedi.
+    //
+    // Ora chi cattura la voce assegna un identificativo all'EVENTO e lo
+    // dichiara: due invii dello stesso evento hanno lo stesso
+    // identificativo — e sono un doppione — mentre due frasi uguali dette
+    // in due momenti diversi hanno identificativi diversi e passano
+    // entrambe.
     const ora = Date.now();
-    if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
-      dbg.debug('[sendMessage] Doppio invio bloccato:', original.slice(0, 30));
+    const idDichiarato = typeof opzioni.idCattura === 'string' && FORMATO_ID_SPEDIZIONE.test(opzioni.idCattura)
+      ? opzioni.idCattura
+      : null;
+    if (idDichiarato) {
+      if (idSpedizioneRef.current.has(idDichiarato)) {
+        dbg.debug('[sendMessage] doppio scatto della stessa cattura, bloccato:', idDichiarato);
+        return null;
+      }
+    } else if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
+      // Ripiego per chi NON dichiara l'origine: senza un identificativo
+      // non c'e proprio altro modo di riconoscere il doppio scatto, e
+      // toglierlo qui vorrebbe dire peggiorare la protezione. Resta la
+      // vecchia regola sul testo, ma vale SOLO su questa strada — chi
+      // l'origine la dichiara non ci passa mai.
+      dbg.debug('[sendMessage] Doppio invio bloccato (origine non dichiarata):', original.slice(0, 30));
       return null;
     }
     lastSentTextRef.current = { testo: original, quando: ora };
 
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
-    const tempId = `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
-    // b.126 — si annota quale spedizione porta questo testo, cosi la
-    // fase 2 puo dire QUALE messaggio aggiornare invece di cercarlo per
-    // contenuto. Si tiene corta: oltre 50 voci si butta la piu vecchia,
-    // perche una mappa che cresce all'infinito e una perdita di memoria
-    // con un altro nome (stessa regola della posta in uscita, b.111).
+    // b.247 — l'identificativo della spedizione E quello della cattura,
+    // quando c'e: una cattura produce un messaggio, e avere due nomi per
+    // la stessa cosa e il modo piu rapido per farli divergere.
+    const tempId = idDichiarato || `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+    // b.247 — la voce si annota sotto l'identificativo, non sotto il
+    // testo (vedi la nota su `idSpedizioneRef`): cosi due messaggi con
+    // lo stesso contenuto restano due messaggi distinti. Si tiene corta:
+    // oltre 50 voci si butta la piu vecchia, perche una mappa che cresce
+    // all'infinito e una perdita di memoria con un altro nome (stessa
+    // regola della posta in uscita, b.111).
     if (idSpedizioneRef.current.size > 50) {
       idSpedizioneRef.current.delete(idSpedizioneRef.current.keys().next().value);
     }
-    idSpedizioneRef.current.set(original, tempId);
+    idSpedizioneRef.current.set(tempId, { original, sender: senderName, quando: ora });
 
     // Build a message object for instant delivery
     const instantMsg = {
@@ -164,9 +218,14 @@ export default function useTranslationAPI({
     // La chiave con cui questo messaggio si riconosce dopo, per
     // aggiornarne lo stato: la stessa che usa la posta in uscita.
     const chiaveMsg = instantMsg.id || tempId;
+    // b.247 — lo stato si segna sul messaggio NOMINATO col suo
+    // identificativo: prima `updateLocalMessage` lo cercava per
+    // `sender + original`, e con due messaggi identici la spunta del
+    // secondo finiva sul primo. Testo e mittente restano come ripiego,
+    // per i messaggi che un identificativo non ce l'hanno.
     const segnaStato = (stato) => {
       if (!updateLocalMessage) return;
-      updateLocalMessage(original, senderName, { _status: stato });
+      updateLocalMessage(original, senderName, { _status: stato }, tempId);
     };
 
     if (spedisciContenuto) {
@@ -205,7 +264,9 @@ export default function useTranslationAPI({
     // In Translate mode: fire-and-forget for persistence and polling fallback.
     if (isDirect) {
       lastServerSaveRef.current = Promise.resolve(null);
-      return { message: instantMsg, serverSave: Promise.resolve(null) };
+      // b.247 — si restituisce anche l'identificativo: chi ha chiamato
+      // deve poterlo passare alla fase 2 senza andarselo a ricostruire.
+      return { message: instantMsg, serverSave: Promise.resolve(null), clientId: tempId };
     }
 
     // IMPORTANT: Store the promise so Phase 2 PATCH can await it before updating.
@@ -251,7 +312,8 @@ export default function useTranslationAPI({
 
     // Return immediately with the instant message — don't await server save
     // The promise is kept alive so it completes in background
-    return { message: instantMsg, serverSave: serverSavePromise };
+    // b.247 — vedi sopra: l'identificativo esce insieme al messaggio.
+    return { message: instantMsg, serverSave: serverSavePromise, clientId: tempId };
   }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, spedisciContenuto, verifiedNameRef, addLocalMessage, updateLocalMessage]);
 
   /**
@@ -259,14 +321,43 @@ export default function useTranslationAPI({
    * Updates local display, broadcasts to partner via P2P + Realtime,
    * and updates the server-saved message.
    */
-    const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
+  // b.247 — `opzioni.clientId` e l'identificativo che la fase 1 ha dato a
+  // QUESTA spedizione. Arriva da chi chiama, che lo ha ricevuto (o
+  // generato) all'origine: e' l'unico modo perche la traduzione sappia su
+  // quale messaggio posarsi. Prima veniva ripescato da una mappa
+  // TESTO → id, e con due messaggi uguali indicava sempre l'ultimo.
+    const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations, opzioni = {}) => {
     if (!roomId) return;
     const senderName = verifiedNameRef?.current || prefsRef.current.name;
-    const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations, timestamp: Date.now() };
+
+    // b.247 — l'identificativo non si cerca piu per contenuto: o viaggia
+    // con la chiamata, o non c'e.
+    const clientId = typeof opzioni.clientId === 'string' && FORMATO_ID_SPEDIZIONE.test(opzioni.clientId)
+      ? opzioni.clientId
+      : '';
+    // b.247 — dal registro si prendono il testo e il mittente ESATTI con
+    // cui la spedizione e partita. I campi `original` e `sender` della
+    // PATCH restano solo come ripiego per i server che non conoscono
+    // ancora l'identificativo: se non combaciassero con quelli salvati,
+    // quel ripiego mancherebbe il bersaglio in silenzio.
+    const spedizione = clientId ? idSpedizioneRef.current.get(clientId) : null;
+    const testoInviato = spedizione ? spedizione.original : original;
+    const mittente = spedizione ? spedizione.sender : senderName;
+
+    // b.247 — `tempId` viaggia anche verso l'altro telefono. Non e un
+    // campo nuovo: `handleMessageUpdate` (useRoomPolling.js) lo legge gia
+    // per non applicare due volte lo stesso aggiornamento arrivato da due
+    // canali — solo che NESSUNO glielo mandava, e ripiegava su
+    // `sender|original`. Con due messaggi uguali quella chiave era la
+    // stessa: il secondo aggiornamento veniva scartato come doppione.
+    const updatePayload = { sender: mittente, original: testoInviato, translated, sourceLang, targetLang, translations, timestamp: Date.now(), ...(clientId && { tempId: clientId }) };
 
     // Update local message immediately (sender sees translation)
+    // b.247 — anche qui si NOMINA il messaggio: senza l'identificativo,
+    // con due messaggi uguali la traduzione del secondo si posava sul
+    // primo anche sullo schermo di chi l'aveva scritta.
     if (updateLocalMessage) {
-      updateLocalMessage(original, senderName, { translated, targetLang, translations });
+      updateLocalMessage(testoInviato, mittente, { translated, targetLang, translations }, clientId || undefined);
     }
 
     const vie = trasportiAmmessi(sessionModeRef?.current);
@@ -295,16 +386,18 @@ export default function useTranslationAPI({
           body: JSON.stringify({
             roomId,
             roomSessionToken: roomSessionTokenRef?.current || null,
-            // b.126 — si dice QUALE messaggio, non lo si fa indovinare
-            // dal contenuto. `original` e `sender` restano per i server
-            // che non hanno ancora il nuovo percorso.
             // b.126 — si dice QUALE messaggio aggiornare, invece di
             // farlo indovinare dal contenuto: due "si" di fila dello
             // stesso utente sono indistinguibili, e la traduzione del
             // primo, arrivando tardi, finiva sul secondo.
-            clientId: idSpedizioneRef.current.get(original) || '',
-            original,
-            sender: senderName,
+            // b.247 — e ora l'identificativo arriva davvero dalla fase 1,
+            // invece di essere ripescato da una mappa TESTO → id che con
+            // due messaggi uguali restituiva sempre l'ULTIMO: la PATCH
+            // del primo messaggio finiva sul secondo. `original` e
+            // `sender` restano per i server senza il nuovo percorso.
+            clientId,
+            original: testoInviato,
+            sender: mittente,
             translated,
             targetLang,
             translations,

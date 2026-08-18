@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { getLang } from '../lib/constants.js';
 import { createNoiseGate } from '../lib/noiseGate.js';
+import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
 const dbg = createLogger('streaming');
 
@@ -70,6 +71,11 @@ export default function useStreamingInterpreter({
 
   // ═══ FETCH DEEPGRAM KEY ═══
   useEffect(() => {
+    // b.247 — la decisione «Deepgram si o no» era scritta in DUE posti che
+    // non si parlavano: useDeepgramSTT.js la spegneva (b.172) e questo file
+    // chiamava /api/stt-token lo stesso. Ora la risposta e una sola e sta in
+    // lib/sttPolicy.js; qui ci si limita a chiederla.
+    if (!deepgramAmmesso(USO.INTERPRETE)) return;
     // b.161 — roomSessionToken obbligatorio per il percorso roomId (vedi
     // stt-token/route.js, punto 2 quarto audit).
     fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) }).then(r => r.ok ? r.json() : null)
@@ -283,8 +289,67 @@ export default function useStreamingInterpreter({
     }
   }, [handleSentenceComplete]);
 
+  // ═══ ABORT COMPLETO (b.247) ═══
+  // Era il difetto peggiore della modalita interprete: `start()` poteva
+  // restituire false (errore del WebSocket, o scadenza dei 4 secondi)
+  // LASCIANDO APERTO tutto quello che aveva gia acceso — il WebSocket, il
+  // microfono di getUserMedia, l'AudioContext e lo ScriptProcessor che
+  // continuava a spingere PCM dentro il socket. useInterpreterMode legge
+  // quel false come «streaming non disponibile» e avvia subito la pipeline
+  // a blocchi da 3 secondi: se il WebSocket Deepgram si apriva un istante
+  // dopo, restavano DUE microfoni aperti e DUE trascrizioni in corso sulla
+  // stessa voce — doppio consumo a pagamento, sottotitoli duplicati e
+  // l'audio del dispositivo mai rilasciato.
+  //
+  // Qui si spegne tutto in un colpo solo. E IDEMPOTENTE: ogni pezzo viene
+  // toccato solo se c'e ancora, e il ref viene azzerato subito dopo, cosi
+  // chiamarla due volte (abort + stop, o abort + smontaggio) non e un
+  // guasto. Nessuna dipendenza: lavora solo su ref.
+  const abortaStreaming = useCallback(() => {
+    if (processorRef.current) {
+      try { processorRef.current.onaudioprocess = null; } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+      try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+      processorRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      const ctx = audioCtxRef.current;
+      audioCtxRef.current = null;
+      if (ctx.state !== 'closed') { try { ctx.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
+    }
+    if (noiseGateRef.current) {
+      try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+      noiseGateRef.current = null;
+    }
+    if (streamRef.current) {
+      const tracce = streamRef.current;
+      streamRef.current = null;
+      tracce.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+    }
+    if (wsRef.current) {
+      const ws = wsRef.current;
+      wsRef.current = null;
+      try {
+        // Si stacca prima l'ascolto: un socket in chiusura puo ancora
+        // consegnare trascrizioni, e finirebbero sui sottotitoli di una
+        // sessione che l'utente ha gia abbandonato.
+        ws.onmessage = null; ws.onerror = null; ws.onclose = null; ws.onopen = null;
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'CloseStream' }));
+        ws.close();
+      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+    }
+    activeRef.current = false;
+    setActive(false);
+  }, []);
+
   // ═══ START STREAMING ═══
   const start = useCallback(async () => {
+    // b.247 — chi decide se Deepgram si puo usare e lib/sttPolicy.js, non
+    // questo file (vedi il commento sulla fetch della chiave).
+    if (!deepgramAmmesso(USO.INTERPRETE)) {
+      dbg.debug('[StreamInterp] Deepgram non ammesso dalla policy: si usa la pipeline a blocchi');
+      return false;
+    }
+
     if (!deepgramKeyRef.current) {
       // Try to get key
       try {
@@ -340,6 +405,24 @@ export default function useStreamingInterpreter({
       wsRef.current = ws;
 
       return new Promise((resolve) => {
+        // b.247 — UNA SOLA PORTA D'USCITA da questa promessa.
+        // Prima l'esito negativo si dava in due punti scollegati
+        // (`ws.onerror` e un `setTimeout(..., 4000)`) e nessuno dei due
+        // spegneva niente; per giunta il temporizzatore non veniva mai
+        // annullato, quindi continuava a scattare anche dopo una
+        // connessione riuscita. Ora: si esce una volta sola, il
+        // temporizzatore si annulla, e ogni esito NEGATIVO passa
+        // obbligatoriamente dall'abort completo.
+        let risolto = false;
+        let timerAperturaId = null;
+        const concludi = (esito) => {
+          if (risolto) return;
+          risolto = true;
+          clearTimeout(timerAperturaId);
+          if (!esito) abortaStreaming();
+          resolve(esito);
+        };
+
         ws.onopen = () => {
           dbg.debug('[StreamInterp] Connected to Deepgram');
 
@@ -365,7 +448,7 @@ export default function useStreamingInterpreter({
           // Don't connect processor to destination - this causes echo!
           // Processor only needs to capture audio, not output it
           setActive(true);
-          resolve(true);
+          concludi(true);
         };
 
         ws.onmessage = (event) => {
@@ -384,15 +467,27 @@ export default function useStreamingInterpreter({
           } catch { /* messaggio del riconoscitore in un formato inatteso: si aspetta il prossimo */ }
         };
 
-        ws.onerror = () => { console.warn('[StreamInterp] WS error'); resolve(false); };
-        ws.onclose = () => { dbg.debug('[StreamInterp] WS closed'); };
-        setTimeout(() => resolve(false), 4000);
+        ws.onerror = () => { console.warn('[StreamInterp] WS error'); concludi(false); };
+        ws.onclose = () => {
+          dbg.debug('[StreamInterp] WS closed');
+          // Se si chiude PRIMA di essersi aperto (chiave rifiutata, rete
+          // caduta) non ha senso aspettare i 4 secondi: si dichiara subito
+          // il fallimento, cosi la pipeline di ripiego parte prima. Dopo
+          // l'apertura riuscita `risolto` e gia true e questa e una riga
+          // che non fa niente.
+          concludi(false);
+        };
+        timerAperturaId = setTimeout(() => concludi(false), 4000);
       });
     } catch (e) {
       console.error('[StreamInterp] Start failed:', e);
+      // b.247 — anche qui il microfono poteva essere gia stato aperto da
+      // getUserMedia qualche riga sopra: senza abort restava acceso mentre
+      // partiva la pipeline a blocchi.
+      abortaStreaming();
       return false;
     }
-  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId, roomSessionTokenRef]);
+  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId, roomSessionTokenRef, abortaStreaming]);
 
   // ═══ STOP STREAMING ═══
   const stop = useCallback(() => {
@@ -405,18 +500,11 @@ export default function useStreamingInterpreter({
       handleSentenceComplete(currentSentenceRef.current);
     }
 
-    // Cleanup audio
-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } processorRef.current = null; }
-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } audioCtxRef.current = null; }
-    if (noiseGateRef.current) { try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } noiseGateRef.current = null; }
-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }); streamRef.current = null; }
-    if (wsRef.current) {
-      try {
-        if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
-        wsRef.current.close();
-      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
-      wsRef.current = null;
-    }
+    // b.247 — la chiusura delle risorse era ricopiata qui riga per riga,
+    // mentre i rami di fallimento di start() non ne avevano nessuna. Ora e
+    // una funzione sola: se un giorno si aggiunge una risorsa da spegnere,
+    // la si spegne anche nei rami di fallimento senza doverselo ricordare.
+    abortaStreaming();
 
     // Reset state
     currentSentenceRef.current = '';
@@ -424,7 +512,7 @@ export default function useStreamingInterpreter({
     currentTranslationRef.current = '';
     setMyLiveText('');
     setPartnerLiveSubtitle('');
-  }, [handleSentenceComplete]);
+  }, [handleSentenceComplete, abortaStreaming]);
 
   // ═══ HANDLE INCOMING FROM PARTNER ═══
   // Il partner che usa lo stesso hook manda subtitle e audio
@@ -513,15 +601,16 @@ export default function useStreamingInterpreter({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (wsRef.current) { try { wsRef.current.close(); } catch { /* il temporizzatore era gia scaduto */ } }
-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
-      if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
+      // b.247 — qui lo smontaggio dimenticava il filtro del rumore (che
+      // tiene un suo AudioContext) e non azzerava i ref: stessa cura di
+      // stop(), stessa funzione.
+      abortaStreaming();
       subtitleTimersRef.current.forEach(id => clearTimeout(id));
       subtitleTimersRef.current = [];
       clearTimeout(sentencePauseTimerRef.current);
       clearTimeout(translateTimerRef.current);
     };
-  }, []);
+  }, [abortaStreaming]);
 
   return {
     active,

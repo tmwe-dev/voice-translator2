@@ -261,9 +261,22 @@ export default function useRoomPolling({
       }
     }
 
-    // Find the message by sender + original text (works for both temp and server IDs)
+    // ── b.247 · prima si cerca per IDENTIFICATIVO, il testo e solo il ripiego ──
+    // Qui si cercava SOLO per `sender + original`, e `findIndex` si ferma
+    // al primo che combacia: con due messaggi identici dello stesso
+    // mittente la traduzione del SECONDO si posava sul PRIMO, e il
+    // secondo restava per sempre senza. Il `tempId` nel payload esisteva
+    // gia (serviva al dedup fra canali, qui sopra), ma per TROVARE il
+    // messaggio non lo guardava nessuno. Il messaggio in elenco si
+    // riconosce o dal suo id (finche e ancora `tmp_...`) o dal
+    // `clientId` (dopo che il polling lo ha sostituito con la copia del
+    // server, che quel campo lo conserva).
     setMessages(prev => {
-      const idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
+      let idx = data.tempId
+        ? prev.findIndex(m => m.id === data.tempId || m.clientId === data.tempId)
+        : -1;
+      // Ripiego per i messaggi partiti senza identificativo (client vecchi).
+      if (idx < 0) idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
       if (idx < 0) {
         // ── Fallback: try matching by sender only + similar original (trim whitespace) ──
         const trimmedOriginal = data.original?.trim();
@@ -878,9 +891,18 @@ export default function useRoomPolling({
   }
 
   // ── Stable callbacks for two-phase send (avoid cascading re-creations) ──
-  const updateLocalMessage = useCallback((original, sender, updates) => {
+  // b.247 — `msgId` e l'identificativo della spedizione (`tmp_...`), e
+  // viene PRIMA del contenuto: la ricerca per `sender + original` con
+  // `findIndex` trova sempre il primo che combacia, quindi con due
+  // messaggi identici lo stato e la traduzione del secondo si posavano
+  // sul primo. Il confronto sul testo resta solo come ripiego per le
+  // chiamate che l'identificativo non ce l'hanno.
+  const updateLocalMessage = useCallback((original, sender, updates, msgId) => {
     setMessages(prev => {
-      const idx = prev.findIndex(m => m.sender === sender && m.original === original);
+      let idx = msgId
+        ? prev.findIndex(m => m.id === msgId || m.clientId === msgId)
+        : -1;
+      if (idx < 0) idx = prev.findIndex(m => m.sender === sender && m.original === original);
       if (idx < 0) return prev;
       const updated = [...prev];
       updated[idx] = { ...updated[idx], ...updates };
@@ -896,7 +918,44 @@ export default function useRoomPolling({
     });
   }, []); // setMessages is stable — no deps needed
 
+  // ── b.247 · uscire si diceva solo a se stessi ──
+  //
+  // Questa funzione cancellava SOLO lo stato locale (gettone di stanza,
+  // roomId, roomInfo) e non avvisava nessuno: il server continuava a
+  // tenere la persona in `room.members` fino alla scadenza della stanza
+  // (un'ora, per giunta rinnovata dai battiti di chi resta). Da li i
+  // membri fantasma, la capienza sbagliata, `partnerConnected` che resta
+  // vero con la stanza vuota, e la videochiamata che aspetta un fantasma.
+  //
+  // Ordine obbligato: PRIMA si avvisa il server, POI si azzera — dopo
+  // `roomSessionTokenRef.current = null` il gettone non c'e piu e la
+  // chiamata sarebbe rifiutata con 401 (l'azione `leave` pretende un
+  // gettone valido per QUESTA stanza, come tutte le azioni protette).
+  //
+  // E un di piu, non un passaggio obbligato: si parte senza `await` e si
+  // ingoia qualunque errore. Se la rete manca o il server risponde male,
+  // l'utente esce lo stesso e senza attendere — resta il vecchio
+  // comportamento (fantasma fino alla scadenza), che e esattamente cio
+  // che succedeva sempre prima di questa versione. `keepalive` serve
+  // perche l'uscita spesso coincide con un cambio di vista o con la
+  // chiusura della pagina: senza, il browser puo annullare la richiesta
+  // a meta.
+  function avvisaServerDellUscita() {
+    const gettone = roomSessionTokenRef.current;
+    const stanza = roomId;
+    if (!gettone || !stanza) return;
+    try {
+      fetch('/api/room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'leave', roomId: stanza, roomSessionToken: gettone }),
+        keepalive: true,
+      }).catch(() => { /* l'uscita non si blocca mai per la rete */ });
+    } catch { /* nemmeno per un fetch che non parte proprio */ }
+  }
+
   function leaveRoom() {
+    avvisaServerDellUscita();
     stopPolling();
     roomSessionTokenRef.current = null;
     verifiedNameRef.current = null;

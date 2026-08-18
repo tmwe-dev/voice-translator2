@@ -32,7 +32,12 @@ async function handlePost(req) {
       if (!argomento) return NextResponse.json({ error: 'Serve un argomento' }, { status: 400 });
       const r = await preparaBriefing({ argomento, lingua, userToken });
       if (!r.ok) return esito(r);
-      return NextResponse.json({ ok: true, articolo: r.articolo, punti: r.punti, domande: r.domande, fonti: r.fonti });
+      // b.247 — `fontiGuaste` viaggia fino al client: prima un briefing con
+      // zero fonti era indistinguibile da uno scritto mentre la ricerca era
+      // rotta, e l'interfaccia mostrava un elenco fonti vuoto senza spiegare
+      // perché. Il guasto si dichiara, non si nasconde.
+      if (r.fontiGuaste) log.warn('briefing consegnato SENZA fonti (ricerca guasta)', { argomento: argomento.slice(0, 120) });
+      return NextResponse.json({ ok: true, articolo: r.articolo, punti: r.punti, domande: r.domande, fonti: r.fonti, fontiGuaste: !!r.fontiGuaste });
     }
 
     if (azione === 'report') {

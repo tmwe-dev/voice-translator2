@@ -73,7 +73,20 @@ describe('2 · un messaggio si identifica col suo id', () => {
   it('e il client lo manda', () => {
     const c = senzaCommenti(leggi('app/hooks/useTranslationAPI.js'));
     expect(c).toMatch(/idSpedizioneRef/);
-    expect(c).toMatch(/clientId: idSpedizioneRef\.current\.get\(original\)/);
+    // b.247 — qui si controllava `clientId: idSpedizioneRef.current.get(original)`,
+    // cioe la riga che b.126 aveva scritto per NON far indovinare il
+    // messaggio dal contenuto. Ma quella riga il contenuto lo usava
+    // ancora: la mappa era TESTO → id, e con due messaggi uguali
+    // restituiva sempre l'ULTIMO. Il difetto era mezzo corretto, e
+    // questo controllo lo teneva in vita.
+    //
+    // Ora l'identificativo arriva dalla fase 1 e viaggia con la
+    // chiamata. Il controllo diventa quello giusto: il client manda un
+    // `clientId` che NON ha ricostruito dal testo. Il resto e in
+    // __tests__/identita-messaggio-b247.test.js.
+    expect(c).toMatch(/\bclientId,/);
+    expect(c, 'l\'identificativo non si ripesca piu dal contenuto')
+      .not.toMatch(/idSpedizioneRef\.current\.get\(original\)/);
   });
 
   it('il registro delle spedizioni non cresce all\'infinito', () => {

@@ -27,6 +27,12 @@ import { useApp } from '../contexts/AppContext.js';
 // trasparente e si vede lo SpatialBackdrop dietro.
 // ═══════════════════════════════════════════════════════════════
 
+// b.247 — le 20 chiavi di questa schermata ora esistono in tutti e quindici
+// i pacchetti: via i ripieghi `L('chiave') || 'testo'`, che erano codice
+// morto (t() torna la chiave, mai undefined, quindi il || non scattava e a
+// schermo compariva la chiave nuda). Via anche la bandiera bianca emoji:
+// come negli altri componenti, senza bandiera si mostra solo il nome.
+
 // Le lingue del tassista più comuni, in cima; le altre restano nel menu.
 const LINGUE_TAXI = ['en', 'es', 'fr', 'de', 'pt', 'it', 'ar', 'zh', 'ja', 'ko', 'hi', 'ru', 'tr', 'th', 'vi'];
 
@@ -102,13 +108,13 @@ function TaxiTalk({ userToken }) {
       );
       if (!res.ok) throw new Error('geocoding');
       const data = await res.json();
-      if (data.length === 0) { setErroreDest(L('placeNotFound') || 'Nessun risultato'); }
+      if (data.length === 0) { setErroreDest(L('placeNotFound')); }
       else if (data.length === 1) {
         setDest({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), displayName: data[0].display_name });
       } else {
         setRisultati(data.map(p => ({ lat: parseFloat(p.lat), lon: parseFloat(p.lon), displayName: p.display_name })));
       }
-    } catch { setErroreDest(L('searchError') || 'Errore di ricerca'); }
+    } catch { setErroreDest(L('searchError')); }
     setCercando(false);
   }, [userPos, driverLang, L]);
 
@@ -129,13 +135,13 @@ function TaxiTalk({ userToken }) {
           userToken: userToken || '',
         }),
       });
-      if (!res.ok) { setErroreTrad(res.status === 402 ? (L('creditExhausted') || 'Credito esaurito') : (L('translationRetryLater') || 'Riprova tra poco')); setTraducendo(false); return ''; }
+      if (!res.ok) { setErroreTrad(res.status === 402 ? L('creditExhausted') : L('translationRetryLater')); setTraducendo(false); return ''; }
       const data = await res.json();
       const out = data.translated || '';
       setTradotto(out);
       setTraducendo(false);
       return out;
-    } catch { setErroreTrad(L('youHaveNoConnection') || 'Nessuna connessione'); setTraducendo(false); return ''; }
+    } catch { setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
   }, [testo, myLang, driverLang, userToken, L]);
 
   // ── Voce (Edge → OpenAI, in coda: come SpeakerView) ──
@@ -186,7 +192,7 @@ function TaxiTalk({ userToken }) {
   const dettatura = useCallback(() => {
     if (registrando) { dettaturaOff(); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { setErroreTrad(L('speechNotSupported') || 'Dettatura non disponibile: scrivi il testo'); return; }
+    if (!SR) { setErroreTrad(L('speechNotSupported')); return; }
     vibrate(); setRegistrando(true);
     const rec = new SR(); speechRef.current = rec;
     rec.lang = getLang(myLang)?.speech || 'it-IT';
@@ -233,34 +239,34 @@ function TaxiTalk({ userToken }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 2px 6px' }}>
         {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
-        <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('back') || 'Indietro'}
+        <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('back')}
           style={{ width: 38, height: 38, borderRadius: 12, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {'‹'}
         </button>
         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
         <button onClick={() => { vibrate(8); setPickerLingua(true); }}
           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 12, cursor: 'pointer', color: C.text }}>
-          <span style={{ fontSize: 16 }}>{driverInfo?.flag || '🏳️'}</span>
+          <span style={{ fontSize: 16 }}>{driverInfo?.flag || ''}</span>
           <span style={{ fontSize: 12, fontWeight: 700 }}>{driverInfo?.name || driverLang.toUpperCase()}</span>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
         </button>
       </div>
-      <div style={{ fontSize: 12, color: C.muted, padding: '0 2px 4px' }}>{L('taxiDriverLangHint') || 'Lingua del tassista'}: <b style={{ color: C.text }}>{driverInfo?.name}</b></div>
+      <div style={{ fontSize: 12, color: C.muted, padding: '0 2px 4px' }}>{L('taxiDriverLangHint')}: <b style={{ color: C.text }}>{driverInfo?.name}</b></div>
 
       {/* 1 · DOVE VAI */}
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
           <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#04121c' }}>1</span>
-          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiWhereTo') || 'Dove vai'}</span>
-          <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{L('taxiShowOrScan') || 'mostra o fai scansionare'}</span>
+          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiWhereTo')}</span>
+          <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{L('taxiShowOrScan')}</span>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={query} onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) cerca(query); }}
-            placeholder={L('searchAddress') || "Scrivi l'indirizzo…"} style={inputStyle} />
+            placeholder={L('searchAddress')} style={inputStyle} />
           <button onClick={() => query.trim() && cerca(query)} disabled={!query.trim() || cercando} style={miniBtn(!!query.trim() && !cercando)}>
-            {cercando ? '…' : (L('search') || 'Cerca')}
+            {cercando ? '…' : L('search')}
           </button>
         </div>
 
@@ -286,8 +292,8 @@ function TaxiTalk({ userToken }) {
               {qrSrc
                 ? <img src={qrSrc} alt="QR" width={104} height={104} style={{ borderRadius: 10, background: '#fff', padding: 6, display: 'block' }} />
                 : <div style={{ width: 104, height: 104, borderRadius: 10, background: C.card2 }} />}
-              <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1.35 }}>{L('taxiScanOpensMap') || 'Il tassista inquadra: si apre la sua mappa'}</div>
-              <button onClick={condividiMappa} style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink') || 'Condividi link'}</button>
+              <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1.35 }}>{L('taxiScanOpensMap')}</div>
+              <button onClick={condividiMappa} style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink')}</button>
             </div>
           </div>
         )}
@@ -297,16 +303,16 @@ function TaxiTalk({ userToken }) {
       <div style={cardStyle}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
           <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#04121c' }}>2</span>
-          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiSpeakOrType') || 'Parla o scrivi'}</span>
+          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiSpeakOrType')}</span>
           <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{driverInfo?.name}</span>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={testo} onChange={(e) => setTesto(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && testo.trim()) traduci(); }}
-            placeholder={L('taxiTypeHere') || 'Scrivi qui…'} style={inputStyle} />
+            placeholder={L('taxiTypeHere')} style={inputStyle} />
           <button onClick={() => testo.trim() && traduci()} disabled={!testo.trim() || traducendo} style={miniBtn(!!testo.trim() && !traducendo)}>
-            {traducendo ? '…' : (L('translate') || 'Traduci')}
+            {traducendo ? '…' : L('translate')}
           </button>
         </div>
 
@@ -324,23 +330,23 @@ function TaxiTalk({ userToken }) {
           <button onClick={() => { if (tradotto) { vibrate(10); setFlip(true); } }} disabled={!tradotto}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradotto ? 'pointer' : 'default', background: tradotto ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradotto ? '#04121c' : C.muted, fontWeight: 800, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
-            {L('taxiShowFlipped') || 'Mostra ribaltato'}
+            {L('taxiShowFlipped')}
           </button>
           <button onClick={() => tradotto && ascolta(tradotto)} disabled={!tradotto || suonando}
             style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradotto ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 700, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /></svg>
-            {suonando ? '…' : (L('taxiListen') || 'Ascolta')}
+            {suonando ? '…' : L('taxiListen')}
           </button>
         </div>
 
         {/* Mic dettatura */}
         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
-          <button onClick={dettatura} aria-label={L('taxiDictate') || 'Detta'}
+          <button onClick={dettatura} aria-label={L('taxiDictate')}
             style={{ width: 64, height: 64, borderRadius: '50%', border: 'none', cursor: 'pointer', background: registrando ? 'linear-gradient(135deg,#ff5a52,#ff2d55)' : `linear-gradient(135deg, ${C.accent}, ${C.purple})`, color: '#04121c', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: registrando ? '0 6px 22px rgba(255,45,85,0.4)' : `0 6px 22px ${C.accent}52`, animation: registrando ? 'ttPulse 1.2s ease-in-out infinite' : 'none' }}>
             <Icon name="mic" size={24} color="#04121c" />
           </button>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: C.faint, marginTop: 8 }}>{registrando ? `● ${L('taxiListeningTap') || 'sto ascoltando… tocca per fermare'}` : (L('taxiTapToDictate') || 'tocca per dettare')}</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: C.faint, marginTop: 8 }}>{registrando ? `● ${L('taxiListeningTap')}` : L('taxiTapToDictate')}</div>
       </div>
 
       {/* 3 · CHAT opzionale */}
@@ -350,8 +356,8 @@ function TaxiTalk({ userToken }) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
         </span>
         <span style={{ flex: 1 }}>
-          <b style={{ fontSize: 13, fontWeight: 700, display: 'block', color: C.text }}>{L('taxiChatOptional') || 'Chatta con lui (opzionale)'}</b>
-          <span style={{ fontSize: 11, color: C.muted }}>{L('taxiChatHint') || 'Apre la conversazione tradotta che già usi'}</span>
+          <b style={{ fontSize: 13, fontWeight: 700, display: 'block', color: C.text }}>{L('taxiChatOptional')}</b>
+          <span style={{ fontSize: 11, color: C.muted }}>{L('taxiChatHint')}</span>
         </span>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
       </button>
@@ -362,7 +368,7 @@ function TaxiTalk({ userToken }) {
           style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }}>
           <div style={{ width: '100%', background: C.bg, borderRadius: '20px 20px 0 0', maxHeight: '80dvh', overflowY: 'auto', padding: '16px 16px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 800 }}>{L('taxiDriverLangHint') || 'Lingua del tassista'}</div>
+              <div style={{ fontSize: 16, fontWeight: 800 }}>{L('taxiDriverLangHint')}</div>
               <button onClick={() => setPickerLingua(false)} style={{ marginLeft: 'auto', width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer' }}>✕</button>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -371,7 +377,7 @@ function TaxiTalk({ userToken }) {
                 return (
                   <button key={code} onClick={() => { vibrate(10); setDriverLang(code); setPickerLingua(false); }}
                     style={{ padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: on ? `${C.accent}20` : C.card, border: `1px solid ${on ? C.accent : C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: FONT }}>
-                    <span style={{ fontSize: 24 }}>{li?.flag || '🏳️'}</span>
+                    <span style={{ fontSize: 24 }}>{li?.flag || ''}</span>
                     <span style={{ fontSize: 11, fontWeight: 600, color: on ? C.accent : C.text }}>{li?.name || code}</span>
                   </button>
                 );
@@ -385,8 +391,8 @@ function TaxiTalk({ userToken }) {
       {flip && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: `linear-gradient(180deg, ${C.bg}, #04070f)`, display: 'flex', flexDirection: 'column', animation: 'ttUp 0.28s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver') || 'Girato verso il tassista'}</div>
-            <button onClick={() => setFlip(false)} aria-label={L('close') || 'Chiudi'} style={{ width: 36, height: 36, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
+            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver')}</div>
+            <button onClick={() => setFlip(false)} aria-label={L('close')} style={{ width: 36, height: 36, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
           </div>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '34px 26px', transform: 'rotate(180deg)' }}>
             <div style={{ fontSize: 34, marginBottom: 6 }}>{driverInfo?.flag}</div>
@@ -395,7 +401,7 @@ function TaxiTalk({ userToken }) {
             {testo && <div style={{ fontSize: 14, color: C.muted, fontStyle: 'italic', marginTop: 20, textAlign: 'center' }}>{testo}</div>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px 30px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={() => ascolta(tradotto)} disabled={suonando} aria-label={L('taxiListen') || 'Ascolta'}
+            <button onClick={() => ascolta(tradotto)} disabled={suonando} aria-label={L('taxiListen')}
               style={{ width: 72, height: 72, borderRadius: '50%', border: 'none', background: C.amber, color: '#1a1200', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(245,166,35,0.34)' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a10 10 0 0 1 0 14" /></svg>
             </button>

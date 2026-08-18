@@ -74,11 +74,14 @@ async function handlePost(req) {
       // superficie; senza override vale il default ('conversazionale').
       profilo: profiloEffettivo(compagno, 'amico'),
     });
-    // b.237 — la REGIA del turno: stima cosa sta facendo la persona (sfogo?
-    // domanda? riflessione?) e detta la mossa. È il "conversation controller":
-    // deterministico, zero latenza, e toglie il tic della domanda a ogni costo.
+    // b.237 — la lettura del turno: stima cosa sta facendo la persona (sfogo?
+    // domanda? riflessione?) e la offre come IPOTESI. b.238 l'ha retrocessa da
+    // decisore a indizio: non detta la mossa, la sceglie il Compagno.
+    // Il commento diceva ancora "detta la mossa" — cioe descriveva l'esatta
+    // architettura che abbiamo eliminato. Fra tre mesi qualcuno l'avrebbe
+    // letto e ricostruito. Un commento che invecchia e' una trappola.
     const { blocco: regia } = regiaConversazione({ ultimo, storia: messaggi });
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${quantoViConoscete}${bloccoObiettivi}${involucro}\n\n${LENTI_UMANE}${regia}\n\n${ISTRUZIONE_VOCE}`;
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona. Rispondi nella lingua: ${lingua}.${blocco}${quantoViConoscete}${bloccoObiettivi}${involucro}\n\n${LENTI_UMANE}${regia}\n\n${ISTRUZIONE_VOCE}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
     const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500, temperature: temperaturaLiberta(compagno.liberta) });

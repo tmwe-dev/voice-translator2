@@ -74,7 +74,9 @@ function LifeView({ onApriStanza }) {
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
           { id: 'dossier', icon: 'doc', label: L('lifeDossierTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
-          { id: 'obiettivi', icon: 'target', label: (L('lifeGoalsTab') && L('lifeGoalsTab') !== 'lifeGoalsTab') ? L('lifeGoalsTab') : 'Obiettivi' },
+          // b.247 — la chiave ora esiste in tutti e quindici i pacchetti:
+          // via il ripiego che confrontava il risultato con la chiave stessa.
+          { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ].map((t) => {
           const on = scheda === t.id;

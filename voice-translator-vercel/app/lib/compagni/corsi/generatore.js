@@ -17,6 +17,26 @@ import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contes
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 
 import { getLang } from '../../constants.js';
+import { createLogger } from '../../logger.js';
+
+const log = createLogger('compagni-corsi');
+
+// ── INIZIO b.247 — una ricerca GUASTA non deve travestirsi da "nessuna fonte" ──
+// `ponte.cerca` ritornava `[]` sia quando non trovava niente sia quando
+// esplodeva: qui dentro i due casi diventavano indistinguibili e una lezione
+// di medicina poteva nascere senza una sola fonte senza che nessuno lo
+// sapesse. Ora l'esito è { ok, risultati, errore } e si legge da qui.
+// Si tollera ancora l'ARRAY nudo del vecchio contratto (= ricerca riuscita),
+// così la migrazione non rompe chi/che cosa ritorna ancora una lista.
+// Una forma SCONOSCIUTA vale guasto: non si può giurare che sia andata bene.
+function leggiEsitoRicerca(x) {
+  if (Array.isArray(x)) return { ok: true, risultati: x };
+  if (x && typeof x === 'object' && typeof x.ok === 'boolean') {
+    return { ok: x.ok, risultati: Array.isArray(x.risultati) ? x.risultati : [], errore: x.errore };
+  }
+  return { ok: false, risultati: [], errore: 'esito-ricerca-sconosciuto' };
+}
+// ── FINE b.247 ──
 
 // b.214 — la lingua andava al modello come CODICE ("es"), e il modello non
 // lo rispettava (un corso "es" tornava in italiano). Ora si passa il NOME
@@ -79,7 +99,7 @@ Niente testo fuori dal JSON.`;
 }
 
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [] } = {}) {
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
@@ -92,6 +112,13 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
         fonti.slice(0, 5).map((f, i) => `${i + 1}. ${f.titolo || ''} — ${(f.sintesi || '').slice(0, 300)}`).join('\n')}`
     : '';
+  // b.247 — materia certificata per cui la ricerca è RIUSCITA ma non ha
+  // trovato nulla: il silenzio non basta. Prima il blocco FONTI spariva e
+  // basta, e il modello scriveva lo stesso citando studi "a memoria" — cioè
+  // inventandoli. Ora glielo si dice in faccia: niente fonti, niente citazioni.
+  const bloccoSenzaFonti = (!bloccoFonti && fontiNonTrovate)
+    ? `\n\nATTENZIONE: la ricerca di fonti per questa materia (che le pretende) NON ha restituito alcun documento. NON hai fonti. Insegna solo ciò che è consolidato, NON citare studi, linee guida, statistiche, dosaggi o riferimenti bibliografici (nemmeno a memoria), e dichiara apertamente quali punti vanno verificati su una fonte autorevole o con un professionista.`
+    : '';
   const prompt =
 // b.240 — la struttura fissa "introduzione → corpo → punti chiave" produceva
 // dispense: corrette e dimenticabili. Ora c'è un RITMO (aggancia, insegna
@@ -100,7 +127,7 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
 `Corso: "${argomento}" (livello ${livello}). Scrivi la lezione: "${lezione?.titolo || ''}".
 Obiettivi: ${obiettivi}.
 ${RITMO_LEZIONE}
-Tono adatto al livello.${bloccoFonti}
+Tono adatto al livello.${bloccoFonti}${bloccoSenzaFonti}
 
 ${ISTRUZIONE_APPUNTO}`;
   return { system, prompt };
@@ -150,19 +177,39 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
 export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [] } = {}, { userToken = null } = {}) {
   let fonti = [];
+  // ── INIZIO b.247 — FAIL-CLOSED sulle materie certificate ──
+  // Scelta dichiarata: per una materia che PRETENDE fonti (medicina,
+  // psicologia, nutrizione, benessere: `fontiCertificate` in catalogo.js) una
+  // ricerca GUASTA non si degrada, si RIFIUTA. Generare lo stesso vorrebbe
+  // dire consegnare una lezione che ha l'aria di essere fondata su fonti
+  // mentre non lo è: il danno non è la lezione mancante, è la lezione
+  // inventata di cui nessuno sospetta. Meglio un errore leggibile.
+  // Diverso il caso "ricerca riuscita, zero documenti": lì si genera, ma
+  // dicendo al modello che fonti non ce ne sono (vedi promptLezione).
+  let fontiNonTrovate = false;
   if (categoriaCertificata(categoria)) {
     const query = `${argomento} ${lezione?.titolo || ''}`.trim();
-    const trovate = await cerca(query, { lingua, profonda: true, fonti: 4 });
-    fonti = (trovate || []).slice(0, 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+    const esito = leggiEsitoRicerca(await cerca(query, { lingua, profonda: true, fonti: 4 }));
+    if (!esito.ok) {
+      log.warn('materia certificata: ricerca fonti guasta, lezione NON generata', {
+        categoria, argomento: String(argomento || '').slice(0, 120), errore: esito.errore || 'ignoto',
+      });
+      return { ok: false, motivo: 'fonti-non-disponibili: ' + (esito.errore || 'ricerca-guasta'), status: 503 };
+    }
+    fonti = esito.risultati.slice(0, 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+    fontiNonTrovate = fonti.length === 0;
   }
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso });
+  // ── FINE b.247 ──
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 900 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   // b.244 — l'appunto del Maestro si stacca qui: non deve MAI comparire nella
   // lezione. Le osservazioni NUOVE tornano al chiamante, che le salva (il
   // nome è diverso da `osservazioni` in ingresso, che sono quelle già note).
   const { testo, osservazioni: appunto } = staccaAppunto(r.testo);
-  return { ok: true, contenuto: testo, fonti, osservazioni: appunto };
+  // b.247 — `fontiNonTrovate` esce dalla funzione: chi mostra la lezione può
+  // dire la verità ("senza fonti") invece di lasciarlo intuire dall'elenco vuoto.
+  return { ok: true, contenuto: testo, fonti, osservazioni: appunto, fontiNonTrovate };
 }
 
 /** Genera il quiz di una lezione. */

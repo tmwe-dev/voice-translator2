@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useEffect, useCallback } from 'react';
 import { getLang } from '../lib/constants.js';
+import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
 const dbg = createLogger('deepgram');
 
@@ -54,8 +55,17 @@ export default function useDeepgramSTT({
   // configura DEEPGRAM_API_KEY (con permesso di creare chiavi temporanee)
   // su Vercel. Le funzioni start/stopDeepgramStreaming restano nel file,
   // inerti finche availableRef e false.
+  //
+  // b.247 — quel «false» era scritto A MANO qui, e intanto
+  // useStreamingInterpreter.js chiamava /api/stt-token e apriva il suo
+  // WebSocket verso Deepgram: la stessa decisione, presa due volte in due
+  // file che non si parlavano, con esiti opposti. Chi leggeva solo questo
+  // file concludeva che Deepgram fosse spento ovunque, e si sbagliava.
+  // La decisione ora vive in un posto solo, lib/sttPolicy.js, con scritto
+  // il perche; qui la si chiede. L'esito per la traduzione resta false —
+  // il comportamento non cambia, cambia il fatto che sia UNA decisione.
   useEffect(() => {
-    deepgramAvailableRef.current = false;
+    deepgramAvailableRef.current = deepgramAmmesso(USO.TRADUZIONE);
   }, []);
 
   /**
@@ -64,6 +74,17 @@ export default function useDeepgramSTT({
    * @returns {Promise<boolean>} — true if connected, false if fallback needed
    */
   const startDeepgramStreaming = useCallback(async (langObj) => {
+    // b.247 — seconda porta sulla stessa stanza: questa funzione apriva il
+    // microfono e il WebSocket senza chiedere niente a nessuno, e bastava
+    // una chiamata diretta (o un ripristino distratto della riga qui sopra)
+    // per riaccendere Deepgram senza accorgersene. La guardia sta PRIMA di
+    // qualunque effetto collaterale: niente microfono, niente stato di
+    // registrazione, si torna false e chiama il ripiego.
+    if (!deepgramAmmesso(USO.TRADUZIONE)) {
+      dbg.debug('[STT-Deepgram] non ammesso dalla policy: si usa il ripiego');
+      return false;
+    }
+
     const speechLang = getLang(langObj)?.speech || 'en-US';
     const dgLang = speechLang.split('-')[0]; // 'it-IT' → 'it'
 

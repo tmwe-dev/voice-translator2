@@ -82,6 +82,48 @@ export default function useTranslation({
   const stoppingRef = useRef(false);
   const processedFinalsRef = useRef(null);
 
+  // ── b.247 · l'identita dell'EVENTO di cattura ──
+  //
+  // Il difetto: piu in basso nella catena (useTranslationAPI) sia il
+  // freno anti doppio invio sia la fase 2 riconoscevano un messaggio dal
+  // suo TESTO. Due "si" di fila erano indistinguibili: il secondo veniva
+  // scambiato per un doppione e spariva, oppure riceveva la traduzione
+  // del primo. Il testo non e l'identita di niente.
+  //
+  // L'identita nasce QUI, dove il testo viene raccolto: una dettatura,
+  // un blocco audio, un invio dal riquadro. Da qui viaggia intera fino al
+  // server come `clientId` e torna nella fase 2, senza mai essere
+  // ricostruita dal contenuto.
+  //
+  // `testoDettato` serve a UNA cosa sola, ed e il caso vero del doppio
+  // scatto: il VAD manda da solo dopo il silenzio mentre il dito preme
+  // il tasto sullo stesso riquadro. Sono due chiamate diverse, ma UNA
+  // cattura — e l'unico modo di accorgersene e che il testo del riquadro
+  // sia ESATTAMENTE quello che la dettatura in corso ha prodotto.
+  // Fuori da quel caso il confronto sul testo non si fa proprio.
+  const catturaRef = useRef({ id: null, testoDettato: null, spedita: 0 });
+
+  const nuovoIdCattura = () => `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+
+  // Comincia una dettatura nuova: da qui in poi le parole appartengono a
+  // un evento nuovo, anche se dicono la stessa cosa di prima.
+  function apriCattura(testoIniziale = '') {
+    catturaRef.current = { id: nuovoIdCattura(), testoDettato: testoIniziale, spedita: 0 };
+  }
+
+  // Quale evento sta mandando questo testo. Si riusa l'id della dettatura
+  // in corso solo nel caso descritto sopra (e, se e gia partita, entro il
+  // tempo di un doppio scatto). Altrimenti e un evento nuovo e prende un
+  // id nuovo — ed e cosi che "si" detto due volte parte due volte.
+  function idCatturaPer(testo) {
+    const c = catturaRef.current;
+    const stessaCattura = !!c.id
+      && typeof c.testoDettato === 'string'
+      && c.testoDettato.trim() === testo
+      && (!c.spedita || Date.now() - c.spedita < 2500);
+    return stessaCattura ? c.id : nuovoIdCattura();
+  }
+
   // Whisper-only mode ref (for languages where browser STT is unreliable)
   const whisperOnlyRef = useRef(false);
   // Confidence monitoring refs (auto-switch to Whisper if STT quality drops)
@@ -203,12 +245,22 @@ export default function useTranslation({
     const targetLangs = opts.targetLangs || getAllTargetLangs().targetLangs;
     const primaryTargetLang = targetLangs[0]?.code || 'en';
 
+    // b.247 — un identificativo solo per tutto il giro: creazione,
+    // traduzione, aggiornamento, invio. Chi ha gia mandato la fase 1 (il
+    // percorso audio) lo passa; gli altri lo chiedono alla cattura.
+    const idCattura = opts.idCattura || idCatturaPer(text);
+
     // ── PHASE 1: Send original immediately (skip if caller already sent) ──
     if (!opts.skipPhase1) {
       getPerf().mark(PERF.PHASE1_SEND);
-      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null);
+      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura });
       getPerf().measure(PERF.PHASE1_SEND);
     }
+    // b.247 — la cattura in corso risulta partita: un secondo invio dello
+    // stesso testo entro il tempo di un doppio scatto riusera questo
+    // identificativo, e sara `sendMessage` a fermarlo perche riconosce la
+    // spedizione, non il contenuto.
+    if (catturaRef.current.id === idCattura) catturaRef.current.spedita = Date.now();
 
     // ── PHASE 2: Translate + update ──
     getPerf().mark(PERF.TRANSLATE_LATENCY);
@@ -253,7 +305,10 @@ export default function useTranslation({
 
       getPerf().mark(PERF.PHASE2_SEND);
       if (primaryTranslated && roomId) {
-        sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
+        // b.247 — la fase 2 dice QUALE messaggio aggiornare, con lo stesso
+        // identificativo della fase 1. Prima lo cercava per contenuto, e
+        // con due messaggi uguali colpiva sempre l'ultimo.
+        sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations, { clientId: idCattura });
         // Niente refreshBalance qui: era il contatore LEGACY (centesimi Redis)
         // e con l'unificazione scattava a OGNI messaggio → tempesta di POST
         // /api/user → 429 anche sul login. Il saldo vero (wallet) lo aggiorna
@@ -273,7 +328,9 @@ export default function useTranslation({
       console.error('[translateAndSend] Failed after retry:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
-        updateLocalMessage(text, senderName, { _translationError: true });
+        // b.247 — anche il segnale d'errore nomina il SUO messaggio: per
+        // contenuto, con due messaggi uguali, finiva sul primo.
+        updateLocalMessage(text, senderName, { _translationError: true }, idCattura);
       }
     }
 
@@ -310,6 +367,12 @@ export default function useTranslation({
 
         if (!text || processedFinals.has(i)) continue;
         processedFinals.add(i);
+        // b.247 — il magazzino delle parole era vuoto: comincia una
+        // dettatura nuova, quindi un evento di cattura nuovo. E' qui che
+        // due "si" di fila smettono di essere lo stesso messaggio: il
+        // modo mani libere svuota il magazzino dopo ogni invio, e la
+        // frase successiva nasce con un'identita sua.
+        if (!allWordsRef.current) apriCattura();
         allWordsRef.current += (allWordsRef.current ? ' ' : '') + text;
       } else {
         interimTranscript += event.results[i][0].transcript;
@@ -318,6 +381,11 @@ export default function useTranslation({
     // Show interim preview
     const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript : '');
     if (preview) {
+      // b.247 — si annota cosa ha prodotto la dettatura in corso: e
+      // l'unico appiglio per riconoscere il tocco sul tasto come LO
+      // STESSO evento dell'auto-invio del VAD (il riquadro qui sotto
+      // riceve esattamente questo testo).
+      if (catturaRef.current.id) catturaRef.current.testoDettato = preview;
       setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
       // Also populate textInput so user can edit before sending
       setTextInput(preview);
@@ -371,18 +439,24 @@ export default function useTranslation({
     if (!original?.trim() || !roomId) return;
 
     // ── Step 2: Phase 1 send + Phase 2 translate via unified helper ──
-    sendMessage(original, null, myL.code, primaryTarget.code, null);
+    // b.247 — un blocco audio e UN evento di cattura: l'identificativo
+    // nasce qui e accompagna il messaggio fino alla PATCH della
+    // traduzione, che altrimenti se lo sarebbe ricostruito dal testo.
+    const idCattura = nuovoIdCattura();
+    sendMessage(original, null, myL.code, primaryTarget.code, null, { idCattura });
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
     try {
       // L'audio e gia stato scalato da /api/transcribe, che ha lasciato
       // una ricevuta: la strappa /api/translate, non serve dirglielo.
-      await translateAndSend(original, { skipPhase1: true, myL, targetLangs });
+      await translateAndSend(original, { skipPhase1: true, myL, targetLangs, idCattura });
     } catch (e) {
       console.error('[processAndSendAudio] Translation failed:', e);
       if (updateLocalMessage) {
         const senderName = verifiedNameRef?.current || prefsRef.current.name;
-        updateLocalMessage(original, senderName, { _translationError: true });
+        // b.247 — vedi translateAndSend: l'errore si posa sul messaggio
+        // nominato, non sul primo che ha lo stesso testo.
+        updateLocalMessage(original, senderName, { _translationError: true }, idCattura);
       }
     }
     setStreamingMsg(null);
@@ -466,6 +540,10 @@ export default function useTranslation({
 
     // Initialize allWordsRef from current textInput so dictation appends to existing text
     allWordsRef.current = textInputRef.current || '';
+    // b.247 — una registrazione nuova e una cattura nuova, anche quando
+    // continua un testo gia presente nel riquadro (che qui NON svuota il
+    // magazzino, e quindi non farebbe scattare l'apertura automatica).
+    apriCattura(allWordsRef.current);
     lastInterimRef.current = '';
     streamingModeRef.current = true;
     lowConfidenceCountRef.current = 0;
@@ -594,6 +672,10 @@ export default function useTranslation({
     // lastInterimRef is a safety net for any remaining unfinalised text.
     const interimText = lastInterimRef.current?.trim() || '';
     const allOriginal = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
+    // b.247 — questo e il testo definitivo della dettatura, ed e anche
+    // quello che finisce nel riquadro qui sotto: un tocco sul tasto
+    // subito dopo e lo STESSO evento, non un secondo messaggio.
+    if (catturaRef.current.id) catturaRef.current.testoDettato = allOriginal;
 
     // If no text accumulated but backup recording exists → fallback to Whisper
     if (!allOriginal && backupRecRef.current && backupRecRef.current.state !== 'inactive') {

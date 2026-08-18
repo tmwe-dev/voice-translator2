@@ -28,6 +28,9 @@ import { preventivoTesto } from '../../wallet/addebita.js';
 import { COSTO_AVATAR_SECONDI } from '../../wallet/tariffe.js';
 import { callLLMWithFallback } from '../llmCaller.js';
 import { cercaArgomenti } from '../topics/servizio.js';
+import { createLogger } from '../logger.js';
+
+const log = createLogger('compagni-ponte');
 
 // Fattore prudente: 1 token ≈ 4 caratteri; riserviamo su ×5 così il costo
 // vero (commit sui caratteri reali) è sempre ≤ della riserva e l'eccesso
@@ -126,15 +129,48 @@ export async function generaTesto({
 
 /**
  * Cerca fonti/argomenti col motore Topics/Cobra (già protetto SSRF).
- * Ritorna gli argomenti trovati (o [] se niente).
+ *
+ * ── INIZIO b.247 — "non ho trovato niente" e "sono guasto" erano la STESSA COSA ──
+ * Prima questa funzione faceva try/catch e nel catch ritornava `[]`. Chi
+ * chiamava vedeva un array vuoto e NON aveva alcun modo di distinguere una
+ * ricerca riuscita senza risultati da una ricerca esplosa (rete giù, RSS
+ * irraggiungibile — vedi cercaNotizie: se anche la riserva Google fallisce,
+ * `scaricaRss` lancia e l'eccezione arriva fin qui). Il guasto veniva
+ * inghiottito in silenzio.
+ *
+ * È pericoloso per il Dossier e soprattutto per le materie CERTIFICATE
+ * (medicina, psicologia, nutrizione, benessere): la lezione veniva generata
+ * senza una sola fonte, ma con l'aria di essere fondata su fonti, e il
+ * modello riempiva il vuoto INVENTANDO — esattamente ciò che il progetto
+ * vieta. Nessuno se ne accorgeva, perché il difetto è muto.
+ *
+ * Ora l'esito è esplicito:
+ *   { ok:true,  risultati:[...] } → ricerca riuscita (anche con 0 risultati)
+ *   { ok:false, risultati:[], errore:'...' } → motore guasto
+ *
+ * Anche una risposta MALFORMATA (senza `argomenti` array) è un guasto, non
+ * uno zero risultati: se non si capisce cosa ha risposto il motore non si
+ * può giurare che la ricerca sia andata bene.
+ *
+ * Retrocompatibilità: i chiamanti normalizzano ancora un ARRAY nudo (vecchio
+ * contratto) leggendolo come ricerca riuscita, così un doppio di prova che
+ * ritorna un array non viene scambiato per un guasto.
+ * ── FINE b.247 ──
  */
 export async function cerca(query, { lingua = 'it', profonda = false, fonti = 6 } = {}) {
-  if (!query) return [];
+  // Query vuota: non c'è niente da cercare. Non è un guasto del motore.
+  if (!query) return { ok: true, risultati: [] };
   try {
     const r = await cercaArgomenti(query, lingua, { profonda, fonti });
-    return (r && r.argomenti) || [];
-  } catch {
-    return [];
+    if (!r || !Array.isArray(r.argomenti)) {
+      log.warn('ricerca: risposta illeggibile dal motore Topics', { query: String(query).slice(0, 120) });
+      return { ok: false, risultati: [], errore: 'esito-illeggibile' };
+    }
+    return { ok: true, risultati: r.argomenti };
+  } catch (e) {
+    // b.247 — il guasto si REGISTRA sempre: prima spariva nel catch vuoto.
+    log.warn('ricerca guasta', { query: String(query).slice(0, 120), errore: e?.message || 'ignoto' });
+    return { ok: false, risultati: [], errore: e?.message || 'ricerca-guasta' };
   }
 }
 
