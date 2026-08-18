@@ -5,6 +5,20 @@ import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
+// b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
+// in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
+const CHIAVE_CHAT = (id) => `vt-chat-${id}`;
+function caricaChat(id) {
+  if (typeof window === 'undefined' || !id) return [];
+  try { const s = localStorage.getItem(CHIAVE_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
+  catch { return []; }
+}
+function salvaChat(id, messaggi) {
+  if (typeof window === 'undefined' || !id) return;
+  try { localStorage.setItem(CHIAVE_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
+  catch { /* quota/privato: si perde solo la persistenza, non la chat viva */ }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // AmicoChat — parla con un Compagno. Se ha la memoria accesa (🧠) ti
 // ricorda nel tempo. Chat semplice + voce opzionale. (Luca)
@@ -19,6 +33,9 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   const fondo = useRef(null);
 
   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
+
+  // b.231 — salva la conversazione sul dispositivo a ogni cambiamento.
+  useEffect(() => { if (scelto) salvaChat(scelto.id, messaggi); }, [messaggi, scelto]);
 
   const invia = useCallback(async () => {
     const t = testo.trim();
@@ -42,7 +59,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifePickFriend')}</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {compagni.map((c) => (
-            <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi([]); }}
+            <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi(caricaChat(c.id)); }}
               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
               <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
               <span style={{ flex: 1, minWidth: 0 }}>

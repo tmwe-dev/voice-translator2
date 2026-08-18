@@ -14,6 +14,7 @@ vi.mock('../../app/lib/compagni/memoria.js', () => ({
   contestoMemoria: () => '\n\nricordi...',
   estraiRicordi: (...a) => mockEstrai(...a),
   aggiungiRicordi: (...a) => mockAggiungi(...a),
+  tagsDalTesto: () => [],
 }));
 vi.mock('../../app/lib/compagni/ponte.js', () => ({ generaTesto: (...a) => mockGenera(...a) }));
 vi.mock('../../app/lib/apiGuard.js', () => ({ withApiGuard: (fn) => fn }));

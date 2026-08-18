@@ -8,7 +8,6 @@
 // Verbi:
 //   generaTesto(...) → callLLM, MA passando dal wallet (riserva/commit),
 //                      così Life non genera mai token fuori dal conto.
-//   traduci(...)     → una specializzazione di generaTesto.
 //   cerca(...)       → il motore Topics/Cobra (già SSRF-safe).
 //
 // La VOCE (TTS) resta sul percorso client esistente (/api/tts-elevenlabs):
@@ -53,6 +52,9 @@ export async function generaTesto({
   system = '', prompt = '', provider = 'openai', modello = 'gpt-4o-mini',
   userToken = null, roomId = null, roomSessionToken = null,
   maxTokens = 400,
+  // b.231 — la barra "libertà" ora cambia davvero il comportamento: chi
+  // chiama passa la temperatura (temperaturaLiberta). Difetto 0.7 come prima.
+  temperature = 0.7,
   // ── INIZIO b.205 — i contenuti di Life si troncavano a metà ──
   // callLLMWithFallback, senza terzo argomento, usava il timeout di
   // DIFETTO di 10s, tarato sulla TRADUZIONE (una frase, ~1-2s). Ma una
@@ -100,7 +102,7 @@ export async function generaTesto({
 
     const messaggi = componiMessaggi(system, prompt);
     const { translated } = await callLLMWithFallback(
-      { provider, model: modello, apiKey, messages: messaggi, systemPrompt: system, text: prompt, maxTokens, temperature: 0.7 },
+      { provider, model: modello, apiKey, messages: messaggi, systemPrompt: system, text: prompt, maxTokens, temperature },
       fallbacks,
       timeoutMs, // b.205 — tetto ampio per i contenuti lunghi di Life
     );
@@ -120,21 +122,6 @@ export async function generaTesto({
     if (riservaId) await release(riservaId, 'errore-generazione').catch(() => {});
     return { ok: false, motivo: 'errore-generazione: ' + (e?.message || 'ignoto') };
   }
-}
-
-/**
- * Traduce un testo in una lingua, passando dallo stesso percorso fatturato.
- * v1: usa generaTesto con un'istruzione di traduzione. (In futuro potrà
- * puntare a /api/translate per il percorso ottimizzato con glossario.)
- */
-export async function traduci(testo, lingua, opts = {}) {
-  if (!testo || !lingua) return { ok: false, motivo: 'parametri-mancanti' };
-  return generaTesto({
-    system: `Sei un traduttore. Traduci fedelmente nella lingua "${lingua}". Rispondi SOLO con la traduzione, senza commenti.`,
-    prompt: testo,
-    maxTokens: Math.min(1200, Math.max(200, Math.ceil(testo.length / 2))),
-    ...opts,
-  });
 }
 
 /**

@@ -57,9 +57,9 @@ export function generaLezione({ argomento, categoria, livello, lezione, docenteI
   return postJSON('/api/compagni/corso', { azione: 'lezione', argomento, categoria, livello, lezione, docenteId, lingua, userToken });
 }
 
-/** Genera il quiz di una lezione. */
-export function generaQuiz({ lezione, lingua, userToken, livello }) {
-  return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken, livello });
+/** Genera il quiz di una lezione. b.231 — passa il contenuto reale. */
+export function generaQuiz({ lezione, lingua, userToken, livello, contenuto, argomento }) {
+  return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken, livello, contenuto, argomento });
 }
 
 /** b.228 — libreria condivisa: elenco corsi disponibili (sfoglia). */

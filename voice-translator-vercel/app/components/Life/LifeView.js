@@ -311,14 +311,16 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (!aperta) return;
     setLavoro(true);
     try {
-      const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello });
+      // b.231 — passiamo il CONTENUTO reale della lezione aperta e l'argomento:
+      // il quiz chiede solo ciò che è stato davvero insegnato.
+      const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello, contenuto: aperta.contenuto, argomento: argomento.trim() });
       setAperta((a) => ({ ...a, domande: d.domande || [] }));
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — mancavano `linguaCorso` e `livello`: il quiz usa entrambi
     // (lingua del corso e registro bambino) ma le deps non li elencavano.
-  }, [aperta, linguaCorso, livello, userToken, L]);
+  }, [aperta, linguaCorso, livello, userToken, argomento, L]);
 
   // b.229 — illustrazione della lezione (gpt-image-1). Costo dal wallet.
   const illustra = useCallback(async () => {

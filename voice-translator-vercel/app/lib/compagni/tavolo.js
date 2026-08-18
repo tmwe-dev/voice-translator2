@@ -17,6 +17,8 @@
 // I costruttori di prompt sono PURI e testabili.
 // ═══════════════════════════════════════════════════════════════
 
+import { involucroCompagno } from './contratto.js';
+
 export const TAVOLO_MAX = 4;
 
 // Regole del dibattito (adattate da RadioChat DEBATE_FRAMEWORK), per lingua app.
@@ -46,11 +48,18 @@ export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQue
     ? `\n\nOBIETTIVO COMUNE DELLA TAVOLA (tieni SEMPRE la rotta su questo; ogni tuo intervento deve avvicinare il gruppo al risultato): ${obiettivo}`
     : '';
   const bloccoConvergenza = convergenza ? `\n\n${convergenza}` : '';
+  // b.231 — involucro comune: al Tavolo nessuno ha ricerca/fonti in tempo
+  // reale, quindi le capacità lo dicono (Omar non inventa fonti). La barra
+  // "libertà" del Compagno modula anche qui il comportamento.
+  const involucro = involucroCompagno({
+    liberta: compagno && compagno.liberta,
+    capacita: { ricerca: false, fonti: false, memoria: false },
+  });
   const system =
 `${persona}
 Sei ${nome}, a una tavola rotonda con una persona e altri interlocutori. Rispondi in prima persona, conciso e sostanzioso (2-3 frasi). Parli con la persona e reagisci a cosa dicono gli altri, sempre puntando al risultato. Rispondi nella lingua: ${lingua}.
 
-${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoConvergenza}`;
+${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoConvergenza}${involucro}`;
 
   const passato = (storia || []).slice(-8)
     .map(m => `[${m.ruolo === 'persona' ? 'persona' : m.ruolo}]: ${m.testo}`).join('\n');
@@ -79,9 +88,9 @@ ${testo}
 
 Scrivi una SINTESI breve e concreta con:
 1) I punti su cui c'è ACCORDO.
-2) Le eventuali divergenze rimaste aperte.
-3) La CONCLUSIONE condivisa / il prossimo passo consigliato verso l'obiettivo.
-Niente ripetizioni inutili, vai al sodo.`;
+2) Le divergenze e le INCERTEZZE rimaste aperte: riportale esplicitamente, non appiattirle in un falso accordo.
+3) La CONCLUSIONE condivisa dove possibile / il prossimo passo consigliato verso l'obiettivo.
+Niente ripetizioni inutili, vai al sodo. Onestà prima di completezza: se manca un dato per concludere, dillo.`;
   return { system, prompt };
 }
 
@@ -91,6 +100,8 @@ Niente ripetizioni inutili, vai al sodo.`;
  */
 export function istruzioneConvergenza(giro = 0) {
   if (giro <= 0) return 'Primi scambi: metti sul tavolo la TUA posizione distintiva sull\'obiettivo.';
-  if (giro >= 2) return '⚠️ Non girate a vuoto: portate il gruppo verso una conclusione condivisa, riducendo le divergenze e proponendo la sintesi migliore.';
-  return 'Costruite l\'uno sull\'altro: convergete verso la risposta migliore, senza ripetervi.';
+  // b.231 — no falso consenso: se i dati non bastano, convergere su ciò che
+  // è certo e dichiarare apertamente cosa resta incerto e perché.
+  if (giro >= 2) return '⚠️ Non girate a vuoto: puntate alla conclusione migliore possibile. Se i dati NON permettono un accordo, convergete su ciò che è certo, dite chiaramente cosa resta incerto e PERCHÉ — senza fabbricare un consenso artificiale.';
+  return 'Costruite l\'uno sull\'altro: convergete verso la risposta migliore, senza ripetervi e senza appiattire un disaccordo reale.';
 }

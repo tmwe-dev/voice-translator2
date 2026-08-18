@@ -179,7 +179,7 @@ function TaxiTalk({ userToken }) {
 
   // ── Dettatura (Web Speech API, nella MIA lingua) ──
   const dettaturaOff = useCallback(() => {
-    if (speechRef.current) { try { speechRef.current.stop(); } catch { /* già chiuso */ } speechRef.current = null; }
+    if (speechRef.current) { try { speechRef.current.stop(); } catch { /* il riconoscimento era già chiuso: fermarlo di nuovo non serve */ } speechRef.current = null; }
     setRegistrando(false);
   }, []);
 
@@ -219,7 +219,7 @@ function TaxiTalk({ userToken }) {
 
   const condividiMappa = useCallback(async () => {
     if (!mapUrl) return; vibrate(12);
-    if (navigator.share) { try { await navigator.share({ title: 'TaxiTalk', text: dest?.displayName || '', url: mapUrl }); } catch { /* annullato */ } }
+    if (navigator.share) { try { await navigator.share({ title: 'TaxiTalk', text: dest?.displayName || '', url: mapUrl }); } catch { /* l'utente ha annullato la condivisione: nessuna azione necessaria */ } }
     else { try { await navigator.clipboard.writeText(mapUrl); } catch { /* clipboard non disponibile */ } }
   }, [mapUrl, dest]);
 

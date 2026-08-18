@@ -3,9 +3,10 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
-import { ricordiPerContesto, contestoMemoria, estraiRicordi, aggiungiRicordi } from '../../../lib/compagni/memoria.js';
+import { ricordiPerContesto, contestoMemoria, estraiRicordi, aggiungiRicordi, tagsDalTesto } from '../../../lib/compagni/memoria.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
+import { involucroCompagno, temperaturaLiberta } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-amico');
 
@@ -40,19 +41,28 @@ async function handlePost(req) {
     const ultimo = messaggi.length ? (messaggi[messaggi.length - 1].testo || '') : '';
     if (!ultimo.trim()) return NextResponse.json({ error: 'Serve un messaggio' }, { status: 400 });
 
-    // Memoria: solo se accesa sul Compagno.
+    // Memoria: solo se accesa sul Compagno. b.231 — ora i tag REALI del
+    // messaggio guidano il richiamo dei ricordi consolidati (prima era []).
     let blocco = '';
     if (compagno.memoria) {
-      const ricordi = await ricordiPerContesto(email, compagno.id, []);
+      const ricordi = await ricordiPerContesto(email, compagno.id, tagsDalTesto(ultimo));
       blocco = contestoMemoria(ricordi);
     }
 
     const storia = messaggi.slice(0, -1).map(m => `[${m.ruolo === 'compagno' ? compagno.nome : 'persona'}]: ${m.testo}`).join('\n');
     const bloccoObiettivi = formattaObiettivi(obiettivi);
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}`;
+    // b.231 — involucro comune: gerarchia di priorità, capacità dichiarate
+    // (qui nessuna ricerca/fonte: così Omar non inventa fonti), regole
+    // epistemiche, e la barra "libertà" che ora cambia testo e temperatura.
+    const involucro = involucroCompagno({
+      liberta: compagno.liberta,
+      capacita: { ricerca: false, fonti: false, memoria: !!compagno.memoria },
+      antiRipetizione: true,
+    });
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}${involucro}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
-    const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500 });
+    const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500, temperature: temperaturaLiberta(compagno.liberta) });
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

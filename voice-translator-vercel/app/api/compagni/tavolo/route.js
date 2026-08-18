@@ -6,6 +6,7 @@ import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { promptTavolo, promptSintesi, istruzioneConvergenza, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
+import { temperaturaLiberta } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-tavolo');
 
@@ -58,7 +59,7 @@ async function handlePost(req) {
     const altriQuestoGiro = [];
     for (const c of compagni) {
       const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua });
-      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260 });
+      const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260, temperature: temperaturaLiberta(c.liberta) });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

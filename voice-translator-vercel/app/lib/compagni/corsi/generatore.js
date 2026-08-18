@@ -84,10 +84,22 @@ Struttura: una breve introduzione, il corpo con esempi concreti, e una chiusura 
 }
 
 // ── PROMPT: quiz di verifica ──
-export function promptQuiz({ lezione, lingua = 'it', nDomande = 3, livello = '' } = {}) {
+// b.231 — il quiz ora è FONDATO sul contenuto reale della lezione (prima
+// usava solo il titolo, e poteva chiedere cose mai insegnate).
+export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '' } = {}) {
   const system = `Sei un valutatore didattico. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
+  const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
+  const testo = String(contenuto || '').slice(0, 4000);
   const prompt =
-`Sulla lezione "${lezione?.titolo || ''}", crea ${nDomande} domande a risposta multipla.
+`Crea ${nDomande} domande a risposta multipla SOLO su ciò che è stato insegnato nella lezione qui sotto.
+CORSO: ${argomento || ''}
+LEZIONE: "${lezione?.titolo || ''}"
+OBIETTIVI: ${obiettivi}
+CONTENUTO DELLA LEZIONE (unica base ammessa per le domande):
+"""
+${testo || '(contenuto non disponibile: attieniti al titolo e agli obiettivi)'}
+"""
+REGOLA VINCOLANTE: non chiedere nulla che non sia presente nel contenuto qui sopra. Ogni domanda e la sua risposta corretta devono poter essere ricavate dal testo.
 Rispondi SOLO con JSON valido:
 [{"domanda":"...","opzioni":["a","b","c","d"],"corretta":0,"spiegazione":"..."}]
 "corretta" è l'indice (0-3) dell'opzione giusta. Niente testo fuori dal JSON.`;
@@ -124,8 +136,8 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 }
 
 /** Genera il quiz di una lezione. */
-export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '' } = {}) {
-  const { system, prompt } = promptQuiz({ lezione, lingua, nDomande, livello });
+export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '' } = {}) {
+  const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 600 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);

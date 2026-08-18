@@ -20,7 +20,32 @@ import { generaTesto } from './ponte.js';
 
 export const TAG_MEMORIA = ['famiglia', 'lavoro', 'studio', 'emozione', 'successo', 'difficolta', 'salute', 'hobby', 'relazioni', 'obiettivi', 'evento', 'preferenza', 'opinione', 'aneddoto', 'progresso', 'altro'];
 
-// Ripreso verbatim da RadioChat (lifeTutor/extraction.ts): stringa collaudata.
+// b.231 — indizi testuali → tag, per RICHIAMARE i ricordi consolidati
+// pertinenti al messaggio (prima si passava [] e il richiamo non scattava mai).
+const INDIZI_TAG = {
+  famiglia: ['famiglia', 'figli', 'figlio', 'figlia', 'moglie', 'marito', 'madre', 'padre', 'genitori', 'fratello', 'sorella'],
+  lavoro: ['lavoro', 'ufficio', 'capo', 'collega', 'carriera', 'azienda', 'progetto', 'cliente'],
+  studio: ['studio', 'esame', 'università', 'corso', 'scuola', 'imparare', 'lezione', 'lingua'],
+  salute: ['salute', 'medico', 'malattia', 'dieta', 'sonno', 'stress', 'ansia', 'palestra', 'correre'],
+  hobby: ['hobby', 'musica', 'sport', 'viaggio', 'viaggi', 'cucina', 'lettura', 'gioco'],
+  relazioni: ['amico', 'amica', 'relazione', 'partner', 'fidanzat', 'coppia'],
+  obiettivi: ['obiettivo', 'obiettivi', 'traguardo', 'voglio', 'sogno', 'meta'],
+  emozione: ['sento', 'triste', 'felice', 'arrabbiat', 'paura', 'preoccupat', 'contento'],
+  progresso: ['progresso', 'miglior', 'riuscito', 'completato', 'avanzamento'],
+};
+
+/** Tag rilevanti dedotti da un messaggio, per il richiamo della memoria. */
+export function tagsDalTesto(testo) {
+  const t = String(testo || '').toLowerCase();
+  const tags = [];
+  for (const [tag, indizi] of Object.entries(INDIZI_TAG)) {
+    if (indizi.some((k) => t.includes(k))) tags.push(tag);
+  }
+  return tags;
+}
+
+// Ripreso da RadioChat (lifeTutor/extraction.ts) e adattato in b.231 con la
+// clausola di DATA-MINIMIZATION (niente dati sensibili automatici).
 export const PROMPT_ESTRAZIONE = `Sei un analista di conversazioni per il sistema Life Tutor. Il tuo compito è estrarre INFORMAZIONI SIGNIFICATIVE da questa conversazione.
 
 Per ogni ricordo, fornisci:
@@ -31,7 +56,7 @@ Per ogni ricordo, fornisci:
 - emotion: stato emotivo associato (felice, triste, ansioso, motivato, frustrato, soddisfatto, neutro, eccitato, pensieroso)
 - layer: "recent" per fatti recenti, "consolidated" per fatti importanti permanenti
 
-Estrai SOLO fatti personali significativi (vita, emozioni, obiettivi, sfide, successi, preferenze, progressi, dati identificativi). NON estrarre contenuto didattico generico, domande tecniche senza contesto personale, saluti e convenevoli.
+Estrai SOLO fatti personali significativi e utili ad aiutare la persona (obiettivi, sfide, successi, preferenze, progressi, il nome se lo dice). NON estrarre contenuto didattico generico, domande tecniche senza contesto personale, saluti e convenevoli. DATA-MINIMIZATION: NON memorizzare dati sensibili come diagnosi mediche precise, farmaci, orientamenti, numeri di documenti, indirizzi o recapiti, anche se compaiono; al più annota il tema in modo generico (es. "sta seguendo un percorso di salute") senza il dettaglio sensibile.
 
 Rispondi SOLO con JSON valido:
 { "memories": [ { "content": "...", "summary": "...", "tags": ["..."], "importance": 3, "emotion": "neutro", "layer": "recent" } ] }

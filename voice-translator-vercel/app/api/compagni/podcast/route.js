@@ -5,6 +5,7 @@ import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
+import { temperaturaLiberta } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-podcast');
 
@@ -58,6 +59,7 @@ async function handlePost(req) {
         system, prompt: user,
         provider: c.provider, modello: c.modello,
         userToken, maxTokens: t.round === 1 ? 420 : 320,
+        temperature: temperaturaLiberta(c.liberta),
       });
       if (!esito.ok) {
         // Un turno fallito non deve buttare giù tutto il podcast: si salta,

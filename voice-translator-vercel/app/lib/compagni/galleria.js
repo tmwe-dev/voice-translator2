@@ -66,5 +66,5 @@ export async function rimuoviImmagine(id) {
       tx.objectStore(STORE).delete(id);
       tx.oncomplete = res; tx.onerror = res;
     });
-  } catch { /* best effort */ }
+  } catch { /* la galleria è un di più: se IndexedDB non è disponibile, si rinuncia senza rompere */ }
 }
