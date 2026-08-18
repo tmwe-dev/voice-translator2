@@ -7,6 +7,8 @@
 // solo il ponte HTTP fra la UI e il backend già costruito e testato.
 // ═══════════════════════════════════════════════════════════════
 
+import { segmentiPerVoce } from './corsi/lingua.js';
+
 async function postJSON(url, corpo) {
   const r = await fetch(url, {
     method: 'POST',
@@ -119,6 +121,36 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  * disponibile — la voce è un di più, non deve bloccare il podcast).
  * Passa l'elemento Audio a `onAudio` così il chiamante può fermarlo.
  */
+/**
+ * b.241 — VOCE DOPPIA per i corsi di lingua (ripreso da RadioChat).
+ *
+ * Il Maestro parla nella lingua della persona ma marca con [L2:...] ciò che
+ * è nella lingua studiata. Qui il testo si spezza e ogni pezzo va alla sua
+ * voce: la parte in italiano con la voce del Maestro, la frase inglese con
+ * una voce MADRELINGUA (basta non passare `voceId`: la rotta sceglie da sé
+ * la voce giusta per quella lingua).
+ *
+ * Senza tag [L2:] si comporta esattamente come parlaTurno — una chiamata sola.
+ * I pezzi vicini nella stessa lingua sono già uniti da segmentiPerVoce, così
+ * non si paga una chiamata per ogni parola.
+ */
+export async function parlaBilingue({ voceId, testo, linguaParlata, linguaStudiata, userToken, modoVoce }, onAudio) {
+  const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
+  for (const p of pezzi) {
+    const suaLingua = p.lingua === linguaStudiata;
+    await parlaTurno({
+      // La lingua studiata NON usa la voce del Compagno: serve un madrelingua.
+      voceId: suaLingua ? null : voceId,
+      testo: p.testo,
+      lingua: p.lingua,
+      userToken,
+      // Una citazione in lingua straniera si legge piana: è un modello di
+      // pronuncia, non un'interpretazione.
+      modoVoce: suaLingua ? 'neutro' : modoVoce,
+    }, onAudio);
+  }
+}
+
 export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce }, onAudio) {
   try {
     const r = await fetch('/api/tts-elevenlabs', {

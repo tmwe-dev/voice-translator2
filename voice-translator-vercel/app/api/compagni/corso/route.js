@@ -63,7 +63,8 @@ async function handlePost(req) {
       // b.231 — passiamo il CONTENUTO reale della lezione (generato prima):
       // così il quiz chiede solo ciò che è stato insegnato.
       const contenuto = typeof body.contenuto === 'string' ? body.contenuto : '';
-      const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento });
+      // b.240 — anche la prova passa dal docente scelto: e lui che sfida.
+      const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento, docente });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
     }

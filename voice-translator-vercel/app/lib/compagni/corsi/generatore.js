@@ -13,6 +13,8 @@
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
+import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva } from './imparare.js';
+import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 import { getLang } from '../../constants.js';
 
 // b.214 — la lingua andava al modello come CODICE ("es"), e il modello non
@@ -43,8 +45,10 @@ function vestePocente(docente) {
   // del programma, verifica nei punti chiave, un concetto per volta. Vale
   // anche per il docente generico; per un Compagno scelto conta l'eventuale
   // override del suo Deep Setting sulla superficie 'impara'.
-  if (!docente) return `Sei un docente esperto, chiaro e incoraggiante.\n${promptProfilo('didattico')}`;
-  const didattica = `\n${promptProfilo(profiloEffettivo(docente, 'impara'))}`;
+  // b.240 — alla vocazione si aggiunge la responsabilità MOTIVAZIONALE: un
+  // maestro non risponde soltanto bene, fa venire voglia di continuare.
+  if (!docente) return `Sei un docente esperto, chiaro e incoraggiante.\n${promptProfilo('didattico')}\n${RESPONSABILITA_MOTIVAZIONALE}`;
+  const didattica = `\n${promptProfilo(profiloEffettivo(docente, 'impara'))}\n${RESPONSABILITA_MOTIVAZIONALE}`;
   const p = docente.personalita ? `${docente.personalita}\n` : '';
   return `${p}Sei ${docente.nome || 'il docente'} e insegni questo corso con la tua voce.${didattica}`;
 }
@@ -75,25 +79,37 @@ Niente testo fuori dal JSON.`;
 
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
 export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [] } = {}) {
+  // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
+  // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
+  // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
+  const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
+  const bloccoLingua = (l2 && l2 !== lingua) ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2 }) : '';
   const system = `${vestePocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${bloccoLingua}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
         fonti.slice(0, 5).map((f, i) => `${i + 1}. ${f.titolo || ''} — ${(f.sintesi || '').slice(0, 300)}`).join('\n')}`
     : '';
   const prompt =
+// b.240 — la struttura fissa "introduzione → corpo → punti chiave" produceva
+// dispense: corrette e dimenticabili. Ora c'è un RITMO (aggancia, insegna
+// poco, fai fare, collega al reale, lascia voglia del passo dopo) che è una
+// filosofia narrativa, non uno schema da eseguire alla lettera.
 `Corso: "${argomento}" (livello ${livello}). Scrivi la lezione: "${lezione?.titolo || ''}".
 Obiettivi: ${obiettivi}.
-Struttura: una breve introduzione, il corpo con esempi concreti, e una chiusura con i punti chiave. Tono adatto al livello.${bloccoFonti}`;
+${RITMO_LEZIONE}
+Tono adatto al livello.${bloccoFonti}`;
   return { system, prompt };
 }
 
 // ── PROMPT: quiz di verifica ──
 // b.231 — il quiz ora è FONDATO sul contenuto reale della lezione (prima
 // usava solo il titolo, e poteva chiedere cose mai insegnate).
-export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '' } = {}) {
-  const system = `Sei un valutatore didattico. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
+export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '', docente = null } = {}) {
+  // b.240 — la sfida la lancia il MAESTRO, non un "valutatore didattico":
+  // era la voce sbagliata, e trasformava ogni verifica in un esame.
+  const system = `${vestePocente(docente)}\nOra metti alla prova la persona su ciò che le hai appena insegnato. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const testo = String(contenuto || '').slice(0, 4000);
   const prompt =
@@ -106,6 +122,7 @@ CONTENUTO DELLA LEZIONE (unica base ammessa per le domande):
 ${testo || '(contenuto non disponibile: attieniti al titolo e agli obiettivi)'}
 """
 REGOLA VINCOLANTE: non chiedere nulla che non sia presente nel contenuto qui sopra. Ogni domanda e la sua risposta corretta devono poter essere ricavate dal testo.
+${bloccoFormeDiProva(nDomande)}
 Rispondi SOLO con JSON valido:
 [{"domanda":"...","opzioni":["a","b","c","d"],"corretta":0,"spiegazione":"..."}]
 "corretta" è l'indice (0-3) dell'opzione giusta. Niente testo fuori dal JSON.`;
@@ -142,8 +159,8 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 }
 
 /** Genera il quiz di una lezione. */
-export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '' } = {}) {
-  const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello });
+export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null } = {}) {
+  const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 600 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
