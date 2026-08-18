@@ -20,7 +20,12 @@ export const PODCAST_LIMITI = {
   MIN_COMPAGNI: 2,
   MAX_COMPAGNI: 4,
   MIN_ROUND: 1,
-  MAX_ROUND: 10,
+  // b.236 — era 10: con 4 Compagni faceva 40 turni SEQUENZIALI in una rotta
+  // con maxDuration=60s (ogni turno = LLM + traduzione + TTS). Un podcast
+  // lungo moriva a metà per timeout, addebitando comunque i turni già fatti.
+  // 4 round × 4 Compagni = 16 turni resta il massimo finché l'orchestrazione
+  // non diventa un lavoro asincrono (vedi piano: Podcast async).
+  MAX_ROUND: 4,
   ROUND_PREDEFINITI: 4,
 };
 

@@ -39,7 +39,10 @@ async function handleGet(req) {
     return NextResponse.json({ rooms: active });
   } catch (e) {
     log.error('GET error:', e);
-    return NextResponse.json({ rooms: [] });
+    // b.236 — prima un guasto Redis diventava 200 + rooms:[]: piazza vuota e
+    // piazza ROTTA erano indistinguibili, per il client e per il monitoraggio.
+    // Il client ha gia il suo ramo d'errore per !res.ok (b.232): lo si usa.
+    return NextResponse.json({ error: 'vetrina non disponibile' }, { status: 503 });
   }
 }
 

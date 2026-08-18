@@ -65,7 +65,9 @@ async function handleGet(req) {
     return NextResponse.json({ discussioni });
   } catch (e) {
     log.error('GET:', e.message);
-    return NextResponse.json({ discussioni: [] }, { status: 200 });
+    // b.236 — stessa cura di /api/mondo: un guasto non si traveste da feed
+    // vuoto. Il client su !ok mantiene l'ultimo feed valido, non si rompe.
+    return NextResponse.json({ error: 'feed non disponibile' }, { status: 503 });
   }
 }
 
@@ -81,9 +83,12 @@ async function handlePost(req) {
   // b.190 — NICKNAME: in una piazza pubblica non si mostra il nome vero.
   // Il client manda il nickname pubblico scelto dall'utente; se c'e, e
   // quello il nome mostrato. L'email non compare mai (l'autore resta un
-  // id opaco), e senza nickname si ripiega sul nome dell'account.
+  // id opaco).
+  // b.236 — il ripiego su session.name e stato TOLTO: era la promessa
+  // disattesa di questa stessa premessa. Senza nickname l'autore resta
+  // senza nome (il client mostra gia '' senza rompersi), non col nome vero.
   const nick = (body.nick || '').toString().trim().replace(/[<>]/g, '').slice(0, 40);
-  const authorName = nick || session.name || '';
+  const authorName = nick;
 
   try {
     switch (azione) {
