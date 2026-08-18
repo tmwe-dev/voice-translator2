@@ -140,3 +140,29 @@ describe('la voce doppia passa dal client', () => {
     expect(src).toMatch(/segmentiPerVoce/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.242-bis — il tag L2 senza la voce era peggio di niente.
+//
+// Difetto mio, trovato ricontrollando la chat: in b.241 avevo scritto
+// parlaBilingue nel client ma NON l'avevo cablata nella UI. Risultato: il
+// Maestro produceva "[L2: beautiful]" e la lezione lo mostrava GREZZO a
+// schermo — un'istruzione per la voce diventata testo da leggere.
+// ═══════════════════════════════════════════════════════════════
+describe('il tag L2 arriva alla voce, e non arriva mai agli occhi', () => {
+  const ui = () => leggi('app/components/Life/LifeView.js');
+
+  it('a schermo la lezione passa da testoVisibile: niente "[L2:" scritto', () => {
+    expect(ui()).toMatch(/TestoRicco testo=\{testoVisibile\(aperta\.contenuto\)\}/);
+  });
+
+  it('e la lezione si puo ASCOLTARE con la voce doppia', () => {
+    const s = ui();
+    expect(s).toMatch(/parlaBilingue\(\{/);
+    expect(s).toMatch(/linguaStudiata: \(l2 && l2 !== linguaCorso\) \? l2 : linguaCorso/);
+  });
+
+  it('uscendo dalla lezione la voce si ferma', () => {
+    expect(ui()).toMatch(/audioLezioneRef\.current\?\.pause\(\)/);
+  });
+});

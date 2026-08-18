@@ -5,7 +5,8 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
+import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
+import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
@@ -249,6 +250,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [aperta, setAperta] = useState(null); // { lezione, contenuto, fonti, domande }
   // b.242 — le risposte date alla sfida: { indiceDomanda: indiceOpzione }.
   const [risposte, setRisposte] = useState({});
+  const [ascoltando, setAscoltando] = useState(false);
+  const audioLezioneRef = useRef(null);
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -331,6 +334,25 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // (lingua del corso e registro bambino) ma le deps non li elencavano.
   }, [aperta, linguaCorso, livello, userToken, argomento, L]);
 
+  // b.242-bis — leggi la lezione ad alta voce. Se e un corso di LINGUA, le
+  // parti marcate [L2:...] passano a una voce madrelingua: e per questo che
+  // il tag esiste. Altrimenti si comporta come una lettura normale.
+  const ascoltaLezione = useCallback(async () => {
+    if (!aperta || ascoltando) return;
+    setAscoltando(true);
+    try {
+      const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+      await parlaBilingue({
+        voceId: tutor?.voce?.id,
+        testo: aperta.contenuto,
+        linguaParlata: linguaCorso,
+        linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
+        userToken,
+      }, (a) => { audioLezioneRef.current = a; });
+    } catch { /* la voce e un di piu: la lezione resta leggibile */ }
+    finally { setAscoltando(false); }
+  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken]);
+
   // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
   // l'esito al Maestro. La registrazione e' un DI PIU': se fallisce (o se non
   // hai un account) la sfida resta comunque giocata.
@@ -370,7 +392,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   if (aperta) {
     return (
       <div>
-        <button onClick={() => setAperta(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
+        <button onClick={() => { try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
         {/* b.229 — tutor "compagno di viaggio" accanto al titolo. */}
@@ -387,7 +409,17 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
             </button>}
 
-        <TestoRicco testo={aperta.contenuto} testoP={testoP} muto={muto} />
+        {/* b.242-bis — il tag [L2:...] non si mostra MAI: e un'istruzione per
+            la voce, non testo da leggere. Senza questo, in un corso di lingua
+            si vedeva "[L2: beautiful]" scritto nella lezione. */}
+        <TestoRicco testo={testoVisibile(aperta.contenuto)} testoP={testoP} muto={muto} />
+        {/* La lezione si ASCOLTA: nei corsi di lingua le parti in lingua
+            straniera le dice una voce madrelingua (voce doppia, b.241) —
+            e' tutto il senso del tag L2. */}
+        <button onClick={ascoltaLezione} disabled={ascoltando}
+          style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: ascoltando ? 0.6 : 1 }}>
+          {ascoltando ? tt('lifeListening', 'Sto leggendo…') : tt('lifeListen', 'Ascolta la lezione')}
+        </button>
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
