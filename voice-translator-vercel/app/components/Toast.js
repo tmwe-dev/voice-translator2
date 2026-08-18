@@ -49,11 +49,15 @@ const ToastContainer = memo(function ToastContainer() {
       maxWidth: 'calc(100vw - 32px)', width: 360,
       pointerEvents: 'none',
     }} role="alert" aria-live="assertive">
-      {toasts.map(t => {
-        const base = COLORS[t.type] || COLORS.info;
+      {/* b.249 — il parametro si chiamava `t` e OMBREGGIAVA la funzione i18n
+          `t` importata sopra: `t(lingua, 'closeNotification')` chiamava
+          l'oggetto avviso → "t is not a function" → OGNI avviso a schermo
+          faceva cadere l'app intera nell'ErrorBoundary. Da b.138. */}
+      {toasts.map(avviso => {
+        const base = COLORS[avviso.type] || COLORS.info;
         const c = { ...base, bg: velo(base.tinta, 0.15), border: velo(base.tinta, 0.35), text: base.tinta };
         return (
-          <div key={t.id} style={{
+          <div key={avviso.id} style={{
             display: 'flex', alignItems: 'center', gap: 8,
             padding: '10px 14px', borderRadius: 12,
             background: c.bg, border: `1px solid ${c.border}`,
@@ -67,11 +71,11 @@ const ToastContainer = memo(function ToastContainer() {
               color: c.text, border: `1px solid ${c.border}`,
             }}>{c.icon}</span>
             <span style={{ flex: 1, fontSize: 13, color: c.text, lineHeight: 1.4 }}>
-              {t.message}
+              {avviso.message}
             </span>
-            {t.action && (
+            {avviso.action && (
               <button
-                onClick={() => { t.action.onClick(); dismissToast(t.id); }}
+                onClick={() => { avviso.action.onClick(); dismissToast(avviso.id); }}
                 style={{
                   padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                   background: 'rgba(255,255,255,0.1)', border: `1px solid ${c.border}`,
@@ -79,11 +83,11 @@ const ToastContainer = memo(function ToastContainer() {
                   WebkitTapHighlightColor: 'transparent',
                 }}
               >
-                {t.action.label}
+                {avviso.action.label}
               </button>
             )}
             <button
-              onClick={() => dismissToast(t.id)}
+              onClick={() => dismissToast(avviso.id)}
               aria-label={t(lingua, 'closeNotification')}
               style={{
                 background: 'none', border: 'none', color: c.text, cursor: 'pointer',
