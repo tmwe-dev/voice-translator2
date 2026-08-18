@@ -280,7 +280,18 @@ export default function useRoomPolling({
     // ── Deterministic update ID: same content = same ID across P2P + Realtime ──
     // Previously used `update_${Date.now()}` which generated different IDs for each
     // delivery channel, defeating the message-ID dedup guard.
-    const updateId = data.tempId || `update_${data.sender}|${data.original}`;
+    // ═══ INIZIO b.251 — l'aggiornamento non e il messaggio ═══
+    // TROVATO DAL VIVO (Luca: "l'audio non va piu"): da b.247 la fase 2
+    // porta lo STESSO identificativo di cattura della fase 1 (`tempId`),
+    // e qui lo si usava tale e quale come chiave del dedup. Ma la fase 1
+    // (handleRealtimeMessage) aveva GIA registrato quell'id: la fase 2
+    // risultava quindi "gia processata" e veniva scartata — cioe proprio
+    // il turno che porta la traduzione, l'unico che fa parlare la voce.
+    // Risultato: il testo tradotto arriva a schermo e l'audio resta muto.
+    // La chiave dell'AGGIORNAMENTO deve vivere in uno spazio suo:
+    // stesso messaggio, due eventi diversi.
+    const updateId = `upd:${data.tempId || `${data.sender}|${data.original}`}`;
+    // ═══ FINE b.251 ═══
 
     // ── ID-based guard: skip if already processed by another delivery channel ──
     const alreadyProcessed = processedMsgIdsRef.current.has(updateId);
@@ -338,6 +349,12 @@ export default function useRoomPolling({
     if (!alreadyProcessed && (data.translated || data.translations)) {
       processIncomingMessage({
         id: updateId,
+        // b.251 — la chiave della VOCE resta quella della cattura: il
+        // polling porta la stessa traduzione con `clientId = tmp_...`, e
+        // senza questo campo i due canali avrebbero due chiavi diverse e
+        // la frase si sentirebbe DUE volte. Il dedup degli eventi (sopra)
+        // e cosa distinta dal dedup della voce: qui servono entrambi.
+        clientId: data.tempId || undefined,
         sender: data.sender,
         original: data.original,
         translated: data.translated,

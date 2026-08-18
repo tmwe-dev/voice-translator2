@@ -78,7 +78,16 @@ export function creaCodaAudio({ anticipo = ANTICIPO } = {}) {
         const materiale = await voce.materiale;
         coda.shift();
         if (fermata) break;
-        if (!materiale || materiale.fallita) continue;  // si salta, non ci si ferma
+        // ═══ INIZIO b.251 — `null` NON e un fallimento: e il ripiego ═══
+        // TROVATO DAL VIVO ("l'audio non va piu"). Qui si saltava anche
+        // il materiale `null`. Ma chi prepara la voce (useTTSEngine)
+        // restituisce `null` DI PROPOSITO quando il fornitore non da un
+        // blob: e il segnale concordato con `suonaVoce`, che su blob
+        // assente chiama la voce del browser. Saltando il `null` quel
+        // ripiego non partiva MAI: fornitore giu = silenzio totale,
+        // invece della voce di sistema. Si salta solo il fallimento VERO.
+        if (materiale && materiale.fallita) continue;  // si salta, non ci si ferma
+        // ═══ FINE b.251 ═══
         try {
           await voce.suona(materiale);
         } catch {
