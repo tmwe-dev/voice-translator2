@@ -163,19 +163,25 @@ describe('buildTTSKnowledgeBase', () => {
     expect(result).toContain('xx');
   });
 
-  it('includes numbers-as-words guidance', () => {
+  // b.234 — la KB TTS ora METTE LA FEDELTÀ prima della voce: i numeri-prosa
+  // possono diventare parole, ma identificatori/codici/email/URL restano ESATTI
+  // (prima venivano eliminati o alterati — es. un'email cancellata).
+  it('preserva esatti gli identificatori (fedeltà)', () => {
     const result = buildTTSKnowledgeBase('en');
-    expect(result).toContain('numbers as words');
+    expect(result).toContain('EXACT');
+    expect(result).toContain('email');
+    expect(result).toContain('codes');
+  });
+
+  it('non elimina URL/email/codici', () => {
+    const result = buildTTSKnowledgeBase('en');
+    expect(result).toContain('NEVER drop');
+    expect(result).toContain('URLs');
   });
 
   it('includes no-markdown guidance', () => {
     const result = buildTTSKnowledgeBase('en');
     expect(result).toContain('No markdown');
-  });
-
-  it('includes abbreviation guidance', () => {
-    const result = buildTTSKnowledgeBase('en');
-    expect(result).toContain('abbreviations');
   });
 
   it('includes sentence length guidance', () => {

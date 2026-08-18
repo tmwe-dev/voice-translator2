@@ -303,6 +303,13 @@ async function handlePost(req) {
       ({ translated, usage, wasFallback } = await callLLMWithFallback(primaryOpts, fallbacks, 10000));
     }
 
+    // b.234 — OSSERVABILITÀ del motore: quale provider ha DAVVERO tradotto.
+    // Prima non era esposto, così il fallback Asia→Global (quando translateAsia
+    // era assente) avveniva in totale silenzio. Ora è visibile in risposta.
+    const motoreUsato = risultatoAsia
+      ? (risultatoAsia.provider || 'asia')
+      : (wasFallback ? 'global-fallback' : modelInfo.provider);
+
     // b.159 — CONFERMATO (audit b.158, punto 10): se il fornitore scelto
     // ha fallito ed e' scattato il fallback, la chiamata reale e' partita
     // con una chiave di PIATTAFORMA (vedi llmCaller.js: ogni fallback usa
@@ -533,6 +540,7 @@ async function handlePost(req) {
     return NextResponse.json({
       translated,
       confidence,
+      provider: motoreUsato, // b.234 — motore reale (asia/qwen-mt / global-fallback / openai…)
       cost: roundCost(msgCostUsd),
       costEurCents: roundEurCents(msgCostEurCents),
       ...(creditoEsaurito && { creditoEsaurito: true })

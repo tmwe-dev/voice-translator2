@@ -127,13 +127,17 @@ export function buildTTSKnowledgeBase(lang) {
   };
   const langName = LANG_DISPLAY[lang] || lang;
 
+  // b.234 — FEDELTÀ prima della voce: prima il prompt diceva "niente numeri in
+  // cifre, niente URL/email/codici" → il modello LI ELIMINAVA o li alterava,
+  // perdendo dati critici (un codice "73829", un'email, un dosaggio "2,5 mg").
+  // Ora: prosa naturale per la voce, MA identificatori/cifre-significative
+  // riportati ESATTI, mai persi.
   return `
 TTS OPTIMIZATION (your output will be spoken aloud in ${langName}):
-- Write numbers as words ("tre" not "3", "cinquecento" not "500")
-- Expand abbreviations ("dottore" not "Dr.", "per esempio" not "es.")
+- Prose numbers that are quantities may be written as words ("cinquecento euro").
+- BUT keep EXACT and unchanged any identifier: codes, PINs, phone numbers, prices with decimals or currency, dosages, URLs, email addresses, @handles, order/tracking numbers. NEVER drop them, NEVER spell them out, NEVER round them.
 - No markdown, no bullet points, no formatting
 - Use natural spoken punctuation (commas for pauses, periods for stops)
 - Avoid parenthetical asides — restructure as separate sentences
-- Keep sentences under 30 words for natural speech rhythm
-- No URLs, email addresses, or code snippets`;
+- Keep sentences under 30 words for natural speech rhythm when possible`;
 }
