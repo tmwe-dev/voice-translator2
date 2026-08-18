@@ -265,7 +265,16 @@ describe('Rotte a pagamento: roomSessionToken passato a resolveAuth quando si us
 
   it('tts-elevenlabs: roomSessionToken destrutturato dal body e passato a resolveAuth', () => {
     const src = leggi('app/api/tts-elevenlabs/route.js');
-    expect(src).toMatch(/const\s*\{\s*text,\s*voiceId,\s*langCode,\s*userToken,\s*roomId,\s*roomSessionToken,\s*avatarName\s*\}\s*=\s*await req\.json\(\);/);
+    // b.238 — il controllo non fissa piu la lista ESATTA dei campi: bloccava
+    // ogni aggiunta innocua al body (qui `speechMode`, la prosodia) pur non
+    // avendo niente a che vedere con la sicurezza. Cio che deve restare vero
+    // e che i campi della FATTURAZIONE siano destrutturati da req.json() —
+    // e che roomSessionToken arrivi a resolveAuth (verificato sotto).
+    const destrutturazione = src.match(/const\s*\{[^}]*\}\s*=\s*await req\.json\(\);/);
+    expect(destrutturazione, 'il body va letto una volta sola, per destrutturazione').not.toBeNull();
+    for (const campo of ['text', 'voiceId', 'langCode', 'userToken', 'roomId', 'roomSessionToken']) {
+      expect(destrutturazione[0], `manca ${campo}`).toContain(campo);
+    }
     const i = src.indexOf('const { apiKey, isOwnKey, billingEmail, riservatoUtenteCents, riservatoPiattaformaCents } = await resolveAuth({');
     expect(i).toBeGreaterThan(-1);
     expect(src.slice(i, src.indexOf('});', i))).toContain('roomSessionToken,');

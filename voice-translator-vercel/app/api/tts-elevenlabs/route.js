@@ -5,6 +5,7 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
 import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
 import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
+import { parametriVoce } from '../../lib/voceEspressiva.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
 import { creditoFinito, preventivoVocePremium } from '../../wallet/addebita.js';
@@ -111,7 +112,7 @@ async function handlePost(req) {
   let riservaId = null;
   let costoPrevisto = 0;
   try {
-    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName } = await req.json();
+    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName, speechMode } = await req.json();
 
     // ── Direct mode guard ──
     // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
@@ -223,8 +224,16 @@ async function handlePost(req) {
     // ── Adaptive voice settings for tonal languages ──
     // Tonal languages need higher stability to preserve tone accuracy
     const TONAL_LANGS = new Set(['th', 'zh', 'vi', 'ja']);
-    const stability = TONAL_LANGS.has(lang2) ? 0.75 : 0.65;
-    const similarityBoost = TONAL_LANGS.has(lang2) ? 0.85 : 0.80;
+    const tonale = TONAL_LANGS.has(lang2);
+    const stabilityBase = tonale ? 0.75 : 0.65;
+    const similarityBoost = tonale ? 0.85 : 0.80;
+    // b.238 — PROSODIA. `style` era 0.0 fisso: il canale espressivo esisteva
+    // ed era spento, e ogni Compagno leggeva tutto con lo stesso tono. Ora
+    // chi parla dichiara COME vuole dirlo (speechMode) e voceEspressiva.js
+    // lo traduce. Senza speechMode nulla cambia rispetto a prima: la
+    // TRADUZIONE fra persone resta neutra per fedeltà, ed è quello che deve
+    // essere — lì si riporta cosa ha detto un altro, non lo si interpreta.
+    const { stability, style } = parametriVoce({ stability: stabilityBase, modo: speechMode, tonale });
 
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
       method: 'POST',
@@ -240,7 +249,7 @@ async function handlePost(req) {
         voice_settings: {
           stability,
           similarity_boost: similarityBoost,
-          style: 0.0,
+          style,
           use_speaker_boost: true
         }
       })
@@ -263,7 +272,7 @@ async function handlePost(req) {
           body: JSON.stringify({
             text: cleanText, model_id: fallbackModel,
             language_code: elLangCode,
-            voice_settings: { stability, similarity_boost: similarityBoost, style: 0.0, use_speaker_boost: true }
+            voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: true }
           })
         });
         if (fallback.ok) {

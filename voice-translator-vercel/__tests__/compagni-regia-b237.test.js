@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { situazioneDaTesto, mossaPerSituazione, regiaConversazione } from '../app/lib/compagni/controllore.js';
+import { situazioneDaTesto, notaPerSituazione, regiaConversazione } from '../app/lib/compagni/controllore.js';
 import { PROFILI, promptProfilo, profiloPerSuperficie, PROFILI_ELENCO, pulisciProfili, profiloEffettivo } from '../app/lib/compagni/profili.js';
 import { involucroCompagno } from '../app/lib/compagni/contratto.js';
 import { promptTavolo } from '../app/lib/compagni/tavolo.js';
@@ -29,16 +29,15 @@ describe('controllore — la situazione si stima dai segnali, non a caso', () =>
     // perché la mossa giusta lì è mettere in fila pro e contro.
     expect(situazioneDaTesto('Secondo te quale conviene?')).toBe('decisione');
   });
-  it('lo sfogo si riconosce e NON diventa un interrogatorio', () => {
+  it('lo sfogo si riconosce (b.238: la nota non ordina piu, osserva)', () => {
     const s = situazioneDaTesto('Oggi sono stanco morto, non ne posso più');
     expect(s).toBe('sfogo');
-    expect(mossaPerSituazione(s)).toMatch(/ASCOLTA/);
-    expect(mossaPerSituazione(s)).toMatch(/UNA domanda/);
+    expect(notaPerSituazione(s)).toMatch(/capita/);
   });
   it('i puntini sospesi = sta ancora pensando: si accompagna, non si chiude', () => {
     const s = situazioneDaTesto('Secondo me il problema vero è che...');
     expect(s).toBe('riflessione');
-    expect(mossaPerSituazione(s)).toMatch(/accompagna/i);
+    expect(notaPerSituazione(s)).toMatch(/lo spazio è suo/i);
   });
   it('una decisione da prendere chiede pro e contro, non filosofia', () => {
     expect(situazioneDaTesto('Non so se accettare il lavoro a Milano o restare qui')).toBe('decisione');
@@ -46,28 +45,29 @@ describe('controllore — la situazione si stima dai segnali, non a caso', () =>
   it('un compito concreto è operativo: informazioni tutte insieme, poi passi', () => {
     const s = situazioneDaTesto('Organizzami il viaggio a Tokyo per marzo');
     expect(s).toBe('richiesta');
-    expect(mossaPerSituazione(s)).toMatch(/in un colpo solo/);
+    expect(notaPerSituazione(s)).toMatch(/risultato/);
   });
   it('un saluto secco resta un saluto, un "ok" fa PROSEGUIRE senza ripetere', () => {
     expect(situazioneDaTesto('Ciao!')).toBe('saluto');
     expect(situazioneDaTesto('ok')).toBe('conferma');
-    expect(mossaPerSituazione('conferma')).toMatch(/PROSEGUI/);
+    expect(notaPerSituazione('conferma')).toMatch(/riprende/);
   });
   it('la regia dichiara di essere una stima, non un ordine cieco', () => {
     const { blocco, situazione } = regiaConversazione({ ultimo: 'Che ne pensi?' });
     expect(situazione).toBe('domanda');
-    expect(blocco).toMatch(/stima, non certezza/);
-    expect(blocco).toMatch(/REGIA DI QUESTO TURNO/);
+    expect(blocco).toMatch(/ipotesi da confermare o scartare/);
+    expect(blocco).toMatch(/COSA SEMBRA SUCCEDERE ORA/);
   });
 });
 
 describe('profili — il secondo asse, separato dalla libertà', () => {
   it('esistono i quattro profili, ciascuno con la sua condotta', () => {
     expect(Object.keys(PROFILI).sort()).toEqual(['conversazionale', 'dibattimentale', 'didattico', 'operativo']);
-    expect(promptProfilo('conversazionale')).toMatch(/NON chiudere ogni risposta con una domanda/);
-    expect(promptProfilo('didattico')).toMatch(/comprensione viene PRIMA del programma/);
-    expect(promptProfilo('dibattimentale')).toMatch(/steelman/);
-    expect(promptProfilo('operativo')).toMatch(/RISULTATO/);
+    // b.238 — il testo non e piu un elenco di regole: e la VOCAZIONE.
+    expect(promptProfilo('conversazionale')).toMatch(/VOCAZIONE — COMPAGNIA/);
+    expect(promptProfilo('didattico')).toMatch(/VOCAZIONE — GUIDA/);
+    expect(promptProfilo('dibattimentale')).toMatch(/VOCAZIONE — CONFRONTO/);
+    expect(promptProfilo('operativo')).toMatch(/VOCAZIONE — SERVIZIO/);
   });
   it('ogni superficie riceve il profilo giusto', () => {
     expect(profiloPerSuperficie('amico')).toBe('conversazionale');
@@ -79,8 +79,8 @@ describe('profili — il secondo asse, separato dalla libertà', () => {
   it('l\'involucro monta il profilo quando c\'è, e resta identico quando non c\'è', () => {
     const senza = involucroCompagno({ liberta: 'balanced' });
     const con = involucroCompagno({ liberta: 'balanced', profilo: 'didattico' });
-    expect(senza).not.toMatch(/PROFILO DIDATTICO/);
-    expect(con).toMatch(/PROFILO DIDATTICO/);
+    expect(senza).not.toMatch(/VOCAZIONE — GUIDA/);
+    expect(con).toMatch(/VOCAZIONE — GUIDA/);
     // Il profilo NON sostituisce la libertà: convivono, assi diversi.
     expect(con).toMatch(/MODO EQUILIBRATO/);
   });
@@ -109,8 +109,8 @@ describe('deep setting — l\'override si valida PRIMA di toccare il database', 
   });
   it('il Tavolo rispetta l\'override del Deep Setting', () => {
     const { system } = promptTavolo({ compagno: { nome: 'Alex', profili: { tavolo: 'operativo' } }, ultimoUmano: 'Fate.' });
-    expect(system).toMatch(/PROFILO OPERATIVO/);
-    expect(system).not.toMatch(/PROFILO DIBATTIMENTALE/);
+    expect(system).toMatch(/VOCAZIONE — SERVIZIO/);
+    expect(system).not.toMatch(/VOCAZIONE — CONFRONTO/);
   });
   it('la persistenza valida i profili in scrittura E in lettura', () => {
     const s = leggi('app/lib/compagni/persistenza.js');
@@ -122,11 +122,11 @@ describe('deep setting — l\'override si valida PRIMA di toccare il database', 
 describe('i call site veri usano davvero il secondo asse', () => {
   it('il Tavolo dibatte col profilo dibattimentale', () => {
     const { system } = promptTavolo({ compagno: { nome: 'Alex', personalita: 'Analista.' }, ultimoUmano: 'Che ne dite?' });
-    expect(system).toMatch(/PROFILO DIBATTIMENTALE/);
+    expect(system).toMatch(/VOCAZIONE — CONFRONTO/);
   });
   it('il Podcast pure', () => {
     const { system } = promptTurno({ compagno: { nome: 'Elena' }, argomento: 'AI' });
-    expect(system).toMatch(/PROFILO DIBATTIMENTALE/);
+    expect(system).toMatch(/VOCAZIONE — CONFRONTO/);
   });
   it('la rotta Amico monta il profilo effettivo E la regia del turno', () => {
     const s = leggi('app/api/compagni/amico/route.js');

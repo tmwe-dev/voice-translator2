@@ -57,7 +57,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       // b.232 — se nel frattempo si è cambiato Compagno, scarta la risposta.
       if (sceltoRef.current?.id !== idAtt) return;
       setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
-      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken });
+      // b.238 — la voce riceve anche COME il Compagno voleva dirlo.
+      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken, modoVoce: d.modoVoce });
     } catch (e) {
       if (sceltoRef.current?.id !== idAtt) return;
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));

@@ -52,33 +52,43 @@ export function situazioneDaTesto(ultimo = '', storia = []) {
   return 'racconto';
 }
 
-// La mossa per ogni situazione: cosa deve fare il Compagno ADESSO.
-const MOSSE = {
-  domanda: 'Rispondi alla domanda, in modo pieno. Aggiungi una domanda solo se serve a rispondere meglio.',
-  sfogo: 'Prima di tutto ASCOLTA: riconosci come sta, senza sminuire e senza amplificare. Non proporre soluzioni non richieste e non trasformare lo sfogo in un interrogatorio: al massimo UNA domanda aperta, se aiuta la persona a dirne di più.',
-  racconto: 'La persona sta raccontando: reagisci a ciò che ha detto — un\'osservazione, un collegamento, un tuo punto di vista. NON chiudere con una domanda di routine.',
-  riflessione: 'La persona sta ancora sviluppando il pensiero: accompagna senza chiuderlo tu. Riprendi il filo, offri al massimo un appiglio, e lasciale lo spazio per continuare.',
-  decisione: 'Aiuta a DECIDERE: metti in fila le opzioni con i pro e i contro veri, sbilanciati se hai un\'opinione fondata, e chiedi solo ciò che manca davvero per scegliere.',
-  richiesta: 'C\'è un compito concreto: capisci il risultato atteso, chiedi SUBITO e in un colpo solo le informazioni indispensabili che mancano, poi procedi per passi.',
-  saluto: 'Ricambia con calore, breve. Se c\'è una storia con questa persona, riprendi il filo da dove si era rimasti invece di ripartire da zero.',
-  conferma: 'La persona ha confermato: PROSEGUI da dove eravate senza ripetere quanto già detto e senza rilanciare con una domanda inutile.',
+// b.238 — NON PIÙ ORDINI, MA COSE DA TENERE PRESENTI.
+//
+// In b.237 qui c'era una "mossa" per situazione: di fatto un
+// `if situazione == sfogo: ascolta()`. È esattamente l'handcode
+// comportamentale che vogliamo togliere: il modello sa già cosa fa una
+// persona attenta davanti a uno sfogo, e lo sa meglio di una riga scritta
+// da noi. Quello che NON può indovinare è cosa sta succedendo in questo
+// turno — e quello glielo diamo, come ipotesi.
+//
+// Restano righe brevissime, una per situazione: non dicono cosa dire, ma
+// cosa sarebbe facile sbagliare. Sono anche PIÙ CORTE delle precedenti:
+// meno prompt, meno token, meno latenza.
+const DA_TENERE_PRESENTE = {
+  domanda: 'ha fatto una domanda vera: merita una risposta, non un rimando.',
+  sfogo: 'sembra sotto pressione: probabilmente conta più essere capita che ricevere una soluzione.',
+  racconto: 'sta raccontando, non interrogando.',
+  riflessione: 'sta ancora costruendo il pensiero: lo spazio è suo.',
+  decisione: 'sta scegliendo: le serve vederci chiaro, non essere assecondata.',
+  richiesta: 'ha chiesto una cosa concreta: conta il risultato.',
+  saluto: 'sta solo aprendo la conversazione.',
+  conferma: 'ha confermato: il filo riprende da dove eravate.',
 };
 
-/** La mossa consigliata per una situazione. */
-export function mossaPerSituazione(situazione) {
-  return MOSSE[situazione] || MOSSE.racconto;
+/** Cosa è facile sbagliare in questa situazione (una riga, non un ordine). */
+export function notaPerSituazione(situazione) {
+  return DA_TENERE_PRESENTE[situazione] || DA_TENERE_PRESENTE.racconto;
 }
 
 /**
- * Il blocco di REGIA da appendere al system: situazione stimata + mossa.
+ * Il blocco di LETTURA del turno: un'ipotesi su cosa sta succedendo, da
+ * confermare o scartare. Non prescrive la risposta: la decide il Compagno.
  * Parte con due a-capo, pronto per la concatenazione (come involucroCompagno).
  * @returns {{blocco:string, situazione:Situazione}}
  */
 export function regiaConversazione({ ultimo = '', storia = [] } = {}) {
   const situazione = situazioneDaTesto(ultimo, storia);
   const blocco =
-`\n\nREGIA DI QUESTO TURNO (stima, non certezza: se il contesto dice altro, segui il contesto):
-Situazione: la persona sembra in "${situazione}".
-Mossa: ${mossaPerSituazione(situazione)}`;
+`\n\nCOSA SEMBRA SUCCEDERE ORA (ipotesi da confermare o scartare, non un'istruzione): ${notaPerSituazione(situazione)} Decidi tu se e come rispondere.`;
   return { blocco, situazione };
 }

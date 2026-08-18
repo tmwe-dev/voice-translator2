@@ -9,6 +9,8 @@ import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { involucroCompagno, temperaturaLiberta } from '../../../lib/compagni/contratto.js';
 import { regiaConversazione } from '../../../lib/compagni/controllore.js';
 import { profiloEffettivo } from '../../../lib/compagni/profili.js';
+import { LENTI_UMANE, contestoRelazione } from '../../../lib/compagni/vocazione.js';
+import { ISTRUZIONE_VOCE, staccaModoVoce } from '../../../lib/voceEspressiva.js';
 
 const log = createLogger('compagni-amico');
 
@@ -46,9 +48,15 @@ async function handlePost(req) {
     // Memoria: solo se accesa sul Compagno. b.231 — ora i tag REALI del
     // messaggio guidano il richiamo dei ricordi consolidati (prima era []).
     let blocco = '';
+    let quantoViConoscete = '';
     if (compagno.memoria) {
       const ricordi = await ricordiPerContesto(email, compagno.id, tagsDalTesto(ultimo));
       blocco = contestoMemoria(ricordi);
+      // b.238 — il TEMPO DELLA RELAZIONE: chi ti conosce da sei mesi non ti
+      // parla come chi ti ha appena incontrato. Confidenza e iniziativa
+      // crescono con la storia, invece di ripartire da zero a ogni sessione.
+      // Costo: zero query in più — i ricordi erano già stati caricati qui.
+      quantoViConoscete = contestoRelazione(ricordi.length);
     }
 
     const storia = messaggi.slice(0, -1).map(m => `[${m.ruolo === 'compagno' ? compagno.nome : 'persona'}]: ${m.testo}`).join('\n');
@@ -69,7 +77,7 @@ async function handlePost(req) {
     // domanda? riflessione?) e detta la mossa. È il "conversation controller":
     // deterministico, zero latenza, e toglie il tic della domanda a ogni costo.
     const { blocco: regia } = regiaConversazione({ ultimo, storia: messaggi });
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}${involucro}${regia}`;
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${quantoViConoscete}${bloccoObiettivi}${involucro}\n\n${LENTI_UMANE}${regia}\n\n${ISTRUZIONE_VOCE}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
     const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500, temperature: temperaturaLiberta(compagno.liberta) });
@@ -79,10 +87,15 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'Nessuna risposta' }, { status: 502 });
     }
 
+    // b.238 — il Compagno ha dichiarato in coda COME vuole dirlo: si stacca
+    // dal testo (che non deve mai mostrarlo né farlo leggere) e viaggia
+    // fino alla voce. Se manca o è malformato, 'neutro' e nulla cambia.
+    const { testo: rispostaPulita, modo: modoVoce } = staccaModoVoce(r.testo);
+
     // Dopo la risposta: estrae e salva i ricordi nuovi (throttle leggero
     // per non estrarre a ogni singola battuta e non gonfiare i costi).
     if (compagno.memoria) {
-      const conRisposta = [...messaggi, { ruolo: 'compagno', testo: r.testo }];
+      const conRisposta = [...messaggi, { ruolo: 'compagno', testo: rispostaPulita }];
       if (conRisposta.length >= 4 && conRisposta.length % 3 === 0) {
         try {
           const ricordi = await estraiRicordi(conRisposta, { userToken });
@@ -91,7 +104,7 @@ async function handlePost(req) {
       }
     }
 
-    return NextResponse.json({ ok: true, risposta: r.testo, voceId: compagno.voce?.id, memoria: !!compagno.memoria });
+    return NextResponse.json({ ok: true, risposta: rispostaPulita, modoVoce, voceId: compagno.voce?.id, memoria: !!compagno.memoria });
   } catch (e) {
     log.error('Errore:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

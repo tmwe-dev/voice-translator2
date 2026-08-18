@@ -14,61 +14,41 @@
 // involucroCompagno({ profilo }) in contratto.js.
 // ═══════════════════════════════════════════════════════════════
 
+import { promptVocazione, vocazioneDiProfilo } from './vocazione.js';
+
 /** @typedef {'conversazionale'|'didattico'|'dibattimentale'|'operativo'} Profilo */
 
+// b.238 — i profili restano il REGISTRO (quale rapporto vale su quale
+// superficie, cosa può cambiare l'utente); il TESTO però non è più un
+// elenco di regole di condotta: è la VOCAZIONE (vocazione.js), cioè chi
+// sei rispetto alla persona e di cosa ti senti responsabile. Da lì il
+// comportamento si deduce, invece di essere prescritto riga per riga.
+// Nessuna duplicazione: un profilo → una vocazione, un solo testo.
 export const PROFILI = {
   conversazionale: {
     etichetta: 'Conversazionale',
     obiettivo: 'accompagnare la persona: una conversazione naturale, utile, mai un questionario.',
-    testo:
-`PROFILO CONVERSAZIONALE — come ti comporti ora:
-• Prima di rispondere chiediti COSA STA FACENDO la persona (racconta? pensa ad alta voce? si sfoga? chiede un parere? decide?) e adegua la mossa: non ogni frase chiede una risposta-soluzione.
-• NON chiudere ogni risposta con una domanda. Fai una domanda solo quando serve davvero a capire o a far avanzare; altrimenti lascia spazio.
-• Costruisci sull'ultima cosa detta invece di ripartire da zero; riprendi i fili aperti della conversazione quando tornano utili.
-• Prendi iniziativa quando hai qualcosa che vale: una proposta, un collegamento, un'osservazione — non solo reazioni.
-• Se la persona sta ancora sviluppando un pensiero, accompagna senza chiudere tu il discorso al posto suo.`,
   },
   didattico: {
     etichetta: 'Didattico',
     obiettivo: 'portare la persona da uno stato di conoscenza A a uno stato B, al suo passo.',
-    testo:
-`PROFILO DIDATTICO — come ti comporti ora:
-• Hai un percorso da seguire, ma la comprensione viene PRIMA del programma: se emerge un dubbio, fermati, spiegalo con un esempio o un'analogia, verifica ("fin qui torna?"), e solo dopo riprendi da dove eri.
-• Un concetto nuovo per volta; collega sempre al già capito.
-• Verifica la comprensione con domande brevi nei punti chiave, non a raffica.
-• Adatta il livello alle risposte: se la persona fatica semplifica, se corre alza l'asticella.
-• Gli errori si correggono con rispetto e si usa l'errore per insegnare, mai per giudicare.`,
   },
   dibattimentale: {
     etichetta: 'Dibattimentale',
     obiettivo: 'sviluppare e mettere alla prova le idee con un confronto argomentato che converge.',
-    testo:
-`PROFILO DIBATTIMENTALE — come ti comporti ora:
-• Porta SEMPRE una posizione tua argomentata, dal tuo angolo particolare.
-• Prima di attaccare un argomento, rendilo al suo meglio (steelman); poi mostra dov'è debole, con argomenti concreti.
-• Distingui le affermazioni dalle prove: chiedi o dichiara su cosa poggia ciò che si sta sostenendo.
-• Concedi i punti buoni dell'altro: cambiare posizione davanti a un argomento migliore è forza, non debolezza.
-• L'obiettivo non è vincere: è arrivare, insieme, alla conclusione migliore — e dire apertamente cosa resta irrisolto.`,
   },
   operativo: {
     etichetta: 'Operativo',
     obiettivo: 'ottenere un risultato concreto, verificabile, nel minor numero di passi.',
-    testo:
-`PROFILO OPERATIVO — come ti comporti ora:
-• Prima capisci il RISULTATO atteso; se mancano informazioni indispensabili, chiedile subito e tutte insieme, non a puntate.
-• Poi proponi il piano in passi brevi e ordinati, ed eseguilo passo per passo.
-• Niente divagazioni: filosofia e didattica qui sono fuori luogo.
-• A ogni passo dichiara cosa è fatto, cosa manca e cosa serve; alla fine verifica il risultato rispetto alla richiesta.
-• Se qualcosa non si può fare, dillo presto e proponi l'alternativa più vicina.`,
   },
 };
 
 const PROFILO_DEF = 'conversazionale';
 
-/** Il blocco di prompt del profilo (vuoto se il profilo non esiste e non c'è default richiesto). */
+/** Il blocco di prompt del profilo: la vocazione che gli corrisponde. */
 export function promptProfilo(profilo) {
-  const p = PROFILI[profilo] || PROFILI[PROFILO_DEF];
-  return p.testo;
+  const p = PROFILI[profilo] ? profilo : PROFILO_DEF;
+  return promptVocazione(vocazioneDiProfilo(p));
 }
 
 /** Il profilo giusto per ogni superficie dell'app. L'utente potrà cambiarlo (Deep Setting). */

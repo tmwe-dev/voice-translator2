@@ -119,12 +119,14 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  * disponibile — la voce è un di più, non deve bloccare il podcast).
  * Passa l'elemento Audio a `onAudio` così il chiamante può fermarlo.
  */
-export async function parlaTurno({ voceId, testo, lingua, userToken }, onAudio) {
+export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce }, onAudio) {
   try {
     const r = await fetch('/api/tts-elevenlabs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: testo, voiceId: voceId, langCode: lingua, userToken }),
+      // b.238 — `modoVoce` è l'intento dichiarato da chi parla (pensoso,
+      // caldo, serio…): la voce smette di leggere tutto allo stesso modo.
+      body: JSON.stringify({ text: testo, voiceId: voceId, langCode: lingua, userToken, speechMode: modoVoce }),
     });
     if (!r.ok) return; // niente voce: si legge soltanto
     const blob = await r.blob();
