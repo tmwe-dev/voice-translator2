@@ -75,8 +75,8 @@ export function promptAvatar({ nome = '', ruolo = '', genere = 'neutral', descri
   const sesso = genere === 'female' ? 'female' : genere === 'male' ? 'male' : 'person';
   return [
     'Illustrated avatar portrait, head and shoulders, clean modern flat vector cartoon style,',
-    'soft cel shading, smooth lines, plain very light neutral background, friendly confident expression,',
-    'centered composition, matching a set of professional "companion" avatars.',
+    'soft cel shading, smooth lines, fully TRANSPARENT background (no background, cut-out sticker style, alpha),',
+    'friendly confident expression, centered composition, matching a set of professional "companion" avatars.',
     `Subject: a ${sesso} — ${chi}.`,
     nome ? `Tasteful illustrated caricature inspired by ${nome} (their era, look and vibe), NOT a photograph and NOT an exact copy of a real person's face.` : '',
     'No text, no watermark, no logo.',

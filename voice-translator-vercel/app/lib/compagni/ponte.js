@@ -183,14 +183,17 @@ export async function generaAvatar({ prompt = '', userToken = null, riferimentoD
 
   try {
     const openai = new OpenAI({ apiKey });
+    // b.225 — SFONDO TRASPARENTE: l'avatar deve stare bene sia su tema scuro
+    // sia chiaro. gpt-image-1 con background:'transparent' + PNG dà l'alpha.
+    const comuni = { model: 'gpt-image-1', size: dimensione, quality: qualita, n: 1, background: 'transparent', output_format: 'png' };
     let resp;
     if (riferimentoDataUrl) {
       // Reference-based: il volto arriva dal riferimento, il prompt lo riadatta.
       const b64 = String(riferimentoDataUrl).replace(/^data:image\/\w+;base64,/, '');
       const file = await toFile(Buffer.from(b64, 'base64'), 'riferimento.png', { type: 'image/png' });
-      resp = await openai.images.edit({ model: 'gpt-image-1', image: file, prompt, size: dimensione, quality: qualita, n: 1 });
+      resp = await openai.images.edit({ ...comuni, image: file, prompt });
     } else {
-      resp = await openai.images.generate({ model: 'gpt-image-1', prompt, size: dimensione, quality: qualita, n: 1 });
+      resp = await openai.images.generate({ ...comuni, prompt });
     }
     const out = resp?.data?.[0]?.b64_json;
     if (!out) {
