@@ -33,6 +33,26 @@ import { useApp } from '../contexts/AppContext.js';
 // schermo compariva la chiave nuda). Via anche la bandiera bianca emoji:
 // come negli altri componenti, senza bandiera si mostra solo il nome.
 
+// b.248 — tre stati che potevano mentire, piu una verifica di fatturazione:
+//   · la traduzione non seguiva ne il campo ne la lingua del tassista:
+//     cambiata la frase (o la lingua) restava sullo schermo — e girata
+//     verso il tassista — la traduzione VECCHIA come se fosse quella nuova.
+//     Ora si ricorda che cosa e stato tradotto e verso quale lingua
+//     (fonteTraduzione) e la si mostra solo se combacia ancora
+//     (tradottoValido): la dettatura incrementale non butta niente, la
+//     traduzione resta solo nascosta finche non torna a corrispondere.
+//   · la destinazione non seguiva la ricerca: scelto un posto, riscrivere
+//     la query lasciava mappa e QR sul posto vecchio. Ora modificarla
+//     invalida la scelta (cambiaQuery), e lo stesso vale nel pannello
+//     "Dove vai?" (TaxiDestinationPanel).
+//   · verificato (§5) il sospetto "il tassista traduce senza credenziale":
+//     TaxiDriverView chiama /api/translate senza gettoni, MA resolveAuth
+//     (apiAuth.js, Path 4) dichiara da b.154 un accesso libero con chiave
+//     di piattaforma, coperto dal tetto giornaliero di piattaforma e dal
+//     limite per IP: il tassista traduce davvero, niente 401/402, e non e
+//     un buco nuovo. Qui, sullo schermo del passeggero, paga come sempre
+//     il passeggero (userToken nel corpo della richiesta).
+
 // Le lingue del tassista più comuni, in cima; le altre restano nel menu.
 const LINGUE_TAXI = ['en', 'es', 'fr', 'de', 'pt', 'it', 'ar', 'zh', 'ja', 'ko', 'hi', 'ru', 'tr', 'th', 'vi'];
 
@@ -70,6 +90,10 @@ function TaxiTalk({ userToken }) {
   // Parla / scrivi
   const [testo, setTesto] = useState('');
   const [tradotto, setTradotto] = useState('');
+  // b.248 — che cosa e stato tradotto e verso quale lingua: senza questa
+  // memoria la traduzione restava "vera" per sempre, anche dopo aver
+  // cambiato frase o lingua del tassista.
+  const [fonteTraduzione, setFonteTraduzione] = useState(null); // { testo, lingua }
   const [traducendo, setTraducendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [erroreTrad, setErroreTrad] = useState('');
@@ -83,6 +107,14 @@ function TaxiTalk({ userToken }) {
   useEffect(() => () => codaRef.current?.ferma(), []);
 
   const driverInfo = getLang(driverLang);
+
+  // b.248 — il cancello: la traduzione si mostra SOLO se corrisponde ancora
+  // a cio che c'e nel campo e alla lingua scelta. Qualunque modifica
+  // (tastiera, dettatura, cambio lingua) la marca da rifare senza cancellare
+  // nulla: se il testo torna identico, ricompare senza richiedere il server.
+  const tradottoValido = (tradotto && fonteTraduzione
+    && fonteTraduzione.testo === testo.trim()
+    && fonteTraduzione.lingua === driverLang) ? tradotto : '';
 
   // ── Posizione: fa salire in cima i risultati vicini ──
   useEffect(() => {
@@ -120,6 +152,13 @@ function TaxiTalk({ userToken }) {
 
   const scegli = useCallback((r) => { vibrate(12); setDest(r); setRisultati([]); setQuery(r.displayName.split(',').slice(0, 3).join(', ')); }, []);
 
+  // b.248 — modificare la ricerca dopo aver scelto una destinazione invalida
+  // la scelta: campo, mappa e QR non possono dire due cose diverse. La
+  // riscrittura programmatica di `query` dentro `scegli` non passa da qui
+  // (un input controllato non emette onChange per le scritture da codice),
+  // quindi la destinazione appena scelta non si auto-invalida.
+  const cambiaQuery = useCallback((v) => { setQuery(v); setDest(null); }, []);
+
   // ── Traduci (percorso /api/translate provato) ──
   const traduci = useCallback(async (raw) => {
     const text = (raw ?? testo).trim();
@@ -139,6 +178,9 @@ function TaxiTalk({ userToken }) {
       const data = await res.json();
       const out = data.translated || '';
       setTradotto(out);
+      // b.248 — si fissa la coppia (testo, lingua) a cui questa traduzione
+      // appartiene: e il metro con cui tradottoValido decide se mostrarla.
+      setFonteTraduzione({ testo: text, lingua: driverLang });
       setTraducendo(false);
       return out;
     } catch { setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
@@ -210,7 +252,11 @@ function TaxiTalk({ userToken }) {
     rec.onend = async () => {
       speechRef.current = null; setRegistrando(false);
       const t = finale.trim();
-      if (t) { const out = await traduci(t); if (out) ascolta(out); }
+      // b.248 — il campo si allinea al testo DAVVERO tradotto: onresult
+      // scrive (finale+interim), ma qui si traduce solo `finale`. Se un
+      // residuo provvisorio li facesse divergere, il cancello tradottoValido
+      // nasconderebbe una traduzione appena fatta.
+      if (t) { setTesto(t); const out = await traduci(t); if (out) ascolta(out); }
     };
     try { rec.start(); } catch { setRegistrando(false); }
   }, [registrando, dettaturaOff, myLang, traduci, ascolta, L]);
@@ -262,7 +308,7 @@ function TaxiTalk({ userToken }) {
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
-          <input value={query} onChange={(e) => setQuery(e.target.value)}
+          <input value={query} onChange={(e) => cambiaQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) cerca(query); }}
             placeholder={L('searchAddress')} style={inputStyle} />
           <button onClick={() => query.trim() && cerca(query)} disabled={!query.trim() || cercando} style={miniBtn(!!query.trim() && !cercando)}>
@@ -318,22 +364,22 @@ function TaxiTalk({ userToken }) {
 
         {erroreTrad && <div style={{ fontSize: 11, color: PALETTE.coral || '#f87171', marginTop: 6 }}>{erroreTrad}</div>}
 
-        {tradotto && (
+        {tradottoValido && (
           <div style={{ marginTop: 14, background: `linear-gradient(145deg, ${C.accent}14, ${C.purple}0e)`, border: `1px solid ${C.accent}38`, borderRadius: 16, padding: 16 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{driverInfo?.flag} {driverInfo?.name}</div>
-            <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.32 }}>{tradotto}</div>
+            <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.32 }}>{tradottoValido}</div>
             {testo && <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', marginTop: 8 }}>{testo}</div>}
           </div>
         )}
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-          <button onClick={() => { if (tradotto) { vibrate(10); setFlip(true); } }} disabled={!tradotto}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradotto ? 'pointer' : 'default', background: tradotto ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradotto ? '#04121c' : C.muted, fontWeight: 800, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
+          <button onClick={() => { if (tradottoValido) { vibrate(10); setFlip(true); } }} disabled={!tradottoValido}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradottoValido ? 'pointer' : 'default', background: tradottoValido ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradottoValido ? '#04121c' : C.muted, fontWeight: 800, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
             {L('taxiShowFlipped')}
           </button>
-          <button onClick={() => tradotto && ascolta(tradotto)} disabled={!tradotto || suonando}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradotto ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 700, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
+          <button onClick={() => tradottoValido && ascolta(tradottoValido)} disabled={!tradottoValido || suonando}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradottoValido ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 700, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /></svg>
             {suonando ? '…' : L('taxiListen')}
           </button>
@@ -397,11 +443,11 @@ function TaxiTalk({ userToken }) {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '34px 26px', transform: 'rotate(180deg)' }}>
             <div style={{ fontSize: 34, marginBottom: 6 }}>{driverInfo?.flag}</div>
             <div style={{ fontSize: 13, color: C.muted, marginBottom: 22 }}>{driverInfo?.name}</div>
-            <div style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradotto}</div>
+            <div style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradottoValido}</div>
             {testo && <div style={{ fontSize: 14, color: C.muted, fontStyle: 'italic', marginTop: 20, textAlign: 'center' }}>{testo}</div>}
           </div>
           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px 30px', borderTop: `1px solid ${C.border}` }}>
-            <button onClick={() => ascolta(tradotto)} disabled={suonando} aria-label={L('taxiListen')}
+            <button onClick={() => ascolta(tradottoValido)} disabled={suonando} aria-label={L('taxiListen')}
               style={{ width: 72, height: 72, borderRadius: '50%', border: 'none', background: C.amber, color: '#1a1200', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(245,166,35,0.34)' }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a10 10 0 0 1 0 14" /></svg>
             </button>

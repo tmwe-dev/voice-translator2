@@ -72,9 +72,13 @@ describe('ogni segnale ha un destinatario', () => {
     expect(blocco).toMatch(/destinatario richiesto/);
   });
 
-  it('quello che ho letto non lo rileggo', () => {
+  it('quello che ho letto non lo rileggo, e in un colpo solo', () => {
+    // b.248 — qui si pretendeva il DEL separato dopo l'LRANGE: era
+    // proprio il difetto (un ICE arrivato fra i due comandi veniva
+    // cancellato non letto). Ora lettura e svuotamento sono UNO script
+    // Lua; la prova comportamentale sta in video-gruppo-b248.test.js.
     const blocco = rotta.slice(rotta.indexOf("case 'ritira'"));
-    expect(blocco).toMatch(/redis\('DEL', chiave\)/);
+    expect(blocco).toMatch(/redis\('EVAL', RITIRA_CASSETTA, 1, chiave\)/);
   });
 
   it('chiama chi ARRIVA DOPO, verso tutti quelli che trova', () => {

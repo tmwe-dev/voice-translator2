@@ -81,6 +81,14 @@ async function tierDallaSessione(userToken) {
 // `leave` non sostituisce niente: affianca la TTL rendendo
 // l'uscita IMMEDIATA invece che ritardata di un'ora.
 //
+// b.248 — "nessun lastSeen, nessuna potatura" qui sopra descrive il
+// mondo di PRIMA: ora ogni battito scrive un lastSeen per membro
+// (UPDATE_HEARTBEAT in redisLua.js) e chi resta muto oltre soglia
+// viene tolto alla lettura (potaMembriAssenti in store.js), con la
+// stessa rimozione atomica di questo leave. `leave` resta la via
+// PULITA e immediata; la potatura copre la via SPORCA — rete persa,
+// browser morto — che nessun leave puo coprire.
+//
 // SICUREZZA: stesso identico controllo delle altre azioni protette
 // (heartbeat, speaking, changeLang...): l'azione e nell'elenco
 // `needsIdentity`, quindi passa da resolveIdentity → resolveRoomIdentity,

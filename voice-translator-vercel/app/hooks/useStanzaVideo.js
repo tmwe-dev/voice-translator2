@@ -132,8 +132,18 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     const voce = apriPeer(nome);
     voce.canale = createDataChannel(voce.pc, 'parlato');
     ascoltaCanale(voce.canale, nome);
-    voce.pc.addTransceiver('audio', { direction: 'sendrecv' });
-    if (conVideo) voce.pc.addTransceiver('video', { direction: 'sendrecv' });
+    // b.248 — CONFERMATO (audit esterno): apriPeer aveva GIA messo le
+    // mie tracce con addTrack (una m-line per traccia, in sendrecv), e
+    // qui si aggiungevano COMUNQUE due transceiver espliciti: l'offerta
+    // usciva con le m-line doppie — doppio audio, doppio video, meta
+    // linee senza niente dentro. Fragile e inutile. I transceiver
+    // espliciti servono SOLO per i media che non sto gia inviando
+    // (ricezione sola): senza, l'offerta non chiederebbe il video degli
+    // altri. O le tracce o il transceiver, mai entrambi per lo stesso
+    // media.
+    const giaInviati = new Set(voce.pc.getSenders().map(s => s.track?.kind).filter(Boolean));
+    if (!giaInviati.has('audio')) voce.pc.addTransceiver('audio', { direction: 'recvonly' });
+    if (conVideo && !giaInviati.has('video')) voce.pc.addTransceiver('video', { direction: 'recvonly' });
     // createOffer restituisce gia una stringa JSON pronta da spedire.
     const offerta = await createOffer(voce.pc);
     await api('manda', { a: nome, segnale: { tipo: 'offerta', dati: offerta } });
@@ -199,6 +209,20 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     }
   }, [api, rispondi, chiudiPeer]);
 
+  // b.248 — CONFERMATO (audit esterno): solo "stanza piena" fermava le
+  // tracce; un ingresso fallito per QUALSIASI altro motivo tornava
+  // indietro lasciando camera e microfono accesi — spia verde, senza
+  // essere in stanza. Il rilascio ora e UN punto solo, chiamato da OGNI
+  // percorso di errore e dall'uscita: se il punto e uno, non si puo
+  // dimenticare un ramo.
+  const spegniMioFlusso = useCallback(() => {
+    if (mioStreamRef.current) {
+      mioStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma */ } });
+      mioStreamRef.current = null;
+    }
+    setMioStream(null);
+  }, []);
+
   // ── Entro ──
   const entra = useCallback(async () => {
     if (!roomId || !roomSessionToken) return;
@@ -214,22 +238,25 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       const d = await api('entra');
       if (d?.error === 'stanza piena') {
         setStanzaPiena(true); setErrore(d.motivo || tFuori('roomFull')); setStato('errore');
-        flusso.getTracks().forEach(t => t.stop());
+        spegniMioFlusso();
         return;
       }
-      if (!d?.ok) { setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
+      if (!d?.ok) { spegniMioFlusso(); setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
 
       setStato('dentro');
       // Propongo solo a chi mi tocca: l'ordine alfabetico evita che due
       // persone si offrano insieme e non si colleghi nessuno.
       for (const nome of d.devoChiamare || []) await proponi(nome);
     } catch (e) {
+      // Anche un errore a meta (permesso negato, offerta fallita) non
+      // deve lasciare la spia della camera accesa.
+      spegniMioFlusso();
       setErrore(e?.name === 'NotAllowedError'
         ? tFuori('needMicCamPermission')
         : tFuori('cannotStartMicCam'));
       setStato('errore');
     }
-  }, [roomId, roomSessionToken, conVideo, api, proponi]);
+  }, [roomId, roomSessionToken, conVideo, api, proponi, spegniMioFlusso]);
 
   // ── Esco ──
   const esci = useCallback(async () => {
@@ -238,14 +265,10 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       chiudiPeer(nome);
     }
     await api('esci');
-    if (mioStreamRef.current) {
-      mioStreamRef.current.getTracks().forEach(t => t.stop());
-      mioStreamRef.current = null;
-    }
-    setMioStream(null);
+    spegniMioFlusso();
     setPartecipanti([]);
     setStato('fermo');
-  }, [api, chiudiPeer]);
+  }, [api, chiudiPeer, spegniMioFlusso]);
 
   // ── Mando il mio parlato tradotto a tutti ──
   const mandaTesto = useCallback((testo, lingua) => {

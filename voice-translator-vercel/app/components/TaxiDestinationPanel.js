@@ -99,6 +99,13 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
 
   const handleQueryChange = useCallback((val) => {
     setQuery(val);
+    // b.248 — toccare la ricerca dopo aver scelto un posto invalida la
+    // scelta: prima handleConfirm componeva destinationName con la query
+    // NUOVA e lat/lng del posto VECCHIO — campo e mappa dicevano due cose
+    // diverse dentro lo stesso oggetto consegnato al QR. `selectPlace`
+    // reimposta la query per via programmatica (nessun onChange), quindi
+    // il posto appena scelto non si auto-invalida.
+    setSelectedPlace(null);
     clearTimeout(searchTimerRef.current);
     searchTimerRef.current = setTimeout(() => doSearch(val), 500);
   }, [doSearch]);

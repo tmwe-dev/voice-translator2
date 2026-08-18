@@ -220,6 +220,14 @@ export default function JoinView({ joinCode,
           </div>
 
           {/* Room code */}
+          {/* b.248 — IL CAMPO ACCETTAVA 6 CARATTERI, IL CODICE NE HA 8.
+              Il server genera il codice stanza con randomBytes(4)
+              .toString('hex').toUpperCase() (createRoom, store.js): QUATTRO
+              byte esadecimali = OTTO caratteri, sempre. Qui pero c'era
+              maxLength={6} e il placeholder "ABC123": un codice reale come
+              A4F72C19 si fermava a "A4F72C" e l'ingresso manuale era
+              IMPOSSIBILE per costruzione. Ora il campo tiene 8 caratteri e
+              l'esempio mostra la forma vera del codice. */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('roomCode')}</div>
             <input style={{
@@ -228,7 +236,7 @@ export default function JoinView({ joinCode,
               background: C.input, border: `1px solid ${joinCode.length >= 4 ? `${C.accent}40` : C.inputBorder}`,
               color: C.textPrimary, fontFamily: FONT, outline: 'none',
               boxSizing: 'border-box', transition: 'border-color 0.2s',
-            }} placeholder="ABC123" value={joinCode} maxLength={6}
+            }} placeholder="A4F72C19" value={joinCode} maxLength={8}
               onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
           </div>
 

@@ -13,6 +13,16 @@ const TalkControls = memo(function TalkControls({
   liveMode, setLiveModeState, setLiveMode,
   status, webrtc, myName, roomInfo,
   endChatAndSave, setView,
+  // b.248 — IL GETTONE DI STANZA ARRIVAVA DA UN POSTO CHE NON ESISTE.
+  // raiseHand e grantSpeak leggevano webrtc?.roomSessionTokenRef?.current,
+  // ma useWebRTC RICEVE roomSessionTokenRef come parametro e non lo espone
+  // nel proprio return (vedi il return di useWebRTC.js): quel percorso era
+  // sempre undefined, il ripiego `|| null` mandava roomSessionToken: null
+  // a /api/room, e resolveIdentity rispondeva 401. Alzare la mano e
+  // concedere la parola non funzionavano MAI. Il gettone ora arriva come
+  // prop dalla catena che lo possiede gia (page.js -> RoomView), la stessa
+  // che serve reazioni, moderazione e stanza video.
+  roomSessionToken,
 }) {
   const [handRaising, setHandRaising] = useState(false);
   const [grantingSpeak, setGrantingSpeak] = useState(null);
@@ -156,7 +166,7 @@ const TalkControls = memo(function TalkControls({
               const body = {
                 action: 'raiseHand', roomId,
                 raised: true,
-                roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
+                roomSessionToken: roomSessionToken || null,
                 name: myName,
               };
               try {
@@ -205,7 +215,7 @@ const TalkControls = memo(function TalkControls({
                 const body = {
                   action: 'grantSpeak', roomId,
                   targetMember: m.name,
-                  roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
+                  roomSessionToken: roomSessionToken || null,
                   name: myName,
                 };
                 try {

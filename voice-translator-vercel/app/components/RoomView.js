@@ -39,7 +39,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   realtimeConnected, webrtc, isHostVerified, verifiedName,
   setLiveMode, interpreter, onMessageRead,
   showChatActions, setShowChatActions, localChat, ProviderBadge,
-  roomSessionToken }) {
+  roomSessionToken, userToken }) {
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
 
   // ── b.99 · reazioni durevoli ──
@@ -139,7 +139,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         if (!videoFullscreen) setVideoFullscreen(true);
       }
     }
-  }, [webrtc?.webrtcState]);
+    // b.248 — si ascolta anche il TIPO: quando "passa a video" promuove
+    // una chiamata voce (da entrambi i lati), lo stato resta 'connected'
+    // e senza questa dipendenza la finestra video non si apriva mai.
+  }, [webrtc?.webrtcState, webrtc?.callType]);
 
   // Auto-enable ducking when in video call and languages differ
   useEffect(() => {
@@ -455,6 +458,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           interpreter={interpreter}
           onClose={() => setShowVoiceCall(false)}
           onUpgradeToVideo={() => {
+            // ── b.248 · "passa a video" accende DAVVERO la camera ──
+            // Prima cambiava solo le finestre: nessuna acquisizione,
+            // nessuna rinegoziazione, il partner non riceveva nulla.
+            // toggleVideo (useWebRTC) fa gia tutto: getUserMedia,
+            // addTrack, offerta di rinegoziazione (che l'altro accetta
+            // da solo, senza riaccettare) e promozione del tipo a
+            // 'video' — bastava chiamarla dal pulsante.
+            webrtc.toggleVideo();
             setShowVoiceCall(false);
             setShowVideoCall(true);
             setVideoFullscreen(true);
@@ -550,6 +561,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
           status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
           endChatAndSave={endChatAndSave} setView={setView}
+          roomSessionToken={roomSessionToken}
         />
 
         {/* Risposta citata — subito sopra la riga di testo, legata all'input */}
@@ -638,10 +650,20 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       )}
 
       {/* ═══ Chat Actions Panel ═══ */}
+      {/* b.248 — LE AZIONI AI PARTIVANO SEMPRE SENZA CREDENZIALI.
+          Qui c'era userToken={null} cablato: /api/chat-action autentica
+          proprio con resolveAuth({userToken, lendingCode}) e senza gettone
+          risponde 401 "Authentication required" — anche per un utente
+          loggato con credito. Riassunto, analisi, consigli e vocabolario
+          erano quindi irraggiungibili per chiunque. Ora il gettone vero
+          arriva via prop da page.js (auth.userToken), come per le altre
+          viste. lendingCode resta null: nel client non esiste (ancora)
+          nessun posto che conservi un codice di prestito — non e un
+          cablaggio mancante, e una funzione solo lato server. */}
       {showChatActions && (
         <ChatActionsPanel
           theme={theme} messages={messages} members={roomInfo?.members || []}
-          mode={roomMode} domain={roomInfo?.context} userToken={null} lendingCode={null}
+          mode={roomMode} domain={roomInfo?.context} userToken={userToken} lendingCode={null}
           roomId={roomId} roomSessionToken={roomSessionToken}
           onClose={() => setShowChatActions(false)} t={L}
         />

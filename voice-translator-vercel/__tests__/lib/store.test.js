@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE,
   CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING,
-  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+  UPDATE_HEARTBEAT, UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
 } from '../../app/lib/redisLua.js';
 
 // Mock Redis with EVAL support for Lua scripts
@@ -30,6 +30,24 @@ function handleEval(script, numKeys, ...rest) {
     } else {
       const idx = room.members.findIndex(m => m.role !== 'host');
       if (idx >= 0) room.members[idx] = { name, lang, joined: now, role: 'guest', avatar };
+    }
+    const encoded = JSON.stringify(room);
+    redisStore[keys[0]] = encoded;
+    return encoded;
+  }
+
+  // b.248 — il battito non e piu di sola lettura: stampa lastSeen sul
+  // membro che batte (e la grazia a chi non ha ancora il campo). Mirror
+  // di UPDATE_HEARTBEAT in redisLua.js, come per gli altri script qui.
+  if (script === UPDATE_HEARTBEAT) {
+    const data = redisStore[keys[0]];
+    if (!data) return null;
+    const room = JSON.parse(data);
+    const [name, nowStr] = argv;
+    const now = parseInt(nowStr);
+    for (const m of room.members) {
+      if (m.name === name) m.lastSeen = now;
+      else if (typeof m.lastSeen !== 'number') m.lastSeen = now;
     }
     const encoded = JSON.stringify(room);
     redisStore[keys[0]] = encoded;

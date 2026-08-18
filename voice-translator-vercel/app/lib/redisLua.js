@@ -34,6 +34,9 @@ for i, m in ipairs(room.members) do
     room.members[i].lang = lang
     room.members[i].joined = now
     room.members[i].avatar = avatar
+    -- b.248 · chi (ri)entra e presente ADESSO: il dato di presenza
+    -- nasce qui, non al primo battito (che potrebbe non arrivare mai).
+    room.members[i].lastSeen = now
     found = true
     break
   end
@@ -50,9 +53,55 @@ if not found then
   if tetto < ${CAPIENZA.MIN} then tetto = ${CAPIENZA.MIN} end
   if tetto > ${CAPIENZA.MAX} then tetto = ${CAPIENZA.MAX} end
   if #room.members < tetto then
-    table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar})
+    table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar, lastSeen=now})
   else
     return 'PIENA'
+  end
+end
+local encoded = cjson.encode(room)
+redis.call('SET', KEYS[1], encoded, 'EX', 3600)
+return encoded
+`;
+
+/**
+ * Atomic updateHeartbeat — b.248 (P1 confermato da due audit: la
+ * presenza non era individuale).
+ *
+ * Prima il battito era "di sola lettura": store.js faceva GET + EXPIRE
+ * 3600 sulla chiave della stanza INTERA, senza toccare alcun campo del
+ * singolo membro. Quella scelta era nata per una buona ragione — un
+ * GET+SET in JavaScript perdeva l'ingresso di chi entrava nello stesso
+ * istante — ma la ragione vale per il leggi-modifica-riscrivi FUORI da
+ * Redis, non qui dentro: questo script gira atomico come tutti gli
+ * altri di questo file, quindi puo scrivere senza schiacciare nessuno.
+ *
+ * Cosa scrive: `lastSeen = now` sul membro che batte. E la GRAZIA
+ * iniziale: a chi non ha ancora il campo (membri delle stanze nate
+ * prima di b.248, o appena entrati da un client vecchio) viene stampato
+ * `lastSeen = now` al primo giro, cosi ha davanti una soglia INTERA
+ * prima di poter essere potato — mai potato subito, mai lettura rotta.
+ *
+ * La POTATURA dei muti oltre soglia NON sta qui: sta in store.js
+ * (potaMembriAssenti), che riusa la stessa rimozione atomica del leave
+ * b.247 (REMOVE_MEMBER) invece di inventare un secondo meccanismo.
+ *
+ * KEYS[1] = room key
+ * ARGV[1] = memberName, ARGV[2] = now (timestamp del SERVER: il client
+ *           non dichiara mai l'ora, altrimenti un orologio storto
+ *           renderebbe qualcuno impotabile o potato a torto)
+ * Returns: updated room JSON, or nil if room doesn't exist
+ */
+export const UPDATE_HEARTBEAT = `
+local data = redis.call('GET', KEYS[1])
+if not data then return nil end
+local room = cjson.decode(data)
+local name = ARGV[1]
+local now = tonumber(ARGV[2])
+for i, m in ipairs(room.members) do
+  if m.name == name then
+    room.members[i].lastSeen = now
+  elseif type(m.lastSeen) ~= 'number' then
+    room.members[i].lastSeen = now
   end
 end
 local encoded = cjson.encode(room)
@@ -384,6 +433,25 @@ user._lastMod = tonumber(ARGV[2])
 local encoded = cjson.encode(user)
 redis.call('SET', KEYS[1], encoded)
 return encoded
+`;
+
+/**
+ * Ritiro atomico della cassetta dei segnali video di gruppo — b.248.
+ * KEYS[1] = chiave della cassetta (svideo:{stanza}:{nome})
+ * Restituisce: l'elenco grezzo dei segnali (anche vuoto).
+ *
+ * b.248 — CONFERMATO (audit esterno): la rotta faceva LRANGE e poi DEL
+ * come DUE comandi separati. Un candidato ICE arrivato nel mezzo veniva
+ * cancellato senza essere mai stato letto: video che ogni tanto non
+ * partiva, e nessun modo di riprodurlo, perche la finestra e di pochi
+ * millisecondi. Dentro uno script i due passi sono UN comando solo:
+ * un segnale o arriva prima (e viene letto) o arriva dopo (e resta li
+ * per il giro successivo). Perdersi non puo piu.
+ */
+export const RITIRA_CASSETTA = `
+local segnali = redis.call('LRANGE', KEYS[1], 0, -1)
+if #segnali > 0 then redis.call('DEL', KEYS[1]) end
+return segnali
 `;
 
 /**

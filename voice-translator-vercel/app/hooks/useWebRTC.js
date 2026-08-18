@@ -205,6 +205,16 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     const updatedStream = new MediaStream(remoteStreamRef.current.getTracks());
     setRemoteStream(updatedStream);
     if (track.kind === 'video') setRemoteVideoActive(true);
+    // ── b.248 · anche chi RICEVE il video viene promosso ──
+    // Quando l'altro fa "passa a video", qui arriva la sua traccia video
+    // dentro una chiamata nata 'voice' (la rinegoziazione si accetta gia
+    // da sola, senza banner). Senza promozione il partner restava nella
+    // finestra della chiamata vocale e il video, pur ricevuto, non si
+    // vedeva da nessuna parte.
+    if (track.kind === 'video' && callTypeRef.current === 'voice') {
+      setCallType('video');
+      callTypeRef.current = 'video';
+    }
     track.onended = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
     track.onmute = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
     track.onunmute = () => { if (track.kind === 'video') setRemoteVideoActive(true); };
@@ -816,6 +826,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           }
         }
         sendDirectMessage({ type: 'video-toggle', enabled: true });
+        // ── b.248 · accendere il video PROMUOVE la chiamata ──
+        // "Passa a video" da una chiamata voce arriva qui: la camera e'
+        // accesa e la rinegoziazione e' partita, ma il tipo restava
+        // 'voice' — la finestra giusta non si apriva e una riconnessione
+        // (b.245) avrebbe ricostruito la chiamata come solo-audio.
+        // Si promuove SOLO a video acceso davvero: se l'acquisizione
+        // fallisce si finisce nel catch e il tipo non si tocca.
+        if (callTypeRef.current === 'voice' && localStreamRef.current?.getVideoTracks().length > 0) {
+          setCallType('video');
+          callTypeRef.current = 'video';
+        }
       } catch (e) {
         console.warn('[WebRTC] Camera failed:', e);
       }
@@ -825,9 +846,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const flipCamera = useCallback(async () => {
     if (!localStreamRef.current || sendersRef.current.length === 0) return;
     try {
-      const newStream = await switchCamera(localStreamRef.current, sendersRef.current);
-      localStreamRef.current = newStream;
-      setLocalStream(newStream);
+      // ── b.248 · il cambio camera non butta piu il microfono ──
+      // switchCamera acquisisce un flusso di SOLO video (il replaceTrack
+      // sul sender lo fa gia lei): assegnarlo intero al ref principale
+      // perdeva la traccia AUDIO originale — il mute non controllava piu
+      // il microfono giusto e il cleanup non lo spegneva. Si ricompone:
+      // audio VECCHIO + video NUOVO, senza mai buttare l'audio.
+      const tracceAudio = localStreamRef.current.getAudioTracks();
+      const soloVideo = await switchCamera(localStreamRef.current, sendersRef.current);
+      const ricomposto = new MediaStream([...tracceAudio, ...soloVideo.getVideoTracks()]);
+      localStreamRef.current = ricomposto;
+      setLocalStream(ricomposto);
     } catch (e) { console.warn('[WebRTC] flipCamera:', e.message); }
   }, []);
 

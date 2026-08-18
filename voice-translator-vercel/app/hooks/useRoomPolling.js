@@ -89,11 +89,12 @@ export default function useRoomPolling({
   const processedMsgIdsRef = useRef(new Set());
 
   // ── Helper: process incoming message (shared by realtime + polling + P2P) ──
-  // ALWAYS checks content fingerprint to prevent TTS replay.
-  // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
+  // b.248 — il dedup del TTS e per IDENTIFICATIVO, non piu per contenuto.
+  // Copre: P2P + Realtime a ~50 ms di distanza, e il polling che porta la
+  // copia del server (id nuovo, ma stesso `clientId`) di un messaggio gia letto.
   const processIncomingMessage = useCallback((msg) => {
-    if (!msg || !msg.id) { dbg.debug('[TTS-TRACE] skip: no msg/id'); return; }
-    if (sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
+    if (!msg) { dbg.debug('[TTS-TRACE] skip: no msg'); return; }
+    if (msg.id && sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
     if (msg.sender === myVerifiedName) { dbg.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
 
@@ -112,12 +113,37 @@ export default function useRoomPolling({
     // `processIncomingMessage` lo chiamano tutti e due i percorsi, e ha
     // gia i controlli giusti sopra: scarta i miei messaggi e quelli gia
     // visti. Il posto era questo dall'inizio.
-    try { broadcastAckRef.current?.(msg.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
+    try { if (msg.id) broadcastAckRef.current?.(msg.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
 
-    const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000);
-    const contentFingerprint = `${msg.sender}|${msg.original?.substring(0,20)}|${timeWindow}`;
-    if (processedForTTSRef.current.has(contentFingerprint)) {
-      dbg.debug('[TTS-TRACE] skip: fingerprint dup', contentFingerprint);
+    // ── b.248 · la voce segue l'IDENTITA del messaggio, non il suo testo ──
+    //
+    // Qui c'era un'impronta sul CONTENUTO: `sender | primi 20 caratteri |
+    // finestra di 30 s`. Due messaggi REALMENTE DIVERSI dello stesso
+    // mittente che cominciavano uguale ("Va bene, ci vediamo domani alle
+    // otto" / "...alle nove", entro 30 s) avevano la stessa impronta, e la
+    // voce del secondo spariva senza un errore.
+    //
+    // Da b.247 l'identificativo esiste SEMPRE e viaggia intero: e la
+    // chiave giusta. `clientId` viene prima di `id` perche e l'id di
+    // cattura, quello che NON cambia da un canale all'altro: il broadcast
+    // consegna il messaggio con `id = tmp_...`, il polling porta la copia
+    // del server con un id suo ma con `clientId = tmp_...` (lo conserva
+    // /api/messages). Stessa cattura = stessa chiave = una sola voce, che
+    // e esattamente il caso per cui l'impronta sul contenuto era nata
+    // (stesso messaggio da P2P + Realtime + polling, anche a ~50 ms).
+    //
+    // Ripiego SOLO per i messaggi senza alcun id (client precedenti a
+    // b.126, che il clientId non lo mandano): prima venivano scartati del
+    // tutto (`if (!msg.id) return`) e restavano muti. Ora si leggono, e il
+    // doppione si riconosce dal testo INTERO — non da un prefisso: due
+    // frasi diverse non devono mai diventare "la stessa". La finestra di
+    // 30 s resta solo qui, perche senza identita e l'unico modo di
+    // permettere alla stessa frase di essere ridetta piu tardi.
+    const chiaveTTS = (msg.clientId || msg.id)
+      ? `id:${msg.clientId || msg.id}`
+      : `testo:${msg.sender}|${msg.original}|${Math.floor((msg.timestamp || Date.now()) / 30000)}`;
+    if (processedForTTSRef.current.has(chiaveTTS)) {
+      dbg.debug('[TTS-TRACE] skip: gia letto', chiaveTTS);
       return;
     }
 
@@ -146,13 +172,16 @@ export default function useRoomPolling({
     });
 
     if (textToPlay && prefsRef.current.autoPlay !== false) {
-      processedForTTSRef.current.add(contentFingerprint);
+      processedForTTSRef.current.add(chiaveTTS);
       if (processedForTTSRef.current.size > 500) {
         const first = processedForTTSRef.current.values().next().value;
         processedForTTSRef.current.delete(first);
       }
       dbg.debug('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
-      queueAudio(textToPlay, speechLang, msg.id);
+      // b.248 — alla coda si passa l'id di CATTURA (clientId se c'e):
+      // cosi anche il suo dedup interno vede la stessa chiave su tutti i
+      // canali, copia del server compresa.
+      queueAudio(textToPlay, speechLang, msg.clientId || msg.id);
     } else {
       dbg.debug('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
     }
@@ -313,9 +342,10 @@ export default function useRoomPolling({
         sourceLang: data.sourceLang,
         targetLang: data.targetLang,
         translations: data.translations,
-        // IMPORTANT: preserve original timestamp for TTS fingerprint dedup.
-        // Without this, Date.now() is used, which can cross 30-second bucket
-        // boundaries and cause duplicate TTS playback.
+        // b.248 — il timestamp originale si conserva per il RIPIEGO senza
+        // id (finestra di 30 s sul testo intero): con Date.now() si
+        // cambierebbe finestra e la stessa frase suonerebbe due volte.
+        // Con l'id (il caso normale da b.247) non conta piu per il dedup.
         timestamp: data.timestamp,
       });
     }

@@ -12,7 +12,7 @@ const log = createLogger('store');
 import {
   JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE, AGGIORNA_POLITICA_PUBBLICA,
   CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING, REMOVE_MEMBER,
-  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+  UPDATE_HEARTBEAT, UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
 } from './redisLua.js';
 
 // =============================================
@@ -238,22 +238,97 @@ export async function setSpeaking(roomId, memberName, speaking, liveText = null,
   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse setSpeaking result:', e.message); return null; }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// b.248 — LA PRESENZA E DI OGNUNO, NON DELLA STANZA (P1, confermato
+// da due audit).
+//
+// Prima il battito rinnovava la TTL della stanza INTERA e basta:
+// nessun timestamp del singolo membro veniva mai scritto. E il client
+// (useRoomPolling.js) deriva `partnerConnected` da
+// `room.members.length >= 2`. L'uscita PULITA e coperta dal leave di
+// b.247, ma se l'ospite perde la rete o il browser muore nessun leave
+// parte: restava in members finche la stanza viveva — anche ore, visto
+// che il battito dell'altro rinnovava la TTL — e l'ultimo rimasto
+// vedeva "ospite connesso" con la stanza vuota. Premeva Video e il
+// segnale non lo riceveva nessuno.
+//
+// LA SOGLIA: il battito del client (useRoomPolling.js) e ogni 1,5s
+// senza Realtime, 3s con Realtime, e a schermo spento rallenta di 6
+// volte (FRENO_A_SCHERMO_SPENTO) → il battito legittimo piu lento e
+// 18s. Sessanta secondi sono ~3,3 battiti mancati al ritmo piu lento:
+// abbastanza da non potare un telefono vivo ma in tasca (o un blip di
+// rete), abbastanza poco da far sparire un fantasma entro il minuto.
+// ═══════════════════════════════════════════════════════════════
+export const SOGLIA_PRESENZA_MS = 60 * 1000;
+
+/**
+ * Toglie dalla stanza i membri muti oltre soglia. Chiamata alla lettura
+ * (heartbeat, e check in roomActions.js): non c'e un demone, e chi legge
+ * che fa pulizia — come per la TTL della stanza stessa.
+ *
+ * Regole, nell'ordine in cui contano:
+ *   · si giudica SOLO su `lastSeen` scritto dal server (UPDATE_HEARTBEAT
+ *     / JOIN_ROOM): mai l'orologio del client, mai `joined` come
+ *     ripiego — un membro di una stanza nata prima di b.248 avrebbe un
+ *     joined di ore fa e verrebbe potato al primo giro;
+ *   · chi NON ha il campo non si pota MAI qui: e la grazia iniziale —
+ *     UPDATE_HEARTBEAT gli stampa lastSeen=adesso al primo giro, e da
+ *     li ha davanti una soglia intera;
+ *   · l'HOST non si pota mai: la sua voce in members e cio su cui
+ *     ruoloDi() decide al suo rientro (b.169) — potato per un
+ *     inciampo di rete, nemmeno il segreto host gli ridarebbe il ruolo;
+ *   · la rimozione e la STESSA del leave b.247 e di blocca() (b.167):
+ *     removeMember → script Lua REMOVE_MEMBER, atomico. Non un secondo
+ *     meccanismo che un giorno divergerebbe dal primo.
+ *
+ * Un errore qui non deve MAI rompere la lettura: al peggio il fantasma
+ * resta un giro in piu.
+ */
+export async function potaMembriAssenti(roomId, room, adesso = Date.now()) {
+  if (!room || !Array.isArray(room.members)) return room;
+  try {
+    const assenti = room.members.filter((m) =>
+      m &&
+      m.role !== 'host' && m.name !== room.host &&
+      typeof m.lastSeen === 'number' &&
+      adesso - m.lastSeen > SOGLIA_PRESENZA_MS
+    );
+    if (assenti.length === 0) return room;
+    let aggiornata = room;
+    for (const fantasma of assenti) {
+      const dopo = await removeMember(roomId, fantasma.name);
+      // null = gia sparito da solo (o stanza scaduta): l'esito voluto
+      // c'e comunque, si tiene l'ultima fotografia buona.
+      if (dopo) aggiornata = dopo;
+    }
+    return aggiornata;
+  } catch (e) {
+    log.warn('potatura presenza non riuscita:', e.message);
+    return room;
+  }
+}
+
 export async function updateHeartbeat(roomId, memberName) {
   const key = `room:${roomId.toUpperCase()}`;
-  const data = await redis('GET', key);
-  if (!data) return null;
-  let room; try { room = JSON.parse(data); } catch (e) { log.warn('Failed to parse room in updateHeartbeat:', e.message); return null; }
-  // READ-ONLY heartbeat: just refresh TTL without writing room data back.
-  // This prevents race conditions where heartbeat overwrites a concurrent
-  // joinRoom operation, effectively removing the guest from the room.
-  await redis('EXPIRE', key, 3600);
+  // b.248 — prima qui c'era un battito "di sola lettura" (GET + EXPIRE):
+  // la nota diceva, giustamente, che un GET+SET in JavaScript avrebbe
+  // schiacciato il join di chi entrava nello stesso istante. La ragione
+  // resta valida per il leggi-modifica-riscrivi FUORI da Redis; lo
+  // script Lua invece gira atomico come tutti gli altri di redisLua.js,
+  // quindi puo scrivere `lastSeen` del battente senza perdere nessuno.
+  const result = await redis('EVAL', UPDATE_HEARTBEAT, 1, key, memberName, Date.now().toString());
+  if (!result) return null;
+  let room; try { room = JSON.parse(result); } catch (e) { log.warn('Failed to parse room in updateHeartbeat:', e.message); return null; }
   // b.169 — il segreto host (creaSegretoHost, sopra) ha la stessa TTL
   // iniziale della stanza: senza questo refresh scadrebbe un'ora dopo
   // la creazione anche se la stanza (e l'host dentro) e ancora viva.
   // EXPIRE su una chiave assente non fa nulla (nessun errore): innocuo
   // per le stanze create prima di questa versione, che non ce l'hanno.
   await redis('EXPIRE', `roomhost:${roomId.toUpperCase()}`, 3600);
-  return room;
+  // b.248 — la potatura avviene DOPO la stampa del lastSeen: chi batte
+  // adesso non puo mai risultare muto, e la fotografia restituita al
+  // client e gia senza fantasmi (e da questa che nasce partnerConnected).
+  return potaMembriAssenti(roomId, room);
 }
 
 export async function addCost(roomId, amount) {

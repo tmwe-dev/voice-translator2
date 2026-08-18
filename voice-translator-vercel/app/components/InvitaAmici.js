@@ -20,7 +20,7 @@
 // Si mostra UNA volta, alla fine del tutorial. Un rito, non un pedaggio.
 // ═══════════════════════════════════════════════════════════════
 
-import { memo, useState, useCallback } from 'react';
+import { memo, useState, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -61,15 +61,32 @@ function InvitaAmici({ aperta, onClose }) {
     } catch { /* l'utente ha chiuso il foglio di condivisione: scelta sua */ }
   }, [messaggio]);
 
+  // ── b.248 — IL DIALOGO NON AVEVA NESSUNA VIA D'USCITA STANDARD ──
+  // Il collaudo dal vivo lo ha trovato APERTO sopra la home, e non
+  // riusciva a chiuderlo: Escape non era ascoltato da nessuno, il tocco
+  // sullo sfondo scuro non faceva niente (a differenza degli altri modali
+  // del progetto: il popup invito di JoinView e ChatActionsPanel si
+  // chiudono entrambi toccando il velo, con stopPropagation sulla carta),
+  // e l'unico bottone che chiudeva era "Più tardi" (invitaDopo) — testo
+  // localizzato SENZA aria-label, quindi invisibile a qualsiasi ricerca
+  // di chiudi/annulla/× e a chi usa un lettore di schermo. Qui si aggiunge
+  // l'ascolto di Escape; sotto, la chiusura dal velo e l'aria-label.
+  useEffect(() => {
+    if (!aperta) return;
+    const suTasto = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', suTasto);
+    return () => window.removeEventListener('keydown', suTasto);
+  }, [aperta, onClose]);
+
   if (!aperta) return null;
 
   return (
-    <div role="dialog" aria-modal="true" style={{
+    <div role="dialog" aria-modal="true" onClick={onClose} style={{
       position: 'fixed', inset: 0, zIndex: 400,
       background: 'rgba(3,5,12,0.78)', fontFamily: FONT,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
     }}>
-      <div style={{
+      <div onClick={e => e.stopPropagation()} style={{
         width: '100%', maxWidth: 420, maxHeight: '82dvh', overflowY: 'auto',
         background: C.bg || '#070a14', borderRadius: 22, border: bordo, padding: '22px 20px',
       }}>
@@ -131,7 +148,7 @@ function InvitaAmici({ aperta, onClose }) {
           }}>
             {L('invitaCondividi')}
           </button>
-          <button onClick={() => { vibrate(6); onClose(); }} style={{
+          <button onClick={() => { vibrate(6); onClose(); }} aria-label={L('close')} style={{
             padding: '10px 0', borderRadius: 13, cursor: 'pointer',
             background: 'none', border: 'none', color: C.textMuted,
             fontSize: 13, fontFamily: FONT,

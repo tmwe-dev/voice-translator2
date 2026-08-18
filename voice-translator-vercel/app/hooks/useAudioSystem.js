@@ -305,19 +305,36 @@ export default function useAudioSystem({
   // =============================================
 
   async function queueAudio(text, lang, msgId) {
-    if (msgId && playedMsgIdsRef.current.has(msgId)) return;
-    const contentKey = `${text?.substring(0, 60)}|${lang}`;
-    if (playedMsgIdsRef.current.has(contentKey)) return;
-    // Mark as played IMMEDIATELY (like b.41) to prevent duplicates from multi-channel delivery
-    if (msgId) playedMsgIdsRef.current.add(msgId);
-    playedMsgIdsRef.current.add(contentKey);
+    // ── b.248 · con un id si dedup SOLO per id, mai per contenuto ──
+    //
+    // Qui c'era una seconda impronta sul testo (`primi 60 caratteri |
+    // lingua`, finestra di 30 s) che scattava ANCHE quando l'id c'era:
+    // due messaggi veri con lo stesso testo ("Si." detto due volte, con
+    // due id di cattura diversi da b.247) perdevano la seconda voce.
+    //
+    // Un id NUOVO si legge SEMPRE, qualunque sia il testo: la protezione
+    // contro lo stesso messaggio arrivato da piu canali (P2P + Realtime +
+    // polling) sta tutta nell'id, che chi chiama passa gia unificato
+    // (l'id di cattura, conservato dalla copia del server come clientId).
+    // Si annota SUBITO, prima di suonare, come da b.41: i canali arrivano
+    // a ~50 ms e la coda e asincrona.
+    //
+    // Il confronto sul contenuto resta SOLO per le chiamate senza id
+    // (client vecchi, riascolti manuali): li si usa il testo INTERO — un
+    // prefisso trasforma due frasi diverse nella stessa — e la chiave
+    // scade dopo 30 s, cosi la stessa frase puo essere ridetta piu tardi.
+    // Le chiavi per id invece NON scadono: un messaggio gia letto non si
+    // rilegge (ci pensa il tetto LRU a non farle crescere per sempre).
+    const chiave = msgId || `testo:${text}|${lang}`;
+    if (playedMsgIdsRef.current.has(chiave)) return;
+    playedMsgIdsRef.current.add(chiave);
     if (playedMsgIdsRef.current.size > 500) {
       const first = playedMsgIdsRef.current.values().next().value;
       playedMsgIdsRef.current.delete(first);
     }
-    setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
+    if (!msgId) setTimeout(() => { playedMsgIdsRef.current.delete(chiave); }, 30000);
     if (!audioEnabledRef.current) { playNotifSound(); return; }
-    accodaConAnticipo(text, lang, msgId || contentKey);
+    accodaConAnticipo(text, lang, chiave);
   }
 
   /**

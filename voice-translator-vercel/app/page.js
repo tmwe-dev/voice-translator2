@@ -1155,6 +1155,7 @@ function HomeInner() {
     <Suspense fallback={<LazyFallback />}>
     <RoomView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
       roomSessionToken={roomPolling.roomSessionTokenRef?.current}
+      userToken={auth.userToken}
       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
       isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}

@@ -193,7 +193,16 @@ const RoomHeader = memo(function RoomHeader({
                 <button onClick={() => {
                     if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
                       setShowVoiceCall(true);
-                    } else if (webrtc.webrtcState === 'idle') {
+                    } else {
+                      // ── b.248 · stessa cura di b.245, ma sul pulsante VOCE ──
+                      // La guardia `webrtcState === 'idle'` era rimasta QUI:
+                      // dopo una chiamata caduta lo stato resta 'failed' e
+                      // ripremere Voce non faceva piu niente — identico al
+                      // difetto corretto per il Video in b.245. (Il commento
+                      // di b.245 qui sotto diceva che l'audio "non ha mai
+                      // avuto questa guardia": non era vero, ce l'aveva.)
+                      // Chi decide se si puo chiamare e' initiateConnection,
+                      // che gia rifiuta 'connecting' e 'connected'.
                       webrtc.initiateConnection(false);
                     }
                     setShowMoreMenu(false);
@@ -222,7 +231,19 @@ const RoomHeader = memo(function RoomHeader({
                       // che gia rifiuta 'connecting' e 'connected'.
                       webrtc.initiateConnection(true);
                     } else {
+                      // ── b.248 · "chiudi" CHIUDE, non nasconde ──
+                      // Prima qui c'era solo setShowVideoCall(false): la
+                      // finestra spariva ma camera e connessione restavano
+                      // VIVE. Chi vuole solo ridurre la finestra ha gia il
+                      // comando nell'overlay (fullscreen -> riquadro); la
+                      // voce di menu si chiama "Chiudi video" e deve fare
+                      // quello che dice. Si usa la stessa via dei pulsanti
+                      // rossi dell'overlay: disconnect() marca la chiusura
+                      // VOLUTA (b.116), avvisa l'altro con call-ended
+                      // (b.117) e spegne davvero camera e connessione.
+                      webrtc.disconnect();
                       setShowVideoCall(false);
+                      setVideoFullscreen(false);
                     }
                     setShowMoreMenu(false);
                   }}

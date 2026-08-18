@@ -48,6 +48,11 @@ vi.mock('../../app/lib/store.js', () => ({
   resolveRoomIdentity: (...args) => mockResolveRoomIdentity(...args),
   creaSegretoHost: (...args) => mockCreaSegretoHost(...args),
   verificaSegretoHost: (...args) => mockVerificaSegretoHost(...args),
+  // b.248 — handleCheck ora pota i membri muti oltre soglia leggendo la
+  // stanza. Qui lo store e interamente finto: la potatura vera ha i suoi
+  // test con la rotta reale in presenza-b248.test.js, qui basta che non
+  // tocchi niente.
+  potaMembriAssenti: async (roomId, room) => room,
 }));
 
 // Mock validate

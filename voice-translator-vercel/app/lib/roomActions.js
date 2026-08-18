@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost } from './store.js';
+import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost, potaMembriAssenti } from './store.js';
 import { redis } from './redis.js';
 import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
 import { createLogger } from './logger.js';
@@ -223,5 +223,12 @@ export async function handleChangeLang({ roomId, lang, identity }) {
 export async function handleCheck({ roomId }) {
   if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
   const room = await getRoom(roomId);
+  // b.248 — anche questa lettura fa pulizia dei membri muti oltre
+  // soglia (vedi potaMembriAssenti in store.js): HomeView chiama
+  // `check` a ogni avvio, ed e un'occasione in piu per far sparire i
+  // fantasmi anche quando dentro non batte piu nessuno. La risposta
+  // NON cambia forma (exists/ended, come sempre) e la potatura ingoia
+  // da sola ogni suo errore: al peggio il fantasma resta un giro in piu.
+  if (room && !room.ended) await potaMembriAssenti(roomId, room);
   return NextResponse.json({ exists: !!room, ended: room?.ended || false });
 }

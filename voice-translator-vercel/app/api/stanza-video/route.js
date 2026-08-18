@@ -3,6 +3,7 @@ import { withApiGuard } from '../../lib/apiGuard.js';
 import { redis } from '../../lib/redis.js';
 import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 import { verifyRoomSession, getRoom, eAncoraMembroStanza } from '../../lib/store.js';
+import { RITIRA_CASSETTA } from '../../lib/redisLua.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('stanza-video');
@@ -52,6 +53,30 @@ const MAX_PARTECIPANTI = 8;   // oltre, ognuno spedisce il video troppe volte
 
 const cassetta = (stanza, nome) => `svideo:${stanza}:${nome.toLowerCase()}`;
 const presenze = (stanza) => `svideo:${stanza}:presenti`;
+const battiti = (stanza) => `svideo:${stanza}:battiti`;
+
+// b.248 — sei battiti persi (il client batte ogni 5 secondi): non c'e piu.
+const SOGLIA_ASSENZA = 30_000;
+
+// b.248 — l'audit segnalava "lo score non si aggiorna col battito".
+// Vero a meta: il momento di INGRESSO resta fermo DI PROPOSITO, perche
+// regge la regola chi-chiama-chi (vedi il commento in 'battito'). Il
+// difetto REALE era che nessuno misurava chi fosse ancora VIVO: chi
+// chiudeva la scheda senza salutare restava fra i presenti finche
+// qualcun altro teneva viva la chiave — riquadri fantasma, e "stanza
+// piena" contando gente che non c'era piu. La cura: un secondo insieme
+// ordinato con l'ULTIMO SEGNO DI VITA (aggiornato a ogni battito), e
+// questa potatura di chi non batte da troppo. L'ordine di arrivo non
+// si tocca.
+async function potaAssenti(roomId) {
+  const limite = Date.now() - SOGLIA_ASSENZA;
+  const spariti = (await redis('ZRANGEBYSCORE', battiti(roomId), 0, limite)) || [];
+  for (const nome of spariti) {
+    await redis('ZREM', presenze(roomId), nome);
+    await redis('ZREM', battiti(roomId), nome);
+    await redis('DEL', cassetta(roomId, nome));
+  }
+}
 
 async function chiSei(token, roomId) {
   if (!token) return null;
@@ -88,6 +113,10 @@ async function handlePost(req) {
         const stanza = await getRoom(roomId);
         if (!stanza) return NextResponse.json({ error: 'Stanza non trovata' }, { status: 404 });
 
+        // b.248 — prima di contare chi c'e si potano gli assenti: senza,
+        // un fantasma occupava un posto vero e la stanza risultava piena.
+        await potaAssenti(roomId);
+
         // Chi c'era PRIMA di me: si legge prima di aggiungersi, altrimenti
         // ci si troverebbe dentro il proprio nome.
         const prima = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
@@ -101,7 +130,10 @@ async function handlePost(req) {
         }
 
         await redis('ZADD', presenze(roomId), Date.now(), io.name);
+        // b.248 — e da subito anche il segno di vita: chi entra e vivo.
+        await redis('ZADD', battiti(roomId), Date.now(), io.name);
         await redis('EXPIRE', presenze(roomId), TTL);
+        await redis('EXPIRE', battiti(roomId), TTL);
 
         // Chiamo TUTTI quelli che ho trovato. Sono arrivato dopo: tocca a me.
         return NextResponse.json({
@@ -119,7 +151,14 @@ async function handlePost(req) {
         // l'ordine si mescola e due persone si richiamano a vicenda.
         const mio = await redis('ZSCORE', presenze(roomId), io.name);
         if (!mio) await redis('ZADD', presenze(roomId), Date.now(), io.name);
+        // b.248 — l'ingresso resta fermo, ma l'ultimo SEGNO DI VITA si
+        // aggiorna a ogni battito, in un insieme separato. E chi non
+        // batte da troppo viene potato: e questo che fa sparire i
+        // riquadri fantasma di chi ha chiuso la scheda senza salutare.
+        await redis('ZADD', battiti(roomId), Date.now(), io.name);
+        await potaAssenti(roomId);
         await redis('EXPIRE', presenze(roomId), TTL);
+        await redis('EXPIRE', battiti(roomId), TTL);
 
         const dentro = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
         const arrivatiPrimaDiMe = [];
@@ -131,6 +170,9 @@ async function handlePost(req) {
 
       case 'esci': {
         await redis('ZREM', presenze(roomId), io.name);
+        // b.248 — via anche il segno di vita: senza, il nome rientrerebbe
+        // nella finestra dei "vivi" fino alla soglia di assenza.
+        await redis('ZREM', battiti(roomId), io.name);
         await redis('DEL', cassetta(roomId, io.name));
         return NextResponse.json({ ok: true });
       }
@@ -157,8 +199,14 @@ async function handlePost(req) {
       // ── Svuoto la mia cassetta: quello che ho letto non lo rileggo ──
       case 'ritira': {
         const chiave = cassetta(roomId, io.name);
-        const grezzi = (await redis('LRANGE', chiave, 0, -1)) || [];
-        if (grezzi.length) await redis('DEL', chiave);
+        // b.248 — CONFERMATO (audit esterno): qui c'erano DUE comandi
+        // separati, LRANGE e poi DEL. Un candidato ICE arrivato NEL
+        // MEZZO veniva cancellato senza essere mai stato letto: video
+        // che ogni tanto non partiva, impossibile da riprodurre perche
+        // la finestra e di pochi millisecondi. Ora lettura e svuotamento
+        // sono UNO script Lua, cioe un comando solo: un segnale o arriva
+        // prima (e si legge) o arriva dopo (e aspetta il giro seguente).
+        const grezzi = (await redis('EVAL', RITIRA_CASSETTA, 1, chiave)) || [];
         const segnali = grezzi
           .map(s => { try { return JSON.parse(s); } catch { return null; } })
           .filter(Boolean);
