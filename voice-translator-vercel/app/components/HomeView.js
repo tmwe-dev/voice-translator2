@@ -329,6 +329,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                     : action.icon === 'mail' ? <IconMail size={20} />
                     : action.icon === 'video' ? <IconVideoCall size={20} />
                     : action.icon === 'gift' ? <Icon name="gift" size={20} color={C.accent} />
+                    : action.icon === 'chat' ? <Icon name="chat" size={20} color={C.textPrimary} />
                     : <IconCar size={20} />}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>

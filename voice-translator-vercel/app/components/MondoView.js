@@ -63,7 +63,7 @@ const LANG_FILTERS = [
 ];
 
 function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
-  const { L, S, prefs, setView, theme } = useApp();
+  const { L, setView, theme } = useApp(); // b.232 — rimossi S/prefs inutilizzati
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -99,6 +99,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       setLoading(true);
       const res = await fetch('/api/mondo');
       if (res.ok) { const data = await res.json(); setRooms(data.rooms || []); setError(null); }
+      else setError(L('loadRoomsFailed')); // b.232 — prima !res.ok (500/429) era silenzioso
     } catch { setError(L('loadRoomsFailed')); }
     finally { setLoading(false); }
   }, [L]);

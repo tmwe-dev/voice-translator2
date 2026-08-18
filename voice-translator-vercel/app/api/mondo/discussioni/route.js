@@ -88,9 +88,13 @@ async function handlePost(req) {
   try {
     switch (azione) {
       case 'crea': {
+        // b.232 — come per 'commenta', un titolo vuoto va rifiutato: prima si
+        // potevano creare discussioni con titolo '' (mostrate come "—").
+        const titoloCrea = (body.title || '').trim();
+        if (!titoloCrea) return NextResponse.json({ error: 'titolo mancante' }, { status: 400 });
         const id = await creaDiscussione({
           authorEmail, authorName,
-          title: (body.title || '').slice(0, 300),
+          title: titoloCrea.slice(0, 300),
           titleLang: body.titleLang || null,
           topic: body.topic || null,
           country: body.country || null,

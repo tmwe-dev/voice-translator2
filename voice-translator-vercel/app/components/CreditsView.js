@@ -51,15 +51,20 @@ export default function CreditsView({ userAccount }) {
   useEffect(() => { carica(); }, [carica]);
 
   async function compra(pacchettoId) {
-    setCaricando(true);
+    setCaricando(true); setEsito(''); setEsitoOk(false);
     try {
       const r = await fetch('/api/wallet/ricarica', {
         method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ pacchetto: pacchettoId }),
       });
-      const { url } = await r.json();
-      if (url) window.location.href = url;
-    } finally { setCaricando(false); }
+      const d = await r.json().catch(() => ({}));
+      // b.232 — prima nessun controllo su r.ok: se il server rispondeva 401
+      // (sloggato) o errore, `url` era undefined e non succedeva NULLA. Ora
+      // mostra un messaggio invece del click muto.
+      if (!r.ok || !d.url) { setEsito(d.error || L('genericError')); setEsitoOk(false); return; }
+      window.location.href = d.url;
+    } catch { setEsito(L('genericError')); setEsitoOk(false); }
+    finally { setCaricando(false); }
   }
 
   // Un solo campo per due cose: i codici che iniziano con GIFT- sono
@@ -68,14 +73,18 @@ export default function CreditsView({ userAccount }) {
     setEsito('...'); setEsitoOk(false);
     const pulito = codice.trim().toUpperCase();
     const eRegalo = pulito.startsWith('GIFT-');
-    const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
-      method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
-    });
-    const d = await r.json();
-    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
-    setEsitoOk(!!d.ok);
-    if (d.ok) { setCodice(''); carica(); }
+    // b.232 — prima senza try/catch: offline o errore di rete lasciava il
+    // messaggio bloccato su "..." con una promise non gestita.
+    try {
+      const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
+        method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
+      });
+      const d = await r.json().catch(() => ({}));
+      setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+      setEsitoOk(!!d.ok);
+      if (d.ok) { setCodice(''); carica(); }
+    } catch { setEsito(L('genericError')); setEsitoOk(false); }
   }
 
   // ── Regalare minuti a qualcuno ──

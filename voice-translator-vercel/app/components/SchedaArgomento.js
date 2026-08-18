@@ -31,12 +31,13 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
   const [sintesiAI, setSintesiAI] = useState('');
   const [generando, setGenerando] = useState(false);
   const [serveAccount, setServeAccount] = useState(false);
+  const [errSintesi, setErrSintesi] = useState(false); // b.232 — 402/500 non erano più mostrati
 
   // Ogni scheda nuova riparte pulita; e appena si apre si CHIEDE la
   // cache condivisa: se qualcuno ha gia pagato la sintesi, arriva
   // gratis senza premere niente.
   useEffect(() => {
-    setSintesiAI(''); setServeAccount(false); setGenerando(false);
+    setSintesiAI(''); setServeAccount(false); setErrSintesi(false); setGenerando(false);
     if (!aperta || tipo !== 'articolo' || !dati?.titolo) return;
     let vivo = true;
     (async () => {
@@ -68,11 +69,11 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
         }),
       });
       if (r.status === 401) { setServeAccount(true); return; }
-      if (r.ok) {
-        const d = await r.json();
-        if (d.sintesi) setSintesiAI(d.sintesi);
-      }
-    } catch { /* si riprova col bottone */ }
+      // b.232 — prima 402 (credito) e 500 non mostravano nulla: click "morto".
+      if (!r.ok) { setErrSintesi(true); return; }
+      const d = await r.json();
+      if (d.sintesi) setSintesiAI(d.sintesi);
+    } catch { setErrSintesi(true); }
     finally { setGenerando(false); }
   }, [dati, generando, prefs.uiLang, userToken]);
 
@@ -163,6 +164,9 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
                   </button>
                   {serveAccount && (
                     <div style={{ fontSize: 12, color: C.red, marginTop: 8 }}>{L('schedaAccedi')}</div>
+                  )}
+                  {errSintesi && !serveAccount && (
+                    <div style={{ fontSize: 12, color: C.red, marginTop: 8 }}>{L('genericError')}</div>
                   )}
                 </>
               )}

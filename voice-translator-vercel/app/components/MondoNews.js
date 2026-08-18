@@ -193,7 +193,9 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
       else setErrore(true);
     } catch { setErrore(true); }
     setCreando(false);
-  }, [creando, userToken, lingua, chipAttiva]);
+    // b.232 — `prefs` nelle deps: il body usa prefs.mondoNick, che prima
+    // poteva essere quello vecchio (stale closure).
+  }, [creando, userToken, lingua, chipAttiva, prefs]);
 
   const quando = (ts) => {
     if (!ts) return '';

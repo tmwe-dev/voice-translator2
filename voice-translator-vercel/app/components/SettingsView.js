@@ -262,7 +262,13 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             onClick={() => setView('credits')} />
           <Riga c={c} icona={<IconKey size={17} />} titolo={L('yourApiKeys')}
             sotto={L('apiKeysUnlimited')}
-            valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : L('noneWord')}
+            valore={(() => {
+              // b.232 — apiKeyInputs è un OGGETTO {openai,anthropic,…}: `.length`
+              // era sempre undefined → mostrava sempre "Nessuna". Ora conta le
+              // chiavi effettivamente valorizzate.
+              const n = apiKeyInputs ? Object.values(apiKeyInputs).filter((v) => v && String(v).trim()).length : 0;
+              return n ? String(n) : L('noneWord');
+            })()}
             onClick={() => setView('apikeys')} />
           <Riga c={c} icona={<IconUser size={17} />} titolo={L('contactsRow')}
             sotto={L('contactsRowDesc')}

@@ -132,9 +132,15 @@ export async function parlaTurno({ voceId, testo, lingua, userToken }, onAudio) 
     await new Promise((risolvi) => {
       const audio = new Audio(url);
       if (onAudio) onAudio(audio);
-      audio.onended = () => { URL.revokeObjectURL(url); risolvi(); };
-      audio.onerror = () => { URL.revokeObjectURL(url); risolvi(); };
-      audio.play().catch(() => risolvi());
+      // b.232 — anche la PAUSA (Stop del podcast) risolve la promise: prima
+      // audio.pause() non emetteva onended/onerror e il ciclo di `vai` restava
+      // appeso su questo await. `fatto` evita la doppia risoluzione.
+      let fatto = false;
+      const chiudi = () => { if (fatto) return; fatto = true; URL.revokeObjectURL(url); risolvi(); };
+      audio.onended = chiudi;
+      audio.onerror = chiudi;
+      audio.onpause = chiudi;
+      audio.play().catch(() => chiudi());
     });
   } catch { /* la voce è un di più: se fallisce, si prosegue in silenzio */ }
 }

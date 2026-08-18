@@ -31,25 +31,37 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   const [attende, setAttende] = useState(false);
   const [errore, setErrore] = useState('');
   const fondo = useRef(null);
+  // b.232 — riferimento sempre aggiornato al Compagno scelto, per evitare che
+  // la risposta di A (in arrivo) finisca nella chat di B se si cambia Compagno.
+  const sceltoRef = useRef(scelto);
+  useEffect(() => { sceltoRef.current = scelto; }, [scelto]);
 
   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
 
   // b.231 — salva la conversazione sul dispositivo a ogni cambiamento.
   useEffect(() => { if (scelto) salvaChat(scelto.id, messaggi); }, [messaggi, scelto]);
 
+  // b.232 — cambiando Compagno azzera attesa/errore: prima B restava con il
+  // "…" e il tasto invio disabilitato finché la vecchia richiesta di A non finiva.
+  useEffect(() => { setAttende(false); setErrore(''); }, [scelto]);
+
   const invia = useCallback(async () => {
     const t = testo.trim();
     if (!t || !scelto || attende) return;
     setErrore('');
+    const idAtt = scelto.id;
     const nuovi = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(nuovi); setTesto(''); setAttende(true);
     try {
       const d = await parlaAmico({ compagnoId: scelto.id, messaggi: nuovi, lingua, userToken, obiettivi: obiettiviAttivi() });
+      // b.232 — se nel frattempo si è cambiato Compagno, scarta la risposta.
+      if (sceltoRef.current?.id !== idAtt) return;
       setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
       if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken });
     } catch (e) {
+      if (sceltoRef.current?.id !== idAtt) return;
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
-    } finally { setAttende(false); }
+    } finally { if (sceltoRef.current?.id === idAtt) setAttende(false); }
   }, [testo, scelto, attende, messaggi, lingua, userToken, L]);
 
   // ── Scelta del Compagno ──
@@ -78,10 +90,10 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
-        <button onClick={() => setScelto(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
+        <button onClick={() => setScelto(null)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
           <Icon name="back" size={16} color={testoP} />
         </button>
-        <img src={scelto.avatar} alt="" width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
+        <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
         <span style={{ fontWeight: 700, color: testoP }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
       </div>
 
@@ -102,8 +114,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
 
       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
-          placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
-        <button onClick={invia} disabled={attende} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+          aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
+        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
           <Icon name="send" size={16} color="#04121c" />
         </button>
       </div>

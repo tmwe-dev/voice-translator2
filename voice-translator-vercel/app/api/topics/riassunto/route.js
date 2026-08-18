@@ -91,7 +91,12 @@ async function handlePost(req) {
   }
 
   const openai = new OpenAI({ apiKey });
-  const completion = await openai.chat.completions.create({
+  // b.232 — la chiamata al fornitore era senza try/catch: un rate-limit o un
+  // timeout risaliva ad apiGuard come 500 (e finiva su Sentry come guasto
+  // interno). Ora un fallimento transitorio è un 502 pulito, non un allarme.
+  let completion;
+  try {
+  completion = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
     messages: [
       {
@@ -108,6 +113,10 @@ REGOLE INVIOLABILI:
     temperature: 0.3,
     max_tokens: 400,
   });
+  } catch (e) {
+    log.error('sintesi: fornitore non disponibile:', e);
+    return NextResponse.json({ error: 'Servizio non disponibile, riprova tra poco' }, { status: 502 });
+  }
 
   const testo = (completion.choices?.[0]?.message?.content || '').trim();
   if (!testo) return NextResponse.json({ error: 'sintesi vuota' }, { status: 502 });

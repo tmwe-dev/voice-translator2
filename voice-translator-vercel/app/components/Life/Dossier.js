@@ -44,7 +44,8 @@ function Dossier({ compagni, onApriStanza, onDebate, L, lingua, userToken, testo
     const discussione = copioni.map(t => `${t.nome}: ${t.testo}`).join('\n\n');
     try { const d = await reportFinale({ argomento: argomento.trim(), briefing: brief?.articolo || '', discussione, lingua, userToken }); setReport(d.report); }
     catch (e) { err(e); } finally { setFase(''); }
-  }, [copioni, brief, argomento, lingua, userToken]);
+    // b.232 — `L` nelle deps come in passo1/passo2: err() lo usa per i messaggi.
+  }, [copioni, brief, argomento, lingua, userToken, L]);
 
   const btn = (onClick, testo, on = true) => (
     <button onClick={onClick} disabled={!!fase || !on}
@@ -56,7 +57,7 @@ function Dossier({ compagni, onApriStanza, onDebate, L, lingua, userToken, testo
 
   return (
     <div>
-      <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeDossierPh')}
+      <input value={argomento} onChange={(e) => setArgomento(e.target.value)} aria-label={L('lifeDossierPh')} placeholder={L('lifeDossierPh')}
         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box' }} />
       {btn(passo1, fase === 'briefing' ? L('lifeGenerating') : `📰 ${L('lifeDossierBriefing')}`)}
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}

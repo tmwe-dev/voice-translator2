@@ -42,7 +42,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
                 {L('loginBeforeKeysDesc')}
               </div>
               <button style={S.btn} onClick={() => setView('account')}>
-                Accedi / Registrati
+                {L('loginToAccount')}
               </button>
             </div>
           </div>
@@ -64,17 +64,17 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
           </div>
           <div style={S.field}>
             <div style={S.label}>{L('openaiRequired')}</div>
-            <input style={S.input} placeholder="sk-proj-..." value={apiKeyInputs.openai}
+            <input style={S.input} type="password" autoComplete="off" placeholder="sk-proj-..." value={apiKeyInputs.openai}
               onChange={e => setApiKeyInputs({...apiKeyInputs, openai:e.target.value})} />
           </div>
           <div style={S.field}>
             <div style={S.label}>{L('anthropicOptional')}</div>
-            <input style={S.input} placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
+            <input style={S.input} type="password" autoComplete="off" placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
               onChange={e => setApiKeyInputs({...apiKeyInputs, anthropic:e.target.value})} />
           </div>
           <div style={S.field}>
             <div style={S.label}>{L('geminiOptional')}</div>
-            <input style={S.input} placeholder="AIza..." value={apiKeyInputs.gemini}
+            <input style={S.input} type="password" autoComplete="off" placeholder="AIza..." value={apiKeyInputs.gemini}
               onChange={e => setApiKeyInputs({...apiKeyInputs, gemini:e.target.value})} />
           </div>
           <div style={{marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,215,0,0.1)'}}>
@@ -86,7 +86,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
             </div>
             <div style={S.field}>
               <div style={S.label}>ElevenLabs API Key</div>
-              <input style={S.input} placeholder="xi_..." value={apiKeyInputs.elevenlabs}
+              <input style={S.input} type="password" autoComplete="off" placeholder="xi_..." value={apiKeyInputs.elevenlabs}
                 onChange={e => setApiKeyInputs({...apiKeyInputs, elevenlabs:e.target.value})} />
             </div>
           </div>

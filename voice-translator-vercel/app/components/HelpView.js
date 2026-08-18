@@ -112,7 +112,7 @@ function HelpView() {
                 backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
                 animation: `vtSlideUp 0.3s ease-out ${i * 0.05}s both`,
               }}>
-                <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>
+                {f.icon && <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>}
                 <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
                 <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{L(f.descKey)}</div>
               </div>
@@ -145,7 +145,7 @@ function HelpView() {
                     display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
                     WebkitTapHighlightColor: 'transparent',
                   }}>
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>
+                    {faq.icon && <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>}
                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
                       {L(faq.qKey)}
                     </span>

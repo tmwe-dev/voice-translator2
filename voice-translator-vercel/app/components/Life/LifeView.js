@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useRef, useCallback, useEffect } from 'react';
+import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
@@ -32,7 +32,9 @@ function LifeView({ onApriStanza }) {
     try { setMiei(await elencoMiei(userToken)); } catch { /* senza login o senza rete: solo i predefiniti */ }
   }, [userToken]);
   useEffect(() => { caricaMiei(); }, [caricaMiei]);
-  const tutti = [...COMPAGNI_PREDEFINITI, ...miei];
+  // b.232 — memoizzato: prima si ricreava a ogni render e vanificava il memo()
+  // dei figli (AmicoChat, Tavolo…), che ri-renderizzavano sempre.
+  const tutti = useMemo(() => [...COMPAGNI_PREDEFINITI, ...miei], [miei]);
 
   const testoP = C.textPrimary || '#eef2ff';
   const muto = C.textMuted || 'rgba(242,244,247,0.6)';
@@ -282,7 +284,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }, [lezioni, argomento, categoria, livello, linguaCorso, docenteId, userToken, L]);
 
   const crea = useCallback(async () => {
-    setErrore(''); setLezioni([]); setAperta(null);
+    // b.232 — reset di `pubblicato`: senza questo, dopo aver pubblicato un
+    // corso il tasto "Pubblica" restava bloccato su "✓ Pubblicato" anche per
+    // il corso nuovo (sbloccabile solo cambiando scheda). apriPubblico lo fa già.
+    setErrore(''); setLezioni([]); setAperta(null); setPubblicato(false);
     if (!argomento.trim()) { setErrore(L('lifeNeedTopic')); return; }
     setLavoro(true);
     try {
@@ -428,11 +433,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       {lezioni.length > 0 && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12, color: muto }}>{L('lifeLessons')}</div>
-          {lezioni.map((lz) => (
-            <button key={lz.indice} onClick={() => apri(lz)} disabled={lavoro}
+          {lezioni.map((lz, i) => (
+            // b.232 — difesa sui corsi della libreria (lezioni grezze dal DB):
+            // `indice`/`obiettivi` possono mancare → key/NaN e crash su .length.
+            <button key={lz.indice ?? i} onClick={() => apri(lz)} disabled={lavoro}
               style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
-              <div style={{ fontWeight: 700 }}>{lz.indice + 1}. {lz.titolo}</div>
-              {lz.obiettivi.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
+              <div style={{ fontWeight: 700 }}>{(lz.indice ?? i) + 1}. {lz.titolo}</div>
+              {lz.obiettivi?.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
             </button>
           ))}
           {/* b.228 — pubblica il corso nella libreria condivisa. */}

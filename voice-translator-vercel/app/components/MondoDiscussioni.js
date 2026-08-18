@@ -34,6 +34,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const [tradotti, setTradotti] = useState({});
   // b.187 — chi seguo, per id pubblico (stato ottimistico di sessione)
   const [seguiti, setSeguiti] = useState(() => new Set());
+  const [likeMessi, setLikeMessi] = useState(() => new Set()); // b.232 — evita il doppio conteggio del like
   const scrollRef = useRef(null);
 
   const carica = useCallback(async () => {
@@ -188,7 +189,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
 
       {/* Composer */}
       <div style={{ padding: '10px 16px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
-        {errore && <div style={{ fontSize: 11, color: '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
+        {errore && <div style={{ fontSize: 11, color: C.red || '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
         <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
           onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
           placeholder={L('publicNickname')}
@@ -211,13 +212,20 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   // like: idempotente lato server; aggiorna il conteggio localmente
   async function metti(commentId) {
     if (!userToken) { setErrore(L('accessToCreate')); return; }
+    // b.232 — il server è idempotente (un like per persona): se l'avevo già
+    // messo, non re-incremento (prima ogni click faceva +1 in UI, ma il DB
+    // restava a 1). Così l'UI resta allineata al server.
+    if (likeMessi.has(commentId)) return;
     vibrate(8);
     try {
       const r = await fetch('/api/mondo/discussioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'like', userToken, commentId }),
       });
-      if (r.ok) setCommenti(cs => cs.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + 1 } : c));
+      if (r.ok) {
+        setLikeMessi(s => new Set(s).add(commentId));
+        setCommenti(cs => cs.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + 1 } : c));
+      }
     } catch { /* il like non e critico: nessun errore in faccia */ }
   }
 }
