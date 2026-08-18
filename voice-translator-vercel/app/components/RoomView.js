@@ -677,6 +677,11 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       <TaxiMode
         visible={taxiVisible}
         onClose={() => setTaxiVisible(false)}
+        // b.252 — TaxiMode ascolta l'inclinazione del telefono per aprirsi
+        // da solo quando lo giri verso il tassista, ma la sua guardia esce
+        // subito se manca questo callback: nessuno glielo passava, quindi
+        // l'intero gesto non ha MAI funzionato. Il pulsante resta, ovvio.
+        onAutoActivate={() => setTaxiVisible(true)}
         originalText={taxiData.original}
         translatedText={taxiData.translated}
         fromLang={taxiData.fromLang}

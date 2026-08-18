@@ -45,6 +45,11 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
     // esplodeva: la mappa non veniva disegnata (ne dal tassista ne altrove).
     // Ora si prende il namespace: `Map`/`Marker` sono export nominati.
     // `mod.default ?? mod` regge anche eventuali versioni vecchie col default.
+    // b.252 — la mappa che si sta per ricreare NON e ancora pronta.
+    // Cambiando destinazione (o tema) l'effetto rigira: senza questo, il
+    // flag restava `true` dal caricamento precedente e per tutto il tempo
+    // del nuovo si vedeva un riquadro VUOTO invece di "carico la mappa".
+    setPronta(false);
     import('maplibre-gl').then((mod) => {
       const maplibregl = mod.default ?? mod;
     // ── FINE b.179 ──
@@ -92,6 +97,8 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
       }
 
       mappa.on('load', () => setPronta(true));
+      // b.252 — vedi setPronta(false) a inizio effetto: senza, cambiando
+      // destinazione restava il riquadro vuoto invece di "carico la mappa".
     });
 
     return () => {

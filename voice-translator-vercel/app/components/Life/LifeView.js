@@ -359,7 +359,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
       await parlaBilingue({
         voceId: tutor?.voce?.id,
-        testo: aperta.contenuto,
+        // b.252 — il tag [PRONUNCIA:] va tolto anche dal percorso VOCE.
+        // A schermo era gia staccato (piu sotto), ma qui passava grezzo:
+        // nei corsi di lingua la voce leggeva ad alta voce "PRONUNCIA due
+        // punti ..." in mezzo alla lezione. I tag [L2:] restano: servono a
+        // segmentiPerVoce per far dire la parte straniera a una voce
+        // madrelingua — e tutto il senso della lezione bilingue.
+        testo: staccaEsercizio(aperta.contenuto).testo,
         linguaParlata: linguaCorso,
         linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
         userToken,

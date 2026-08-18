@@ -31,7 +31,14 @@ export function buildMapsUrl(dest, provider = 'google') {
     case 'google':
     default:
       // Indicazioni verso la destinazione: apre l'app Google Maps o il browser
-      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+      // b.252 — l'ETICHETTA mancava solo qui. Apple e geo (sopra) la
+      // portano da sempre; Google, che e il ramo predefinito e quindi
+      // quello del QR, mandava due numeri e basta: il tassista vedeva un
+      // puntino senza nome. Le coordinate restano la destinazione vera
+      // (precisione), il nome viaggia in `destination_name`, che Google
+      // mostra come titolo senza toccare il calcolo del percorso.
+      return `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+        + (label ? `&destination_name=${encodeURIComponent(label)}` : '');
   }
 }
 
