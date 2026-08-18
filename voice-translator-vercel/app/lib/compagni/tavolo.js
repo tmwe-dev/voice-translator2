@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { involucroCompagno } from './contratto.js';
+import { profiloEffettivo } from './profili.js';
 
 export const TAVOLO_MAX = 4;
 
@@ -54,6 +55,9 @@ export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQue
   const involucro = involucroCompagno({
     liberta: compagno && compagno.liberta,
     capacita: { ricerca: false, fonti: false, memoria: false },
+    // b.237 — al Tavolo si dibatte: steelman, prove, concessioni, convergenza.
+    // Il Deep Setting del Compagno può cambiarlo per questa superficie.
+    profilo: profiloEffettivo(compagno, 'tavolo'),
   });
   const system =
 `${persona}

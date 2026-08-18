@@ -3,6 +3,7 @@ import { memo, useState, useCallback, useEffect, useRef } from 'react';
 import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
+import { PROFILI, PROFILI_ELENCO, SUPERFICI_PROFILO, profiloPerSuperficie } from '../../lib/compagni/profili.js';
 import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
 import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
@@ -320,6 +321,32 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
           </span>
           <span><b style={{ color: testoP }}>{L('lifeMemory')}</b> — {L('lifeMemoryHint')}</span>
         </label>
+
+        {/* b.237 — DEEP SETTING: identità stabile, comportamento per superficie.
+            Un solo Archimede; qui si sceglie COME si comporta in Amico, Impara,
+            Tavolo e Podcast (profili.js). Vuoto = default della superficie.
+            Etichette dei profili da PROFILI_ELENCO (nomi di prodotto). */}
+        <details style={{ marginTop: 14 }}>
+          <summary style={{ ...etich, cursor: 'pointer', listStyle: 'revert' }}>Deep Setting</summary>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
+            {SUPERFICI_PROFILO.map((s) => (
+              <div key={s}>
+                <label style={etich}>{{ amico: 'Amico', impara: 'Impara', tavolo: 'Tavolo', podcast: 'Podcast' }[s]}</label>
+                <select
+                  value={(bozza.profili && bozza.profili[s]) || ''}
+                  onChange={(e) => setBozza((b) => {
+                    const profili = { ...(b.profili || {}) };
+                    if (e.target.value) profili[s] = e.target.value; else delete profili[s];
+                    return { ...b, profili: Object.keys(profili).length ? profili : null };
+                  })}
+                  style={input}>
+                  <option value="">{`— ${PROFILI[profiloPerSuperficie(s)].etichetta}`}</option>
+                  {PROFILI_ELENCO.map((p) => <option key={p.id} value={p.id}>{p.etichetta}</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
+        </details>
 
         {errore && <div style={{ color: '#f87171', fontSize: 13, margin: '10px 0' }}>{errore}</div>}
 

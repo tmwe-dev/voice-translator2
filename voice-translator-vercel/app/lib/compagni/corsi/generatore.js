@@ -12,6 +12,7 @@
 
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
+import { promptProfilo, profiloEffettivo } from '../profili.js';
 import { getLang } from '../../constants.js';
 
 // b.214 — la lingua andava al modello come CODICE ("es"), e il modello non
@@ -38,9 +39,14 @@ export function estraiJSON(testo) {
 }
 
 function vestePocente(docente) {
-  if (!docente) return 'Sei un docente esperto, chiaro e incoraggiante.';
+  // b.237 — il profilo DIDATTICO (profili.js): la comprensione viene prima
+  // del programma, verifica nei punti chiave, un concetto per volta. Vale
+  // anche per il docente generico; per un Compagno scelto conta l'eventuale
+  // override del suo Deep Setting sulla superficie 'impara'.
+  if (!docente) return `Sei un docente esperto, chiaro e incoraggiante.\n${promptProfilo('didattico')}`;
+  const didattica = `\n${promptProfilo(profiloEffettivo(docente, 'impara'))}`;
   const p = docente.personalita ? `${docente.personalita}\n` : '';
-  return `${p}Sei ${docente.nome || 'il docente'} e insegni questo corso con la tua voce.`;
+  return `${p}Sei ${docente.nome || 'il docente'} e insegni questo corso con la tua voce.${didattica}`;
 }
 
 // b.213 — registro e SICUREZZA per i bambini. Attivo quando il livello è

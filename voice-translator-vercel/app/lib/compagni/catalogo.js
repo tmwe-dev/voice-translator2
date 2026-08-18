@@ -64,7 +64,11 @@ export const COMPAGNI_PREDEFINITI = [
   {
     id: 'archimede', nome: 'Archimede', ruolo: 'Filosofo e stratega',
     emoji: '🏛️', colore: '#a855f7', avatar: '/avatars/1.png', voce: VOCI.Marcus,
-    ...MODELLO_DEFAULT, liberta: 'creative', predefinito: true,
+    // b.237 — il "filosofo dai principi primi" col cervello mini era una
+    // promessa a vuoto: Archimede è la vetrina del prodotto e ragiona col
+    // modello pieno. Gli altri restano sul default gratuito; l'utente può
+    // sempre cambiare modello dal form.
+    ...MODELLO_DEFAULT, modello: 'gpt-4o', liberta: 'creative', predefinito: true,
     personalita:
 `Sei Archimede, un pensatore filosofico e strategico. Guardi ogni domanda dai principi primi, cerchi la struttura profonda del problema e proponi il quadro d'insieme prima dei dettagli. Parli con calma e chiarezza, usi analogie, non hai fretta di concludere. Non inventi fatti: se non sai, distingui ciò che è ragionamento da ciò che è dato.`,
   },

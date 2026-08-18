@@ -11,6 +11,7 @@
 import crypto from 'crypto';
 import { getSupabaseAdmin } from '../supabase.js';
 import { getCompagnoPredefinito } from './catalogo.js';
+import { pulisciProfili } from './profili.js';
 
 /** Impronta pubblica dell'utente (sha256 dell'email, troncato). */
 export function idUtente(email) {
@@ -31,6 +32,8 @@ function daRiga(r) {
     avatar: r.avatar || '/avatars/9.png', voce: { id: r.voce_id, nome: r.voce_nome || '' },
     provider: r.provider, modello: r.modello, liberta: r.liberta, personalita: r.personalita || '',
     lingua: r.lingua || '', memoria: !!r.memoria, predefinito: false,
+    // b.237 — Deep Setting: override dei profili per superficie (o null).
+    profili: pulisciProfili(r.profili),
   };
 }
 
@@ -67,6 +70,9 @@ export async function salvaCompagno(email, c) {
     lingua: (c.lingua || '').slice(0, 8) || null,
     memoria: !!c.memoria,
     personalita: (c.personalita || '').slice(0, 4000),
+    // b.237 — Deep Setting: si salva SOLO ciò che passa il validatore
+    // (superfici note, profili esistenti); il resto si butta.
+    profili: pulisciProfili(c.profili),
     updated_at: new Date().toISOString(),
   };
   const { data, error } = await sb.from('compagni').upsert(riga, { onConflict: 'id' }).select().single();

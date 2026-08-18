@@ -7,6 +7,8 @@ import { ricordiPerContesto, contestoMemoria, estraiRicordi, aggiungiRicordi, ta
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { involucroCompagno, temperaturaLiberta } from '../../../lib/compagni/contratto.js';
+import { regiaConversazione } from '../../../lib/compagni/controllore.js';
+import { profiloEffettivo } from '../../../lib/compagni/profili.js';
 
 const log = createLogger('compagni-amico');
 
@@ -58,8 +60,16 @@ async function handlePost(req) {
       liberta: compagno.liberta,
       capacita: { ricerca: false, fonti: false, memoria: !!compagno.memoria },
       antiRipetizione: true,
+      // b.237 — qui il Compagno è un amico, non un motore di risposte.
+      // Il Deep Setting del Compagno può cambiare il profilo di questa
+      // superficie; senza override vale il default ('conversazionale').
+      profilo: profiloEffettivo(compagno, 'amico'),
     });
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}${involucro}`;
+    // b.237 — la REGIA del turno: stima cosa sta facendo la persona (sfogo?
+    // domanda? riflessione?) e detta la mossa. È il "conversation controller":
+    // deterministico, zero latenza, e toglie il tic della domanda a ogni costo.
+    const { blocco: regia } = regiaConversazione({ ultimo, storia: messaggi });
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona in modo naturale e caldo. Rispondi nella lingua: ${lingua}.${blocco}${bloccoObiettivi}${involucro}${regia}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
     const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500, temperature: temperaturaLiberta(compagno.liberta) });

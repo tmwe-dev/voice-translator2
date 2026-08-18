@@ -14,6 +14,8 @@
 // personalità del Compagno appendendo `involucroCompagno(...)` al system.
 // ═══════════════════════════════════════════════════════════════
 
+import { promptProfilo } from './profili.js';
+
 export const GERARCHIA_PRIORITA =
 `GERARCHIA DI PRIORITÀ (se due indicazioni confliggono, vince quella più in alto):
 1) Sicurezza e rispetto della persona.
@@ -65,14 +67,20 @@ export function bloccoCapacita({ ricerca = false, fonti = false, memoria = false
 /**
  * Involucro comune da APPENDERE al system del Compagno (dopo la personalità).
  * Ritorna un blocco che parte con due a-capo, pronto per la concatenazione.
+ *
+ * b.237 — secondo asse: `profilo` ('conversazionale'|'didattico'|
+ * 'dibattimentale'|'operativo', vedi profili.js). La libertà dice QUANTO
+ * spaziare, il profilo dice COME comportarsi in questa superficie. Se non
+ * viene passato, l'involucro resta identico a prima (retrocompatibile).
  */
-export function involucroCompagno({ liberta = LIB_DEF, capacita = {}, antiRipetizione = false } = {}) {
+export function involucroCompagno({ liberta = LIB_DEF, capacita = {}, antiRipetizione = false, profilo = null } = {}) {
   const parti = [
     GERARCHIA_PRIORITA,
     bloccoCapacita(capacita),
     REGOLE_EPISTEMICHE,
     promptLiberta(liberta),
   ];
+  if (profilo) parti.push(promptProfilo(profilo));
   if (antiRipetizione) {
     parti.push('Non ripeterti: se hai già detto una cosa in questa conversazione, aggiungi un punto NUOVO invece di riformularla.');
   }
