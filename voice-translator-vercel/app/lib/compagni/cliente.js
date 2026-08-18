@@ -64,6 +64,18 @@ export function generaQuiz({ lezione, lingua, userToken, livello, contenuto, arg
   return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken, livello, contenuto, argomento });
 }
 
+/**
+ * b.242 — REGISTRA com'è andata una prova: è ciò che permette al Maestro di
+ * ricordare. `daRivedere` sono le cose sbagliate (per il ripasso),
+ * `osservazioni` cosa ha imparato su questa persona. Senza account non salva
+ * nulla e non è un errore.
+ */
+export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere, osservazioni, userToken }) {
+  return postJSON('/api/compagni/corso', {
+    azione: 'esito', argomento, lezioneIndice, punteggio, daRivedere, osservazioni, userToken,
+  });
+}
+
 /** b.228 — libreria condivisa: elenco corsi disponibili (sfoglia). */
 export async function corsiDisponibili({ soloBambini, linguaFiltro, categoriaFiltro } = {}) {
   const d = await postJSON('/api/compagni/corso', { azione: 'disponibili', soloBambini, linguaFiltro, categoriaFiltro });

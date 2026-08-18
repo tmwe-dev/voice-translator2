@@ -6,6 +6,7 @@ import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
 import { lezioniPerLivello } from '../../../lib/compagni/corsi/catalogo.js';
 import { generaSyllabus, generaLezione, generaQuiz } from '../../../lib/compagni/corsi/generatore.js';
 import { pubblicaCorso, elencaCorsiPubblici } from '../../../lib/compagni/corsi/pubblici.js';
+import { leggiOsservazioni, aggiungiOsservazioni, leggiProgresso, salvaEsito } from '../../../lib/compagni/corsi/studente.js';
 
 const log = createLogger('compagni-corso');
 
@@ -52,7 +53,13 @@ async function handlePost(req) {
     if (azione === 'lezione') {
       const lezione = body.lezione;
       if (!argomento || !lezione?.titolo) return NextResponse.json({ error: 'Servono argomento e lezione' }, { status: 400 });
-      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente }, { userToken });
+      // b.242 — il Maestro RICORDA: cosa sa di questa persona e dove siete
+      // arrivati nel corso. Due letture leggere, nessuna chiamata al modello
+      // in piu; se l'utente non ha un account, semplicemente non c'e ricordo.
+      const [osservazioni, progresso] = sessione?.email
+        ? await Promise.all([leggiOsservazioni(sessione.email), leggiProgresso(sessione.email, argomento)])
+        : [[], []];
+      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, contenuto: r.contenuto, fonti: r.fonti });
     }
@@ -64,9 +71,26 @@ async function handlePost(req) {
       // così il quiz chiede solo ciò che è stato insegnato.
       const contenuto = typeof body.contenuto === 'string' ? body.contenuto : '';
       // b.240 — anche la prova passa dal docente scelto: e lui che sfida.
-      const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento, docente });
+      const [oss, prog] = sessione?.email
+        ? await Promise.all([leggiOsservazioni(sessione.email), leggiProgresso(sessione.email, argomento)])
+        : [[], []];
+      const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento, docente, osservazioni: oss, progresso: prog });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
+    }
+
+    // b.242 — REGISTRA com'e andata: e cio che rende possibili la
+    // motivazione ("guarda dov'eri"), il ripasso mirato e un percorso che si
+    // adatta. Senza account non si salva niente, e va bene cosi.
+    if (azione === 'esito') {
+      if (!sessione?.email) return NextResponse.json({ ok: true, salvato: false });
+      const indice = Number(body.lezioneIndice) || 0;
+      const punteggio = body.punteggio === null || body.punteggio === undefined ? null : Number(body.punteggio);
+      const daRivedere = Array.isArray(body.daRivedere) ? body.daRivedere.slice(0, 15).map(t => String(t).slice(0, 160)) : [];
+      const osservazioni = Array.isArray(body.osservazioni) ? body.osservazioni.slice(0, 6).map(t => String(t).slice(0, 160)) : [];
+      const salvato = await salvaEsito(sessione.email, { corso: argomento, lezione: indice, punteggio, daRivedere });
+      if (osservazioni.length) await aggiungiOsservazioni(sessione.email, osservazioni);
+      return NextResponse.json({ ok: true, salvato });
     }
 
     // b.228 — libreria condivisa: sfoglia i corsi disponibili (nessun account

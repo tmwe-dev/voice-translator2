@@ -20,6 +20,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 // Si aggiunge alla vocazione GUIDA quando si insegna: non sostituisce nulla.
+const MAX_OSS = 12;
+
 export const RESPONSABILITA_MOTIVAZIONALE =
 `SENTI ANCHE QUESTA RESPONSABILITÀ: alimentare curiosità, fiducia e voglia di continuare.
 Non rendere artificialmente facile ciò che è difficile e non lodare a vuoto: un riconoscimento che arriva sempre non vale niente. Riconosci ciò che merita, e quando una risposta è giusta per caso dillo ("hai indovinato, ma non sono sicuro che sia chiaro il perché").
@@ -67,4 +69,61 @@ export function contestoStudente(osservazioni = []) {
   const righe = (osservazioni || []).filter(Boolean).slice(0, 8);
   if (!righe.length) return '';
   return `\n\nCOSA SAI GIÀ DI QUESTA PERSONA (usalo, non elencarlo):\n${righe.map(r => `- ${r}`).join('\n')}`;
+}
+
+// ── IL RICORDO DELLO STUDENTE (puro: nessuna rete) ──
+// Vive qui e non in studente.js perche i costruttori di prompt lo usano, e
+// non devono trascinarsi dietro il client del database.
+
+/** Chiave stabile di un corso a partire dal titolo. */
+export function chiaveCorso(argomento) {
+  return String(argomento || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'corso';
+}
+
+
+/** Unisce osservazioni vecchie e nuove: niente doppioni, niente crescita infinita. */
+export function unisciOsservazioni(attuali = [], nuove = []) {
+  const viste = new Set();
+  const fuori = [];
+  for (const o of [...(nuove || []), ...(attuali || [])]) {
+    const t = String(o || '').trim().slice(0, 160);
+    const k = t.toLowerCase();
+    if (!t || viste.has(k)) continue;
+    viste.add(k);
+    fuori.push(t);
+  }
+  return fuori.slice(0, MAX_OSS);
+}
+
+/**
+ * Il progresso raccontato al Maestro. Non "3/5 lezioni, media 74": una riga
+ * che gli dica cosa può DIRE alla persona, e cosa vale la pena ripassare.
+ */
+export function riassuntoProgresso(righe = []) {
+  const fatte = (righe || []).filter(r => r && typeof r.lezione === 'number');
+  if (!fatte.length) return '';
+  const conVoto = fatte.filter(r => typeof r.punteggio === 'number');
+  const ultima = fatte[fatte.length - 1];
+  const daRivedere = [];
+  for (const r of fatte) for (const d of (r.da_rivedere || [])) if (!daRivedere.includes(d)) daRivedere.push(d);
+
+  const parti = [`Ha già affrontato ${fatte.length} ${fatte.length === 1 ? 'lezione' : 'lezioni'} di questo corso`];
+  if (typeof ultima.punteggio === 'number') {
+    parti.push(ultima.punteggio >= 80
+      ? `e l'ultima prova è andata bene (${ultima.punteggio}%)`
+      : ultima.punteggio >= 50
+        ? `e l'ultima prova è andata così così (${ultima.punteggio}%)`
+        : `e l'ultima prova è andata male (${ultima.punteggio}%)`);
+  }
+  if (conVoto.length >= 2) {
+    const primo = conVoto[0].punteggio, ora = conVoto[conVoto.length - 1].punteggio;
+    if (ora - primo >= 15) parti.push(`— ed è MIGLIORATA parecchio da quando ha cominciato (era ${primo}%, ora ${ora}%): faglielo notare, se ne accorga`);
+    else if (primo - ora >= 15) parti.push('— ma sta calando: forse il ritmo è troppo veloce o l\'argomento non la prende');
+  }
+  let s = `\n\nDOVE SIETE ARRIVATI: ${parti.join(' ')}.`;
+  if (daRivedere.length) {
+    s += `\nCOSE RIMASTE INDIETRO (riprendile quando càpita, dentro qualcos'altro — non come un'interrogazione): ${daRivedere.slice(0, 8).join('; ')}.`;
+  }
+  return s;
 }

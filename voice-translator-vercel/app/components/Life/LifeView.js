@@ -5,7 +5,7 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione } from '../../lib/compagni/cliente.js';
+import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
@@ -247,6 +247,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [lavoro, setLavoro] = useState(false);
   const [errore, setErrore] = useState('');
   const [aperta, setAperta] = useState(null); // { lezione, contenuto, fonti, domande }
+  // b.242 — le risposte date alla sfida: { indiceDomanda: indiceOpzione }.
+  const [risposte, setRisposte] = useState({});
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -305,6 +307,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setLavoro(true); setErrore(''); setIllustrazione(null);
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
+      setRisposte({});
       setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -319,6 +322,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // b.231 — passiamo il CONTENUTO reale della lezione aperta e l'argomento:
       // il quiz chiede solo ciò che è stato davvero insegnato.
       const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello, contenuto: aperta.contenuto, argomento: argomento.trim() });
+      setRisposte({});
       setAperta((a) => ({ ...a, domande: d.domande || [] }));
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -326,6 +330,30 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // b.217 — mancavano `linguaCorso` e `livello`: il quiz usa entrambi
     // (lingua del corso e registro bambino) ma le deps non li elencavano.
   }, [aperta, linguaCorso, livello, userToken, argomento, L]);
+
+  // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
+  // l'esito al Maestro. La registrazione e' un DI PIU': se fallisce (o se non
+  // hai un account) la sfida resta comunque giocata.
+  const rispondi = useCallback((indice, opzione) => {
+    setRisposte((prec) => {
+      if (prec[indice] !== undefined) return prec;
+      const nuove = { ...prec, [indice]: opzione };
+      const domande = aperta?.domande || [];
+      if (domande.length && Object.keys(nuove).length === domande.length) {
+        const giuste = domande.filter((q, i) => nuove[i] === q.corretta).length;
+        const daRivedere = domande.filter((q, i) => nuove[i] !== q.corretta).map((q) => q.domanda);
+        const indiceLezione = Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo));
+        registraEsito({
+          argomento: argomento.trim(),
+          lezioneIndice: indiceLezione,
+          punteggio: Math.round((giuste / domande.length) * 100),
+          daRivedere,
+          userToken,
+        }).catch(() => { /* il ricordo e un di piu: la sfida resta valida */ });
+      }
+      return nuove;
+    });
+  }, [aperta, lezioni, argomento, userToken]);
 
   // b.229 — illustrazione della lezione (gpt-image-1). Costo dal wallet.
   const illustra = useCallback(async () => {
@@ -370,15 +398,48 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
             </button>
           : <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {aperta.domande.map((q, i) => (
-                <div key={i} style={{ padding: 12, borderRadius: 12, background: card, border: bordo }}>
-                  <div style={{ fontWeight: 700, color: testoP, marginBottom: 6 }}>{i + 1}. {q.domanda}</div>
-                  {q.opzioni.map((o, j) => (
-                    <div key={j} style={{ fontSize: 14, color: j === q.corretta ? accent : testoP, padding: '2px 0' }}>{j === q.corretta ? '✓ ' : '· '}{o}</div>
-                  ))}
-                  {q.spiegazione && <div style={{ fontSize: 12, color: muto, marginTop: 6 }}>{q.spiegazione}</div>}
+              {/* ── b.242 · LA SFIDA SI GIOCA ──
+                  Prima le risposte giuste erano gia segnate col ✓: non c'era
+                  niente da rispondere, e quindi niente da imparare e niente
+                  da ricordare. Ora si sceglie, si vede subito com'e andata, e
+                  l'esito arriva al Maestro (registraEsito) che la prossima
+                  volta sa dove sei e cosa e rimasto indietro. */}
+              {aperta.domande.map((q, i) => {
+                const scelta = risposte[i];
+                const data = scelta !== undefined;
+                return (
+                  <div key={i} style={{ padding: 12, borderRadius: 12, background: card, border: bordo }}>
+                    <div style={{ fontWeight: 700, color: testoP, marginBottom: 8 }}>{i + 1}. {q.domanda}</div>
+                    {q.opzioni.map((o, j) => {
+                      const giusta = j === q.corretta;
+                      const miaSbagliata = data && scelta === j && !giusta;
+                      const colore = data ? (giusta ? accent : miaSbagliata ? '#f87171' : muto) : testoP;
+                      return (
+                        <button key={j} onClick={() => !data && rispondi(i, j)} disabled={data}
+                          style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 14, color: colore,
+                            padding: '7px 10px', margin: '3px 0', borderRadius: 9, fontFamily: FONT,
+                            border: `1px solid ${data && (giusta || miaSbagliata) ? colore : 'transparent'}`,
+                            background: data ? 'transparent' : card, cursor: data ? 'default' : 'pointer' }}>
+                          {data ? (giusta ? '✓ ' : miaSbagliata ? '✗ ' : '· ') : '· '}{o}
+                        </button>
+                      );
+                    })}
+                    {data && q.spiegazione && <div style={{ fontSize: 12, color: muto, marginTop: 6 }}>{q.spiegazione}</div>}
+                  </div>
+                );
+              })}
+              {/* Il risultato arriva solo quando hai risposto a tutto. */}
+              {aperta.domande.length > 0 && Object.keys(risposte).length === aperta.domande.length && (
+                <div style={{ padding: 14, borderRadius: 12, background: card, border: `1px solid ${accent}`, color: testoP, fontWeight: 700 }}>
+                  {(() => {
+                    const giuste = aperta.domande.filter((q, i) => risposte[i] === q.corretta).length;
+                    const tot = aperta.domande.length;
+                    return `${giuste}/${tot} — ${giuste === tot ? tt('lifeQuizAll', 'tutte giuste')
+                      : giuste * 2 >= tot ? tt('lifeQuizGood', 'ci siamo')
+                      : tt('lifeQuizRetry', 'da riprendere insieme')}`;
+                  })()}
                 </div>
-              ))}
+              )}
             </div>}
       </div>
     );

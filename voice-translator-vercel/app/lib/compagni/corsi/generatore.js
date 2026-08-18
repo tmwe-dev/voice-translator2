@@ -13,8 +13,9 @@
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
-import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva } from './imparare.js';
+import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contestoStudente, riassuntoProgresso } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
+
 import { getLang } from '../../constants.js';
 
 // b.214 — la lingua andava al modello come CODICE ("es"), e il modello non
@@ -78,14 +79,14 @@ Niente testo fuori dal JSON.`;
 }
 
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [] } = {}) {
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [] } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
   const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
   const bloccoLingua = (l2 && l2 !== lingua) ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2 }) : '';
   const system = `${vestePocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${bloccoLingua}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -106,10 +107,10 @@ Tono adatto al livello.${bloccoFonti}`;
 // ── PROMPT: quiz di verifica ──
 // b.231 — il quiz ora è FONDATO sul contenuto reale della lezione (prima
 // usava solo il titolo, e poteva chiedere cose mai insegnate).
-export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '', docente = null } = {}) {
+export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   // b.240 — la sfida la lancia il MAESTRO, non un "valutatore didattico":
   // era la voce sbagliata, e trasformava ogni verifica in un esame.
-  const system = `${vestePocente(docente)}\nOra metti alla prova la persona su ciò che le hai appena insegnato. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
+  const system = `${vestePocente(docente)}\nOra metti alla prova la persona su ciò che le hai appena insegnato. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const testo = String(contenuto || '').slice(0, 4000);
   const prompt =
@@ -145,22 +146,22 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
-export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null } = {}, { userToken = null } = {}) {
+export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [] } = {}, { userToken = null } = {}) {
   let fonti = [];
   if (categoriaCertificata(categoria)) {
     const query = `${argomento} ${lezione?.titolo || ''}`.trim();
     const trovate = await cerca(query, { lingua, profonda: true, fonti: 4 });
     fonti = (trovate || []).slice(0, 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
   }
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti });
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 900 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   return { ok: true, contenuto: r.testo, fonti };
 }
 
 /** Genera il quiz di una lezione. */
-export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null } = {}) {
-  const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente });
+export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null, osservazioni = [], progresso = [] } = {}) {
+  const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente, osservazioni, progresso });
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 600 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
