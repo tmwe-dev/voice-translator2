@@ -56,6 +56,18 @@ export function generaQuiz({ lezione, lingua, userToken, livello }) {
   return postJSON('/api/compagni/corso', { azione: 'quiz', lezione, lingua, userToken, livello });
 }
 
+/** b.228 — libreria condivisa: elenco corsi disponibili (sfoglia). */
+export async function corsiDisponibili({ soloBambini, linguaFiltro, categoriaFiltro } = {}) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'disponibili', soloBambini, linguaFiltro, categoriaFiltro });
+  return d.corsi || [];
+}
+
+/** b.228 — pubblica un corso nella libreria (richiede account). */
+export async function pubblicaCorso({ titolo, argomento, categoria, livello, lingua, lezioni, docenteId, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'pubblica', titolo, argomento, categoria, livello, lingua, lezioni, docenteId, userToken });
+  return d.corso;
+}
+
 // ── I miei Compagni (creazione/gestione) ──
 export async function elencoMiei(userToken) {
   const d = await postJSON('/api/compagni/mie', { azione: 'elenco', userToken });

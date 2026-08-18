@@ -5,7 +5,7 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
+import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
@@ -245,8 +245,37 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [lavoro, setLavoro] = useState(false);
   const [errore, setErrore] = useState('');
   const [aperta, setAperta] = useState(null); // { lezione, contenuto, fonti, domande }
+  // b.228 — libreria condivisa "Corsi disponibili"
+  const [disponibili, setDisponibili] = useState([]);
+  const [pubblicato, setPubblicato] = useState(false);
+  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+
+  useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
 
   const stileSelect = { flex: 1, padding: 10, borderRadius: 10, border: bordo, background: card, color: testoP, fontFamily: FONT, fontSize: 13 };
+
+  // b.228 — apri un corso della libreria: carica struttura e impostazioni; le
+  // lezioni si (ri)generano poi nella lingua scelta (conta per i bambini).
+  const apriPubblico = useCallback((corso) => {
+    setErrore(''); setAperta(null); setPubblicato(false);
+    setArgomento(corso.argomento || corso.titolo || '');
+    setCategoria(corso.categoria || 'altro');
+    setLivello(corso.livello || 'base');
+    setLinguaCorso(corso.lingua || linguaCorso);
+    setLezioni(corso.lezioni || []);
+  }, [linguaCorso]);
+
+  // b.228 — pubblica il corso appena generato nella libreria condivisa.
+  const pubblica = useCallback(async () => {
+    if (!lezioni.length) return;
+    try {
+      await pubblicaCorso({ titolo: argomento.trim(), argomento: argomento.trim(), categoria, livello, lingua: linguaCorso, lezioni, docenteId: docenteId || undefined, userToken });
+      setPubblicato(true);
+      corsiDisponibili({}).then(setDisponibili).catch(() => {});
+    } catch (e) {
+      setErrore(e.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
+    }
+  }, [lezioni, argomento, categoria, livello, linguaCorso, docenteId, userToken, L]);
 
   const crea = useCallback(async () => {
     setErrore(''); setLezioni([]); setAperta(null);
@@ -321,6 +350,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
   return (
     <div>
+      {/* b.228 — libreria condivisa: corsi già pronti, da avviare con un tocco. */}
+      {disponibili.length > 0 && <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCoursesAvailable', 'Corsi disponibili')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {disponibili.slice(0, 8).map((corso) => (
+            <button key={corso.id} onClick={() => apriPubblico(corso)}
+              style={{ textAlign: 'left', padding: 12, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              <div style={{ fontWeight: 700 }}>{corso.perBambini ? '🧒 ' : ''}{corso.titolo}</div>
+              <div style={{ fontSize: 11, color: muto, marginTop: 2 }}>{(LANGS.find(l => l.code === corso.lingua)?.flag || '')} {corso.lezioni?.length || 0} {tt('lifeLessonsCount', 'lezioni')} · {corso.livello}</div>
+            </button>
+          ))}
+        </div>
+      </div>}
+
+      <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCreateOwn', 'Crea un corso')}</div>
       <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeLearnPh')}
         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 12 }} />
 
@@ -360,6 +404,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               {lz.obiettivi.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
             </button>
           ))}
+          {/* b.228 — pubblica il corso nella libreria condivisa. */}
+          <button onClick={pubblica} disabled={pubblicato}
+            style={{ marginTop: 6, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, cursor: pubblicato ? 'default' : 'pointer', fontFamily: FONT, opacity: pubblicato ? 0.6 : 1 }}>
+            {pubblicato ? `✓ ${tt('lifeCoursePublished', 'Pubblicato')}` : `📤 ${tt('lifeCoursePublish', 'Pubblica nella libreria')}`}
+          </button>
         </div>
       )}
     </div>

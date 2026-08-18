@@ -5,6 +5,7 @@ import { getSession } from '../../../lib/users.js';
 import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
 import { lezioniPerLivello } from '../../../lib/compagni/corsi/catalogo.js';
 import { generaSyllabus, generaLezione, generaQuiz } from '../../../lib/compagni/corsi/generatore.js';
+import { pubblicaCorso, elencaCorsiPubblici } from '../../../lib/compagni/corsi/pubblici.js';
 
 const log = createLogger('compagni-corso');
 
@@ -62,6 +63,29 @@ async function handlePost(req) {
       const r = await generaQuiz(lezione, { lingua, userToken, livello });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
+    }
+
+    // b.228 — libreria condivisa: sfoglia i corsi disponibili (nessun account
+    // richiesto per SFOGLIARE) e pubblica un corso (richiede l'account).
+    if (azione === 'disponibili') {
+      const corsi = await elencaCorsiPubblici({
+        soloBambini: body.soloBambini === true,
+        lingua: typeof body.linguaFiltro === 'string' ? body.linguaFiltro : null,
+        categoria: typeof body.categoriaFiltro === 'string' ? body.categoriaFiltro : null,
+      });
+      return NextResponse.json({ ok: true, corsi });
+    }
+
+    if (azione === 'pubblica') {
+      if (!sessione?.email) return NextResponse.json({ error: 'Accedi per pubblicare un corso' }, { status: 401 });
+      const salvato = await pubblicaCorso(sessione.email, {
+        titolo: body.titolo || argomento, argomento, categoria, livello, lingua,
+        perBambini: livello === 'bambino' || body.perBambini === true,
+        lezioni: Array.isArray(body.lezioni) ? body.lezioni : [],
+        docente: docente ? { nome: docente.nome, ruolo: docente.ruolo, avatar: docente.avatar } : null,
+      });
+      if (!salvato) return NextResponse.json({ error: 'Pubblicazione non riuscita' }, { status: 500 });
+      return NextResponse.json({ ok: true, corso: salvato });
     }
 
     return NextResponse.json({ error: 'Azione sconosciuta' }, { status: 400 });
