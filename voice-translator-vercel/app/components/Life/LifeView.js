@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { FONT, LANGS, vibrate } from '../../lib/constants.js';
+import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
@@ -385,7 +385,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {disponibili.slice(0, 8).map((corso) => (
             <button key={corso.id} onClick={() => apriPubblico(corso)}
-              style={{ textAlign: 'left', padding: 12, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
               <div style={{ fontWeight: 700 }}>{corso.perBambini ? '🧒 ' : ''}{corso.titolo}</div>
               <div style={{ fontSize: 11, color: muto, marginTop: 2 }}>{(LANGS.find(l => l.code === corso.lingua)?.flag || '')} {corso.lezioni?.length || 0} {tt('lifeLessonsCount', 'lezioni')} · {corso.livello}</div>
             </button>
@@ -428,7 +428,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <div style={{ fontSize: 12, color: muto }}>{L('lifeLessons')}</div>
           {lezioni.map((lz) => (
             <button key={lz.indice} onClick={() => apri(lz)} disabled={lavoro}
-              style={{ textAlign: 'left', padding: 12, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
               <div style={{ fontWeight: 700 }}>{lz.indice + 1}. {lz.titolo}</div>
               {lz.obiettivi.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
             </button>

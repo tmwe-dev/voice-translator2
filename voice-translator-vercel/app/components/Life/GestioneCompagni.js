@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useCallback, useEffect, useRef } from 'react';
-import { FONT, LANGS, vibrate } from '../../lib/constants.js';
+import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
 import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
@@ -332,7 +332,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
 
   // ── LISTA ──
   const carta = (c, mio) => (
-    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo }}>
+    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, ...clayCard(card) }}>
       <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome}</div>
@@ -350,7 +350,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   return (
     <div>
       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
-      <div style={{ padding: 14, borderRadius: 16, background: card, border: bordo, marginBottom: 12 }}>
+      <div style={{ padding: 14, ...clayCard(card), marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}

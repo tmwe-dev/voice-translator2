@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useCallback } from 'react';
-import { FONT, vibrate } from '../../lib/constants.js';
+import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import {
   elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
@@ -99,7 +99,7 @@ function GestioneObiettivi({ L, testoP, muto, accent, card, bordo }) {
         ? <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 8px' }}>{tt('lifeGoalEmpty', 'Ancora nessun obiettivo. Aggiungine uno: il tuo Compagno inizierà a tenerlo presente.')}</div>
         : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {lista.map((o) => (
-              <div key={o.id} style={{ padding: 12, borderRadius: 12, background: card, border: `1px solid ${o.stato === 'attivo' ? accent : (bordo.split(' ').pop())}` }}>
+              <div key={o.id} style={{ padding: 14, ...clayCard(card), ...(o.stato === 'attivo' ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px ${accent}` } : {}) }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 18 }}>{iconaCat(o.categoria)}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>

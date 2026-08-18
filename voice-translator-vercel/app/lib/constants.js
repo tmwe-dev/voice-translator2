@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.229';
+export const APP_VERSION = 'b.230';
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -104,6 +104,16 @@ export const CONTEXTS = [
 
 // Apple rounded in testa: su iOS/macOS usa SF Pro Rounded, altrove fallback morbidi
 export const FONT = "ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
+
+// b.230 — direzione grafica "Clay" (neumorfismo): superfici morbide in
+// RILIEVO, con doppia ombra (scura in basso-destra, luce in alto-sinistra).
+// NON cambia colori/temi/sfondi: si applica sopra il colore card attuale, così
+// le stesse superfici diventano "clay" su qualsiasi tema. `clayCard(bg)` dà lo
+// stile della carta; `CLAY_OMBRA` è solo l'ombra da comporre dove serve.
+export const CLAY_OMBRA = '6px 6px 16px rgba(0,0,0,0.32), -4px -4px 12px rgba(255,255,255,0.035)';
+export function clayCard(bg) {
+  return { background: bg, border: 'none', borderRadius: 18, boxShadow: CLAY_OMBRA };
+}
 
 // \u2500\u2500 Spatial Design: 3 temi \u2500\u2500
 export const THEMES = { DEEP: 'deep', EMBER: 'ember', DAWN: 'dawn', AVORIO: 'avorio', LILLA: 'lilla', BLUBIANCO: 'blubianco' };

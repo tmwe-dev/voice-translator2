@@ -50,7 +50,7 @@ RISPONDI SOLO con JSON valido, senza markdown, senza backtick, solo il JSON, con
 {
   "nome": "il nome del Compagno (max 4 parole; per una persona reale usa il suo nome)",
   "ruolo": "ruolo/titolo che lo descrive e ne dice l'epoca/campo (max 8 parole)",
-  "personalita": "come parla (con la SUA voce), cosa sa, come argomenta, cosa evita — 2-4 frasi concrete e specifiche di QUESTA persona, in seconda persona: 'Sei ...'",
+  "personalita": "profilo di carattere ricco e strutturato di QUESTA persona (stile RadioChat), in seconda persona ('Sei ...'), 3-5 frasi che coprano: come PARLA (registro/tono e cadenza tipica), cosa SA e come ARGOMENTA, come SUPPORTA/incoraggia chi ha davanti, il suo UMORISMO, 1-2 sue FRASI o intercalari tipici (senza citazioni lunghe protette), e cosa EVITA. Concreto e specifico, non generico.",
   "liberta": "uno tra: strict | balanced | creative | autonomous",
   "genere": "male | female | neutral",
   "barre": { "tono": 0-100 (0=formale,100=informale), "calore": 0-100 (0=distaccato,100=caloroso), "sintesi": 0-100 (0=conciso,100=prolisso), "umorismo": 0-100 (0=serio,100=spiritoso), "assertivita": 0-100 (0=cauto,100=deciso), "creativita": 0-100 (0=preciso,100=creativo) }
