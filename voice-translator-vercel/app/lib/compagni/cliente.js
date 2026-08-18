@@ -41,6 +41,12 @@ export async function generaAvatar({ nome, ruolo, genere, descrizione, riferimen
   return d.dataUrl;
 }
 
+/** b.229 — genera l'ILLUSTRAZIONE di una lezione (stessa rotta, tipo:'lezione'). */
+export async function generaIllustrazione({ titolo, argomento, livello, userToken }) {
+  const d = await postJSON('/api/compagni/avatar', { tipo: 'lezione', nome: titolo, descrizione: argomento, livello, userToken });
+  return d.dataUrl;
+}
+
 /** Genera l'elenco lezioni di un corso. */
 export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, userToken });

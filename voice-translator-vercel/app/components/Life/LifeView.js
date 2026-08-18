@@ -5,7 +5,7 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso } from '../../lib/compagni/cliente.js';
+import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione } from '../../lib/compagni/cliente.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
@@ -248,6 +248,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
+  // b.229 — illustrazione della lezione + tutor "compagno di viaggio"
+  const [illustrazione, setIllustrazione] = useState(null);
+  const [genIll, setGenIll] = useState(false);
+  const tutor = compagni.find((c) => c.id === docenteId) || null;
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
@@ -293,7 +297,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
 
   const apri = useCallback(async (lezione) => {
-    setLavoro(true); setErrore('');
+    setLavoro(true); setErrore(''); setIllustrazione(null);
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
@@ -316,13 +320,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // (lingua del corso e registro bambino) ma le deps non li elencavano.
   }, [aperta, linguaCorso, livello, userToken, L]);
 
+  // b.229 — illustrazione della lezione (gpt-image-1). Costo dal wallet.
+  const illustra = useCallback(async () => {
+    if (!aperta || genIll) return;
+    setGenIll(true);
+    try {
+      const url = await generaIllustrazione({ titolo: aperta.lezione?.titolo, argomento: argomento.trim(), livello, userToken });
+      if (url) setIllustrazione(url);
+    } catch (e) {
+      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+    } finally { setGenIll(false); }
+  }, [aperta, genIll, argomento, livello, userToken, L]);
+
   if (aperta) {
     return (
       <div>
         <button onClick={() => setAperta(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
-        <h3 style={{ color: testoP, margin: '4px 0 12px' }}>{aperta.lezione.titolo}</h3>
+        {/* b.229 — tutor "compagno di viaggio" accanto al titolo. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 12px' }}>
+          {tutor?.avatar && <img src={tutor.avatar} alt="" width={34} height={34} style={{ borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />}
+          <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
+        </div>
+
+        {/* b.229 — illustrazione della lezione (generata, sfondo trasparente). */}
+        {illustrazione
+          ? <img src={illustrazione} alt="" style={{ width: '100%', borderRadius: 14, marginBottom: 12, display: 'block' }} />
+          : <button onClick={illustra} disabled={genIll}
+              style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
+              {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
+            </button>}
+
         <TestoRicco testo={aperta.contenuto} testoP={testoP} muto={muto} />
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>

@@ -83,6 +83,21 @@ export function promptAvatar({ nome = '', ruolo = '', genere = 'neutral', descri
   ].filter(Boolean).join(' ');
 }
 
+/**
+ * b.229 — Prompt per l'ILLUSTRAZIONE di una lezione (gpt-image-1). Per i
+ * bambini: illustrazione da libro, calda e sicura, con un piccolo "compagno di
+ * viaggio" che esplora la scena. Sfondo trasparente (si adatta ai temi).
+ */
+export function promptIllustrazione({ titolo = '', argomento = '', livello = 'base' } = {}) {
+  const bimbo = livello === 'bambino';
+  return [
+    bimbo ? "Children's book illustration, warm, playful, friendly and safe for kids," : 'Clean modern editorial illustration,',
+    'flat vector style, soft colors, fully TRANSPARENT background (cut-out sticker, alpha), no text, no watermark.',
+    `A scene that illustrates the lesson "${titolo}"${argomento ? ` (topic: ${argomento})` : ''}.`,
+    bimbo ? 'Include a friendly little guide character — a travel companion — exploring the scene.' : '',
+  ].filter(Boolean).join(' ');
+}
+
 // ── Estrazione tollerante del JSON dall'output del modello ──
 export function estraiAgente(testo) {
   if (!testo) return null;

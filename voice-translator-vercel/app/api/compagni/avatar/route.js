@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { generaAvatar } from '../../../lib/compagni/ponte.js';
-import { promptAvatar } from '../../../lib/compagni/genera.js';
+import { promptAvatar, promptIllustrazione } from '../../../lib/compagni/genera.js';
 
 const log = createLogger('compagni-avatar');
 
@@ -30,8 +30,13 @@ async function handlePost(req) {
     const riferimentoDataUrl = typeof body.riferimentoDataUrl === 'string' && body.riferimentoDataUrl.startsWith('data:image/')
       ? body.riferimentoDataUrl : null;
 
-    const prompt = promptAvatar({ nome, ruolo, genere, descrizione });
-    const r = await generaAvatar({ prompt, userToken, riferimentoDataUrl });
+    // b.229 — stessa rotta genera anche le ILLUSTRAZIONI delle lezioni (tipo).
+    const tipo = body.tipo === 'lezione' ? 'lezione' : 'avatar';
+    const prompt = tipo === 'lezione'
+      ? promptIllustrazione({ titolo: nome, argomento: descrizione, livello: typeof body.livello === 'string' ? body.livello : 'base' })
+      : promptAvatar({ nome, ruolo, genere, descrizione });
+    const dimensione = tipo === 'lezione' ? '1536x1024' : '1024x1024';
+    const r = await generaAvatar({ prompt, userToken, riferimentoDataUrl, dimensione });
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
