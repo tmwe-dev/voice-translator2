@@ -12,7 +12,8 @@ import { preparaBriefing, generaPodcast, reportFinale } from '../../lib/compagni
 // Riusa le rotte /api/compagni/dossier e /api/compagni/podcast. (Luca)
 // ═══════════════════════════════════════════════════════════════
 
-function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+function Dossier({ compagni, onApriStanza, onDebate, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
+  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
   const [argomento, setArgomento] = useState('');
   const [scelti, setScelti] = useState(compagni.slice(0, 3).map(c => c.id));
   const [brief, setBrief] = useState(null);
@@ -110,6 +111,14 @@ function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, a
             </button>
           )}
         </div>
+        {/* b.227 — dal Dossier al Debate: porta il tema alla tavola rotonda
+            con un obiettivo già pronto (ricerca → conclusione condivisa). */}
+        {onDebate && (
+          <button onClick={() => onDebate(`${tt('lifeDebateFromDossier', 'Arrivare a una conclusione condivisa su')}: ${argomento.trim()}`)}
+            style={{ width: '100%', marginTop: 8, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+            ⚖️ {tt('lifeDebateOpen', 'Apri un Debate su questo')}
+          </button>
+        )}
       </>}
     </div>
   );

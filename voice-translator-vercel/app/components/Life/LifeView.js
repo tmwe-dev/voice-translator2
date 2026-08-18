@@ -25,6 +25,7 @@ function LifeView({ onApriStanza }) {
   const lingua = prefs?.uiLang || prefs?.lang || 'it';
   const [scheda, setScheda] = useState('podcast');
   const [miei, setMiei] = useState([]);
+  const [debateObiettivo, setDebateObiettivo] = useState(''); // b.227 — Dossier→Debate
 
   const caricaMiei = useCallback(async () => {
     if (!userToken) { setMiei([]); return; }
@@ -91,8 +92,10 @@ function LifeView({ onApriStanza }) {
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'tavolo' && <Tavolo compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza}
+        onDebate={(obiettivo) => { setDebateObiettivo(obiettivo || ''); setScheda('tavolo'); }}
+        {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}

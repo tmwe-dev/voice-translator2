@@ -167,6 +167,9 @@ export const MODELLI = [
   { provider: 'openai',    modello: 'gpt-4o',      label: 'OpenAI · più preciso' },
   { provider: 'anthropic', modello: 'claude-haiku', label: 'Claude · caldo' },
   { provider: 'gemini',    modello: 'gemini-flash', label: 'Gemini · rapido' },
+  // b.227 — 4° provider per la tavola rotonda: Grok (xAI). Serve la chiave xAI
+  // (piattaforma o propria); senza chiave semplicemente non risponde.
+  { provider: 'grok',      modello: 'grok-2-latest', label: 'Grok · xAI' },
 ];
 export const LIBERTA_ETICHETTE = {
   strict: 'Fedele', balanced: 'Equilibrato', creative: 'Creativo', autonomous: 'Autonomo',

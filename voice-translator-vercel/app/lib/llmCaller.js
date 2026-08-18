@@ -93,6 +93,17 @@ async function _callProvider({ provider, model, apiKey, messages, systemPrompt, 
       completion_tokens: gUsage?.candidatesTokenCount || 0,
       total_tokens: gUsage?.totalTokenCount || 0
     };
+  } else if (provider === 'grok' || provider === 'xai') {
+    // b.227 — Grok (xAI). API OpenAI-compatibile: stesso SDK, altro baseURL.
+    const xai = new OpenAI({ apiKey, baseURL: 'https://api.x.ai/v1' });
+    const completion = await xai.chat.completions.create({
+      model,
+      messages,
+      temperature,
+      max_tokens: maxTokens
+    });
+    translated = completion?.choices?.[0]?.message?.content?.trim() || '';
+    usage = completion.usage;
   } else {
     // OpenAI (default)
     const openai = new OpenAI({ apiKey });

@@ -42,6 +42,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   // b.223 — upload della propria immagine + galleria su dispositivo (IndexedDB)
   const [galleria, setGalleria] = useState([]);
   const fileRef = useRef(null);
+  const autoAvatarRef = useRef(null); // b.227 — agente+immagine insieme
 
   // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
   // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
@@ -78,6 +79,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
       });
       setErrImg(''); setNGenImg(0);
       setDescAg('');
+      // b.227 — agente E immagine insieme: subito dopo aver costruito l'agente,
+      // genera anche la sua immagine (una volta). Un effetto la lancia quando la
+      // bozza è pronta, così non dipende dallo stato non ancora committato.
+      autoAvatarRef.current = { nome: a.nome || descAg.trim(), ruolo: a.ruolo || '', genere: a.genere || 'neutral' };
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { setGenerando(false); }
@@ -142,26 +147,20 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     } catch { return null; }
   }, []);
 
-  // b.221/b.223 — genera l'IMMAGINE dell'avatar (gpt-image-1). Se `riferimento`
-  // è un data URL, il volto arriva da lì (tap-to-restyle); altrimenti nasce dal
-  // prompt (nome/ruolo/genere). Il costo lo regge il wallet; tetto morbido per
-  // sessione. Ogni immagine riuscita finisce nella galleria SUL DISPOSITIVO.
-  const creaAvatar = useCallback(async (riferimento = null) => {
+  // b.221/b.223 — core di generazione immagine (gpt-image-1). Prende i campi
+  // ESPLICITI (così può girare anche subito dopo la creazione, quando la bozza
+  // non è ancora committata). Se `riferimento` è un data URL, il volto arriva da
+  // lì (tap-to-restyle). Costo dal wallet; ogni immagine finisce nella galleria.
+  const eseguiGeneraAvatar = useCallback(async ({ nome = '', ruolo = '', genere = 'neutral' }, riferimento = null) => {
     if (genImg || nGenImg >= MAX_GEN_IMG) return;
     setGenImg(true); setErrImg('');
     try {
       const rif = riferimento ? await urlToDataUrl(riferimento) : null;
-      const dataUrl = await generaAvatar({
-        nome: (bozza?.nome || '').trim(),
-        ruolo: (bozza?.ruolo || '').trim(),
-        genere: bozza?.genere || 'neutral',
-        riferimentoDataUrl: rif,
-        userToken,
-      });
+      const dataUrl = await generaAvatar({ nome, ruolo, genere, riferimentoDataUrl: rif, userToken });
       if (dataUrl) {
-        setBozza((b) => ({ ...b, avatar: dataUrl }));
+        setBozza((b) => b ? { ...b, avatar: dataUrl } : b);
         setNGenImg((n) => n + 1);
-        salvaImmagine(dataUrl, { nome: bozza?.nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
+        salvaImmagine(dataUrl, { nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
       } else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
     } catch (e) {
       setErrImg(e.creditoEsaurito ? L('lifeNoCredit')
@@ -169,7 +168,20 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
         : e.status === 422 ? tt('lifeAvatarRifiuto', 'Il modello ha rifiutato l’immagine: prova a cambiare nome o descrizione.')
         : tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
     } finally { setGenImg(false); }
-  }, [bozza, userToken, genImg, nGenImg, urlToDataUrl, L]);
+  }, [genImg, nGenImg, urlToDataUrl, userToken, L]);
+
+  // Il pulsante nel form usa i campi della bozza.
+  const creaAvatar = useCallback((riferimento = null) => {
+    return eseguiGeneraAvatar({ nome: (bozza?.nome || '').trim(), ruolo: (bozza?.ruolo || '').trim(), genere: bozza?.genere || 'neutral' }, riferimento);
+  }, [bozza, eseguiGeneraAvatar]);
+
+  // b.227 — agente+immagine INSIEME: quando la creazione ha appena costruito
+  // la bozza, genera anche l'immagine (una volta). L'effetto legge il ref e lo
+  // azzera subito, così non riparte a ogni render.
+  useEffect(() => {
+    const req = autoAvatarRef.current;
+    if (bozza && req) { autoAvatarRef.current = null; eseguiGeneraAvatar(req); }
+  }, [bozza, eseguiGeneraAvatar]);
 
   // b.223 — carica una tua immagine come avatar (resta sul dispositivo).
   const caricaImmagine = useCallback((e) => {

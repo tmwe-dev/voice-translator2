@@ -46,6 +46,9 @@ export async function resolveAuth({
     elevenlabs: process.env.ELEVENLABS_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
     gemini: process.env.GEMINI_API_KEY,
+    // b.227 — Grok (xAI): la chiave della piattaforma se presente.
+    grok: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
+    xai: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
   };
   const defaultKey = envKeys[provider] || process.env.OPENAI_API_KEY;
 
