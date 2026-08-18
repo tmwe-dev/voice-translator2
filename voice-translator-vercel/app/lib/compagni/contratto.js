@@ -24,6 +24,34 @@ export const GERARCHIA_PRIORITA =
 4) Lo scopo e il flusso della conversazione.
 5) Tono e stile.`;
 
+// b.239 — COME SI SCEGLIE COSA FARE (Convergence Decision Model, solo Fase 1).
+//
+// Non è un motore: è un criterio di giudizio, quattro righe nel prompt, zero
+// chiamate in più. L'idea utile del "Decision Cube": prima di rispondere si
+// confrontano più mosse possibili, e si sceglie quella che tiene insieme
+// dove si vuole arrivare, cosa è appropriato adesso, e la responsabilità del
+// ruolo — invece di massimizzarne una sola.
+//
+// Del modello originale NON prendiamo la parte numerica (punteggi 0-1,
+// distanza euclidea): quei numeri nessuno li misura, verrebbero inventati
+// dal modello e sembrerebbero rigore senza esserlo. E la geometria
+// contraddirebbe sé stessa: la distanza euclidea è COMPENSATORIA (un asse
+// alto copre uno basso), mentre il principio dice l'opposto.
+//
+// Il secondo capoverso è il più importante per BarTalk: qui la voce si paga a
+// CARATTERE. Se "considera più alternative" diventasse un ragionamento scritto
+// a schermo, pagheremmo due volte — in denaro e in latenza.
+//
+// E NON diciamo "puoi scegliere di non rispondere": oggi un turno è
+// richiesta→risposta, il canale per tacere non esiste. Scrivere una facoltà
+// che il sistema non ha significa chiedere al modello di fingere. Il
+// surrogato onesto è: non occupare spazio inutile, non anticipare chi sta
+// ancora pensando. WAIT diventerà un'azione vera solo col full-duplex.
+export const PRINCIPIO_DECISIONALE =
+`PRINCIPIO DI GIUDIZIO: prima di reagire, considera se esista una mossa migliore della risposta più immediata — chiedere, approfondire, verificare, proporre, riformulare, o dire meno. Scegli ciò che soddisfa meglio INSIEME l'obiettivo, la situazione presente e la responsabilità del tuo ruolo, senza sacrificarne irragionevolmente una alle altre.
+Il confronto resta interno: non descrivere il tuo processo decisionale se non te lo chiedono, e non lasciare che un ragionamento più ampio allunghi automaticamente la risposta. Comunica solo ciò che serve, con la brevità adatta al momento.
+Non occupare più spazio conversazionale del necessario, e non anticipare il pensiero della persona quando lo sta ancora costruendo.`;
+
 export const REGOLE_EPISTEMICHE =
 `ONESTÀ INTELLETTUALE: distingui ciò che è un FATTO da un'INFERENZA, un'OPINIONE o un "non lo so". Non inventare dati, nomi, numeri, citazioni o fonti. Se non sei sicuro, dillo con naturalezza invece di riempire il vuoto.`;
 
@@ -78,6 +106,9 @@ export function involucroCompagno({ liberta = LIB_DEF, capacita = {}, antiRipeti
     GERARCHIA_PRIORITA,
     bloccoCapacita(capacita),
     REGOLE_EPISTEMICHE,
+    // b.239 — il criterio di scelta sta DOPO la gerarchia e le capacità: non
+    // può scavalcare sicurezza, verità e permessi reali, che restano in cima.
+    PRINCIPIO_DECISIONALE,
     promptLiberta(liberta),
   ];
   if (profilo) parti.push(promptProfilo(profilo));

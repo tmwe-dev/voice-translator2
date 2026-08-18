@@ -131,6 +131,43 @@ confronto al Tavolo; Margaret può avere impostazioni completamente diverse.
 
 ---
 
+## Il principio di giudizio (b.239)
+
+Vive in `contratto.js`, dopo la gerarchia e l'anti-invenzione — **non le
+scavalca**. In sostanza: *prima di reagire, considera se esista una mossa
+migliore della risposta più immediata, e scegli ciò che soddisfa meglio
+insieme obiettivo, situazione e responsabilità del ruolo.*
+
+È l'idea utile del "Decision Cube". **Non** ne prendiamo la parte numerica, e
+il motivo va ricordato perché tornerà la tentazione:
+
+- **Niente punteggi 0-1.** Nessuno li misura: il modello li inventerebbe, e
+  sembrerebbero rigore senza esserlo.
+- **Niente distanza euclidea.** È *compensatoria* — un asse alto copre uno
+  basso — e quindi contraddice il principio che dovrebbe difendere. Se un
+  giorno si formalizzasse, l'aggregatore giusto è il **più debole delle tre
+  dimensioni**, non la somma.
+- **Niente `decisionCube.js`.** Il principio sta nel contratto, non è
+  infrastruttura. Niente secondo cubo per la comunicazione: "come dirlo" è già
+  lo speech intent più la personalità.
+
+Due vincoli inchiodati dai test:
+
+1. **La deliberazione è interna.** Non si descrive il processo decisionale, e
+   un ragionamento più ampio **non deve allungare la risposta**: qui la voce si
+   paga a carattere, un ragionamento a schermo costerebbe due volte — in denaro
+   e in latenza.
+2. **Non si promette ciò che il canale non dà.** Oggi un turno è
+   richiesta→risposta: scrivere "puoi scegliere di non rispondere" chiederebbe
+   al modello di fingere. Il surrogato onesto è *non occupare spazio inutile e
+   non anticipare chi sta ancora pensando*. `WAIT` diventerà un'azione vera
+   solo col full-duplex.
+
+Costo misurato: **717 caratteri ≈ 179 token** di input per turno, **zero
+chiamate aggiuntive**.
+
+---
+
 ## Le lenti (come si ascolta)
 
 Non sono campi da riempire né stati da salvare: sono modi di guardare, e
