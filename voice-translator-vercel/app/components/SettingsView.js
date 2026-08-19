@@ -219,6 +219,17 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             </div>
           )}
 
+          {/* b.287 — la preferenza sul "traduci e ascolta" (default).
+              Tre scelte, un giro solo: voce+testo -> solo testo -> spenta. */}
+          <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('autoTranslateTitle')}
+            sotto={L('autoTranslateDesc')}
+            valore={(prefs.autoTraduzione || 'voce') === 'voce' ? L('autoTransVoiceText')
+              : prefs.autoTraduzione === 'testo' ? L('autoTransTextOnly') : L('autoTransOff')}
+            onClick={() => {
+              const giro = { voce: 'testo', testo: 'off', off: 'voce' };
+              savePrefs({ ...prefs, autoTraduzione: giro[prefs.autoTraduzione || 'voce'] });
+            }} />
+
           <Riga c={c} icona={<IconVolume size={17} />} titolo={L('voiceTimbre')}
             sotto={L('voiceTimbreDesc')}
             valore={prefs.voiceGender === 'male' ? L('voiceMale') : L('voiceFemale')}

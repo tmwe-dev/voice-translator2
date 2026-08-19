@@ -18,7 +18,7 @@ import ContenutiChat from './ContenutiChat.js';
 import SchedaArgomento from './SchedaArgomento.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
-import { getAttenuazione } from '../lib/audioPrefs.js';
+import { getAttenuazione, setVolumeTTS } from '../lib/audioPrefs.js';
 import useReazioni from '../hooks/useReazioni.js';
 import { eDiretta } from '../lib/decisioni.js';
 
@@ -175,7 +175,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     if (!connesso) { autoTraduzioneFattaRef.current = false; return; }
     if (autoTraduzioneFattaRef.current) return;
     autoTraduzioneFattaRef.current = true;
+    // b.287 — la preferenza dal profilo comanda il default:
+    //   'voce' (default) -> traduzione con voce e testo
+    //   'testo'          -> traduzione accesa ma voce a zero
+    //   'off'            -> non parte niente: la accende l'utente
+    const scelta = prefs?.autoTraduzione || 'voce';
+    if (scelta === 'off') return;
     if (!roomInfo?.diretta && setInterpreterActive && !interpreterActive) {
+      if (scelta === 'testo') setVolumeTTS(0);
       setInterpreterActive(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
