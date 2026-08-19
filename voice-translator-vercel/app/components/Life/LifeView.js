@@ -315,8 +315,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.301 — il livello e 'bambino' (singolare), come in catalogo.js e nel
   // generatore. Ieri (b.299) qui c'era 'bambini': per un corso da bambino
   // il default cadeva su 'link' invece che sui disegni. Corretto.
-  const defaultContenuti = (liv) => (liv === 'bambino' || liv === 'base') ? 'disegni' : 'link';
+  // b.306 — i contenuti sono PIU DI UNO alla volta (Luca): non una scelta
+  // singola ma un insieme. E il default CRESCE col livello — piu si va verso
+  // l'alto, piu elementi si accendono in automatico — che l'utente puo poi
+  // togliere a piacere. Cosi un corso universitario nasce gia ricco senza
+  // costringere a cliccare quattro volte, ma niente e imposto.
+  const defaultContenuti = (liv) => ({
+    bambino: ['disegni'],
+    base: ['disegni'],
+    intermedio: ['disegni', 'foto'],
+    avanzato: ['foto', 'link'],
+    universitario: ['foto', 'link', 'video'],
+    ricercatore: ['disegni', 'foto', 'link', 'video'],
+  }[liv] || ['disegni']);
   const [contenuti, setContenuti] = useState(defaultContenuti('base'));
+  const toggleContenuto = (id) => setContenuti((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   const [arricchimento, setArricchimento] = useState(null);
   const [docenteId, setDocenteId] = useState('');
   const [lezioni, setLezioni] = useState([]);
@@ -393,12 +406,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // 'disegni' -> illustrazione del Maestro; 'foto'/'link'/'video' ->
       // dalla community (Cobra). 'nessuno' -> niente. Non blocca la
       // lezione: se l'arricchimento non arriva, il testo c'e comunque.
-      if (contenuti === 'disegni') {
+      // b.306 — piu contenuti INSIEME: se c'e 'disegni' si genera
+      // l'illustrazione; per 'foto'/'link'/'video' si interroga la community e
+      // si UNISCONO i risultati (link e video) in un solo blocco.
+      if (contenuti.includes('disegni')) {
         generaIllustrazione({ titolo: lezione?.titolo, argomento: argomento.trim(), livello, userToken })
           .then((url) => url && setIllustrazione(url)).catch(() => {});
-      } else if (contenuti && contenuti !== 'nessuno') {
-        arricchisciLezione({ modalita: contenuti, titolo: lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso })
-          .then((a) => a && setArricchimento(a)).catch(() => {});
+      }
+      const comunita = contenuti.filter((c) => c === 'foto' || c === 'link' || c === 'video');
+      if (comunita.length) {
+        Promise.all(comunita.map((m) => arricchisciLezione({ modalita: m, titolo: lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso }).catch(() => null)))
+          .then((esiti) => {
+            const unito = { link: [], video: [] };
+            for (const a of esiti) { if (!a) continue; if (Array.isArray(a.link)) unito.link.push(...a.link); if (Array.isArray(a.video)) unito.video.push(...a.video); }
+            if (unito.link.length || unito.video.length) setArricchimento(unito);
+          }).catch(() => {});
       }
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
@@ -421,12 +443,18 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const approfondisci = useCallback(async () => {
     if (!aperta || genAppr) return;
     setGenAppr(true);
+    // b.306 — contenuti ora e un insieme: come ripiego si prende il primo
+    // tipo "community" scelto (foto/link/video), altrimenti link.
+    const sceltoComunita = contenuti.find((c) => c === 'foto' || c === 'link' || c === 'video');
     const perLivello = (livello === 'bambino' || livello === 'base') ? 'video'
       : (livello === 'universitario' || livello === 'ricercatore') ? 'link'
-      : (contenuti && contenuti !== 'nessuno' && contenuti !== 'disegni' ? contenuti : 'link');
+      : (sceltoComunita || 'link');
     try {
       const a = await arricchisciLezione({ modalita: perLivello, titolo: aperta.lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso });
-      if (a) setArricchimento(a);
+      if (a) setArricchimento((prec) => {
+        const base = prec && (prec.link || prec.video) ? prec : { link: [], video: [] };
+        return { link: [...(base.link || []), ...(Array.isArray(a.link) ? a.link : [])], video: [...(base.video || []), ...(Array.isArray(a.video) ? a.video : [])] };
+      });
     } catch { /* la community non risponde: la lezione resta com'e */ }
     finally { setGenAppr(false); }
   }, [aperta, genAppr, livello, contenuti, argomento, linguaCorso]);
@@ -524,7 +552,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             manuale resta come ripiego se l'auto non e partita. */}
         {illustrazione
           ? <img src={illustrazione} alt="" style={{ width: '100%', borderRadius: 14, marginBottom: 12, display: 'block' }} />
-          : contenuti === 'disegni' && <button onClick={illustra} disabled={genIll}
+          : contenuti.includes('disegni') && <button onClick={illustra} disabled={genIll}
               style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
               {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
             </button>}
@@ -715,9 +743,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             { id: 'link',    ic: '🔗', et: tt('lifeContentLink', 'Approfondimenti') },
             { id: 'video',   ic: '🎬', et: tt('lifeContentVideo', 'Video') },
           ].map((o) => {
-            const on = contenuti === o.id;
+            const on = contenuti.includes(o.id);
             return (
-              <button key={o.id} onClick={() => setContenuti(o.id)} aria-pressed={on}
+              <button key={o.id} onClick={() => toggleContenuto(o.id)} aria-pressed={on}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 10px', borderRadius: 12,
                   cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 700, textAlign: 'left',
                   background: on ? `${accent}22` : card, color: testoP,
