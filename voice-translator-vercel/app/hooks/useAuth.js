@@ -30,6 +30,13 @@ export default function useAuth() {
   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
   const [selectedELVoice, setSelectedELVoice] = useState('');
   const [platformHasEL, setPlatformHasEL] = useState(false);
+  // ═══ b.263 — il tier della STANZA come stato, non solo come ref ═══
+  // TROVATO DAL VIVO ("l'ospite non ha ElevenLabs tra i servizi"):
+  // entrando in una stanza con host PRO l'ospite eredita il tier
+  // (page.js), ma canUseElevenLabs restava quello del login — che un
+  // ospite non ha mai fatto. Il ref non fa girare l'effetto qui sotto:
+  // serve uno stato, cosi i diritti si ricalcolano a ogni entrata/uscita.
+  const [tierStanza, setTierStanza] = useState(null);
   const [clonedVoiceId, setClonedVoiceId] = useState(null);
   const [clonedVoiceName, setClonedVoiceName] = useState('');
 
@@ -67,10 +74,15 @@ export default function useAuth() {
       setCanUseElevenLabs(true);
       return;
     }
+    // b.263 — dentro una stanza valgono i diritti dell'HOST: e gia cosi
+    // per il tier (page.js) e per l'addebito (hostEmail, b.107): la voce
+    // premium era l'unico pezzo rimasto indietro. L'addebito della voce
+    // resta sull'host: e il percorso stanza di tts-elevenlabs (b.161/167).
+    const ereditaDallaStanza = !!tierStanza && tierStanza !== 'FREE';
     if (!userAccount) {
-      setIsTrial(true);
-      setIsTopPro(false);
-      setCanUseElevenLabs(false);
+      setIsTrial(!ereditaDallaStanza);
+      setIsTopPro(tierStanza === 'TOP PRO');
+      setCanUseElevenLabs(ereditaDallaStanza);
       return;
     }
     const tier = userAccount.tier || userAccount.subscription_plan || 'free';
@@ -79,12 +91,12 @@ export default function useAuth() {
     // con il saldo (402 se finito, con ripiego sui provider gratuiti).
     // "Trial" resta solo per chi non ha un account.
     setIsTrial(false);
-    setIsTopPro(tier === 'business' || tier === 'top_pro');
+    setIsTopPro(tier === 'business' || tier === 'top_pro' || tierStanza === 'TOP PRO');
     const hasOwnEL = userAccount.apiKeys?.elevenlabs?.trim?.();
     // ElevenLabs: disponibile se la piattaforma ha la chiave (il saldo
     // wallet lo verifica il server a ogni sintesi) o se ha la chiave sua.
-    setCanUseElevenLabs(platformHasEL || !!hasOwnEL);
-  }, [userAccount, platformHasEL]);
+    setCanUseElevenLabs(platformHasEL || !!hasOwnEL || ereditaDallaStanza);
+  }, [userAccount, platformHasEL, tierStanza]);
 
   function getEffectiveToken() {
     if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') return undefined;
@@ -373,6 +385,7 @@ export default function useAuth() {
     setIsTopPro,
     canUseElevenLabs,
     setCanUseElevenLabs,
+    tierStanza, setTierStanza,
     elevenLabsVoices,
     setElevenLabsVoices,
     selectedELVoice,

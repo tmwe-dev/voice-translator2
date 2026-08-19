@@ -743,6 +743,9 @@ function HomeInner() {
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
     convContext.resetContext(); // Clear conversation knowledge base
+    // b.263 — vedi leaveRoomTemporary: i diritti della stanza si rendono.
+    auth.roomTierOverrideRef.current = null;
+    auth.setTierStanza(null);
     setStatus('');
     setView('home');
   }
@@ -769,6 +772,10 @@ function HomeInner() {
     } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
     roomPolling.stopPolling();
     roomPolling.leaveRoom();
+    // b.263 — fuori dalla stanza i diritti tornano i PROPRI: l'ospite di
+    // un host PRO non si porta via ElevenLabs (l'addebito era dell'host).
+    auth.roomTierOverrideRef.current = null;
+    auth.setTierStanza(null);
     setView('home');
   }
 
@@ -819,6 +826,10 @@ function HomeInner() {
 
     const hostTier = room.hostTier || 'FREE';
     auth.roomTierOverrideRef.current = hostTier;
+    // b.263 — il tier della stanza passa anche come STATO: e lui che fa
+    // ricalcolare a useAuth i diritti voce (ElevenLabs per l'ospite di un
+    // host PRO). I set qui sotto restano per l'effetto immediato.
+    auth.setTierStanza(hostTier);
     if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
     else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
     else { auth.setIsTrial(false); auth.setIsTopPro(false); }
@@ -1227,7 +1238,7 @@ function HomeInner() {
     <Suspense fallback={<LazyFallback />}>
     <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
-      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
+      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); auth.roomTierOverrideRef.current = null; auth.setTierStanza(null); setView('home'); }} unlockAudio={audio.unlockAudio}
       perVideo={intentoVideo} />
     {/* La porta per il video di gruppo sta DENTRO LobbyView: messa qui
         fuori finiva sotto la schermata della stanza e non si poteva
