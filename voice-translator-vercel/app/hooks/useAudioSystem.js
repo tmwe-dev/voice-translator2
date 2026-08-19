@@ -106,9 +106,20 @@ export default function useAudioSystem({
   // AUDIO UNLOCK + CONTEXT
   // =============================================
 
-  function unlockAudio() {
-    if (audioReady) return;
-    requestMicEarly();
+  // b.268 — L'AUDIO SI SBLOCCA AL PRIMO TOCCO, OVUNQUE SIA.
+  // Trovato dal vivo (Luca): l'ospite al primo messaggio si vedeva
+  // comparire "tocca lo schermo per attivare l'audio". Non era un
+  // difetto del suono: il browser concede l'audio solo dopo un gesto
+  // della persona, e noi quel gesto lo raccoglievamo troppo tardi —
+  // solo su certi pulsanti. L'ospite che arriva da un invito tocca dieci
+  // cose (cookie, paese, avanti, avatar) prima di ricevere un messaggio:
+  // ora il PRIMO di quei tocchi sblocca l'audio, e quando il messaggio
+  // arriva il suono e gia pronto.
+  // Il microfono NON si chiede qui: quello resta legato ai pulsanti che
+  // servono davvero a parlare, altrimenti la richiesta di permesso
+  // salterebbe fuori mentre uno accetta i cookie.
+  function sbloccaSuono() {
+    if (audioReadyRef.current) return;
     try {
       // Create or resume AudioContext
       let ctx = audioContextRef.current;
@@ -149,6 +160,22 @@ export default function useAudioSystem({
       setAudioReady(true);
     } catch (e) { console.warn('[AUDIO] unlockAudio error:', e); }
   }
+
+  function unlockAudio() {
+    if (audioReady) return;
+    requestMicEarly();
+    sbloccaSuono();
+  }
+
+  // b.268 — il primo tocco della persona, dovunque cada, apre l'audio.
+  // Una volta sola: dopo, i cacciatori si tolgono da soli.
+  useEffect(() => {
+    if (audioReady) return;
+    const apri = () => sbloccaSuono();
+    const eventi = ['pointerdown', 'touchend', 'keydown'];
+    for (const e of eventi) document.addEventListener(e, apri, { once: true, capture: true, passive: true });
+    return () => { for (const e of eventi) document.removeEventListener(e, apri, { capture: true }); };
+  }, [audioReady]);
 
   // =============================================
   // DUCKING
