@@ -4,6 +4,7 @@ import { getLang } from '../lib/constants.js';
 import { createNoiseGate } from '../lib/noiseGate.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
+import { getVolumeTTS } from '../lib/audioPrefs.js';
 const dbg = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
@@ -38,7 +39,17 @@ export default function useStreamingInterpreter({
 }) {
   const [active, setActive] = useState(false);
   const [myLiveText, setMyLiveText] = useState('');           // Testo STT in tempo reale (mio)
-  const [partnerLiveSubtitle, setPartnerLiveSubtitle] = useState(''); // Subtitle tradotto in real-time
+  // b.276 — P0: PRIMA QUESTO CONTENITORE ERA UNO SOLO per due cose
+  // diverse: la traduzione di cio che dico IO (da mandare al partner) e
+  // la traduzione di cio che dice LUI (da mostrare a me). Il mio testo
+  // poteva comparire nello spazio col nome dell'altro, e sparire appena
+  // lui parlava davvero. Ora sono due, e la videochiamata mostra il suo.
+  const [partnerLiveSubtitle, setPartnerLiveSubtitle] = useState('');   // cio che dice LUI, tradotto per me
+  const [miaTraduzione, setMiaTraduzione] = useState('');               // cio che dico IO, tradotto per lui
+  // b.276 — P0: l'originale di cio che dice il partner viaggia gia nel
+  // messaggio (originalText) ma non veniva tenuto: la videochiamata lo
+  // chiedeva e trovava il vuoto.
+  const [partnerLiveOriginale, setPartnerLiveOriginale] = useState('');
   const [mySubtitles, setMySubtitles] = useState([]);         // Cronologia subtitle miei
   const [partnerSubtitles, setPartnerSubtitles] = useState([]); // Cronologia subtitle partner
 
@@ -53,6 +64,14 @@ export default function useStreamingInterpreter({
 
   // Sentence accumulator
   const currentSentenceRef = useRef('');    // Frase corrente accumulata da final transcripts
+  // b.276 — P1: ogni frase ha un numero. Una traduzione parziale che
+  // torna dopo che la frase e gia stata chiusa appartiene a un numero
+  // vecchio e viene buttata: prima poteva sovrascrivere il testo finale
+  // con un pezzo di frase a meta.
+  const numeroFraseRef = useRef(0);
+  // b.276 — P0: la frase in lavorazione, per non lavorarla due volte
+  // (la pausa e il segnale di fine discorso possono arrivare insieme).
+  const fraseInLavorazioneRef = useRef(null);
   const interimTextRef = useRef('');         // Ultimo interim (preview)
   const lastFinalTimeRef = useRef(0);        // Timestamp ultimo final transcript
   const sentencePauseTimerRef = useRef(null); // Timer per detect fine frase
@@ -202,6 +221,16 @@ export default function useStreamingInterpreter({
   const handleSentenceComplete = useCallback(async (sentence) => {
     if (!sentence || sentence.trim().length < 2) return;
     const trimmed = sentence.trim();
+    // b.276 — P0: la stessa frase puo arrivare qui da due strade (la
+    // pausa e il segnale di fine discorso di chi trascrive). Senza
+    // questa guardia si traduceva due volte, si mandavano due
+    // sottotitoli, si pronunciavano due voci e si pagava due volte.
+    if (fraseInLavorazioneRef.current === trimmed) return;
+    fraseInLavorazioneRef.current = trimmed;
+    // La frase e chiusa: da qui in poi le parole nuove appartengono alla
+    // frase successiva, e il numero cambia. Cosi una traduzione parziale
+    // ancora in volo non puo piu sovrascrivere questa.
+    numeroFraseRef.current++;
 
     // Traduzione finale della frase completa
     const translated = await translateChunk(trimmed, true);
@@ -209,7 +238,9 @@ export default function useStreamingInterpreter({
 
     // Update translation display
     currentTranslationRef.current = translated;
-    setPartnerLiveSubtitle(translated);
+    // b.276 — P0-2: questa e la MIA voce tradotta. Va nel mio contenitore,
+    // non in quello del partner.
+    setMiaTraduzione(translated);
 
     // Send FINAL subtitle to partner
     sendSubtitleToPartner(translated, trimmed, true);
@@ -231,9 +262,13 @@ export default function useStreamingInterpreter({
     ttsQueueRef.current.push({ text: translated });
     processTTSQueue();
 
-    // Clear current sentence
-    currentSentenceRef.current = '';
+    // b.276 — P0-3: la frase NON si svuota piu qui. Veniva svuotata dopo
+    // l'attesa della traduzione, e nel frattempo le parole nuove si erano
+    // gia accumulate dentro: venivano cancellate insieme al resto, cioe
+    // si perdevano pezzi di discorso. Ora chi chiude la frase la stacca
+    // PRIMA di chiamare (vedi sotto), e qui non resta niente da azzerare.
     currentTranslationRef.current = '';
+    fraseInLavorazioneRef.current = null;
   }, [translateChunk, sendSubtitleToPartner, myLang, partnerLang, processTTSQueue]);
 
   // ═══ HANDLE TRANSCRIPT FROM DEEPGRAM ═══
@@ -254,12 +289,18 @@ export default function useStreamingInterpreter({
         clearTimeout(translateTimerRef.current);
         translateTimerRef.current = setTimeout(async () => {
           if (!activeRef.current) return;
-          const partial = await translateChunk(currentSentenceRef.current, false);
+          // b.276 — P1: il numero della frase al momento della partenza.
+          const mioNumero = numeroFraseRef.current;
+          const testoAlVolo = currentSentenceRef.current;
+          const partial = await translateChunk(testoAlVolo, false);
+          // Se nel frattempo la frase e stata chiusa, questo parziale e
+          // vecchio: si butta, invece di sovrascrivere il testo finale.
+          if (mioNumero !== numeroFraseRef.current) return;
           if (partial && activeRef.current) {
             currentTranslationRef.current = partial;
-            setPartnerLiveSubtitle(partial);
+            setMiaTraduzione(partial);
             // Send interim subtitle to partner
-            sendSubtitleToPartner(partial, currentSentenceRef.current, false);
+            sendSubtitleToPartner(partial, testoAlVolo, false);
           }
         }, TRANSLATE_DEBOUNCE_MS);
       }
@@ -267,9 +308,11 @@ export default function useStreamingInterpreter({
       // Reset sentence pause timer — se non arriva nulla per SENTENCE_PAUSE_MS, la frase è finita
       clearTimeout(sentencePauseTimerRef.current);
       sentencePauseTimerRef.current = setTimeout(() => {
-        if (currentSentenceRef.current.trim()) {
-          handleSentenceComplete(currentSentenceRef.current);
-        }
+        // b.276 — P0-3: si stacca la frase PRIMA di mandarla a tradurre.
+        const frase = currentSentenceRef.current;
+        if (!frase.trim()) return;
+        currentSentenceRef.current = '';
+        handleSentenceComplete(frase);
       }, SENTENCE_PAUSE_MS);
 
     } else {
@@ -284,9 +327,12 @@ export default function useStreamingInterpreter({
   // Deepgram manda UtteranceEnd quando rileva fine discorso
   const handleUtteranceEnd = useCallback(() => {
     clearTimeout(sentencePauseTimerRef.current);
-    if (currentSentenceRef.current.trim()) {
-      handleSentenceComplete(currentSentenceRef.current);
-    }
+    // b.276 — P0-3/P0-4: stessa regola. Chi arriva primo stacca la frase;
+    // chi arriva secondo trova il contenitore vuoto e non fa niente.
+    const frase = currentSentenceRef.current;
+    if (!frase.trim()) return;
+    currentSentenceRef.current = '';
+    handleSentenceComplete(frase);
   }, [handleSentenceComplete]);
 
   // ═══ ABORT COMPLETO (b.247) ═══
@@ -526,6 +572,7 @@ export default function useStreamingInterpreter({
         }]);
       }
       setPartnerLiveSubtitle(msg.text);
+      setPartnerLiveOriginale(msg.originalText || '');
       // Clear old timers before adding new one
       subtitleTimersRef.current.forEach(id => clearTimeout(id));
       subtitleTimersRef.current = [];
@@ -565,8 +612,26 @@ export default function useStreamingInterpreter({
       const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.volume = 0.9;
+      // b.276 — P1: IL VOLUME ORA LO COMANDI TU.
+      // Era fisso a 0,9: spegnere "Ascolta la voce" o abbassare il
+      // cursore non aveva alcun effetto sull'interprete, perche questa
+      // riga non guardava la preferenza. Ora la legge, e a volume zero
+      // non si riproduce affatto.
+      const volume = getVolumeTTS();
+      if (volume <= 0) { URL.revokeObjectURL(url); return; }
+      audio.volume = volume;
+      // b.276 — P1: L'ATTENUAZIONE DELL'ORIGINALE.
+      // startDucking abbassa un volume interno che la voce del partner
+      // in videochiamata non attraversa: "Solo tradotta / Attenuata /
+      // Entrambe" restava senza effetto durante l'interprete. La stanza
+      // ascolta un avviso preciso per abbassare la voce vera: ora
+      // l'interprete lo manda, come gia fa la voce normale.
+      const avvisa = (acceso) => {
+        try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
+        catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
+      };
       startDucking?.();
+      avvisa(true);
       audio.play().catch(() => {});
       audio.onended = () => { URL.revokeObjectURL(url); stopDucking?.(); };
       audio.onerror = () => { stopDucking?.(); };
@@ -617,7 +682,9 @@ export default function useStreamingInterpreter({
     start,
     stop,
     myLiveText,                    // Testo STT real-time (quello che sto dicendo)
-    partnerLiveSubtitle,           // Subtitle tradotto real-time (preview per partner)
+    partnerLiveSubtitle,           // Cio che dice LUI, tradotto per me
+    partnerLiveOriginale,          // ...e le sue parole originali (b.276)
+    miaTraduzione,                 // Cio che dico IO, tradotto per lui (b.276)
     mySubtitles,                   // Cronologia frasi tradotte mie
     partnerSubtitles,              // Cronologia frasi tradotte partner
     handleIncomingMessage,         // Handler per messaggi P2P dal partner

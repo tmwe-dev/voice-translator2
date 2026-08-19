@@ -342,10 +342,16 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           {(() => {
             // b.132 — quando l'interprete e acceso, il sottotitolo VERO
             // e il suo: arriva dalla voce in tempo reale, non dalla chat.
+            // b.276 — comunque arrivi (scheda o semplice testo), qui
+            // diventa una scheda: cosi un mittente distratto non svuota
+            // piu il sottotitolo a schermo.
+            const inScheda = (x) => !x ? null
+              : (typeof x === 'string' ? { text: x, original: '' } : x);
             const daInterprete = interpreterActive && interpreter?.lastSubtitle
-              ? [interpreter.lastSubtitle] : null;
-            const subs = daInterprete || (Array.isArray(lastTranslationSubtitle) ? lastTranslationSubtitle
-              : lastTranslationSubtitle ? [lastTranslationSubtitle] : []);
+              ? [inScheda(interpreter.lastSubtitle)] : null;
+            const subs = daInterprete || (Array.isArray(lastTranslationSubtitle)
+              ? lastTranslationSubtitle.map(inScheda)
+              : lastTranslationSubtitle ? [inScheda(lastTranslationSubtitle)] : []);
             const latest = subs.length > 0 ? subs[subs.length - 1] : null;
             const acc = S?.colors?.accent2 || '#38e1ff';
             const acc1 = S?.colors?.accent1 || '#5b8cff';

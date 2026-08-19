@@ -4,6 +4,7 @@ import { createNoiseGate } from '../lib/noiseGate.js';
 import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 import useStreamingInterpreter from './useStreamingInterpreter.js';
 import { createLogger } from '../lib/logger.js';
+import { getVolumeTTS } from '../lib/audioPrefs.js';
 const dbg = createLogger('interpreter');
 
 // ═══════════════════════════════════════
@@ -83,15 +84,34 @@ export default function useInterpreterMode({
       const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.volume = 0.9;
+      // b.276 — P1: IL VOLUME ORA LO COMANDI TU.
+      // Era fisso a 0,9: spegnere "Ascolta la voce" o abbassare il
+      // cursore non aveva alcun effetto sull'interprete, perche questa
+      // riga non guardava la preferenza. Ora la legge, e a volume zero
+      // non si riproduce affatto.
+      const volume = getVolumeTTS();
+      if (volume <= 0) { URL.revokeObjectURL(url); return; }
+      audio.volume = volume;
       // Duck partner audio while interpreter speaks
+      // b.276 — P1: L'ATTENUAZIONE DELL'ORIGINALE.
+      // startDucking abbassa un volume interno che la voce del partner
+      // in videochiamata non attraversa: "Solo tradotta / Attenuata /
+      // Entrambe" restava senza effetto durante l'interprete. La stanza
+      // ascolta un avviso preciso per abbassare la voce vera: ora
+      // l'interprete lo manda, come gia fa la voce normale.
+      const avvisa = (acceso) => {
+        try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
+        catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
+      };
       startDucking?.();
+      avvisa(true);
       audio.play().catch(() => {});
       audio.onended = () => {
         URL.revokeObjectURL(url);
         stopDucking?.();
+        avvisa(false);
       };
-      audio.onerror = () => { stopDucking?.(); };
+      audio.onerror = () => { stopDucking?.(); avvisa(false); };
     } catch (e) {
       console.warn('[Interpreter] Failed to play audio:', e);
       stopDucking?.();
@@ -112,12 +132,18 @@ export default function useInterpreterMode({
         seenMsgsRef.current.delete(seenMsgsRef.current.values().next().value);
       }
 
-      const sub = { text: msg.text, lang: msg.lang, ts: Date.now() };
+      const sub = { text: msg.text, original: msg.originalText || '', lang: msg.lang, ts: Date.now() };
       setPartnerSubtitles(prev => [...prev.slice(-20), sub]);
-      setLastSubtitle(msg.text);
+      // b.276 — P0: UN SOLO CONTRATTO PER IL SOTTOTITOLO.
+      // Qui prima finiva una STRINGA, e la schermata della videochiamata
+      // le chiedeva "originale" e "tradotto" — due campi che una stringa
+      // non ha. Risultato: la traduzione era giusta e il sottotitolo
+      // restava vuoto. Ora esce sempre una scheda con gli stessi campi,
+      // da tutti e due i percorsi.
+      setLastSubtitle(sub);
       // Auto-clear after 8s — track timer for cleanup on unmount
       const timerId = setTimeout(() => {
-        setLastSubtitle(prev => prev === msg.text ? null : prev);
+        setLastSubtitle(prev => (prev && prev.text === msg.text) ? null : prev);
         subtitleTimersRef.current = subtitleTimersRef.current.filter(id => id !== timerId);
       }, 8000);
       subtitleTimersRef.current.push(timerId);
@@ -470,7 +496,13 @@ export default function useInterpreterMode({
     setActive,
     mySubtitles: isStreaming ? streaming.mySubtitles : mySubtitles,
     partnerSubtitles: isStreaming ? streaming.partnerSubtitles : partnerSubtitles,
-    lastSubtitle: isStreaming ? streaming.partnerLiveSubtitle : lastSubtitle,
+    // b.276 — la stessa scheda in tutti e due i percorsi: chi disegna non
+    // deve piu indovinare se gli arriva una stringa o un oggetto.
+    lastSubtitle: isStreaming
+      ? (streaming.partnerLiveSubtitle
+        ? { text: streaming.partnerLiveSubtitle, original: streaming.partnerLiveOriginale || '', ts: Date.now() }
+        : null)
+      : lastSubtitle,
     myLiveText: streaming.myLiveText,
     partnerLiveSubtitle: streaming.partnerLiveSubtitle,
     start: startUnified,

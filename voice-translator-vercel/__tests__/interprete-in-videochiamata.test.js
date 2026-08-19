@@ -81,8 +81,11 @@ describe('e il sottotitolo giusto vince', () => {
   it('ma senza interprete si continua a vedere quello della chat', () => {
     // Togliere il vecchio comportamento avrebbe curato un difetto
     // creandone un altro.
-    expect(senzaCommenti(leggi('app/components/VideoCallOverlay.js')))
-      .toMatch(/lastTranslationSubtitle \? \[lastTranslationSubtitle\] : \[\]/);
+    // b.276 — il ripiego sulla chat c'e ancora, ma ora il sottotitolo
+    // passa da una forma sola (inScheda): si controlla che il ramo esista,
+    // non piu come e scritto dentro.
+    const s = senzaCommenti(leggi('app/components/VideoCallOverlay.js'));
+    expect(s).toMatch(/lastTranslationSubtitle \? \[[^\]]*lastTranslationSubtitle[^\]]*\] : \[\]/);
   });
 });
 
