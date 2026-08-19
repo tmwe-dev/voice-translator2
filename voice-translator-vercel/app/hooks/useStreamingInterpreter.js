@@ -5,6 +5,7 @@ import { createNoiseGate } from '../lib/noiseGate.js';
 import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
 import { createLogger } from '../lib/logger.js';
 import { getVolumeTTS } from '../lib/audioPrefs.js';
+import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('streaming');
 
 // ═══════════════════════════════════════════════════════════════
@@ -63,7 +64,8 @@ export default function useStreamingInterpreter({
   const convContextRef = useRef(conversationContext);
 
   // Sentence accumulator
-  const currentSentenceRef = useRef('');    // Frase corrente accumulata da final transcripts
+  const currentSentenceRef = useRef('');
+  const daRendereRef = useRef(null);        // b.277 — la copia del microfono unico da rendere    // Frase corrente accumulata da final transcripts
   // b.276 — P1: ogni frase ha un numero. Una traduzione parziale che
   // torna dopo che la frase e gia stata chiusa appartiene a un numero
   // vecchio e viene buttata: prima poteva sovrascrivere il testo finale
@@ -369,7 +371,14 @@ export default function useStreamingInterpreter({
     if (streamRef.current) {
       const tracce = streamRef.current;
       streamRef.current = null;
-      tracce.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+      // b.277 — se la voce era una copia del microfono unico, si RENDE:
+      // e il contatore del master a decidere se spegnere l'hardware.
+      if (daRendereRef.current === tracce) {
+        rendiVoce(tracce);
+        daRendereRef.current = null;
+      } else {
+        tracce.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+      }
     }
     if (wsRef.current) {
       const ws = wsRef.current;
@@ -413,10 +422,21 @@ export default function useStreamingInterpreter({
     }
 
     try {
-      // Get mic stream
-      const rawStream = await navigator.mediaDevices.getUserMedia({
-        audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
-      });
+      // b.277 — la voce arriva dal microfono UNICO dell'applicazione,
+      // come copia: niente terza apertura dell'hardware (su Android
+      // faceva saltare l'eco e poteva farsi revocare il microfono).
+      // Se il master non parte, si ripiega sull'apertura diretta di
+      // prima: il modulo condiviso non deve mai bloccare la voce.
+      let rawStream;
+      try {
+        rawStream = await prendiVoce();
+        daRendereRef.current = rawStream;
+      } catch {
+        rawStream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, sampleRate: 16000, echoCancellation: true, noiseSuppression: true },
+        });
+        daRendereRef.current = null;
+      }
       streamRef.current = rawStream;
 
       // Noise gate

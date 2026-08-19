@@ -7,6 +7,7 @@ import { creaCodaAudio } from '../lib/codaAudio.js';
 // b.262 — per avvisare (una volta) chi ha l'audio bloccato: vedi sotto.
 import { toast } from '../lib/avvisi.js';
 import { tFuori } from '../lib/i18n.js';
+import { prendiVoce } from '../lib/microfonoMaster.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -324,9 +325,14 @@ export default function useAudioSystem({
     const audioConstraints = liveModeRef.current
       ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
       : true;
-    navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
+    // b.277 — anche la richiesta anticipata passa dal microfono unico:
+    // apre l'hardware una volta sola e riceve una copia. Il ripiego
+    // sull'apertura diretta resta per qualunque intoppo.
+    prendiVoce()
       .then(stream => { persistentMicRef.current = stream; })
-      .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e))
+      .catch(() => navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
+        .then(stream => { persistentMicRef.current = stream; })
+        .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e)))
       .finally(() => { micInCorsoRef.current = false; });
   }
 

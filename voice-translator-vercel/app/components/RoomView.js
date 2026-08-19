@@ -173,6 +173,26 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     }
   }, [interpreterActive, interpreter]);
 
+  // b.277 — P1: CAMBIO LINGUA A INTERPRETE ACCESO.
+  // Chi trascrive la voce viene istruito sulla lingua UNA volta, alla
+  // partenza. Cambiando lingua dalla stanza l'interfaccia cambiava ma
+  // l'ascolto restava su quella vecchia: un italiano passato al francese
+  // continuava a essere trascritto come italiano. Ora al cambio di
+  // lingua l'interprete si spegne e si riaccende, e riparte istruito
+  // sulla lingua nuova.
+  const linguaInterpreteRef = useRef(myLang);
+  useEffect(() => {
+    if (linguaInterpreteRef.current === myLang) return;
+    linguaInterpreteRef.current = myLang;
+    if (!interpreter?.active) return;
+    interpreter.stop();
+    // La riaccensione passa dallo stesso effetto di sopra al giro dopo:
+    // qui basta un rilancio esplicito, breve, per non dipendere dai tempi.
+    const t = setTimeout(() => { if (interpreterActive) interpreter.start(); }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myLang]);
+
   // Subtitle queue for video fullscreen
   const lastSubMsgIdRef = useRef(null);
   useEffect(() => {

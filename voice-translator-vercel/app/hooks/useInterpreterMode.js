@@ -5,6 +5,7 @@ import { apiCircuitBreaker } from '../lib/circuitBreaker.js';
 import useStreamingInterpreter from './useStreamingInterpreter.js';
 import { createLogger } from '../lib/logger.js';
 import { getVolumeTTS } from '../lib/audioPrefs.js';
+import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 const dbg = createLogger('interpreter');
 
 // ═══════════════════════════════════════
@@ -40,6 +41,7 @@ export default function useInterpreterMode({
   const [mySubtitles, setMySubtitles] = useState([]);
   const [partnerSubtitles, setPartnerSubtitles] = useState([]);
   const [lastSubtitle, setLastSubtitle] = useState(null);
+  const daRendereRef = useRef(null);        // b.277 — la copia del microfono unico da rendere
 
   const recorderRef = useRef(null);
   const streamRef = useRef(null);
@@ -240,6 +242,21 @@ export default function useInterpreterMode({
       const { translated } = await translateRes.json();
       if (!translated) { return; }
 
+      // b.277 — P1: IL TESTO NON ASPETTA LA VOCE.
+      // Il sottotitolo era pronto qui, ma partiva solo DOPO la sintesi
+      // vocale e la conversione dell'audio: chi leggeva aspettava
+      // secondi per un testo che esisteva gia. Ora il sottotitolo parte
+      // subito; la voce lo raggiunge quando e pronta.
+      if (webrtc?.sendDirectMessage) {
+        webrtc.sendDirectMessage({
+          type: 'interpreter-subtitle',
+          text: translated,
+          lang: partnerLang,
+          originalText: transcript,
+          originalLang: myLang,
+        });
+      }
+
       // 3. TTS — Generate audio of translation
       // /api/tts-edge expects langCode (not lang)
       const ttsRes = await apiCircuitBreaker.execute('interpreter-tts', () =>
@@ -273,15 +290,7 @@ export default function useInterpreterMode({
       // 4. Send via DataChannel to partner
       // IMPORTANT: pass objects (not strings) — sendDirectMessage handles JSON.stringify + E2E
       if (webrtc?.sendDirectMessage) {
-        // Send subtitle
-        webrtc.sendDirectMessage({
-          type: 'interpreter-subtitle',
-          text: translated,
-          lang: partnerLang,
-          originalText: transcript,
-          originalLang: myLang,
-        });
-
+        // b.277 — il sottotitolo e gia partito, qui viaggia solo la voce.
         // Send audio (split into chunks if too large for DC)
         // Browser RTCDataChannel limit is ~16KB per message.
         // After JSON.stringify + E2E encryption overhead (~200 bytes),
@@ -360,7 +369,10 @@ export default function useInterpreterMode({
   // Start recording + processing loop
   const startInterpreter = useCallback(async () => {
     try {
-      const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // b.277 — copia dal microfono unico, ripiego sull'apertura diretta.
+      let rawStream;
+      try { rawStream = await prendiVoce(); daRendereRef.current = rawStream; }
+      catch { rawStream = await navigator.mediaDevices.getUserMedia({ audio: true }); daRendereRef.current = null; }
       streamRef.current = rawStream;
 
       // Apply noise gate for cleaner STT in noisy environments
@@ -421,7 +433,9 @@ export default function useInterpreterMode({
       noiseGateRef.current = null;
     }
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+      // b.277 — se era una copia del microfono unico si rende al master.
+      if (daRendereRef.current === streamRef.current) { rendiVoce(streamRef.current); daRendereRef.current = null; }
+      else streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       streamRef.current = null;
     }
     dbg.debug('[Interpreter] Stopped');
@@ -438,7 +452,9 @@ export default function useInterpreterMode({
         try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
       }
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+        // b.277 — se era una copia del microfono unico si rende al master.
+      if (daRendereRef.current === streamRef.current) { rendiVoce(streamRef.current); daRendereRef.current = null; }
+      else streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
       }
       // Clear all pending subtitle timers
       subtitleTimersRef.current.forEach(id => clearTimeout(id));
@@ -462,7 +478,13 @@ export default function useInterpreterMode({
 
   // ═══ UNIFIED API ═══
   // Try streaming first; if Deepgram unavailable, fall back to legacy chunks
-  const startUnified = useCallback(async () => {
+  // b.277 — P1: l'avvio dura qualche secondo (permesso microfono, presa
+  // di linea con chi trascrive) e in quel tempo `active` e ancora falso:
+  // un ridisegno della schermata poteva far ripartire l'avvio SOPRA
+  // quello in corso — due microfoni, due trascrizioni, doppio consumo.
+  // Ora un avvio in corso chiude la porta al successivo.
+  const avvioInCorsoRef = useRef(false);
+  const startUnifiedInterno = useCallback(async () => {
     const streamingOk = await streaming.start();
     if (streamingOk) {
       dbg.debug('[Interpreter] Using streaming pipeline (subtitle-first)');
@@ -472,6 +494,13 @@ export default function useInterpreterMode({
     dbg.debug('[Interpreter] Streaming unavailable, using legacy 3s chunks');
     startInterpreter();
   }, [streaming.start, startInterpreter]);
+
+  const startUnified = useCallback(async () => {
+    if (avvioInCorsoRef.current) return;
+    avvioInCorsoRef.current = true;
+    try { await startUnifiedInterno(); }
+    finally { avvioInCorsoRef.current = false; }
+  }, [startUnifiedInterno]);
 
   const stopUnified = useCallback(() => {
     if (streaming.active) streaming.stop();

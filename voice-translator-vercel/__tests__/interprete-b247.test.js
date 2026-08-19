@@ -466,10 +466,14 @@ describe('ciò che non deve essersi rotto', () => {
 
   it('e si accende ancora quando lo streaming dice di no', () => {
     const s = modalita();
-    const i = s.indexOf('const startUnified = useCallback(');
+    // b.277 — la sostanza dell'avvio vive ora in startUnifiedInterno
+    // (startUnified e' solo la porta che impedisce il doppio ingresso).
+    const i = s.indexOf('const startUnifiedInterno = useCallback(');
     const corpo = s.slice(i, i + 400);
     expect(corpo).toContain('await streaming.start()');
     expect(corpo).toContain('startInterpreter()');
+    // e la porta esiste davvero
+    expect(s).toContain('avvioInCorsoRef');
   });
 
   it('la catena STT → traduzione → TTS del blocco è rimasta intera', () => {

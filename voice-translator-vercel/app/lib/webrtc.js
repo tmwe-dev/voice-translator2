@@ -183,6 +183,26 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
       autoGainControl: true,
     } : false,
   };
+  // ═══ b.277 — LA VOCE DELLA CHIAMATA VIENE DAL MICROFONO UNICO ═══
+  // Era una delle tre aperture parallele dell'hardware (sistema audio,
+  // chiamata, interprete): su Android la terza apertura puo far revocare
+  // il microfono alle prime due e rompe la cancellazione dell'eco.
+  // Ora l'audio e una COPIA del master; il video resta un'acquisizione
+  // sua, perche la telecamera non ha questo problema.
+  // QUALUNQUE intoppo → si torna esattamente al percorso di prima:
+  // questo modulo non deve mai essere il motivo per cui la chiamata
+  // non parte.
+  if (opts.audio) {
+    try {
+      const { prendiVoce } = await import('./microfonoMaster.js');
+      const voce = await prendiVoce();
+      if (!opts.video) return voce;
+      const video = await navigator.mediaDevices.getUserMedia({ video: constraints.video });
+      return new MediaStream([...video.getVideoTracks(), ...voce.getAudioTracks()]);
+    } catch (e) {
+      log.warn('microfono unico non disponibile, apertura diretta:', e?.message || e);
+    }
+  }
   return await navigator.mediaDevices.getUserMedia(constraints);
 }
 
