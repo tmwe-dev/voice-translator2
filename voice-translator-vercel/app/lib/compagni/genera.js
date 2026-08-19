@@ -98,6 +98,23 @@ export function promptIllustrazione({ titolo = '', argomento = '', livello = 'ba
   ].filter(Boolean).join(' ');
 }
 
+// b.308 — RECUPERO di un oggetto JSON TRONCATO (risposta del modello tagliata
+// dal tetto di token). Si prova a chiudere l'oggetto dopo l'ultima proprieta
+// completa, cercando all'indietro dai punti plausibili di fine-valore. Meglio
+// un profilo PARZIALE — i campi mancanti hanno un default in normalizzaAgente —
+// che un blocco "Profilo illeggibile". Bounded: l'output agente e piccolo.
+function ricuciOggetto(s) {
+  const inizio = Math.max(0, s.length - 1200);
+  for (let k = s.length; k > inizio; k--) {
+    const c = s[k - 1];
+    if (c !== '}' && c !== '"' && c !== ']' && !(c >= '0' && c <= '9')) continue;
+    for (const suff of ['', '}', '"}', '"]}', ']}', '"}}', '}}', '}]}' ]) {
+      try { const o = JSON.parse(s.slice(0, k) + suff); if (o && typeof o === 'object' && !Array.isArray(o)) return o; } catch { /* prova il prossimo taglio */ }
+    }
+  }
+  return null;
+}
+
 // ── Estrazione tollerante del JSON dall'output del modello ──
 export function estraiAgente(testo) {
   if (!testo) return null;
@@ -105,9 +122,10 @@ export function estraiAgente(testo) {
   const i = s.indexOf('{');
   if (i > 0) s = s.slice(i);
   const j = s.lastIndexOf('}');
-  if (j >= 0) s = s.slice(0, j + 1);
+  const sChiuso = j >= 0 ? s.slice(0, j + 1) : s;
   let d;
-  try { d = JSON.parse(s); } catch { return null; }
+  try { d = JSON.parse(sChiuso); }
+  catch { d = ricuciOggetto(s); }   // troncato: si tenta il recupero invece di arrendersi
   if (!d || typeof d !== 'object') return null;
   return normalizzaAgente(d);
 }

@@ -41,7 +41,10 @@ async function handlePost(req) {
     // b.226 — SINTESI: chiude la tavola in un risultato condiviso (neutrale).
     if (azione === 'sintesi') {
       const { system, prompt } = promptSintesi({ obiettivo, discussione: messaggi.map(m => ({ ruolo: m.ruolo, nome: m.nome, testo: m.testo })), lingua });
-      const r = await generaTesto({ system, prompt, userToken, maxTokens: 500 });
+      // b.308 — la sintesi legge TUTTI i turni: 500 token erano pochi per
+      // chiudere davvero. Spazio proporzionato alla mole della discussione.
+      const maxTokensSintesi = Math.min(2000, 700 + messaggi.length * 40);
+      const r = await generaTesto({ system, prompt, userToken, maxTokens: maxTokensSintesi });
       if (!r.ok) {
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
         return NextResponse.json({ error: 'Sintesi non riuscita' }, { status: 502 });

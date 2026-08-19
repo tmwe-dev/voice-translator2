@@ -26,7 +26,9 @@ async function handlePost(req) {
     const sorpresa = body.sorpresa === true;
 
     const { system, prompt } = promptAgente({ descrizione, lingua, sorpresa });
-    const r = await generaTesto({ system, prompt, userToken, maxTokens: 600, temperature: 0.8 });
+    // b.308 — 600 token erano stretti per un profilo ricco (personalita lunga
+    // in JSON): usciva troncato e "illeggibile". Ora c'e respiro.
+    const r = await generaTesto({ system, prompt, userToken, maxTokens: 1100, temperature: 0.8 });
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });

@@ -189,7 +189,9 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   // ci stava: per questo falliva solo in alto.) Ora il tetto segue il numero
   // di lezioni chieste, con un minimo generoso.
   const nLezioni = Math.max(1, Number(opts.nLezioni) || 8);
-  const maxTokens = Math.min(2200, 500 + nLezioni * 130);
+  // b.308 — tetto alzato a 2800: anche un syllabus da 14 lezioni (ricercatore)
+  // ci sta dentro con margine, senza riabbattere contro il soffitto.
+  const maxTokens = Math.min(2800, 500 + nLezioni * 150);
   const r = await generaTesto({ system, prompt, userToken, maxTokens });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
@@ -240,7 +242,10 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
   // ── FINE b.247 ──
   const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate });
   // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: livelloAlto ? 1600 : 900 });
+  // b.308 — spazio piu generoso: una lezione da documentario non deve
+  // uscire tagliata a meta per un tetto stretto. Il costo segue la mole, ma
+  // il principio e non bloccare/non mozzare: chi va in profondita ha respiro.
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: livelloAlto ? 2400 : 1200 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   // b.244 — l'appunto del Maestro si stacca qui: non deve MAI comparire nella
   // lezione. Le osservazioni NUOVE tornano al chiamante, che le salva (il
@@ -254,7 +259,7 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 /** Genera il quiz di una lezione. */
 export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente, osservazioni, progresso });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: Math.min(1400, 250 + nDomande * 200) });   // b.301: verifiche piu ricche a livello alto
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: Math.min(2200, 400 + nDomande * 260) });   // b.308: tetto piu alto, il quiz a 6 domande non si tronca piu
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'quiz-illeggibile' };

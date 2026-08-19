@@ -91,7 +91,9 @@ export async function preparaBriefing({ argomento, lingua = 'it', userToken = nu
   }
   const fonti = esito.risultati.slice(0, 6).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
   const { system, prompt } = promptBriefing({ argomento, fonti, lingua, ricercaGuasta: !esito.ok });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 800 });
+  // b.308 — 800 era stretto: articolo + punti + domande in JSON si troncavano
+  // prima dei 4000 char del taglio finale. Ora c'e respiro.
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: 1500 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const d = estraiJSON(r.testo) || {};
   return {
@@ -113,7 +115,11 @@ export async function preparaBriefing({ argomento, lingua = 'it', userToken = nu
 export async function sintetizzaReport({ argomento, briefing = '', discussione = '', lingua = 'it', userToken = null } = {}) {
   if (!discussione || !discussione.trim()) return { ok: false, motivo: 'discussione-mancante' };
   const { system, prompt } = promptReport({ argomento, briefing, discussione, lingua });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 1100 });
+  // b.308 — il report della DISCUSSIONE INTERA aveva un tetto fisso di 1100:
+  // su un dibattito lungo usciva mozzato. Ora lo spazio SEGUE la mole della
+  // discussione (piu turni -> report piu ampio), con un soffitto generoso.
+  const maxTokens = Math.min(3000, 1400 + Math.floor((discussione?.length || 0) / 60));
+  const r = await generaTesto({ system, prompt, userToken, maxTokens });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   return { ok: true, report: r.testo };
 }
