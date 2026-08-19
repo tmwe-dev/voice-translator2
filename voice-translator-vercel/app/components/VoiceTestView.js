@@ -3,6 +3,7 @@ import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { VOICES, FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
+import { bandieraVoce } from '../lib/bandiereVoci.js';
 import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -171,7 +172,10 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
       const q = searchQuery.toLowerCase();
       const name = (v.name || '').toLowerCase();
       const accent = (v.labels?.accent || '').toLowerCase();
-      if (!name.includes(q) && !accent.includes(q)) return false;
+      // b.309 — si cerca anche per PAESE (ricavato dall'accento): "italia",
+      // "francia", "usa" filtrano, non solo il nome o l'accento in inglese.
+      const paese = (bandieraVoce({ accent: v.labels?.accent, language: v.labels?.language || v.language }).p || '').toLowerCase();
+      if (!name.includes(q) && !accent.includes(q) && !paese.includes(q)) return false;
     }
     return true;
   });
@@ -507,6 +511,10 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
               const accent = v.labels?.accent || '';
               const gender = v.labels?.gender || '';
               const category = v.category || '';
+              // b.309 — bandiera del paese della voce (ricavata dall'accento):
+              // qui le righe mostravano solo l'accento a parole, ora c'e anche
+              // la bandiera, come nella striscia voci in stanza.
+              const bv = bandieraVoce({ accent: v.labels?.accent, language: v.labels?.language || v.language });
 
               // Determine accent color based on category
               const voiceAccent = category === 'cloned' ? purple
@@ -566,7 +574,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                       color: isSelected ? voiceAccent : (isHovered ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.8)'),
                       transition: 'color 0.3s',
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>{v.name}</div>
+                    }}>{bv?.f ? `${bv.f} ` : ''}{v.name}</div>
                     <div style={{
                       fontSize: 10, color: 'rgba(255,255,255,0.38)', marginTop: 3,
                       display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',

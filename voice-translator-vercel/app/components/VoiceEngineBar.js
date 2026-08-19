@@ -374,12 +374,18 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                           })
                       : elevenLabsVoices;
                     // b.261 — il filtro guarda nome e paese, senza maiuscole.
+                    // b.309 — CERCAVA v.country e v.description, campi che l'API
+                    // non produce: il filtro per paese era MORTO. Ora il paese
+                    // si ricava dall'accento (bandiereVoci) e si cerca anche
+                    // per accento/lingua: scrivere "italia", "british", "es"
+                    // filtra davvero.
                     const cerca = filtroVoce.trim().toLowerCase();
                     const visibili = cerca
                       ? base.filter(v =>
                           (v.name || '').toLowerCase().includes(cerca) ||
-                          (v.country || '').toLowerCase().includes(cerca) ||
-                          (v.description || '').toLowerCase().includes(cerca))
+                          (bandieraVoce(v).p || '').toLowerCase().includes(cerca) ||
+                          (v.accent || '').toLowerCase().includes(cerca) ||
+                          (v.language || '').toLowerCase().includes(cerca))
                       : base;
                     const females = visibili.filter(v => v.gender === 'female');
                     const males = visibili.filter(v => v.gender === 'male');

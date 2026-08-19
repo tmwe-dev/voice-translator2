@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { FONT, LANGS, getLang } from '../lib/constants.js';
 import { cercaPaesi, indovinaPaese, getPaese } from '../lib/paesi.js';
+import { getOpenAIVoiceForLang } from '../lib/voiceDefaults.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import { useApp } from '../contexts/AppContext.js';
 import SpatialBackdrop from './SpatialBackdrop.js';
@@ -203,11 +204,18 @@ export default function SceltaPaeseView({ onFatto }) {
   function confermaDavvero(paese) {
     if (!paese) return;
     const linguaParlata = LANGS.find(l => l.code === paese.lingua) ? paese.lingua : 'en';
+    // b.309 — VOCE PREFERITA in automatico: scelta la lingua (dal paese), si
+    // imposta subito la voce piu adatta a quella lingua, invece di lasciare
+    // il default fisso 'nova' per tutti. Con il motore 'auto' (ElevenLabs/Edge)
+    // la voce per-lingua e gia risolta lato server; questo migliora anche il
+    // ripiego OpenAI. Resta cambiabile nelle impostazioni.
+    const vocePreferita = getOpenAIVoiceForLang(linguaParlata) || prefs.voice || 'nova';
     const nuove = {
       ...prefs,
       country: paese.codice,
       lang: linguaParlata,
       uiLang: mapLang(linguaParlata),
+      voice: vocePreferita,
     };
     savePrefs(nuove);
     onFatto?.(nuove);

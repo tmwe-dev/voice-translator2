@@ -331,7 +331,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
             <label style={etich}>{L('lifeLanguage')}</label>
             <select value={bozza.lingua || ''} onChange={campo('lingua')} style={input}>
               <option value="">{L('lifeLangAuto')}</option>
-              {LANGS.map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
+              {LANGS.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
             </select>
           </div>
           <div style={{ flex: 1 }}>
