@@ -162,8 +162,16 @@ export default function useAudioSystem({
   }
 
   function unlockAudio() {
-    if (audioReady) return;
+    // b.271 — QUI b.268 AVEVA ROTTO IL MICROFONO, e con lui le chiamate.
+    // Con lo sblocco al primo tocco, `audioReady` diventa vero prima che
+    // qualcuno prema un pulsante vero. Da quel momento questa funzione
+    // usciva alla prima riga — e `requestMicEarly()` non veniva chiamato
+    // MAI PIU: il microfono non veniva piu chiesto in anticipo, e la
+    // chiamata partiva senza. Ora il microfono si chiede sempre (dentro
+    // e' gia protetto: se c'e gia, non fa niente) e solo lo sblocco del
+    // suono si salta quando e' gia fatto.
     requestMicEarly();
+    if (audioReady) return;
     sbloccaSuono();
   }
 

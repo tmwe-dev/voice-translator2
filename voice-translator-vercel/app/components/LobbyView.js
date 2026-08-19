@@ -74,7 +74,12 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
             <button style={S.shareBtn} onClick={shareRoom}>{L('shareLink')}</button>
           </div>
 
-          {/* ── b.104 · la porta per il video di gruppo ──
+          {/* ── b.104 · la porta per la stanza video ──
+              b.271 — diceva "Entra in video di gruppo · Fino a 8 persone"
+              dentro il riquadro di un invito a UNA persona: prometteva una
+              cosa diversa da quella che stava succedendo, ed era in
+              italiano per tutti. Ora dice dove si entra e chi ci si trova,
+              nella lingua di chi legge.
               In b.102 questo pulsante stava FUORI da LobbyView, appiccicato
               dopo. Il collaudo dal vivo lo ha bocciato: esisteva nel DOM,
               ma la schermata della stanza gli passava sopra e nessuno
@@ -88,10 +93,10 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
                 background:'transparent', border:`1px solid ${S.colors.accent1}55`,
                 color:S.colors.accent1, fontSize:14, fontWeight:800, fontFamily:FONT,
               }}>
-              Entra in video di gruppo
+              {L('enterVideoRoom')}
             </button>
             <div style={{fontSize:11, color:S.colors.textMuted, marginTop:5, lineHeight:1.4}}>
-              Fino a 8 persone. Ognuno parla e legge nella propria lingua.
+              {L('videoRoomHint')}
             </div>
           </div>
           {/* ── INIZIO b.90 — "Videochiamata" apriva questa identica schermata ──
@@ -104,7 +109,7 @@ const LobbyView = memo(function LobbyView({ roomId, roomInfo, partnerConnected, 
               background:`${S.colors.accent1}12`, border:`1px solid ${S.colors.accent1}25`,
               color:S.colors.textSecondary,
             }}>
-              Appena il tuo invitato entra, potrai avviare la <b>videochiamata</b> dalla chat.
+              {L('guestThenCall')}
             </div>
           )}
           {/* ── FINE b.90 ── */}
