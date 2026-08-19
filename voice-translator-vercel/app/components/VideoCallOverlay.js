@@ -190,7 +190,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const [pannelloAperto, setPannelloAperto] = useState(false);
   const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
-  const { L, prefs } = useApp();
+  const { L, prefs, savePrefs } = useApp();
   // b.278 — P2: IL CONTATORE DEVE DIRE LA TARIFFA DELLA VOCE CHE SUONA.
   // Guardava solo il motore SCELTO nelle impostazioni: ma quando
   // l'interprete e acceso la voce che suona e SEMPRE quella veloce
@@ -461,6 +461,43 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                     {/* b.284 — il costo della chiamata, spostato qui dal video */}
                     <div style={{ marginBottom: 10 }}>
                       <CostTicker attivo={true} vocePremium={vocePremiumAttiva} />
+                    </div>
+
+                    {/* b.290 — LA VOCE DELLA TRADUZIONE SI CAMBIA QUI, IN
+                        CHIAMATA, con pulsanti GRANDI (regola: anziani e
+                        bambini, uso elementare). Tre scelte in parole
+                        semplici, la scelta vale subito, dal prossimo
+                        messaggio. Scrive la stessa preferenza delle
+                        Impostazioni: un posto solo per la verita. */}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: 'rgba(238,242,255,0.55)', marginBottom: 7 }}>
+                        {L('voiceEngine')}
+                      </div>
+                      {[
+                        { id: 'edge', nome: L('engineStandardDesc') },
+                        { id: 'elevenlabs', nome: L('enginePremiumDesc') },
+                        { id: 'auto', nome: L('engineAutoDesc') },
+                      ].map(m => {
+                        const attivo = (prefs?.voiceEngine || 'auto') === m.id;
+                        return (
+                          <button key={m.id}
+                            onClick={() => savePrefs && savePrefs({ ...prefs, voiceEngine: m.id })}
+                            aria-pressed={attivo}
+                            style={{
+                              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                              padding: '13px 12px', marginBottom: 6, borderRadius: 12, cursor: 'pointer',
+                              fontFamily: 'inherit', textAlign: 'left',
+                              background: attivo ? 'rgba(61,220,132,0.14)' : 'rgba(255,255,255,0.05)',
+                              border: `2px solid ${attivo ? '#3ddc84' : 'rgba(160,190,255,0.15)'}`,
+                              color: '#eef2ff', fontSize: 14, fontWeight: 700,
+                            }}>
+                            <span aria-hidden="true" style={{ fontSize: 16, width: 20, textAlign: 'center', color: attivo ? '#3ddc84' : 'rgba(238,242,255,0.35)' }}>
+                              {attivo ? '\u2713' : '\u25CB'}
+                            </span>
+                            {m.nome}
+                          </button>
+                        );
+                      })}
                     </div>
 
                 {/* ═══ INIZIO b.176 — Versione B: due interruttori grandi ═══
