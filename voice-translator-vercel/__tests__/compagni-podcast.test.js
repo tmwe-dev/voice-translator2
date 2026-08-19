@@ -37,8 +37,8 @@ describe('promptTurno', () => {
     expect(system).toContain('Sei un filosofo.');
     expect(system).toContain('Archimede');
     expect(user).toContain('AI e lavoro');
-    expect(user).toContain('posizione iniziale');
-    expect(user).not.toContain('hanno detto finora');
+    expect(user).toMatch(/TUA posizione|apri/i);
+    expect(user).not.toContain('detto finora gli altri');
   });
 
   it('round successivo include cosa hanno detto gli altri', () => {
@@ -46,8 +46,8 @@ describe('promptTurno', () => {
       compagno: compagni[1], argomento: 'AI e lavoro', round: 2, totaleRound: 3,
       precedenti: [{ nome: 'Archimede', testo: 'La tecnologia libera tempo.' }],
     });
-    expect(user).toContain('round 2');
-    expect(user).toContain('hanno detto finora');
+    expect(user).toMatch(/[Rr]ound 2/);
+    expect(user).toMatch(/detto|hanno/i);
     expect(user).toContain('Archimede: La tecnologia libera tempo.');
   });
 

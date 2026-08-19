@@ -3,7 +3,8 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
-import { promptTavolo, promptSintesi, istruzioneConvergenza, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
+import { promptTavolo, promptSintesi, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
+import { analizzaConvergenza, istruzioneConvergenza, puoSaltare } from '../../../lib/compagni/orchestratore.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { temperaturaLiberta } from '../../../lib/compagni/contratto.js';
@@ -51,13 +52,19 @@ async function handlePost(req) {
     const ultimoUmano = messaggi.length ? (messaggi[messaggi.length - 1].testo || '') : '';
     if (!ultimoUmano.trim()) return NextResponse.json({ error: 'Serve un messaggio' }, { status: 400 });
     const storia = messaggi.slice(0, -1);
-    // Convergenza in base al numero di scambi già avvenuti (anti-stagnazione).
+    // b.303 — CONVERGENZA COME RADIOCHAT: analizzata dal CONTENUTO reale
+    // (stagnano? concordano? divergono?), non dal solo numero di scambi.
+    const soloAgenti = messaggi.filter(m => m.ruolo !== 'persona');
+    const stato = analizzaConvergenza(soloAgenti, lingua);
+    const convergenza = istruzioneConvergenza(stato, lingua);
     const giro = messaggi.filter(m => m.ruolo === 'persona').length - 1;
-    const convergenza = istruzioneConvergenza(giro);
 
     const risposte = [];
     const altriQuestoGiro = [];
     for (const c of compagni) {
+      // b.303 — SKIP ANTI-CONSENSO: chi non ha niente di nuovo da
+      // aggiungere tace, come al bar. Ma non lascia mai il giro vuoto.
+      if (risposte.length > 0 && puoSaltare(soloAgenti, ultimoUmano, giro)) continue;
       const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua });
       const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260, temperature: temperaturaLiberta(c.liberta) });
       if (!r.ok) {

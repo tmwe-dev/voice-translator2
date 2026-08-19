@@ -1,6 +1,6 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.302';
+export const APP_VERSION = 'b.303';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -8,7 +8,7 @@ export const APP_VERSION = 'b.302';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 541;
+export const PUSH = 542;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 

@@ -64,7 +64,7 @@ async function handlePost(req) {
       });
       const esito = await generaTesto({
         system, prompt: user, provider: c.provider, modello: c.modello,
-        userToken, maxTokens: t.round === 1 ? 420 : 320,
+        userToken, maxTokens: t.round === 1 ? 200 : 150,   // b.303: turni brevi e umani
         temperature: temperaturaLiberta(c.liberta),
       });
       if (!esito.ok) {
@@ -94,7 +94,7 @@ async function handlePost(req) {
       const esito = await generaTesto({
         system, prompt: user,
         provider: c.provider, modello: c.modello,
-        userToken, maxTokens: t.round === 1 ? 420 : 320,
+        userToken, maxTokens: t.round === 1 ? 200 : 150,   // b.303: turni brevi e umani
         temperature: temperaturaLiberta(c.liberta),
       });
       if (!esito.ok) {

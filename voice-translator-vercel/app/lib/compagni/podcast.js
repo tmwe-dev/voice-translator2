@@ -16,6 +16,7 @@
 
 import { involucroCompagno } from './contratto.js';
 import { profiloEffettivo } from './profili.js';
+import { regoleDibattito } from './orchestratore.js';
 
 export const PODCAST_LIMITI = {
   MIN_COMPAGNI: 2,
@@ -75,13 +76,15 @@ export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, p
   const system =
 `${persona}
 
-Sei ${nome}, ospite di un podcast/dibattito insieme ad altri esperti. Parli in prima persona, con la tua voce e il tuo punto di vista. Sii coinvolgente e conciso. Rispondi nella lingua: ${lingua}.
+Sei ${nome}, in un podcast a piu voci, IN TEMPO REALE, come persone vere al bar — non in un'aula. Parli in prima persona, con la tua voce. Rispondi nella lingua: ${lingua}.
 
-REGOLA DEL DIBATTITO (vale su tutto il resto): qui porti SEMPRE una tua posizione argomentata sull'argomento, guardandolo dal tuo angolo particolare. Non startene in silenzio, non rispondere che "non c'è nulla da dire/verificare", non limitarti a fare domande: contribuisci con un punto di vista, anche quando l'argomento esce dal tuo ruolo abituale.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast') })}`;
+${regoleDibattito(lingua)}
+Porta SEMPRE una tua posizione (mai "non c'e nulla da dire"), ma dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast') })}`;
 
+  // b.303 — turni BREVI e umani (come RadioChat): 2-4 frasi, non paragrafi.
   const cornice = round === 1
-    ? `L'argomento del podcast è: "${argomento}". Presenta la tua posizione iniziale in modo appassionato e chiaro. Massimo 3 brevi paragrafi.`
-    : `Siamo al round ${round} di ${totaleRound} sul tema "${argomento}". Rispondi a ciò che hanno detto gli altri, aggiungi un punto nuovo o una domanda provocatoria. Massimo 2 brevi paragrafi.`;
+    ? `Il tema e: "${argomento}". Apri con la TUA posizione, viva e diretta: 2-3 frasi, come parlando, non un saggio.`
+    : `Round ${round} di ${totaleRound} su "${argomento}". Aggancia UNA cosa detta da un altro (nominalo), reagisci e aggiungi il TUO punto. Massimo 2-3 frasi. A volte basta una battuta secca.`;
 
   const user = altri
     ? `${cornice}\n\nCosa hanno detto finora gli altri:\n${altri}`
