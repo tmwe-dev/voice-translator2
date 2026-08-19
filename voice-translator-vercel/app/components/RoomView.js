@@ -105,6 +105,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   // chiamata unicamente da /api/mondo). Le stanze da invito/QR/contatti
   // non ce l'hanno, e li le chiamate restano come sono sempre state.
   const stanzaMondo = !!roomInfo?.roomType && vaInVetrina(roomInfo.roomType);
+  // ═══ b.294 — LA PLANCIA A TRE STATI (richiesta di Luca) ═══
+  // 'libera' (default): la chat prende TUTTO lo spazio; in primo piano,
+  // fuori da ogni contenitore, due tondi: ⌨ al centro (semitrasparente,
+  // apre la scrittura col cursore gia nel campo) e il microfono a lato.
+  // 'scrivi': il campo di testo galleggia sopra i messaggi, a fuoco.
+  // 'parla': il microfono-eroe coi suoi strumenti, anche lui libero.
+  // La X (o l'invio) riporta alla pagina libera.
+  const [plancia, setPlancia] = useState('libera');
+  const campoTestoRef = useRef(null);
+  useEffect(() => {
+    if (plancia === 'scrivi') { try { campoTestoRef.current?.focus(); } catch { /* il campo non e ancora montato: il fuoco arriva al giro dopo */ } }
+  }, [plancia]);
   const isHost = isHostVerified !== undefined ? isHostVerified : roomInfo?.host === myName;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
   // b.157 — audit dei setting: canTalk era cablato a "solo l'host" in
@@ -603,9 +615,46 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           NESSUN handler toccato: stessi onClick, solo riorganizzati.
           PERCHE: "gli elementi in basso non sono allineati, non sono
           messi in modo funzionale" + template C ("il microfono e l'eroe"). */}
-      <div style={{display:'flex', flexDirection:'column', flexShrink:0,
-        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.20) 100%)',
-        borderTop:`1px solid ${S.colors.overlayBorder}`, padding:'8px 10px 10px'}}>
+      {/* ═══ INIZIO b.294 — la plancia e LIBERA: niente barra fissa ═══ */}
+      <style>{`@keyframes vtSaleDalBasso { from { transform: translateY(100%); opacity: 0.4; } to { transform: translateY(0); opacity: 1; } }`}</style>
+      {plancia === 'libera' && (
+        <div style={{ position: 'absolute', left: 0, right: 0,
+          bottom: 'max(18px, env(safe-area-inset-bottom))', zIndex: 40,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18,
+          pointerEvents: 'none' }}>
+          <button onClick={() => { vibrate(); setPlancia('scrivi'); }}
+            aria-label={L('typePlaceholder')}
+            style={{ pointerEvents: 'auto', width: 56, height: 56, borderRadius: 28,
+              border: '1px solid rgba(160,190,255,0.25)', cursor: 'pointer',
+              background: 'rgba(10,14,26,0.55)', backdropFilter: 'blur(10px)',
+              color: S.colors.textPrimary, fontSize: 24, display: 'flex',
+              alignItems: 'center', justifyContent: 'center',
+              WebkitTapHighlightColor: 'transparent' }}>
+            {'\u2328\uFE0E'}
+          </button>
+          <button onClick={() => { vibrate(); setPlancia('parla'); }}
+            aria-label={L('speakNow')}
+            style={{ pointerEvents: 'auto', width: 72, height: 72, borderRadius: 36,
+              border: 'none', cursor: 'pointer',
+              background: S.colors.btnGradient, color: '#fff', fontSize: 30,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 8px 28px rgba(91,140,255,0.45)',
+              WebkitTapHighlightColor: 'transparent' }}>
+            {'\u{1F3A4}'}
+          </button>
+        </div>
+      )}
+
+      {plancia === 'parla' && (
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
+        animation: 'vtSaleDalBasso 0.22s ease-out',
+        display:'flex', flexDirection:'column', flexShrink:0,
+        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%)',
+        padding:'8px 10px calc(10px + env(safe-area-inset-bottom))'}}>
+        <button onClick={() => setPlancia('libera')} aria-label={L('close')}
+          style={{ alignSelf: 'center', background: 'rgba(10,14,26,0.6)', border: '1px solid rgba(160,190,255,0.2)',
+            color: S.colors.textMuted, width: 34, height: 34, borderRadius: 17, cursor: 'pointer',
+            fontSize: 15, marginBottom: 6 }}>{'\u2715'}</button>
         <TalkControls
           L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
           canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
@@ -620,6 +669,19 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           roomSessionToken={roomSessionToken}
         />
 
+      </div>
+      )}
+
+      {plancia === 'scrivi' && (
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
+        animation: 'vtSaleDalBasso 0.22s ease-out',
+        display:'flex', flexDirection:'column',
+        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%)',
+        padding:'8px 10px calc(10px + env(safe-area-inset-bottom))'}}>
+        <button onClick={() => setPlancia('libera')} aria-label={L('close')}
+          style={{ alignSelf: 'center', background: 'rgba(10,14,26,0.6)', border: '1px solid rgba(160,190,255,0.2)',
+            color: S.colors.textMuted, width: 34, height: 34, borderRadius: 17, cursor: 'pointer',
+            fontSize: 15, marginBottom: 6 }}>{'\u2715'}</button>
         {/* Risposta citata — subito sopra la riga di testo, legata all'input */}
         {rispostaA && (
           <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 12,
@@ -643,6 +705,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           background:S.colors.inputBg, border:`1px solid ${S.colors.inputBorder}`,
           borderRadius:22, padding:'5px 6px 5px 14px'}}>
         <input
+          ref={campoTestoRef}
           aria-label={L('typePlaceholder')}
           style={{flex:1, background:'transparent', border:'none', color:S.colors.textPrimary,
             fontSize:14, outline:'none', fontFamily:FONT, minWidth:0}}
@@ -672,7 +735,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </button>
         </div>
       </div>
-      {/* ═══ FINE b.173 ═══ */}
+      )}
+      {/* ═══ FINE b.294 (gia b.173) ═══ */}
 
       {/* ═══ INIZIO v.154 — Contenuti chat (link condivisi) ═══
           COSA: striscia scorrevole subito sotto il campo di scrittura.
