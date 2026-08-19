@@ -331,12 +331,41 @@ export default function useInitializeApp({
   }, []);
 
   // ── Service worker registration ──
+  // ═══ INIZIO b.259 — l'applicazione si accorge da sola dei rilasci ═══
+  // TROVATO DAL VIVO, ed e costato UNA NOTTE: ogni correzione arrivava in
+  // produzione ma la scheda di Luca continuava a eseguire il bundle
+  // vecchio. Il controllo aggiornamenti girava UNA volta, al primo avvio:
+  // una scheda tenuta aperta (o una PWA installata) non veniva mai piu a
+  // sapere di un rilascio, e ogni collaudo inseguiva un fantasma di cache.
+  // Ora: si ricontrolla a ogni ritorno in primo piano e ogni 5 minuti; e
+  // quando il service worker nuovo prende il controllo, la pagina si
+  // ricarica da sola — MA solo se non sei in una stanza, perche un
+  // ricaricamento a meta conversazione butterebbe fuori dalla chiamata.
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').then(reg => {
         reg.update().catch(() => {});
+        // Ritorno in primo piano: il momento tipico in cui si riprende in
+        // mano un'app rimasta aperta da ore — e quello in cui il collaudo
+        // di stanotte trovava sempre la versione vecchia.
+        const ricontrolla = () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); };
+        document.addEventListener('visibilitychange', ricontrolla);
+        setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
       }).catch(err => console.error('SW registration failed:', err));
+
+      // Il service worker nuovo ha preso il controllo (skipWaiting e gia
+      // in sw.js): da questo istante HTML e pagina appartengono a due
+      // versioni diverse. Si ricarica subito, tranne in stanza.
+      let ricaricato = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (ricaricato) return;
+        ricaricato = true;
+        const inStanza = /room|speaker|taxi/.test(window.location.hash || '') ||
+          document.querySelector('[aria-label*="translation" i], [role="log"]');
+        if (!inStanza) window.location.reload();
+      });
     }
     try { initMonitoring(); } catch { /* il monitoraggio e un di piu: se non parte, l applicazione funziona uguale */ }
   }, []);
+  // ═══ FINE b.259 ═══
 }
