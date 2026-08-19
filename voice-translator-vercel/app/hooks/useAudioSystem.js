@@ -289,8 +289,19 @@ export default function useAudioSystem({
     const audioConstraints = liveModeRef.current
       ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
       : true;
+    // b.288 — anche QUESTA porta passa dal microfono unico: era l'ultima
+    // apertura diretta rimasta ("una sola porta" deve valere sempre, non
+    // quasi sempre). Ripiego sull'apertura diretta solo se il master non
+    // parte, come ovunque.
+    try {
+      const stream = await prendiVoce();
+      persistentMicRef.current = stream;
+      micDalMasterRef.current = true;
+      return stream;
+    } catch { /* master non disponibile: apertura diretta qui sotto */ }
     const stream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
     persistentMicRef.current = stream;
+    micDalMasterRef.current = false;
     return stream;
   }
 

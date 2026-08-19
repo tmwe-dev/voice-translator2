@@ -93,8 +93,12 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
         } catch { /* messaggio non nostro */ }
       },
       (nuovoStato) => {
-        aggiornaPartecipante(nome, { stato: nuovoStato });
-        if (nuovoStato === 'failed' || nuovoStato === 'closed') chiudiPeer(nome);
+        // b.288 — lo stato arriva come scheda { source, state }, non come
+        // parola: il confronto diretto non scattava MAI, e un partecipante
+        // caduto restava appeso nella griglia della stanza di gruppo.
+        const stato = typeof nuovoStato === 'object' ? nuovoStato.state : nuovoStato;
+        aggiornaPartecipante(nome, { stato });
+        if (stato === 'failed' || stato === 'closed') chiudiPeer(nome);
       },
       (traccia, flusso) => {
         // Il flusso di QUELLA persona finisce nel SUO riquadro: e la

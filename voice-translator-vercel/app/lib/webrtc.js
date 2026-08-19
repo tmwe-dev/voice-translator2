@@ -242,6 +242,12 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
           rendiVoce(voceInPrestito);
           voceInPrestito = null;
         }
+        // b.288 — il caso speculare: MICROFONO fallito ma TELECAMERA gia
+        // accesa. Prima la camera restava aperta (lucina accesa) mentre
+        // si passava al ripiego: ogni pezzo riuscito si spegne PRIMA.
+        if (esitoVideo.status === 'fulfilled' && esitoVideo.value) {
+          esitoVideo.value.getTracks().forEach(t => { try { t.stop(); } catch { /* traccia gia ferma: fermarla di nuovo non e un guasto */ } });
+        }
         throw (esitoVideo.status !== 'fulfilled' ? esitoVideo.reason : esitoVoce.reason);
       }
       const insieme = new MediaStream([...esitoVideo.value.getVideoTracks(), ...voceInPrestito.getAudioTracks()]);
