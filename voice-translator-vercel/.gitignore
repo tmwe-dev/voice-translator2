@@ -1,2 +1,8 @@
 node_modules/
 .next/
+
+# b.296 — le prove di collaudo locali non viaggiano col prodotto:
+# possono contenere codici di stanza, schermate e — mai piu, ma la
+# regola resta — materiale che non deve stare in un repo pubblico.
+_collaudo/
+_prove/
