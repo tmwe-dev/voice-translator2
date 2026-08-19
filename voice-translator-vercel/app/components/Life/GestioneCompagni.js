@@ -98,12 +98,43 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
 
   const campo = (v) => (e) => setBozza((b) => ({ ...b, [v]: e.target.value }));
 
+  // b.305 — RIMPICCIOLISCE l'avatar prima di salvarlo. IL BUG: l'immagine
+  // generata (1024px) come data URL supera 1 MB, ma il salvataggio ha un
+  // tetto di 256 KB sul corpo della richiesta (apiGuard): la POST veniva
+  // RIFIUTATA e il Compagno non si salvava, con errore generico. Ora si
+  // riduce a una miniatura 256px JPEG (~15-30 KB): entra nel limite e si
+  // vede benissimo come avatar tondo.
+  const rimpicciolisci = useCallback((dataUrl, lato = 256) => new Promise((res) => {
+    if (!dataUrl || !dataUrl.startsWith('data:') || dataUrl.length < 180000) return res(dataUrl);
+    try {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = lato; c.height = lato;
+        const ctx = c.getContext('2d');
+        // ritaglio quadrato centrato
+        const m = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, lato, lato);
+        res(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => res(dataUrl);
+      img.src = dataUrl;
+    } catch { res(dataUrl); }
+  }), []);
+
   const salva = useCallback(async () => {
     if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
     if (!bozza?.nome?.trim()) { setErrore(L('lifeNeedName')); return; }
     setSalvando(true); setErrore('');
     try {
-      await salvaMio(bozza, userToken);
+      // b.305 — rete di sicurezza: se l'avatar e ancora un data URL pesante
+      // (es. caricato da fuori), lo si rimpicciolisce prima di spedire.
+      let daSalvare = bozza;
+      if (bozza.avatar && bozza.avatar.startsWith('data:') && bozza.avatar.length > 180000) {
+        daSalvare = { ...bozza, avatar: await rimpicciolisci(bozza.avatar) };
+        setBozza(daSalvare);
+      }
+      await salvaMio(daSalvare, userToken);
       setBozza(null);
       if (onCambiato) await onCambiato();
     } catch (e) {
@@ -137,6 +168,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     return () => { vivo = false; };
   }, [apertoForm]);
 
+
   // Converte un URL (template /avatars/N.png o remoto) in data URL, per usarlo
   // come RIFERIMENTO nella rigenerazione (tap-to-restyle).
   const urlToDataUrl = useCallback(async (url) => {
@@ -159,9 +191,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
       const rif = riferimento ? await urlToDataUrl(riferimento) : null;
       const dataUrl = await generaAvatar({ nome, ruolo, genere, riferimentoDataUrl: rif, userToken });
       if (dataUrl) {
-        setBozza((b) => b ? { ...b, avatar: dataUrl } : b);
+        const leggero = await rimpicciolisci(dataUrl);
+        setBozza((b) => b ? { ...b, avatar: leggero } : b);
         setNGenImg((n) => n + 1);
-        salvaImmagine(dataUrl, { nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
+        salvaImmagine(leggero, { nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
       } else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
     } catch (e) {
       setErrImg(e.creditoEsaurito ? L('lifeNoCredit')

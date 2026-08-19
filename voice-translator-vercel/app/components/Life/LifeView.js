@@ -19,6 +19,7 @@ const IDEE_CORSO = [
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito } from '../../lib/compagni/cliente.js';
+import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
@@ -50,6 +51,12 @@ function LifeView({ onApriStanza }) {
   // b.232 — memoizzato: prima si ricreava a ogni render e vanificava il memo()
   // dei figli (AmicoChat, Tavolo…), che ri-renderizzavano sempre.
   const tutti = useMemo(() => [...COMPAGNI_PREDEFINITI, ...miei], [miei]);
+
+  // b.305 — TELECOMANDO AUDIO: un pulsante fluttuante che appare quando
+  // qualcosa sta suonando e ti segue mentre cambi scheda di Life. Pausa,
+  // riprendi, interrompi — sempre a portata.
+  const [audioStato, setAudioStato] = useState({ attivo: false, inPausa: false, etichetta: '' });
+  useEffect(() => ascoltaAudio(setAudioStato), []);
 
   const testoP = C.textPrimary || '#eef2ff';
   const muto = C.textMuted || 'rgba(242,244,247,0.6)';
@@ -124,6 +131,31 @@ function LifeView({ onApriStanza }) {
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
+
+    {/* b.305 — il telecomando audio: appare solo se qualcosa suona, resta
+        fisso in basso e ti segue mentre cambi scheda. */}
+    {audioStato.attivo && (
+      <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)',
+        bottom: 'max(16px, env(safe-area-inset-bottom))', zIndex: 200,
+        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px 8px 16px',
+        borderRadius: 999, background: 'rgba(8,11,22,0.94)', backdropFilter: 'blur(14px)',
+        border: `1px solid ${accent}55`, boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: testoP, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {'\u{1F509}'} {audioStato.etichetta || L('lifeAudio')}
+        </span>
+        <button onClick={() => audioStato.inPausa ? riprendiAudio() : pausaAudio()}
+          aria-label={audioStato.inPausa ? 'Riprendi' : 'Pausa'}
+          style={{ width: 42, height: 42, borderRadius: 21, border: 'none', cursor: 'pointer',
+            background: accent, color: '#04121c', fontSize: 18, fontWeight: 900 }}>
+          {audioStato.inPausa ? '\u25B6' : '\u23F8'}
+        </button>
+        <button onClick={() => fermaAudio()} aria-label="Interrompi"
+          style={{ width: 42, height: 42, borderRadius: 21, cursor: 'pointer',
+            background: 'transparent', border: `1px solid ${testoP}44`, color: testoP, fontSize: 15 }}>
+          {'\u23F9'}
+        </button>
+      </div>
+    )}
     </div>
   );
 }
@@ -199,7 +231,7 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
         lista.push(d.turno);
         setCopioni([...lista]);
         setAttuale(lista.length - 1);
-        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken }, (a) => { audioRef.current = a; });
+        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken }, (a) => { audioRef.current = a; registraAudio(a, 'Podcast'); });
       }
       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
     } catch (e) {
@@ -435,7 +467,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         linguaParlata: linguaCorso,
         linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
         userToken,
-      }, (a) => { audioLezioneRef.current = a; });
+      }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Lezione'); });
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
     finally { setAscoltando(false); }
   }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken]);
