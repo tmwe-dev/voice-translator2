@@ -195,9 +195,17 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
   if (opts.audio) {
     try {
       const { prendiVoce } = await import('./microfonoMaster.js');
-      const voce = await prendiVoce();
-      if (!opts.video) return voce;
-      const video = await navigator.mediaDevices.getUserMedia({ video: constraints.video });
+      if (!opts.video) return await prendiVoce();
+      // b.279 — voce e telecamera si aprono INSIEME, non in fila.
+      // b.277 le aveva messe una dopo l'altra e la chiamata, prima
+      // immediata, impiegava secondi a partire (visto da Luca dal vivo):
+      // due attese sommate invece di una. Ora corrono in parallelo e si
+      // aspetta solo la piu lenta — com'era prima, ma con l'hardware
+      // del microfono aperto una volta sola.
+      const [voce, video] = await Promise.all([
+        prendiVoce(),
+        navigator.mediaDevices.getUserMedia({ video: constraints.video }),
+      ]);
       return new MediaStream([...video.getVideoTracks(), ...voce.getAudioTracks()]);
     } catch (e) {
       log.warn('microfono unico non disponibile, apertura diretta:', e?.message || e);
