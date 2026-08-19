@@ -34,6 +34,8 @@ export default function useAudioSystem({
   getEffectiveToken
 }) {
   const [audioReady, setAudioReady] = useState(false);
+  // b.273 — una sola apertura del microfono per volta (vedi requestMicEarly).
+  const micInCorsoRef = useRef(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [playingMsgId, setPlayingMsgId] = useState(null);
 
@@ -309,12 +311,23 @@ export default function useAudioSystem({
 
   function requestMicEarly() {
     if (persistentMicRef.current) return;
+    // b.273 — RITARDO NELLA TRADUZIONE, colpa di b.271.
+    // Da b.271 il microfono si chiede a ogni sblocco audio. Ma qui
+    // mancava la guardia sulla richiesta GIA IN CORSO: finche il
+    // permesso non e concesso, `persistentMicRef` resta vuoto, quindi
+    // ogni tocco faceva partire un'altra apertura del microfono. Piu
+    // aperture in parallelo sullo stesso dispositivo si mettono in fila
+    // e rallentano tutto quello che viene dopo — la voce compresa.
+    // Ora se ne apre una sola per volta.
+    if (micInCorsoRef.current) return;
+    micInCorsoRef.current = true;
     const audioConstraints = liveModeRef.current
       ? { noiseSuppression: true, echoCancellation: true, autoGainControl: true }
       : true;
     navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
       .then(stream => { persistentMicRef.current = stream; })
-      .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e));
+      .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e))
+      .finally(() => { micInCorsoRef.current = false; });
   }
 
   // =============================================

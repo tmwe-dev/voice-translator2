@@ -225,7 +225,16 @@ export function rilevaPiattaforma() {
 
 /** Vero se in questa chiamata conviene mettere H.264 davanti a tutto. */
 export function serveH264(miaPiattaforma, piattaformaPartner) {
-  return miaPiattaforma === 'apple' || piattaformaPartner === 'apple';
+  // b.273 — PRIMA ERA "se uno dei due e Apple, lo chiedono TUTTI E DUE",
+  // e su Android la chiamata ha smesso di partire (Luca, dal vivo).
+  // Riordinare i codec su un dispositivo che non ne ha bisogno e un
+  // rischio senza guadagno: se il profilo H.264 messo davanti non e
+  // quello che quel telefono sa trattare, la trattativa si incaglia.
+  // Basta che la preferenza la esprima il lato APPLE: e' lui ad avere il
+  // vincolo hardware, e chi sta di fronte accetta H.264 comunque.
+  // Su Android non si tocca piu niente: vale il comportamento di sempre.
+  void piattaformaPartner;
+  return miaPiattaforma === 'apple';
 }
 
 /**
