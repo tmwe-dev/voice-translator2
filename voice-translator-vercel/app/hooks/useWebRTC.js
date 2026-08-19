@@ -517,6 +517,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
           setLocalStream(stream);
           return stream;
         } catch (e) { console.warn('[WebRTC] audio-only fallback failed:', e.message); }
+        // b.285 — IL RIPIEGO NON E PIU MUTO. Prima, se la telecamera non
+        // si apriva (permesso negato, altra app che la tiene), si
+        // proseguiva in solo-audio SENZA DIRLO: l'utente si credeva in
+        // video e l'altro non lo vedeva — trovato da Luca dal vivo.
+        try { const { toast } = await import('../lib/avvisi.js'); const { tFuori } = await import('../lib/i18n.js'); toast.warning(tFuori('cameraPermHint')); } catch { /* avviso non consegnabile: la chiamata prosegue comunque */ }
       }
     }
     return null;
@@ -691,6 +696,12 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         pcRef.current = newPc;
         newPc.ondatachannel = (event) => setupDC(event.channel);
         const offerSdp = JSON.parse(data);
+        // b.285 — SE LA CHIAMATA E VIDEO, LA CAMERA SI ACCENDE DA SOLA
+        // ANCHE PER CHI RISPONDE (ordine di Luca: chi viene invitato in
+        // video non deve accendersela a mano). Il tipo lo dice il banner
+        // accettato (callTypeRef); il controllo sull'offerta resta come
+        // seconda voce.
+        const videochiamataAccettata = callTypeRef.current === 'video';
         // b.272 — non basta che l'offerta NOMINI il video: se chi chiama
         // non e' riuscito ad accendere la telecamera, il suo canale video
         // e' di sola ricezione. Prima bastava la parola "video" e il
@@ -698,7 +709,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         // l'altro non si vedeva: si finiva in video da soli.
         const bloccoVideo = (offerSdp.sdp || '').split(/^m=/m).find(b => b.startsWith('video')) || '';
         const callerHasVideo = !!bloccoVideo && /a=(sendrecv|sendonly)/.test(bloccoVideo);
-        const stream = await getMediaWithFallback(callerHasVideo);
+        const stream = await getMediaWithFallback(videochiamataAccettata || callerHasVideo);
         if (stream) sendersRef.current = addMediaTracks(newPc, stream);
         collectIceCandidates(newPc, (candidateStr) => {
           sendSignal('ice-candidate', candidateStr).catch(() => {});

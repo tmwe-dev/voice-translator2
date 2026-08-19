@@ -553,6 +553,34 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           })()}
         </div>
 
+        {/* ═══ b.285 — QUANDO NON TI VEDONO O NON TI SENTONO, C'E UN
+            CARTELLO, non un'icona da interpretare. Regola di Luca: un
+            bambino o un anziano devono capire al volo. Il cartello e
+            anche il pulsante: lo tocchi e il problema si risolve. */}
+        {(!webrtc.videoEnabled || !webrtc.audioEnabled) && (
+          <div style={{ position: 'absolute', top: 'max(58px, env(safe-area-inset-top))', left: 0, right: 0,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, zIndex: 7, pointerEvents: 'none' }}>
+            {!webrtc.videoEnabled && (
+              <button onClick={() => webrtc.toggleVideo()}
+                style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '9px 16px', borderRadius: 999, border: '1px solid rgba(255,196,77,0.5)',
+                  background: 'rgba(120,72,0,0.85)', color: '#ffe9c2', fontSize: 13, fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(10px)' }}>
+                <IconCameraOff size={16}/> {L('cameraOffTap')}
+              </button>
+            )}
+            {!webrtc.audioEnabled && (
+              <button onClick={() => webrtc.toggleAudio()}
+                style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '9px 16px', borderRadius: 999, border: '1px solid rgba(239,68,68,0.55)',
+                  background: 'rgba(110,15,15,0.88)', color: '#ffd9d9', fontSize: 13, fontWeight: 800,
+                  cursor: 'pointer', fontFamily: 'inherit', backdropFilter: 'blur(10px)' }}>
+                <IconVolumeOff size={16}/> {L('micOffWarn')}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ═══ INIZIO b.284 — BARRA LATERALE + BARRA BASSA ESSENZIALE ═══
             COSA: i sei comandi (camera, micro, traduci, sottotitoli,
             gira, riduci) stanno in una COLONNA di sole icone sul bordo
