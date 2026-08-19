@@ -581,6 +581,66 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           </div>
         )}
 
+        {/* ═══ INIZIO b.286 — IL BORDO DESTRO: COME SENTI E COME LEGGI ═══
+            Ordine di Luca: tre interruttori (testo si/no, voce tradotta
+            si/no, traduzione si/no) e DUE volumi sempre a vista — voce
+            dell'ospite e voce del traduttore — sul bordo destro, al
+            centro. L'utente decide a piacere quanto sentire l'originale
+            e quanto la traduzione. */}
+        <div style={{
+          position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
+          zIndex: 6, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center',
+          padding: '10px 8px', borderRadius: 18,
+          background: 'rgba(5,7,15,0.55)', backdropFilter: 'blur(14px)',
+          border: '1px solid rgba(160,190,255,0.14)', width: 96,
+        }}>
+          <ControlBtn
+            onClick={() => setMostraTesto(v => !v)}
+            active={mostraTesto}
+            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
+            label={mostraTesto ? 'Testo' : 'No testo'}
+            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={44}
+          />
+          <ControlBtn
+            onClick={() => {
+              if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); }
+              else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
+            }}
+            active={volTTS > 0.01}
+            icon={volTTS > 0.01 ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
+            label={volTTS > 0.01 ? 'Voce' : 'No voce'}
+            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={44}
+          />
+          {setInterpreterActive && (
+            <ControlBtn
+              onClick={() => {
+                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                setInterpreterActive(!interpreterActive);
+              }}
+              active={interpreterActive && !stanzaDiretta}
+              icon={<IconGlobe size={18}/>}
+              label={stanzaDiretta ? 'Diretta' : interpreterActive ? 'Traduce' : 'Traduci'}
+              color={stanzaDiretta ? '#8b93a7' : '#3ddc84'}
+              activeColor="rgba(61,220,132,0.18)" size={44}
+            />
+          )}
+          {/* volume OSPITE (voce originale) */}
+          <div style={{ width: '100%' }}>
+            <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(238,242,255,0.55)', textAlign: 'center', marginBottom: 3 }}>OSPITE</div>
+            <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
+              onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
+              aria-label={L('partnerVolume')} style={{ width: '100%', accentColor: '#38e1ff', height: 3 }} />
+          </div>
+          {/* volume TRADUTTORE (voce tradotta) */}
+          <div style={{ width: '100%' }}>
+            <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(238,242,255,0.55)', textAlign: 'center', marginBottom: 3 }}>TRADUTTORE</div>
+            <input type="range" min="0" max="1" step="0.05" value={volTTS}
+              onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
+              aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: '#3ddc84', height: 3 }} />
+          </div>
+        </div>
+        {/* ═══ FINE b.286 ═══ */}
+
         {/* ═══ INIZIO b.284 — BARRA LATERALE + BARRA BASSA ESSENZIALE ═══
             COSA: i sei comandi (camera, micro, traduci, sottotitoli,
             gira, riduci) stanno in una COLONNA di sole icone sul bordo
@@ -611,26 +671,8 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
-          {setInterpreterActive && (
-            <ControlBtn
-              onClick={() => {
-                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
-                setInterpreterActive(!interpreterActive);
-              }}
-              active={interpreterActive && !stanzaDiretta}
-              icon={<IconGlobe size={20}/>}
-              label={stanzaDiretta ? 'Diretta' : interpreterActive ? 'Traduce' : 'Traduci'}
-              color={stanzaDiretta ? '#8b93a7' : '#3ddc84'}
-              activeColor="rgba(61,220,132,0.18)" size={46}
-            />
-          )}
-          <ControlBtn
-            onClick={() => setMostraTesto(v => !v)}
-            active={mostraTesto}
-            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
-            label={mostraTesto ? 'Testo' : 'No testo'}
-            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
-          />
+          {/* b.286 — CC e Traduci vivono ora sul bordo DESTRO, con i
+              volumi: a sinistra resta solo il TUO segnale. */}
           <ControlBtn
             onClick={() => webrtc.flipCamera()}
             active={false}

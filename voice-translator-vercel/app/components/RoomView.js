@@ -163,6 +163,24 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     }
   }, [webrtc?.webrtcState]);
 
+  // ═══ b.286 — IL DEFAULT E "TRADUCI E ASCOLTA" (ordine di Luca) ═══
+  // Appena la chiamata si allaccia, la traduzione (voce + testo) parte
+  // DA SOLA: l'utente semmai la spegne, non deve accenderla. Si accende
+  // UNA volta per chiamata (al passaggio a "connesso"): se poi la
+  // spegne a mano, nessuno gliela riaccende sotto le dita. Nelle Stanze
+  // Dirette non parte: la voce li non passa dai server, per promessa.
+  const autoTraduzioneFattaRef = useRef(false);
+  useEffect(() => {
+    const connesso = !!webrtc?.webrtcConnected;
+    if (!connesso) { autoTraduzioneFattaRef.current = false; return; }
+    if (autoTraduzioneFattaRef.current) return;
+    autoTraduzioneFattaRef.current = true;
+    if (!roomInfo?.diretta && setInterpreterActive && !interpreterActive) {
+      setInterpreterActive(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [webrtc?.webrtcConnected]);
+
   // Interpreter start/stop
   useEffect(() => {
     if (!interpreter) return;
