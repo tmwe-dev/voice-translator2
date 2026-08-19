@@ -3,6 +3,11 @@ import { memo, useState, useMemo, useEffect } from 'react';
 import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
+// b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
+// scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella
+// vecchia. `toast` e la coda avvisi (lib/avvisi.js), non il disegno.
+import { t, mapLang } from '../lib/i18n.js';
+import { toast } from '../lib/avvisi.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import { BatteryPillSlot } from './BatteryPill.js';
@@ -260,7 +265,46 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                           cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
                         }}
                         onClick={() => {
-                          vibrate(); savePrefs({ ...prefs, lang: l.code }); setShowLangPicker(false);
+                          vibrate();
+                          // ═══ INIZIO b.254 — cambiare lingua cambia l'applicazione ═══
+                          // Luca, dal vivo, due volte: scelto Dansk (e poi
+                          // Cestina) i menu restavano in italiano. La
+                          // separazione fra lingua parlata e lingua dei menu
+                          // (b.136) resta giusta, ma il valore predefinito
+                          // era CONGELATO alla scelta del paese iniziale e
+                          // non si muoveva mai piu: chi non sapeva di dover
+                          // scavare in Impostazioni non poteva cambiare i
+                          // menu nemmeno volendo.
+                          //
+                          // Ora la lingua dei menu SEGUE quella che dichiari
+                          // di parlare — mappata sulle 15 in cui l'interfaccia
+                          // esiste davvero — a meno che tu non l'abbia scelta
+                          // a mano: in quel caso comanda la tua scelta, e non
+                          // te la si tocca (uiLangScelta, vedi SettingsView).
+                          //
+                          // Il caso che b.136 proteggeva — chi mette "en" per
+                          // avere le TRADUZIONI in inglese e non vuole i menu
+                          // in inglese — non resta scoperto: l'avviso qui
+                          // sotto lo rimette a posto in un tocco, e da quel
+                          // momento la sua scelta diventa esplicita.
+                          const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
+                          const dopo = mapLang(l.code);
+                          const nuove = prefs.uiLangScelta
+                            ? { ...prefs, lang: l.code }
+                            : { ...prefs, lang: l.code, uiLang: dopo };
+                          savePrefs(nuove);
+                          if (!prefs.uiLangScelta && dopo !== prima) {
+                            const nomePrima = getLang(prima)?.name || prima;
+                            toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
+                              duration: 8000,
+                              action: {
+                                label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
+                                onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
+                              },
+                            });
+                          }
+                          // ═══ FINE b.254 ═══
+                          setShowLangPicker(false);
                         }}
                       >
                         <span style={{ fontSize: 18 }}>{l.flag}</span>

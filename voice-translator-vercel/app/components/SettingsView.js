@@ -177,7 +177,9 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 return (
                   <Scelta c={c} key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
                     titolo={`${l.flag}  ${l.name}`}
-                    onClick={() => { savePrefs({ ...prefs, uiLang: codice }); setApertoInterfaccia(false); }} />
+                    onClick={() => { /* b.254 — scegliendola QUI la scelta diventa esplicita: da
+                       questo momento la home non la cambia piu da sola. */
+                      savePrefs({ ...prefs, uiLang: codice, uiLangScelta: true }); setApertoInterfaccia(false); }} />
                 );
               })}
             </div>
