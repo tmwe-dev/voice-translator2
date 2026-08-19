@@ -25,7 +25,22 @@ export default function useInitializeApp({
       const saved = localStorage.getItem('vt-prefs');
       const savedToken = localStorage.getItem('vt-token');
       const urlParams = new URLSearchParams(window.location.search);
-      const roomParam = urlParams.get('room');
+      // ═══ b.269 — L'INVITO SOPRAVVIVE ALLA PULIZIA DELL'INDIRIZZO ═══
+      // Trovato dal vivo: chi apre un link di invito vede per un istante
+      // "Sto entrando nella conversazione..." e finisce sulla home. Il
+      // server accetta l'ingresso (l'host lo vede arrivare), ma lo
+      // schermo dell'ospite torna indietro.
+      // Il motivo: qui sotto l'indirizzo viene ripulito subito
+      // (replaceState) per non lasciare il codice stanza nella barra. Se
+      // questa inizializzazione riparte una seconda volta — e riparte —
+      // il codice nell'indirizzo non c'e piu, le preferenze intanto sono
+      // state salvate, e la scelta della schermata iniziale finisce
+      // dritta sulla home, cancellando l'ingresso in corso.
+      // Ora il codice dell'invito viene messo da parte per la sessione:
+      // finche l'ingresso non e andato a buon fine, l'invito resta.
+      const roomParam = urlParams.get('room') || (() => {
+        try { return sessionStorage.getItem('vt-invito-in-corso'); } catch { return null; }
+      })();
       const paymentStatus = urlParams.get('payment');
       const paymentCredits = urlParams.get('credits');
 
@@ -142,6 +157,7 @@ export default function useInitializeApp({
       // piu niente.
       if (roomParam) {
         setJoinCode(roomParam.toUpperCase());
+        try { sessionStorage.setItem('vt-invito-in-corso', roomParam.toUpperCase()); } catch { /* niente memoria di sessione: si prosegue */ }
         window.history.replaceState({}, '', window.location.pathname);
 
         {

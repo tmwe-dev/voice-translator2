@@ -742,6 +742,7 @@ function HomeInner() {
         body: JSON.stringify(endBody) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
+    try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
     convContext.resetContext(); // Clear conversation knowledge base
     // b.263 — vedi leaveRoomTemporary: i diritti della stanza si rendono.
     auth.roomTierOverrideRef.current = null;
@@ -772,6 +773,9 @@ function HomeInner() {
     } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
     roomPolling.stopPolling();
     roomPolling.leaveRoom();
+    // b.269 — uscendo, l'invito smette di valere: senza questo un
+    // ricaricamento riporterebbe dentro una stanza appena lasciata.
+    try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
     // b.263 — fuori dalla stanza i diritti tornano i PROPRI: l'ospite di
     // un host PRO non si porta via ElevenLabs (l'addebito era dell'host).
     auth.roomTierOverrideRef.current = null;
@@ -1056,6 +1060,9 @@ function HomeInner() {
       if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
       else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
       else { auth.setIsTrial(false); auth.setIsTopPro(false); }
+      // b.269 — dentro davvero: l'invito ha finito il suo lavoro e si
+      // toglie, cosi un ricaricamento non prova a rientrare da solo.
+      try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
       setView('room');
       setStatus('');
     } catch (e) { setStatus('Error: ' + e.message); }
