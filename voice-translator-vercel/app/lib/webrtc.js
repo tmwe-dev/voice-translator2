@@ -12,30 +12,24 @@ const log = createLogger('webrtc');
 
 // ICE servers: STUN for NAT traversal + TURN for relay fallback
 // Custom TURN via env vars: NEXT_PUBLIC_TURN_URL, NEXT_PUBLIC_TURN_USER, NEXT_PUBLIC_TURN_PASS
+// ═══ b.281 — IL PONTE GRATUITO ERA MORTO, E LO SPEDIVAMO AI TELEFONI ═══
+// Scoperto dalla scatola nera (chiamata verso Android: "strada: NESSUNA")
+// e verificato dal DNS: openrelay.metered.ca NON ESISTE PIU — il progetto
+// del relay pubblico gratuito e stato chiuso. L'app consegnava ai telefoni
+// QUATTRO indirizzi morti (1 STUN + 3 TURN): ogni chiamata perdeva tempo a
+// bussare a porte inesistenti, e il "ponte" per le reti difficili non
+// c'era proprio.
+// Ora restano solo ponti VIVI e gratuiti, verificati: gli STUN di Google
+// e quello di Cloudflare (pubblico, senza account). Bastano per tutte le
+// reti in cui i telefoni possono vedersi (stessa rete, wi-fi domestici,
+// la maggior parte degli operatori). NON coprono il caso peggiore — due
+// reti mobili chiuse — per quello serve un relay: o uno proprio su un
+// server gia nostro (coturn, software libero), o le variabili
+// NEXT_PUBLIC_TURN_* qui sotto.
 const ICE_SERVERS = [
-  // Google STUN servers (fast, reliable)
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
-  { urls: 'stun:stun2.l.google.com:19302' },
-  // Open Relay STUN
-  { urls: 'stun:openrelay.metered.ca:80' },
-  // ── TURN servers (relay for ~15-20% of users behind symmetric NAT) ──
-  // Metered.ca Open Relay Project — free public TURN (20GB/month)
-  {
-    urls: 'turn:openrelay.metered.ca:80',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
-  {
-    urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-    username: 'openrelayproject',
-    credential: 'openrelayproject',
-  },
+  { urls: 'stun:stun.cloudflare.com:3478' },
 ];
 
 // ═══════════════════════════════════════════════
@@ -86,9 +80,9 @@ if (typeof window !== 'undefined') {
   } else {
     // Non e un dettaglio da scoprire in produzione: si dice subito.
     log.warn(
-      'Nessun TURN privato configurato (NEXT_PUBLIC_TURN_URL). ' +
-      'Si usa il relay pubblico gratuito: va bene per le prove, non per gli utenti veri. ' +
-      'Vede chi parla con chi, non ha quote garantite ne SLA.'
+      'Nessun relay configurato (NEXT_PUBLIC_TURN_URL): niente ponte. ' +
+      'Le chiamate fra reti che non si vedono direttamente (doppia rete mobile) non si allacceranno. ' +
+      'Il vecchio relay pubblico gratuito non esiste piu: b.281.'
     );
   }
 }
