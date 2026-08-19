@@ -374,6 +374,31 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
   }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L, contenuti]);
 
+  // b.304 — la lezione successiva nell'elenco, per il tasto "Prosegui".
+  const prossimaLezione = (() => {
+    if (!aperta?.lezione || !lezioni.length) return null;
+    const i = lezioni.findIndex(l => l.titolo === aperta.lezione.titolo);
+    return (i >= 0 && i < lezioni.length - 1) ? lezioni[i + 1] : null;
+  })();
+
+  // b.304 — APPROFONDISCI su richiesta: cerca dalla community, ma con la
+  // MODALITA tarata sul livello — bambino/base -> video semplici;
+  // universitario/ricercatore -> documenti profondi (link); altrimenti
+  // quello scelto alla creazione.
+  const [genAppr, setGenAppr] = useState(false);
+  const approfondisci = useCallback(async () => {
+    if (!aperta || genAppr) return;
+    setGenAppr(true);
+    const perLivello = (livello === 'bambino' || livello === 'base') ? 'video'
+      : (livello === 'universitario' || livello === 'ricercatore') ? 'link'
+      : (contenuti && contenuti !== 'nessuno' && contenuti !== 'disegni' ? contenuti : 'link');
+    try {
+      const a = await arricchisciLezione({ modalita: perLivello, titolo: aperta.lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso });
+      if (a) setArricchimento(a);
+    } catch { /* la community non risponde: la lezione resta com'e */ }
+    finally { setGenAppr(false); }
+  }, [aperta, genAppr, livello, contenuti, argomento, linguaCorso]);
+
   const quiz = useCallback(async () => {
     if (!aperta) return;
     setLavoro(true);
@@ -529,8 +554,24 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
           </div>
         )}
+        {/* b.304 — dopo la lezione: APPROFONDISCI o PROSEGUI. Approfondisci
+            cerca video/articoli dalla community TARATI sul livello (bambino
+            -> semplici; universitario -> documenti profondi). Prosegui apre
+            la lezione successiva. Poi, quando vuole, il quiz. */}
+        <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={approfondisci} disabled={genAppr}
+            style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: genAppr ? 0.6 : 1 }}>
+            {genAppr ? '…' : `🔎 ${tt('lifeDeepen', 'Approfondisci')}`}
+          </button>
+          {prossimaLezione && (
+            <button onClick={() => apri(prossimaLezione)} disabled={lavoro}
+              style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+              {tt('lifeContinue', 'Prosegui')} →
+            </button>
+          )}
+        </div>
         {!aperta.domande
-          ? <button onClick={quiz} disabled={lavoro} style={{ marginTop: 16, padding: 12, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+          ? <button onClick={quiz} disabled={lavoro} style={{ marginTop: 10, padding: 12, borderRadius: 12, border: 'none', background: card, color: testoP, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, width: '100%' }}>
               {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
             </button>
           : <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -49,17 +49,19 @@ describe('la responsabilità in più: far venire voglia di continuare', () => {
 });
 
 describe('la lezione ha un ritmo, non uno schema', () => {
-  it('aggancia, fa fare, collega al reale, lascia voglia del passo dopo', () => {
-    expect(RITMO_LEZIONE).toMatch(/aggancia/i);
-    expect(RITMO_LEZIONE).toMatch(/fai FARE qualcosa/);
-    expect(RITMO_LEZIONE).toMatch(/mondo reale/);
-    expect(RITMO_LEZIONE).toMatch(/voglia del passo dopo/);
+  it('e VOCE DA DOCUMENTARIO: mostra, prosa fluida, niente domande nel vuoto (b.304)', () => {
+    expect(RITMO_LEZIONE).toMatch(/DOCUMENTARIO/i);
+    expect(RITMO_LEZIONE).toMatch(/PROSA CONTINUA|fluid/i);
+    expect(RITMO_LEZIONE).toMatch(/MOSTRA/);
+    expect(RITMO_LEZIONE).toMatch(/MAI domande buttate|nel vuoto/i);
+    expect(RITMO_LEZIONE).toMatch(/NON rileggere il titolo/i);
   });
 
   it('e la vecchia struttura da dispensa non c\'è più', () => {
     const { prompt } = promptLezione({ argomento: 'Storia', lezione: { titolo: 'Roma' } });
     expect(prompt).not.toMatch(/una breve introduzione, il corpo con esempi concreti/);
-    expect(prompt).toMatch(/RITMO/);
+    // b.304 — il ritmo e ora la VOCE DA DOCUMENTARIO (prosa fluida che mostra).
+    expect(prompt).toMatch(/DOCUMENTARIO|MOSTRA|PROSA CONTINUA/);
   });
 });
 

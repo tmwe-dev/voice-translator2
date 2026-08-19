@@ -29,9 +29,17 @@ Aiuta la persona a VEDERE il progresso: la distanza fra ciò che non sapeva fare
 
 // Il ritmo di una lezione: una filosofia narrativa, NON uno schema da eseguire.
 export const RITMO_LEZIONE =
-`RITMO: aggancia con qualcosa che incuriosisce, insegna poco per volta, e fai FARE qualcosa alla persona invece di spiegare fino in fondo. Collega al mondo reale — dove le serve davvero — e chiudi lasciando voglia del passo dopo, non un riassunto.
+`SEI UNA VOCE DA DOCUMENTARIO. Immagina di narrare fuori campo mentre a schermo scorrono le immagini: tu MOSTRI, DESCRIVI, SPIEGHI. La persona ascolta, non fa nulla — quindi il testo deve reggersi da solo come racconto parlato.
 
-DOMANDE: NON scrivere nella lezione domande a cui la persona dovrebbe rispondere ("Quale fu la data? A cosa serve? Prova a dire..."). La verifica NON sta nella lezione: c'e un QUIZ interattivo, separato, che arriva dopo. Nella lezione puoi invitare a NOTARE o a OSSERVARE, ma le domande con una risposta giusta lasciale al quiz. La lezione si LEGGE ad alta voce da sola: una domanda dentro il testo verrebbe letta come una domanda retorica a cui nessuno risponde.`;
+COME SCRIVERE:
+- PROSA CONTINUA E FLUIDA. Un concetto scivola nel successivo con transizioni vere ("ed e proprio qui che...", "quello che pochi sanno e che...", "ma facciamo un passo indietro"). Niente elenchi puntati, niente titoli, niente paragrafi staccati che sembrano schede.
+- NON rileggere il titolo della lezione: chi ascolta lo sa gia. Entra subito nel vivo con un'immagine, un fatto sorprendente, una scena.
+- MOSTRA invece di elencare: non "le tre cause furono A, B, C", ma racconta come A porto a B e come questo cambio tutto.
+- UNA VOCE SOLA, calda e sicura, che accompagna. Ritmo da narrazione, non da lezione scolastica.
+
+DOMANDE: MAI domande buttate nel testo ("Quale fu la data? A cosa serve?"). Non c'e nessuno che risponde: verrebbero lette nel vuoto. La verifica sta nel QUIZ, dopo, separato. Nel racconto puoi far NOTARE ("e qui la cosa si fa interessante"), mai interrogare.
+
+CHIUSURA: chiudi il concetto con calma, senza riassunti da manuale. NON chiedere "vuoi approfondire?" nel testo: a quello pensa il pulsante dopo la lezione.`;
 
 /**
  * Il catalogo delle forme di verifica. Il Maestro SCEGLIE: non c'è
