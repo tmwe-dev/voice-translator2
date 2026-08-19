@@ -5,6 +5,19 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
+
+// b.300 — idee per riempire il campo: un tocco mette una frase gia
+// dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
+const IDEE_CORSO = [
+  { ic: '🔢', et: 'Matematica', q: 'Matematica di base: numeri, operazioni ed equazioni semplici' },
+  { ic: '🌍', et: 'Storia', q: 'Storia: dai secoli antichi ai giorni nostri, con date ed eventi chiave' },
+  { ic: '🎵', et: 'Musica', q: 'Storia della musica e dei grandi compositori, con esempi da ascoltare' },
+  { ic: '🗣️', et: 'Inglese', q: 'Inglese per iniziare a parlare: frasi utili di ogni giorno' },
+  { ic: '🔬', et: 'Scienze', q: 'Scienze: il corpo umano, la natura e come funziona il mondo' },
+  { ic: '🍳', et: 'Cucina', q: 'Cucina: ricette semplici passo dopo passo' },
+  { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
+  { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
+];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito } from '../../lib/compagni/cliente.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
@@ -52,8 +65,13 @@ function LifeView({ onApriStanza }) {
     // più alto dello schermo, veniva tagliato e il tasto Salva restava
     // irraggiungibile. Ora il contenitore è alto quanto lo schermo e
     // scorre internamente. Lo sfondo NON cambia (resta C.bg dietro il velo).
-    <div style={{ height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: C.bg || '#0a0e1a', color: testoP, fontFamily: FONT, padding: '14px 14px 90px' }}>
+    <div style={{ height: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: C.bg || '#0a0e1a', color: testoP, fontFamily: FONT }}>
     {/* ── FINE b.205 ── */}
+    {/* b.300 — REGOLA DI SISTEMA (Luca): mai a tutta larghezza. Il
+        contenuto vive in una colonna centrata, larga al massimo 640, con
+        aria ai lati. Se serve piu spazio si sfrutta l'altezza, non si
+        allarga oltre. Vale per tutte le pagine di Life. */}
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px 90px', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
@@ -106,6 +124,7 @@ function LifeView({ onApriStanza }) {
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+    </div>
     </div>
   );
 }
@@ -281,6 +300,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [illustrazione, setIllustrazione] = useState(null);
   const [genIll, setGenIll] = useState(false);
   const tutor = compagni.find((c) => c.id === docenteId) || null;
+  // b.300 — indice del livello per la barra
+  const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
@@ -578,13 +599,33 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeLearnPh')}
         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 12 }} />
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-        <select value={categoria} onChange={(e) => setCategoria(e.target.value)} style={stileSelect}>
-          {CATEGORIE.map((c) => <option key={c.id} value={c.id}>{c.icona} {c.etichetta}</option>)}
-        </select>
-        <select value={livello} onChange={(e) => { setLivello(e.target.value); setContenuti(defaultContenuti(e.target.value)); }} style={stileSelect}>
-          {LIVELLI.map((l) => <option key={l.id} value={l.id}>{l.icona} {l.etichetta}</option>)}
-        </select>
+      {/* b.300 — via il dropdown "categoria": basta il campo di ricerca.
+          Sotto, BADGE di idee per riempirlo — toccandone uno si aggiunge
+          un dettaglio al testo (es. Matematica -> "con equazioni"). */}
+      {!argomento.trim() && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+          {IDEE_CORSO.map((idea) => (
+            <button key={idea.q} onClick={() => setArgomento(idea.q)}
+              style={{ padding: '7px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                fontSize: 13, fontWeight: 600, background: card, color: testoP, border: bordo }}>
+              {idea.ic} {idea.et}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* b.300 — il livello e una BARRA, non un menu: si trascina, si vede
+          subito dove sei. La parola e l'eta sopra, chiare. */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: testoP, opacity: 0.7 }}>{tt('lifeLevelWord', 'Livello')}</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: accent }}>{LIVELLI[livelloIdx]?.icona} {LIVELLI[livelloIdx]?.etichetta}</span>
+        </div>
+        <input type="range" min="0" max={LIVELLI.length - 1} step="1" value={livelloIdx}
+          onChange={(e) => { const i = parseInt(e.target.value, 10); setLivello(LIVELLI[i].id); setContenuti(defaultContenuti(LIVELLI[i].id)); }}
+          aria-label={tt('lifeLevelWord', 'Livello')}
+          style={{ width: '100%', accentColor: accent, height: 6 }} />
+        <div style={{ fontSize: 11, color: muto, marginTop: 4 }}>{LIVELLI[livelloIdx]?.nota}</div>
       </div>
 
       {/* b.299 — COSA vuoi nella lezione: quattro pulsanti GRANDI (regola
@@ -619,10 +660,31 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {LANGS.map((l) => <option key={l.code} value={l.code}>{l.flag} {l.name}</option>)}
       </select>
 
-      <select value={docenteId} onChange={(e) => setDocenteId(e.target.value)} style={{ ...stileSelect, width: '100%', marginBottom: 12 }}>
-        <option value="">{L('lifeTeacher')}…</option>
-        {compagni.map((c) => <option key={c.id} value={c.id}>{c.nome} — {c.ruolo}</option>)}
-      </select>
+      {/* b.300 — il Maestro si SCEGLIE con la faccia, come nelle altre
+          sezioni: avatar tondo + nome, non un menu di nomi. */}
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: testoP, opacity: 0.7, marginBottom: 8 }}>{L('lifeTeacher')}</div>
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+          {compagni.slice(0, 12).map((c) => {
+            const on = docenteId === c.id;
+            return (
+              <button key={c.id} onClick={() => setDocenteId(on ? '' : c.id)} aria-pressed={on}
+                title={`${c.nome} — ${c.ruolo}`}
+                style={{ flexShrink: 0, width: 74, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+                  background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>
+                <span style={{ width: 58, height: 58, borderRadius: '50%', overflow: 'hidden',
+                  border: `3px solid ${on ? accent : 'transparent'}`, background: card, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {c.avatar
+                    ? <img src={c.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : <span style={{ fontSize: 26 }}>{c.emoji || '🧑\u200d🏫'}</span>}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: on ? 800 : 600, color: on ? accent : testoP,
+                  maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.nome}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}
 
