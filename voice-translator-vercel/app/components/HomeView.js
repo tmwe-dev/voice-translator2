@@ -6,7 +6,7 @@ import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
 // scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella
 // vecchia. `toast` e la coda avvisi (lib/avvisi.js), non il disegno.
-import { t, mapLang } from '../lib/i18n.js';
+import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import { toast } from '../lib/avvisi.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import Icon from './Icon.js';
@@ -295,13 +295,20 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                           savePrefs(nuove);
                           if (!prefs.uiLangScelta && dopo !== prima) {
                             const nomePrima = getLang(prima)?.name || prima;
+                            // b.257 — l'avviso si scrive DOPO che il pacchetto
+                            // e arrivato. Provato dal vivo: senza l'attesa
+                            // annunciava "Interface language" in inglese
+                            // proprio mentre l'applicazione passava al
+                            // tedesco — l'unico messaggio che non poteva
+                            // permettersi di essere nella lingua sbagliata.
+                            preloadLang(dopo).finally(() =>
                             toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
                               duration: 8000,
                               action: {
                                 label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
                                 onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
                               },
-                            });
+                            }));
                           }
                           // ═══ FINE b.254 ═══
                           setShowLangPicker(false);
