@@ -421,7 +421,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
               <button onClick={() => webrtc.declineIncomingCall()}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
                   background:PALETTE.red, color:'#fff', fontSize:13, fontWeight:600}}>
-                Rifiuta
+                {L('callDecline')}
               </button>
               <button onClick={() => {
                 webrtc.acceptIncomingCall();
@@ -429,7 +429,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
               }}
                 style={{padding:'8px 16px', borderRadius:20, border:'none', cursor:'pointer',
                   background:PALETTE.green, color:'#fff', fontSize:13, fontWeight:600}}>
-                Accetta
+                {L('callAccept')}
               </button>
             </div>
           </div>
