@@ -5,7 +5,7 @@ import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
 import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito } from '../../lib/compagni/cliente.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
@@ -258,6 +258,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
   const [linguaCorso, setLinguaCorso] = useState(lingua || 'it'); // b.213 — lingua del corso, scelta esplicita (conta per i bambini)
+  // b.299 — COSA arricchisce la lezione: 'disegni' (illustrazioni fatte
+  // dal Maestro), 'foto'/'link' (recuperati dalla community — Cobra),
+  // 'video' (video collegati), 'nessuno'. Il default lo decide l'eta:
+  // i bambini vedono disegni, gli universitari link e video.
+  const defaultContenuti = (liv) => (liv === 'bambini' || liv === 'base') ? 'disegni' : 'link';
+  const [contenuti, setContenuti] = useState(defaultContenuti('base'));
+  const [arricchimento, setArricchimento] = useState(null);
   const [docenteId, setDocenteId] = useState('');
   const [lezioni, setLezioni] = useState([]);
   const [lavoro, setLavoro] = useState(false);
@@ -322,16 +329,27 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
 
   const apri = useCallback(async (lezione) => {
-    setLavoro(true); setErrore(''); setIllustrazione(null);
+    setLavoro(true); setErrore(''); setIllustrazione(null); setArricchimento(null);
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setRisposte({});
       setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
+      // b.299 — l'arricchimento segue il flag scelto alla creazione:
+      // 'disegni' -> illustrazione del Maestro; 'foto'/'link'/'video' ->
+      // dalla community (Cobra). 'nessuno' -> niente. Non blocca la
+      // lezione: se l'arricchimento non arriva, il testo c'e comunque.
+      if (contenuti === 'disegni') {
+        generaIllustrazione({ titolo: lezione?.titolo, argomento: argomento.trim(), livello, userToken })
+          .then((url) => url && setIllustrazione(url)).catch(() => {});
+      } else if (contenuti && contenuti !== 'nessuno') {
+        arricchisciLezione({ modalita: contenuti, titolo: lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso })
+          .then((a) => a && setArricchimento(a)).catch(() => {});
+      }
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
-  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
+  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L, contenuti]);
 
   const quiz = useCallback(async () => {
     if (!aperta) return;
@@ -422,13 +440,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
         </div>
 
-        {/* b.229 — illustrazione della lezione (generata, sfondo trasparente). */}
+        {/* b.229/b.299 — l'illustrazione (modalita 'disegni'). Il pulsante
+            manuale resta come ripiego se l'auto non e partita. */}
         {illustrazione
           ? <img src={illustrazione} alt="" style={{ width: '100%', borderRadius: 14, marginBottom: 12, display: 'block' }} />
-          : <button onClick={illustra} disabled={genIll}
+          : contenuti === 'disegni' && <button onClick={illustra} disabled={genIll}
               style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
               {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
             </button>}
+
+        {/* b.299 — l'arricchimento dalla community (Cobra): link o video. */}
+        {arricchimento?.link?.length > 0 && (
+          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {arricchimento.link.map((f, i) => (
+              <a key={i} href={f.url || f.link} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10,
+                  background: card, color: accent, textDecoration: 'none', fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
+                <span>🔗</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.titolo || f.title || f.url}</span>
+              </a>
+            ))}
+          </div>
+        )}
+        {arricchimento?.video?.length > 0 && (
+          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {arricchimento.video.map((v, i) => (
+              <a key={i} href={v.url || `https://youtube.com/watch?v=${v.id}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10,
+                  background: card, color: accent, textDecoration: 'none', fontSize: 13, fontWeight: 600, fontFamily: FONT }}>
+                <span>🎬</span><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v.titolo || v.title || 'Video'}</span>
+              </a>
+            ))}
+          </div>
+        )}
 
         {/* b.242-bis — il tag [L2:...] non si mostra MAI: e un'istruzione per
             la voce, non testo da leggere. Senza questo, in un corso di lingua
@@ -539,9 +582,35 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <select value={categoria} onChange={(e) => setCategoria(e.target.value)} style={stileSelect}>
           {CATEGORIE.map((c) => <option key={c.id} value={c.id}>{c.icona} {c.etichetta}</option>)}
         </select>
-        <select value={livello} onChange={(e) => setLivello(e.target.value)} style={stileSelect}>
+        <select value={livello} onChange={(e) => { setLivello(e.target.value); setContenuti(defaultContenuti(e.target.value)); }} style={stileSelect}>
           {LIVELLI.map((l) => <option key={l.id} value={l.id}>{l.icona} {l.etichetta}</option>)}
         </select>
+      </div>
+
+      {/* b.299 — COSA vuoi nella lezione: quattro pulsanti GRANDI (regola
+          anziani/bambini). Il default segue l'eta; l'utente lo cambia con
+          un tocco. 'foto', 'link' e 'video' arrivano dalla community. */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: testoP, opacity: 0.7, marginBottom: 6 }}>{tt('lifeContentKind', 'Contenuti della lezione')}</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+          {[
+            { id: 'disegni', ic: '🎨', et: tt('lifeContentDraw', 'Disegni') },
+            { id: 'foto',    ic: '🖼️', et: tt('lifeContentPhoto', 'Immagini') },
+            { id: 'link',    ic: '🔗', et: tt('lifeContentLink', 'Approfondimenti') },
+            { id: 'video',   ic: '🎬', et: tt('lifeContentVideo', 'Video') },
+          ].map((o) => {
+            const on = contenuti === o.id;
+            return (
+              <button key={o.id} onClick={() => setContenuti(o.id)} aria-pressed={on}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 10px', borderRadius: 12,
+                  cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 700, textAlign: 'left',
+                  background: on ? `${accent}22` : card, color: testoP,
+                  border: `2px solid ${on ? accent : 'transparent'}` }}>
+                <span style={{ fontSize: 20 }}>{o.ic}</span>{o.et}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* b.213 — lingua del corso: scelta esplicita. Conta soprattutto per i

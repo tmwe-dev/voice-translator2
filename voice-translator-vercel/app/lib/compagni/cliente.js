@@ -58,6 +58,30 @@ export async function generaIllustrazione({ titolo, argomento, livello, userToke
   return d.dataUrl;
 }
 
+// b.299 — l'arricchimento della lezione dalla COMMUNITY (il seminatore,
+// "Cobra"): link di approfondimento, video, o foto reali. Non e un
+// secondo sistema: sono le stesse rotte /api/topics gia collaudate in
+// Mondo, chiamate qui con la query fatta di argomento + titolo lezione.
+export async function arricchisciLezione({ modalita, titolo, argomento, lingua = 'it' }) {
+  const q = `${argomento} ${titolo || ''}`.trim().slice(0, 120);
+  try {
+    if (modalita === 'video') {
+      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      return { modalita, video: (d.video || d.risultati || []).slice(0, 3) };
+    }
+    if (modalita === 'link' || modalita === 'foto') {
+      const r = await fetch(`/api/topics/search?q=${encodeURIComponent(q)}&lang=${lingua}&cat=notizie&fonti=4`);
+      if (!r.ok) return null;
+      const d = await r.json();
+      const fonti = (d.argomenti || d.risultati || d.fonti || []).slice(0, 4);
+      return { modalita, link: fonti };
+    }
+  } catch { /* la community non risponde: la lezione resta senza arricchimento, non e un guasto */ }
+  return null;
+}
+
 /** Genera l'elenco lezioni di un corso. */
 export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, userToken });

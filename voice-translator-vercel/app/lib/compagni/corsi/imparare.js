@@ -29,7 +29,9 @@ Aiuta la persona a VEDERE il progresso: la distanza fra ciò che non sapeva fare
 
 // Il ritmo di una lezione: una filosofia narrativa, NON uno schema da eseguire.
 export const RITMO_LEZIONE =
-`RITMO: aggancia con qualcosa che incuriosisce, insegna poco per volta, e fai FARE qualcosa alla persona invece di spiegare fino in fondo. Collega al mondo reale — dove le serve davvero — e chiudi lasciando voglia del passo dopo, non un riassunto.`;
+`RITMO: aggancia con qualcosa che incuriosisce, insegna poco per volta, e fai FARE qualcosa alla persona invece di spiegare fino in fondo. Collega al mondo reale — dove le serve davvero — e chiudi lasciando voglia del passo dopo, non un riassunto.
+
+DOMANDE: NON scrivere nella lezione domande a cui la persona dovrebbe rispondere ("Quale fu la data? A cosa serve? Prova a dire..."). La verifica NON sta nella lezione: c'e un QUIZ interattivo, separato, che arriva dopo. Nella lezione puoi invitare a NOTARE o a OSSERVARE, ma le domande con una risposta giusta lasciale al quiz. La lezione si LEGGE ad alta voce da sola: una domanda dentro il testo verrebbe letta come una domanda retorica a cui nessuno risponde.`;
 
 /**
  * Il catalogo delle forme di verifica. Il Maestro SCEGLIE: non c'è

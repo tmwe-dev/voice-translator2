@@ -80,12 +80,59 @@ function cleanWhitespace(text) {
  * @param {string} lang - BCP-47 language code (e.g., 'it', 'th', 'zh')
  * @returns {string} Cleaned text ready for TTS
  */
+
+// b.299 — I NUMERI ROMANI. La voce leggeva "XXIV" come "iks-iks-i-vu" —
+// una fila di lettere. Nei corsi di storia e ovunque (secoli, papi,
+// capitoli, Luigi XIV) sono continui. Qui si convertono nell'ordinale
+// PARLATO della lingua, prima che la voce ci metta le mani.
+// Si toccano SOLO i romani veri e isolati: parole tutte in I V X L C D M,
+// lunghe almeno due segni (una "I" o "V" sola sarebbe un pronome o una
+// nota), spesso precedute da secolo/capitolo/re o seguite da secolo.
+const VAL_ROMANI = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+function romanoANumero(r) {
+  let tot = 0;
+  for (let i = 0; i < r.length; i++) {
+    const v = VAL_ROMANI[r[i]], succ = VAL_ROMANI[r[i + 1]] || 0;
+    tot += v < succ ? -v : v;
+  }
+  return tot;
+}
+const ORDINALI = {
+  it: (n) => n <= 20
+    ? ['zero','primo','secondo','terzo','quarto','quinto','sesto','settimo','ottavo','nono','decimo','undicesimo','dodicesimo','tredicesimo','quattordicesimo','quindicesimo','sedicesimo','diciassettesimo','diciottesimo','diciannovesimo','ventesimo'][n]
+    : `${n}\u00BA`,
+};
+// Parole che ANNUNCIANO un numero romano: solo con una di queste vicino
+// si converte. Senza contesto, MIX/CIVIC/LID sono romani validi ma sono
+// parole, non numeri — e non vanno toccate.
+const CONTESTO_ROMANO = /\b(secol[oi]|capitol[oi]|tom[oi]|libr[oi]|part[ei]|volum[ei]|paragraf[oi]|re|regina|papa|luigi|enrico|carlo|giovanni|pio|benedetto|napoleone|guerra mondiale|millenni[oi]|dinastia|olimpiad[ei]|century|chapter|book|part|volume|king|queen|pope|louis|henry|world war)\b/i;
+function espandiRomani(text, lang) {
+  const inParola = ORDINALI[lang];
+  return text.replace(/(\b[\p{L}]+\b[ ,]+)?\b([IVXLCDM]{2,})\b([ ,]+\b[\p{L}]+\b)?/gu, (intero, prima, r, dopo) => {
+    const n = romanoANumero(r);
+    if (n <= 0 || n > 3000) return intero;
+    if (numeroARomano(n) !== r) return intero;             // non canonico: era una parola
+    // serve una parola-contesto PRIMA o DOPO (secolo XXIV, Luigi XIV, XVIII secolo)
+    const haContesto = CONTESTO_ROMANO.test(prima || '') || CONTESTO_ROMANO.test(dopo || '');
+    if (!haContesto) return intero;
+    const parola = inParola ? inParola(n) : String(n);
+    return `${prima || ''}${parola}${dopo || ''}`;
+  });
+}
+function numeroARomano(n) {
+  const tab = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+  let out = '';
+  for (const [v, sim] of tab) while (n >= v) { out += sim; n -= v; }
+  return out;
+}
+
 export function preprocessForTTS(text, lang) {
   if (!text) return '';
 
   let cleaned = text;
   cleaned = stripMarkdown(cleaned);
   cleaned = stripEmoji(cleaned);
+  cleaned = espandiRomani(cleaned, lang);
   cleaned = normalizePunctuation(cleaned);
   cleaned = cleanWhitespace(cleaned);
 
