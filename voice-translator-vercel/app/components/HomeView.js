@@ -11,7 +11,7 @@ import { toast } from '../lib/avvisi.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import { BatteryPillSlot } from './BatteryPill.js';
-import PrimaProva, { primaProvaGiaFatta } from './PrimaProva.js'; // b.96
+import PrimaProva, { primaProvaGiaFatta, riapriPrimaProva } from './PrimaProva.js'; // b.96
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -385,11 +385,28 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             Il primo avvio era: benvenuto, sei dentro, arrangiati. Chi non
             prova nei primi secondi non torna. Questa scheda fa SENTIRE
             l'app invece di spiegarla, e poi sparisce per sempre. */}
-        {mostraPrimaProva && (
+        {mostraPrimaProva ? (
           <PrimaProva
             onChiudi={() => setMostraPrimaProva(false)}
             onIniziaDavvero={() => handleAction('face-to-face')}
           />
+        ) : (
+          /* b.266 — quando il blocco e chiuso resta questa riga: e la prova
+             audio immediata, e senza di lei l'unico modo di riaverla era
+             svuotare la memoria del browser. */
+          <button
+            onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
+            style={{
+              width: '100%', maxWidth: 480, margin: '0 auto 14px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              background: 'none', border: `1px dashed ${C.accent}35`, borderRadius: 14,
+              padding: '9px 12px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+              fontFamily: FONT, fontSize: 12, fontWeight: 700, color: C.accent,
+            }}
+          >
+            <Icon name="speaker" size={14} color={C.accent} />
+            {L('hearItWork')}
+          </button>
         )}
         {/* ── FINE b.96 ── */}
 

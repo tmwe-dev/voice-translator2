@@ -44,6 +44,13 @@ export function primaProvaGiaFatta() {
   try { return localStorage.getItem(FATTA) === '1'; } catch { return true; }
 }
 
+// b.266 — si deve poter tornare indietro: chi ha chiuso il blocco (o ha
+// premuto "non mostrare piu") lo riapre dalla home, senza svuotare la
+// memoria del browser a mano.
+export function riapriPrimaProva() {
+  try { localStorage.removeItem(FATTA); } catch { /* niente memoria: pazienza */ }
+}
+
 export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
   const { L, S, prefs } = useApp();
   const C = S?.colors || {};
@@ -116,7 +123,11 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
         <span style={{ fontSize: 13, fontWeight: 800, color: C.textPrimary }}>
           {L('hearItWork')}
         </span>
-        <button onClick={chiudiPerSempre} aria-label={L('dontShowAgain')}
+        {/* b.266 — la × chiude SOLO per adesso. Prima era `chiudiPerSempre`:
+            un tocco sull'icona piu piccola della schermata e il blocco
+            spariva per sempre, senza che niente lo dicesse e senza modo di
+            riaverlo. "Non mostrare piu" e la riga esplicita qui sotto. */}
+        <button onClick={() => onChiudi?.()} aria-label={L('close')}
           style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
             color: C.textMuted, display: 'flex', padding: 2 }}>
           <Icon name="x" size={14} color={C.textMuted} />

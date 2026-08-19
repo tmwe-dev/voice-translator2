@@ -22,6 +22,10 @@ Ordine di Luca del 19/08/2026, e viene PRIMA di tutto il resto:
   aspetto: appena l'aggiornamento e in linea si prosegue.
 - Se una verifica lunga sembra davvero necessaria, si dice in UNA riga
   quanto costa e si aspetta il suo via.
+- **Non si sta ad aspettare il deploy.** Dopo il push si passa subito al
+  difetto successivo: che il rilascio sia arrivato lo vede lui dal numero
+  #NNN in alto a sinistra nella home. Aspettare il verde di Vercel e
+  tempo morto pagato da lui.
 
 Questo non annulla il punto 3 (nessun "fatto" senza prova): la prova
 resta obbligatoria, ma e la piu breve che regge — una riga di log, un
