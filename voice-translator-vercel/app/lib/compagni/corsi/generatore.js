@@ -57,7 +57,18 @@ export function estraiJSON(testo) {
   try { return JSON.parse(s); } catch { /* riprova a ritagliare */ }
   // Ritaglio fino all'ultima chiusura utile.
   const ultimo = Math.max(s.lastIndexOf(']'), s.lastIndexOf('}'));
-  if (ultimo > 0) { try { return JSON.parse(s.slice(0, ultimo + 1)); } catch { /* JSON irrecuperabile: si rinuncia */ } }
+  if (ultimo > 0) { try { return JSON.parse(s.slice(0, ultimo + 1)); } catch { /* si prova il recupero dell'array troncato */ } }
+  // b.306 — RECUPERO DI UN ARRAY TRONCATO. Se la risposta e un array che si e
+  // interrotto a meta ("...},{"titolo":"incompl") il ritaglio qui sopra lascia
+  // la parentesi quadra aperta e JSON.parse fallisce lo stesso: si perdevano
+  // TUTTE le lezioni gia complete. Qui si taglia dopo l'ultimo oggetto chiuso e
+  // si richiude l'array, salvando quelle valide.
+  if (s[0] === '[') {
+    const ultimaGraffa = s.lastIndexOf('}');
+    if (ultimaGraffa > 0) {
+      try { return JSON.parse(s.slice(0, ultimaGraffa + 1) + ']'); } catch { /* JSON irrecuperabile: si rinuncia */ }
+    }
+  }
   return null;
 }
 
@@ -171,7 +182,15 @@ Rispondi SOLO con JSON valido:
 /** Genera l'elenco lezioni. Ritorna { ok, lezioni } o { ok:false, motivo }. */
 export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   const { system, prompt } = promptSyllabus(opts);
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 700 });
+  // b.306 — il tetto di 700 token era FISSO, ma b.301 ha portato le lezioni a
+  // 12 (universitario) e 14 (ricercatore): il JSON di 12+ lezioni con titoli e
+  // obiettivi sfonda i 700 token, esce TRONCATO e illeggibile — "syllabus
+  // illeggibile", 502, corso non creato. (Ai livelli bassi, 5-8 lezioni,
+  // ci stava: per questo falliva solo in alto.) Ora il tetto segue il numero
+  // di lezioni chieste, con un minimo generoso.
+  const nLezioni = Math.max(1, Number(opts.nLezioni) || 8);
+  const maxTokens = Math.min(2200, 500 + nLezioni * 130);
+  const r = await generaTesto({ system, prompt, userToken, maxTokens });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'syllabus-illeggibile' };

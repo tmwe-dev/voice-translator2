@@ -25,6 +25,16 @@ describe('estraiJSON — tollerante', () => {
   it('ritorna null se non c\'è JSON', () => {
     expect(estraiJSON('nessun json qui')).toBe(null);
   });
+  // b.306 — un array TRONCATO a metà (risposta del modello tagliata dal tetto
+  // di token) prima faceva perdere TUTTE le lezioni: 502 "syllabus-illeggibile".
+  // Ora si recuperano gli oggetti completi richiudendo l'array.
+  it('recupera le lezioni complete da un array troncato', () => {
+    const troncato = '[{"titolo":"Uno","obiettivi":["a"]},{"titolo":"Due","obiettivi":["b"]},{"titolo":"Tre inc';
+    const out = estraiJSON(troncato);
+    expect(Array.isArray(out)).toBe(true);
+    expect(out).toHaveLength(2);
+    expect(out[1].titolo).toBe('Due');
+  });
 });
 
 describe('costruttori di prompt (puri)', () => {
