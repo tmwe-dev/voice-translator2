@@ -226,10 +226,17 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   // essere in stanza. Il rilascio ora e UN punto solo, chiamato da OGNI
   // percorso di errore e dall'uscita: se il punto e uno, non si puo
   // dimenticare un ramo.
+  const voceInPrestitoRef = useRef(null);   // b.280 — la copia del microfono unico
   const spegniMioFlusso = useCallback(() => {
     if (mioStreamRef.current) {
       mioStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma */ } });
       mioStreamRef.current = null;
+    }
+    // b.280 — la copia della voce si rende al master, sempre.
+    if (voceInPrestitoRef.current) {
+      const voce = voceInPrestitoRef.current;
+      voceInPrestitoRef.current = null;
+      import('../lib/microfonoMaster.js').then(m => m.rendiVoce(voce)).catch(() => { /* master gia smontato: le tracce sono ferme comunque */ });
     }
     setMioStream(null);
   }, []);
@@ -239,10 +246,38 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     if (!roomId || !roomSessionToken) return;
     setStato('apro'); setErrore(''); setStanzaPiena(false);
     try {
-      const flusso = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-        video: conVideo ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } : false,
-      });
+      // b.280 — anche la stanza di gruppo prende la voce dal microfono
+      // UNICO: era l'ultima apertura parallela rimasta, e su Android due
+      // acquisizioni insieme rompono l'eco e possono farsi revocare il
+      // microfono. Telecamera a parte, ripiego totale su qualunque intoppo.
+      let flusso;
+      try {
+        const { prendiVoce } = await import('../lib/microfonoMaster.js');
+        const [voce, video] = await Promise.allSettled([
+          prendiVoce(),
+          conVideo
+            ? navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } })
+            : Promise.resolve(null),
+        ]);
+        if (voce.status !== 'fulfilled' || video.status === 'rejected') {
+          if (voce.status === 'fulfilled') {
+            const { rendiVoce } = await import('../lib/microfonoMaster.js');
+            rendiVoce(voce.value);
+          }
+          throw (video.status === 'rejected' ? video.reason : voce.reason);
+        }
+        voceInPrestitoRef.current = voce.value;
+        flusso = new MediaStream([
+          ...(video.value ? video.value.getVideoTracks() : []),
+          ...voce.value.getAudioTracks(),
+        ]);
+      } catch {
+        voceInPrestitoRef.current = null;
+        flusso = await navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          video: conVideo ? { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' } : false,
+        });
+      }
       mioStreamRef.current = flusso;
       setMioStream(flusso);
 

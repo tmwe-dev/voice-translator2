@@ -7,7 +7,7 @@ import { creaCodaAudio } from '../lib/codaAudio.js';
 // b.262 — per avvisare (una volta) chi ha l'audio bloccato: vedi sotto.
 import { toast } from '../lib/avvisi.js';
 import { tFuori } from '../lib/i18n.js';
-import { prendiVoce } from '../lib/microfonoMaster.js';
+import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -37,6 +37,9 @@ export default function useAudioSystem({
   const [audioReady, setAudioReady] = useState(false);
   // b.273 — una sola apertura del microfono per volta (vedi requestMicEarly).
   const micInCorsoRef = useRef(false);
+  // b.280 — vero se il microfono persistente e una copia del master: alla
+  // chiusura va resa, non solo fermata.
+  const micDalMasterRef = useRef(false);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [playingMsgId, setPlayingMsgId] = useState(null);
 
@@ -242,7 +245,10 @@ export default function useAudioSystem({
         try { audioContextRef.current.close(); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
       }
       if (persistentMicRef.current) {
-        persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
+        // b.280 — la copia del master si rende: il contatore deve tornare
+        // a zero perche l'hardware si spenga davvero.
+        if (micDalMasterRef.current) { rendiVoce(persistentMicRef.current); micDalMasterRef.current = false; }
+        else persistentMicRef.current.getTracks().forEach(track => { try { track.stop(); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
         persistentMicRef.current = null;
       }
       activeBlobUrlsRef.current.forEach(url => { try { URL.revokeObjectURL(url); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ } });
@@ -329,7 +335,7 @@ export default function useAudioSystem({
     // apre l'hardware una volta sola e riceve una copia. Il ripiego
     // sull'apertura diretta resta per qualunque intoppo.
     prendiVoce()
-      .then(stream => { persistentMicRef.current = stream; })
+      .then(stream => { persistentMicRef.current = stream; micDalMasterRef.current = true; })
       .catch(() => navigator.mediaDevices.getUserMedia({ audio: audioConstraints })
         .then(stream => { persistentMicRef.current = stream; })
         .catch(e => console.warn('[useAudioSystem] requestMicEarly failed:', e?.message || e)))

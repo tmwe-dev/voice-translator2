@@ -193,25 +193,72 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
   // questo modulo non deve mai essere il motivo per cui la chiamata
   // non parte.
   if (opts.audio) {
+    let voceInPrestito = null;
     try {
       const { prendiVoce } = await import('./microfonoMaster.js');
-      if (!opts.video) return await prendiVoce();
+      if (!opts.video) {
+        const voce = await prendiVoce();
+        vociInPrestito.set(voce, voce);
+        return voce;
+      }
       // b.279 — voce e telecamera si aprono INSIEME, non in fila.
       // b.277 le aveva messe una dopo l'altra e la chiamata, prima
       // immediata, impiegava secondi a partire (visto da Luca dal vivo):
       // due attese sommate invece di una. Ora corrono in parallelo e si
       // aspetta solo la piu lenta — com'era prima, ma con l'hardware
       // del microfono aperto una volta sola.
-      const [voce, video] = await Promise.all([
+      const [esitoVoce, esitoVideo] = await Promise.allSettled([
         prendiVoce(),
         navigator.mediaDevices.getUserMedia({ video: constraints.video }),
       ]);
-      return new MediaStream([...video.getVideoTracks(), ...voce.getAudioTracks()]);
+      // b.280 — SE LA TELECAMERA FALLISCE, LA VOCE VA RESA.
+      // Con Promise.all, la copia del microfono gia presa restava in
+      // prestito per sempre: il contatore del master non tornava a zero
+      // e l'hardware restava aperto. Ora ogni esito e gestito.
+      if (esitoVoce.status === 'fulfilled') voceInPrestito = esitoVoce.value;
+      if (esitoVoce.status !== 'fulfilled' || esitoVideo.status !== 'fulfilled') {
+        if (voceInPrestito) {
+          const { rendiVoce } = await import('./microfonoMaster.js');
+          rendiVoce(voceInPrestito);
+          voceInPrestito = null;
+        }
+        throw (esitoVideo.status !== 'fulfilled' ? esitoVideo.reason : esitoVoce.reason);
+      }
+      const insieme = new MediaStream([...esitoVideo.value.getVideoTracks(), ...voceInPrestito.getAudioTracks()]);
+      // Il flusso combinato ricorda la sua copia in prestito: chi lo
+      // rilascia con rilasciaLocalMediaStream la rende al master.
+      vociInPrestito.set(insieme, voceInPrestito);
+      return insieme;
     } catch (e) {
       log.warn('microfono unico non disponibile, apertura diretta:', e?.message || e);
     }
   }
   return await navigator.mediaDevices.getUserMedia(constraints);
+}
+
+// b.280 — il registro delle copie in prestito: flusso consegnato -> la
+// copia della voce che contiene. WeakMap: quando il flusso muore, la
+// voce non viene trattenuta.
+const vociInPrestito = new WeakMap();
+
+/**
+ * L'UNICO modo giusto di spegnere un flusso ottenuto da
+ * getLocalMediaStream: ferma le tracce e, se dentro c'era una copia del
+ * microfono unico, la RENDE al master — cosi il contatore torna a zero e
+ * l'hardware si spegne davvero. Chiamare track.stop() a mano lascia il
+ * conto sospeso.
+ */
+export async function rilasciaLocalMediaStream(stream) {
+  if (!stream) return;
+  const voce = vociInPrestito.get(stream);
+  vociInPrestito.delete(stream);
+  stream.getTracks().forEach(t => { try { t.stop(); } catch { /* traccia gia ferma: fermarla di nuovo non e un guasto */ } });
+  if (voce) {
+    try {
+      const { rendiVoce } = await import('./microfonoMaster.js');
+      rendiVoce(voce);
+    } catch { /* il master non c'e piu: le tracce sono comunque ferme */ }
+  }
 }
 
 /**

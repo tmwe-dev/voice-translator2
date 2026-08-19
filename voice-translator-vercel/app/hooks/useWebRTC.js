@@ -5,7 +5,7 @@ import {
   createPeerConnection, createDataChannel, createOffer,
   createAnswer, acceptAnswer, addIceCandidate,
   sendViaDataChannel, collectIceCandidates,
-  addMediaTracks, getLocalMediaStream,
+  addMediaTracks, getLocalMediaStream, rilasciaLocalMediaStream,
   setVideoEnabled, switchCamera,
   rilevaPiattaforma, serveH264, preferisciH264,
 } from '../lib/webrtc.js';
@@ -127,7 +127,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       pcRef.current = null;
     }
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch (e) { console.warn('[WebRTC] track stop:', e.message); } });
+      // b.280 — non basta fermare le tracce: se dentro c'era la copia del
+      // microfono unico va RESA, o il contatore del master resta sospeso
+      // e l'hardware rimane aperto dopo la chiamata.
+      rilasciaLocalMediaStream(localStreamRef.current);
       localStreamRef.current = null;
     }
     sendersRef.current = [];
