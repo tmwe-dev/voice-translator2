@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
+import { FONT, getLang, LANGS, vibrate, PUSH } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
@@ -190,6 +190,19 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           <div style={{ position: 'relative', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             {/* b.191 — icona in alto a sinistra che porta al Mondo (Luca) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* b.265 — numero di rilascio: si vede subito se la pagina
+                  davanti agli occhi e gia quella nuova. Aumenta di uno a
+                  ogni push (PUSH in constants.js). */}
+              <span
+                aria-label={`rilascio numero ${PUSH}`}
+                style={{
+                  fontFamily: FONT, fontSize: 11, fontWeight: 700, lineHeight: 1,
+                  color: C.accent, background: C.cardBg,
+                  border: `1px solid ${C.accent}40`, borderRadius: 8,
+                  padding: '5px 7px', flexShrink: 0, letterSpacing: 0.3,
+                  userSelect: 'text',
+                }}
+              >#{PUSH}</span>
               <button
                 onClick={() => { vibrate(); setView('mondo'); }}
                 aria-label={L('worldNowTitle')}
