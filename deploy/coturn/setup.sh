@@ -9,7 +9,10 @@ apt-get update -y && apt-get install -y coturn
 # il segreto: generato qui, stampato alla fine — va copiato su Vercel
 SEGRETO=$(head -c 32 /dev/urandom | base64 | tr -d '/+=' | head -c 40)
 
-install -m 640 "$(dirname "$0")/turnserver.conf" /etc/turnserver.conf
+# 644: coturn gira come utente "turnserver" e DEVE poter leggere il file.
+# (Con 640 root:root partiva coi valori di fabbrica, in silenzio: realm
+# vuoto, niente segreto — trovato dal vivo il 19/08.)
+install -m 644 "$(dirname "$0")/turnserver.conf" /etc/turnserver.conf
 sed -i "s/CAMBIAMI_SEGRETO_LUNGO_E_CASUALE/${SEGRETO}/" /etc/turnserver.conf
 sed -i "s/# external-ip=IP_PUBBLICO_DELLA_VM/external-ip=${IP}/" /etc/turnserver.conf
 
