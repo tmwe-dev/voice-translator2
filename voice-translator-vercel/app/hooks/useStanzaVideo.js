@@ -33,7 +33,9 @@ const RITMO_SEGNALI = 1200;   // quanto spesso si guarda la cassetta
 const RITMO_PRESENZE = 5000;
 
 export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, attiva, conVideo = true }) {
-  const [partecipanti, setPartecipanti] = useState([]);   // [{ nome, stream, stato }]
+  const [partecipanti, setPartecipanti] = useState([]);
+  // b.292 — il palco: chi ha la parola, chi e in coda, a chi e offerta
+  const [palco, setPalco] = useState({ posti: [], coda: [], offerta: null });   // [{ nome, stream, stato }]
   const [mioStream, setMioStream] = useState(null);
   const [stato, setStato] = useState('fermo');            // fermo | apro | dentro | errore
   const [errore, setErrore] = useState('');
@@ -333,6 +335,13 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
 
   const quandoArrivaTesto = useCallback((fn) => { suTestoRef.current = fn; }, []);
 
+  // b.292 — le quattro mosse del palco; la risposta aggiorna subito lo stato
+  const mossaPalco = useCallback(async (mossa) => {
+    const d = await api('palco', { mossa });
+    if (d?.ok && d.palco) setPalco(d.palco);
+    return d?.palco || null;
+  }, [api]);
+
   // ── I due battiti: segnali svelti, presenze lente ──
   useEffect(() => {
     if (!attiva || stato !== 'dentro') return undefined;
@@ -344,6 +353,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     return subscribeTick(RITMO_PRESENZE, async () => {
       const d = await api('battito');
       if (!d?.ok) return;
+      if (d.palco) setPalco(d.palco);
       // RETE DI SICUREZZA, non la via normale. Di norma chiama chi entra,
       // subito, verso chi ha trovato. Ma se quella proposta si perde
       // (rete ballerina, scheda in secondo piano) senza questo nessuno
@@ -364,6 +374,7 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   return {
     partecipanti, mioStream, stato, errore, stanzaPiena,
     entra, esci, mandaTesto, quandoArrivaTesto,
+    palco, mossaPalco,
     MAX_PARTECIPANTI,
   };
 }

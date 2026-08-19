@@ -53,6 +53,41 @@ const MAX_PARTECIPANTI = 8;   // oltre, ognuno spedisce il video troppe volte
 
 const cassetta = (stanza, nome) => `svideo:${stanza}:${nome.toLowerCase()}`;
 const presenze = (stanza) => `svideo:${stanza}:presenti`;
+// ═══ b.292 — IL PALCO: chi ha la parola nella stanza di gruppo ═══
+// Regole di Luca: DUE posti di parola (come una chiamata a due), gli
+// altri in coda. Quando un posto si libera, il PROSSIMO in coda viene
+// AVVERTITO e ha un'offerta a scadenza: o la consuma ("Parlo") entro i
+// secondi previsti, o il turno passa da solo al successivo — e se non
+// c'e nessuno in coda, il posto resta libero per chiunque. Chi parla
+// puo CHIUDERE il proprio intervento e passare la palla.
+const chiavePalco = (stanza) => `svideo:${stanza}:palco`;
+const MAX_POSTI = 2;
+const OFFERTA_MS = 10000;   // dieci secondi per prendere la parola offerta
+
+async function leggiPalco(roomId) {
+  try { const v = JSON.parse(await redis('GET', chiavePalco(roomId)) || 'null'); if (v) return v; } catch { /* palco illeggibile: se ne apre uno nuovo vuoto */ }
+  return { posti: [], coda: [], offerta: null };
+}
+async function salvaPalco(roomId, palco) {
+  await redis('SET', chiavePalco(roomId), JSON.stringify(palco));
+  await redis('EXPIRE', chiavePalco(roomId), TTL);
+}
+/** Fa rispettare le regole del tempo: via chi non c'e piu, offerte scadute al prossimo. */
+function normalizzaPalco(palco, presenti) {
+  const vivi = new Set(presenti.map(n => n.toLowerCase()));
+  palco.posti = palco.posti.filter(n => vivi.has(n.toLowerCase()));
+  palco.coda = palco.coda.filter(n => vivi.has(n.toLowerCase()));
+  if (palco.offerta && !vivi.has(palco.offerta.nome.toLowerCase())) palco.offerta = null;
+  // offerta scaduta o mancante con posti liberi: si passa al prossimo
+  while (!palco.offerta || palco.offerta.scade <= Date.now()) {
+    if (palco.offerta) palco.offerta = null;             // scaduta: il turno passa
+    if (palco.posti.length >= MAX_POSTI) break;          // pieno: niente offerte
+    const prossimo = palco.coda.shift();
+    if (!prossimo) break;                                 // coda vuota: posto libero per chi lo chiede
+    palco.offerta = { nome: prossimo, scade: Date.now() + OFFERTA_MS };
+  }
+  return palco;
+}
 const battiti = (stanza) => `svideo:${stanza}:battiti`;
 
 // b.248 — sei battiti persi (il client batte ogni 5 secondi): non c'e piu.
@@ -165,10 +200,49 @@ async function handlePost(req) {
         const i = dentro.findIndex(n => n.toLowerCase() === io.name.toLowerCase());
         if (i > 0) arrivatiPrimaDiMe.push(...dentro.slice(0, i));
 
-        return NextResponse.json({ ok: true, presenti: dentro, arrivatiPrimaDiMe });
+        const palco = normalizzaPalco(await leggiPalco(roomId), dentro);
+        await salvaPalco(roomId, palco);
+        return NextResponse.json({ ok: true, presenti: dentro, arrivatiPrimaDiMe, palco });
+      }
+
+      // ── Il palco: chiedo, prendo, chiudo, rinuncio ──
+      case 'palco': {
+        const presenti = (await redis('ZRANGE', presenze(roomId), 0, -1)) || [];
+        const palco = normalizzaPalco(await leggiPalco(roomId), presenti);
+        const mossa = String(corpo.mossa || 'stato');
+        const me = io.name;
+        const sono = (n) => n.toLowerCase() === me.toLowerCase();
+
+        if (mossa === 'chiedi' && !palco.posti.some(sono)) {
+          if (palco.posti.length < MAX_POSTI && !palco.coda.length && !palco.offerta) {
+            palco.posti.push(me);                          // posto libero: parola presa subito
+          } else if (!palco.coda.some(sono) && !(palco.offerta && sono(palco.offerta.nome))) {
+            palco.coda.push(me);
+          }
+        }
+        if (mossa === 'prendo' && palco.offerta && sono(palco.offerta.nome) && palco.offerta.scade > Date.now()) {
+          palco.offerta = null;
+          if (palco.posti.length < MAX_POSTI && !palco.posti.some(sono)) palco.posti.push(me);
+        }
+        if (mossa === 'chiudo') {
+          palco.posti = palco.posti.filter(n => !sono(n));  // ho finito: passo la palla
+        }
+        if (mossa === 'rinuncia') {
+          palco.coda = palco.coda.filter(n => !sono(n));
+          if (palco.offerta && sono(palco.offerta.nome)) palco.offerta = null;
+        }
+        normalizzaPalco(palco, presenti);
+        await salvaPalco(roomId, palco);
+        return NextResponse.json({ ok: true, palco });
       }
 
       case 'esci': {
+        // b.292 — uscendo si lascia anche il palco: il posto va al prossimo.
+        {
+          const presenti = ((await redis('ZRANGE', presenze(roomId), 0, -1)) || []).filter(n => n.toLowerCase() !== io.name.toLowerCase());
+          const palco = normalizzaPalco(await leggiPalco(roomId), presenti);
+          await salvaPalco(roomId, palco);
+        }
         await redis('ZREM', presenze(roomId), io.name);
         // b.248 — via anche il segno di vita: senza, il nome rientrerebbe
         // nella finestra dei "vivi" fino alla soglia di assenza.

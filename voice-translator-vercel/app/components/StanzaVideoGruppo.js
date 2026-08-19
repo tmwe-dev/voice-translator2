@@ -132,6 +132,30 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
   // (passa dalla coda audio gia esistente e collaudata, non da un
   // secondo impianto).
   const sceltaTraduzione = prefs?.autoTraduzione || 'voce';
+  // ═══ b.292 — IL PALCO: chi parla, chi aspetta, a chi tocca ═══
+  const palco = stanza.palco || { posti: [], coda: [], offerta: null };
+  const sonoIo = (n) => n && n.toLowerCase() === (mioNome || '').toLowerCase();
+  const hoLaParola = palco.posti.some(sonoIo);
+  const solo = stanza.partecipanti.length === 0;   // da solo si parla liberi
+  const offertaAMe = palco.offerta && sonoIo(palco.offerta.nome) ? palco.offerta : null;
+  const miaPosizioneInCoda = palco.coda.findIndex(sonoIo);
+  // l'avviso a chi tocca: vibrazione una volta sola per offerta
+  const offertaAvvisataRef = useRef(0);
+  useEffect(() => {
+    if (offertaAMe && offertaAvvisataRef.current !== offertaAMe.scade) {
+      offertaAvvisataRef.current = offertaAMe.scade;
+      vibrate(60);
+    }
+  }, [offertaAMe]);
+  // il conto alla rovescia dell'offerta
+  const [oraTic, setOraTic] = useState(0);
+  useEffect(() => {
+    if (!offertaAMe) return undefined;
+    const t = setInterval(() => setOraTic(x => x + 1), 500);
+    return () => clearInterval(t);
+  }, [offertaAMe]);
+  void oraTic;
+
   // b.291 — P2-11: volume e muto PER PERSONA (vivono qui, di ciascun
   // ascoltatore: le mie regolazioni non toccano gli altri).
   const [volumi, setVolumi] = useState({});
@@ -143,8 +167,11 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
     const s = stanza.mioStream;
     if (!s) return;
     s.getVideoTracks().forEach(t => { t.enabled = cameraAccesa; });
-    s.getAudioTracks().forEach(t => { t.enabled = microfonoAcceso; });
-  }, [stanza.mioStream, cameraAccesa, microfonoAcceso]);
+    // b.292 — il microfono obbedisce anche al PALCO: parla chi ha la
+    // parola (o chi e solo in stanza). Cosi la voce tradotta che esce
+    // dagli altoparlanti degli altri non rientra nei microfoni aperti.
+    s.getAudioTracks().forEach(t => { t.enabled = microfonoAcceso && (hoLaParola || solo); });
+  }, [stanza.mioStream, cameraAccesa, microfonoAcceso, hoLaParola, solo]);
   const { battute, accogli } = useTraduzioneInArrivo(miaLingua, {
     roomId, roomSessionToken,
     // la voce tradotta si accoda solo se la scelta e "voce"
@@ -163,7 +190,7 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
     roomId, roomSessionToken,
     // b.289 — P0: con la preferenza su "spenta" il microfono non viene
     // trascritto affatto: zero chiamate, come da scelta dell'utente.
-    attivo: stanza.stato === 'dentro' && sceltaTraduzione !== 'off',
+    attivo: stanza.stato === 'dentro' && sceltaTraduzione !== 'off' && (hoLaParola || solo),
   });
 
   // L'ultima battuta di ciascuno: sotto il riquadro sta una riga sola.
@@ -241,6 +268,48 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
                 suMuto={(m) => setMuti(x => ({ ...x, [p.nome]: m }))} />
             ))}
           </div>
+
+          {/* ═══ b.292 — LA PLANCIA DEL PALCO: un solo pulsante grande che
+              dice sempre la cosa giusta da fare. Regole di Luca:
+              1) chi e di turno viene AVVERTITO (vibrazione + riquadro) e
+                 ha dieci secondi per prendere la parola;
+              2) se non la prende, il turno passa da solo al prossimo
+                 (lo fa il server, alla scadenza);
+              3) chi parla puo CHIUDERE l'intervento e passare la palla. */}
+          {!solo && (
+            <div style={{ marginTop: 12 }}>
+              {offertaAMe ? (
+                <button onClick={() => { vibrate(); stanza.mossaPalco('prendo'); }}
+                  style={{ width: '100%', padding: '16px 14px', borderRadius: 16, cursor: 'pointer',
+                    background: 'linear-gradient(90deg, #16a34a, #3ddc84)', border: 'none',
+                    color: '#fff', fontSize: 17, fontWeight: 900, fontFamily: FONT,
+                    boxShadow: '0 6px 24px rgba(61,220,132,0.4)' }}>
+                  {L('floorYourTurn')} · {Math.max(0, Math.ceil((offertaAMe.scade - Date.now()) / 1000))}s
+                </button>
+              ) : hoLaParola ? (
+                <button onClick={() => { vibrate(); stanza.mossaPalco('chiudo'); }}
+                  style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
+                    background: 'rgba(56,225,255,0.14)', border: '2px solid #38e1ff',
+                    color: C.textPrimary, fontSize: 15, fontWeight: 800, fontFamily: FONT }}>
+                  {'\u2705'} {L('floorDone')}
+                </button>
+              ) : miaPosizioneInCoda >= 0 ? (
+                <button onClick={() => { vibrate(); stanza.mossaPalco('rinuncia'); }}
+                  style={{ width: '100%', padding: '14px 14px', borderRadius: 16, cursor: 'pointer',
+                    background: C.overlayBg, border: `2px solid ${C.cardBorder}`,
+                    color: C.textPrimary, fontSize: 14, fontWeight: 800, fontFamily: FONT }}>
+                  {'\u23F3'} {L('floorInQueue')} · {miaPosizioneInCoda + 1}\u00B0 — {L('floorLeave')}
+                </button>
+              ) : (
+                <button onClick={() => { vibrate(); stanza.mossaPalco('chiedi'); }}
+                  style={{ width: '100%', padding: '16px 14px', borderRadius: 16, cursor: 'pointer',
+                    background: 'rgba(61,220,132,0.14)', border: '2px solid #3ddc84',
+                    color: C.textPrimary, fontSize: 16, fontWeight: 900, fontFamily: FONT }}>
+                  {'\u{1F64B}'} {L('floorAsk')}
+                </button>
+              )}
+            </div>
+          )}
 
           {/* b.291 — P2-11/12: i MIEI comandi, come nella chiamata a due.
               Icone grandi con la parola sotto: camera, microfono, e la
