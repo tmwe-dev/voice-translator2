@@ -52,6 +52,25 @@ export default function useRoomPolling({
   const [partnerConnected, setPartnerConnected] = useState(false);
   const [partnerSpeaking, setPartnerSpeaking] = useState(false);
   const [partnerLiveText, setPartnerLiveText] = useState('');
+  // b.291 — P1-7: lo stato e PER PARTECIPANTE. Prima un evento di
+  // chiunque sovrascriveva l'unico stato "partner": se Carla smetteva di
+  // parlare mentre Bruno parlava, Bruno risultava muto. La mappa tiene
+  // ognuno per nome; i tre stati storici diventano riassunti derivati,
+  // cosi la grafica esistente continua a funzionare — ma senza bugie.
+  const [statoPartecipanti, setStatoPartecipanti] = useState({});
+  const statoPartecipantiRef = useRef({});
+  const aggiornaPartecipante = useCallback((nome, campi) => {
+    const prima = statoPartecipantiRef.current[nome] || {};
+    const dopo = { ...prima, ...campi, quando: Date.now() };
+    statoPartecipantiRef.current = { ...statoPartecipantiRef.current, [nome]: dopo };
+    setStatoPartecipanti(statoPartecipantiRef.current);
+    // i riassunti derivano dalla mappa INTERA, non dall'ultimo evento
+    const tutti = Object.values(statoPartecipantiRef.current);
+    const cheParla = tutti.find(x => x.speaking);
+    setPartnerSpeaking(!!cheParla);
+    setPartnerLiveText(cheParla?.liveText || '');
+    setPartnerTyping(tutti.some(x => x.typing));
+  }, []);
   const [partnerTyping, setPartnerTyping] = useState(false);
 
   const pollRef = useRef(null);
@@ -373,15 +392,15 @@ export default function useRoomPolling({
   const handleRealtimeSpeaking = useCallback((data) => {
     const myName = verifiedNameRef.current || prefsRef.current.name;
     if (data.name === myName) return;
+    // b.291 — l'evento aggiorna SOLO la voce di chi l'ha mandato.
+    const campi = {};
     if (data.speaking !== undefined) {
-      setPartnerSpeaking(data.speaking);
-      if (data.liveText !== undefined) setPartnerLiveText(data.liveText);
-      if (!data.speaking) setPartnerLiveText('');
+      campi.speaking = data.speaking;
+      campi.liveText = data.speaking ? (data.liveText !== undefined ? data.liveText : (statoPartecipantiRef.current[data.name]?.liveText || '')) : '';
     }
-    if (data.typing !== undefined) {
-      setPartnerTyping(data.typing);
-    }
-  }, [prefsRef]);
+    if (data.typing !== undefined) campi.typing = data.typing;
+    if (Object.keys(campi).length) aggiornaPartecipante(data.name || '?', campi);
+  }, [prefsRef, aggiornaPartecipante]);
 
   const handleRealtimeMemberUpdate = useCallback((data) => {
     if (data.room) {
@@ -654,11 +673,14 @@ export default function useRoomPolling({
           const others = room.members.filter(m => m.name !== myName);
           // Only update speaking/typing from polling if Realtime is NOT connected
           if (!realtimeConnectedRef.current) {
-            const anyoneSpeaking = others.some(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
-            const speakingPartner = others.find(p => p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT);
-            setPartnerSpeaking(anyoneSpeaking);
-            setPartnerLiveText(speakingPartner?.liveText || '');
-            setPartnerTyping(others.some(p => p.typing && Date.now() - (p.typingAt || 0) < TYPING_TIMEOUT));
+            // b.291 — anche dal giro lento: uno per uno, mai in blocco.
+            for (const p of others) {
+              aggiornaPartecipante(p.name, {
+                speaking: !!(p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT),
+                liveText: (p.speaking && Date.now() - p.speakingAt < SPEAKING_TIMEOUT) ? (p.liveText || '') : '',
+                typing: !!(p.typing && Date.now() - (p.typingAt || 0) < TYPING_TIMEOUT),
+              });
+            }
           }
         }
 
@@ -1059,6 +1081,7 @@ export default function useRoomPolling({
   }
 
   return {
+    statoPartecipanti,
     roomId,
     setRoomId,
     roomInfo,

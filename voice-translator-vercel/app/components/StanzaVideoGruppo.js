@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { FONT, getLang, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -18,8 +18,12 @@ import useParlatoTradotto, { useTraduzioneInArrivo } from '../hooks/useParlatoTr
 // parallelo di testo che non rallenta nessuno.
 // ═══════════════════════════════════════════════════════════════
 
-function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
+function Riquadro({ nome, stream, stato, lingua, battuta, C, mio, volume = 1, muto = false, suVolume, suMuto }) {
   const ref = useRef(null);
+  // b.291 — P2-11: il volume del singolo si applica al SUO video/audio.
+  useEffect(() => {
+    if (ref.current) { ref.current.volume = muto ? 0 : volume; ref.current.muted = mio || muto; }
+  }, [volume, muto, mio]);
   useEffect(() => {
     if (ref.current && stream) ref.current.srcObject = stream;
   }, [stream]);
@@ -39,7 +43,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
     }}>
       <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
         {stream ? (
-          <video ref={ref} autoPlay playsInline muted={mio}
+          <video ref={ref} autoPlay playsInline muted
             style={{ width: '100%', height: '100%', objectFit: 'cover',
               transform: mio ? 'scaleX(-1)' : 'none' }} />
         ) : (
@@ -91,13 +95,29 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
             {mio ? L('speakITranslate') : L('listeningDots')}
           </div>
         )}
+        {/* b.291 — P2-11: OGNI persona ha il suo volume e il suo muto,
+            qui sotto il suo riquadro. Grande, elementare: un altoparlante
+            da toccare e una riga da trascinare. Vale solo per gli altri. */}
+        {!mio && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+            <button onClick={() => suMuto?.(!muto)} aria-pressed={muto}
+              aria-label={nome + (muto ? ' — riattiva audio' : ' — silenzia')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18,
+                color: muto ? '#ef4444' : C.textPrimary, padding: 2, lineHeight: 1 }}>
+              {muto ? '\u{1F507}' : '\u{1F50A}'}
+            </button>
+            <input type="range" min="0" max="1" step="0.05" value={muto ? 0 : volume}
+              onChange={(e) => { const v = parseFloat(e.target.value); suVolume?.(v); if (v > 0 && muto) suMuto?.(false); }}
+              aria-label={`Volume di ${nome}`} style={{ flex: 1, height: 4, accentColor: '#38e1ff' }} />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, onEsci, queueAudio }) {
-  const { L, S, prefs, myLang } = useApp();
+  const { L, S, prefs, savePrefs, myLang } = useApp();
   const C = S?.colors || {};
   const miaLingua = myLang || prefs?.lang || 'it';
 
@@ -112,6 +132,19 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
   // (passa dalla coda audio gia esistente e collaudata, non da un
   // secondo impianto).
   const sceltaTraduzione = prefs?.autoTraduzione || 'voce';
+  // b.291 — P2-11: volume e muto PER PERSONA (vivono qui, di ciascun
+  // ascoltatore: le mie regolazioni non toccano gli altri).
+  const [volumi, setVolumi] = useState({});
+  const [muti, setMuti] = useState({});
+  // e i MIEI interruttori: camera e microfono della stanza di gruppo
+  const [cameraAccesa, setCameraAccesa] = useState(true);
+  const [microfonoAcceso, setMicrofonoAcceso] = useState(true);
+  useEffect(() => {
+    const s = stanza.mioStream;
+    if (!s) return;
+    s.getVideoTracks().forEach(t => { t.enabled = cameraAccesa; });
+    s.getAudioTracks().forEach(t => { t.enabled = microfonoAcceso; });
+  }, [stanza.mioStream, cameraAccesa, microfonoAcceso]);
   const { battute, accogli } = useTraduzioneInArrivo(miaLingua, {
     roomId, roomSessionToken,
     // la voce tradotta si accoda solo se la scelta e "voce"
@@ -202,7 +235,43 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
               lingua={miaLingua} battuta={mio.ultimoMio ? { testo: mio.ultimoMio } : null} C={C} />
             {stanza.partecipanti.map(p => (
               <Riquadro key={p.nome} nome={p.nome} stream={p.stream} stato={p.stato}
-                lingua={ultimaDi[p.nome]?.lingua} battuta={ultimaDi[p.nome]} C={C} />
+                lingua={ultimaDi[p.nome]?.lingua} battuta={ultimaDi[p.nome]} C={C}
+                volume={volumi[p.nome] ?? 1} muto={!!muti[p.nome]}
+                suVolume={(v) => setVolumi(x => ({ ...x, [p.nome]: v }))}
+                suMuto={(m) => setMuti(x => ({ ...x, [p.nome]: m }))} />
+            ))}
+          </div>
+
+          {/* b.291 — P2-11/12: i MIEI comandi, come nella chiamata a due.
+              Icone grandi con la parola sotto: camera, microfono, e la
+              scelta della traduzione (spenta / testo / voce) che scrive
+              la STESSA preferenza del profilo. */}
+          <div style={{ marginTop: 12, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {[
+              { id: 'camera', acceso: cameraAccesa, su: () => setCameraAccesa(v => !v), icona: cameraAccesa ? '\u{1F4F9}' : '\u{1F6AB}', parola: cameraAccesa ? 'Camera' : 'Spenta' },
+              { id: 'micro', acceso: microfonoAcceso, su: () => setMicrofonoAcceso(v => !v), icona: microfonoAcceso ? '\u{1F3A4}' : '\u{1F507}', parola: microfonoAcceso ? 'Micro' : 'Muto' },
+            ].map(b => (
+              <button key={b.id} onClick={() => { vibrate(); b.su(); }} aria-pressed={b.acceso}
+                style={{ width: 74, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
+                  background: b.acceso ? 'rgba(61,220,132,0.14)' : 'rgba(239,68,68,0.14)',
+                  border: `2px solid ${b.acceso ? '#3ddc84' : '#ef4444'}`, color: C.textPrimary,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 20, lineHeight: 1 }}>{b.icona}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 800 }}>{b.parola}</span>
+              </button>
+            ))}
+            {[['off','\u{1F6AB}'],['testo','\u{1F4D6}'],['voce','\u{1F50A}']].map(([id, icona]) => (
+              <button key={id} onClick={() => { vibrate(); savePrefs && savePrefs({ ...prefs, autoTraduzione: id }); }}
+                aria-pressed={sceltaTraduzione === id}
+                style={{ width: 74, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,
+                  background: sceltaTraduzione === id ? 'rgba(56,225,255,0.14)' : C.overlayBg,
+                  border: `2px solid ${sceltaTraduzione === id ? '#38e1ff' : C.cardBorder}`, color: C.textPrimary,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                <span style={{ fontSize: 20, lineHeight: 1 }}>{icona}</span>
+                <span style={{ fontSize: 10.5, fontWeight: 800 }}>
+                  {id === 'off' ? L('autoTransOff').split(':')[0] : id === 'testo' ? L('autoTransTextOnly') : L('autoTransVoiceText')}
+                </span>
+              </button>
             ))}
           </div>
 

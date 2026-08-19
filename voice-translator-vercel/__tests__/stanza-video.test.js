@@ -150,7 +150,10 @@ describe('la schermata', () => {
 
   it('il proprio video e specchiato e muto, come deve', () => {
     // Non specchiato disorienta; non muto fa fischiare tutto.
-    expect(schermo).toMatch(/muted=\{mio\}/);
+    // b.291 — il muto ora lo governa l'effetto (volume/muto per persona):
+    // il proprio riquadro resta muto perche l'effetto forza muted=true
+    // quando mio. Si controlla la regola, non piu l'attributo alla lettera.
+    expect(schermo).toMatch(/ref\.current\.muted = mio \|\| muto/);
     expect(schermo).toMatch(/scaleX\(-1\)/);
   });
 
