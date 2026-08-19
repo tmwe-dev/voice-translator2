@@ -16,14 +16,26 @@ import { subscribeTick } from '../lib/ticker.js';
 import { useApp } from '../contexts/AppContext.js';
 import MondoNews from './MondoNews.js';
 
+// ═══ INIZIO b.255 — le etichette delle stanze erano in inglese fisso ═══
+// Sono il testo piu ripetuto della vetrina (una per ogni scheda e per
+// ogni filtro) e restavano "Chat/Classroom/Free Talk/Live" anche con
+// l'interfaccia in coreano o in arabo. Le chiavi esistono gia: sono le
+// STESSE che usa la barra dentro la stanza (MODES in constants.js), cosi
+// la stessa modalita non si chiama in due modi diversi in due schermate.
+// 'interview' e 'conference' restano nella mappa per le stanze vecchie
+// che potrebbero averle salvate (tolte da b.126), ma senza chiave: per
+// quelle si mostra l'identificativo grezzo invece di una bugia tradotta.
 const MODE_LABELS = {
-  conversation: { label: 'Chat', icon: '', color: PALETTE.teal },
-  classroom:    { label: 'Classroom', icon: '', color: '#10B981' },
+  conversation: { labelKey: 'conversation', icon: '', color: PALETTE.teal },
+  classroom:    { labelKey: 'classroom', icon: '', color: '#10B981' },
   interview:    { label: 'Interview', icon: '', color: '#F59E0B' },
   conference:   { label: 'Conference', icon: '', color: '#8B5CF6' },
-  freetalk:     { label: 'Free Talk', icon: '', color: '#EC4899' },
-  simultaneous: { label: 'Live', icon: '', color: '#EF4444' },
+  freetalk:     { labelKey: 'freeTalk', icon: '', color: '#EC4899' },
+  simultaneous: { labelKey: 'simultaneous', icon: '', color: '#EF4444' },
 };
+// Il nome da mostrare: la chiave tradotta se c'e, altrimenti cio che c'e.
+const nomeModalita = (info, L) => (info?.labelKey ? L(info.labelKey) : (info?.label || ''));
+// ═══ FINE b.255 ═══
 
 // b.98 — questa mappa era rimasta svuotata dalla ripulitura delle emoji di
 // b.94: renderizzava uno spazio, e il tipo di stanza non si vedeva piu.
@@ -302,7 +314,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 fontSize: 10, fontWeight: 600, fontFamily: FONT,
                 WebkitTapHighlightColor: 'transparent',
               }}>
-                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${info?.label || mode}`}
+                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${nomeModalita(info, L) || mode}`}
               </button>
             );
           })}
@@ -460,7 +472,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                     padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
                     background: `${modeInfo.color}18`, color: modeInfo.color,
                   }}>
-                    {modeInfo.icon} {modeInfo.label}
+                    {modeInfo.icon} {nomeModalita(modeInfo, L)}
                   </span>
                 </div>
 

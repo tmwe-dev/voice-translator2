@@ -104,7 +104,10 @@ const Scelta = ({ c, attiva, titolo, sotto, onClick }) => (
 
 
 const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
-  const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
+  // b.255 — `setPrefs` non si prende piu da qui: era l'unica via per cui
+  // una preferenza poteva restare in memoria senza mai finire su disco.
+  // In questa schermata si scrive SOLO con savePrefs.
+  const { L, S, prefs, savePrefs, setView, theme, setTheme } = useApp();
   const c = S.colors;
   const [apertoLingua, setApertoLingua] = useState(false);
   const [apertoInterfaccia, setApertoInterfaccia] = useState(false);
@@ -293,7 +296,14 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                 {L('e2eDesc')}
               </span>
             </span>
-            <button onClick={() => setPrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
+            {/* b.255 — questo interruttore usava setPrefs, che aggiorna solo
+                lo stato in memoria: TUTTE le altre righe di questa schermata
+                usano savePrefs, che scrive anche su disco. Chi accendeva la
+                crittografia la vedeva accesa, chiudeva l'applicazione e la
+                ritrovava spenta — senza un avviso. Una promessa di
+                riservatezza che non sopravvive a un riavvio e peggio che
+                non averla fatta. */}
+            <button onClick={() => savePrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
               aria-pressed={!!prefs.e2eEncryption}
               style={{ ...S.toggle, width: 40, height: 23, flexShrink: 0,
                 background: prefs.e2eEncryption ? c.accent1 : c.toggleOff }}>

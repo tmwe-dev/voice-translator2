@@ -99,12 +99,19 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     setSeguiti(s => { const n = new Set(s); if (gia) n.delete(publicId); else n.add(publicId); return n; });
     vibrate(8);
     try {
-      await fetch('/api/mondo/discussioni', {
+      // b.255 — anche una risposta di rifiuto (403, 429, 500) va trattata
+      // come un fallimento: prima si guardava solo l'eccezione di rete, e
+      // un "no" del server lasciava il pulsante acceso per sempre.
+      const r = await fetch('/api/mondo/discussioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
       });
+      if (!r.ok) throw new Error('rifiutato');
     } catch {
       setSeguiti(s => { const n = new Set(s); if (gia) n.add(publicId); else n.delete(publicId); return n; });
+      // b.255 — il pulsante tornava indietro DA SOLO, in silenzio: sembrava
+      // che l'applicazione ci ripensasse. Ora si dice che non e riuscito.
+      setErrore(L('genericError'));
     }
   }, [userToken, seguiti, L]);
 

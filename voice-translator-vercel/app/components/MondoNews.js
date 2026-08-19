@@ -22,6 +22,9 @@ import SchedaArgomento from './SchedaArgomento.js';
 import MondoDiscussioni from './MondoDiscussioni.js';
 import MondoPersona from './MondoPersona.js';
 import { useApp } from '../contexts/AppContext.js';
+// b.255 — vedi lib/pannelloPieno.js: un pannello che copre lo schermo lo
+// dichiara, cosi il banner d'installazione non gli finisce sopra.
+import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js';
 
 const CATEGORIE = [
   { id: 'top',        cat: 'notizie',    labelKey: 'newsTopHeadlines' },
@@ -63,7 +66,10 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const [argomenti, setArgomenti] = useState(null); // null = mai cercato
   const [stanze, setStanze] = useState([]);
   const [daCache, setDaCache] = useState(false);
-  const [errore, setErrore] = useState(false);
+  // b.255 — non piu un booleano: '' = nessun errore, 'account' = serve un
+  // conto, 'guasto' = la ricerca non e riuscita. Due cause diverse non
+  // possono avere lo stesso messaggio.
+  const [errore, setErrore] = useState('');
   const [chipAttiva, setChipAttiva] = useState(null);
   // b.153 — la scheda di lettura/visione e i video di YouTube.
   const [scheda, setScheda] = useState(null); // { tipo: 'articolo'|'video', dati }
@@ -89,6 +95,15 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     })();
     return () => { vivo = false; };
   }, [chipAttiva, discAperta]);
+
+  // b.255 — finche uno di questi pannelli e aperto, niente si mette
+  // davanti: erano proprio loro (composer di una discussione, scheda di
+  // lettura) a farsi coprire dal banner d'installazione.
+  useEffect(() => {
+    if (!discAperta && !personaAperta && !scheda) return;
+    apriPannelloPieno();
+    return () => chiudiPannelloPieno();
+  }, [discAperta, personaAperta, scheda]);
 
   const descriviStadio = useCallback((r) => {
     switch (r.stadio) {
@@ -125,7 +140,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
-    setCercando(true); setErrore(false); setProcesso([]); setDaCache(false);
+    setCercando(true); setErrore(''); setProcesso([]); setDaCache(false);
     vibrate(10);
     try {
       const paramProfonda = profonda ? `&deep=1&fonti=${numFonti}` : '';
@@ -150,7 +165,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
             setStanze(r.stanze || []);
             setDaCache(!!r.daCache);
           } else if (r.stadio === 'errore') {
-            setErrore(true);
+            setErrore('guasto');
           } else {
             const testo = descriviStadio(r);
             if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
@@ -158,7 +173,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
         }
       }
     } catch (e) {
-      if (e.name !== 'AbortError') setErrore(true);
+      if (e.name !== 'AbortError') setErrore('guasto');
     } finally {
       setCercando(false);
     }
@@ -176,7 +191,11 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   // account: chi non ce l'ha riceve l'avviso.
   const apriDiscussione = useCallback(async (t) => {
     if (creando) return;
-    if (!userToken) { setErrore(true); return; }
+    // b.255 — qui si diceva "La ricerca non e riuscita" (newsError) a chi
+    // semplicemente non aveva un account: un messaggio che manda a cercare
+    // un guasto inesistente. Il motivo vero e un altro, e la frase giusta
+    // esiste gia ed e usata negli stessi casi altrove (accessToCreate).
+    if (!userToken) { setErrore('account'); return; }
     setCreando(true); vibrate(12);
     try {
       const media = t.url ? { url: t.url, thumb: t.immagine || '', source: (t.fonti?.[0]?.dominio) || '' } : {};
@@ -190,8 +209,8 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
       });
       const d = await r.json();
       if (r.ok && d.id) setDiscAperta(d.id);
-      else setErrore(true);
-    } catch { setErrore(true); }
+      else setErrore('guasto');
+    } catch { setErrore('guasto'); }
     setCreando(false);
     // b.232 — `prefs` nelle deps: il body usa prefs.mondoNick, che prima
     // poteva essere quello vecchio (stale closure).
@@ -329,7 +348,9 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
 
       {/* ─── Esiti vuoti ─── */}
       {errore && (
-        <div style={{ padding: '18px 4px', fontSize: 13, color: C.red }}>{L('newsError')}</div>
+        <div role="alert" style={{ padding: '18px 4px', fontSize: 13, color: C.red }}>
+          {errore === 'account' ? L('accessToCreate') : L('newsError')}
+        </div>
       )}
       {!errore && !cercando && argomenti !== null && argomenti.length === 0 && (
         <div style={{ padding: '18px 4px', fontSize: 13, color: C.textMuted }}>{L('newsNoResults')}</div>

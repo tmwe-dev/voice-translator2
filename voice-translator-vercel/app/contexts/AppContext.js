@@ -5,8 +5,8 @@
 // Components import { useApp } from './contexts/AppContext' instead of 30+ props
 // ═══════════════════════════════════════════════════════════════
 
-import { createContext, useContext, useCallback, useMemo } from 'react';
-import { t, mapLang } from '../lib/i18n.js';
+import { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
+import { t, mapLang, preloadLang, ascoltaLingueCaricate } from '../lib/i18n.js';
 
 const AppContext = createContext(null);
 
@@ -30,7 +30,28 @@ export function AppProvider({ children, value }) {
   // sulla lingua parlata (mappata sulle 15 dell'interfaccia) e solo in
   // ultima istanza sull'inglese, che e la lingua di riserva di t().
   const linguaInterfaccia = value.prefs?.uiLang || mapLang(value.prefs?.lang || 'en');
-  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia]);
+
+  // ═══ INIZIO b.256 — aspettare il pacchetto lingua, e poi ridisegnare ═══
+  // Solo inglese e italiano stanno dentro il programma: le altre tredici
+  // arrivano a parte. `t()` ripiega sull'inglese finche il pacchetto non
+  // c'e — ed e giusto — ma nessuno tornava a disegnare quando arrivava:
+  // chi sceglieva tedesco o spagnolo restava con i menu in inglese.
+  // Qui si chiede il pacchetto e ci si sveglia quando entra in memoria.
+  const [versioneLingua, setVersioneLingua] = useState(0);
+  useEffect(() => { preloadLang(linguaInterfaccia); }, [linguaInterfaccia]);
+  useEffect(() => ascoltaLingueCaricate((codice) => {
+    // Ci si ridisegna solo per la lingua che si sta mostrando: il
+    // precaricamento di un'altra non deve far ridisegnare mezza app.
+    if (codice === linguaInterfaccia) setVersioneLingua((v) => v + 1);
+  }), [linguaInterfaccia]);
+
+  // `versioneLingua` non si legge: serve a far rinascere L() (e quindi a
+  // ridisegnare chi la usa) quando il pacchetto e finalmente pronto.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `versioneLingua`
+  // non si legge dentro: e proprio il suo cambiare che deve far rinascere
+  // L() quando il pacchetto lingua arriva. Toglierla rimetterebbe il difetto.
+  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia, versioneLingua]);
+  // ═══ FINE b.256 ═══
 
   const ctx = useMemo(() => ({
     // ── i18n ──

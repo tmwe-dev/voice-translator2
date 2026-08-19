@@ -632,7 +632,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
 
       {/* ═══ INIZIO b.250 — Provider Badge nel flusso, non piu sospeso ═══
           COSA: via il contenitore position:absolute (top:50, left:8).
-          PERCHE: atterrava ESATTAMENTE sopra la riga "💬 Conversazione"
+          PERCHE: atterrava ESATTAMENTE sopra la riga della modalita
           della barra modalita — i tasti in alto a sinistra sovrapposti
           visti dal vivo sul telefono. Ora il badge viaggia dentro
           VoiceEngineBar, nella stessa riga, come elemento di flusso. */}

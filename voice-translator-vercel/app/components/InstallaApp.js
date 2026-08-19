@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { ascoltaPannelloPieno } from '../lib/pannelloPieno.js';
 import Icon from './Icon.js';
 import { FONT } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
@@ -67,6 +68,13 @@ export default function InstallaApp({ pwa, theme }) {
   // nel browser non e piu una scelta, e un indovinello.
   const { L } = useApp();
   const [istruzioniAperte, setIstruzioniAperte] = useState(false);
+  // b.255 — non ci si mette davanti a un pannello che sta gia coprendo lo
+  // schermo. Succedeva nel Mondo: i pannelli (discussione, persona,
+  // scheda) non cambiano schermata, quindi la guardia per VISTA di page.js
+  // non li vedeva, e questo banner atterrava sul campo di scrittura e sul
+  // pulsante di invio proprio mentre si stava commentando.
+  const [pannelloPieno, setPannelloPieno] = useState(false);
+  useEffect(() => ascoltaPannelloPieno(setPannelloPieno), []);
   const S = getStyles(theme);
   const col = S.colors || {};
 
@@ -81,7 +89,7 @@ export default function InstallaApp({ pwa, theme }) {
 
   const suIPhone = eIPhone();
 
-  if (!pwa?.showInstallBanner) return null;
+  if (!pwa?.showInstallBanner || pannelloPieno) return null;
 
   // ── b.134-bis · TRE SITUAZIONI DIVERSE, NON UNA ──
   //

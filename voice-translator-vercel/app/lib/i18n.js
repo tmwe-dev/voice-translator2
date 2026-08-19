@@ -64,11 +64,43 @@ export async function preloadLang(code) {
   try {
     const mod = await loader();
     T[code] = mod.default;
+    // ═══ INIZIO b.256 — chi ha gia disegnato non lo sapeva mai ═══
+    // TROVATO DAL VIVO (Luca): "non riesci neanche a tradurre la lingua
+    // del menu". Vero, ed era qui. Solo inglese e italiano sono dentro
+    // il programma; le altre TREDICI si caricano a parte, e finche non
+    // arrivano `t()` ripiega sull'inglese — giusto. Il difetto e che
+    // quando arrivavano NESSUNO lo veniva a sapere: React aveva gia
+    // disegnato col ripiego e non aveva motivo di rifarlo. Scegliendo
+    // tedesco o spagnolo i menu restavano in inglese finche non
+    // succedeva qualcos'altro che costringesse a ridisegnare.
+    // Funzionava solo alla scelta del paese perche li si cambia
+    // schermata subito dopo, e il cambio di schermata ridisegna.
+    annunciaLingua(code);
+    // ═══ FINE b.256 ═══
     return true;
   } catch (e) {
     log.warn('Failed to load', code, e.message);
     return false;
   }
+}
+
+// b.256 — chi disegna si iscrive qui e viene svegliato quando un
+// pacchetto lingua entra davvero in memoria. Deliberatamente senza
+// React: i18n.js e usato anche fuori dai componenti.
+const ascoltatoriLingua = new Set();
+function annunciaLingua(code) {
+  ascoltatoriLingua.forEach((fn) => { try { fn(code); } catch { /* un ascoltatore rotto non deve fermare gli altri */ } });
+}
+
+/** Si iscrive ai pacchetti lingua che arrivano; la funzione restituita disiscrive. */
+export function ascoltaLingueCaricate(fn) {
+  ascoltatoriLingua.add(fn);
+  return () => ascoltatoriLingua.delete(fn);
+}
+
+/** Per i controlli: il pacchetto di questa lingua e gia in memoria? */
+export function linguaPronta(code) {
+  return !!T[code];
 }
 
 /**

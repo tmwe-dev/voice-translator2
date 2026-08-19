@@ -19,6 +19,9 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
   const [p, setP] = useState(null);
   const [caricando, setCaricando] = useState(true);
   const [seguito, setSeguito] = useState(false);
+  // b.255 — mancava del tutto un posto dove dire che il Segui non e
+  // riuscito: il pulsante tornava indietro da solo, senza spiegazioni.
+  const [erroreSegui, setErroreSegui] = useState('');
 
   useEffect(() => {
     let vivo = true;
@@ -38,12 +41,14 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
     setSeguito(!gia);
     vibrate(8);
     try {
-      await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
       });
-    } catch { setSeguito(gia); }
-  }, [userToken, seguito, publicId]);
+      if (!r.ok) throw new Error('rifiutato');
+      setErroreSegui('');
+    } catch { setSeguito(gia); setErroreSegui(L('genericError')); }
+  }, [userToken, seguito, publicId, L]);
 
   const bg = C.bg || '#0a0e1a';
   const card = C.glassCard || 'rgba(12,16,30,0.65)';
@@ -82,6 +87,17 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
           }}>{seguito ? L('following') : L('follow')}</button>
         )}
       </header>
+
+      {/* b.255 — il messaggio che mancava: senza, il pulsante tornava
+          indietro da solo e nessuno sapeva perche. */}
+      {erroreSegui && (
+        <div role="alert" style={{
+          margin: '0 16px 8px', padding: '8px 12px', borderRadius: 10,
+          background: `${C.statusError || '#ef4444'}18`,
+          border: `1px solid ${C.statusError || '#ef4444'}40`,
+          color: C.statusError || '#ef4444', fontSize: 12, fontFamily: FONT,
+        }}>{erroreSegui}</div>
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 24px', scrollbarWidth: 'none' }}>
         {p?.discussioni?.length > 0 && (
