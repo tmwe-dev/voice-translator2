@@ -27,7 +27,24 @@ async function handleGet(req) {
     // meta del limite dichiarato — un difetto che avevamo gia corretto
     // altrove e che si era ricreato qui.
 
-    const raw = await redis('LRANGE', MONDO_KEY, 0, 29); // Max 30 rooms
+    let raw;
+    try {
+      raw = await redis('LRANGE', MONDO_KEY, 0, 29); // Max 30 rooms
+    } catch (e) {
+      // b.297 — TROVATO IN PRODUZIONE: la vetrina rispondeva 503 a ogni
+      // richiesta mentre il resto di Redis funzionava (le stanze si
+      // creavano). Il colpevole tipico e la chiave col TIPO sbagliato
+      // (WRONGTYPE): qualcosa ha scritto mondo:rooms come valore
+      // semplice, e da allora ogni lettura della lista esplode — vetrina
+      // morta PER SEMPRE finche qualcuno non pulisce a mano. Ora, se il
+      // tipo e sbagliato, la chiave corrotta si butta e la piazza
+      // riparte vuota ma VIVA: pubblicabile di nuovo, non piu rotta.
+      if (/WRONGTYPE/i.test(String(e?.message || e))) {
+        log.error('mondo:rooms aveva il tipo sbagliato: chiave corrotta eliminata, piazza ripartita vuota');
+        await redis('DEL', MONDO_KEY);
+        raw = [];
+      } else throw e;
+    }
     const rooms = (raw || []).map(s => {
       try { return JSON.parse(s); } catch { return null; }
     }).filter(Boolean);
