@@ -4,6 +4,7 @@ import { LANGS, AVATARS } from '../lib/constants.js';
 import { mapLang } from '../lib/i18n.js';
 import { indovinaPaese } from '../lib/paesi.js';
 import { createLogger } from '../lib/logger.js';
+import { memDel, memGet, memSet, sesGet, sesSet } from '../lib/memoria.js';
 const dbg = createLogger('init');
 
 /**
@@ -22,8 +23,8 @@ export default function useInitializeApp({
   // ── Main initialization ──
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('vt-prefs');
-      const savedToken = localStorage.getItem('vt-token');
+      const saved = memGet('vt-prefs');
+      const savedToken = memGet('vt-token');
       const urlParams = new URLSearchParams(window.location.search);
       // ═══ b.269 — L'INVITO SOPRAVVIVE ALLA PULIZIA DELL'INDIRIZZO ═══
       // Trovato dal vivo: chi apre un link di invito vede per un istante
@@ -39,7 +40,7 @@ export default function useInitializeApp({
       // Ora il codice dell'invito viene messo da parte per la sessione:
       // finche l'ingresso non e andato a buon fine, l'invito resta.
       const roomParam = urlParams.get('room') || (() => {
-        try { return sessionStorage.getItem('vt-invito-in-corso'); } catch { return null; }
+        try { return sesGet('vt-invito-in-corso'); } catch { return null; }
       })();
       const paymentStatus = urlParams.get('payment');
       const paymentCredits = urlParams.get('credits');
@@ -91,7 +92,7 @@ export default function useInitializeApp({
             // ricevuto un invito in italiano.
             ...(effectiveLang ? { lang: effectiveLang, uiLang: mapLang(effectiveLang) } : {}),
           };
-          localStorage.setItem('vt-prefs', JSON.stringify(updated));
+          memSet('vt-prefs', JSON.stringify(updated));
           return updated;
         });
         if (effectiveLang) {
@@ -106,7 +107,7 @@ export default function useInitializeApp({
         setMyLang(langParam);
         setPrefs(p => {
           const updated = { ...p, lang: langParam, uiLang: mapLang(langParam) };
-          localStorage.setItem('vt-prefs', JSON.stringify(updated));
+          memSet('vt-prefs', JSON.stringify(updated));
           return updated;
         });
       }
@@ -120,14 +121,14 @@ export default function useInitializeApp({
       // riscatta da sola appena c'è una sessione valida.
       const regaloParam = urlParams.get('regalo');
       if (regaloParam) {
-        localStorage.setItem('vt-voucher-pendente', regaloParam.toUpperCase());
+        memSet('vt-voucher-pendente', regaloParam.toUpperCase());
         window.history.replaceState({}, '', window.location.pathname);
       }
 
       // 5. Capture invite code (contacts system)
       const inviteParam = urlParams.get('invite');
       if (inviteParam) {
-        localStorage.setItem('vt-pending-invite', inviteParam);
+        memSet('vt-pending-invite', inviteParam);
         window.history.replaceState({}, '', window.location.pathname);
       }
 
@@ -157,7 +158,7 @@ export default function useInitializeApp({
       // piu niente.
       if (roomParam) {
         setJoinCode(roomParam.toUpperCase());
-        try { sessionStorage.setItem('vt-invito-in-corso', roomParam.toUpperCase()); } catch { /* niente memoria di sessione: si prosegue */ }
+        try { sesSet('vt-invito-in-corso', roomParam.toUpperCase()); } catch { /* niente memoria di sessione: si prosegue */ }
         window.history.replaceState({}, '', window.location.pathname);
 
         {
@@ -221,7 +222,7 @@ export default function useInitializeApp({
               autoPlay: p?.autoPlay === false ? false : true,
               avatar: p?.avatar || AVATARS[0],
             };
-            try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
+            try { memSet('vt-prefs', JSON.stringify(provvisorie)); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
             return provvisorie;
           });
           setMyLang(linguaOspite);
@@ -288,7 +289,7 @@ export default function useInitializeApp({
             if (data.ok && data.token) {
               auth.setUserToken(data.token);
               auth.userTokenRef.current = data.token;
-              localStorage.setItem('vt-token', data.token);
+              memSet('vt-token', data.token);
               auth.setUserAccount(data.user);
               auth.setIsTrial(false);
               auth.setIsTopPro(true);
@@ -337,7 +338,7 @@ export default function useInitializeApp({
               auth.setClonedVoiceName(data.user.clonedVoiceName || 'My Voice');
             }
           } else {
-            localStorage.removeItem('vt-token');
+            memDel('vt-token');
             auth.setUserToken(null);
             auth.userTokenRef.current = null;
             auth.setUserAccount(null);

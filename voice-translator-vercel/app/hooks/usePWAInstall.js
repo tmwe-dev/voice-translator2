@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════════
 // INSTALLAZIONE E NOTIFICHE (b.134)
@@ -67,7 +68,7 @@ export default function usePWAInstall() {
     function handleBeforeInstall(e) {
       e.preventDefault();
       setDeferredInstallPrompt(e);
-      if (!localStorage.getItem('vt-install-dismissed')) {
+      if (!memGet('vt-install-dismissed')) {
         setShowInstallBanner(true);
       }
     }
@@ -96,7 +97,7 @@ export default function usePWAInstall() {
     // e installata e nessuno ha detto di no, si propone. L'evento, se
     // arriva, serve solo a decidere se il bottone puo installare da solo
     // o se bisogna spiegare come si fa a mano.
-    if (!eInstallata() && !localStorage.getItem('vt-install-dismissed')) {
+    if (!eInstallata() && !memGet('vt-install-dismissed')) {
       // Un attimo di respiro: comparire nello stesso istante in cui la
       // pagina si disegna la fa sembrare un cartello pubblicitario.
       setTimeout(() => setShowInstallBanner(true), 2500);
@@ -124,7 +125,7 @@ export default function usePWAInstall() {
 
   function dismissInstallBanner() {
     setShowInstallBanner(false);
-    localStorage.setItem('vt-install-dismissed', '1');
+    memSet('vt-install-dismissed', '1');
   }
 
   async function requestNotifPermission() {

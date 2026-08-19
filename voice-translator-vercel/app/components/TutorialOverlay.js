@@ -5,6 +5,7 @@ import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Sciame from './Sciame.js';
+import { memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // TutorialOverlay — Dark Ambient Onboarding
@@ -68,7 +69,7 @@ export default function TutorialOverlay({ tutorialStep, setTutorialStep, setShow
       setTutorialStep(tutorialStep + 1);
     } else {
       setShowTutorial(false);
-      try { localStorage.setItem('vt-tutorial-done', '1'); } catch (e) { console.warn('[TutorialOverlay] localStorage error:', e?.message); }
+      try { memSet('vt-tutorial-done', '1'); } catch (e) { console.warn('[TutorialOverlay] localStorage error:', e?.message); }
     }
   }, [isLastStep, tutorialStep, setTutorialStep, setShowTutorial]);
 

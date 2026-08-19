@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import { TESTING_MODE } from '../lib/config.js';
+import { memDel, memSet } from '../lib/memoria.js';
 
 export default function useAuth() {
   // Auth state
@@ -146,7 +147,7 @@ export default function useAuth() {
       if (data.ok && data.token) {
         setUserToken(data.token);
         userTokenRef.current = data.token;
-        localStorage.setItem('vt-token', data.token);
+        memSet('vt-token', data.token);
         setUserAccount(data.user);
         setCreditBalance(data.user.credits || 0);
         setUseOwnKeys(data.user.useOwnKeys || false);
@@ -250,7 +251,7 @@ export default function useAuth() {
     if (data.ok && data.token) {
       setUserToken(data.token);
       userTokenRef.current = data.token;
-      localStorage.setItem('vt-token', data.token);
+      memSet('vt-token', data.token);
       setUserAccount(data.user);
       setCreditBalance(data.user.credits || 0);
       setUseOwnKeys(data.user.useOwnKeys || false);
@@ -340,11 +341,11 @@ export default function useAuth() {
         body: JSON.stringify({ action: 'logout', token: tokenUscente }),
       }).catch(() => {});
     }
-    localStorage.removeItem('vt-token');
+    memDel('vt-token');
     if (opts.clearPrefs) {
-      localStorage.removeItem('vt-prefs');
-      localStorage.removeItem('vt-tutorial-done');
-      localStorage.removeItem('vt-free-usage');
+      memDel('vt-prefs');
+      memDel('vt-tutorial-done');
+      memDel('vt-free-usage');
     }
     setUserToken(null);
     setUserAccount(null);

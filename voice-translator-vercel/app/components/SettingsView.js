@@ -9,6 +9,7 @@ import { IconMic, IconGlobe, IconKey, IconMusic, IconUser, IconVolume, IconCredi
 import PageHeader from './ui/PageHeader.js';
 import AvatarImg from './AvatarImg.js';
 import { useApp } from '../contexts/AppContext.js';
+import { memGet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // SettingsView — riscritta: ogni riga FA qualcosa.
@@ -344,8 +345,8 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
                   const k = localStorage.key(i);
                   if (!k?.startsWith('vt-')) continue;
                   if (/token|key|chiav/i.test(k)) continue; // mai esportare credenziali
-                  try { suTelefono[k] = JSON.parse(localStorage.getItem(k)); }
-                  catch { suTelefono[k] = localStorage.getItem(k); }
+                  try { suTelefono[k] = JSON.parse(memGet(k)); }
+                  catch { suTelefono[k] = memGet(k); }
                 }
                 const dati = { prefs, datiLocali: suTelefono, esportato: new Date().toISOString(), versione: APP_VERSION };
                 const url = URL.createObjectURL(new Blob([JSON.stringify(dati, null, 2)], { type: 'application/json' }));

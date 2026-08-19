@@ -5,6 +5,7 @@ import useRealtimeRoom from './useRealtimeRoom.js';
 import { createLogger } from '../lib/logger.js';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
+import { memGet, memSet } from '../lib/memoria.js';
 const dbg = createLogger('polling');
 
 // ═══════════════════════════════════════════════════════════════
@@ -643,7 +644,7 @@ export default function useRoomPolling({
           auth401CountRef.current++;
           if (auth401CountRef.current === 2) {
             let hostSecret = null;
-            try { hostSecret = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}')[rid] || null; } catch { /* nessun segreto: si rientra da guest */ }
+            try { hostSecret = JSON.parse(memGet('vt-host-secrets') || '{}')[rid] || null; } catch { /* nessun segreto: si rientra da guest */ }
             try {
               const ri = await fetch('/api/room', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -912,12 +913,12 @@ export default function useRoomPolling({
       // Senza, si rientrerebbe sempre come guest anche essendo l'host.
       if (hostSecret) {
         try {
-          const mappa = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}');
+          const mappa = JSON.parse(memGet('vt-host-secrets') || '{}');
           mappa[room.id] = hostSecret;
           // Tetto a 20 stanze: non deve crescere senza limite nel tempo.
           const chiavi = Object.keys(mappa);
           if (chiavi.length > 20) delete mappa[chiavi[0]];
-          localStorage.setItem('vt-host-secrets', JSON.stringify(mappa));
+          memSet('vt-host-secrets', JSON.stringify(mappa));
         } catch { /* navigazione privata o memoria piena: si perde solo la comodita del rientro come host */ }
       }
       setRoomId(room.id);
@@ -940,7 +941,7 @@ export default function useRoomPolling({
     // assegna guest — vedi verificaSegretoHost in roomActions.js.
     let hostSecret = null;
     try {
-      const mappa = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}');
+      const mappa = JSON.parse(memGet('vt-host-secrets') || '{}');
       hostSecret = mappa[rid] || null;
     } catch { /* nessun segreto disponibile: si rientra come guest se non si e piu host */ }
     try {

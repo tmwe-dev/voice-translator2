@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../contexts/AppContext.js';
 import { PACCHETTI, oreIncluse } from '../wallet/tariffe.js';
 import { subscribeTick } from '../lib/ticker.js';
+import { memDel, memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // BatteryPill — la pila del credito, in alto, cliccabile.
@@ -38,7 +39,7 @@ export default function BatteryPill({ utente }) {
 
   // Il wallet riconosce l'utente dalla SESSIONE (Bearer), mai da un parametro
   const conToken = useCallback((extra = {}) => {
-    const token = localStorage.getItem('vt-token');
+    const token = memGet('vt-token');
     return { ...extra, ...(token && { Authorization: `Bearer ${token}` }) };
   }, []);
 
@@ -67,24 +68,24 @@ export default function BatteryPill({ utente }) {
     (async () => {
       try {
         // Bonus benvenuto — una richiesta per dispositivo, il DB fa da guardiano
-        if (!localStorage.getItem('vt-benvenuto-chiesto')) {
-          const token = localStorage.getItem('vt-token');
+        if (!memGet('vt-benvenuto-chiesto')) {
+          const token = memGet('vt-token');
           if (token) {
             const r = await fetch('/api/wallet/benvenuto', {
               method: 'POST', headers: { Authorization: `Bearer ${token}` },
             });
             const d = await r.json().catch(() => ({}));
             if (d.ok) {
-              localStorage.setItem('vt-benvenuto-chiesto', '1');
+              memSet('vt-benvenuto-chiesto', '1');
               if (d.nuovo) { setEsito(L('welcomeGiftMsg').replace('{x}', d.testo)); setEsitoOk(true); setAperto(true); }
             }
           }
         }
         // Codice lasciato in attesa: dall'onboarding (voucher) o da un
         // link di regalo (?regalo=GIFT-...). Il prefisso dice dove va.
-        const pendente = localStorage.getItem('vt-voucher-pendente');
+        const pendente = memGet('vt-voucher-pendente');
         if (pendente) {
-          localStorage.removeItem('vt-voucher-pendente');
+          memDel('vt-voucher-pendente');
           const eRegalo = pendente.startsWith('GIFT-');
           const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
             method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),

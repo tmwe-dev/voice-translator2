@@ -1,4 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
+import { memGet, memSet } from '../memoria.js';
 // OBIETTIVI DI VITA — il "tutor che ti accompagna" (Luca)
 //
 // Modellato sugli LTObjective del Life Tutor di RadioChat (titolo,
@@ -31,12 +32,12 @@ export const STATI_OBIETTIVO = ['attivo', 'raggiunto', 'pausa'];
 
 function leggiGrezzo() {
   if (typeof window === 'undefined') return [];
-  try { const s = localStorage.getItem(CHIAVE); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a : []; }
+  try { const s = memGet(CHIAVE); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a : []; }
   catch { return []; }
 }
 function scrivi(lista) {
   if (typeof window === 'undefined') return;
-  try { localStorage.setItem(CHIAVE, JSON.stringify(lista)); } catch { /* quota/privato: si perde solo la persistenza */ }
+  try { memSet(CHIAVE, JSON.stringify(lista)); } catch { /* quota/privato: si perde solo la persistenza */ }
 }
 
 /** Normalizza un obiettivo (dal client o dal corpo di una richiesta). */

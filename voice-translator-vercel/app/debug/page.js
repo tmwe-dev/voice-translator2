@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { memGet } from '../lib/memoria.js';
 
 const FONT = "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
 
@@ -29,7 +30,7 @@ export default function DebugPage() {
   }, []);
 
   async function loadUserInfo() {
-    const token = localStorage.getItem('vtToken');
+    const token = memGet('vtToken');
     if (!token) return;
     try {
       const res = await fetch('/api/debug', {
@@ -58,7 +59,7 @@ export default function DebugPage() {
           domainContext: ctx?.prompt || '',
           description,
           audioSeconds: audioSec,
-          userToken: localStorage.getItem('vtToken'),
+          userToken: memGet('vtToken'),
         }),
       });
       if (res.ok) setSimulation(await res.json());

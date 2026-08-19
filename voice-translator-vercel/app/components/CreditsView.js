@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FONT } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import { PACCHETTI, oreIncluse, MOLTIPLICATORE_PREMIUM } from '../wallet/tariffe.js';
+import { memGet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // CreditsView — LA pagina commerciale, allineata al wallet.
@@ -37,7 +38,7 @@ export default function CreditsView({ userAccount }) {
   const [regaloFatto, setRegaloFatto] = useState(null);
 
   const conToken = useCallback((extra = {}) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('vt-token') : null;
+    const token = typeof window !== 'undefined' ? memGet('vt-token') : null;
     return { ...extra, ...(token && { Authorization: `Bearer ${token}` }) };
   }, []);
 

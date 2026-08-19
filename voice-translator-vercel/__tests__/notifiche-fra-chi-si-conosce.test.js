@@ -294,7 +294,7 @@ describe('il banner non dipende da un evento che puo non arrivare', () => {
 
   it('si mostra a chi non ha installato e non ha detto di no', () => {
     const s = hook();
-    expect(s).toMatch(/if \(!eInstallata\(\) && !localStorage\.getItem\('vt-install-dismissed'\)\)/);
+    expect(s).toMatch(/if \(!eInstallata\(\) && !memGet\('vt-install-dismissed'\)\)/);
   });
 
   it('e non solo su iPhone, come prima', () => {

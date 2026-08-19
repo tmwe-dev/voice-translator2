@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
+import { memDel, memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════════
 // PRIMA PROVA — il momento che decide se una persona resta.
@@ -41,14 +42,14 @@ const FRASI = {
 const METE = ['en', 'es', 'fr', 'de', 'ja', 'ar'];
 
 export function primaProvaGiaFatta() {
-  try { return localStorage.getItem(FATTA) === '1'; } catch { return true; }
+  try { return memGet(FATTA) === '1'; } catch { return true; }
 }
 
 // b.266 — si deve poter tornare indietro: chi ha chiuso il blocco (o ha
 // premuto "non mostrare piu") lo riapre dalla home, senza svuotare la
 // memoria del browser a mano.
 export function riapriPrimaProva() {
-  try { localStorage.removeItem(FATTA); } catch { /* niente memoria: pazienza */ }
+  try { memDel(FATTA); } catch { /* niente memoria: pazienza */ }
 }
 
 export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
@@ -64,7 +65,7 @@ export default function PrimaProva({ onChiudi, onIniziaDavvero }) {
   const [tradotto, setTradotto] = useState('');
 
   const chiudiPerSempre = useCallback(() => {
-    try { localStorage.setItem(FATTA, '1'); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
+    try { memSet(FATTA, '1'); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
     onChiudi?.();
   }, [onChiudi]);
 

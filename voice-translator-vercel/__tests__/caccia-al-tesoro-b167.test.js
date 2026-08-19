@@ -138,7 +138,7 @@ describe('Logout: la sessione server viene revocata, non solo lo stato locale', 
     const iFn = src.indexOf('function logout(opts = {})');
     expect(iFn).toBeGreaterThan(-1);
     const iFetch = src.indexOf("action: 'logout'", iFn);
-    const iRemove = src.indexOf("localStorage.removeItem('vt-token')", iFn);
+    const iRemove = src.indexOf("memDel('vt-token')", iFn);
     expect(iFetch, 'la chiamata al server deve esserci').toBeGreaterThan(-1);
     expect(iFetch).toBeLessThan(iRemove);
   });

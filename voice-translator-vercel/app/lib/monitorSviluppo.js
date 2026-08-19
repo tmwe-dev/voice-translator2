@@ -1,4 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
+import { memDel, memGet, memSet } from './memoria.js';
 // b.275 — IL MONITOR: dove passa la voce, e quanto ci mette
 //
 // La scatola nera (diagnosticaChiamata.js) racconta la CHIAMATA. Questo
@@ -25,7 +26,7 @@ export function traccia(fase, dati = {}) {
     const r = { t: Date.now(), fase, ...dati };
     righe.push(r);
     if (righe.length > QUANTE) righe.splice(0, righe.length - QUANTE);
-    try { localStorage.setItem(CHIAVE, JSON.stringify(righe.slice(-QUANTE))); } catch { /* memoria piena o navigazione privata: le righe restano solo in memoria, va bene lo stesso */ }
+    try { memSet(CHIAVE, JSON.stringify(righe.slice(-QUANTE))); } catch { /* memoria piena o navigazione privata: le righe restano solo in memoria, va bene lo stesso */ }
     try { if (typeof window !== 'undefined') window.__bartalkMonitor = righe; } catch { /* fuori dal browser: la copia comoda in window salta, le righe restano in memoria */ }
   } catch { /* il monitor non deve mai disturbare cio che sta misurando: si perde la riga e si prosegue */ }
 }
@@ -38,13 +39,13 @@ export function cronometro(fase, datiIniziali = {}) {
 
 export function leggiMonitor() {
   if (righe.length) return righe;
-  try { const v = JSON.parse(localStorage.getItem(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
+  try { const v = JSON.parse(memGet(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
   catch { return []; }
 }
 
 export function svuotaMonitor() {
   righe.length = 0;
-  try { localStorage.removeItem(CHIAVE); } catch { /* niente memoria da svuotare: va bene cosi */ }
+  try { memDel(CHIAVE); } catch { /* niente memoria da svuotare: va bene cosi */ }
 }
 
 /** Le righe in una forma leggibile, la piu recente in fondo. */

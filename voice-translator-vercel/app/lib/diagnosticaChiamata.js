@@ -15,6 +15,7 @@
 // accorgersene. Tutto sotto try, nessun errore che risale.
 // ═══════════════════════════════════════════════════════════════
 import { createLogger } from './logger.js';
+import { memGet, memSet } from './memoria.js';
 
 const log = createLogger('diagnostica');
 const CHIAVE = 'vt-rapporti-chiamata';
@@ -83,14 +84,14 @@ export async function fotografiaChiamata(pc, extra = {}) {
 export function salvaRapporto(r) {
   try {
     const vecchi = leggiRapporti();
-    localStorage.setItem(CHIAVE, JSON.stringify([r, ...vecchi].slice(0, QUANTI)));
+    memSet(CHIAVE, JSON.stringify([r, ...vecchi].slice(0, QUANTI)));
     log.debug('rapporto salvato:', r.esito, r.stradaLocale, r.codecVideoRicevuto?.nome);
   } catch { /* memoria piena o navigazione privata: si prosegue senza */ }
   try { if (typeof window !== 'undefined') window.__bartalkChiamate = leggiRapporti(); } catch { /* fuori dal browser (o finestra non disponibile): la copia comoda in window salta, il rapporto resta comunque in memoria */ }
 }
 
 export function leggiRapporti() {
-  try { const v = JSON.parse(localStorage.getItem(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
+  try { const v = JSON.parse(memGet(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
   catch { return []; }
 }
 

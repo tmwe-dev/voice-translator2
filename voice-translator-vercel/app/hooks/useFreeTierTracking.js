@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FREE_DAILY_LIMIT } from '../lib/constants.js';
 import { subscribeTick } from '../lib/ticker.js';
+import { memGet, memSet } from '../lib/memoria.js';
 
 /**
  * useFreeTierTracking — Manages free tier character usage with daily reset.
@@ -16,7 +17,7 @@ export default function useFreeTierTracking() {
   // Load saved usage on mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('vt-free-usage');
+      const saved = memGet('vt-free-usage');
       if (saved) {
         let data; try { data = JSON.parse(saved); } catch { data = null; }
         if (data) {
@@ -27,7 +28,7 @@ export default function useFreeTierTracking() {
             freeCharsRef.current = data.chars || 0;
             if ((data.chars || 0) >= FREE_DAILY_LIMIT) setFreeLimitExceeded(true);
           } else {
-            localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
+            memSet('vt-free-usage', JSON.stringify({ date: todayUTC, chars: 0 }));
             setFreeCharsUsed(0); freeCharsRef.current = 0; setFreeLimitExceeded(false);
           }
         }
@@ -39,7 +40,7 @@ export default function useFreeTierTracking() {
   useEffect(() => {
     if (freeCharsUsed > 0) {
       const todayUTC = new Date().toISOString().split('T')[0];
-      localStorage.setItem('vt-free-usage', JSON.stringify({ date: todayUTC, chars: freeCharsUsed }));
+      memSet('vt-free-usage', JSON.stringify({ date: todayUTC, chars: freeCharsUsed }));
       freeCharsRef.current = freeCharsUsed;
     }
   }, [freeCharsUsed]);

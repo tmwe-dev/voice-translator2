@@ -45,7 +45,9 @@ describe('sezione profilo', () => {
     // b.95 — prima bastava che AIView scrivesse su localStorage. Non
     // basta piu: un glossario che nessuna traduzione legge e inutile.
     const modulo = leggi('lib/glossario.js');
-    expect(modulo, 'il modulo deve salvare').toMatch(/localStorage\.setItem/);
+    // b.295 — il salvataggio passa dalla porta sicura (memSet): nel
+    // browser di WhatsApp toccare localStorage direttamente esplode.
+    expect(modulo, 'il modulo deve salvare').toMatch(/memSet\(/);
     expect(leggi('components/AIView.js'), 'la pagina deve usare il modulo').toMatch(/salvaGlossario/);
     expect(leggi('api/translate/route.js'), 'la rotta deve accettarlo').toMatch(/glossario/);
     expect(leggi('lib/translatePrompt.js'), 'e deve finire nel prompt').toMatch(/GLOSSARY/);

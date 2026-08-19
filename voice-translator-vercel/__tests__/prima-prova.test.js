@@ -16,7 +16,7 @@ describe('prima prova', () => {
   });
 
   it('si mostra una volta sola e poi non torna', () => {
-    expect(src).toMatch(/localStorage\.setItem\(FATTA, '1'\)/);
+    expect(src).toMatch(/memSet\(FATTA, '1'\)/);
     expect(src, 'chiudendola non deve ricomparire').toMatch(/chiudiPerSempre/);
   });
 

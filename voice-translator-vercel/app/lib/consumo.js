@@ -1,4 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
+import { memGet, memSet } from './memoria.js';
 // consumo — traccia il consumo (caratteri tradotti) lato client.
 //
 // Perche lato client e non dal ledger: il ledger NON registra QUALE
@@ -22,14 +23,14 @@ let sessione = 0; // caratteri consumati da quando l'app e stata caricata
 
 function leggiGrezzo() {
   try {
-    const s = localStorage.getItem(CHIAVE);
+    const s = memGet(CHIAVE);
     if (s) { const d = JSON.parse(s); if (d && typeof d === 'object') return { perChat: d.perChat || {}, giorni: d.giorni || {} }; }
   } catch { /* memoria piena o navigazione privata: si riparte da zero */ }
   return { perChat: {}, giorni: {} };
 }
 
 function scrivi(d) {
-  try { localStorage.setItem(CHIAVE, JSON.stringify(d)); } catch { /* senza persistenza si vive: resta il conteggio di sessione */ }
+  try { memSet(CHIAVE, JSON.stringify(d)); } catch { /* senza persistenza si vive: resta il conteggio di sessione */ }
 }
 
 function oggiUTC() {

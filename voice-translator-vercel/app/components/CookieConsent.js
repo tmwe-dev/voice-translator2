@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { PALETTE } from '../lib/palette.js';
 import { t, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
+import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════════
 // L'AVVISO COOKIE PARLAVA SOLO INGLESE (b.136-bis)
@@ -38,7 +39,7 @@ export default function CookieConsent() {
   useEffect(() => {
     try {
       setLingua(linguaInterfacciaFuoriContesto());
-      const consent = localStorage.getItem('vt-cookie-consent');
+      const consent = memGet('vt-cookie-consent');
       if (!consent) {
         setTimeout(() => setVisible(true), 1500);
       }
@@ -47,8 +48,8 @@ export default function CookieConsent() {
 
   const handleConsent = (type) => {
     try {
-      localStorage.setItem('vt-cookie-consent', type);
-      localStorage.setItem('vt-cookie-consent-date', new Date().toISOString());
+      memSet('vt-cookie-consent', type);
+      memSet('vt-cookie-consent-date', new Date().toISOString());
     } catch (e) { console.warn('[CookieConsent] localStorage error:', e?.message); }
     setVisible(false);
   };

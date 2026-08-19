@@ -2,6 +2,7 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
+import { memGet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════════
 // useParlatoTradotto — chi prende la parola viene tradotto.
@@ -71,7 +72,7 @@ export default function useParlatoTradotto({
       if (roomId) fd.append('roomId', roomId);
       if (roomSessionToken) fd.append('roomSessionToken', roomSessionToken);
       try {
-        const t = localStorage.getItem('vt-token');
+        const t = memGet('vt-token');
         if (t) fd.append('userToken', t);
       } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
 
@@ -214,7 +215,7 @@ export function useTraduzioneInArrivo(miaLingua, { roomId, roomSessionToken, suT
           // (b.161). Stessa regola dappertutto.
           roomId: roomId || undefined,
           roomSessionToken: roomSessionToken || undefined,
-          userToken: (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })(),
+          userToken: (() => { try { return memGet('vt-token') || ''; } catch { return ''; } })(),
         }),
       });
       if (!r.ok) return;

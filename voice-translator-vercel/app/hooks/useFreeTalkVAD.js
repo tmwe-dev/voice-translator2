@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react';
 import { getLang, SILENCE_DELAY, VAD_THRESHOLD, VAD_PRESETS, isWhisperPrimaryLang } from '../lib/constants.js';
 import { createLogger } from '../lib/logger.js';
 import { creaCalibratore, sogliaInScala255 } from '../lib/calibraRumore.js';
+import { memGet, memSet } from '../lib/memoria.js';
 const dbg = createLogger('vad');
 
 /**
@@ -66,7 +67,7 @@ export default function useFreeTalkVAD({
   const [vadSilenceCountdown, setVadSilenceCountdown] = useState(null);
   const [vadSensitivity, setVadSensitivity] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('vt-vad-sensitivity') || 'normal';
+      return memGet('vt-vad-sensitivity') || 'normal';
     }
     return 'normal';
   });
@@ -88,7 +89,7 @@ export default function useFreeTalkVAD({
   const updateSensitivity = useCallback((val) => {
     setVadSensitivity(val);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('vt-vad-sensitivity', val);
+      memSet('vt-vad-sensitivity', val);
     }
   }, []);
 

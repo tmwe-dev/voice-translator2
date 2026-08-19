@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { t, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';
+import { memGet } from '../lib/memoria.js';
 
 // b.139 — pagina in inglese fisso. Sta fuori da AppProvider (e una
 // rotta a se, /account) quindi non ha L(): legge la lingua da sola,
@@ -19,12 +20,12 @@ export default function AccountPage() {
   useEffect(() => {
     // Load prefs from localStorage
     try {
-      const saved = localStorage.getItem('vt-prefs');
+      const saved = memGet('vt-prefs');
       if (saved) setPrefs(JSON.parse(saved));
     } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
 
     // Fetch user data if authenticated
-    const token = localStorage.getItem('vt-token');
+    const token = memGet('vt-token');
     if (token) {
       fetch('/api/user?action=profile', { headers: { 'Authorization': `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : null)

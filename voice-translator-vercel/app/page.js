@@ -40,6 +40,7 @@ import ToastContainer, { toast } from './components/Toast.js';
 import NetworkStatus from './components/NetworkStatus.js';
 import TutorialOverlay from './components/TutorialOverlay.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
+import { memDel, memGet, memSet, sesDel } from './lib/memoria.js';
 
 // ═══ LAZY-LOADED: secondary views (loaded on demand → faster initial bundle) ═══
 const AccountView = lazy(() => import('./components/AccountView.js'));
@@ -188,8 +189,8 @@ function HomeInner() {
     if (!tutorialEraAperto.current) return;
     tutorialEraAperto.current = false;
     try {
-      if (!localStorage.getItem(INVITO_AMICI_VISTO)) {
-        localStorage.setItem(INVITO_AMICI_VISTO, '1');
+      if (!memGet(INVITO_AMICI_VISTO)) {
+        memSet(INVITO_AMICI_VISTO, '1');
         setShowInvitaAmici(true);
       }
     } catch { /* storage negato: niente invito, nessun dramma */ }
@@ -543,9 +544,9 @@ function HomeInner() {
   }, []);
 
   useEffect(() => {
-    if (view === 'home' && !localStorage.getItem('vt-tutorial-done')) {
+    if (view === 'home' && !memGet('vt-tutorial-done')) {
       setTutorialStep(0); setShowTutorial(true);
-      localStorage.setItem('vt-tutorial-done', '1');
+      memSet('vt-tutorial-done', '1');
     }
     // Auto-load history when navigating to archive tab
     if (view === 'history') {
@@ -569,14 +570,14 @@ function HomeInner() {
   // di React, il resto lo legge quando serve.
   const savePrefs = useCallback(function savePrefs(newPrefs) {
     setPrefs(newPrefs); setMyLang(newPrefs.lang);
-    localStorage.setItem('vt-prefs', JSON.stringify(newPrefs));
+    memSet('vt-prefs', JSON.stringify(newPrefs));
 
     // b.98 — il nome viveva in DUE posti che non si parlavano: qui sul
     // telefono, e sul server. Nelle stanze Community si leggeva quello
     // locale, quindi bastava non aver mai aggiornato il server per
     // presentarsi al mondo con un nome vecchio o con delle iniziali.
     // Ora il locale comanda, e lo dice anche al server.
-    const token = (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })();
+    const token = (() => { try { return memGet('vt-token') || ''; } catch { return ''; } })();
     if (token && newPrefs.name) {
       fetch('/api/user', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -649,9 +650,9 @@ function HomeInner() {
   // Process pending invite after auth
   useEffect(() => {
     if (!auth.userToken) return;
-    const pendingInvite = localStorage.getItem('vt-pending-invite');
+    const pendingInvite = memGet('vt-pending-invite');
     if (pendingInvite) {
-      localStorage.removeItem('vt-pending-invite');
+      memDel('vt-pending-invite');
       contactsHook.acceptInvite(pendingInvite).then(result => {
         if (result.ok) {
           // b.138 — qui era sopravvissuto l'ULTIMO indovinello di lingua
@@ -742,7 +743,7 @@ function HomeInner() {
         body: JSON.stringify(endBody) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
-    try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
+    try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
     convContext.resetContext(); // Clear conversation knowledge base
     // b.263 — vedi leaveRoomTemporary: i diritti della stanza si rendono.
     auth.roomTierOverrideRef.current = null;
@@ -759,7 +760,7 @@ function HomeInner() {
     cambiaModalitaSessione('translate');
     // Save room to active rooms list in localStorage
     try {
-      let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
+      let activeRooms; try { activeRooms = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
       const roomData = {
         roomId: roomPolling.roomId,
         host: roomPolling.roomInfo?.host,
@@ -769,13 +770,13 @@ function HomeInner() {
       };
       activeRooms = activeRooms.filter(r => r.roomId !== roomData.roomId);
       activeRooms.unshift(roomData);
-      localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms.slice(0, 10)));
+      memSet('vt-active-rooms', JSON.stringify(activeRooms.slice(0, 10)));
     } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
     roomPolling.stopPolling();
     roomPolling.leaveRoom();
     // b.269 — uscendo, l'invito smette di valere: senza questo un
     // ricaricamento riporterebbe dentro una stanza appena lasciata.
-    try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
+    try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
     // b.263 — fuori dalla stanza i diritti tornano i PROPRI: l'ospite di
     // un host PRO non si porta via ElevenLabs (l'addebito era dell'host).
     auth.roomTierOverrideRef.current = null;
@@ -853,18 +854,18 @@ function HomeInner() {
       applicaPoliticaStanza(room);
       // Remove from active rooms list since we're back in
       try {
-        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
+        let activeRooms; try { activeRooms = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
-        localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
+        memSet('vt-active-rooms', JSON.stringify(activeRooms));
       } catch (e) { console.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
       setView('room');
       setStatus('');
     } catch (e) {
       // Room expired or gone — remove from active rooms
       try {
-        let activeRooms; try { activeRooms = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
+        let activeRooms; try { activeRooms = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { activeRooms = []; }
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
-        localStorage.setItem('vt-active-rooms', JSON.stringify(activeRooms));
+        memSet('vt-active-rooms', JSON.stringify(activeRooms));
       } catch (e2) { console.warn('[Page] Cleanup active rooms on rejoin error failed:', e2?.message); }
       setStatus('Chat terminata');
       setTimeout(() => setStatus(''), 2000);
@@ -1066,7 +1067,7 @@ function HomeInner() {
       else { auth.setIsTrial(false); auth.setIsTopPro(false); }
       // b.269 — dentro davvero: l'invito ha finito il suo lavoro e si
       // toglie, cosi un ricaricamento non prova a rientrare da solo.
-      try { sessionStorage.removeItem('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
+      try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
       setView('room');
       setStatus('');
     } catch (e) { setStatus('Error: ' + e.message); }
@@ -1510,7 +1511,7 @@ function HomeInner() {
                     // stanza non compariva mai in vetrina.
                     roomSessionToken: roomPolling.roomSessionTokenRef?.current || '',
                     userToken: auth.userAccount?.token
-                      || (typeof window !== 'undefined' ? localStorage.getItem('vt-token') || '' : ''),
+                      || (typeof window !== 'undefined' ? memGet('vt-token') || '' : ''),
                   }),
                 });
               } catch (e) {

@@ -21,6 +21,7 @@ import en from './locales/en.js';
 
 const log = createLogger('i18n');
 import it from './locales/it.js';
+import { memGet } from './memoria.js';
 
 const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi',
   // b.260 — pacchetti COMPLETI generati (1182 chiavi ciascuno):
@@ -164,7 +165,7 @@ export function t(lang, key) {
 export function linguaInterfacciaFuoriContesto() {
   if (typeof window === 'undefined') return 'en';
   try {
-    const p = JSON.parse(localStorage.getItem('vt-prefs') || 'null');
+    const p = JSON.parse(memGet('vt-prefs') || 'null');
     if (p?.uiLang) return p.uiLang;
     if (p?.lang) return mapLang(p.lang);
   } catch { /* preferenze illeggibili: si ripiega sul browser */ }

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { THEMES, THEME_MIGRATION } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
+import { memGet, memSet } from '../lib/memoria.js';
 
 /**
  * useTheme — Manages theme state with localStorage persistence.
@@ -14,10 +15,10 @@ export default function useTheme() {
   // Load from localStorage (with legacy migration)
   useEffect(() => {
     try {
-      let saved = localStorage.getItem('vt-theme');
+      let saved = memGet('vt-theme');
       if (saved && THEME_MIGRATION[saved]) {
         saved = THEME_MIGRATION[saved];
-        localStorage.setItem('vt-theme', saved);
+        memSet('vt-theme', saved);
       }
       if (saved && Object.values(THEMES).includes(saved)) setTheme(saved);
     } catch (e) { console.warn('[useTheme] localStorage error:', e?.message); }
@@ -25,7 +26,7 @@ export default function useTheme() {
 
   // Save on change
   useEffect(() => {
-    try { localStorage.setItem('vt-theme', theme); } catch (e) { console.warn('[useTheme] localStorage error:', e?.message); }
+    try { memSet('vt-theme', theme); } catch (e) { console.warn('[useTheme] localStorage error:', e?.message); }
   }, [theme]);
 
   const S = useMemo(() => getStyles(theme), [theme]);

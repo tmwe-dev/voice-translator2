@@ -4,18 +4,19 @@ import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+import { memGet, memSet } from '../../lib/memoria.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
 const CHIAVE_CHAT = (id) => `vt-chat-${id}`;
 function caricaChat(id) {
   if (typeof window === 'undefined' || !id) return [];
-  try { const s = localStorage.getItem(CHIAVE_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
+  try { const s = memGet(CHIAVE_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
   catch { return []; }
 }
 function salvaChat(id, messaggi) {
   if (typeof window === 'undefined' || !id) return;
-  try { localStorage.setItem(CHIAVE_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
+  try { memSet(CHIAVE_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
   catch { /* quota/privato: si perde solo la persistenza, non la chat viva */ }
 }
 

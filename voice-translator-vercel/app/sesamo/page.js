@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FONT } from '../lib/constants.js';
 import { t, mapLang } from '../lib/i18n.js';
 import AdminWallet from '../components/AdminWallet.js';
+import { memGet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // Admin Dashboard — i18n
@@ -11,7 +12,7 @@ import AdminWallet from '../components/AdminWallet.js';
 
 function detectLang() {
   if (typeof window === 'undefined') return 'en';
-  try { let p; try { p = JSON.parse(localStorage.getItem('vt-prefs') || '{}'); } catch { p = null; } if (p?.lang) return mapLang(p.lang); } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
+  try { let p; try { p = JSON.parse(memGet('vt-prefs') || '{}'); } catch { p = null; } if (p?.lang) return mapLang(p.lang); } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
   return mapLang((typeof navigator !== 'undefined' ? navigator.language : 'en').split('-')[0]);
 }
 
@@ -43,12 +44,12 @@ export default function AdminPage() {
 
   // Get session token from localStorage (set by auth flow)
   const getToken = () => {
-    try { return localStorage.getItem('vt-token') || ''; } catch { return ''; }
+    try { return memGet('vt-token') || ''; } catch { return ''; }
   };
 
   // b.92 — mostra subito con quale account si entrerebbe
   useEffect(() => {
-    const t = (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })();
+    const t = (() => { try { return memGet('vt-token') || ''; } catch { return ''; } })();
     if (!t) return;
     // La rotta /api/user smista per `action`: senza, risponde 400 "Invalid
     // action" e il pannello resta convinto che tu non sia collegato.

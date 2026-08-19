@@ -12,6 +12,7 @@ import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import PrimaProva, { primaProvaGiaFatta, riapriPrimaProva } from './PrimaProva.js'; // b.96
+import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -101,7 +102,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   useEffect(() => {
     async function checkActiveRooms() {
       try {
-        let saved; try { saved = JSON.parse(localStorage.getItem('vt-active-rooms') || '[]'); } catch { saved = []; }
+        let saved; try { saved = JSON.parse(memGet('vt-active-rooms') || '[]'); } catch { saved = []; }
         if (saved.length === 0) { setActiveRooms([]); return; }
         // ── b.116 · una stanza si toglie solo se il server LO DICE ──
         //
@@ -129,7 +130,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             rimaste.push(room);   // rete incerta: si tiene
           }
         }
-        localStorage.setItem('vt-active-rooms', JSON.stringify(rimaste));
+        memSet('vt-active-rooms', JSON.stringify(rimaste));
         setActiveRooms(rimaste);
       } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
     }

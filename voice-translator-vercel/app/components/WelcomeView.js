@@ -8,6 +8,7 @@ import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Sciame from './Sciame.js';
 import { IconGlobe, IconMic, IconBattery } from './Icons.js';
+import { memDel, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════════════════
 // WELCOME VIEW — Redesign v2.0
@@ -536,8 +537,8 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
                   const v = e.target.value.toUpperCase();
                   setCodicePromo(v);
                   try {
-                    if (v.trim()) localStorage.setItem('vt-voucher-pendente', v.trim());
-                    else localStorage.removeItem('vt-voucher-pendente');
+                    if (v.trim()) memSet('vt-voucher-pendente', v.trim());
+                    else memDel('vt-voucher-pendente');
                   } catch { /* memoria del browser piena o navigazione privata: si prosegue senza salvare */ }
                 }}
                 placeholder={L('codePlaceholder')}

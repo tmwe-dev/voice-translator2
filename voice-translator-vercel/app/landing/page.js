@@ -5,6 +5,7 @@ import { FONT, LANGS } from '../lib/constants.js';
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import Icon from '../components/Icon.js';
 import { PACCHETTI, MOLTIPLICATORE_PREMIUM, BONUS_BENVENUTO_SECONDI, formattaDurata } from '../wallet/tariffe.js';
+import { memGet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════════════
 // BarTalk — pagina pubblica.
@@ -39,7 +40,7 @@ function detectLang() {
   if (params.get('lang')) return mapLang(params.get('lang'));
   // 2. Check localStorage (user's saved preference from the app)
   try {
-    const rawPrefs = localStorage.getItem('vt-prefs') || '{}';
+    const rawPrefs = memGet('vt-prefs') || '{}';
     let prefs; try { prefs = JSON.parse(rawPrefs); } catch { prefs = null; }
     // b.136 — leggeva solo `prefs.lang`, la lingua PARLATA: chi ha i
     // menu in italiano e parla inglese si vedeva la pagina pubblica in

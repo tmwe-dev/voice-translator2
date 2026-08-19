@@ -5,6 +5,7 @@ import { toast } from '../lib/avvisi.js';
 import { createLogger } from '../lib/logger.js';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
+import { memGet, memSet } from '../lib/memoria.js';
 
 const log = createLogger('voci-premium');
 
@@ -55,7 +56,7 @@ export default function useElevenLabsSync(auth) {
   // Load saved voice from localStorage
   useEffect(() => {
     try {
-      const savedVoice = localStorage.getItem('vt-elvoice');
+      const savedVoice = memGet('vt-elvoice');
       if (savedVoice) auth.setSelectedELVoice(savedVoice);
     } catch (e) {
       // In navigazione privata localStorage solleva: la voce salvata
@@ -69,7 +70,7 @@ export default function useElevenLabsSync(auth) {
   useEffect(() => {
     if (auth.selectedELVoice) {
       try {
-        localStorage.setItem('vt-elvoice', auth.selectedELVoice);
+        memSet('vt-elvoice', auth.selectedELVoice);
       } catch (e) {
         // Idem: la scelta vale per questa sessione e non sopravvive al
         // riavvio. Avvisare a schermo per questo sarebbe rumore.

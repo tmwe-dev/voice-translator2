@@ -1,4 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
+import { memGet, memSet } from './memoria.js';
 // GLOSSARIO — le parole che contano per te.
 //
 // Fino a b.94 esisteva una pagina che raccoglieva i termini e li
@@ -18,7 +19,7 @@ const MAX_LUNGHEZZA = 60;   // un termine, non una frase
 export function leggiGlossario() {
   try {
     if (typeof localStorage === 'undefined') return [];
-    const grezzo = JSON.parse(localStorage.getItem(CHIAVE) || '[]');
+    const grezzo = JSON.parse(memGet(CHIAVE) || '[]');
     if (!Array.isArray(grezzo)) return [];
     return grezzo
       .filter(t => t && typeof t.from === 'string' && typeof t.to === 'string')
@@ -35,7 +36,7 @@ export function leggiGlossario() {
 /** Salva i termini. Ritorna l'elenco ripulito. */
 export function salvaGlossario(termini) {
   const puliti = (Array.isArray(termini) ? termini : []).slice(0, MAX_TERMINI);
-  try { localStorage.setItem(CHIAVE, JSON.stringify(puliti)); } catch { /* pieno o privato */ }
+  try { memSet(CHIAVE, JSON.stringify(puliti)); } catch { /* pieno o privato */ }
   return puliti;
 }
 
