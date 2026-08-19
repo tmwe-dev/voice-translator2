@@ -5,6 +5,8 @@ import ConnectionQuality from './ConnectionQuality.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import { ultimoRapportoTesto } from '../lib/diagnosticaChiamata.js';
+import { toast } from '../lib/avvisi.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import ConsumoChip from './ConsumoChip.js';
 
@@ -279,6 +281,21 @@ const RoomHeader = memo(function RoomHeader({
                 style={rigaMenu(S)}>
                 <span style={iconaMenu}><IconClipboard size={15}/></span>
                 <span>{L('exportConversation')}</span>
+              </button>
+              {/* b.274 — la scatola nera della chiamata, copiabile.
+                  Serve a rispondere con i FATTI quando una chiamata non
+                  si allaccia: che codifica e stata scelta, per che strada
+                  passava, e dove si e fermata. Su un telefono non c'e
+                  altro modo di leggerla. */}
+              <button onClick={async () => {
+                  const testo = ultimoRapportoTesto();
+                  try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
+                  catch { toast.info(testo.slice(0, 300)); }
+                  setShowMoreMenu(false);
+                }}
+                style={rigaMenu(S)} aria-label={L('techReport')}>
+                <span style={iconaMenu}><IconClipboard size={15}/></span>
+                <span>{L('techReport')}</span>
               </button>
               {/* Azioni AI */}
               {messages.length >= 3 && (

@@ -12,6 +12,7 @@ import {
 import useE2EEncryption from './useE2EEncryption.js';
 import { createLogger } from '../lib/logger.js';
 import { creaPostaInUscita } from '../lib/postaInUscita.js';
+import { fotografiaChiamata, salvaRapporto } from '../lib/diagnosticaChiamata.js';
 const dbg = createLogger('webrtc');
 
 // ═══════════════════════════════════════════════
@@ -276,6 +277,22 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
   }, [sendSignal]);
 
+  // b.274 — la scatola nera: guarda e basta, non tocca la chiamata.
+  // Scatta due volte: quando si allaccia (cosi si sa COME si e allacciata:
+  // codec e strada) e quando fallisce (cosi si sa DOVE si e fermata).
+  const scattaRapporto = useCallback((esito) => {
+    const pc = pcRef.current;
+    Promise.resolve()
+      .then(() => fotografiaChiamata(pc, {
+        esito,
+        miaPiattaforma: piattaformaRef.current,
+        piattaformaPartner: piattaformaPartnerRef.current,
+        tipoChiamata: callTypeRef.current || tipoChiamataPrecedenteRef.current,
+      }))
+      .then(salvaRapporto)
+      .catch(() => { /* la diagnostica non deve mai disturbare la chiamata */ });
+  }, []);
+
   // ── Connection state handler ──
   const handleStateChange = useCallback((info) => {
     const { source, state } = typeof info === 'object' ? info : { source: 'unknown', state: info };
@@ -288,6 +305,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       }
       iceRestartAttemptRef.current = 0; // Reset ICE restart counter on successful connection
       autoReconnectAttemptRef.current = 0; // Reset auto-reconnect counter
+      if (stateRef.current !== 'connected') scattaRapporto('riuscita');
       if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
       setWebrtcState('connected');
       stateRef.current = 'connected';
@@ -338,7 +356,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         cleanup();
       }
     }
-  }, [cleanup, attemptIceRestart]);
+  }, [cleanup, attemptIceRestart, scattaRapporto]);
 
   // ── Auto-reconnect: rebuild the entire P2P connection from scratch ──
   // Called when ICE restart fails. Tears down current connection and sends a new
@@ -351,6 +369,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (chiusuraVolutaRef.current) return;
     if (autoReconnectAttemptRef.current >= MAX_AUTO_RECONNECTS) {
       console.warn('[WebRTC] Auto-reconnect limit reached — giving up');
+      scattaRapporto('fallita');
       setWebrtcState('failed');
       stateRef.current = 'failed';
       cleanup();
@@ -608,6 +627,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         await sendSignal('offer', offerStr);
         timeoutRef.current = setTimeout(() => {
           if (stateRef.current !== 'connected') {
+            scattaRapporto('fallita-tempo-scaduto');
             setWebrtcState('failed');
             stateRef.current = 'failed';
             cleanup();
@@ -689,6 +709,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         await flushIceCandidates(newPc);
         timeoutRef.current = setTimeout(() => {
           if (stateRef.current !== 'connected') {
+            scattaRapporto('fallita-tempo-scaduto');
             setWebrtcState('failed');
             stateRef.current = 'failed';
             cleanup();
