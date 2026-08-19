@@ -64,6 +64,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   const [genderFilter, setGenderFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [hoveredVoice, setHoveredVoice] = useState(null);
+  const [ordina, setOrdina] = useState('paese'); // 'paese' | 'nome' — b.309
   const audioRef = useRef(null);
 
   // Palette
@@ -161,7 +162,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   }, [playingVoice, sampleText, prefs.lang, userTokenRef, stopAudio]);
 
   // Filter EL voices
-  const filteredVoices = elevenLabsVoices.filter(v => {
+  const filtrate = elevenLabsVoices.filter(v => {
     if (categoryFilter !== 'all' && v.category !== categoryFilter) return false;
     if (genderFilter !== 'all') {
       const g = v.labels?.gender?.toLowerCase() || '';
@@ -179,6 +180,18 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
     }
     return true;
   });
+  // b.309 — ORDINAMENTO con un tasto: per PAESE (bandiere raggruppate) o per
+  // NOME. Le voci qui hanno l'accento in labels.*, quindi si passa lo shim a
+  // bandieraVoce (che legge accent/language al primo livello).
+  const bandieraDi = (v) => bandieraVoce({ accent: v.labels?.accent, language: v.labels?.language || v.language });
+  const filteredVoices = ordina === 'paese'
+    ? [...filtrate].sort((a, b) => {
+        const ba = bandieraDi(a), bb = bandieraDi(b);
+        if (ba.o !== bb.o) return ba.o - bb.o;
+        if (ba.p !== bb.p) return String(ba.p).localeCompare(String(bb.p));
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      })
+    : [...filtrate].sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
   // ── Waveform bars for playing indicator ──
   const WaveBars = ({ color }) => (
@@ -460,6 +473,17 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                   }}>{f.fisso || L(f.chiave)}</button>
                 );
               })}
+              <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.06)', alignSelf: 'center', margin: '0 4px' }} />
+              {/* b.309 — tasto ORDINAMENTO: alterna paese/nome */}
+              <button onClick={() => setOrdina(o => o === 'paese' ? 'nome' : 'paese')}
+                title={ordina === 'paese' ? 'Ordina per paese' : 'Ordina per nome'} style={{
+                padding: '6px 12px', borderRadius: 12, cursor: 'pointer',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: 11, fontWeight: 600, fontFamily: FONT,
+                transition: 'all 0.2s ease', WebkitTapHighlightColor: 'transparent',
+              }}>{ordina === 'paese' ? '\u{1F3F3}️ ↓' : '\u{1F524} ↓'}</button>
             </div>
           </div>
         )}
