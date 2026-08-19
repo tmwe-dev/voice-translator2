@@ -116,7 +116,10 @@ describe('P0-2: hostTier non arriva piu dal client dichiarato', () => {
     const blocco = src.slice(i, src.indexOf('\n}', i));
     expect(blocco).toContain("livelloAccount === 'business' || livelloAccount === 'top_pro'");
     const clientSrc = leggi('app/hooks/useAuth.js');
-    expect(clientSrc).toContain("setIsTopPro(tier === 'business' || tier === 'top_pro');");
+    // b.263 — al criterio di CONTO si aggiunge l'eredita dalla stanza
+    // (l'ospite di una stanza TOP PRO usa la voce premium dell'host).
+    // Qui si verifica il criterio sul conto, che non deve cambiare.
+    expect(clientSrc).toContain("tier === 'business' || tier === 'top_pro'");
   });
 });
 

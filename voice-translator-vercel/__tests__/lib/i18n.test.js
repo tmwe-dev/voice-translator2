@@ -63,12 +63,17 @@ describe('mapLang', () => {
     expect(mapLang('it')).toBe('it');
     expect(mapLang('ja')).toBe('ja');
     expect(mapLang('th')).toBe('th');
+    // b.260 — nl/pl/sv hanno il pacchetto completo: non ripiegano piu
+    expect(mapLang('nl')).toBe('nl');
+    expect(mapLang('pl')).toBe('pl');
+    expect(mapLang('sv')).toBe('sv');
   });
 
   it('maps unsupported languages to en', () => {
-    expect(mapLang('nl')).toBe('en');
-    expect(mapLang('pl')).toBe('en');
-    expect(mapLang('sv')).toBe('en');
+    // Lingue senza pacchetto: l'interfaccia non esiste, si legge in inglese
+    expect(mapLang('is')).toBe('en');
+    expect(mapLang('et')).toBe('en');
+    expect(mapLang('lt')).toBe('en');
   });
 
   it('returns en for completely unknown codes', () => {

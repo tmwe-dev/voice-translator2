@@ -5,6 +5,30 @@ dell'utente, non come suggerimento.
 
 ---
 
+## 0. Il giro di lavoro: si ripara, si aggiorna, collauda lui
+
+Ordine di Luca del 19/08/2026, e viene PRIMA di tutto il resto:
+
+    riparo una sezione -> aggiorno (git push, che pubblica) -> collauda LUI -> sezione successiva
+
+- **La velocita e il criterio.** Si va a trovare i difetti e a correggerli,
+  sezione per sezione, quando lui lo chiede. Nient'altro.
+- **Niente banchi di prova su mia iniziativa.** Costruire un impianto di
+  collaudo (browser pilotati, script di verifica, giri sistematici sugli
+  elementi) e tempo tolto alle riparazioni. Se serve una prova, la piu
+  corta che dimostra il punto.
+- **I test si eseguono alla fine, e insieme a lui.** Il collaudo delle
+  funzioni riparate lo fa lui, sul prodotto. Io non lo rifaccio e non
+  aspetto: appena l'aggiornamento e in linea si prosegue.
+- Se una verifica lunga sembra davvero necessaria, si dice in UNA riga
+  quanto costa e si aspetta il suo via.
+
+Questo non annulla il punto 3 (nessun "fatto" senza prova): la prova
+resta obbligatoria, ma e la piu breve che regge — una riga di log, un
+header, un test che era rosso e diventa verde — non una campagna.
+
+---
+
 ## 1. Si finisce quello che si comincia
 
 Quando concordiamo un elenco di interventi, si eseguono **tutti**, in ordine,
