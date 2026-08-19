@@ -1,0 +1,11 @@
+import { apri, stato, foto, entra, DIR } from './lib.mjs';
+import { mkdirSync } from 'fs';
+mkdirSync(DIR, { recursive: true });
+const { b, page, log } = await apri();
+const passi = await entra(page);
+console.log('PASSI:', JSON.stringify(passi));
+console.log('STATO:', JSON.stringify(await stato(page), null, 1));
+await foto(page, '01-dopo-onboarding');
+console.log('ERRORI:', log.errori.length, JSON.stringify([...new Set(log.errori)].slice(0, 6), null, 1));
+console.log('HTTP>=400:', JSON.stringify([...new Set(log.reti)]));
+await b.close();

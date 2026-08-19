@@ -53,6 +53,32 @@ const ICE_SERVERS = [
 /** Vero se stiamo usando il relay pubblico gratuito, cioe nessuno di nostro. */
 export let RELAY_PUBBLICO = true;
 
+// ═══ b.282 — IL PONTE ARRIVA DALLA PORTA /api/turn, NON DAL PACCHETTO ═══
+// Le credenziali temporanee (HMAC, 4 ore) si chiedono al server appena
+// l'app parte: se il relay e configurato (TURN_SECRET + TURN_URLS su
+// Vercel), entrano nella lista PRIMA della prima chiamata. Se la porta
+// risponde vuoto o non risponde, non cambia niente: restano gli STUN.
+// Le variabili NEXT_PUBLIC_TURN_* qui sotto restano come strada di
+// prova manuale, ma quella buona e questa: il segreto non tocca mai il
+// browser.
+if (typeof window !== 'undefined') {
+  fetch('/api/turn')
+    .then(r => (r.ok ? r.json() : null))
+    .then(d => {
+      const voci = d?.iceServers;
+      if (!Array.isArray(voci) || !voci.length) return;
+      // via ogni relay precedente: comanda quello appena ricevuto
+      for (let i = ICE_SERVERS.length - 1; i >= 0; i--) {
+        const u = String(ICE_SERVERS[i].urls || '');
+        if (u.startsWith('turn:') || u.startsWith('turns:')) ICE_SERVERS.splice(i, 1);
+      }
+      for (const v of voci) ICE_SERVERS.push(v);
+      RELAY_PUBBLICO = false;
+      log.debug('ponte ricevuto da /api/turn:', voci.map(x => x.urls).flat().join(' '));
+    })
+    .catch(() => { /* la porta non c'e o la rete manca: si prosegue con i soli STUN */ });
+}
+
 if (typeof window !== 'undefined') {
   const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
   const turnUser = process.env.NEXT_PUBLIC_TURN_USER;

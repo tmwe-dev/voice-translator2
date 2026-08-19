@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **42** — vive: **38**, rimosse: **4**
+Rotte totali: **43** — vive: **39**, rimosse: **4**
 
 ## Come si legge
 
@@ -60,6 +60,7 @@ Rotte totali: **42** — vive: **38**, rimosse: **4**
 | /api/tts-edge | GET POST | si | tts-edge | — | — | — | — |
 | /api/tts-elevenlabs | POST GET | si | tts-elevenlabs | — | — | — | si |
 | /api/tts-test | POST | — | — | — | — | — | — |
+| /api/turn | GET | si | turn | — | — | — | — |
 | /api/user | POST GET PUT | si | user | — | — | — | si |
 | /api/voci | GET POST | si | voci | — | — | — | — |
 | /api/voice-clone | POST GET | si | voice-clone | — | — | si | si |
