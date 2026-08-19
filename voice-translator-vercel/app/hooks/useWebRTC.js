@@ -7,6 +7,7 @@ import {
   sendViaDataChannel, collectIceCandidates,
   addMediaTracks, getLocalMediaStream,
   setVideoEnabled, switchCamera,
+  rilevaPiattaforma, serveH264, preferisciH264,
 } from '../lib/webrtc.js';
 import useE2EEncryption from './useE2EEncryption.js';
 import { createLogger } from '../lib/logger.js';
@@ -77,6 +78,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
   const iceCandidateQueueRef = useRef([]);
   const heartbeatIntervalRef = useRef(null);
   const lastPongRef = useRef(0);
+  // b.272 — chi sono io e chi e' dall'altra parte: serve a decidere la
+  // codifica video (H.264 se c'e di mezzo un Apple).
+  const piattaformaRef = useRef(null);
+  if (piattaformaRef.current === null) piattaformaRef.current = rilevaPiattaforma();
+  const piattaformaPartnerRef = useRef(null);
+  // b.272 — l'ascoltatore che aspetta il ritorno della rete: va tenuto
+  // per poterlo togliere, vedi cleanup.
+  const risveglioRef = useRef(null);
 
   // ── E2E Encryption (extracted hook) ──
   // b.113 — la stanza entra nel calcolo del numero di sicurezza: due
@@ -103,6 +112,8 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     if (incomingCallTimerRef.current) { clearTimeout(incomingCallTimerRef.current); incomingCallTimerRef.current = null; }
     if (heartbeatIntervalRef.current) { clearInterval(heartbeatIntervalRef.current); heartbeatIntervalRef.current = null; }
     if (autoReconnectTimerRef.current) { clearTimeout(autoReconnectTimerRef.current); autoReconnectTimerRef.current = null; }
+    // b.272 — via anche l'attesa del ritorno della rete (vedi sopra).
+    if (risveglioRef.current) { window.removeEventListener('online', risveglioRef.current); risveglioRef.current = null; }
     // Destroy ephemeral E2E keys on disconnect
     e2e.reset();
     pendingCallRef.current = false;
@@ -356,12 +367,19 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     autoReconnectTimerRef.current = setTimeout(async () => {
       autoReconnectTimerRef.current = null;
       if (!navigator.onLine) {
-        // Wait for network to come back
-        const onOnline = () => {
-          window.removeEventListener('online', onOnline);
+        // b.272 — si aspetta il ritorno della rete, ma l'attesa deve
+        // poter essere ANNULLATA: prima questo ascoltatore restava
+        // appeso per sempre e, se la rete tornava dopo che avevi chiuso
+        // e lasciato la stanza, faceva ripartire la chiamata da solo.
+        if (risveglioRef.current) window.removeEventListener('online', risveglioRef.current);
+        const alRitornoDellaRete = () => {
+          window.removeEventListener('online', alRitornoDellaRete);
+          risveglioRef.current = null;
+          if (chiusuraVolutaRef.current) return;
           attemptAutoReconnect();
         };
-        window.addEventListener('online', onOnline);
+        risveglioRef.current = alRitornoDellaRete;
+        window.addEventListener('online', alRitornoDellaRete);
         return;
       }
       try {
@@ -371,7 +389,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         // azzerato da cleanup(), e una videochiamata tornava audio.
         const tipoDaRipristinare = callTypeRef.current || tipoChiamataPrecedenteRef.current;
         callTypeRef.current = tipoDaRipristinare;
-        await sendSignal('call-request', { withVideo: tipoDaRipristinare === 'video', reconnect: true });
+        await sendSignal('call-request', { withVideo: tipoDaRipristinare === 'video', reconnect: true, piattaforma: piattaformaRef.current });
         timeoutRef.current = setTimeout(() => {
           if (pendingCallRef.current) {
             pendingCallRef.current = false;
@@ -416,7 +434,14 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         if (dcRef.current?.readyState === 'open') {
           try { dcRef.current.send(JSON.stringify({ type: 'ping', ts: Date.now() })); } catch { /* il temporizzatore era gia scaduto */ }
           if (Date.now() - lastPongRef.current > 20000 && stateRef.current === 'connected') {
-            console.warn('[WebRTC] No heartbeat pong for 20s — connection may be dead');
+            // b.272 — prima qui si scriveva solo un avviso nel registro:
+            // il collegamento era morto, il sistema se ne accorgeva, e
+            // restava a guardare. Ora si reagisce come a una caduta.
+            console.warn('[WebRTC] nessuna risposta al battito da 20s: tratto la linea come caduta');
+            lastPongRef.current = Date.now();   // un solo tentativo per giro
+            if (!chiusuraVolutaRef.current) {
+              attemptIceRestart().then(ripartito => { if (!ripartito) attemptAutoReconnect(); });
+            }
           }
         }
       }, 8000);
@@ -515,10 +540,16 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       // l'ospite non si riallacciava piu.
       // Ora: si smonta la vecchia connessione morta e si riaccetta, senza
       // far ricomparire il banner "chiamata in arrivo".
-      if (payload?.reconnect && (stateRef.current === 'connected' || stateRef.current === 'connecting')) {
+      // b.272 — QUI IL SEGNALE NON ARRIVAVA MAI. `reconnect` viaggia
+      // dentro il contenuto del messaggio (`data`), non accanto ad esso:
+      // `payload.reconnect` era sempre indefinito, quindi la riconnessione
+      // cadeva nel ramo qui sotto e si rispondeva OCCUPATO. E' esattamente
+      // il difetto che b.245 credeva di aver chiuso: la correzione era
+      // giusta, l'indirizzo da cui leggeva no.
+      if (data?.reconnect && (stateRef.current === 'connected' || stateRef.current === 'connecting')) {
         dbg.debug('[WebRTC] riconnessione del partner: smonto la vecchia e riaccetto');
         cleanup();
-        const eraVideo = !!payload.withVideo || tipoChiamataPrecedenteRef.current === 'video';
+        const eraVideo = !!data?.withVideo || tipoChiamataPrecedenteRef.current === 'video';
         const tipo = eraVideo ? 'video' : 'voice';
         chiusuraVolutaRef.current = false;
         setCallType(tipo);
@@ -526,9 +557,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         setWebrtcState('connecting');
         stateRef.current = 'connecting';
         // Si riaccetta subito: nessun banner, e' la stessa chiamata di prima.
-        sendSignal('call-accepted', {}).catch((e) => console.warn('[WebRTC] riaccetto:', e.message));
+        sendSignal('call-accepted', { piattaforma: piattaformaRef.current }).catch((e) => console.warn('[WebRTC] riaccetto:', e.message));
         return;
       }
+      if (data?.piattaforma) piattaformaPartnerRef.current = data.piattaforma;
       // Someone wants to call us — show incoming call banner
       if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
         // Already busy
@@ -546,6 +578,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     }
 
     if (type === 'call-accepted') {
+      if (data?.piattaforma) piattaformaPartnerRef.current = data.piattaforma;
       // Partner accepted our call — now send the actual offer
       if (!pendingCallRef.current) return;
       pendingCallRef.current = false;
@@ -558,6 +591,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         pc.addTransceiver('audio', { direction: 'sendrecv' });
         if (wantVideo) {
           pc.addTransceiver('video', { direction: 'sendrecv' });
+        }
+        // b.272 — se in questa chiamata c'e' di mezzo un Apple, H.264 va
+        // messo davanti PRIMA di scrivere l'offerta: dopo non conta piu.
+        if (wantVideo && serveH264(piattaformaRef.current, piattaformaPartnerRef.current)) {
+          preferisciH264(pc);
         }
         const dc = createDataChannel(pc);
         setupDC(dc);
@@ -630,13 +668,23 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
         pcRef.current = newPc;
         newPc.ondatachannel = (event) => setupDC(event.channel);
         const offerSdp = JSON.parse(data);
-        const callerHasVideo = offerSdp.sdp?.includes('m=video');
+        // b.272 — non basta che l'offerta NOMINI il video: se chi chiama
+        // non e' riuscito ad accendere la telecamera, il suo canale video
+        // e' di sola ricezione. Prima bastava la parola "video" e il
+        // ricevente accendeva la propria camera per una chiamata in cui
+        // l'altro non si vedeva: si finiva in video da soli.
+        const bloccoVideo = (offerSdp.sdp || '').split(/^m=/m).find(b => b.startsWith('video')) || '';
+        const callerHasVideo = !!bloccoVideo && /a=(sendrecv|sendonly)/.test(bloccoVideo);
         const stream = await getMediaWithFallback(callerHasVideo);
         if (stream) sendersRef.current = addMediaTracks(newPc, stream);
         collectIceCandidates(newPc, (candidateStr) => {
           sendSignal('ice-candidate', candidateStr).catch(() => {});
         });
-        const answerStr = await createAnswer(newPc, data);
+        const answerStr = await createAnswer(newPc, data, (pcPronta) => {
+          if (callerHasVideo && serveH264(piattaformaRef.current, piattaformaPartnerRef.current)) {
+            preferisciH264(pcPronta);
+          }
+        });
         await sendSignal('answer', answerStr);
         await flushIceCandidates(newPc);
         timeoutRef.current = setTimeout(() => {
@@ -678,10 +726,34 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
       const pc = pcRef.current;
       if (!pc) return;
       try {
+        // b.272 — DUE PROPOSTE CHE SI INCROCIANO.
+        // Se accendiamo la telecamera quasi nello stesso istante, la sua
+        // proposta arriva mentre la mia e' ancora in volo. Prima si
+        // accettava comunque: il browser rifiutava, l'errore finiva nel
+        // registro, e la chiamata restava a meta' — video nero, e
+        // nessuno dei due che riprova.
+        // La regola e' quella gia' usata nella stanza di gruppo: decide
+        // l'ordine dei nomi. Chi ha il nome maggiore tiene la propria
+        // proposta e ignora quella che arriva; l'altro ritira la sua,
+        // risponde, e subito dopo la ripropone — cosi' la sua telecamera
+        // non resta indietro.
+        let daRiproporre = false;
+        if (pc.signalingState !== 'stable') {
+          if (String(myName || '') > String(payload.from || '')) return;
+          await pc.setLocalDescription({ type: 'rollback' });
+          daRiproporre = true;
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(data)));
+        // b.272 — se e' l'altro ad accendere la telecamera, il canale
+        // video compare qui: la preferenza si esprime prima di rispondere.
+        if (serveH264(piattaformaRef.current, piattaformaPartnerRef.current)) preferisciH264(pc);
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         await sendSignal('answer', JSON.stringify(pc.localDescription));
+        if (daRiproporre) {
+          const offerStr = await createOffer(pc);
+          sendSignal('renegotiate', offerStr).catch(() => {});
+        }
       } catch (e) {
         console.error('[WebRTC] Renegotiate error:', e);
       }
@@ -746,12 +818,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     pendingCallRef.current = true;
 
     try {
-      await sendSignal('call-request', { withVideo });
+      await sendSignal('call-request', { withVideo, piattaforma: piattaformaRef.current });
       // Wait for call-accepted or call-declined (handled by handleIncomingSignal)
       // Timeout after 30s
       timeoutRef.current = setTimeout(() => {
         if (pendingCallRef.current) {
           pendingCallRef.current = false;
+          // b.272 — smettere di chiamare va DETTO all'altro: prima chi
+          // non aveva risposto restava con la finestra della chiamata
+          // accesa fino allo scadere del suo tempo, per una chiamata che
+          // dall'altra parte non esisteva piu.
+          sendSignal('call-ended', {}).catch(() => {});
           setWebrtcState('idle');
           stateRef.current = 'idle';
         }
@@ -780,7 +857,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     setWebrtcState('connecting');
     stateRef.current = 'connecting';
     try {
-      await sendSignal('call-accepted', {});
+      await sendSignal('call-accepted', { piattaforma: piattaformaRef.current });
     } catch (e) {
       console.error('[WebRTC] Accept signal error:', e);
     }
@@ -821,6 +898,10 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
             }
             setLocalStream(new MediaStream(localStreamRef.current.getTracks()));
             setVideoEnabledState(true);
+            // b.272 — il canale video nasce ADESSO, quindi la preferenza
+            // sul codec va espressa adesso: e' il caso "passa a video"
+            // dentro una chiamata gia' aperta.
+            if (serveH264(piattaformaRef.current, piattaformaPartnerRef.current)) preferisciH264(pc);
             const offerStr = await createOffer(pc);
             sendSignal('renegotiate', offerStr).catch(() => {});
           }

@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import {
   createPeerConnection, createDataChannel, createOffer, createAnswer, acceptAnswer,
+  rilevaPiattaforma, serveH264, preferisciH264,
   addMediaTracks, collectIceCandidates, addIceCandidate, sendViaDataChannel,
 } from '../lib/webrtc.js';
 import { subscribeTick } from '../lib/ticker.js';
@@ -144,6 +145,12 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
     const giaInviati = new Set(voce.pc.getSenders().map(s => s.track?.kind).filter(Boolean));
     if (!giaInviati.has('audio')) voce.pc.addTransceiver('audio', { direction: 'recvonly' });
     if (conVideo && !giaInviati.has('video')) voce.pc.addTransceiver('video', { direction: 'recvonly' });
+    // b.272 — stessa regola della chiamata a due: se questo dispositivo e
+    // Apple mette H.264 davanti, perche e quello che la sua accelerazione
+    // hardware tratta davvero. Nella stanza di gruppo non si sa chi sono
+    // gli altri, ma non serve: basta che il lato Apple lo chieda, e chi
+    // sta su Android H.264 lo sa fare comunque.
+    if (conVideo && serveH264(rilevaPiattaforma(), null)) preferisciH264(voce.pc);
     // createOffer restituisce gia una stringa JSON pronta da spedire.
     const offerta = await createOffer(voce.pc);
     await api('manda', { a: nome, segnale: { tipo: 'offerta', dati: offerta } });
@@ -157,7 +164,11 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       ascoltaCanale(e.channel, nome);
     };
     // createAnswer vuole la stringa e la stringa restituisce.
-    const risposta = await createAnswer(voce.pc, offertaJson);
+    const risposta = await createAnswer(voce.pc, offertaJson, (pcPronta) => {
+      // b.272 — anche rispondendo: chi risponde tiene l'ordine di chi ha
+      // chiesto, quindi il lato Apple deve rimetterlo a posto qui.
+      if (serveH264(rilevaPiattaforma(), null)) preferisciH264(pcPronta);
+    });
     await api('manda', { a: nome, segnale: { tipo: 'risposta', dati: risposta } });
 
     // I candidati arrivati prima della descrizione ora si possono usare.

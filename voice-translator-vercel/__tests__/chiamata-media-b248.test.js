@@ -153,7 +153,7 @@ describe('le difese b.116 / b.117 / b.245 restano intatte', () => {
 
   it('b.245: la riconnessione viene intercettata PRIMA del busy', () => {
     const s = hook();
-    const iRiconn = s.indexOf('payload?.reconnect &&');
+    const iRiconn = s.indexOf('data?.reconnect &&');
     const iBusy = s.indexOf("reason: 'busy'");
     expect(iRiconn).toBeGreaterThan(-1);
     expect(iBusy).toBeGreaterThan(-1);

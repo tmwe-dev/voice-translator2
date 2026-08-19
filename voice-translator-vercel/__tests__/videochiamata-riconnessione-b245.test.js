@@ -64,12 +64,12 @@ describe('una riconnessione non è una chiamata nuova', () => {
   const h = () => senzaCommenti(leggi('app/hooks/useWebRTC.js'));
 
   it('il flag reconnect ORA viene letto dal ricevente', () => {
-    expect(h()).toMatch(/payload\?\.reconnect &&/);
+    expect(h()).toMatch(/data\?\.reconnect &&/);
   });
 
   it('e chi si crede ancora connesso non risponde più BUSY a una riconnessione', () => {
     const s = h();
-    const iRiconn = s.indexOf('payload?.reconnect &&');
+    const iRiconn = s.indexOf('data?.reconnect &&');
     const iBusy = s.indexOf("reason: 'busy'");
     expect(iRiconn, 'il ramo riconnessione deve esserci').toBeGreaterThan(-1);
     expect(iBusy, 'il busy deve esistere ancora, per le chiamate vere').toBeGreaterThan(-1);
@@ -78,7 +78,7 @@ describe('una riconnessione non è una chiamata nuova', () => {
 
   it('si riaccetta senza far ricomparire il banner "chiamata in arrivo"', () => {
     const s = h();
-    const i = s.indexOf('payload?.reconnect &&');
+    const i = s.indexOf('data?.reconnect &&');
     const corpo = s.slice(i, i + 700);
     expect(corpo).toMatch(/sendSignal\('call-accepted'/);
     expect(corpo).not.toMatch(/setIncomingCall\(/);
@@ -106,8 +106,8 @@ describe('una videochiamata si riconnette come videochiamata', () => {
 
   it('anche chi riceve la riconnessione ricostruisce il video', () => {
     const s = h();
-    const i = s.indexOf('payload?.reconnect &&');
-    expect(s.slice(i, i + 400)).toMatch(/payload\.withVideo \|\| tipoChiamataPrecedenteRef\.current === 'video'/);
+    const i = s.indexOf('data?.reconnect &&');
+    expect(s.slice(i, i + 400)).toMatch(/data\?\.withVideo \|\| tipoChiamataPrecedenteRef\.current === 'video'/);
   });
 });
 

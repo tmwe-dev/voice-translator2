@@ -189,6 +189,74 @@ export async function getLocalMediaStream(opts = { video: true, audio: false }) 
 /**
  * Create SDP offer
  */
+// ═══════════════════════════════════════════════════════════════
+// b.272 — APPLE E ANDROID DEVONO PARLARE LA STESSA LINGUA VIDEO
+//
+// Fra due Apple la videochiamata si allaccia sempre; fra un Apple e un
+// Android no (verificato da Luca sui telefoni veri). La ragione non e la
+// rete: e la CODIFICA del video.
+//
+// Fino a qui non veniva dichiarata nessuna preferenza, quindi la sceglieva
+// il browser. Chrome su Android mette davanti VP8; Safari sui dispositivi
+// Apple ha l'accelerazione hardware su H.264 e con VP8 va in difficolta o
+// non lo tratta affatto. Due Apple si accordano da soli su H.264 — ecco
+// perche fra loro funziona — mentre nell'incrocio l'accordo puo cadere sul
+// codec sbagliato: l'audio passa e il video resta nero.
+//
+// Ora: si riconosce il sistema dei due partecipanti e, se ANCHE UNO SOLO
+// dei due e Apple, tutti e due mettono H.264 in cima. Se il dispositivo
+// non sa fare H.264, o il browser non permette di esprimere preferenze,
+// non si tocca niente e vale il comportamento di prima: una preferenza
+// non esprimibile non deve mai diventare una chiamata persa.
+// ═══════════════════════════════════════════════════════════════
+
+/** 'apple' | 'android' | 'altro' — quale sistema sta usando chi legge. */
+export function rilevaPiattaforma() {
+  if (typeof navigator === 'undefined') return 'altro';
+  const ua = navigator.userAgent || '';
+  if (/android/i.test(ua)) return 'android';
+  const iOS = /iPad|iPhone|iPod/.test(ua)
+    // iPad recenti si presentano come Macintosh: li smaschera il tocco.
+    || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+  const safari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg/.test(ua);
+  if (iOS || safari) return 'apple';
+  return 'altro';
+}
+
+/** Vero se in questa chiamata conviene mettere H.264 davanti a tutto. */
+export function serveH264(miaPiattaforma, piattaformaPartner) {
+  return miaPiattaforma === 'apple' || piattaformaPartner === 'apple';
+}
+
+/**
+ * Mette H.264 in cima alle preferenze video della connessione.
+ * Va chiamata DOPO che i canali video esistono e PRIMA di creare
+ * l'offerta o la risposta. Non solleva mai: se non si puo fare, torna
+ * false e la chiamata prosegue come prima.
+ */
+export function preferisciH264(pc) {
+  try {
+    if (!pc?.getTransceivers || typeof RTCRtpSender === 'undefined'
+      || !RTCRtpSender.getCapabilities) return false;
+    const capacita = RTCRtpSender.getCapabilities('video');
+    const codec = capacita?.codecs || [];
+    const h264 = codec.filter(c => /h264/i.test(c.mimeType || ''));
+    if (!h264.length) return false;
+    const resto = codec.filter(c => !/h264/i.test(c.mimeType || ''));
+    let applicate = 0;
+    for (const t of pc.getTransceivers()) {
+      const tipo = t.receiver?.track?.kind || t.sender?.track?.kind;
+      if (tipo !== 'video' || typeof t.setCodecPreferences !== 'function') continue;
+      try { t.setCodecPreferences([...h264, ...resto]); applicate++; } catch { /* questo canale non accetta preferenze: si lascia com'e */ }
+    }
+    if (applicate) log.debug('H.264 messo davanti su', applicate, 'canali video');
+    return applicate > 0;
+  } catch (e) {
+    log.warn('preferenza codec non applicabile:', e?.message || e);
+    return false;
+  }
+}
+
 export async function createOffer(pc) {
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
@@ -198,9 +266,13 @@ export async function createOffer(pc) {
 /**
  * Create SDP answer from received offer
  */
-export async function createAnswer(pc, offerSdpStr) {
+export async function createAnswer(pc, offerSdpStr, primaDiRispondere) {
   let offer; try { offer = JSON.parse(offerSdpStr); } catch { throw new Error('Invalid offer SDP'); }
   await pc.setRemoteDescription(new RTCSessionDescription(offer));
+  // b.272 — i canali video esistono solo ora, dopo l'offerta ricevuta: e
+  // questo l'unico istante in cui si puo esprimere la preferenza sul
+  // codec, prima che la risposta venga scritta.
+  try { primaDiRispondere?.(pc); } catch { /* preferenza non applicata: si risponde comunque */ }
   const answer = await pc.createAnswer();
   await pc.setLocalDescription(answer);
   return JSON.stringify(pc.localDescription);
