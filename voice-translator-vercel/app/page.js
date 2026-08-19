@@ -33,6 +33,7 @@ import WelcomeView from './components/WelcomeView.js';
 // b.136 — la scelta del paese e la PRIMA schermata: non puo essere
 // pigra, altrimenti al primo avvio si vede lo spinner al posto suo.
 import SceltaPaeseView from './components/SceltaPaeseView.js';
+import LinguettaLingua from './components/LinguettaLingua.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -1140,6 +1141,13 @@ function HomeInner() {
           tempo — e coprivano il pulsante di conferma, che e l'unica cosa
           da fare in quella schermata. */}
       {!SCHERMATE_SENZA_VELO.has(view) && view !== 'paese' && <InstallaApp pwa={pwa} theme={theme} />}
+      {/* b.311 — LINGUETTA lingua/voce sul bordo sinistro, sulle schermate
+          calme: non in onboarding (paese/welcome/loading), non in chiamata
+          (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
+          (voicetest). Da qui si cambia lingua e voce al volo. */}
+      {!['loading', 'paese', 'welcome', 'room', 'speaker', 'taxi-chat', 'taxi', 'lobby', 'summary', 'join', 'voicetest'].includes(view) && (
+        <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} />
+      )}
     </AppProvider>
   );
 
