@@ -34,15 +34,27 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
   // b.262 — il motore che parlera DAVVERO al prossimo messaggio, risolto
   // con la stessa regola di procuraVoce: e quello che la spilla mostra.
   const ve = prefs.voiceEngine || 'auto';
+  // b.267 — la spilla diceva "OpenAI" a chi in automatico sentiva Edge.
+  // La regola vera e' una sola, quella di procuraVoce (useTTSEngine):
+  //   premium = motore === 'elevenlabs' || (auto && canUseElevenLabs)
+  //   altrimenti si va SEMPRE su Edge — mai su OpenAI, che in automatico
+  //   non viene chiamato da nessuna parte.
+  // Chi aveva un conto ma non ElevenLabs leggeva "OpenAI" sulla spilla e
+  // ascoltava la voce meccanica: la stessa bugia che b.204 aveva tolto
+  // dall'altro ramo. `isTrial` qui non conta piu niente: conta solo il
+  // diritto a ElevenLabs, che l'ospite di un host PRO eredita (b.263).
   const motoreAttivo = ve === 'auto'
-    ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
+    ? (canUseElevenLabs ? 'elevenlabs' : 'edge')
     : ve;
   // Le scelte offerte: solo cio che questa persona puo davvero usare.
   const motoriDisponibili = [
     ...(canUseElevenLabs ? [{ id: 'elevenlabs', nome: 'ElevenLabs', sotto: L('enginePremiumDesc'), colore: S.colors.goldAccent || '#d4a24e' }] : []),
     ...(!isTrial ? [{ id: 'openai', nome: 'OpenAI', sotto: L('engineOpenaiDesc'), colore: S.colors.accent2 || S.colors.accent1 }] : []),
     { id: 'edge', nome: 'Edge TTS', sotto: L('engineStandardDesc'), colore: S.colors.textMuted },
-    ...(!isTrial ? [{ id: 'auto', nome: L('engineAuto'), sotto: L('engineAutoDesc'), colore: S.colors.accent1 }] : []),
+    // b.267 — "Automatico" serve soprattutto all'ospite che eredita la
+    // voce premium dall'host: e' la scelta che gliela fa sentire senza
+    // sapere niente di motori. Prima gli era negata perche isTrial.
+    ...((!isTrial || canUseElevenLabs) ? [{ id: 'auto', nome: L('engineAuto'), sotto: L('engineAutoDesc'), colore: S.colors.accent1 }] : []),
   ];
 
   return (
