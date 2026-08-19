@@ -56,19 +56,19 @@ Da 3 a 5 punti, da 2 a 3 domande.${bloccoFonti}${bloccoSenzaFonti}`;
 
 // ── PROMPT: report finale (il documento) ──
 export function promptReport({ argomento, briefing = '', discussione = '', lingua = 'it' } = {}) {
-  const system = `Sei un analista. Scrivi un documento finale chiaro e utile, adatto a chi non ha seguito la discussione. Scrivi in lingua: ${lingua}.`;
+  const system = `Sei un analista che scrive un documento UTILE e CONCRETO, non un verbale della discussione. Chi lo legge vuole SAPERE e SAPER FARE, non sapere "chi ha detto cosa". Scrivi in lingua: ${lingua}. Vietato riempitivo, frasi vaghe ("e importante considerare", "gioca un ruolo cruciale") e conclusioni che non concludono.`;
   const prompt =
-`Argomento: "${argomento}".
-${briefing ? `Contesto di partenza:\n${briefing}\n\n` : ''}Discussione fra gli esperti:
+`Tema: "${argomento}".
+${briefing ? `Fatti di partenza (dalle fonti):\n${briefing}\n\n` : ''}Confronto fra gli esperti (usalo come MATERIA PRIMA, non da riassumere nome per nome):
 ${discussione}
 
-Scrivi il REPORT finale con queste sezioni, in testo semplice (niente tabelle):
-- Sintesi (3-4 righe)
-- Posizioni emerse
-- Punti di accordo
-- Punti di disaccordo
-- Conclusione
-- Domande ancora aperte`;
+Scrivi il DOCUMENTO finale, in testo semplice, con SOSTANZA in ogni riga:
+- In due righe: la risposta o il punto centrale, subito.
+- I FATTI che contano: cosa e vero, cosa e stabilito, i numeri/dati se ci sono.
+- COME SI FA / cosa fare in pratica: passi concreti, in ordine.
+- Gli errori o le trappole da evitare.
+- I nodi davvero aperti (solo quelli reali, non "servono ulteriori studi").
+NON impostarlo come verbale del dibattito (chi ha detto cosa, chi concordava): quello non serve al lettore. Se un dato non c'e, dillo in tre parole invece di girarci intorno.`;
   return { system, prompt };
 }
 

@@ -2,7 +2,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import { parlaTavolo, parlaTurno, sintesiTavolo } from '../../lib/compagni/cliente.js';
+import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -19,6 +19,14 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [attende, setAttende] = useState(false);
   const [errore, setErrore] = useState('');
   const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
+  // b.302 — la Tavola rotonda assorbe il Dossier: puo partire da FONTI
+  // reali (ricerca online, come faceva il Dossier) e produrre un
+  // DOCUMENTO su richiesta, all'avvio o durante. Una sezione sola.
+  const [conFonti, setConFonti] = useState(false);
+  const [briefing, setBriefing] = useState('');   // l'articolo neutro dalle fonti
+  const [fonti, setFonti] = useState([]);
+  const [conDocumento, setConDocumento] = useState(false);
+  const [documento, setDocumento] = useState(null);
   const fondo = useRef(null);
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
 
@@ -51,6 +59,48 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // b.226 — Debate: chiude la tavola con la SINTESI (risultato condiviso).
+  // b.302 — avvio della tavola: con le fonti fa prima la ricerca (come il
+  // Dossier) e la mette come primo "documento di partenza" a schermo.
+  const avviaTavola = useCallback(async () => {
+    if (scelti.length < 2) { setErrore(L('lifeNeedCompanions')); return; }
+    setErrore(''); setMessaggi([]); setDocumento(null); setBriefing(''); setFonti([]);
+    if (conFonti) {
+      const tema = (obiettivo || '').trim();
+      if (!tema) { setErrore(tt('lifeTableNeedTopic', 'Con le fonti, scrivi prima di cosa parlare nell\'obiettivo.')); return; }
+      setAttende(true);
+      try {
+        const d = await preparaBriefing({ argomento: tema, lingua, userToken });
+        if (d?.articolo) {
+          setBriefing(d.articolo);
+          setFonti(d.fonti || []);
+          setMessaggi([{ ruolo: '__briefing', testo: d.articolo, fonti: d.fonti || [] }]);
+        }
+      } catch (e) {
+        setErrore(e?.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
+        setAttende(false); return;
+      }
+      setAttende(false);
+    }
+    vibrate(8); setAvviato(true);
+  }, [scelti, conFonti, obiettivo, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // b.302 — il DOCUMENTO su richiesta: dal confronto (e dal briefing se
+  // c'era) scrive il documento finale, sostanzioso, da conservare.
+  const [genDoc, setGenDoc] = useState(false);
+  const creaDocumento = useCallback(async () => {
+    if (genDoc || messaggi.length < 2) return;
+    setGenDoc(true); setErrore('');
+    try {
+      const discussione = messaggi
+        .filter(m => m.ruolo !== '__briefing' && m.ruolo !== '__sintesi' && m.ruolo !== '__documento')
+        .map(m => `${m.ruolo === 'persona' ? 'Persona' : m.ruolo}: ${m.testo}`).join('\n');
+      const r = await reportFinale({ argomento: (obiettivo || '').trim() || tt('lifeTableTopic', 'la tavola rotonda'), briefing, discussione, lingua, userToken });
+      if (r?.report) setDocumento(r.report);
+    } catch (e) {
+      setErrore(e?.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
+    } finally { setGenDoc(false); }
+  }, [genDoc, messaggi, obiettivo, briefing, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const concludi = useCallback(async () => {
     if (attende || messaggi.length < 2) return;
     setErrore(''); setAttende(true);
@@ -84,9 +134,26 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <input value={obiettivo} onChange={(e) => setObiettivo(e.target.value)}
           placeholder={tt('lifeDebateGoalPh', 'Obiettivo del confronto (facoltativo): a cosa volete arrivare?')}
           style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 10 }} />
-        <button onClick={() => { if (scelti.length >= 2) { vibrate(8); setAvviato(true); setMessaggi([]); } else setErrore(L('lifeNeedCompanions')); }}
-          style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT }}>
-          ⚖️ {tt('lifeDebateStart', 'Apri il Debate')}
+        {/* b.302 — le due opzioni ereditate dal Dossier: fonti + documento */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT }}>
+            <input type="checkbox" checked={conFonti} onChange={(e) => setConFonti(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
+            <span style={{ flex: 1 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: testoP }}>🔎 {tt('lifeTableSources', 'Parti da fonti reali')}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{tt('lifeTableSourcesDesc', 'Cerca online e dai agli esperti dei fatti da cui partire')}</span>
+            </span>
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 12px', borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT }}>
+            <input type="checkbox" checked={conDocumento} onChange={(e) => setConDocumento(e.target.checked)} style={{ width: 20, height: 20, accentColor: accent }} />
+            <span style={{ flex: 1 }}>
+              <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: testoP }}>📄 {tt('lifeTableDoc', 'Produci un documento')}</span>
+              <span style={{ display: 'block', fontSize: 11.5, color: muto }}>{tt('lifeTableDocDesc', 'Alla fine, un documento da conservare — o chiedilo quando vuoi durante')}</span>
+            </span>
+          </label>
+        </div>
+        <button onClick={avviaTavola} disabled={attende}
+          style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: attende ? 0.6 : 1 }}>
+          {attende ? '…' : `⚖️ ${tt('lifeDebateStart', 'Apri la Tavola rotonda')}`}
         </button>
         {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
       </div>
@@ -109,6 +176,21 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {messaggi.map((m, i) => {
+          if (m.ruolo === '__briefing') {
+            return (
+              <div key={i} style={{ alignSelf: 'stretch', margin: '2px 0 8px', padding: '12px 14px', borderRadius: 14, background: card, border: bordo, color: testoP, fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>🔎 {tt('lifeTableBrief', 'Da cui partiamo (fonti)')}</div>
+                {m.testo}
+                {m.fonti?.length > 0 && (
+                  <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {m.fonti.slice(0, 4).map((f, k) => (
+                      <a key={k} href={f.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: accent, textDecoration: 'none' }}>🔗 {f.titolo || f.url}</a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
           if (m.ruolo === '__sintesi') {
             return (
               <div key={i} style={{ alignSelf: 'stretch', margin: '6px 0', padding: '12px 14px', borderRadius: 14, background: `${accent}18`, border: `1px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
@@ -134,10 +216,27 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, padding: '6px 0' }}>{errore}</div>}
 
+      {documento && (
+        <div style={{ alignSelf: 'stretch', margin: '6px 0', padding: '14px 16px', borderRadius: 14, background: `${accent}14`, border: `2px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontWeight: 800, color: accent }}>📄 {tt('lifeTableDoc', 'Documento')}</span>
+            <button onClick={() => { try { navigator.clipboard.writeText(documento); } catch { /* il browser non concede gli appunti in questo contesto: il testo resta comunque a schermo */ } }}
+              style={{ background: 'none', border: `1px solid ${accent}`, color: accent, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+              {tt('lifeCopy', 'Copia')}
+            </button>
+          </div>
+          {documento}
+        </div>
+      )}
       {messaggi.length >= 2 && (
-        <button onClick={concludi} disabled={attende} style={{ alignSelf: 'center', margin: '6px 0', padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-          ⚖️ {tt('lifeDebateConclude', 'Concludi: conclusione condivisa')}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignSelf: 'center', margin: '6px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={concludi} disabled={attende} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            ⚖️ {tt('lifeDebateConclude', 'Conclusione condivisa')}
+          </button>
+          <button onClick={creaDocumento} disabled={genDoc} style={{ padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genDoc ? 0.6 : 1 }}>
+            {genDoc ? '…' : `📄 ${tt('lifeTableMakeDoc', 'Fai il documento')}`}
+          </button>
+        </div>
       )}
 
       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>

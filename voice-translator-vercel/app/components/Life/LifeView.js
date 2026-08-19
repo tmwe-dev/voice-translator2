@@ -26,7 +26,6 @@ import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
-import Dossier from './Dossier.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
@@ -89,8 +88,10 @@ function LifeView({ onApriStanza }) {
         {[
           { id: 'podcast', icon: 'mic', label: L('lifePodcast') },
           { id: 'amico', icon: 'chat', label: L('lifeFriendTab') },
+          // b.302 — Dossier e Tavolo erano due porte per la stessa stanza:
+          // fuse in una, "Tavola rotonda", che cerca online e produce un
+          // documento su richiesta. Il Dossier non e piu una scheda a se.
           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
-          { id: 'dossier', icon: 'doc', label: L('lifeDossierTab') },
           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
           // b.247 — la chiave ora esiste in tutti e quindici i pacchetti:
           // via il ripiego che confrontava il risultato con la chiave stessa.
@@ -118,9 +119,7 @@ function LifeView({ onApriStanza }) {
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza}
-        onDebate={(obiettivo) => { setDebateObiettivo(obiettivo || ''); setScheda('tavolo'); }}
-        {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}

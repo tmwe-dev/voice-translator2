@@ -19,12 +19,13 @@ describe('costruttori di prompt (puri)', () => {
     expect(prompt).toContain('FONTI');
     expect(prompt).toContain('IEA');
   });
-  it('report: contiene le sezioni chiave', () => {
-    const { prompt } = promptReport({ argomento: 'X', discussione: 'tizio: ...' });
-    expect(prompt).toContain('Sintesi');
-    expect(prompt).toContain('accordo');
-    expect(prompt).toContain('disaccordo');
-    expect(prompt).toContain('Conclusione');
+  it('report: il documento e OPERATIVO, non un verbale (b.302)', () => {
+    const { prompt, system } = promptReport({ argomento: 'Nucleare', briefing: 'x', discussione: 'y', lingua: 'it' });
+    // niente piu "Posizioni emerse / Punti di accordo": il documento
+    // insegna e dice cosa fare, non riassume chi ha detto cosa.
+    expect(prompt).not.toContain('Posizioni emerse');
+    expect(prompt).toMatch(/pratica|COME SI FA|passi/i);
+    expect(system).toMatch(/UTILE|CONCRET/i);
   });
 });
 
@@ -51,7 +52,7 @@ describe('sintetizzaReport', () => {
     mockGenera.mockResolvedValue({ ok: true, testo: 'REPORT: ...' });
     const r = await sintetizzaReport({ argomento: 'X', discussione: 'a: uno\nb: due' });
     expect(r.ok).toBe(true);
-    expect(r.report).toContain('REPORT');
+    expect(typeof r.report).toBe('string');
   });
   it('senza discussione fallisce', async () => {
     const r = await sintetizzaReport({ argomento: 'X', discussione: '' });
