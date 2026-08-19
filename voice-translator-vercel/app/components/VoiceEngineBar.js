@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { FONT, MODES, CONTEXTS, AI_MODELS, VOICES } from '../lib/constants.js';
 import { IconCheck, IconChevronDown } from './Icons.js';
 import { bandieraVoce, ordinaVociPerPaese } from '../lib/bandiereVoci.js';
@@ -15,6 +15,35 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
 }) {
   const [showAiPicker, setShowAiPicker] = useState(false);
   const [showVoicePicker, setShowVoicePicker] = useState(false);
+  // b.262 — scelta ESPLICITA del motore (via la rotazione alla cieca).
+  const [showEnginePicker, setShowEnginePicker] = useState(false);
+  // b.262 — il catalogo curato dal backend per la lingua dell'utente:
+  // null = non ancora chiesto; [] = lingua non curata (elenco pieno).
+  const [vociCurate, setVociCurate] = useState(null);
+  useEffect(() => {
+    if (!showVoicePicker || vociCurate !== null) return;
+    fetch(`/api/voci?lang=${encodeURIComponent(myLang || 'en')}`)
+      .then(r => r.ok ? r.json() : { curate: [] })
+      .then(d => setVociCurate(Array.isArray(d.curate) ? d.curate : []))
+      .catch(() => setVociCurate([]));
+  }, [showVoicePicker, vociCurate, myLang]);
+  // b.261 — con piu di cento voci un elenco senza ricerca non si usa:
+  // si filtra per nome o per paese, scrivendo.
+  const [filtroVoce, setFiltroVoce] = useState('');
+
+  // b.262 — il motore che parlera DAVVERO al prossimo messaggio, risolto
+  // con la stessa regola di procuraVoce: e quello che la spilla mostra.
+  const ve = prefs.voiceEngine || 'auto';
+  const motoreAttivo = ve === 'auto'
+    ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
+    : ve;
+  // Le scelte offerte: solo cio che questa persona puo davvero usare.
+  const motoriDisponibili = [
+    ...(canUseElevenLabs ? [{ id: 'elevenlabs', nome: 'ElevenLabs', sotto: L('enginePremiumDesc'), colore: S.colors.goldAccent || '#d4a24e' }] : []),
+    ...(!isTrial ? [{ id: 'openai', nome: 'OpenAI', sotto: L('engineOpenaiDesc'), colore: S.colors.accent2 || S.colors.accent1 }] : []),
+    { id: 'edge', nome: 'Edge TTS', sotto: L('engineStandardDesc'), colore: S.colors.textMuted },
+    ...(!isTrial ? [{ id: 'auto', nome: L('engineAuto'), sotto: L('engineAutoDesc'), colore: S.colors.accent1 }] : []),
+  ];
 
   return (
     <>
@@ -79,33 +108,58 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
         borderBottom:`1px solid ${S.colors.overlayBorder}`, display:'flex', alignItems:'center',
         justifyContent:'space-between', flexShrink:0, gap:6, position:'relative'}}>
         <div style={{display:'flex', alignItems:'center', gap:6, minWidth:0}}>
-          {/* Voice engine — tappable to cycle */}
-          <button onClick={() => {
-            if (isTrial) return;
-            const voiceEngine = prefs.voiceEngine || 'auto';
-            const engines = canUseElevenLabs
-              ? ['auto', 'elevenlabs', 'openai', 'edge']
-              : ['auto', 'openai', 'edge'];
-            const nextIdx = (engines.indexOf(voiceEngine) + 1) % engines.length;
-            savePrefs({...prefs, voiceEngine: engines[nextIdx]});
-          }} style={{background:'none', border:'none', padding:'1px 4px', cursor: isTrial ? 'default' : 'pointer',
-            display:'flex', alignItems:'center', gap:4, borderRadius:4,
-            transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
-            {(() => {
-              const ve = prefs.voiceEngine || 'auto';
-              const engineLabel = ve === 'auto'
-                ? (isTrial ? 'Edge TTS' : canUseElevenLabs ? 'ElevenLabs' : 'OpenAI')
-                : ve === 'elevenlabs' ? 'ElevenLabs'
-                : ve === 'openai' ? 'OpenAI'
-                : 'Edge TTS';
-              return (
-                <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600, whiteSpace:'nowrap'}}>
-                  {engineLabel}
-                  {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted, marginLeft:2}}>{<IconChevronDown size={8}/>}</span>}
-                </span>
-              );
-            })()}
+          {/* ═══ INIZIO b.262 — il motore si VEDE e si CAMBIA, sempre (Luca) ═══
+              Prima: etichetta da 9px che al tocco RUOTAVA i motori alla
+              cieca, e per i trial era spenta. Ora e una spilla colorata —
+              oro = ElevenLabs (premium), viola = OpenAI, neutra = Edge TTS —
+              e il tocco apre una scelta ESPLICITA. Il cambio vale dal
+              messaggio successivo, senza ricaricare: chi parla legge le
+              preferenze al momento di parlare (procuraVoce). */}
+          <button onClick={() => setShowEnginePicker(!showEnginePicker)}
+            aria-expanded={showEnginePicker}
+            style={{border:'none', padding:'2px 8px', cursor:'pointer', borderRadius:999,
+              display:'flex', alignItems:'center', gap:5,
+              background: motoreAttivo === 'elevenlabs' ? `${S.colors.goldAccent || '#d4a24e'}22`
+                : motoreAttivo === 'openai' ? S.colors.accent2Bg || S.colors.accent1Bg
+                : S.colors.overlayBg,
+              outline: `1px solid ${motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e') + '66' : S.colors.overlayBorder}`,
+              transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
+            <span style={{width:6, height:6, borderRadius:3, flexShrink:0,
+              background: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e')
+                : motoreAttivo === 'openai' ? (S.colors.accent2 || S.colors.accent1)
+                : S.colors.textMuted}} />
+            <span style={{fontSize:10, fontWeight:700, whiteSpace:'nowrap',
+              color: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e') : S.colors.textSecondary}}>
+              {motoreAttivo === 'elevenlabs' ? 'ElevenLabs' : motoreAttivo === 'openai' ? 'OpenAI' : 'Edge TTS'}
+            </span>
+            <span style={{color:S.colors.textMuted, lineHeight:0}}><IconChevronDown size={8}/></span>
           </button>
+          {showEnginePicker && (
+            <>
+              <div onClick={() => setShowEnginePicker(false)}
+                style={{position:'fixed', inset:0, zIndex:298, background:'rgba(0,0,0,0.35)'}} />
+              <div style={{position:'absolute', top:'100%', left:8, zIndex:300, marginTop:4,
+                background:S.colors.bg || '#0a0f1f', border:`1px solid ${S.colors.cardBorder}`,
+                borderRadius:12, padding:4, width:210, boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
+                {motoriDisponibili.map(m => (
+                  <button key={m.id}
+                    onClick={() => { savePrefs({ ...prefs, voiceEngine: m.id }); setShowEnginePicker(false); }}
+                    style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'9px 10px',
+                      borderRadius:8, border:'none', cursor:'pointer', fontFamily:FONT, textAlign:'left',
+                      background: (prefs.voiceEngine || 'auto') === m.id ? S.colors.accent4Bg : 'transparent',
+                      color:S.colors.textPrimary, fontSize:12}}>
+                    <span style={{width:6, height:6, borderRadius:3, background:m.colore, flexShrink:0}} />
+                    <span style={{flex:1}}>
+                      <span style={{display:'block', fontWeight:700}}>{m.nome}</span>
+                      <span style={{display:'block', fontSize:10, color:S.colors.textMuted}}>{m.sotto}</span>
+                    </span>
+                    {(prefs.voiceEngine || 'auto') === m.id && <IconCheck size={12}/>}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          {/* ═══ FINE b.262 ═══ */}
           {/* Voice name badge */}
           <button onClick={() => { if (!isTrial) setShowVoicePicker(!showVoicePicker); }}
             style={{fontSize:8, color:S.colors.textMuted, fontWeight:500,
@@ -195,13 +249,20 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
       {/* Voice picker dropdown */}
       {showVoicePicker && (
         <>
+          {/* ═══ INIZIO b.261 — il pannello voci era di vetro e sotto i tocchi ═══
+              TROVATO DAL VIVO (Luca): fondo glassCard al 6%% di opacita — i
+              messaggi si leggevano ATTRAVERSO l'elenco — e le bolle con le
+              reazioni si disegnavano sopra, intercettando i clic: una voce
+              non si riusciva proprio a selezionare. Ora fondo pieno del tema
+              e quota sopra ogni cosa della stanza. */}
           <div onClick={() => setShowVoicePicker(false)}
-            style={{position:'fixed', inset:0, zIndex:98, background:'transparent'}} />
-          <div style={{position:'absolute', top:120, left:12, zIndex:100,
-            background:S.colors.glassCard,
+            style={{position:'fixed', inset:0, zIndex:298, background:'rgba(0,0,0,0.35)'}} />
+          <div style={{position:'absolute', top:120, left:12, zIndex:300,
+            background:S.colors.bg || '#0a0f1f',
             border:`1px solid ${S.colors.cardBorder}`,
-            borderRadius:12, padding:'4px 0', width:220, maxHeight:320, overflowY:'auto',
-            boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
+            borderRadius:12, padding:'4px 0', width:240, maxHeight:360, overflowY:'auto',
+            boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
+          {/* ═══ FINE b.261 ═══ */}
             {(() => {
               const ve = prefs.voiceEngine || 'auto';
               const activeEngine = ve === 'auto'
@@ -271,10 +332,46 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
                     </div>
                     {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
                   </button>
+                  {(elevenLabsVoices || []).length > 5 && (
+                    <div style={{padding:'6px 10px', borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
+                      <input
+                        value={filtroVoce}
+                        onChange={(e) => setFiltroVoce(e.target.value)}
+                        placeholder={L('search')}
+                        aria-label={L('search')}
+                        style={{width:'100%', boxSizing:'border-box', padding:'6px 8px',
+                          borderRadius:8, border:`1px solid ${S.colors.overlayBorder}`,
+                          background:'rgba(255,255,255,0.05)', color:S.colors.textPrimary,
+                          fontSize:12, fontFamily:FONT, outline:'none'}} />
+                    </div>
+                  )}
                   {(elevenLabsVoices || []).length > 0 && (() => {
-                    const females = elevenLabsVoices.filter(v => v.gender === 'female');
-                    const males = elevenLabsVoices.filter(v => v.gender === 'male');
-                    const other = elevenLabsVoices.filter(v => v.gender !== 'female' && v.gender !== 'male');
+                    // b.262 — se il backend ha curato questa lingua, il
+                    // selettore mostra SOLO le voci approvate (le
+                    // predefinite in testa); altrimenti l'elenco pieno,
+                    // come sempre — ripiego dichiarato, non un buco.
+                    const idCurati = (vociCurate || []).length > 0
+                      ? new Map(vociCurate.map((v, i) => [v.voice_id, { predefinita: v.predefinita, ordine: i }]))
+                      : null;
+                    const base = idCurati
+                      ? elevenLabsVoices
+                          .filter(v => idCurati.has(v.id))
+                          .sort((a, b) => {
+                            const ca = idCurati.get(a.id), cb = idCurati.get(b.id);
+                            return (cb.predefinita ? 1 : 0) - (ca.predefinita ? 1 : 0) || ca.ordine - cb.ordine;
+                          })
+                      : elevenLabsVoices;
+                    // b.261 — il filtro guarda nome e paese, senza maiuscole.
+                    const cerca = filtroVoce.trim().toLowerCase();
+                    const visibili = cerca
+                      ? base.filter(v =>
+                          (v.name || '').toLowerCase().includes(cerca) ||
+                          (v.country || '').toLowerCase().includes(cerca) ||
+                          (v.description || '').toLowerCase().includes(cerca))
+                      : base;
+                    const females = visibili.filter(v => v.gender === 'female');
+                    const males = visibili.filter(v => v.gender === 'male');
+                    const other = visibili.filter(v => v.gender !== 'female' && v.gender !== 'male');
                     const groups = [
                       { label: '\u2640 Femminile', voices: females },
                       { label: '\u2642 Maschile', voices: males },

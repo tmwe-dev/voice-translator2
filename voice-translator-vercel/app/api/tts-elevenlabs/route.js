@@ -162,7 +162,16 @@ async function handlePost(req) {
     const adminDefault = getELVoiceForLang(lang2, genderHint);
     const nativeVoice = NATIVE_VOICES_BY_LANG[lang2]?.[genderHint]
       || NATIVE_VOICES_BY_LANG[lang2]?.female;
+    // b.262 — la PREDEFINITA DI SISTEMA ora la decide il backend (tabella
+    // voci_lingue, pannello /voci): viene prima delle cablate qui sotto,
+    // che restano il ripiego per le lingue non ancora curate. L'errore di
+    // lettura non ferma la voce: si passa oltre, come sempre.
+    const dbDefault = voiceId ? null
+      : await import('../../lib/vociCatalogo.js')
+          .then(m => m.predefinitaPer(lang2, genderHint))
+          .catch(() => null);
     const selectedVoice = voiceId
+      || dbDefault
       || adminDefault
       || nativeVoice
       || (avatarName && AVATAR_VOICE_MAP[avatarName])

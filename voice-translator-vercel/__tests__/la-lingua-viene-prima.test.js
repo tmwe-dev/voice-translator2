@@ -202,10 +202,10 @@ describe('l\'interfaccia segue uiLang, non la lingua parlata', () => {
   it('mapLang riporta le 44 lingue parlate sulle 15 dell\'interfaccia', () => {
     expect(mapLang('it')).toBe('it');
     expect(mapLang('zh')).toBe('zh');
-    // Il danese si parla ma l'interfaccia in danese non esiste:
-    // proporla sarebbe una promessa non mantenuta.
-    expect(LINGUE_INTERFACCIA).not.toContain('da');
-    expect(mapLang('da')).toBe('en');
+    // b.260 — il danese ORA esiste (mini-pacchetto della schermata
+    // principale): proporlo non e piu una promessa non mantenuta.
+    expect(LINGUE_INTERFACCIA).toContain('da');
+    expect(mapLang('da')).toBe('da');
   });
 });
 

@@ -22,7 +22,13 @@ import en from './locales/en.js';
 const log = createLogger('i18n');
 import it from './locales/it.js';
 
-const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
+const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi',
+  // b.260 — pacchetti COMPLETI generati (1182 chiavi ciascuno):
+  'nl','pl','sv','da','cs','ro','hu',
+  // b.260 — mini-pacchetti: la schermata principale parla la lingua
+  // scelta, il resto ripiega sull'inglese finche il pacchetto pieno
+  // non arriva. Meglio una prima schermata giusta che tutto in inglese.
+  'el','fi','uk','nb','he','id','ms','ca','hr','sk','bg','fil','bn','ta','sw','af'];
 
 /**
  * Le lingue in cui l'INTERFACCIA esiste davvero.
@@ -48,6 +54,29 @@ const loaders = {
   hi: () => import('./locales/hi.js'),
   ru: () => import('./locales/ru.js'),
   tr: () => import('./locales/tr.js'),
+  nl: () => import('./locales/nl.js'),
+  pl: () => import('./locales/pl.js'),
+  sv: () => import('./locales/sv.js'),
+  da: () => import('./locales/da.js'),
+  cs: () => import('./locales/cs.js'),
+  ro: () => import('./locales/ro.js'),
+  hu: () => import('./locales/hu.js'),
+  el: () => import('./locales/el.js'),
+  fi: () => import('./locales/fi.js'),
+  uk: () => import('./locales/uk.js'),
+  nb: () => import('./locales/nb.js'),
+  he: () => import('./locales/he.js'),
+  id: () => import('./locales/id.js'),
+  ms: () => import('./locales/ms.js'),
+  ca: () => import('./locales/ca.js'),
+  hr: () => import('./locales/hr.js'),
+  sk: () => import('./locales/sk.js'),
+  bg: () => import('./locales/bg.js'),
+  fil: () => import('./locales/fil.js'),
+  bn: () => import('./locales/bn.js'),
+  ta: () => import('./locales/ta.js'),
+  sw: () => import('./locales/sw.js'),
+  af: () => import('./locales/af.js'),
   vi: () => import('./locales/vi.js'),
 };
 
@@ -170,8 +199,9 @@ export function mapLang(code) {
   const base = String(code || '').split(/[-_]/)[0];
   if (base !== code && (T[base] || SUPPORTED.includes(base))) return base;
   // ═══ FINE b.258 ═══
-  const map = { 'id':'en', 'ms':'en', 'nl':'en', 'pl':'en', 'sv':'en', 'el':'en', 'cs':'en', 'ro':'en', 'hu':'en', 'fi':'en' };
-  return map[code] || map[base] || 'en';
+  // b.260 — la mappa 'lingua -> inglese' e sparita: ogni lingua del
+  // selettore ora ha un pacchetto (pieno o della prima schermata).
+  return 'en';
 }
 
 export default T;

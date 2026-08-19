@@ -62,8 +62,9 @@ describe('un pacchetto lingua che arriva si fa sentire', () => {
   it('una lingua che non esiste non rompe niente', async () => {
     const svegliate = [];
     const stop = ascoltaLingueCaricate((c) => svegliate.push(c));
-    // 'da' (danese) non e fra le 15: non c'e nessun pacchetto da caricare.
-    expect(await preloadLang('da')).toBe(false);
+    // b.260 — il danese ora ESISTE (mini-pacchetto): il caso "lingua
+    // inesistente" e diventato un codice inventato.
+    expect(await preloadLang('xx')).toBe(false);
     stop();
     expect(svegliate).toEqual([]);
   });
@@ -128,9 +129,11 @@ describe('la lingua di una variante regionale e la sua base', () => {
   }
 
   it('ma una lingua senza pacchetto resta all\'inglese, anche col suffisso', () => {
-    // Il danese non c'e: ne 'da' ne un ipotetico 'da-DK' possono tradurre.
-    expect(mapLang('da')).toBe('en');
-    expect(mapLang('da-DK')).toBe('en');
+    // b.260 — il danese ora c'e; il caso senza pacchetto e un codice
+    // inventato. E la variante di una lingua ESISTENTE va alla base.
+    expect(mapLang('xx')).toBe('en');
+    expect(mapLang('xx-YY')).toBe('en');
+    expect(mapLang('da-DK')).toBe('da');
   });
 
   it('e le lingue intere non vengono toccate', () => {

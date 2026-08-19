@@ -42,8 +42,9 @@ describe('la lingua dei menu segue quella che dichiari di parlare', () => {
     // nessun pacchetto lingua conosce, e i menu resterebbero in inglese
     // senza che nessuno capisca perche.
     expect(home()).toMatch(/const dopo = mapLang\(l\.code\);/);
-    expect(mapLang('da')).toBe('en');   // danese: non c'e, si ripiega
-    expect(mapLang('cs')).toBe('en');   // ceco: idem
+    // b.260 — danese e ceco ORA esistono (mini-pacchetto / pacchetto pieno)
+    expect(mapLang('da')).toBe('da');
+    expect(mapLang('cs')).toBe('cs');
     expect(mapLang('ja')).toBe('ja');   // giapponese: c'e, resta
   });
 });

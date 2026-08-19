@@ -4,6 +4,9 @@ import { getLang } from '../lib/constants.js';
 import useTTSEngine from './useTTSEngine.js';
 import { getVolumeTTS } from '../lib/audioPrefs.js';
 import { creaCodaAudio } from '../lib/codaAudio.js';
+// b.262 — per avvisare (una volta) chi ha l'audio bloccato: vedi sotto.
+import { toast } from '../lib/avvisi.js';
+import { tFuori } from '../lib/i18n.js';
 
 /**
  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
@@ -47,6 +50,8 @@ export default function useAudioSystem({
   const codaRef = useRef(null);
   if (!codaRef.current) codaRef.current = creaCodaAudio();
   const playedMsgIdsRef = useRef(new Set());
+  // b.262 — l'avviso "audio bloccato" si mostra una volta per sessione.
+  const avvisoAudioMutoRef = useRef(false);
   const persistentMicRef = useRef(null);
   const audioEnabledRef = useRef(audioEnabled);
   const activeBlobUrlsRef = useRef(new Set());
@@ -352,7 +357,26 @@ export default function useAudioSystem({
       () => tts.procuraVoce(text, lang),
       async (blob) => {
         startDucking();
-        try { await tts.suonaVoce(blob, text, lang); }
+        try {
+          const suonato = await tts.suonaVoce(blob, text, lang);
+          // ═══ INIZIO b.262 — un messaggio rimasto MUTO si puo riprovare ═══
+          // TROVATO DAL VIVO ("l'ospite non sente"): b.248 marca la chiave
+          // PRIMA di suonare e per sempre — giusto contro i doppioni
+          // multi-canale, ma se il primo tentativo fallisce DEL TUTTO
+          // (fornitore giu E audio del telefono ancora bloccato) quel
+          // messaggio restava muto per l'eternita. Ora il fallimento
+          // totale libera la chiave: la prossima consegna dello stesso
+          // messaggio (polling) riprova. E la persona viene AVVISATA,
+          // una volta sola, invece del silenzio.
+          if (suonato === false) {
+            playedMsgIdsRef.current.delete(chiave);
+            if (!avvisoAudioMutoRef.current) {
+              avvisoAudioMutoRef.current = true;
+              toast.warning(tFuori('audioBlockedTapScreen'));
+            }
+          }
+          // ═══ FINE b.262 ═══
+        }
         finally {
           stopDucking();
           // Quando la coda si e svuotata si smette di segnalare "sto

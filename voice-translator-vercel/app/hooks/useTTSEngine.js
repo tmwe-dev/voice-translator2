@@ -133,9 +133,13 @@ export default function useTTSEngine({
 
   const BROWSER_TTS_RATE = { 'th': 0.8, 'zh': 0.85, 'ja': 0.85, 'ko': 0.88, 'vi': 0.82, 'ar': 0.88, 'hi': 0.9 };
 
+  // b.262 — la promessa risolve con true se la voce E' PARTITA (onstart):
+  // "finito" e "mai partito" erano indistinguibili, e un telefono con
+  // l'audio bloccato sembrava aver parlato.
   function speakChunk(text, lang, voice) {
     return new Promise((resolve) => {
-      if (typeof speechSynthesis === 'undefined') { resolve(); return; }
+      if (typeof speechSynthesis === 'undefined') { resolve(false); return; }
+      let partita = false;
       const u = new SpeechSynthesisUtterance(text);
       u.lang = lang;
       const langBase = lang.split('-')[0].toLowerCase();
@@ -144,8 +148,9 @@ export default function useTTSEngine({
       u.volume = 1.0;
       if (voice) u.voice = voice;
       const timeoutMs = Math.min(20000, Math.max(3000, text.length * 120));
-      const safetyTimer = setTimeout(() => { speechSynthesis.cancel(); resolve(); }, timeoutMs);
-      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); }
+      const safetyTimer = setTimeout(() => { speechSynthesis.cancel(); resolve(partita); }, timeoutMs);
+      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(partita); }
+      u.onstart = () => { partita = true; };
       u.onend = done;
       u.onerror = done;
       if (speechSynthesis.paused) speechSynthesis.resume();
@@ -158,13 +163,15 @@ export default function useTTSEngine({
   }
 
   async function browserSpeak(text, lang) {
-    if (typeof speechSynthesis === 'undefined') return;
+    if (typeof speechSynthesis === 'undefined') return false;
     speechSynthesis.cancel();
     const voice = findBestVoice(lang);
     const chunks = splitTextForSpeech(text);
+    let almenoUno = false;
     for (const chunk of chunks) {
-      await speakChunk(chunk, lang, voice);
+      if (await speakChunk(chunk, lang, voice)) almenoUno = true;
     }
+    return almenoUno;
   }
 
   function checkVoiceAvailability(lang) {
@@ -219,7 +226,9 @@ export default function useTTSEngine({
     activeBlobUrlsRef.current.add(url);
     let played = await playBlobAudio(url);
     if (!played) played = await playBlobNewAudio(url);
-    if (!played) await browserSpeak(text, lang);
+    // b.262 — il ripiego sulla voce del browser, se PARLA, e un successo:
+    // prima qui si ritornava false anche a voce sentita.
+    if (!played) played = await browserSpeak(text, lang);
     activeBlobUrlsRef.current.delete(url);
     URL.revokeObjectURL(url);
     return played;
@@ -424,7 +433,10 @@ export default function useTTSEngine({
     }
   }
 
-  /** Fa suonare quello che procuraVoce ha portato. */
+  /** Fa suonare quello che procuraVoce ha portato.
+   * b.262 — ritorna true se QUALCOSA ha suonato (blob o voce browser):
+   * serve a useAudioSystem per liberare la chiave di un messaggio che e
+   * rimasto muto davvero, cosi puo riprovare al prossimo giro. */
   async function suonaVoce(blob, text, langCode) {
     if (!blob) return browserSpeak(text, langCode);
     return playBlobWithFallback(blob, text, langCode);

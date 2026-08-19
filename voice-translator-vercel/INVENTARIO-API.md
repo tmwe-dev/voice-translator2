@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **41** — vive: **37**, rimosse: **4**
+Rotte totali: **42** — vive: **38**, rimosse: **4**
 
 ## Come si legge
 
@@ -28,7 +28,7 @@ Rotte totali: **41** — vive: **37**, rimosse: **4**
 | /api/admin | POST | si | admin | — | — | — | si |
 | /api/analytics | POST | si | analytics | — | — | — | si |
 | /api/auth | POST | si | auth | auth-otp | — | — | si |
-| /api/chat-action | POST | si | chat-action | — | — | si | — |
+| /api/chat-action | POST | si | chat-action | — | — | — | — |
 | /api/contacts | POST | si | contacts | — | — | — | si |
 | /api/conversation | POST GET | si | conversation | — | — | si | si |
 | /api/debug | POST | si | debug | — | — | — | si |
@@ -37,30 +37,31 @@ Rotte totali: **41** — vive: **37**, rimosse: **4**
 | /api/keys | GET POST DELETE | si | keys | — | — | — | si |
 | /api/messages | POST PATCH GET | si | messages | messages-patch | — | si | si |
 | /api/moderazione | POST | si | moderazione | — | — | — | si |
-| /api/mondo | POST GET | si | mondo | — | — | — | — |
+| /api/mondo | POST GET | si | mondo | — | — | — | si |
 | /api/og | GET | — | — | — | — | — | — |
 | /api/push-send | POST | si | push-send | — | — | — | si |
 | /api/push-subscribe | POST GET DELETE | si | push-subscribe | — | — | — | si |
-| /api/reazioni | POST | si | reazioni | — | — | si | si |
+| /api/reazioni | POST | si | reazioni | — | — | — | si |
 | /api/room | POST GET | si | room | — | — | — | si |
 | /api/stanza-video | POST | si | stanza-video | — | — | — | si |
 | /api/startrek | POST | — | — | startrek | — | — | — |
-| /api/stripe | POST | si | stripe | — | — | — | si |
-| /api/stt-token | POST | si | stt-token | — | — | si | — |
+| /api/stripe | POST | si | stripe | — | — | — | — |
+| /api/stt-token | POST | si | stt-token | — | — | — | si |
 | /api/subscription | POST | si | subscription | — | — | — | si |
-| /api/summary | POST | si | summary | — | — | si | si |
+| /api/summary | POST | si | summary | — | — | — | si |
 | /api/test-login | POST | — | — | — | — | — | — |
-| /api/transcribe | POST | si | transcribe | — | — | si | — |
-| /api/translate | POST | si | translate | — | si | si | — |
-| /api/translate-consensus | POST | si | translate-consensus | — | — | si | — |
-| /api/translate-free | POST | si | translate-free | free-translate free-chars | — | si | — |
+| /api/transcribe | POST | si | transcribe | — | — | — | — |
+| /api/translate | POST | si | translate | — | si | — | — |
+| /api/translate-consensus | POST | si | translate-consensus | — | — | — | si |
+| /api/translate-free | POST | si | translate-free | free-translate free-chars | — | — | si |
 | /api/translate-test | POST | si | translate-test | — | — | — | — |
 | /api/translate-test-llm | POST | — | — | — | — | — | — |
-| /api/tts | POST | si | tts | — | si | si | — |
-| /api/tts-edge | GET POST | si | tts-edge | — | — | si | — |
-| /api/tts-elevenlabs | POST GET | si | tts-elevenlabs | — | — | si | si |
+| /api/tts | POST | si | tts | — | si | — | — |
+| /api/tts-edge | GET POST | si | tts-edge | — | — | — | — |
+| /api/tts-elevenlabs | POST GET | si | tts-elevenlabs | — | — | — | si |
 | /api/tts-test | POST | — | — | — | — | — | — |
 | /api/user | POST GET PUT | si | user | — | — | — | si |
+| /api/voci | GET POST | si | voci | — | — | — | — |
 | /api/voice-clone | POST GET | si | voice-clone | — | — | si | si |
 
 ## Rotte rimosse (rispondono 410)
