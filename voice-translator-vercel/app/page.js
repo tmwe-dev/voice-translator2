@@ -828,7 +828,11 @@ function HomeInner() {
       description: room.description || '',
     };
 
-    const hostTier = room.hostTier || 'FREE';
+    // b.289 — se l'host ha scelto "ognuno paga il suo", NIENTE eredita:
+    // ogni membro usa il proprio conto e i propri diritti, e il client
+    // continua a mandare il PROPRIO token (il server, dal canto suo, non
+    // addebita comunque piu l'host per queste stanze).
+    const hostTier = room.ognunoPagaIlSuo ? 'FREE' : (room.hostTier || 'FREE');
     auth.roomTierOverrideRef.current = hostTier;
     // b.263 — il tier della stanza passa anche come STATO: e lui che fa
     // ricalcolare a useAuth i diritti voce (ElevenLabs per l'ospite di un
@@ -1237,6 +1241,7 @@ function HomeInner() {
         roomId={roomPolling.roomId}
         roomSessionToken={roomPolling.roomSessionTokenRef?.current}
         mioNome={roomPolling.verifiedNameRef?.current || prefs.name}
+        queueAudio={audio.queueAudio}
         onEsci={() => setView(roomPolling.roomId ? 'room' : 'home')} />
     </Suspense>
   );
@@ -1453,7 +1458,8 @@ function HomeInner() {
               roomConfig.description || '',
               auth.isTrial, auth.isTopPro, auth.userAccount,
               roomConfig.diretta,
-              roomConfig.maxParticipants
+              roomConfig.maxParticipants,
+              roomConfig.ognunoPagaIlSuo
             );
             // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
             // Prima di b.113 la modalita Diretta era un meccanismo

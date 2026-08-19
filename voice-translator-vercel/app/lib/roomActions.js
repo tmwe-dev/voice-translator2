@@ -52,7 +52,7 @@ const MAXLEN_CONTEXT_PROMPT = 500;
 const MAXLEN_DESCRIPTION = 200;
 
 // ── Action: create ──
-export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta, maxPartecipanti }) {
+export async function handleCreate({ name, lang, mode, avatar, context, contextPrompt, description, hostTier, hostEmail, diretta, maxPartecipanti, ognunoPagaIlSuo }) {
   if (!name || !lang) return NextResponse.json({ error: 'name and lang required' }, { status: 400 });
   const room = await createRoom(
     name, lang, mode || 'conversation',
@@ -60,7 +60,7 @@ export async function handleCreate({ name, lang, mode, avatar, context, contextP
     context ? sanitize(context, MAXLEN_CONTEXT) : null,
     contextPrompt ? sanitize(contextPrompt, MAXLEN_CONTEXT_PROMPT) : null,
     description ? sanitize(description, MAXLEN_DESCRIPTION) : null,
-    hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null
+    hostTier || 'FREE', hostEmail || null, !!diretta, maxPartecipanti ?? null, !!ognunoPagaIlSuo
   );
   const { token } = await createRoomSession(room.id, name, 'host');
   // b.169 — vedi la nota su creaSegretoHost in store.js: e la sola

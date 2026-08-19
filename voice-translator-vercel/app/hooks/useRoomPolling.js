@@ -846,7 +846,8 @@ export default function useRoomPolling({
     // mai alla stanza: viaggiava solo verso /api/mondo, cioe solo per le
     // stanze pubblicate. In una stanza privata il numero scelto veniva
     // buttato via e valeva il ripiego dello script Lua.
-    maxPartecipanti = null
+    maxPartecipanti = null,
+    ognunoPagaIlSuo = false
   ) {
     try {
       const ctxObj = CONTEXTS.find(c => c.id === selectedContext) || CONTEXTS[0];
@@ -856,6 +857,7 @@ export default function useRoomPolling({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create',
+          ognunoPagaIlSuo,
           name, lang, mode, avatar,
           context: selectedContext,
           contextPrompt: ctxObj.prompt,

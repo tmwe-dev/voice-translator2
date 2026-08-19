@@ -323,7 +323,9 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
   // ── Mando il mio parlato tradotto a tutti ──
   const mandaTesto = useCallback((testo, lingua) => {
     if (!testo) return;
-    const pacchetto = JSON.stringify({ tipo: 'parlato', testo, lingua, id: `${Date.now()}` });
+    // b.289 — P2-13: l'orologio non e un'identita (due frasi nello stesso
+    // millisecondo si fondono). Nome + caso unico.
+    const pacchetto = JSON.stringify({ tipo: 'parlato', testo, lingua, id: `${mioNome || 'io'}-${(typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2)}` });
     for (const voce of peersRef.current.values()) {
       if (voce.canale) sendViaDataChannel(voce.canale, pacchetto);
     }

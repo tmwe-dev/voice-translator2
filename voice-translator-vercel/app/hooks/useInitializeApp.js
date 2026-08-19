@@ -215,7 +215,10 @@ export default function useInitializeApp({
               // quella parlata, mappata sulle 15 che l'interfaccia ha.
               uiLang: mapLang(linguaOspite),
               country: p?.country || indovinaPaese({ lingua: linguaOspite })?.codice || '',
-              autoPlay: true,
+              // b.289 — P0: una preferenza ESPLICITA non si calpesta.
+              // Prima l'invito forzava sempre true: chi aveva scelto di
+              // non ascoltare se lo ritrovava riacceso.
+              autoPlay: p?.autoPlay === false ? false : true,
               avatar: p?.avatar || AVATARS[0],
             };
             try { localStorage.setItem('vt-prefs', JSON.stringify(provvisorie)); } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }

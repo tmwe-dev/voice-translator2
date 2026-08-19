@@ -292,7 +292,9 @@ describe('5 · l\'identificativo nasce dove nasce il testo', () => {
   it('un blocco audio e una cattura sua', () => {
     const s = orch();
     expect(s).toMatch(/const idCattura = nuovoIdCattura\(\);/);
-    expect(s).toMatch(/sendMessage\(original, null, myL\.code, primaryTarget\.code, null, \{ idCattura \}\)/);
+    // b.289 — con targetLangs vuoto il messaggio parte nella lingua di
+    // chi parla: il controllo segue la nuova forma protetta dal vuoto.
+    expect(s).toMatch(/sendMessage\(original, null, myL\.code, primaryTarget\?\.code \|\| myL\.code, null, \{ idCattura \}\)/);
   });
 
   it('e lo stesso identificativo copre fase 1 e fase 2', () => {

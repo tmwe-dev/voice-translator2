@@ -448,7 +448,9 @@ export default function useTranslation({
     // nasce qui e accompagna il messaggio fino alla PATCH della
     // traduzione, che altrimenti se lo sarebbe ricostruito dal testo.
     const idCattura = nuovoIdCattura();
-    sendMessage(original, null, myL.code, primaryTarget.code, null, { idCattura });
+    // b.289 — con targetLangs vuoto (nessuno da tradurre) il messaggio
+    // parte comunque, nella lingua di chi parla.
+    sendMessage(original, null, myL.code, primaryTarget?.code || myL.code, null, { idCattura });
     setStreamingMsg({ original, translated: '...', isStreaming: false });
 
     try {

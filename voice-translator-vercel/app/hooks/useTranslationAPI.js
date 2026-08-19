@@ -600,8 +600,10 @@ export default function useTranslationAPI({
     const myL = getLang(currentMyLang);
 
     if (!currentRoomInfo?.members) {
-      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
-      return { myL, targetLangs: [getLang(fallbackCode)] };
+      // b.289 — niente membri = niente destinatari = NIENTE traduzione.
+      // Prima si traduceva comunque verso it/en "a caso": costo pagato
+      // per una lingua che nessuno nella stanza avrebbe letto.
+      return { myL, targetLangs: [] };
     }
 
     const uniqueLangCodes = new Set();
@@ -612,8 +614,9 @@ export default function useTranslationAPI({
     }
 
     if (uniqueLangCodes.size === 0) {
-      const fallbackCode = currentMyLang === 'en' ? 'it' : 'en';
-      return { myL, targetLangs: [getLang(fallbackCode)] };
+      // b.289 — tutti parlano la mia lingua (o sono solo): non si paga
+      // una traduzione che nessuno leggera.
+      return { myL, targetLangs: [] };
     }
 
     const targetLangs = [...uniqueLangCodes].map(code => getLang(code));
@@ -625,13 +628,21 @@ export default function useTranslationAPI({
    * Returns { translations: { "en": "Hello", "th": "สวัสดี" }, primaryTranslated, primaryTargetLang }
    */
   const translateToAllTargets = useCallback(async (text, myL, targetLangs, options = {}) => {
-    const results = await Promise.allSettled(
-      targetLangs.map(tL =>
-        translateUniversal(text, myL.code, tL.code, myL.name, tL.name, options)
-          .then(data => ({ langCode: tL.code, translated: data.translated || '' }))
-          .catch(() => ({ langCode: tL.code, translated: '' }))
-      )
-    );
+    // b.289 — P2-14: con molte lingue nella stanza le richieste partivano
+    // TUTTE insieme (otto lingue = otto chiamate simultanee dallo stesso
+    // telefono). Ora a gruppi di 4: stessa resa sulle stanze piccole,
+    // niente raffica su quelle grandi.
+    const results = [];
+    for (let i = 0; i < targetLangs.length; i += 4) {
+      const gruppo = targetLangs.slice(i, i + 4);
+      results.push(...await Promise.allSettled(
+        gruppo.map(tL =>
+          translateUniversal(text, myL.code, tL.code, myL.name, tL.name, options)
+            .then(data => ({ langCode: tL.code, translated: data.translated || '' }))
+            .catch(() => ({ langCode: tL.code, translated: '' }))
+        )
+      ));
+    }
 
     const translations = {};
     let primaryTranslated = '';

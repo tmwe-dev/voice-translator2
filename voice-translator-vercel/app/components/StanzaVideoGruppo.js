@@ -96,7 +96,7 @@ function Riquadro({ nome, stream, stato, lingua, battuta, C, mio }) {
   );
 }
 
-export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, onEsci }) {
+export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, onEsci, queueAudio }) {
   const { L, S, prefs, myLang } = useApp();
   const C = S?.colors || {};
   const miaLingua = myLang || prefs?.lang || 'it';
@@ -105,7 +105,20 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
     roomId, roomSessionToken, mioNome, attiva: true, conVideo: true,
   });
 
-  const { battute, accogli } = useTraduzioneInArrivo(miaLingua);
+  // b.289 — P0: la preferenza "traduzione in chiamata" del PROFILO vale
+  // anche qui, ed e di CIASCUN partecipante: off = niente trascrizione
+  // ne traduzione; testo = solo sottotitoli; voce = anche la voce
+  // tradotta, riprodotta col MIO motore, la MIA voce e il MIO volume
+  // (passa dalla coda audio gia esistente e collaudata, non da un
+  // secondo impianto).
+  const sceltaTraduzione = prefs?.autoTraduzione || 'voce';
+  const { battute, accogli } = useTraduzioneInArrivo(miaLingua, {
+    roomId, roomSessionToken,
+    // la voce tradotta si accoda solo se la scelta e "voce"
+    suTradotto: sceltaTraduzione === 'voce' && queueAudio
+      ? (tradotto, id) => { try { queueAudio(tradotto, getLang(miaLingua).speech, id); } catch { /* la voce e un di piu: il testo resta */ } }
+      : null,
+  });
 
   // Il canale dati consegna qui il parlato degli altri.
   useEffect(() => { stanza.quandoArrivaTesto(accogli); }, [stanza, accogli]);
@@ -114,7 +127,10 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
     mioStream: stanza.mioStream,
     miaLingua,
     mandaTesto: stanza.mandaTesto,
-    attivo: stanza.stato === 'dentro',
+    roomId, roomSessionToken,
+    // b.289 — P0: con la preferenza su "spenta" il microfono non viene
+    // trascritto affatto: zero chiamate, come da scelta dell'utente.
+    attivo: stanza.stato === 'dentro' && sceltaTraduzione !== 'off',
   });
 
   // L'ultima battuta di ciascuno: sotto il riquadro sta una riga sola.

@@ -33,7 +33,7 @@ const PEZZO_MASSIMO = 15000;   // oltre, si taglia: nessuno parla 15s di fila
 const MINIMO_UTILE = 400;      // sotto, e un colpo di tosse
 
 export default function useParlatoTradotto({
-  mioStream, miaLingua, mandaTesto, roomSessionToken, attivo,
+  mioStream, miaLingua, mandaTesto, roomId, roomSessionToken, attivo,
 }) {
   const [staScrivendo, setStaScrivendo] = useState(false);
   const [ultimoMio, setUltimoMio] = useState('');
@@ -64,6 +64,12 @@ export default function useParlatoTradotto({
       fd.append('audio', new File([blob], 'parlato.webm', { type: 'audio/webm' }));
       fd.append('sourceLang', miaLingua || 'it');
       fd.append('durata', String(Math.round(durataMs / 1000)));
+      // b.289 — l'identita della stanza viaggia con l'audio: autentica
+      // l'ospite, attribuisce il consumo secondo le regole della stanza
+      // e fa scattare la guardia delle Stanze Dirette sul server
+      // (transcribe la verifica gia: le mancavano solo questi campi).
+      if (roomId) fd.append('roomId', roomId);
+      if (roomSessionToken) fd.append('roomSessionToken', roomSessionToken);
       try {
         const t = localStorage.getItem('vt-token');
         if (t) fd.append('userToken', t);
@@ -88,7 +94,7 @@ export default function useParlatoTradotto({
     } finally {
       setStaScrivendo(false);
     }
-  }, [miaLingua, mandaTesto]);
+  }, [miaLingua, mandaTesto, roomId, roomSessionToken]);
 
   // ── Il misuratore sul microfono ──
   useEffect(() => {
@@ -179,13 +185,16 @@ export default function useParlatoTradotto({
 // Si tiene una memoria: la stessa frase non si ritraduce, e non si
 // ripaga.
 // ═══════════════════════════════════════════════════════════════
-export function useTraduzioneInArrivo(miaLingua) {
+export function useTraduzioneInArrivo(miaLingua, { roomId, roomSessionToken, suTradotto = null } = {}) {
   const [battute, setBattute] = useState([]);   // [{ id, da, testo, tradotto, lingua }]
   const memoriaRef = useRef(new Map());
 
   const accogli = useCallback(async ({ da, testo, lingua, id }) => {
     if (!testo) return;
-    const chiave = `${lingua}|${testo}`;
+    // b.289 — P0: la chiave DEVE contenere anche la lingua di arrivo.
+    // Senza, dopo un cambio lingua la memoria serviva la traduzione
+    // nella lingua VECCHIA spacciandola per quella nuova.
+    const chiave = `${lingua}|${miaLingua}|${testo}`;
     const gia = memoriaRef.current.get(chiave);
 
     const battuta = { id: id || `${Date.now()}`, da, testo, lingua, tradotto: gia || null };
@@ -199,6 +208,12 @@ export function useTraduzioneInArrivo(miaLingua) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: testo, sourceLang: lingua, targetLang: miaLingua,
+          // b.289 — la stanza entra nella richiesta: senza, un OSPITE
+          // nella stanza video di un host PRO pagava (o falliva) di
+          // tasca propria, mentre in chat l'addebito va all'host
+          // (b.161). Stessa regola dappertutto.
+          roomId: roomId || undefined,
+          roomSessionToken: roomSessionToken || undefined,
           userToken: (() => { try { return localStorage.getItem('vt-token') || ''; } catch { return ''; } })(),
         }),
       });
@@ -207,9 +222,12 @@ export function useTraduzioneInArrivo(miaLingua) {
       if (!d.translated) return;
       memoriaRef.current.set(chiave, d.translated);
       setBattute(prima => prima.map(b => (b.id === battuta.id ? { ...b, tradotto: d.translated } : b)));
+      // b.289 — P0-4: la voce tradotta, per chi la vuole. La riproduce la
+      // coda audio del ricevente (motore, voce e volume SUOI).
+      try { suTradotto?.(d.translated, battuta.id); } catch { /* la voce e un di piu: il testo e gia a schermo */ }
       if (d.creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     } catch { /* resta l'originale: meglio di niente */ }
-  }, [miaLingua]);
+  }, [miaLingua, roomId, roomSessionToken, suTradotto]);
 
   return { battute, accogli };
 }

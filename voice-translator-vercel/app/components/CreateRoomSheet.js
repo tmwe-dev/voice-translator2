@@ -81,6 +81,8 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
   // b.113 — Stanza Diretta: niente nuvola, per davvero. Spenta di suo:
   // toglie la traduzione, che e il motivo per cui quasi tutti sono qui.
   const [diretta, setDiretta] = useState(false);
+  // b.289 — la scelta dell'host: offre lui (default) o ognuno paga il suo
+  const [ognunoPagaIlSuo, setOgnunoPagaIlSuo] = useState(false);
   const sheetRef = useSheetA11y(open, onClose);
 
   // b.147 — "Parlane": una card News apre questo foglio con nome e
@@ -125,6 +127,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
         maxParticipants: normalizzaCapienza(maxParticipants, { diretta }),
         hot,
         diretta,
+        ognunoPagaIlSuo,
         mode: category, // maps to existing room modes
       });
       onClose();
@@ -132,7 +135,7 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
       console.warn('[CreateRoom] Failed:', e?.message);
     }
     setCreating(false);
-  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, diretta, onCreate, onClose]);
+  }, [nomePulito, nomeValido, roomType, category, lang, description, maxParticipants, hot, diretta, ognunoPagaIlSuo, onCreate, onClose]);
 
   if (!open) return null;
 
@@ -231,6 +234,37 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
               nasconde il suo prezzo e una promessa che si ritorce
               contro: qui il prezzo e la traduzione, cioe la ragione per
               cui quasi tutti aprono questo programma. */}
+          {/* b.289 — chi paga la traduzione: l'host offre (default) o
+              ognuno paga il suo. Interruttore grande, parole semplici. */}
+          <div style={{ marginBottom: 12 }}>
+            <button
+              onClick={() => { setOgnunoPagaIlSuo(v => !v); vibrate(10); }}
+              aria-pressed={ognunoPagaIlSuo}
+              style={{
+                width: '100%', padding: '12px 14px', borderRadius: 12, cursor: 'pointer',
+                background: cardBg, border: `1px solid ${cardBorder}`,
+                textAlign: 'left', fontFamily: FONT, display: 'flex', gap: 10, alignItems: 'center',
+              }}>
+              <span style={{ flex: 1 }}>
+                <span style={{ display: 'block', fontSize: 12, fontWeight: 700, color: textPrimary, marginBottom: 2 }}>
+                  {L('whoPaysTitle')}
+                </span>
+                <span style={{ display: 'block', fontSize: 11, color: textMuted, lineHeight: 1.5 }}>
+                  {ognunoPagaIlSuo ? L('whoPaysEach') : L('whoPaysHost')}
+                </span>
+              </span>
+              <span aria-hidden="true" style={{
+                width: 34, height: 20, borderRadius: 10, flexShrink: 0,
+                background: ognunoPagaIlSuo ? '#F59E0B' : '#26D9B0', position: 'relative', transition: 'background .18s',
+              }}>
+                <span style={{
+                  position: 'absolute', top: 2, left: ognunoPagaIlSuo ? 16 : 2, width: 16, height: 16,
+                  borderRadius: '50%', background: '#fff', transition: 'left .18s',
+                }} />
+              </span>
+            </button>
+          </div>
+
           <div style={{ marginBottom: 16 }}>
             <button
               onClick={() => {

@@ -181,6 +181,11 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     //   'off'            -> non parte niente: la accende l'utente
     const scelta = prefs?.autoTraduzione || 'voce';
     if (scelta === 'off') return;
+    // b.289 — con PIU di due persone l'interprete simultaneo non parte:
+    // e un impianto a due (un canale, una lingua) e nel gruppo darebbe
+    // la traduzione a UNO solo spacciandola per tutti. Nel gruppo ognuno
+    // legge gia nella propria lingua dalla stanza video.
+    if (otherMembers.length > 1) return;
     if (!roomInfo?.diretta && setInterpreterActive && !interpreterActive) {
       if (scelta === 'testo') setVolumeTTS(0);
       setInterpreterActive(true);
@@ -301,11 +306,12 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     if (msg.translations && msg.translations[myLang]) return msg.translations[myLang];
     if (msg.sourceLang === myLang && msg.original) return msg.original;
     if (msg.targetLang === myLang && msg.translated) return msg.translated;
-    if (msg.translations) {
-      const keys = Object.keys(msg.translations);
-      if (keys.length > 0) return msg.translations[keys[0]];
-    }
-    return msg.translated || msg.original || '';
+    // b.289 — P1-8: MAI la lingua di un altro come ripiego. Un francese
+    // in una stanza con inglesi e thai riceveva translations.en "perche
+    // era la prima": meglio l'originale, dichiarando che la sua
+    // traduzione sta arrivando.
+    if (msg.original) return msg.original;
+    return msg.translated || '';
   }
 
   function getSenderAvatar(senderName) {
@@ -495,6 +501,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         recording={recording} isListening={isListening}
         partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} S={S}
         stanzaDiretta={!!roomInfo?.diretta}
+        stanzaConPiuDiDue={otherMembers.length > 1}
       />
 
       {/* ── Voice Call Overlay ── */}

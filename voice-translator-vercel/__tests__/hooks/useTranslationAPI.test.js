@@ -244,13 +244,15 @@ describe('useTranslationAPI', () => {
       expect(targetLangs[0].code).toBe('it');
     });
 
-    it('returns fallback language when no room members', () => {
+    it('senza membri non si traduce verso nessuno (b.289)', () => {
+      // Prima ripiegava su it/en "a caso": si pagava una traduzione che
+      // nessuno nella stanza avrebbe letto.
       const props = defaultProps();
       props.roomInfoRef = { current: null };
       const { result } = renderHook(() => useTranslationAPI(props));
 
       const { targetLangs } = result.current.getAllTargetLangs();
-      expect(targetLangs).toHaveLength(1);
+      expect(targetLangs).toHaveLength(0);
     });
 
     it('deduplicates languages from multiple members', () => {

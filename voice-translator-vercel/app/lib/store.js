@@ -202,7 +202,7 @@ export async function verificaSegretoHost(roomId, secret) {
 // ROOMS
 // =============================================
 
-export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null, diretta = false, maxPartecipanti = null) {
+export async function createRoom(creatorName, creatorLang, mode = 'conversation', avatar = null, context = null, contextPrompt = null, description = null, hostTier = 'FREE', hostEmail = null, diretta = false, maxPartecipanti = null, ognunoPagaIlSuo = false) {
   const id = randomBytes(4).toString('hex').toUpperCase();
   const room = {
     id,
@@ -224,6 +224,10 @@ export async function createRoom(creatorName, creatorLang, mode = 'conversation'
     // continuerebbe a mandare la propria voce alla nuvola credendo di
     // essere in una conversazione riservata.
     diretta: !!diretta,
+    // b.289 — la scelta dell'host abbonato: false (default) = offre lui
+    // la traduzione agli invitati, com'e sempre stato; true = ognuno
+    // paga il suo, e gli ospiti senza conto vanno a tariffa gratuita.
+    ognunoPagaIlSuo: !!ognunoPagaIlSuo,
     // ── b.139-bis · IL TETTO SI SCRIVE ALLA NASCITA ──
     //
     // Non veniva scritto affatto. L'unico punto che lo metteva sulla

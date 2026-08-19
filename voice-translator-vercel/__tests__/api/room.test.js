@@ -96,7 +96,8 @@ describe('POST /api/room', () => {
       // pubblicate, e in una stanza privata la scelta dell'host veniva
       // buttata via. Qui non e stata chiesta, quindi vale `null` e la
       // stanza prende il valore predefinito — ma il posto c'e.
-      expect(mockCreateRoom).toHaveBeenCalledWith('Luca', 'it', 'conversation', null, null, null, null, 'FREE', null, false, null);
+      // b.289 — l'undicesimo argomento e la scelta "ognuno paga il suo" (default false)
+      expect(mockCreateRoom).toHaveBeenCalledWith('Luca', 'it', 'conversation', null, null, null, null, 'FREE', null, false, null, false);
       expect(mockCreateRoomSession).toHaveBeenCalledWith('ABC123', 'Luca', 'host');
     });
 

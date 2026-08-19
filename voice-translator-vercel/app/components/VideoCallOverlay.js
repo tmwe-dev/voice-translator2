@@ -146,6 +146,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   partnerSpeaking, partnerTyping,
   S,
   stanzaDiretta = false,
+  stanzaConPiuDiDue = false,
 }) {
   const localVideoRef = useRef(null);
   const localVideoInlineRef = useRef(null);
@@ -615,12 +616,15 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             <ControlBtn
               onClick={() => {
                 if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                // b.289 — nel gruppo il comando dice la verita: l'interprete
+                // simultaneo e un impianto a due e tradurrebbe per UNO solo.
+                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
                 setInterpreterActive(!interpreterActive);
               }}
-              active={interpreterActive && !stanzaDiretta}
+              active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
               icon={<IconGlobe size={18}/>}
-              label={stanzaDiretta ? 'Diretta' : interpreterActive ? 'Traduce' : 'Traduci'}
-              color={stanzaDiretta ? '#8b93a7' : '#3ddc84'}
+              label={stanzaDiretta ? 'Diretta' : stanzaConPiuDiDue ? 'A due' : interpreterActive ? 'Traduce' : 'Traduci'}
+              color={(stanzaDiretta || stanzaConPiuDiDue) ? '#8b93a7' : '#3ddc84'}
               activeColor="rgba(61,220,132,0.18)" size={44}
             />
           )}

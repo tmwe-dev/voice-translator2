@@ -224,6 +224,21 @@ export async function resolveAuth({
       throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
     }
 
+    // ═══ b.289 — "OGNUNO PAGA IL SUO" (scelta dell'host alla creazione) ═══
+    // L'host abbonato puo scegliere di NON offrire la traduzione agli
+    // invitati. In quel caso questa stanza non addebita MAI l'host:
+    // chi ha un conto manda il suo token (e passa dal Percorso 1, non
+    // da qui); chi non ce l'ha viene trattato come accesso libero —
+    // chiave di piattaforma, nessun addebito personale, protetto dal
+    // tetto giornaliero di piattaforma e dal limite per IP. Ordine dei
+    // controlli rispettato: prima l'AUTORIZZAZIONE (gettone di stanza,
+    // gia verificato sopra), poi il fornitore, senza toccare il conto.
+    // ATTENZIONE: NIENTE uscita anticipata — b.154 ha gia insegnato che
+    // un return qui salterebbe il tetto giornaliero di PIATTAFORMA nel
+    // blocco condiviso in fondo. Si marca e si prosegue: chiave di
+    // piattaforma, nessun conto personale.
+    if (!room.ognunoPagaIlSuo) {
+
     // Check host tier requirement
     if (requiredHostTier) {
       if (room.hostTier !== requiredHostTier) {
@@ -278,6 +293,11 @@ export async function resolveAuth({
           throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
         }
       }
+    }
+
+    // b.289 — fine del ramo "offre l'host". Con "ognuno paga il suo" si
+    // arriva qui direttamente: chiave di piattaforma, nessun conto
+    // personale, e il tetto di piattaforma del blocco condiviso vale.
     }
   } else {
     // Path 4: No token, no room, no lending — accesso libero dichiarato
