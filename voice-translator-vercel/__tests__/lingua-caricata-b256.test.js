@@ -19,7 +19,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { t, preloadLang, ascoltaLingueCaricate, linguaPronta } from '../app/lib/i18n.js';
+import { t, preloadLang, ascoltaLingueCaricate, linguaPronta, mapLang } from '../app/lib/i18n.js';
 
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
@@ -99,5 +99,42 @@ describe('il contesto dell\'applicazione ridisegna quando la lingua e pronta', (
 
   it('e L viaggia nelle dipendenze del contesto, altrimenti il ridisegno si ferma qui', () => {
     expect(ctx()).toMatch(/\}\), \[\s*\n?\s*L, linguaInterfaccia/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+// b.258 — le varianti regionali finivano tutte in inglese.
+//
+// TROVATO DAL VIVO, subito dopo b.256: col vietnamita i menu cambiavano,
+// con "العربية (مصر)" restavano in inglese. La differenza non era il
+// caricamento: era il CODICE. 'vi' e nell'elenco delle 15, 'ar-EG' no —
+// e cadeva nel ripiego finale. Ma l'arabo l'interfaccia ce l'ha: e 'ar'.
+// Cinque varianti su sei puntavano a una lingua che esiste, e nessuna
+// ci arrivava.
+// ═══════════════════════════════════════════════════════════════
+describe('la lingua di una variante regionale e la sua base', () => {
+  const CASI = [
+    ['ar-EG', 'ar'],   // il caso trovato dal vivo
+    ['es-MX', 'es'],
+    ['fr-CA', 'fr'],
+    ['pt-PT', 'pt'],
+    ['zh-TW', 'zh'],
+    ['en-GB', 'en'],
+  ];
+  for (const [variante, base] of CASI) {
+    it(`${variante} → ${base}`, () => {
+      expect(mapLang(variante)).toBe(base);
+    });
+  }
+
+  it('ma una lingua senza pacchetto resta all\'inglese, anche col suffisso', () => {
+    // Il danese non c'e: ne 'da' ne un ipotetico 'da-DK' possono tradurre.
+    expect(mapLang('da')).toBe('en');
+    expect(mapLang('da-DK')).toBe('en');
+  });
+
+  it('e le lingue intere non vengono toccate', () => {
+    expect(mapLang('vi')).toBe('vi');
+    expect(mapLang('it')).toBe('it');
   });
 });

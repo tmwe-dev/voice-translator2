@@ -159,8 +159,19 @@ export function tFuori(key) {
 /** Map unsupported language codes to the closest supported one */
 export function mapLang(code) {
   if (T[code] || SUPPORTED.includes(code)) return code;
+  // ═══ INIZIO b.258 — le varianti regionali finivano in inglese ═══
+  // TROVATO DAL VIVO (Luca): scelto "العربية (مصر)" i menu restavano in
+  // inglese, mentre col vietnamita cambiavano. La differenza e il codice:
+  // 'vi' e nell'elenco, 'ar-EG' no — e cadeva nel ripiego finale.
+  // Ma l'arabo l'interfaccia CE L'HA: e 'ar'. Lo stesso valeva per
+  // en-GB, es-MX, fr-CA, pt-PT, zh-TW — cinque lingue su sei che
+  // esistono, buttate sull'inglese per via del suffisso regionale.
+  // La lingua di una variante e la sua base: 'ar-EG' e arabo.
+  const base = String(code || '').split(/[-_]/)[0];
+  if (base !== code && (T[base] || SUPPORTED.includes(base))) return base;
+  // ═══ FINE b.258 ═══
   const map = { 'id':'en', 'ms':'en', 'nl':'en', 'pl':'en', 'sv':'en', 'el':'en', 'cs':'en', 'ro':'en', 'hu':'en', 'fi':'en' };
-  return map[code] || 'en';
+  return map[code] || map[base] || 'en';
 }
 
 export default T;

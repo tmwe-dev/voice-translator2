@@ -30,8 +30,9 @@ console.log('PRIMA:', await titolo());
 // apre il selettore lingua e sceglie Deutsch
 await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => /Italiano|▼/.test(x.innerText||'')); b.click(); });
 await page.waitForTimeout(800);
-const ok = await page.evaluate(() => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText||'').includes('Deutsch')); if (!b) return false; b.click(); return true; });
-console.log('cliccato Deutsch:', ok);
+const scelta = process.env.LINGUA || 'Deutsch';
+const ok = await page.evaluate((n) => { const b = [...document.querySelectorAll('button')].find(x => (x.innerText||'').includes(n)); if (!b) return false; b.click(); return true; }, scelta);
+console.log('cliccato', scelta, ':', ok);
 for (const attesa of [500, 1000, 2000, 3000]) {
   await page.waitForTimeout(attesa);
   console.log(`dopo ${attesa}ms →`, await titolo());
