@@ -225,6 +225,25 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   maxHeight: 280, overflowY: 'auto', padding: 6,
                   boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
                 }}>
+                  {/* ═══ INIZIO b.253 — dire QUALE lingua si sta scegliendo ═══
+                      COSA: intestazione "La tua lingua" sopra l'elenco, e in
+                      fondo una riga che porta alla lingua dell'interfaccia.
+                      PERCHE (trovato dal vivo, Luca): scegliendo "Dansk" qui
+                      i testi dell'app restavano in italiano, e sembrava un
+                      guasto. Non lo e: qui si sceglie la lingua in cui si
+                      PARLA e si ricevono le traduzioni, mentre la lingua dei
+                      menu e un'altra cosa (b.136: un italiano che parla con
+                      un americano mette "en" per le traduzioni e non vuole
+                      l'applicazione in inglese). Il difetto era che nessuno
+                      lo diceva, e che la lingua dei menu si poteva cambiare
+                      solo scavando nelle Impostazioni. Nessuna stringa nuova:
+                      `yourLang` e `uiLanguage` esistono gia in tutte e 15 le
+                      lingue dell'interfaccia. */}
+                  <div style={{
+                    padding: '6px 12px 8px', fontSize: 10, fontWeight: 800,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: C.textMuted,
+                  }}>{L('yourLang')}</div>
                   {/* b.146 — Luca: "i paesi devono essere ordinati in ordine
                       alfabetico". LANGS ha l'ordine storico del file, non
                       quello che un occhio si aspetta scorrendo un elenco. */}
@@ -250,6 +269,22 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                       </button>
                     );
                   })}
+                  {/* La via d'uscita per chi cercava QUI la lingua dei menu:
+                      un tocco, invece di sapere che sta sotto Profilo. */}
+                  <button
+                    onClick={() => { vibrate(); setShowLangPicker(false); setView('settings'); }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                      marginTop: 6, padding: '10px 12px', borderRadius: 10,
+                      border: 'none', borderTop: `1px solid ${C.cardBorder}`,
+                      background: 'transparent', color: C.textSecondary,
+                      fontSize: 12, cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+                    }}
+                  >
+                    <Icon name="globe" size={15} color={C.textMuted} />
+                    <span>{L('uiLanguage')}</span>
+                    <span style={{ marginLeft: 'auto', opacity: 0.5 }}>›</span>
+                  </button>
                 </div>
               </>
             )}
