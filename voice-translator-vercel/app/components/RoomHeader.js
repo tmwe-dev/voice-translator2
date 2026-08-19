@@ -6,6 +6,7 @@ import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
   IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { ultimoRapportoTesto } from '../lib/diagnosticaChiamata.js';
+import { rapportoMonitorTesto } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import ConsumoChip from './ConsumoChip.js';
@@ -288,7 +289,11 @@ const RoomHeader = memo(function RoomHeader({
                   passava, e dove si e fermata. Su un telefono non c'e
                   altro modo di leggerla. */}
               <button onClick={async () => {
-                  const testo = ultimoRapportoTesto();
+                  // b.275 — un solo tocco porta via tutto: la chiamata e
+                  // la catena della voce. Chi prova sul telefono non deve
+                  // ricordarsi di copiare due cose.
+                  const testo = ultimoRapportoTesto()
+                    + '\n\n— CATENA VOCE / TESTO —\n' + rapportoMonitorTesto();
                   try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
                   catch { toast.info(testo.slice(0, 300)); }
                   setShowMoreMenu(false);

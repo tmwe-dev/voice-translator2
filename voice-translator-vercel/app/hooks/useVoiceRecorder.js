@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { traccia } from '../lib/monitorSviluppo.js';
 
 const SILENCE_THRESHOLD = 0.01;
 const CLIPPING_THRESHOLD = 0.95;
@@ -36,6 +37,18 @@ export default function useVoiceRecorder() {
         },
       });
       streamRef.current = stream;
+      // b.275 — che cosa ci ha dato DAVVERO il telefono: il chiesto e il
+      // ottenuto non coincidono sempre, e una frequenza diversa da quella
+      // attesa e una causa classica di voce spezzata o non riconosciuta.
+      try {
+        const impostazioni = stream.getAudioTracks()[0]?.getSettings?.() || {};
+        traccia('microfono-aperto', {
+          frequenza: impostazioni.sampleRate ?? '?',
+          canali: impostazioni.channelCount ?? '?',
+          eco: impostazioni.echoCancellation ?? '?',
+          rumore: impostazioni.noiseSuppression ?? '?',
+        });
+      } catch { /* il telefono non espone le impostazioni della traccia: si prosegue senza questa riga */ }
 
       const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
       const source = audioContext.createMediaStreamSource(stream);
@@ -109,6 +122,7 @@ export default function useVoiceRecorder() {
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      traccia('voce-registrata', { byte: blob.size, pezzi: chunksRef.current.length, tipo: mimeType });
       const url = URL.createObjectURL(blob);
       const dur = durationRef.current;
       if (dur > 0.5) { // Skip very short accidental recordings

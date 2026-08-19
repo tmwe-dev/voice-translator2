@@ -12,6 +12,7 @@ import { trasportiAmmessi, TRASPORTO } from '../lib/decisioni.js';
 import { createLogger } from '../lib/logger.js';
 import { puoPartire } from '../lib/reati.js';
 import { toast } from '../lib/avvisi.js';
+import { cronometro } from '../lib/monitorSviluppo.js';
 const dbg = createLogger('translation-api');
 
 // b.247 — lo stesso formato che accetta /api/messages (POST e PATCH).
@@ -485,6 +486,11 @@ export default function useTranslationAPI({
     }
 
     let result;
+    // b.275 — la traduzione: da che lingua a che lingua, quanto ci mette,
+    // e se e finita bene. Si registrano SOLO misure, mai il testo.
+    const fineTraduzione = cronometro('traduzione', {
+      da: sourceLang, a: targetLang, caratteri: (text || '').length,
+    });
     try {
       const res = await fetch('/api/translate', {
         method: 'POST',
@@ -513,9 +519,11 @@ export default function useTranslationAPI({
           throw new Error('no-credits');
         }
         console.warn('[translateUniversal] Paid translate failed:', res.status, errData.error);
+        fineTraduzione({ stato: res.status, esito: 'errore' });
         throw new Error('Translation error');
       }
       result = await res.json();
+      fineTraduzione({ stato: res.status, fornitore: result?.provider || result?.model || '?', esito: 'ok' });
       // Wallet: era l'ultimo messaggio col credito — avvisa la batteria
       if (result.creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     } catch (paidErr) {

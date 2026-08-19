@@ -8,6 +8,7 @@ import useFreeTalkVAD from './useFreeTalkVAD.js';
 import { getPerf, PERF } from '../lib/perfTelemetry.js';
 import { createLogger } from '../lib/logger.js';
 import { toast } from '../lib/avvisi.js';
+import { cronometro, traccia } from '../lib/monitorSviluppo.js';
 const dbg = createLogger('translation');
 
 // ═══════════════════════════════════════════════════════════════
@@ -422,7 +423,11 @@ export default function useTranslation({
       recStartAtRef.current = 0;
     }
 
+    // b.275 — il passaggio piu costoso della catena: quanto ci mette
+    // l'audio ad andare e a tornare come testo.
+    const fineInvio = cronometro('voce-inviata');
     const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+    fineInvio({ stato: res.status });
     if (res.status === 402) {
       // Credito esaurito: fermiamo la sessione e mostriamo l'avviso batteria
       window.dispatchEvent(new CustomEvent('wallet:esaurito'));

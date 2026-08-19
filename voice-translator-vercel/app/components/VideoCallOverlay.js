@@ -4,6 +4,7 @@ import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
   IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord, IconGlobe } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import { traccia } from '../lib/monitorSviluppo.js';
 import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -151,6 +152,31 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   // Comandi del pannello traduzione (persistenti tra le chiamate)
   const [mostraTesto, setMostraTesto] = useState(true);
+
+  // b.275 — IL TESTO DURANTE LA VIDEOCHIAMATA.
+  // Si registra quando un sottotitolo nuovo arriva, da dove viene
+  // (interprete dal vivo o chat), quanto e lungo e se in quel momento i
+  // sottotitoli erano accesi. Serve a distinguere tre guasti che a
+  // schermo si assomigliano: il testo non arriva, arriva e non si vede,
+  // arriva in ritardo. Il contenuto NON viene mai registrato.
+  const ultimoSottotitoloRef = useRef(null);
+  useEffect(() => {
+    try {
+      const daInterprete = interpreterActive && interpreter?.lastSubtitle ? interpreter.lastSubtitle : null;
+      const grezzo = daInterprete
+        || (Array.isArray(lastTranslationSubtitle)
+          ? lastTranslationSubtitle[lastTranslationSubtitle.length - 1]
+          : lastTranslationSubtitle);
+      const testo = typeof grezzo === 'string' ? grezzo : (grezzo?.text || grezzo?.testo || null);
+      if (!testo || testo === ultimoSottotitoloRef.current) return;
+      ultimoSottotitoloRef.current = testo;
+      traccia('sottotitolo-a-schermo', {
+        caratteri: testo.length,
+        fonte: daInterprete ? 'interprete' : 'chat',
+        sottotitoliAccesi: mostraTesto ? 1 : 0,
+      });
+    } catch { /* il monitor non deve mai fermare il disegno del sottotitolo: si perde la riga e si prosegue */ }
+  }, [lastTranslationSubtitle, interpreter?.lastSubtitle, interpreterActive, mostraTesto]);
   const [volTTS, setVolTTS] = useState(() => getVolumeTTS());
   const [livelloAtt, setLivelloAtt] = useState(() => getAttenuazione());
   // b.176 — Versione B: due interruttori grandi. "Avanzate" nasconde i
