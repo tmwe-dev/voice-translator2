@@ -105,8 +105,15 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
   const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
   const bloccoLingua = (l2 && l2 !== lingua) ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2 }) : '';
+  // b.301 — PUNTO 5: a livello universitario/ricercatore la lezione ha
+  // un'altra stazza. Non piu 900 token di prosa: piu moduli, metodologia,
+  // problemi, casi, e — se ci sono fonti — riferimenti espliciti.
+  const livelloAlto = livello === 'universitario' || livello === 'ricercatore';
+  const profondita = livelloAlto
+    ? `\nQUESTO E UN LIVELLO ${livello.toUpperCase()}: vai in profondita. Struttura la lezione in piu passaggi collegati; includi la METODOLOGIA (come si ragiona in questo campo, non solo cosa si sa), almeno un PROBLEMA o CASO concreto da analizzare, e le sfumature/dibattiti aperti. Cita i titoli delle fonti quando usi un dato. Niente semplificazioni da manuale introduttivo.`
+    : '';
   const system = `${vestePocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -187,21 +194,34 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
   // Diverso il caso "ricerca riuscita, zero documenti": lì si genera, ma
   // dicendo al modello che fonti non ce ne sono (vedi promptLezione).
   let fontiNonTrovate = false;
-  if (categoriaCertificata(categoria)) {
+  // b.301 — PUNTO 6: a livello ALTO (universitario, ricercatore) le fonti
+  // sono obbligatorie SEMPRE, non solo per medicina/psicologia. A quei
+  // livelli una lezione "a memoria" non basta: deve poggiare su documenti.
+  const livelloAlto = livello === 'universitario' || livello === 'ricercatore';
+  if (categoriaCertificata(categoria) || livelloAlto) {
     const query = `${argomento} ${lezione?.titolo || ''}`.trim();
-    const esito = leggiEsitoRicerca(await cerca(query, { lingua, profonda: true, fonti: 4 }));
+    const esito = leggiEsitoRicerca(await cerca(query, { lingua, profonda: true, fonti: livelloAlto ? 6 : 4 }));
     if (!esito.ok) {
-      log.warn('materia certificata: ricerca fonti guasta, lezione NON generata', {
-        categoria, argomento: String(argomento || '').slice(0, 120), errore: esito.errore || 'ignoto',
-      });
-      return { ok: false, motivo: 'fonti-non-disponibili: ' + (esito.errore || 'ricerca-guasta'), status: 503 };
+      // Materia certificata (medicina...): fail-closed, si rifiuta.
+      // Livello alto ma materia non certificata: la ricerca guasta non
+      // blocca — si genera dicendo al modello che non ha fonti (niente
+      // citazioni inventate), come per il caso "zero documenti".
+      if (categoriaCertificata(categoria)) {
+        log.warn('materia certificata: ricerca fonti guasta, lezione NON generata', {
+          categoria, argomento: String(argomento || '').slice(0, 120), errore: esito.errore || 'ignoto',
+        });
+        return { ok: false, motivo: 'fonti-non-disponibili: ' + (esito.errore || 'ricerca-guasta'), status: 503 };
+      }
+      fontiNonTrovate = true;
+    } else {
+      fonti = esito.risultati.slice(0, livelloAlto ? 6 : 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+      fontiNonTrovate = fonti.length === 0;
     }
-    fonti = esito.risultati.slice(0, 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
-    fontiNonTrovate = fonti.length === 0;
   }
   // ── FINE b.247 ──
   const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 900 });
+  // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: livelloAlto ? 1600 : 900 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   // b.244 — l'appunto del Maestro si stacca qui: non deve MAI comparire nella
   // lezione. Le osservazioni NUOVE tornano al chiamante, che le salva (il
@@ -215,7 +235,7 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 /** Genera il quiz di una lezione. */
 export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente, osservazioni, progresso });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 600 });
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: Math.min(1400, 250 + nDomande * 200) });   // b.301: verifiche piu ricche a livello alto
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'quiz-illeggibile' };

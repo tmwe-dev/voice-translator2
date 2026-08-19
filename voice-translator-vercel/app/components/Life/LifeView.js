@@ -281,7 +281,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // dal Maestro), 'foto'/'link' (recuperati dalla community — Cobra),
   // 'video' (video collegati), 'nessuno'. Il default lo decide l'eta:
   // i bambini vedono disegni, gli universitari link e video.
-  const defaultContenuti = (liv) => (liv === 'bambini' || liv === 'base') ? 'disegni' : 'link';
+  // b.301 — il livello e 'bambino' (singolare), come in catalogo.js e nel
+  // generatore. Ieri (b.299) qui c'era 'bambini': per un corso da bambino
+  // il default cadeva su 'link' invece che sui disegni. Corretto.
+  const defaultContenuti = (liv) => (liv === 'bambino' || liv === 'base') ? 'disegni' : 'link';
   const [contenuti, setContenuti] = useState(defaultContenuti('base'));
   const [arricchimento, setArricchimento] = useState(null);
   const [docenteId, setDocenteId] = useState('');

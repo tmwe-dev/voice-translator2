@@ -66,3 +66,19 @@ export function lezioniPerLivello(id) {
   const l = getLivello(id);
   return l ? l.lezioni[0] : 5;
 }
+
+// b.301 — PUNTO 5: piu moduli a livello alto. La coda della forbice
+// (universitario 8-12, ricercatore 10-14) invece del minimo.
+export function lezioniProfonde(id) {
+  const l = getLivello(id);
+  if (!l) return 5;
+  const alto = id === 'universitario' || id === 'ricercatore';
+  return alto ? l.lezioni[1] : l.lezioni[0];
+}
+
+// b.301 — PUNTO 7: quante domande di verifica, per livello.
+// Base bastano 3; a salire crescono, perche una verifica universitaria
+// non si esaurisce in tre crocette.
+export function domandePerLivello(id) {
+  return { bambino: 3, base: 3, intermedio: 4, avanzato: 5, universitario: 6, ricercatore: 6 }[id] || 3;
+}

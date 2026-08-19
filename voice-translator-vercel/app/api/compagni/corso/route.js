@@ -3,7 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
-import { lezioniPerLivello } from '../../../lib/compagni/corsi/catalogo.js';
+import { lezioniProfonde, domandePerLivello } from '../../../lib/compagni/corsi/catalogo.js';
 import { generaSyllabus, generaLezione, generaQuiz } from '../../../lib/compagni/corsi/generatore.js';
 import { pubblicaCorso, elencaCorsiPubblici } from '../../../lib/compagni/corsi/pubblici.js';
 import { leggiOsservazioni, aggiungiOsservazioni, leggiProgresso, salvaEsito } from '../../../lib/compagni/corsi/studente.js';
@@ -44,7 +44,7 @@ async function handlePost(req) {
 
     if (azione === 'syllabus') {
       if (!argomento) return NextResponse.json({ error: 'Serve un argomento' }, { status: 400 });
-      const nLezioni = lezioniPerLivello(livello);
+      const nLezioni = lezioniProfonde(livello);   // b.301 PUNTO 5
       const r = await generaSyllabus({ argomento, categoria, livello, lingua, docente, nLezioni, direzione: body.direzione || '' }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, argomento, categoria, livello, lezioni: r.lezioni });
@@ -79,7 +79,9 @@ async function handlePost(req) {
       const [oss, prog] = sessione?.email
         ? await Promise.all([leggiOsservazioni(sessione.email), leggiProgresso(sessione.email, argomento)])
         : [[], []];
-      const r = await generaQuiz(lezione, { lingua, userToken, livello, contenuto, argomento, docente, osservazioni: oss, progresso: prog });
+      // b.301 PUNTO 7: quante domande secondo il livello.
+      const nDomande = domandePerLivello(livello);
+      const r = await generaQuiz(lezione, { lingua, userToken, nDomande, livello, contenuto, argomento, docente, osservazioni: oss, progresso: prog });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, domande: r.domande });
     }
