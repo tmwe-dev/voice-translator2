@@ -469,6 +469,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         setInterpreterActive={setInterpreterActive}
         recording={recording} isListening={isListening}
         partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} S={S}
+        stanzaDiretta={!!roomInfo?.diretta}
       />
 
       {/* ── Voice Call Overlay ── */}

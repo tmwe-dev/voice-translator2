@@ -5,6 +5,7 @@ import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCa
   IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord, IconGlobe } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { traccia } from '../lib/monitorSviluppo.js';
+import { toast } from '../lib/avvisi.js';
 import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -144,6 +145,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   recording, isListening,
   partnerSpeaking, partnerTyping,
   S,
+  stanzaDiretta = false,
 }) {
   const localVideoRef = useRef(null);
   const localVideoInlineRef = useRef(null);
@@ -183,10 +185,19 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   // controlli fini (modi SENTI + volume partner). Il ref ricorda il
   // volume voce prima di spegnerla, per ripristinarlo alla riaccensione.
   const [mostraAvanzate, setMostraAvanzate] = useState(false);
+  // b.278 — il cassetto laterale dei controlli traduzione (linguetta -> apre)
+  const [pannelloAperto, setPannelloAperto] = useState(false);
   const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs } = useApp();
-  const vocePremiumAttiva = prefs?.voiceEngine === 'elevenlabs';
+  // b.278 — P2: IL CONTATORE DEVE DIRE LA TARIFFA DELLA VOCE CHE SUONA.
+  // Guardava solo il motore SCELTO nelle impostazioni: ma quando
+  // l'interprete e acceso la voce che suona e SEMPRE quella veloce
+  // standard (e la scelta di progetto: la simultanea privilegia la
+  // rapidita). Con l'interprete acceso il contatore diceva "premium" e
+  // si pagava... la voce standard. Ora la tariffa segue la voce vera:
+  // interprete acceso -> standard, altrimenti il motore scelto.
+  const vocePremiumAttiva = !interpreterActive && prefs?.voiceEngine === 'elevenlabs';
 
   // Attach local video stream to BOTH fullscreen and inline elements
   useEffect(() => {
@@ -367,6 +378,36 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               background: 'transparent', color: 'rgba(238,242,255,0.5)',
             };
             return (
+              <>
+              {/* ═══ INIZIO b.278 — linguetta + cassetto al posto del pannello fisso ═══
+                  COSA: il pannello b.176 copriva il video con interruttori e
+                  cursori sempre a schermo. Ora: (1) il SOTTOTITOLO resta in
+                  basso, da solo, sempre leggibile; (2) una LINGUETTA compatta
+                  mostra lo stato reale (CC, voce, volume) e apre (3) il
+                  CASSETTO laterale con GLI STESSI controlli di prima — stessi
+                  onClick, stessi aria, niente perso. PERCHE: "il video prima
+                  di tutto" (gerarchia chiesta da Luca). */}
+
+              {/* (1) linguetta flottante: lo stato vero, in un tocco */}
+              <button onClick={() => setPannelloAperto(true)}
+                aria-label={L('settings')} aria-expanded={pannelloAperto}
+                style={{
+                  position: 'absolute', top: 96, left: 14, zIndex: 7,
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+                  background: 'rgba(5,7,15,0.72)', backdropFilter: 'blur(14px)',
+                  border: '1px solid rgba(160,190,255,0.2)', color: '#eef2ff',
+                  fontSize: 11, fontWeight: 800, fontFamily: 'inherit',
+                }}>
+                <span>{mostraTesto ? 'CC' : 'cc'}</span>
+                <span style={{ width: 3, height: 3, borderRadius: 2, background: 'rgba(238,242,255,0.35)' }} />
+                <span>{volTTS > 0.01 ? `\u{1F50A} ${Math.round(volTTS * 100)}%` : '\u{1F507}'}</span>
+                <span style={{ width: 3, height: 3, borderRadius: 2, background: 'rgba(238,242,255,0.35)' }} />
+                <span style={{ color: acc, fontSize: 10 }}>{'\u2699\uFE0E'}</span>
+              </button>
+
+              {/* (2) il sottotitolo, da solo, in basso: la parte che si legge */}
+              {mostraTesto && (
               <div style={{
                 position: 'absolute', bottom: 128, left: 14, right: 14,
                 background: 'rgba(5,7,15,0.84)', backdropFilter: 'blur(18px)',
@@ -374,8 +415,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 padding: '12px 14px 10px',
                 boxShadow: '0 10px 40px -10px rgba(0,0,0,0.6)',
               }}>
-                {/* ── Sottotitoli (spegnibili) ── */}
-                {mostraTesto && (
+                {(
                   <div style={{ marginBottom: 9 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
                       {partnerSpeaking && (
@@ -408,6 +448,31 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                     )}
                   </div>
                 )}
+              </div>
+              )}
+
+              {/* (3) il cassetto laterale: si apre dalla linguetta, si
+                  chiude toccando fuori o la X. Dentro ci sono GLI STESSI
+                  controlli del pannello b.176: spostati, non riscritti. */}
+              {pannelloAperto && (
+                <>
+                  <div onClick={() => setPannelloAperto(false)}
+                    style={{ position: 'absolute', inset: 0, zIndex: 8, background: 'rgba(0,0,0,0.45)' }} />
+                  <div role="dialog" aria-label={L('settings')} style={{
+                    position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 9,
+                    width: 'min(320px, 88vw)', overflowY: 'auto',
+                    background: 'rgba(8,11,22,0.96)', backdropFilter: 'blur(20px)',
+                    borderLeft: '1px solid rgba(160,190,255,0.18)',
+                    padding: '18px 16px calc(18px + env(safe-area-inset-bottom))',
+                    boxShadow: '-16px 0 48px rgba(0,0,0,0.5)',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#eef2ff' }}>{L('interpreterModeName')}</span>
+                      <button onClick={() => setPannelloAperto(false)} aria-label={L('close')}
+                        style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 18, cursor: 'pointer', padding: 4 }}>
+                        {'\u2715'}
+                      </button>
+                    </div>
 
                 {/* ═══ INIZIO b.176 — Versione B: due interruttori grandi ═══
                     COSA: al posto di "Testo" + 3 modi SENTI + 2 slider
@@ -491,7 +556,11 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   )}
                 </div>
                 {/* ═══ FINE b.176 ═══ */}
-              </div>
+                  </div>
+                </>
+              )}
+              {/* ═══ FINE b.278 ═══ */}
+              </>
             );
           })()}
         </div>
@@ -525,13 +594,23 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
 
           {/* b.132 — l'interprete si accende anche da qui, non solo
               nella chiamata vocale. Stessa veste degli altri comandi. */}
+          {/* b.278 — P1: IN STANZA DIRETTA IL COMANDO DICE LA VERITA.
+              La traduzione dell'interprete passa dai server cloud, e la
+              Stanza Diretta promette che la voce non ci passa: il server
+              gia rifiuta (403). Ma il pulsante qui sembrava attivabile —
+              lo si premeva, non succedeva niente, e sembrava un guasto.
+              Ora e spento e, se lo tocchi, spiega il perche. */}
           {setInterpreterActive && (
             <ControlBtn
-              onClick={() => setInterpreterActive(!interpreterActive)}
-              active={interpreterActive}
+              onClick={() => {
+                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                setInterpreterActive(!interpreterActive);
+              }}
+              active={interpreterActive && !stanzaDiretta}
               icon={<IconGlobe size={22}/>}
-              label={interpreterActive ? 'Traduce' : 'Traduci'}
-              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
+              label={stanzaDiretta ? 'Diretta' : interpreterActive ? 'Traduce' : 'Traduci'}
+              color={stanzaDiretta ? '#8b93a7' : '#3ddc84'}
+              activeColor="rgba(61,220,132,0.18)" size={52}
             />
           )}
 
