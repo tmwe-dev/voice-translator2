@@ -344,10 +344,8 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             </button>
           </div>
 
-          {/* Costo call in euro, tempo reale */}
-          <div style={{ position: 'absolute', top: 52, right: 106, zIndex: 6 }}>
-            <CostTicker attivo={true} vocePremium={vocePremiumAttiva} />
-          </div>
+          {/* b.284 — il costo non sta piu sopra il video: vive nel
+              cassetto (•••), la pagina resta vuota. */}
 
           {/* ═══ Pannello traduzione — SEMPRE visibile, dal primo secondo ═══ */}
           {(() => {
@@ -388,23 +386,8 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                   onClick, stessi aria, niente perso. PERCHE: "il video prima
                   di tutto" (gerarchia chiesta da Luca). */}
 
-              {/* (1) linguetta flottante: lo stato vero, in un tocco */}
-              <button onClick={() => setPannelloAperto(true)}
-                aria-label={L('settings')} aria-expanded={pannelloAperto}
-                style={{
-                  position: 'absolute', top: 96, left: 14, zIndex: 7,
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
-                  background: 'rgba(5,7,15,0.72)', backdropFilter: 'blur(14px)',
-                  border: '1px solid rgba(160,190,255,0.2)', color: '#eef2ff',
-                  fontSize: 11, fontWeight: 800, fontFamily: 'inherit',
-                }}>
-                <span>{mostraTesto ? 'CC' : 'cc'}</span>
-                <span style={{ width: 3, height: 3, borderRadius: 2, background: 'rgba(238,242,255,0.35)' }} />
-                <span>{volTTS > 0.01 ? `\u{1F50A} ${Math.round(volTTS * 100)}%` : '\u{1F507}'}</span>
-                <span style={{ width: 3, height: 3, borderRadius: 2, background: 'rgba(238,242,255,0.35)' }} />
-                <span style={{ color: acc, fontSize: 10 }}>{'\u2699\uFE0E'}</span>
-              </button>
+              {/* b.284 — la linguetta e stata sostituita dalla barra laterale
+                  di icone (richiesta di Luca: comandi raccolti, pagina vuota). */}
 
               {/* (2) il sottotitolo, da solo, in basso: la parte che si legge */}
               {mostraTesto && (
@@ -472,6 +455,11 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                         style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 18, cursor: 'pointer', padding: 4 }}>
                         {'\u2715'}
                       </button>
+                    </div>
+
+                    {/* b.284 — il costo della chiamata, spostato qui dal video */}
+                    <div style={{ marginBottom: 10 }}>
+                      <CostTicker attivo={true} vocePremium={vocePremiumAttiva} />
                     </div>
 
                 {/* ═══ INIZIO b.176 — Versione B: due interruttori grandi ═══
@@ -565,41 +553,36 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           })()}
         </div>
 
-        {/* ── Barra comandi con GERARCHIA ──
-            Al centro, grande e rosso: TERMINA (l'azione irreversibile).
-            A sinistra i toggle del TUO segnale (camera, micro).
-            A destra le utilità (ruota, riduci). Nessun dubbio su cosa fa cosa. */}
+        {/* ═══ INIZIO b.284 — BARRA LATERALE + BARRA BASSA ESSENZIALE ═══
+            COSA: i sei comandi (camera, micro, traduci, sottotitoli,
+            gira, riduci) stanno in una COLONNA di sole icone sul bordo
+            sinistro, sempre visibile; in basso restano SOLO Termina e
+            il menu ••• che apre il cassetto con tutto il resto (volume,
+            avanzate, costo). STESSI onClick di prima: spostati, non
+            riscritti. PERCHE: "la pagina deve rimanere praticamente
+            vuota" (Luca) — comandi sparsi in alto e in basso
+            confondevano durante la chiamata. */}
         <div style={{
-          padding: '14px 16px', paddingBottom: 'max(36px, env(safe-area-inset-bottom))',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 18,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.98), rgba(0,0,0,0.7))',
+          position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+          zIndex: 6, display: 'flex', flexDirection: 'column', gap: 10,
+          padding: '10px 6px', borderRadius: 18,
+          background: 'rgba(5,7,15,0.55)', backdropFilter: 'blur(14px)',
+          border: '1px solid rgba(160,190,255,0.14)',
         }}>
-          {/* Il tuo segnale */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <ControlBtn
-              onClick={() => webrtc.toggleVideo()}
-              active={webrtc.videoEnabled}
-              icon={webrtc.videoEnabled ? <IconCamera size={22}/> : <IconCameraOff size={22}/>}
-              label={webrtc.videoEnabled ? 'Camera' : 'Spenta'}
-              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
-            />
-            <ControlBtn
-              onClick={() => webrtc.toggleAudio()}
-              active={webrtc.audioEnabled}
-              icon={webrtc.audioEnabled ? <IconMic size={22}/> : <IconVolumeOff size={22}/>}
-              label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
-              color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={52}
-            />
-          </div>
-
-          {/* b.132 — l'interprete si accende anche da qui, non solo
-              nella chiamata vocale. Stessa veste degli altri comandi. */}
-          {/* b.278 — P1: IN STANZA DIRETTA IL COMANDO DICE LA VERITA.
-              La traduzione dell'interprete passa dai server cloud, e la
-              Stanza Diretta promette che la voce non ci passa: il server
-              gia rifiuta (403). Ma il pulsante qui sembrava attivabile —
-              lo si premeva, non succedeva niente, e sembrava un guasto.
-              Ora e spento e, se lo tocchi, spiega il perche. */}
+          <ControlBtn
+            onClick={() => webrtc.toggleVideo()}
+            active={webrtc.videoEnabled}
+            icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
+            label={webrtc.videoEnabled ? 'Camera' : 'Spenta'}
+            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
+          />
+          <ControlBtn
+            onClick={() => webrtc.toggleAudio()}
+            active={webrtc.audioEnabled}
+            icon={webrtc.audioEnabled ? <IconMic size={20}/> : <IconVolumeOff size={20}/>}
+            label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
+            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
+          />
           {setInterpreterActive && (
             <ControlBtn
               onClick={() => {
@@ -607,46 +590,66 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
                 setInterpreterActive(!interpreterActive);
               }}
               active={interpreterActive && !stanzaDiretta}
-              icon={<IconGlobe size={22}/>}
+              icon={<IconGlobe size={20}/>}
               label={stanzaDiretta ? 'Diretta' : interpreterActive ? 'Traduce' : 'Traduci'}
               color={stanzaDiretta ? '#8b93a7' : '#3ddc84'}
-              activeColor="rgba(61,220,132,0.18)" size={52}
+              activeColor="rgba(61,220,132,0.18)" size={46}
             />
           )}
+          <ControlBtn
+            onClick={() => setMostraTesto(v => !v)}
+            active={mostraTesto}
+            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
+            label={mostraTesto ? 'Testo' : 'No testo'}
+            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
+          />
+          <ControlBtn
+            onClick={() => webrtc.flipCamera()}
+            active={false}
+            icon={<IconFlipCamera size={18}/>}
+            label={L('rotateWord')}
+            color="#94a3b8" size={46}
+          />
+          <ControlBtn
+            onClick={() => setVideoFullscreen(false)}
+            active={false}
+            icon={<IconMinimize size={18}/>}
+            label={L('navChat')}
+            color="#94a3b8" size={46}
+          />
+        </div>
 
+        {/* barra bassa: SOLO l'essenziale, il piu in basso possibile */}
+        <div style={{
+          padding: '8px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 22,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.0))',
+        }}>
           {/* TERMINA — il protagonista, impossibile sbagliarsi */}
           <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             aria-label={L('endCall')}
             style={{
-              width: 72, height: 72, borderRadius: 36, border: 'none', cursor: 'pointer',
+              width: 64, height: 64, borderRadius: 32, border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
               background: 'linear-gradient(145deg, #ef4444, #dc2626)', color: '#fff',
               boxShadow: '0 6px 24px rgba(239,68,68,0.5), 0 0 0 6px rgba(239,68,68,0.12)',
               WebkitTapHighlightColor: 'transparent',
             }}>
-            <IconPhoneOff size={26}/>
+            <IconPhoneOff size={24}/>
             <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1 }}>TERMINA</span>
           </button>
 
-          {/* Utilità */}
-          <div style={{ display: 'flex', gap: 10 }}>
-            <ControlBtn
-              onClick={() => webrtc.flipCamera()}
-              active={false}
-              icon={<IconFlipCamera size={20}/>}
-              label={L('rotateWord')}
-              color="#94a3b8" size={46}
-            />
-            <ControlBtn
-              onClick={() => setVideoFullscreen(false)}
-              active={false}
-              icon={<IconMinimize size={20}/>}
-              label={L('navChat')}
-              color="#94a3b8" size={46}
-            />
-          </div>
+          {/* ••• — tutto il secondario vive nel cassetto */}
+          <ControlBtn
+            onClick={() => setPannelloAperto(true)}
+            active={pannelloAperto}
+            icon={<span style={{ fontSize: 18, fontWeight: 900, lineHeight: 0.4 }}>{'\u22EF'}</span>}
+            label={L('settings')}
+            color="#94a3b8" size={46}
+          />
         </div>
+        {/* ═══ FINE b.284 ═══ */}
       </div>
     );
   }
