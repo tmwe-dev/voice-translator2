@@ -976,6 +976,54 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     } catch (e) { console.warn('[WebRTC] flipCamera:', e.message); }
   }, []);
 
+  // ═══ b.293 — CONDIVISIONE SCHERMO (solo dove il browser la offre:
+  // computer si, telefoni per lo piu no — su iPhone il sistema non la
+  // concede alle pagine web). Stessa tecnica del cambio camera: si
+  // SOSTITUISCE la traccia video sul canale gia aperto (replaceTrack),
+  // quindi NIENTE nuova trattativa: il motore collaudato non si tocca.
+  // Quando la condivisione finisce (pulsante nostro o "interrompi" del
+  // sistema), torna la telecamera da sola.
+  const [schermoCondiviso, setSchermoCondiviso] = useState(false);
+  const tracciaCameraRef = useRef(null);   // la telecamera messa da parte
+  const condividiSchermo = useCallback(async () => {
+    if (!navigator.mediaDevices?.getDisplayMedia) return false;
+    const sender = sendersRef.current.find(x => x?.track?.kind === 'video')
+      || pcRef.current?.getSenders?.().find(x => x?.track?.kind === 'video');
+    if (!sender) return false;
+    try {
+      if (schermoCondiviso) {
+        // torno alla telecamera
+        const cam = tracciaCameraRef.current;
+        const attuale = sender.track;
+        if (cam && cam.readyState === 'live') await sender.replaceTrack(cam);
+        if (attuale && attuale !== cam) { try { attuale.stop(); } catch { /* traccia schermo gia ferma */ } }
+        tracciaCameraRef.current = null;
+        setSchermoCondiviso(false);
+        return true;
+      }
+      const schermo = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+      const tracciaSchermo = schermo.getVideoTracks()[0];
+      if (!tracciaSchermo) return false;
+      tracciaCameraRef.current = sender.track;   // la camera si mette da parte, NON si spegne
+      await sender.replaceTrack(tracciaSchermo);
+      setSchermoCondiviso(true);
+      // "Interrompi condivisione" del sistema: si torna alla camera da soli
+      tracciaSchermo.onended = async () => {
+        try {
+          const cam = tracciaCameraRef.current;
+          if (cam && cam.readyState === 'live') await sender.replaceTrack(cam);
+          tracciaCameraRef.current = null;
+          setSchermoCondiviso(false);
+        } catch { /* la chiamata e finita nel frattempo: niente da ripristinare */ }
+      };
+      return true;
+    } catch (e) {
+      // "Annulla" nella finestra di scelta non e un guasto
+      if (e?.name !== 'NotAllowedError') console.warn('[WebRTC] condivisione schermo:', e.message);
+      return false;
+    }
+  }, [schermoCondiviso]);
+
   const toggleAudio = useCallback(() => {
     if (!localStreamRef.current) return;
     const audioTracks = localStreamRef.current.getAudioTracks();
@@ -1047,6 +1095,7 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
     toggleVideo,
     toggleAudio,
     flipCamera,
+    condividiSchermo, schermoCondiviso,
     sendDirectMessage,
     numeroSicurezza: e2e.numeroSicurezza,
     spedisciOAccoda,

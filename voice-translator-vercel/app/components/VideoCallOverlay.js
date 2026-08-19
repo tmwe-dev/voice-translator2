@@ -721,6 +721,17 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             label={L('rotateWord')}
             color="#94a3b8" size={46}
           />
+          {/* b.293 — condivisione schermo: solo dove il browser la offre
+              (computer). Sui telefoni il pulsante non compare. */}
+          {typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo && (
+            <ControlBtn
+              onClick={() => webrtc.condividiSchermo()}
+              active={!!webrtc.schermoCondiviso}
+              icon={<span style={{ fontSize: 16 }}>{'\u{1F5A5}'}</span>}
+              label={L('screenWord')}
+              color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
+            />
+          )}
           <ControlBtn
             onClick={() => setVideoFullscreen(false)}
             active={false}
