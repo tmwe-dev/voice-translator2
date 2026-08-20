@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **43** — vive: **39**, rimosse: **4**
+Rotte totali: **44** — vive: **40**, rimosse: **4**
 
 ## Come si legge
 
@@ -29,6 +29,7 @@ Rotte totali: **43** — vive: **39**, rimosse: **4**
 | /api/analytics | POST | si | analytics | — | — | — | si |
 | /api/auth | POST | si | auth | auth-otp | — | — | si |
 | /api/chat-action | POST | si | chat-action | — | — | — | — |
+| /api/compiti | POST | si | compiti | — | — | — | si |
 | /api/contacts | POST | si | contacts | — | — | — | si |
 | /api/conversation | POST GET | si | conversation | — | — | si | si |
 | /api/debug | POST | si | debug | — | — | — | si |

@@ -27,6 +27,7 @@ import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
 import GestioneObiettivi from './GestioneObiettivi.js';
+import CompitiView from './CompitiView.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
 
@@ -105,6 +106,8 @@ function LifeView({ onApriStanza }) {
           // b.247 — la chiave ora esiste in tutti e quindici i pacchetti:
           // via il ripiego che confrontava il risultato con la chiave stessa.
           { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
+          // b.332 — Ripetizioni e Compiti: l'agenda di studio (piano di Luca).
+          { id: 'compiti', icon: 'history', label: (L('lifeHomeworkTab') !== 'lifeHomeworkTab' ? L('lifeHomeworkTab') : 'Compiti') },
           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
         ].map((t) => {
           const on = scheda === t.id;
@@ -131,6 +134,7 @@ function LifeView({ onApriStanza }) {
       {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'compiti' && <CompitiView {...{ L, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
 
