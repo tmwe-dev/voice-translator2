@@ -1157,6 +1157,88 @@ function HomeInner() {
           tempo — e coprivano il pulsante di conferma, che e l'unica cosa
           da fare in quella schermata. */}
       {!SCHERMATE_SENZA_VELO.has(view) && view !== 'paese' && <InstallaApp pwa={pwa} theme={theme} />}
+      {/* b.326 — audit Mondo D3c: il foglio di creazione stanza era montato
+          SOLO nella vista Mondo: se la vista cambiava con showCreateRoom acceso,
+          il foglio spariva nel nulla (bottone morto, stesso guasto del b.146).
+          Ora vive nell'imbuto comune: si apre ovunque, sempre. */}
+      <Suspense fallback={null}>
+        <CreateRoomSheet
+          open={showCreateRoom}
+          preimpostato={topicPreset}
+          onClose={() => { setShowCreateRoom(false); setTopicPreset(null); }}
+          onCreate={async (roomConfig) => {
+            const room = await roomPolling.handleCreateRoom(
+              prefs.name || 'Host', roomConfig.lang || myLang,
+              roomConfig.mode || selectedMode, prefs.avatar,
+              selectedContext, roomConfig.mode || selectedMode,
+              roomConfig.description || '',
+              auth.isTrial, auth.isTopPro, auth.userAccount,
+              roomConfig.diretta,
+              roomConfig.maxParticipants,
+              roomConfig.ognunoPagaIlSuo
+            );
+            // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
+            // Prima di b.113 la modalita Diretta era un meccanismo
+            // perfettamente funzionante che nessuno poteva accendere.
+            // Da b.123 la riga non e piu qui ma dentro la politica
+            // unica, cosi non puo restare indietro in uno dei tre
+            // ingressi (a rejoinRoom era gia successo).
+            // Si legge `diretta` dalla stanza tornata dal server, con
+            // ripiego sulla scelta locale se il server non la rimanda.
+            applicaPoliticaStanza({ ...room, diretta: room?.diretta ?? roomConfig.diretta });
+            roomInfoRef.current = { ...room, diretta: !!roomConfig.diretta };
+
+            // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──
+            // Il modulo raccoglieva nome, tipo, categoria e numero massimo, e
+            // qui restavano lingua, modalita e descrizione: tutto il resto
+            // veniva buttato via. Risultato: nasceva una normale chat a due,
+            // Community restava eternamente "Nessuna stanza al momento", e la
+            // POST di /api/mondo non la chiamava nessuno.
+            const codice = room?.id;
+            // b.139-bis — qui c'era scritto `roomType !== 'private'`, e la
+            // stessa regola col segno opposto stava in /api/mondo. Il server
+            // resta l'autorita e rifiuta comunque; questo controllo evita solo
+            // una richiesta destinata a essere respinta, e ora legge la regola
+            // dallo stesso posto da cui la legge il server.
+            if (codice && vaInVetrina(roomConfig.roomType)) {
+              try {
+                await fetch('/api/mondo', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    roomId: codice,
+                    host: prefs.name || 'Host',
+                    nome: roomConfig.nome,
+                    description: roomConfig.description || '',
+                    mode: roomConfig.mode,
+                    categoria: roomConfig.category,
+                    lang: roomConfig.lang || myLang,
+                    hostLang: prefs.lang || myLang,
+                    roomType: roomConfig.roomType,
+                    maxPartecipanti: roomConfig.maxParticipants,
+                    // b.111 — stanza a litigio libero: nessuna tendina
+                    // grigia davanti al linguaggio pesante. I reati
+                    // restano vietati come in ogni altra stanza.
+                    hot: !!roomConfig.hot,
+                    // b.110 — `room.sessionToken` non esiste: handleCreateRoom
+                    // restituisce solo la stanza e mette il token nel ref
+                    // (useRoomPolling:661). Il campo era sempre vuoto, quindi
+                    // se l'host non era loggato /api/mondo rispondeva 401 e la
+                    // stanza non compariva mai in vetrina.
+                    roomSessionToken: roomPolling.roomSessionTokenRef?.current || '',
+                    userToken: auth.userAccount?.token
+                      || (typeof window !== 'undefined' ? memGet('vt-token') || '' : ''),
+                  }),
+                });
+              } catch (e) {
+                // La stanza esiste comunque: si entra col codice. Solo non
+                // compare in vetrina, e l'host deve poterlo sapere.
+                console.warn('[Community] stanza non pubblicata:', e?.message);
+              }
+            }
+            setView('lobby');
+          }}
+        />
+      </Suspense>
       {/* b.311 — LINGUETTA lingua/voce sul bordo sinistro, sulle schermate
           calme: non in onboarding (paese/welcome/loading), non in chiamata
           (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
@@ -1469,84 +1551,6 @@ function HomeInner() {
           setTopicPreset({ nome: topic.titolo, descrizione: topic.sintesi || '' });
           setShowCreateRoom(true);
         }} />
-      </Suspense>
-      <Suspense fallback={null}>
-        <CreateRoomSheet
-          open={showCreateRoom}
-          preimpostato={topicPreset}
-          onClose={() => { setShowCreateRoom(false); setTopicPreset(null); }}
-          onCreate={async (roomConfig) => {
-            const room = await roomPolling.handleCreateRoom(
-              prefs.name || 'Host', roomConfig.lang || myLang,
-              roomConfig.mode || selectedMode, prefs.avatar,
-              selectedContext, roomConfig.mode || selectedMode,
-              roomConfig.description || '',
-              auth.isTrial, auth.isTopPro, auth.userAccount,
-              roomConfig.diretta,
-              roomConfig.maxParticipants,
-              roomConfig.ognunoPagaIlSuo
-            );
-            // ── b.113/b.123 · la scelta dell'utente diventa effettiva QUI ──
-            // Prima di b.113 la modalita Diretta era un meccanismo
-            // perfettamente funzionante che nessuno poteva accendere.
-            // Da b.123 la riga non e piu qui ma dentro la politica
-            // unica, cosi non puo restare indietro in uno dei tre
-            // ingressi (a rejoinRoom era gia successo).
-            // Si legge `diretta` dalla stanza tornata dal server, con
-            // ripiego sulla scelta locale se il server non la rimanda.
-            applicaPoliticaStanza({ ...room, diretta: room?.diretta ?? roomConfig.diretta });
-            roomInfoRef.current = { ...room, diretta: !!roomConfig.diretta };
-
-            // ── Fino a b.96 la storia finiva qui, e la stanza non nasceva ──
-            // Il modulo raccoglieva nome, tipo, categoria e numero massimo, e
-            // qui restavano lingua, modalita e descrizione: tutto il resto
-            // veniva buttato via. Risultato: nasceva una normale chat a due,
-            // Community restava eternamente "Nessuna stanza al momento", e la
-            // POST di /api/mondo non la chiamava nessuno.
-            const codice = room?.id;
-            // b.139-bis — qui c'era scritto `roomType !== 'private'`, e la
-            // stessa regola col segno opposto stava in /api/mondo. Il server
-            // resta l'autorita e rifiuta comunque; questo controllo evita solo
-            // una richiesta destinata a essere respinta, e ora legge la regola
-            // dallo stesso posto da cui la legge il server.
-            if (codice && vaInVetrina(roomConfig.roomType)) {
-              try {
-                await fetch('/api/mondo', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    roomId: codice,
-                    host: prefs.name || 'Host',
-                    nome: roomConfig.nome,
-                    description: roomConfig.description || '',
-                    mode: roomConfig.mode,
-                    categoria: roomConfig.category,
-                    lang: roomConfig.lang || myLang,
-                    hostLang: prefs.lang || myLang,
-                    roomType: roomConfig.roomType,
-                    maxPartecipanti: roomConfig.maxParticipants,
-                    // b.111 — stanza a litigio libero: nessuna tendina
-                    // grigia davanti al linguaggio pesante. I reati
-                    // restano vietati come in ogni altra stanza.
-                    hot: !!roomConfig.hot,
-                    // b.110 — `room.sessionToken` non esiste: handleCreateRoom
-                    // restituisce solo la stanza e mette il token nel ref
-                    // (useRoomPolling:661). Il campo era sempre vuoto, quindi
-                    // se l'host non era loggato /api/mondo rispondeva 401 e la
-                    // stanza non compariva mai in vetrina.
-                    roomSessionToken: roomPolling.roomSessionTokenRef?.current || '',
-                    userToken: auth.userAccount?.token
-                      || (typeof window !== 'undefined' ? memGet('vt-token') || '' : ''),
-                  }),
-                });
-              } catch (e) {
-                // La stanza esiste comunque: si entra col codice. Solo non
-                // compare in vetrina, e l'host deve poterlo sapere.
-                console.warn('[Community] stanza non pubblicata:', e?.message);
-              }
-            }
-            setView('lobby');
-          }}
-        />
       </Suspense>
       {bottomNav}
     </>

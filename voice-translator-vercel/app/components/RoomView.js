@@ -551,6 +551,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping}
         partnerLiveText={partnerLiveText} msgsEndRef={msgsEndRef}
         S={S} L={L} onMessageRead={onMessageRead}
+        userToken={userToken} roomId={roomInfo?.id || roomInfo?.roomId}
         onReaction={(msgId, emoji) => {
           if (webrtc?.sendDirectMessage) {
             webrtc.sendDirectMessage({ type: 'msg-reaction', msgId, emoji, from: myName });

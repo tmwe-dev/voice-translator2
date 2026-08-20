@@ -105,6 +105,11 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
         WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
         background: C.bg || '#070a14', borderRadius: '20px 20px 0 0',
         border: bordo, borderBottom: 'none', fontFamily: FONT,
+        // b.326 — audit Mondo D3: con contenuti corti (video) la fila delle
+        // azioni cadeva nella fascia della barra di navigazione fissa: un
+        // tocco "fantasma" atterrava sulla barra sotto (Home / menu). Ora la
+        // scheda tiene sempre le azioni SOPRA quella fascia.
+        paddingBottom: 'calc(76px + env(safe-area-inset-bottom))',
       }}>
         {/* ─── Testata della scheda ─── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 14px 0' }}>

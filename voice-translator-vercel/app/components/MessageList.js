@@ -77,6 +77,7 @@ const QUICK_REACTIONS = ['\u2764\uFE0F', '\uD83D\uDE02', '\uD83D\uDE2E', '\uD83D
  */
 const MessageList = memo(function MessageList({
   messages, streamingMsg, myName, myLang, prefs, partner,
+  userToken, roomId,
   roomInfo, roomMode, isHost,
   getTranslationForMe, getSenderAvatar,
   playMessage, playingMsgId,
@@ -88,6 +89,27 @@ const MessageList = memo(function MessageList({
   // ── b.99 · reazioni durevoli (pollice su/giu, cuore) e risposte ──
   conteReazioni, mieReazioni, onReagisci, onRispondi,
 }) {
+  // b.326 — audit Mondo D2: la traduzione del mittente puo non arrivare mai
+  // (stanza vuota alla scrittura: nessuna lingua di destinazione). Il lettore
+  // non resta appeso a "Traduzione…": puo TRADURRE QUI, a richiesta, nella
+  // sua lingua — stesso meccanismo delle discussioni del Mondo.
+  const [tradLocali, setTradLocali] = useState({});
+  const traduciQui = useCallback(async (m) => {
+    const chiave = m.id || `${m.sender}-${m.timestamp}`;
+    if (tradLocali[chiave]) return;
+    setTradLocali(t => ({ ...t, [chiave]: '…' }));
+    try {
+      const r = await fetch('/api/translate', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: m.original, sourceLang: m.senderLang || m.lang || 'auto', targetLang: myLang, userToken: userToken || '', roomId: roomId || undefined }),
+      });
+      const d = await r.json();
+      const tradotto = d.translated || d.translation || '';
+      setTradLocali(t => ({ ...t, [chiave]: tradotto || null }));
+      if (!tradotto) setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; });
+    } catch { setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); }
+  }, [tradLocali, myLang, userToken, roomId]);
+
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);
   const longPressTimerRef = useRef(null);
   // ── Read receipt: IntersectionObserver to detect when partner messages are on screen ──
@@ -164,11 +186,25 @@ const MessageList = memo(function MessageList({
                   </div>
                   {/* Secondary line: translation for sender, original for receiver */}
                   {pendingTranslation ? (
-                    <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
-                      {m._translationError
-                        ? L('translationFailedShort')
-                        : L('translating')}
-                    </div>
+                    isMine ? (
+                      <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
+                        {m._translationError ? L('translationFailedShort') : L('translating')}
+                      </div>
+                    ) : (() => {
+                      // b.326 — D2: il lettore traduce QUI, subito, senza aspettare
+                      // una traduzione del mittente che potrebbe non arrivare mai.
+                      const chiave = m.id || `${m.sender}-${m.timestamp}`;
+                      const locale = tradLocali[chiave];
+                      if (locale && locale !== '…') return (
+                        <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>{locale}</div>
+                      );
+                      return (
+                        <button onClick={() => traduciQui(m)} disabled={locale === '…'}
+                          style={{marginTop:4, padding:'3px 10px', borderRadius:8, cursor:'pointer', border:`1px solid ${S.colors.cardBorder}`, background:'transparent', color:S.colors.accent1 || S.colors.textSecondary, fontSize:11, fontWeight:700, fontFamily:'inherit'}}>
+                          {locale === '…' ? '…' : (L('showTranslation') !== 'showTranslation' ? L('showTranslation') : 'Traduci')}
+                        </button>
+                      );
+                    })()
                   ) : (
                     <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
                       {isMine ? translationForMe : m.original}

@@ -568,6 +568,16 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
                     {v.titolo}
                   </div>
                   <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 3 }}>{v.canale}</div>
+                  {/* b.326 — audit Mondo D3: il Parlane sulla CARD, come per gli
+                      articoli — il percorso buono non passa piu solo dal lettore. */}
+                  <span role="button" tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); vibrate(10); onParlane?.({ titolo: v.titolo, sintesi: v.canale ? `YouTube · ${v.canale}` : '' }); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); onParlane?.({ titolo: v.titolo, sintesi: v.canale ? `YouTube · ${v.canale}` : '' }); } }}
+                    style={{ display: 'inline-block', marginTop: 7, padding: '4px 10px', borderRadius: 8,
+                      background: `${C.accent}1f`, border: `1px solid ${C.accent}55`, color: C.accent,
+                      fontSize: 11, fontWeight: 700 }}>
+                    {L('newsTalkAbout')}
+                  </span>
                 </div>
               </button>
             ))}

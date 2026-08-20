@@ -520,7 +520,12 @@ export default function useRoomPolling({
 
   const startPolling = useCallback((rid) => {
     if (pollRef.current) clearInterval(pollRef.current);
-    lastMsgRef.current = Date.now();
+    // b.326 — audit Mondo D1: si partiva da Date.now() e si chiedeva SOLO il
+    // futuro: chi entrava dopo trovava la chat vuota, anche se il server la
+    // storia ce l'aveva (e ha perfino il ramo dedicato: after assente/0 =>
+    // tutta la conversazione). Ora il PRIMO giro parte da 0 e carica la
+    // storia; i messaggi storici NON vengono letti ad alta voce.
+    lastMsgRef.current = 0;
     pollErrorCountRef.current = 0;
     setPollError(false);
 
@@ -532,6 +537,7 @@ export default function useRoomPolling({
         const nameParam = `&name=${encodeURIComponent(prefsRef.current.name)}`;
         const pollHeaders = {};
         if (roomSessionTokenRef.current) pollHeaders['x-room-session'] = roomSessionTokenRef.current;
+        const primoCarico = lastMsgRef.current === 0; // b.326 — D1: primo giro = storia intera
         const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}`, { headers: pollHeaders });
         if (mRes.ok) {
           const { messages: newMsgs } = await mRes.json();
@@ -597,9 +603,19 @@ export default function useRoomPolling({
             });
             lastMsgRef.current = Math.max(...newMsgs.map(m => m.timestamp));
 
+            // b.326 — D1: la STORIA appena caricata si mostra e basta.
+            // Niente TTS, niente processi: sono messaggi del passato. Si
+            // marcano come gia processati e si esce da questo ramo.
+            if (primoCarico) {
+              for (const msg of newMsgs) {
+                processedMsgIdsRef.current.add(msg.id);
+                processedForTTSRef.current.add(`id:${msg.id}`);
+              }
+            }
+
             // Trigger TTS for messages that just got translations via polling
             // This is the critical path for guests without Realtime/P2P
-            for (const msg of msgsWithNewTranslations) {
+            if (!primoCarico) for (const msg of msgsWithNewTranslations) {
               processIncomingMessage(msg);
             }
 
@@ -610,6 +626,7 @@ export default function useRoomPolling({
               if (wasTemp) replacedServerIds.add(m.id);
             }
             for (const msg of newMsgs) {
+              if (primoCarico) break; // b.326 — la storia non si rilegge a voce
               // Guard: skip if this message ID was already processed via Realtime/P2P
               if (processedMsgIdsRef.current.has(msg.id)) continue;
               processedMsgIdsRef.current.add(msg.id);
