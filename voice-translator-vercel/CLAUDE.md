@@ -214,12 +214,20 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.131** — in produzione e verificata dal vivo
-- Test: 1099 verdi su 75 file · 0 errori di lint (52 avvisi noti)
-- Sentry: collegato in `instrumentation.js`, **DSN non impostato**.
-  MA gli errori di esecuzione di Vercel si leggono gia col suo MCP
-  (`get_runtime_errors`) e vanno guardati a ogni sessione: e da li che
-  e uscita la correzione di b.127.
+- Versione: **b.351** (push #590) — le sezioni nuove (Business/BizCard,
+  PeepOff, libro di lingue, scanner) attendono il collaudo dal vivo di Luca
+- Test: **2159 verdi su 141 file** · 0 errori di lint (avvisi tollerati)
+- ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
+  b.131 credendola corrente PERCHE questo blocco era rimasto fermo.
+  Questo blocco va aggiornato A OGNI push, o depista chiunque legga.
+- Sentry: collegato in `instrumentation.js`, **DSN non impostato**
+  (azione di Luca su Vercel). Gli errori di esecuzione di Vercel si
+  leggono gia col suo MCP (`get_runtime_errors`).
+- npm audit (20/08/2026): nanoid corretto; restano postcss+sharp (3
+  avvisi alti) il cui fix richiede Next 16.3.1 — migrazione da fare in
+  un ramo a parte con collaudo, MAI con `audit fix --force` a caldo.
+- TURN proprio (coturn): script pronti in `deploy/coturn/`, manca il
+  deploy fisico + variabili su Vercel (azione di Luca).
 
 ### Banco di prova a due utenti, SENZA secondo telefono
 
