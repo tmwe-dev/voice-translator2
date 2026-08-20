@@ -1,5 +1,6 @@
-// La prima traduzione guidata: il momento che decide se una persona resta.
-// Qui si verifica che non possa degradarsi in silenzio.
+// b.355 — Il traduttore subito: la vecchia "prima prova" a frase fissa e
+// diventata un traduttore vero, faccia a faccia. Qui si verifica che i
+// comportamenti chiesti nel collaudo esistano davvero nel sorgente.
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
@@ -8,34 +9,45 @@ const APP = path.join(__dirname, '..', 'app');
 const leggi = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
 const src = leggi('components/PrimaProva.js');
 
-describe('prima prova', () => {
-  it('è montata nella Home, non nascosta in una pagina secondaria', () => {
+describe('il traduttore subito', () => {
+  it('è montato nella Home, non nascosto in una pagina secondaria', () => {
     const home = leggi('components/HomeView.js');
     expect(home).toMatch(/<PrimaProva/);
-    expect(home, 'solo al primo avvio').toMatch(/primaProvaGiaFatta/);
+    expect(home, 'aperto da solo al primo avvio').toMatch(/primaProvaGiaFatta/);
   });
 
-  it('si mostra una volta sola e poi non torna', () => {
-    expect(src).toMatch(/memSet\(FATTA, '1'\)/);
-    expect(src, 'chiudendola non deve ricomparire').toMatch(/chiudiPerSempre/);
+  it('si scrive o si detta, e la traduzione parte da sola', () => {
+    // Niente frase preconfezionata: si traduce quello che l'utente scrive.
+    expect(src, 'traduce il testo dell\'utente').toContain('/api/translate');
+    expect(src, 'parte da sola quando smetti di scrivere').toMatch(/setTimeout\(\(\) => traduci\(testo\)/);
+    expect(src, 'la dettatura c\'e, dove il browser la offre').toMatch(/SpeechRecognition/);
+    expect(src, 'la trascrizione arriva nel campo mentre parli').toMatch(/interimResults = true/);
   });
 
-  it('la frase esiste in tutte le lingue del selettore iniziale', () => {
-    // Se manca, l'utente vedrebbe una frase in una lingua che non è la sua.
-    const previste = ['it', 'en', 'es', 'fr', 'de', 'pt', 'ru', 'zh', 'ja', 'ko', 'ar', 'hi', 'th', 'tr', 'vi'];
-    for (const codice of previste) {
-      expect(src, `manca la frase per "${codice}"`).toMatch(new RegExp(`\\n\\s*${codice}:`));
-    }
+  it('la voce arriva insieme al testo, senza premere niente', () => {
+    expect(src, 'senza voce resta un esercizio di lettura').toContain('tts-edge');
+    expect(src).toMatch(/new Audio/);
+    expect(src, 'la voce parte dalla traduzione appena arrivata').toMatch(/parla\(d\.translated\)/);
+    // Ma non mentre il microfono e aperto: il telefono si detterebbe
+    // da solo la propria traduzione.
+    expect(src).toMatch(/if \(!dettoRef\.current\) parla/);
+  });
+
+  it('il faccia a faccia gira il testone di 180 gradi', () => {
+    expect(src, 'il tasto che capovolge esiste').toMatch(/setCapovolto/);
+    expect(src, 'il tradotto si legge al contrario, dal lato dell\'altro').toContain("rotate(180deg)");
+    expect(src, 'capovolto: prima il tradotto, poi la scrittura').toMatch(/capovolto \? \(<>\{bloccoTradotto\}\{bloccoScrittura\}<\/>\)/);
   });
 
   it('non propone come meta la lingua che già parli', () => {
-    expect(src).toMatch(/METE\.filter\(m => m !== miaLingua\)/);
-    expect(src).toMatch(/METE\.find\(m => m !== miaLingua\)/);
+    expect(src, 'la scelta iniziale salta la tua lingua').toMatch(/RAPIDE\.find\(\(m\) => m\.split\('-'\)\[0\] !==/);
+    expect(src, 'la fila delle mete non contiene la tua lingua').toMatch(/l\.code !== miaLingua/);
   });
 
-  it('fa SENTIRE la traduzione, non solo leggerla', () => {
-    expect(src, 'senza voce resta un esercizio di lettura').toMatch(/tts-edge/);
-    expect(src).toMatch(/new Audio/);
+  it('una volta usato, non riappare da solo', () => {
+    expect(src).toMatch(/memSet\(FATTA, '1'\)/);
+    const home = leggi('components/HomeView.js');
+    expect(home, 'ma la riga per riaprirlo resta').toMatch(/riapriPrimaProva/);
   });
 
   it('se la voce fallisce, il testo resta comunque', () => {
@@ -45,7 +57,12 @@ describe('prima prova', () => {
   });
 
   it('dice cosa sta facendo e cosa è andato storto', () => {
-    expect(src).toMatch(/translatingDots/);
-    expect(src).toMatch(/Non è riuscita/);
+    expect(src, 'lo stato di lavoro esiste').toMatch(/'traduco'/);
+    expect(src, 'l\'errore si vede, non resta muto').toContain('La traduzione non e arrivata');
+  });
+
+  it('una risposta in ritardo non scavalca una frase più nuova', () => {
+    // Due traduzioni in volo: vince l'ultima chiesta, non l'ultima arrivata.
+    expect(src).toMatch(/mio !== numeroRef\.current/);
   });
 });

@@ -293,14 +293,14 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             C={C} L={L} />
         </div>
 
-        {/* ── INIZIO b.96 — la prima traduzione, entro dieci secondi ──
-            Il primo avvio era: benvenuto, sei dentro, arrangiati. Chi non
-            prova nei primi secondi non torna. Questa scheda fa SENTIRE
-            l'app invece di spiegarla, e poi sparisce per sempre. */}
+        {/* ── b.355 — IL TRADUTTORE SUBITO (era la "prima prova" b.96) ──
+            Non piu un assaggio a frase fissa: scrivi o detti, la traduzione
+            parte da sola con testo e voce, e col tasto Faccia a faccia il
+            testone si gira verso la persona che hai davanti. Sta in alto,
+            sotto il carosello, con tutto lo spazio che gli serve. */}
         {mostraPrimaProva ? (
           <PrimaProva
             onChiudi={() => setMostraPrimaProva(false)}
-            onIniziaDavvero={() => handleAction('face-to-face')}
           />
         ) : (
           /* b.266 — quando il blocco e chiuso resta questa riga: e la prova
@@ -347,13 +347,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 onClick={() => handleAction(action.id)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 12, width: '100%',
+                  // b.355 — ALTEZZA UNIFORME e opacita ESPLICITA: dal vivo le
+                  // righe potevano restare schiacciate/invisibili ("hai
+                  // schiacciato tutti i pulsanti", collaudo di Luca). Niente
+                  // piu giochi di opacita al passaggio: la luce che segue il
+                  // mouse fa gia il lavoro.
+                  minHeight: 72, opacity: 1,
                   padding: '13px 2px', background: 'none', textAlign: 'left',
                   border: 'none', cursor: 'pointer',
                   borderBottom: idx < ACTIONS.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
-                  transition: 'opacity 0.2s',
                 }}
-                onMouseOver={(e) => e.currentTarget.style.opacity = 0.82}
-                onMouseOut={(e) => e.currentTarget.style.opacity = 1}
               >
                 <span style={{
                   width: 52, height: 52, borderRadius: 15, flexShrink: 0,

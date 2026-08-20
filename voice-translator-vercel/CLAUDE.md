@@ -214,9 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.351** (push #590) — le sezioni nuove (Business/BizCard,
-  PeepOff, libro di lingue, scanner) attendono il collaudo dal vivo di Luca
-- Test: **2159 verdi su 141 file** · 0 errori di lint (avvisi tollerati)
+- Versione: **b.355** (push #594) — traduttore subito nella home (scrivi/
+  detta → voce+testo, faccia a faccia a 180°), ricerca a tre corsie nel
+  Mondo, carosello con trascinamento e auto-selezione; Business/BizCard,
+  PeepOff, libro di lingue e scanner attendono il collaudo dal vivo di Luca
+- Test: **2164 verdi su 144 file** · 0 errori di lint (avvisi tollerati)
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.
   Questo blocco va aggiornato A OGNI push, o depista chiunque legga.

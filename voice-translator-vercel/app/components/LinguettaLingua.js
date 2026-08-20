@@ -41,7 +41,7 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
       {!aperto && (
         <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
           style={{
-            position: 'fixed', left: 0, top: '50%', transform: 'translateY(-50%)', zIndex: 60,
+            position: 'fixed', left: 0, top: 'max(96px, calc(env(safe-area-inset-top) + 72px))', zIndex: 60, // b.355 — all'altezza del titolo, non a meta schermo (Luca)
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
             padding: '12px 7px 12px 5px', border: 'none', cursor: 'pointer',
             background: card, borderTop: bordo, borderRight: bordo, borderBottom: bordo,

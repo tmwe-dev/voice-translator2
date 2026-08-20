@@ -35,6 +35,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
   const [aperto, setAperto] = useState(false);  // l'elenco completo con la ricerca
   const [cerca, setCerca] = useState('');
   const toccoX = useRef(null);
+  const haGirato = useRef(false); // b.355 — l'autoselezione parte solo dopo un gesto vero
 
   // il centro segue la selezione esterna (senza animare al primo giro)
   useEffect(() => {
@@ -43,7 +44,18 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selezionata]);
 
+  // b.355 — «gira e basta»: no. La bandiera che si ferma AL CENTRO diventa
+  // la lingua, da sola, dopo un attimo di quiete — senza tocchi in piu.
+  useEffect(() => {
+    const l = lingue[centro];
+    if (!haGirato.current || !l || l.code === selezionata) return;
+    const timer = setTimeout(() => onScegli(l), 700);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [centro]);
+
   const scorri = useCallback((dir) => {
+    haGirato.current = true;
     setVerso(dir);
     setSalto((s) => s + 1);
     setCentro((c) => (c + dir + totale) % totale);
@@ -137,13 +149,27 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
       )}
 
       {/* il carosello: frecce + cinque bandiere, scivolata sul cambio */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 380 }}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 380, cursor: 'grab', touchAction: 'pan-y' }}
         onTouchStart={(e) => { toccoX.current = e.touches[0].clientX; }}
         onTouchEnd={(e) => {
           if (toccoX.current == null) return;
           const d = toccoX.current - e.changedTouches[0].clientX;
           if (Math.abs(d) > 50) scorri(d > 0 ? 1 : -1);
           toccoX.current = null;
+        }}
+        // b.355 — "il carosello non scrolla lateralmente" (Luca): ora si
+        // TRASCINA col mouse e risponde alla rotella/trackpad orizzontale.
+        onMouseDown={(e) => { toccoX.current = e.clientX; }}
+        onMouseUp={(e) => {
+          if (toccoX.current == null) return;
+          const d = toccoX.current - e.clientX;
+          if (Math.abs(d) > 40) scorri(d > 0 ? 1 : -1);
+          toccoX.current = null;
+        }}
+        onMouseLeave={() => { toccoX.current = null; }}
+        onWheel={(e) => {
+          const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+          if (Math.abs(d) > 12) scorri(d > 0 ? 1 : -1);
         }}>
         {freccia(-1, '‹')}
         <div key={salto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,

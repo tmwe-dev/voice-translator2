@@ -159,6 +159,30 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     return list;
   }, [rooms, langFilter, modeFilter, search]);
 
+  // b.355 — LA RICERCA A TRE CORSIE (il disegno approvato): mentre scrivi,
+  // tre gruppi di risposte — PAESI/LINGUE (col conteggio delle stanze vive),
+  // STANZE vere, DISCUSSIONI calde. Un campo solo, tutto il Mondo dentro.
+  const cercando = search.trim().length > 0;
+  const risultati = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return null;
+    const stanzePerLingua = {};
+    for (const r of rooms) { if (r.lang) stanzePerLingua[r.lang] = (stanzePerLingua[r.lang] || 0) + 1; }
+    const paesi = LANGS
+      .filter((l) => l.name.toLowerCase().includes(q) || l.code.toLowerCase().startsWith(q))
+      .sort((a, b) => (stanzePerLingua[b.code] || 0) - (stanzePerLingua[a.code] || 0))
+      .slice(0, 6)
+      .map((l) => ({ ...l, vive: stanzePerLingua[l.code] || 0 }));
+    const stanze = rooms.filter((r) =>
+      r.nome?.toLowerCase().includes(q) || r.name?.toLowerCase().includes(q)
+      || r.host?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q)
+    ).slice(0, 6);
+    const discussioni = (feedCaldo || []).filter((d) =>
+      (d.title || d.titolo || '').toLowerCase().includes(q) || (d.topic || '').toLowerCase().includes(q)
+    ).slice(0, 6);
+    return { paesi, stanze, discussioni };
+  }, [search, rooms, feedCaldo]);
+
   const availableModes = useMemo(() => {
     const modes = new Set(rooms.map(r => r.mode));
     return ['all', ...modes];
@@ -249,8 +273,86 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         })}
       </div>
 
+      {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══ */}
+      <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: C.card, border: `1px solid ${C.cardBorder}`,
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          borderRadius: 14, padding: '10px 14px',
+        }}>
+          <span style={{ fontSize: 14, opacity: 0.4 }}></span>
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder={L('searchRooms')}
+            style={{
+              flex: 1, background: 'none', border: 'none', outline: 'none',
+              color: C.textPrimary, fontSize: 13, fontFamily: FONT,
+            }}
+          />
+          {search && (
+            <button onClick={() => setSearch('')} style={{
+              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0,
+            }}>×</button>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ b.355 — I RISULTATI A TRE CORSIE: paesi, stanze, discussioni ═══ */}
+      {cercando && risultati && (
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+            {risultati.paesi.length > 0 && (<>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>PAESI E LINGUE</div>
+              {risultati.paesi.map((l) => (
+                <button key={l.code} onClick={() => { setLangFilter(l.code); setSearch(''); setTab('stanze'); }}
+                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>{l.flag}</span>
+                  <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>{l.name}</span>
+                  {l.vive > 0 && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: C.accent }}>
+                      <span style={{ width: 7, height: 7, borderRadius: 4, background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
+                      {l.vive}
+                    </span>
+                  )}
+                  <span style={{ color: C.textMuted }}>›</span>
+                </button>
+              ))}
+            </>)}
+
+            {risultati.stanze.length > 0 && (<>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('liveRoomsNow') !== 'liveRoomsNow' ? L('liveRoomsNow') : 'STANZE VIVE ADESSO')}</div>
+              {risultati.stanze.map((r) => (
+                <button key={r.roomId || r.id} onClick={() => onJoinRoom?.(r.roomId || r.id)}
+                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || r.nome || r.roomId}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{(r.members ?? r.partecipanti ?? 0)} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
+                </button>
+              ))}
+            </>)}
+
+            {risultati.discussioni.length > 0 && (<>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
+              {risultati.discussioni.map((d, i) => (
+                <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); }}
+                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || d.titolo}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{(d.commentCount || d.commenti || 0)} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
+                </button>
+              ))}
+            </>)}
+
+            {risultati.paesi.length === 0 && risultati.stanze.length === 0 && risultati.discussioni.length === 0 && (
+              <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '30px 0', lineHeight: 1.6 }}>
+                Niente con questo nome, per ora.<br />Apri tu la prima stanza: il Mondo si accende cosi.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ═══ TAB PER TE (b.335) — la home: caldo adesso ═══ */}
-      {tab === 'perte' && (
+      {tab === 'perte' && !cercando && (
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
@@ -304,7 +406,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       )}
 
       {/* ═══ TAB NEWS ═══ */}
-      {tab === 'news' && (
+      {tab === 'news' && !cercando && (
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5 }}>
           {/* b.324 — audit Mondo D8: su schermo largo il contenuto andava a
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
@@ -313,32 +415,6 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
-      )}
-
-      {/* ═══ SEARCH BAR ═══ */}
-      {tab === 'stanze' && (
-      <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: C.card, border: `1px solid ${C.cardBorder}`,
-          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          borderRadius: 14, padding: '10px 14px',
-        }}>
-          <span style={{ fontSize: 14, opacity: 0.4 }}></span>
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={L('searchRooms')}
-            style={{
-              flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: C.textPrimary, fontSize: 13, fontFamily: FONT,
-            }}
-          />
-          {search && (
-            <button onClick={() => setSearch('')} style={{
-              background: 'none', border: 'none', color: C.textMuted, cursor: 'pointer', fontSize: 16, padding: 0,
-            }}>×</button>
-          )}
-        </div>
-      </div>
       )}
 
       {/* ═══ LANGUAGE PILLS ═══ */}
