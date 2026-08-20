@@ -392,6 +392,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const inDomandaRef = useRef(false);
   const interruzionePendenteRef = useRef(false);
   const saltaRef = useRef(0); // b.315 — sezioni da saltare al rientro (gia trattate parlando)
+  // b.315 — EVIDENZIA (leggi-e-segui): sfondo diverso al paragrafo che il
+  // Maestro sta leggendo, cosi chi ascolta in un'altra lingua vede le parole.
+  // E il testo SCORRE per tenere al centro il pezzo in lettura.
+  const [evidenzia, setEvidenzia] = useState(true);
+  const sezioneRef = useRef(null);
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -416,6 +421,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }, [aperta, arricchimento, illustrazione]);
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
+
+  // b.315 — il testo SCORRE per tenere al centro il paragrafo in lettura.
+  useEffect(() => {
+    if (ascoltando && sezioneAttiva >= 0) {
+      try { sezioneRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch { /* niente scroll: non e un guasto */ }
+    }
+  }, [sezioneAttiva, ascoltando]);
 
   const stileSelect = { flex: 1, padding: 10, borderRadius: 10, border: bordo, background: card, color: testoP, fontFamily: FONT, fontSize: 13 };
 
@@ -705,6 +717,25 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
         </div>
 
+        {/* b.315 — CONTROLLI IN ALTO: ascolta/ferma, evidenzia, alza la mano.
+            Restano in cima mentre il testo scorre sotto. */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, position: 'sticky', top: 0, zIndex: 5, paddingTop: 2 }}>
+          <button onClick={ascoltaLezione}
+            style={{ padding: '9px 14px', borderRadius: 12, border: `1px solid ${accent}`, background: ascoltando ? `${accent}22` : 'transparent', color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            {ascoltando ? `■ ${tt('lifeStopListen', 'Ferma')}` : `▶ ${tt('lifeListen', 'Ascolta')}`}
+          </button>
+          <button onClick={() => setEvidenzia((v) => !v)} aria-pressed={evidenzia}
+            style={{ padding: '9px 12px', borderRadius: 12, border: bordo, background: evidenzia ? `${accent}14` : 'transparent', color: evidenzia ? accent : muto, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            {evidenzia ? '✓ ' : ''}{tt('lifeHighlight', 'Evidenzia')}
+          </button>
+          {ascoltando && !manoAlzata && (
+            <button onClick={alzaMano}
+              style={{ padding: '9px 12px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 15 }}>✋</span> {tt('lifeRaiseHand', 'Alza la mano')}
+            </button>
+          )}
+        </div>
+
         {/* b.229/b.299 — l'illustrazione (modalita 'disegni'). Il pulsante
             manuale resta come ripiego se l'auto non e partita. */}
         {illustrazione
@@ -745,38 +776,33 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             LETTURA le immagini reali sono impaginate fra i paragrafi, come in
             un articolo di giornale. Le immagini vengono dalla community
             (anteprime reali del web), gratis; l'illustrazione AI resta in cima. */}
-        {(() => {
-          const paragrafi = paragrafiLezione;
-
-          // ASCOLTO → lavagna: l'immagine della sezione in corso + il suo testo,
-          // con la barra di avanzamento delle diapositive.
-          if (ascoltando && sezioneAttiva >= 0) {
-            const i = Math.max(0, Math.min(sezioneAttiva, paragrafi.length - 1));
-            const img = immaginiSezioni[i];
+        {/* b.315 — UN SOLO testo, che scorre. In ascolto il paragrafo in
+            lettura si EVIDENZIA (sfondo diverso) e il testo scorre per tenerlo
+            al centro; le immagini reali restano impaginate accanto al pezzo che
+            rappresentano (stile Wikipedia). Il pannello "alza la mano" compare
+            sotto il paragrafo in corso. */}
+        <div>
+          {paragrafiLezione.map((p, i) => {
+            const attivo = ascoltando && i === sezioneAttiva;
+            const evid = attivo && evidenzia;
             return (
-              <div style={{ marginBottom: 4 }}>
-                {img && <img src={img} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 14, marginBottom: 10, display: 'block', border: bordo }} />}
-                <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
-                  {paragrafi.map((_, k) => (
-                    <span key={k} style={{ flex: 1, height: 4, borderRadius: 2, background: k <= i ? accent : card, transition: 'background 0.3s' }} />
-                  ))}
-                </div>
-                <TestoRicco testo={paragrafi[i] || ''} testoP={testoP} muto={muto} />
+              <div key={i} ref={attivo ? sezioneRef : null}
+                style={{ borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
+                  background: evid ? `${accent}14` : 'transparent',
+                  borderLeft: `3px solid ${attivo ? accent : 'transparent'}`,
+                  transition: 'background 0.3s, border-color 0.3s' }}>
+                <TestoRicco testo={p} testoP={testoP} muto={muto} />
+                {immaginiSezioni[i] && (
+                  <img src={immaginiSezioni[i]} alt="" style={{ width: '100%', borderRadius: 14, margin: '6px 0 14px', display: 'block', objectFit: 'cover', maxHeight: 320, border: bordo }} />
+                )}
 
-                {/* b.313 — ALZO LA MANO: fermo il Maestro e chiedo. */}
-                {!manoAlzata ? (
-                  <button onClick={alzaMano}
-                    style={{ marginTop: 12, padding: '9px 14px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 16 }}>✋</span> {tt('lifeRaiseHand', 'Alza la mano e chiedi')}
-                  </button>
-                ) : (
-                  <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}55` }}>
+                {/* b.313/b.314 — "alza la mano": il dialogo col Maestro, sotto
+                    il paragrafo in corso. */}
+                {attivo && manoAlzata && (
+                  <div style={{ marginTop: 10, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}55` }}>
                     {maestroStaFinendo
                       ? <div style={{ fontSize: 12, color: muto, marginBottom: 10 }}>✋ {tt('lifeHandUp', 'Mano alzata — il Maestro finisce la frase e si gira verso di te…')}</div>
                       : <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 10 }}>{tt('lifeAskNow', 'Il Maestro ti ascolta. Cosa vuoi chiedere?')}</div>}
-
-                    {/* b.314 — il DIALOGO a piu battute: domanda, risposta, e lui
-                        che chiede se vuoi altro. Si riprende quando sei tu a dirlo. */}
                     {dialogo.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
                         {dialogo.map((t, k) => (
@@ -792,7 +818,6 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                         {chiedendo && <div style={{ alignSelf: 'flex-start', fontSize: 12, color: muto }}>…</div>}
                       </div>
                     )}
-
                     <textarea value={domanda} onChange={(e) => setDomanda(e.target.value)} rows={2}
                       placeholder={dialogo.length ? tt('lifeAskMore', 'Un’altra domanda…') : tt('lifeAskPh', 'La tua domanda…')}
                       style={{ width: '100%', padding: 11, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.04)', color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', resize: 'vertical' }} />
@@ -810,23 +835,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 )}
               </div>
             );
-          }
-
-          // LETTURA → articolo tipo Wikipedia: immagine reale accanto al pezzo
-          // che rappresenta, impaginata fra i paragrafi.
-          return (
-            <div>
-              {paragrafi.map((p, i) => (
-                <div key={i}>
-                  <TestoRicco testo={p} testoP={testoP} muto={muto} />
-                  {immaginiSezioni[i] && (
-                    <img src={immaginiSezioni[i]} alt="" style={{ width: '100%', borderRadius: 14, margin: '6px 0 14px', display: 'block', objectFit: 'cover', maxHeight: 320, border: bordo }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          );
-        })()}
+          })}
+        </div>
         {/* b.244 — se il Maestro ha proposto [PRONUNCIA: ...], qui si dice ad
             alta voce e si scopre subito com'e andata. L'esito torna a lui:
             le parole sbagliate ricompaiono piu avanti, dentro altre frasi. */}
@@ -844,13 +854,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             }}
             {...{ testoP, muto, accent, card, bordo }} />;
         })()}
-        {/* La lezione si ASCOLTA: nei corsi di lingua le parti in lingua
-            straniera le dice una voce madrelingua (voce doppia, b.241) —
-            e' tutto il senso del tag L2. */}
-        <button onClick={ascoltaLezione}
-          style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: ascoltando ? `${accent}18` : 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-          {ascoltando ? `■ ${tt('lifeStopListen', 'Ferma la presentazione')}` : `▶ ${tt('lifeListen', 'Ascolta la lezione')}`}
-        </button>
+        {/* b.315 — il tasto Ascolta e' salito in ALTO (barra dei controlli);
+            qui in fondo non serve piu. */}
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
