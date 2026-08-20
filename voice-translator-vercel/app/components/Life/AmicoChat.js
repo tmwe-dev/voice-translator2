@@ -5,6 +5,7 @@ import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 import { memGet, memSet } from '../../lib/memoria.js';
+import CompagnoLive from './CompagnoLive.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
@@ -31,6 +32,9 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   const [testo, setTesto] = useState('');
   const [attende, setAttende] = useState(false);
   const [errore, setErrore] = useState('');
+  // b.316 — conversazione VOCALE dal vivo (widget ElevenLabs, personalita
+  // del Compagno iniettata all'avvio). Un contenitore, mille personaggi.
+  const [dalVivo, setDalVivo] = useState(false);
   const fondo = useRef(null);
   // b.232 — riferimento sempre aggiornato al Compagno scelto, per evitare che
   // la risposta di A (in arrivo) finisca nella chat di B se si cambia Compagno.
@@ -96,8 +100,19 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
           <Icon name="back" size={16} color={testoP} />
         </button>
         <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
-        <span style={{ fontWeight: 700, color: testoP }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+        <span style={{ fontWeight: 700, color: testoP, flex: 1 }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+        {/* b.316 — parla DAL VIVO col Compagno: voce in tempo reale. */}
+        <button onClick={() => { vibrate(8); setDalVivo((v) => !v); }} aria-pressed={dalVivo}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 800,
+            background: dalVivo ? `${accent}22` : accent, color: dalVivo ? accent : '#04121c', border: dalVivo ? `1px solid ${accent}` : 'none' }}>
+          <Icon name="mic" size={14} color={dalVivo ? accent : '#04121c'} /> {dalVivo ? 'Chiudi' : 'Dal vivo'}
+        </button>
       </div>
+
+      {dalVivo && (
+        <CompagnoLive compagno={scelto} lingua={lingua} onChiudi={() => setDalVivo(false)}
+          {...{ testoP, muto, accent, card, bordo }} />
+      )}
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {messaggi.map((m, i) => (

@@ -23,11 +23,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io",
+              "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://accounts.google.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://*.upstash.io https://api.anthropic.com https://api.elevenlabs.io",
+              "connect-src 'self' https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://*.upstash.io https://api.anthropic.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io",
               "media-src 'self' blob: data:",
               "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
               "worker-src 'self' blob:",
