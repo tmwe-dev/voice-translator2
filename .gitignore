@@ -63,3 +63,4 @@ pnpm-debug.log*
 # qualcosa che git conserva meglio di noi: `git log` le mostra tutte.
 MESSAGGIO-COMMIT-*.txt
 stato-attuale.tar.gz
+_to_delete/
