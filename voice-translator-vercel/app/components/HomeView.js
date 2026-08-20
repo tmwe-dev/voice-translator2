@@ -10,6 +10,7 @@ import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import { toast } from '../lib/avvisi.js';
 import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
 import Icon from './Icon.js';
+import CarouselLingue from './CarouselLingue.js';
 import { BatteryPillSlot } from './BatteryPill.js';
 import PrimaProva, { primaProvaGiaFatta, riapriPrimaProva } from './PrimaProva.js'; // b.96
 import { memGet, memSet } from '../lib/memoria.js';
@@ -84,9 +85,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   contacts, fetchContacts, rejoinRoom, startChatWithContact, unlockAudio }) {
   const { L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, setView, theme, setTheme } = useApp();
 
-  const langInfo = getLang(prefs.lang);
   const [activeRooms, setActiveRooms] = useState([]);
-  const [showLangPicker, setShowLangPicker] = useState(false);
   // b.96 — la prima prova si mostra una volta sola, e solo al primo avvio
   const [mostraPrimaProva, setMostraPrimaProva] = useState(false);
   useEffect(() => { setMostraPrimaProva(!primaProvaGiaFatta()); }, []);
@@ -164,6 +163,50 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
     }
   }
 
+  // b.354 — la scelta lingua (con la regola b.254: i menu seguono la
+  // lingua parlata finche l'utente non li ha scelti a mano) e diventata
+  // una funzione: la usa il carosello, non piu la dropdown demolita.
+  const scegliLingua = (l) => {
+    vibrate();
+    const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
+    const dopo = mapLang(l.code);
+    const nuove = prefs.uiLangScelta
+      ? { ...prefs, lang: l.code }
+      : { ...prefs, lang: l.code, uiLang: dopo };
+    savePrefs(nuove);
+    if (!prefs.uiLangScelta && dopo !== prima) {
+      const nomePrima = getLang(prima)?.name || prima;
+      preloadLang(dopo).finally(() =>
+        toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
+          duration: 8000,
+          action: {
+            label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
+            onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
+          },
+        }));
+    }
+  };
+
+  // b.354 — LA LUCE CHE SEGUE IL MOUSE (Wueform, tema scuro): un'area
+  // illuminata al centro dei tasti che si muove col puntatore. Handler
+  // condivisi: si appoggiano a variabili CSS sul contenitore.
+  const luce = {
+    onMouseMove: (e) => {
+      const r = e.currentTarget.getBoundingClientRect();
+      e.currentTarget.style.setProperty('--lx', `${e.clientX - r.left}px`);
+      e.currentTarget.style.setProperty('--ly', `${e.clientY - r.top}px`);
+    },
+    onMouseEnter: (e) => e.currentTarget.style.setProperty('--lo', '1'),
+    onMouseLeave: (e) => e.currentTarget.style.setProperty('--lo', '0'),
+  };
+  const veloLuce = (
+    <span aria-hidden style={{
+      position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit',
+      opacity: 'var(--lo, 0)', transition: 'opacity .35s',
+      background: `radial-gradient(200px circle at var(--lx, 50%) var(--ly, 50%), ${C.accent}1f, transparent 70%)`,
+    }} />
+  );
+
   return (
     <main style={S.page} aria-label={L('homeAria')}>
       <div style={{
@@ -204,155 +247,13 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                   userSelect: 'text',
                 }}
               >#{PUSH}</span>
-              <button
-                onClick={() => { vibrate(); setView('mondo'); }}
-                aria-label={L('worldNowTitle')}
-                style={{
-                  width: 40, height: 40, borderRadius: 20, flexShrink: 0,
-                  background: C.cardBg, border: `1px solid ${C.accent}30`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                }}
-              >
-                <Icon name="globe" size={20} color={C.accent} />
-              </button>
+{/* b.354 — il mondo NON sta piu qui in alto (Luca: «non c'e nelle
+                  altre pagine»): la sua icona vive nella carta "Il mondo ora". */}
               <BatteryPillSlot />
             </div>
-            <button
-              onClick={() => { vibrate(); setShowLangPicker(!showLangPicker); }}
-              style={{
-                padding: '8px 14px', borderRadius: 20,
-                background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-                color: C.textPrimary, fontSize: 13, fontWeight: 600,
-                cursor: 'pointer', fontFamily: FONT, display: 'flex',
-                alignItems: 'center', gap: 8,
-              }}
-            >
-              <span style={{ fontSize: 16 }}>{langInfo.flag}</span>
-              {langInfo.name}
-              <span style={{ fontSize: 10, opacity: 0.5 }}>▼</span>
-            </button>
+{/* b.354 — la dropdown e stata sostituita dal CAROSELLO delle
+                bandiere copiato da Wueform: vive sotto il titolo. */}
 
-            {showLangPicker && (
-              <>
-                <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowLangPicker(false)} />
-                <div style={{
-                  position: 'absolute', top: '100%', left: 0,
-                  marginTop: 6, zIndex: 100, width: 260,
-                  background: theme === 'dawn' ? '#fff' : '#0a0f1f',
-                  border: `1px solid ${C.accent}25`, borderRadius: 14,
-                  maxHeight: 280, overflowY: 'auto', padding: 6,
-                  boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
-                }}>
-                  {/* ═══ INIZIO b.253 — dire QUALE lingua si sta scegliendo ═══
-                      COSA: intestazione "La tua lingua" sopra l'elenco, e in
-                      fondo una riga che porta alla lingua dell'interfaccia.
-                      PERCHE (trovato dal vivo, Luca): scegliendo "Dansk" qui
-                      i testi dell'app restavano in italiano, e sembrava un
-                      guasto. Non lo e: qui si sceglie la lingua in cui si
-                      PARLA e si ricevono le traduzioni, mentre la lingua dei
-                      menu e un'altra cosa (b.136: un italiano che parla con
-                      un americano mette "en" per le traduzioni e non vuole
-                      l'applicazione in inglese). Il difetto era che nessuno
-                      lo diceva, e che la lingua dei menu si poteva cambiare
-                      solo scavando nelle Impostazioni. Nessuna stringa nuova:
-                      `yourLang` e `uiLanguage` esistono gia in tutte e 15 le
-                      lingue dell'interfaccia. */}
-                  <div style={{
-                    padding: '6px 12px 8px', fontSize: 10, fontWeight: 800,
-                    letterSpacing: '0.12em', textTransform: 'uppercase',
-                    color: C.textMuted,
-                  }}>{L('yourLang')}</div>
-                  {/* b.146 — Luca: "i paesi devono essere ordinati in ordine
-                      alfabetico". LANGS ha l'ordine storico del file, non
-                      quello che un occhio si aspetta scorrendo un elenco. */}
-                  {[...LANGS].sort((a, b) => a.name.localeCompare(b.name, 'en')).map(l => {
-                    const isSelected = l.code === prefs.lang;
-                    return (
-                      <button key={l.code}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-                          padding: '10px 12px', border: 'none', borderRadius: 10,
-                          background: isSelected ? C.accent + '20' : 'transparent',
-                          color: isSelected ? C.accent : C.textPrimary,
-                          fontSize: 13, fontWeight: isSelected ? 700 : 400,
-                          cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
-                        }}
-                        onClick={() => {
-                          vibrate();
-                          // ═══ INIZIO b.254 — cambiare lingua cambia l'applicazione ═══
-                          // Luca, dal vivo, due volte: scelto Dansk (e poi
-                          // Cestina) i menu restavano in italiano. La
-                          // separazione fra lingua parlata e lingua dei menu
-                          // (b.136) resta giusta, ma il valore predefinito
-                          // era CONGELATO alla scelta del paese iniziale e
-                          // non si muoveva mai piu: chi non sapeva di dover
-                          // scavare in Impostazioni non poteva cambiare i
-                          // menu nemmeno volendo.
-                          //
-                          // Ora la lingua dei menu SEGUE quella che dichiari
-                          // di parlare — mappata sulle 15 in cui l'interfaccia
-                          // esiste davvero — a meno che tu non l'abbia scelta
-                          // a mano: in quel caso comanda la tua scelta, e non
-                          // te la si tocca (uiLangScelta, vedi SettingsView).
-                          //
-                          // Il caso che b.136 proteggeva — chi mette "en" per
-                          // avere le TRADUZIONI in inglese e non vuole i menu
-                          // in inglese — non resta scoperto: l'avviso qui
-                          // sotto lo rimette a posto in un tocco, e da quel
-                          // momento la sua scelta diventa esplicita.
-                          const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
-                          const dopo = mapLang(l.code);
-                          const nuove = prefs.uiLangScelta
-                            ? { ...prefs, lang: l.code }
-                            : { ...prefs, lang: l.code, uiLang: dopo };
-                          savePrefs(nuove);
-                          if (!prefs.uiLangScelta && dopo !== prima) {
-                            const nomePrima = getLang(prima)?.name || prima;
-                            // b.257 — l'avviso si scrive DOPO che il pacchetto
-                            // e arrivato. Provato dal vivo: senza l'attesa
-                            // annunciava "Interface language" in inglese
-                            // proprio mentre l'applicazione passava al
-                            // tedesco — l'unico messaggio che non poteva
-                            // permettersi di essere nella lingua sbagliata.
-                            preloadLang(dopo).finally(() =>
-                            toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
-                              duration: 8000,
-                              action: {
-                                label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
-                                onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
-                              },
-                            }));
-                          }
-                          // ═══ FINE b.254 ═══
-                          setShowLangPicker(false);
-                        }}
-                      >
-                        <span style={{ fontSize: 18 }}>{l.flag}</span>
-                        <span>{l.name}</span>
-                        {isSelected && <span style={{ marginLeft: 'auto', fontSize: 12 }}>✓</span>}
-                      </button>
-                    );
-                  })}
-                  {/* La via d'uscita per chi cercava QUI la lingua dei menu:
-                      un tocco, invece di sapere che sta sotto Profilo. */}
-                  <button
-                    onClick={() => { vibrate(); setShowLangPicker(false); setView('settings'); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                      marginTop: 6, padding: '10px 12px', borderRadius: 10,
-                      border: 'none', borderTop: `1px solid ${C.cardBorder}`,
-                      background: 'transparent', color: C.textSecondary,
-                      fontSize: 12, cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
-                    }}
-                  >
-                    <Icon name="globe" size={15} color={C.textMuted} />
-                    <span>{L('uiLanguage')}</span>
-                    <span style={{ marginLeft: 'auto', opacity: 0.5 }}>›</span>
-                  </button>
-                </div>
-              </>
-            )}
           </div>
 
           {/* Title */}
@@ -382,6 +283,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </div>
         </div>
 
+        {/* b.354 — IL CAROSELLO DELLE BANDIERE (Wueform) al posto della
+            dropdown: la lingua si sceglie qui, sotto il titolo. */}
+        <div style={{ margin: '18px 0 6px' }}>
+          <CarouselLingue
+            selezionata={prefs.lang}
+            onScegli={scegliLingua}
+            onLinguaMenu={() => { vibrate(); setView('settings'); }}
+            C={C} L={L} />
+        </div>
+
         {/* ── INIZIO b.96 — la prima traduzione, entro dieci secondi ──
             Il primo avvio era: benvenuto, sei dentro, arrangiati. Chi non
             prova nei primi secondi non torna. Questa scheda fa SENTIRE
@@ -398,7 +309,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           <button
             onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
             style={{
-              width: '100%', maxWidth: 480, margin: '0 auto 14px',
+              width: '100%', margin: '0 0 14px',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
               background: 'none', border: `1px dashed ${C.accent}35`, borderRadius: 14,
               padding: '9px 12px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
@@ -414,12 +325,22 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         {/* ═══ Le 4 azioni: righe in UNA card (spec sciame) ═══
             Tile gradiente solo sulla primaria; le altre tenui.
             Compatta, leggibile, zero card che dilagano. */}
-        <div style={{
+        <div {...luce} style={{
           background: C.cardBg, border: `1px solid ${C.cardBorder}`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 12,
+          position: 'relative', overflow: 'hidden',
         }}>
+          {veloLuce}
           {ACTIONS.map((action, idx) => {
             const tilePieno = !!action.primary;
+            // b.354 — ogni azione ha il SUO colore: tessere grandi, gradiente
+            // acceso, riflesso in alto e ombra portata — l'effetto 3D chiesto.
+            const TINTE = {
+              qr: ['#5b8cff', '#38e1ff'], mail: ['#a855f7', '#ec4899'],
+              video: ['#f97316', '#ffc44d'], chat: ['#3ddc84', '#38e1ff'],
+              gift: ['#ec4899', '#ffc44d'], taxi: ['#ffc44d', '#f97316'],
+            };
+            const [t1, t2] = TINTE[action.icon] || [C.accent, C.accent2];
             return (
               <button
                 key={action.id}
@@ -435,19 +356,18 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 onMouseOut={(e) => e.currentTarget.style.opacity = 1}
               >
                 <span style={{
-                  width: 40, height: 40, borderRadius: 12, flexShrink: 0,
+                  width: 52, height: 52, borderRadius: 15, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
-                  background: tilePieno ? `linear-gradient(145deg, ${C.accent}, ${C.accent2})` : C.cardBg,
-                  border: tilePieno ? 'none' : `1px solid ${C.cardBorder}`,
-                  color: tilePieno ? '#fff' : C.textSecondary,
-                  boxShadow: tilePieno ? `0 4px 14px -4px ${C.accent}70` : 'none',
+                  background: `linear-gradient(150deg, ${t1}, ${t2})`,
+                  border: 'none', color: '#fff', position: 'relative',
+                  boxShadow: `0 6px 16px -5px ${t1}90, inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.25)`,
                 }}>
-                  {action.icon === 'qr' ? <IconQR size={20} />
-                    : action.icon === 'mail' ? <IconMail size={20} />
-                    : action.icon === 'video' ? <IconVideoCall size={20} />
-                    : action.icon === 'gift' ? <Icon name="gift" size={20} color={C.accent} />
-                    : action.icon === 'chat' ? <Icon name="chat" size={20} color={C.textPrimary} />
-                    : <IconCar size={20} />}
+                  {action.icon === 'qr' ? <IconQR size={26} />
+                    : action.icon === 'mail' ? <IconMail size={26} />
+                    : action.icon === 'video' ? <IconVideoCall size={26} />
+                    : action.icon === 'gift' ? <Icon name="gift" size={26} color="#fff" />
+                    : action.icon === 'chat' ? <Icon name="chat" size={26} color="#fff" />
+                    : <IconCar size={26} />}
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
@@ -464,10 +384,12 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         </div>
 
         {/* ═══ Il mondo ora — la Community come riga viva ═══ */}
-        <div style={{
+        <div {...luce} style={{
           background: C.cardBg, border: `1px solid ${C.cardBorder}`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 20,
+          position: 'relative', overflow: 'hidden',
         }}>
+          {veloLuce}
           <button
             onClick={() => { vibrate(); setView('mondo'); }}
             style={{
@@ -476,14 +398,15 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               border: 'none', cursor: 'pointer',
             }}
           >
-            <span style={{ display: 'inline-flex', gap: 3, flexShrink: 0, width: 40, justifyContent: 'center' }}>
-              {[0, 1, 2].map(i => (
-                <span key={i} style={{
-                  width: 5, height: 5, borderRadius: 3, background: C.accent2,
-                  boxShadow: `0 0 6px ${C.accent2}80`,
-                  animation: `vtBattPulse 2.4s ${i * 0.3}s ease-in-out infinite`,
-                }} />
-              ))}
+            {/* b.354 — il MONDO, sceso dalla testata: la sua icona vive qui,
+                in tessera colorata come le azioni in alto. */}
+            <span style={{
+              width: 52, height: 52, borderRadius: 15, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: `linear-gradient(150deg, #38e1ff, #5b8cff)`, color: '#fff',
+              boxShadow: '0 6px 16px -5px #38e1ff90, inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.25)',
+            }}>
+              <Icon name="globe" size={26} color="#fff" />
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
               <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
@@ -498,10 +421,12 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         </div>
 
         {/* ═══ b.198 · Life — Podcast, tutor e corsi coi Compagni ═══ */}
-        <div style={{
+        <div {...luce} style={{
           background: C.cardBg, border: `1px solid ${C.cardBorder}`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 20,
+          position: 'relative', overflow: 'hidden',
         }}>
+          {veloLuce}
           <button
             onClick={() => { vibrate(); setView('life'); }}
             style={{
@@ -527,10 +452,12 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
 
         {/* ═══ b.346 · Business — sezione parallela per gli strumenti di
             lavoro (primo: il BizCard Scanner intero, copiato verbatim) ═══ */}
-        <div style={{
+        <div {...luce} style={{
           background: C.cardBg, border: `1px solid ${C.cardBorder}`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 20,
+          position: 'relative', overflow: 'hidden',
         }}>
+          {veloLuce}
           <button
             onClick={() => { vibrate(); setView('business'); }}
             style={{

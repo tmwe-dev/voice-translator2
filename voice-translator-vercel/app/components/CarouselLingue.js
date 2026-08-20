@@ -1,0 +1,201 @@
+'use client';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FONT, LANGS, vibrate } from '../lib/constants.js';
+
+// ═══════════════════════════════════════════════════════════════
+// b.354 — IL CAROSELLO DELLE LINGUE, copiato dal selettore paesi di
+// Wueform (ordine di Luca: «prendili, copiali come sono e usali al
+// posto della dropdown»). Cinque bandiere in vista: quella al centro
+// a colori pieni e luminosa, le vicine in grigio leggero, le lontane
+// quasi spente; frecce ai lati, scivolata animata, trascinamento col
+// dito, e il bottone a righine che apre l'elenco completo con la
+// ricerca. Sotto, il nome della lingua segue il centro. Porting in
+// React puro: niente librerie, stessa resa.
+// ═══════════════════════════════════════════════════════════════
+
+// Le lingue rapide prima (le piu usate), poi tutte le altre in ordine
+// alfabetico — identico al criterio del selettore Wueform.
+const RAPIDE = ['it', 'en-US', 'es', 'fr', 'de', 'pt-BR', 'zh', 'ja', 'ar', 'ru', 'en-GB', 'hi'];
+
+function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
+  const lingue = useMemo(() => {
+    const rapide = RAPIDE.map((c) => LANGS.find((l) => l.code === c)).filter(Boolean);
+    const resto = LANGS.filter((l) => !RAPIDE.includes(l.code))
+      .sort((a, b) => a.name.localeCompare(b.name, 'en'));
+    return [...rapide, ...resto];
+  }, []);
+  const totale = lingue.length;
+
+  const [centro, setCentro] = useState(() => {
+    const i = lingue.findIndex((l) => l.code === selezionata);
+    return i >= 0 ? i : 0;
+  });
+  const [verso, setVerso] = useState(0);        // -1 sinistra · 1 destra (per l'animazione)
+  const [salto, setSalto] = useState(0);        // chiave che riavvia l'animazione
+  const [aperto, setAperto] = useState(false);  // l'elenco completo con la ricerca
+  const [cerca, setCerca] = useState('');
+  const toccoX = useRef(null);
+
+  // il centro segue la selezione esterna (senza animare al primo giro)
+  useEffect(() => {
+    const i = lingue.findIndex((l) => l.code === selezionata);
+    if (i >= 0) setCentro(i);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selezionata]);
+
+  const scorri = useCallback((dir) => {
+    setVerso(dir);
+    setSalto((s) => s + 1);
+    setCentro((c) => (c + dir + totale) % totale);
+  }, [totale]);
+
+  const scegli = useCallback((l) => { vibrate(6); onScegli(l); }, [onScegli]);
+
+  // le CINQUE in vista: come nel Wueform, il colore racconta la distanza
+  const visibili = [-2, -1, 0, 1, 2].map((sp) => {
+    const idx = (centro + sp + totale) % totale;
+    return { ...lingue[idx], sp };
+  });
+  const alCentro = lingue[centro];
+
+  const filtrate = cerca
+    ? lingue.filter((l) => `${l.name} ${l.code}`.toLowerCase().includes(cerca.toLowerCase()))
+    : lingue;
+
+  const freccia = (dir, segno) => (
+    <button onClick={() => scorri(dir)} aria-label={dir < 0 ? 'precedente' : 'successiva'}
+      style={{ width: 34, height: 34, borderRadius: 17, border: 'none', background: 'transparent',
+        color: C.textMuted, cursor: 'pointer', fontSize: 18, flexShrink: 0, fontFamily: FONT,
+        transition: 'transform .25s, color .25s' }}
+      onMouseEnter={(e) => { e.currentTarget.style.color = C.textPrimary; e.currentTarget.style.transform = 'scale(1.12)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.transform = 'scale(1)'; }}>
+      {segno}
+    </button>
+  );
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+      {/* il bottone a righine che apre l'elenco completo (dal Wueform) */}
+      <button onClick={() => { vibrate(6); setAperto((v) => !v); setCerca(''); }}
+        aria-label={L('yourLang')} aria-expanded={aperto}
+        style={{ width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
+          background: 'rgba(255,255,255,0.05)', color: C.textMuted, marginBottom: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          backdropFilter: 'blur(12px)', transition: 'transform .3s, background .3s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}>
+        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="currentColor" strokeWidth={1.2}>
+          <line x1="4" y1="8" x2="20" y2="8" style={{ animation: 'vtRiga 3s ease-in-out infinite' }} />
+          <line x1="6" y1="12" x2="18" y2="12" style={{ animation: 'vtRiga 3s .4s ease-in-out infinite' }} />
+          <line x1="8" y1="16" x2="16" y2="16" style={{ animation: 'vtRiga 3s .8s ease-in-out infinite' }} />
+        </svg>
+      </button>
+
+      {/* l'elenco completo con la ricerca */}
+      {aperto && (
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setAperto(false)} />
+          <div style={{ position: 'absolute', top: 52, zIndex: 100, width: 300,
+            background: C.headerBg || 'rgba(10,15,31,0.97)', border: `1px solid ${C.cardBorder}`,
+            borderRadius: 16, boxShadow: '0 16px 56px rgba(0,0,0,0.5)', overflow: 'hidden',
+            backdropFilter: 'blur(24px)' }}>
+            <input autoFocus value={cerca} onChange={(e) => setCerca(e.target.value)}
+              placeholder={L('yourLang') + '…'}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '13px 16px', border: 'none',
+                borderBottom: `1px solid ${C.cardBorder}`, background: 'transparent',
+                color: C.textPrimary, fontSize: 14, fontFamily: FONT, outline: 'none' }} />
+            <div style={{ maxHeight: 250, overflowY: 'auto', padding: 6 }}>
+              {filtrate.map((l) => {
+                const on = l.code === selezionata;
+                return (
+                  <button key={l.code} onClick={() => { setAperto(false); scegli(l); }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                      padding: '10px 12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: on ? `${C.accent}22` : 'transparent',
+                      color: on ? C.accent : C.textPrimary, fontSize: 13,
+                      fontWeight: on ? 700 : 400, fontFamily: FONT, textAlign: 'left',
+                      transition: 'background .2s' }}
+                    onMouseEnter={(e) => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                    onMouseLeave={(e) => { if (!on) e.currentTarget.style.background = 'transparent'; }}>
+                    <span style={{ width: 16, textAlign: 'center', opacity: on ? 1 : 0 }}>✓</span>
+                    <span style={{ fontSize: 20 }}>{l.flag}</span>
+                    <span style={{ flex: 1 }}>{l.name}</span>
+                    <span style={{ fontSize: 11, color: C.textMuted }}>{l.code.toUpperCase()}</span>
+                  </button>
+                );
+              })}
+              <button onClick={() => { setAperto(false); onLinguaMenu?.(); }}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', marginTop: 4,
+                  padding: '10px 12px', borderRadius: 12, border: 'none',
+                  borderTop: `1px solid ${C.cardBorder}`, background: 'transparent',
+                  color: C.textSecondary, fontSize: 12, cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
+                {L('uiLanguage')} <span style={{ marginLeft: 'auto', opacity: 0.5 }}>›</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* il carosello: frecce + cinque bandiere, scivolata sul cambio */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', maxWidth: 380 }}
+        onTouchStart={(e) => { toccoX.current = e.touches[0].clientX; }}
+        onTouchEnd={(e) => {
+          if (toccoX.current == null) return;
+          const d = toccoX.current - e.changedTouches[0].clientX;
+          if (Math.abs(d) > 50) scorri(d > 0 ? 1 : -1);
+          toccoX.current = null;
+        }}>
+        {freccia(-1, '‹')}
+        <div key={salto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+          minWidth: 270, height: 64, animation: `vtScivola${verso >= 0 ? 'D' : 'S'} .4s cubic-bezier(0.25,0.1,0.25,1)` }}>
+          {visibili.map((l) => {
+            const cent = l.sp === 0;
+            const vicina = Math.abs(l.sp) === 1;
+            return (
+              <button key={`${l.code}-${l.sp}`}
+                onClick={() => { if (cent) { scegli(l); } else { setVerso(l.sp > 0 ? 1 : -1); setSalto((s) => s + 1); setCentro((c) => (c + l.sp + totale) % totale); } }}
+                title={l.name}
+                style={{ width: 52, border: 'none', background: 'transparent', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px',
+                  fontFamily: FONT }}>
+                <span style={{ fontSize: cent ? 34 : 26, lineHeight: 1, transition: 'all .3s',
+                  filter: cent ? 'grayscale(0%) brightness(1.1)' : vicina ? 'grayscale(40%) brightness(0.9)' : 'grayscale(80%) brightness(0.8)',
+                  opacity: cent ? 1 : vicina ? 0.7 : 0.4,
+                  transform: cent ? 'scale(1.06)' : 'scale(1)' }}>
+                  {l.flag}
+                </span>
+                <span style={{ fontSize: 9, letterSpacing: 1, fontWeight: 600, textTransform: 'uppercase',
+                  color: cent ? C.textPrimary : C.textMuted, opacity: cent ? 1 : 0.5 }}>
+                  {l.code.split('-')[0]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {freccia(1, '›')}
+      </div>
+
+      {/* il nome della lingua al centro, sincronizzato — e la CONFERMA:
+          toccare la bandiera centrale la sceglie (anello del Wueform) */}
+      <button onClick={() => scegli(alCentro)}
+        style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px',
+          borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 700,
+          color: C.textPrimary, transition: 'all .3s',
+          background: alCentro.code === selezionata ? `${C.accent}18` : 'rgba(255,255,255,0.05)',
+          border: `1.5px solid ${alCentro.code === selezionata ? C.accent : C.cardBorder}`,
+          boxShadow: alCentro.code === selezionata ? `0 0 24px -6px ${C.accent}80` : 'none' }}>
+        <span style={{ fontSize: 17 }}>{alCentro.flag}</span>
+        {alCentro.name}
+        {alCentro.code === selezionata && <span style={{ color: C.accent, fontSize: 12 }}>✓</span>}
+      </button>
+
+      <style>{`
+        @keyframes vtScivolaD { from { transform: translateX(52px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes vtScivolaS { from { transform: translateX(-52px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes vtRiga { 0% { opacity: 0; } 15% { opacity: 1; } 60% { opacity: 1; } 80% { opacity: 0; } 100% { opacity: 0; } }
+      `}</style>
+    </div>
+  );
+}
+
+export default memo(CarouselLingue);
