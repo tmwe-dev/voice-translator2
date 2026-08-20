@@ -18,7 +18,7 @@ const IDEE_CORSO = [
   { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
@@ -310,6 +310,7 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
 // NUOVE (domini non ancora usati) — cosi la presentazione esplora risorse
 // diverse invece di ripetere sempre la stessa. Se un'immagine coerente non
 // c'e, la sezione resta senza (il documentario respira, non riempie a forza).
+const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
 function dominioDi(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
 function paroleChiave(s) { return new Set((String(s || '').toLowerCase().match(/\p{L}{4,}/gu) || [])); }
 function assegnaImmagini(paragrafi, items, illustrazione) {
@@ -379,6 +380,17 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // `sezioneAttiva` e il paragrafo in lettura; `stopLetturaRef` ferma il giro.
   const [sezioneAttiva, setSezioneAttiva] = useState(-1);
   const stopLetturaRef = useRef(false);
+  // b.313 — ALZO LA MANO: interrompo il Maestro, chiedo, lui risponde e poi
+  // riprende. La mano alzata NON taglia: il Maestro FINISCE il paragrafo, poi
+  // si gira verso di te. `interruzionePendenteRef` = mano alzata in attesa che
+  // finisca il pezzo; `inDomandaRef` = siamo nel dialogo (la lettura aspetta).
+  const [manoAlzata, setManoAlzata] = useState(false);
+  const [maestroStaFinendo, setMaestroStaFinendo] = useState(false);
+  const [domanda, setDomanda] = useState('');
+  const [rispostaMaestro, setRispostaMaestro] = useState('');
+  const [chiedendo, setChiedendo] = useState(false);
+  const inDomandaRef = useRef(false);
+  const interruzionePendenteRef = useRef(false);
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -529,19 +541,60 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.242-bis — leggi la lezione ad alta voce. Se e un corso di LINGUA, le
   // parti marcate [L2:...] passano a una voce madrelingua: e per questo che
   // il tag esiste. Altrimenti si comporta come una lettura normale.
-  // b.312 — ferma la lettura/presentazione in corso.
+  // b.312/b.313 — ferma del tutto la lettura/presentazione e ogni dialogo.
   const fermaLettura = useCallback(() => {
     stopLetturaRef.current = true;
+    inDomandaRef.current = false;
+    interruzionePendenteRef.current = false;
     try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ }
     setSezioneAttiva(-1);
     setAscoltando(false);
+    setManoAlzata(false); setMaestroStaFinendo(false);
   }, []);
+
+  // b.313 — ALZO LA MANO. Non taglia: segna l'intenzione. Il Maestro finisce
+  // il paragrafo, poi si gira verso di te (la lettura si mette in attesa).
+  const alzaMano = useCallback(() => {
+    if (!ascoltando || manoAlzata) return;
+    interruzionePendenteRef.current = true;
+    setMaestroStaFinendo(true);
+    setManoAlzata(true);
+    setRispostaMaestro(''); setDomanda('');
+  }, [ascoltando, manoAlzata]);
+
+  // b.313 — chiusa la parentesi, si torna alla lezione: la lettura riparte
+  // dal punto dopo (il paragrafo era gia finito).
+  const riprendiLezione = useCallback(() => {
+    inDomandaRef.current = false;
+    setManoAlzata(false); setMaestroStaFinendo(false);
+    setDomanda(''); setRispostaMaestro('');
+  }, []);
+
+  // b.313 — invia la domanda; il Maestro risponde ancorato alla sezione in
+  // corso, e la dice con la sua voce.
+  const inviaDomanda = useCallback(async () => {
+    const q = domanda.trim();
+    if (!q || chiedendo) return;
+    setChiedendo(true);
+    try {
+      const sez = paragrafiLezione[Math.max(0, sezioneAttiva)] || aperta?.contenuto || '';
+      const risposta = await chiediAlMaestro({ argomento: argomento.trim(), lezione: aperta?.lezione, sezione: sez, domanda: q, docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken });
+      setRispostaMaestro(risposta || '');
+      if (risposta) {
+        try { await parlaTurno({ voceId: tutor?.voce?.id, testo: risposta, lingua: linguaCorso, userToken }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
+      }
+    } catch (e) {
+      setRispostaMaestro(e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+    } finally { setChiedendo(false); }
+  }, [domanda, chiedendo, paragrafiLezione, sezioneAttiva, aperta, argomento, docenteId, livello, linguaCorso, userToken, tutor, L]);
 
   const ascoltaLezione = useCallback(async () => {
     if (!aperta) return;
     if (ascoltando) { fermaLettura(); return; } // il tasto fa anche da STOP
     setAscoltando(true);
     stopLetturaRef.current = false;
+    inDomandaRef.current = false;
+    interruzionePendenteRef.current = false;
     const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
     // b.312 — si legge SEZIONE per SEZIONE (paragrafi): cosi la lavagna puo
     // mostrare l'immagine giusta mentre la voce parla di quel pezzo. I tag
@@ -549,7 +602,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     const testoTot = staccaEsercizio(aperta.contenuto).testo;
     const parti = testoTot.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
     const lista = parti.length > 1 ? parti : [testoTot];
-    const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
+    const aspettaDialogo = async () => { while (inDomandaRef.current && !stopLetturaRef.current) await attendi(150); };
     try {
       for (let i = 0; i < lista.length; i++) {
         if (stopLetturaRef.current) break;
@@ -561,13 +614,23 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
           userToken,
         }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Lezione'); });
+        if (stopLetturaRef.current) break;
+        // b.313 — hai alzato la mano DURANTE il paragrafo? Ora e' finito: il
+        // Maestro si gira, si dialoga, e la lettura aspetta la ripresa.
+        if (interruzionePendenteRef.current) {
+          interruzionePendenteRef.current = false;
+          inDomandaRef.current = true;
+          setMaestroStaFinendo(false);
+          await aspettaDialogo();
+          if (stopLetturaRef.current) break;
+        }
         // b.312 — RITMO DA DOCUMENTARIO: dopo aver letto una sezione, si
         // PRENDE IL TEMPO — piu lungo se c'e un'immagine da osservare — cosi
         // chi ascolta guarda e pensa prima che la voce riparta.
         if (!stopLetturaRef.current && i < lista.length - 1) await attendi(immaginiSezioni[i] ? 2200 : 800);
       }
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
-    finally { setAscoltando(false); setSezioneAttiva(-1); }
+    finally { setAscoltando(false); setSezioneAttiva(-1); inDomandaRef.current = false; setManoAlzata(false); setMaestroStaFinendo(false); }
   }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni]);
 
   // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
@@ -675,6 +738,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                   ))}
                 </div>
                 <TestoRicco testo={paragrafi[i] || ''} testoP={testoP} muto={muto} />
+
+                {/* b.313 — ALZO LA MANO: fermo il Maestro e chiedo. */}
+                {!manoAlzata ? (
+                  <button onClick={alzaMano}
+                    style={{ marginTop: 12, padding: '9px 14px', borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>✋</span> {tt('lifeRaiseHand', 'Alza la mano e chiedi')}
+                  </button>
+                ) : (
+                  <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}55` }}>
+                    {maestroStaFinendo
+                      ? <div style={{ fontSize: 12, color: muto, marginBottom: 10 }}>✋ {tt('lifeHandUp', 'Mano alzata — il Maestro finisce la frase e si gira verso di te…')}</div>
+                      : <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 10 }}>{tt('lifeAskNow', 'Il Maestro ti ascolta. Cosa vuoi chiedere?')}</div>}
+                    <textarea value={domanda} onChange={(e) => setDomanda(e.target.value)} rows={2}
+                      placeholder={tt('lifeAskPh', 'La tua domanda…')}
+                      style={{ width: '100%', padding: 11, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.04)', color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', resize: 'vertical' }} />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                      <button onClick={inviaDomanda} disabled={chiedendo || !domanda.trim()}
+                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (chiedendo || !domanda.trim()) ? 0.6 : 1 }}>
+                        {chiedendo ? '…' : tt('lifeAsk', 'Chiedi')}
+                      </button>
+                      <button onClick={riprendiLezione}
+                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                        {tt('lifeResumeLesson', 'Riprendi la lezione')} →
+                      </button>
+                    </div>
+                    {rispostaMaestro && (
+                      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
+                        <TestoRicco testo={rispostaMaestro} testoP={testoP} muto={muto} />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           }

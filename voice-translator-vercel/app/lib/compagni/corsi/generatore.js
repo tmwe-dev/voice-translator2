@@ -256,6 +256,26 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
   return { ok: true, contenuto: testo, fonti, osservazioni: appunto, fontiNonTrovate };
 }
 
+// b.313 — "ALZO LA MANO E CHIEDO". Durante la lezione lo studente interrompe
+// e fa una domanda; il Maestro risponde NEL PERSONAGGIO, ancorato al pezzo che
+// stava spiegando, breve e naturale, poi lascia riprendere. Non e una chat a
+// parte: e lo stesso docente, che si gira verso di te un momento.
+export async function generaRispostaDomanda({ argomento = '', lezione = null, sezione = '', domanda = '', livello = 'base', lingua = 'it', docente = null } = {}, { userToken = null } = {}) {
+  if (!domanda || !domanda.trim()) return { ok: false, motivo: 'domanda-mancante' };
+  const system = `${vestePocente(docente)}
+Stai tenendo una lezione e lo studente ha ALZATO LA MANO per chiederti una cosa. Rispondi come il docente che sei: naturale, caldo, BREVE e diretto, nella lingua: ${nomeLingua(lingua)}. Rispondi SOLO alla domanda, aggiungendo il dettaglio utile; niente elenchi, niente titoli, non rifare la lezione. Il testo si legge ad alta voce: nessuna domanda retorica, nessun tag. CHIUDI riassumendo in UNA frase il punto che stavate trattando e invitando a riprendere (es. "Dunque, tornando a ...: riprendiamo").${registroBambini(livello, lingua)}`;
+  const prompt = `LEZIONE: "${lezione?.titolo || argomento}".
+Stavi spiegando proprio questo pezzo:
+"""${String(sezione || '').slice(0, 1400)}"""
+
+Lo studente alza la mano e chiede: "${domanda.trim().slice(0, 400)}"
+
+Rispondi tu, a voce, come faresti in aula.`;
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: 600, temperature: 0.7 });
+  if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
+  return { ok: true, risposta: staccaAppunto(r.testo).testo };
+}
+
 /** Genera il quiz di una lezione. */
 export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente, osservazioni, progresso });

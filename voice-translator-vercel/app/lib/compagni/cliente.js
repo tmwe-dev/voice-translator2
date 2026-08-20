@@ -98,6 +98,15 @@ export function generaQuiz({ lezione, lingua, userToken, livello, contenuto, arg
 }
 
 /**
+ * b.313 — ALZO LA MANO: durante la lezione lo studente interrompe e chiede.
+ * Il Maestro risponde nel personaggio, ancorato alla sezione in corso.
+ */
+export async function chiediAlMaestro({ argomento, lezione, sezione, domanda, docenteId, livello, lingua, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'domanda', argomento, lezione, sezione, domanda, docenteId, livello, lingua, userToken });
+  return d.risposta || '';
+}
+
+/**
  * b.242 — REGISTRA com'è andata una prova: è ciò che permette al Maestro di
  * ricordare. `daRivedere` sono le cose sbagliate (per il ripasso),
  * `osservazioni` cosa ha imparato su questa persona. Senza account non salva

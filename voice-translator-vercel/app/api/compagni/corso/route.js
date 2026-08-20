@@ -4,7 +4,7 @@ import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
 import { lezioniProfonde, domandePerLivello } from '../../../lib/compagni/corsi/catalogo.js';
-import { generaSyllabus, generaLezione, generaQuiz } from '../../../lib/compagni/corsi/generatore.js';
+import { generaSyllabus, generaLezione, generaQuiz, generaRispostaDomanda } from '../../../lib/compagni/corsi/generatore.js';
 import { pubblicaCorso, elencaCorsiPubblici } from '../../../lib/compagni/corsi/pubblici.js';
 import { leggiOsservazioni, aggiungiOsservazioni, leggiProgresso, salvaEsito } from '../../../lib/compagni/corsi/studente.js';
 
@@ -67,6 +67,17 @@ async function handlePost(req) {
         after(() => aggiungiOsservazioni(sessione.email, r.osservazioni).catch(() => {}));
       }
       return NextResponse.json({ ok: true, contenuto: r.contenuto, fonti: r.fonti });
+    }
+
+    // b.313 — "alzo la mano e chiedo": lo studente interrompe la lezione,
+    // il Maestro risponde nel personaggio, ancorato al pezzo in corso.
+    if (azione === 'domanda') {
+      const domanda = typeof body.domanda === 'string' ? body.domanda : '';
+      if (!domanda.trim()) return NextResponse.json({ error: 'Serve la domanda' }, { status: 400 });
+      const sezione = typeof body.sezione === 'string' ? body.sezione : (typeof body.contenuto === 'string' ? body.contenuto : '');
+      const r = await generaRispostaDomanda({ argomento, lezione: body.lezione, sezione, domanda, livello, lingua, docente }, { userToken });
+      if (!r.ok) return rispostaEsito(r);
+      return NextResponse.json({ ok: true, risposta: r.risposta });
     }
 
     if (azione === 'quiz') {
