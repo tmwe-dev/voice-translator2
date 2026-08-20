@@ -18,7 +18,7 @@ const IDEE_CORSO = [
   { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
@@ -400,6 +400,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const sezioneRef = useRef(null);
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
+  // b.327 — Ondata A: I MIEI CORSI (persistiti, con progresso) e gli esiti
+  // per-lezione del corso aperto (spunta ✓ con voto sulla lista).
+  const [mieiCorsi, setMieiCorsi] = useState(null);
+  const [esitiLezioni, setEsitiLezioni] = useState({}); // { indice: punteggio|null }
+  const ricaricaMieiCorsi = useCallback(() => {
+    if (!userToken) return;
+    mieiCorsiUtente(userToken).then(setMieiCorsi).catch(() => {});
+  }, [userToken]);
+  useEffect(() => { ricaricaMieiCorsi(); }, [ricaricaMieiCorsi]);
+  const ricaricaEsiti = useCallback((arg) => {
+    if (!userToken || !arg) return;
+    progressoCorso({ argomento: arg, userToken })
+      .then((righe) => { const m = {}; for (const r of righe || []) m[r.lezione] = r.punteggio; setEsitiLezioni(m); })
+      .catch(() => {});
+  }, [userToken]);
   const [pubblicato, setPubblicato] = useState(false);
   // b.229 — illustrazione della lezione + tutor "compagno di viaggio"
   const [illustrazione, setIllustrazione] = useState(null);
@@ -443,6 +458,19 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setLezioni(corso.lezioni || []);
   }, [linguaCorso]);
 
+  // b.327 — apri un MIO corso salvato: syllabus stabile, esiti, segnalibro.
+  const apriMioCorso = useCallback((c) => {
+    setErrore(''); setAperta(null); setPubblicato(false);
+    setArgomento(c.argomento || '');
+    setCategoria(c.categoria || 'altro');
+    setLivello(c.livello || 'base');
+    setLinguaCorso(c.lingua || linguaCorso);
+    setDocenteId(c.docenteId || '');
+    setLezioni(Array.isArray(c.lezioni) ? c.lezioni : []);
+    const m = {}; for (const e of c.esiti || []) m[e.lezione] = e.punteggio;
+    setEsitiLezioni(m);
+  }, [linguaCorso]);
+
   // b.228 — pubblica il corso appena generato nella libreria condivisa.
   const pubblica = useCallback(async () => {
     if (!lezioni.length) return;
@@ -465,16 +493,25 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     try {
       const d = await generaSyllabus({ argomento: argomento.trim(), categoria, livello, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setLezioni(d.lezioni || []);
+      // b.327 — il corso si SALVA da solo appena nasce: niente piu
+      // rigenerazioni (e ripagamenti) alla prossima apertura.
+      if (userToken && d.lezioni?.length) {
+        salvaCorsoMio({ argomento: argomento.trim(), titolo: argomento.trim(), categoria, livello, lingua: linguaCorso, lezioni: d.lezioni, docenteId: docenteId || undefined, userToken })
+          .then(() => ricaricaMieiCorsi()).catch(() => {});
+      }
+      setEsitiLezioni({});
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — `linguaCorso` andava nelle deps: il callback lo usa ma prima
     // elencava `lingua` (la lingua app, che non cambia mai). Chi cambiava
     // SOLO la lingua del corso e generava mandava ancora la lingua iniziale.
-  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
+  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L, ricaricaMieiCorsi]);
 
   const apri = useCallback(async (lezione) => {
     setLavoro(true); setErrore(''); setIllustrazione(null); setArricchimento(null);
+    // b.327 — segnalibro: si riprende da qui alla prossima apertura.
+    if (userToken && lezione?.indice !== undefined) segnaLibroCorso({ argomento: argomento.trim(), indice: lezione.indice, userToken }).catch(() => {});
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setRisposte({});
@@ -695,11 +732,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           punteggio: Math.round((giuste / domande.length) * 100),
           daRivedere,
           userToken,
-        }).catch(() => { /* il ricordo e un di piu: la sfida resta valida */ });
+        }).then(() => { ricaricaEsiti(argomento.trim()); ricaricaMieiCorsi(); })
+          .catch(() => { /* il ricordo e un di piu: la sfida resta valida */ });
       }
       return nuove;
     });
-  }, [aperta, lezioni, argomento, userToken]);
+  }, [aperta, lezioni, argomento, userToken, ricaricaEsiti, ricaricaMieiCorsi]);
 
   // b.229 — illustrazione della lezione (gpt-image-1). Costo dal wallet.
   const illustra = useCallback(async () => {
@@ -919,6 +957,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               <button onClick={() => {
                   const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
                   if (idx >= 0) registraEsito({ argomento: argomento.trim(), lezioneIndice: idx, punteggio: null, daRivedere: [], userToken })
+                    .then(() => { ricaricaEsiti(argomento.trim()); ricaricaMieiCorsi(); })
                     .catch(() => { /* il ricordo e un di piu */ });
                   if (prossimaLezione) apri(prossimaLezione); else setAperta(null);
                 }} disabled={lavoro}
@@ -976,6 +1015,29 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
   return (
     <div>
+      {/* b.327 — I MIEI CORSI: persistiti, con barra di avanzamento e
+          Riprendi. Le lezioni saltate contano meta (il salto pesa). */}
+      {mieiCorsi?.length > 0 && <div style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeMyCourses', 'I miei corsi')}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {mieiCorsi.slice(0, 6).map((c) => (
+            <button key={c.id} onClick={() => { vibrate(8); apriMioCorso(c); }}
+              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.titolo || c.argomento}</div>
+                  <div style={{ fontSize: 11, color: muto, marginTop: 2 }}>{c.superate}/{c.totale} {tt('lifeLessonsDone', 'superate')}{c.saltate ? ` · ${c.saltate} ${tt('lifeLessonsSkipped', 'saltate')}` : ''} · {tt('lifeResume', 'riprendi')}: {Math.min((c.ultimaLezione || 0) + 1, c.totale)}</div>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, color: c.percento >= 100 ? '#f1c40f' : accent }}>{c.percento}%</span>
+              </div>
+              <div style={{ marginTop: 8, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                <div style={{ width: `${c.percento}%`, height: '100%', background: c.percento >= 100 ? '#f1c40f' : accent }} />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>}
+
       {/* b.228 — libreria condivisa: corsi già pronti, da avviare con un tocco. */}
       {disponibili.length > 0 && <div style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCoursesAvailable', 'Corsi disponibili')}</div>
@@ -1095,7 +1157,16 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             // `indice`/`obiettivi` possono mancare → key/NaN e crash su .length.
             <button key={lz.indice ?? i} onClick={() => apri(lz)} disabled={lavoro}
               style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
-              <div style={{ fontWeight: 700 }}>{(lz.indice ?? i) + 1}. {lz.titolo}</div>
+              <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ flex: 1 }}>{(lz.indice ?? i) + 1}. {lz.titolo}</span>
+                {/* b.327 — l'esito si VEDE: voto, oppure "saltata" (pesa meta). */}
+                {(() => {
+                  const e = esitiLezioni[lz.indice ?? i];
+                  if (e === undefined) return null;
+                  if (e === null) return <span style={{ fontSize: 11, fontWeight: 700, color: muto }}>{tt('lifeSkippedBadge', 'saltata')}</span>;
+                  return <span style={{ fontSize: 12, fontWeight: 800, color: e >= 80 ? accent : e >= 50 ? '#f59e0b' : '#f87171' }}>✓ {e}%</span>;
+                })()}
+              </div>
               {lz.obiettivi?.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
             </button>
           ))}

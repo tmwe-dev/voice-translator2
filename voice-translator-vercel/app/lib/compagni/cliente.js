@@ -132,6 +132,34 @@ export function moderaContenuto({ tipo, contenuto, nascondi = true, userToken })
   return postJSON('/api/mondo/discussioni', { azione: 'modera', tipo, contenuto, nascondi, userToken });
 }
 
+// ── b.327 · Ondata A — LA BIBLIOTECA DEI MIEI CORSI ──
+/** Salva il corso appena generato (syllabus stabile). Fallisce in silenzio. */
+export function salvaCorsoMio({ argomento, titolo, categoria, livello, lingua, lezioni, docenteId, obiettivoId, userToken }) {
+  return postJSON('/api/compagni/corso', { azione: 'salvaCorsoMio', argomento, titolo, categoria, livello, lingua, lezioni, docenteId, obiettivoId, userToken });
+}
+/** I miei corsi, con progresso unito (superate/viste/saltate/percento/esiti). */
+export async function mieiCorsiUtente(userToken) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'mieiCorsi', userToken });
+  return d.corsi || [];
+}
+/** Segnalibro: l'ultima lezione aperta di un corso. */
+export function segnaLibroCorso({ argomento, indice, userToken }) {
+  return postJSON('/api/compagni/corso', { azione: 'segnalibro', argomento, indice, userToken });
+}
+/** Il progresso di UN corso (per le spunte in lista). */
+export async function progressoCorso({ argomento, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'progresso', argomento, userToken });
+  return d.progresso || [];
+}
+/** Profilo studente (Learner Profile + preferenze esperienza). */
+export async function profiloStudente(userToken) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'profiloStudente', userToken });
+  return d.dati || null;
+}
+export function salvaProfiloStudente({ profilo, comunicazione, preferenze, userToken }) {
+  return postJSON('/api/compagni/corso', { azione: 'salvaProfiloStudente', profilo, comunicazione, preferenze, userToken });
+}
+
 /** b.228 — libreria condivisa: elenco corsi disponibili (sfoglia). */
 export async function corsiDisponibili({ soloBambini, linguaFiltro, categoriaFiltro } = {}) {
   const d = await postJSON('/api/compagni/corso', { azione: 'disponibili', soloBambini, linguaFiltro, categoriaFiltro });
