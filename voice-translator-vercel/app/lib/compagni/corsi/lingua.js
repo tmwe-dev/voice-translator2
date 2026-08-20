@@ -109,11 +109,17 @@ export function nomeLinguaStudiata(code) {
  * Le istruzioni per il Maestro di lingua: marcare la lingua straniera e —
  * soprattutto — far PARLARE la persona invece di spiegarle la grammatica.
  */
-export function istruzioniLingua({ linguaParlata = 'it', linguaStudiata = 'en' } = {}) {
+export function istruzioniLingua({ linguaParlata = 'it', linguaStudiata = 'en', nomeAssistente = '' } = {}) {
   const parlata = nomeLinguaStudiata(linguaParlata);
   const studiata = nomeLinguaStudiata(linguaStudiata);
+  // b.323 — il DUETTO (Luca): il Maestro guida nella lingua dell'utente,
+  // l'ASSISTENTE MADRELINGUA (personaggio con nome) dice tutte le parti in
+  // lingua originale. Il Maestro lo presenta e gli "passa la parola".
+  const duetto = nomeAssistente
+    ? `\nCon te in aula c'è ${nomeAssistente}, l'assistente madrelingua: OGNI parte in ${studiata} la pronuncia ${nomeAssistente} (il sistema instrada i tag [L2:] alla sua voce). Presentalo con naturalezza la prima volta ("${nomeAssistente} ce la legge") e passagli la parola quando c'è da LEGGERE una frase, rileggere lentamente, o rimodellare la versione corretta dopo un errore. Tu spieghi e correggi in ${parlata}; ${nomeAssistente} dà il suono.`
+    : '';
   return `
-CORSO DI LINGUA — si impara usandola, non studiandola.
+CORSO DI LINGUA — si impara usandola, non studiandola.${duetto}
 Tu parli in ${parlata}. Ogni parola, frase o espressione in ${studiata} DEVE stare dentro il tag [L2: ...]: il sistema la farà pronunciare da una voce madrelingua, così la persona sente la pronuncia giusta e non la tua.
 Esempi: «La parola [L2: beautiful] significa bello.» · «Prova a dire [L2: How are you doing today?]» · «Il verbo [L2: to be]: [L2: I am], [L2: you are].»
 Marca SOLO la parte in ${studiata}, anche quando è una parola sola dentro una frase in ${parlata}. Senza tag, quella parola verrebbe letta con l'accento sbagliato — cioè insegneresti una pronuncia scorretta.

@@ -135,8 +135,10 @@ describe('la voce doppia passa dal client', () => {
   it('parlaBilingue esiste e usa una voce madrelingua per la lingua studiata', () => {
     const src = leggi('app/lib/compagni/cliente.js');
     expect(src).toMatch(/export async function parlaBilingue/);
-    // Niente voceId sulla lingua studiata: la rotta sceglie il madrelingua.
-    expect(src).toMatch(/voceId: suaLingua \? null : voceId/);
+    // b.323 — sulla lingua studiata parla l'ASSISTENTE madrelingua (voce
+    // fissa del personaggio); senza assistente, la rotta sceglie da se.
+    // Mai la voce del Compagno sulla L2.
+    expect(src).toMatch(/voceId: suaLingua \? \(voceAssistente \|\| null\) : voceId/);
     expect(src).toMatch(/segmentiPerVoce/);
   });
 });

@@ -205,13 +205,16 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  * I pezzi vicini nella stessa lingua sono già uniti da segmentiPerVoce, così
  * non si paga una chiamata per ogni parola.
  */
-export async function parlaBilingue({ voceId, testo, linguaParlata, linguaStudiata, userToken, modoVoce }, onAudio) {
+export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce }, onAudio) {
   const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
   for (const p of pezzi) {
     const suaLingua = p.lingua === linguaStudiata;
     await parlaTurno({
       // La lingua studiata NON usa la voce del Compagno: serve un madrelingua.
-      voceId: suaLingua ? null : voceId,
+      // b.323 — il DUETTO: se c'e l'Assistente madrelingua (personaggio con
+      // nome e volto), le parti L2 le dice LUI, sempre la stessa voce —
+      // cosi lo studente riconosce chi parla. Senza, sceglie la rotta.
+      voceId: suaLingua ? (voceAssistente || null) : voceId,
       testo: p.testo,
       lingua: p.lingua,
       userToken,

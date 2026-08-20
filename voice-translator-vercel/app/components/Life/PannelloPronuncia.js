@@ -23,7 +23,7 @@ import GraficoFonia from './GraficoFonia.js';
 // le parole andate male tornano più avanti, dentro un'altra frase.
 // ═══════════════════════════════════════════════════════════════
 
-export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, testoP, muto, accent, card, bordo }) {
+export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, voceAssistente = null, nomeAssistente = '', testoP, muto, accent, card, bordo }) {
   const [stato, setStato] = useState('pronto'); // pronto | registro | valuto | fatto
   const [esito, setEsito] = useState(null);
   const [errore, setErrore] = useState('');
@@ -112,11 +112,14 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
     if (ascoltoFrase) return;
     setAscoltoFrase(true);
     try {
-      await parlaTurno({ voceId: null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }, async (audio) => {
+      // b.323 — la frase la dice l'ASSISTENTE MADRELINGUA (voce fissa del
+      // personaggio), non una voce qualsiasi.
+      await parlaTurno({ voceId: voceAssistente || null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }, async (audio) => {
         // b.322 — mentre la voce dice la frase, si CATTURA il riferimento e
         // se ne calcola l'analisi: e la "fascia attesa" del grafico.
         try {
           const b = await fetch(audio.src).then((r) => r.blob());
+          rifBlobRef.current = b; // b.323 — tenuto per la ripetizione LENTA
           const { campioni, sr } = await decodifica(b);
           rifRef.current = analizza(campioni, sr);
         } catch { /* niente riferimento: il grafico restera vuoto, il resto funziona */ }
@@ -124,7 +127,22 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
     }
     catch { /* la voce e un di piu */ }
     finally { setAscoltoFrase(false); }
-  }, [ascoltoFrase, frase, lingua, userToken, decodifica]);
+  }, [ascoltoFrase, frase, lingua, userToken, decodifica, voceAssistente]);
+
+  // b.323 — RIPETIZIONE LENTA: la stessa frase dell'Assistente, rallentata
+  // in locale (gratis, nessuna nuova chiamata). Se il riferimento non c'e
+  // ancora, prima lo si ascolta a velocita normale.
+  const rifBlobRef = useRef(null);
+  const ascoltaLenta = useCallback(() => {
+    const b = rifBlobRef.current;
+    if (!b) { ascoltaFrase(); return; }
+    try {
+      const a = new Audio(URL.createObjectURL(b));
+      a.playbackRate = 0.7;
+      a.onended = () => { try { URL.revokeObjectURL(a.src); } catch { /* url gia revocato: non e un guasto */ } };
+      a.play().catch(() => { /* autoplay negato: si riprova col tasto */ });
+    } catch { /* la ripetizione lenta e un di piu */ }
+  }, [ascoltaFrase]);
 
   const registra = useCallback(async () => {
     if (stato === 'registro') { // secondo tocco: si ferma
@@ -168,7 +186,13 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
         <button onClick={ascoltaFrase} disabled={ascoltoFrase || stato === 'registro'}
           style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${accent}`, fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
             background: 'transparent', color: accent, opacity: (ascoltoFrase || stato === 'registro') ? 0.6 : 1 }}>
-          {ascoltoFrase ? '…' : '▶ Ascolta la frase'}
+          {ascoltoFrase ? '…' : `▶ ${nomeAssistente ? `Ascolta ${nomeAssistente}` : 'Ascolta la frase'}`}
+        </button>
+        <button onClick={ascoltaLenta} disabled={ascoltoFrase || stato === 'registro'}
+          title="La stessa frase, rallentata"
+          style={{ padding: '10px 12px', borderRadius: 12, border: bordo, fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
+            background: 'transparent', color: testoP, opacity: (ascoltoFrase || stato === 'registro') ? 0.6 : 1 }}>
+          ▶ Lenta
         </button>
         <button onClick={registra} disabled={stato === 'valuto'}
           style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',

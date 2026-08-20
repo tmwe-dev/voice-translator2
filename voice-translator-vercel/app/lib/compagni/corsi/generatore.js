@@ -15,6 +15,7 @@ import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
 import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
+import { assistentePer } from './assistenti.js';
 
 import { getLang } from '../../constants.js';
 import { createLogger } from '../../logger.js';
@@ -124,7 +125,10 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
   const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
-  const bloccoLingua = (l2 && l2 !== lingua) ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2 }) : '';
+  // b.323 — nel duetto il Maestro presenta l'Assistente madrelingua per nome.
+  const bloccoLingua = (l2 && l2 !== lingua)
+    ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2, nomeAssistente: assistentePer(l2).nome })
+    : '';
   // b.301 — PUNTO 5: a livello universitario/ricercatore la lezione ha
   // un'altra stazza. Non piu 900 token di prosa: piu moduli, metodologia,
   // problemi, casi, e — se ci sono fonti — riferimenti espliciti.

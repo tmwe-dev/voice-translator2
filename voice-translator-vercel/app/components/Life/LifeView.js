@@ -21,6 +21,7 @@ const IDEE_CORSO = [
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
+import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
@@ -642,6 +643,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         setSezioneAttiva(i);
         await parlaBilingue({
           voceId: tutor?.voce?.id,
+          // b.323 — il DUETTO: le parti in lingua studiata le dice l'Assistente
+          // madrelingua (sempre la stessa voce: lo studente lo riconosce).
+          voceAssistente: (l2 && l2 !== linguaCorso) ? assistentePer(l2).voceId : null,
           testo: lista[i],
           linguaParlata: linguaCorso,
           linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
@@ -715,10 +719,23 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         <button onClick={() => { stopLetturaRef.current = true; try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setSezioneAttiva(-1); setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
-        {/* b.229 — tutor "compagno di viaggio" accanto al titolo. */}
+        {/* b.229 — tutor "compagno di viaggio" accanto al titolo.
+            b.323 — nel corso di lingua c'e anche l'ASSISTENTE MADRELINGUA:
+            volto e nome accanto al Maestro, cosi si sa chi parla. */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 12px' }}>
           {tutor?.avatar && <img src={tutor.avatar} alt="" width={34} height={34} style={{ borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />}
           <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
+          {(() => {
+            const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+            if (!l2c || l2c === linguaCorso) return null;
+            const assist = assistentePer(l2c);
+            return (
+              <span title={`${assist.nome} — madrelingua`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: card, border: bordo, flexShrink: 0 }}>
+                <img src={assist.avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} />
+                <span style={{ fontSize: 11, fontWeight: 700, color: muto }}>{assist.nome}</span>
+              </span>
+            );
+          })()}
         </div>
 
         {/* b.315 — CONTROLLI IN ALTO: ascolta/ferma, evidenzia, alza la mano.
@@ -852,6 +869,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           // pannello e si vedeva il punteggio della frase precedente sotto la
           // frase nuova. Con key={es} il pannello riparte pulito.
           return <PannelloPronuncia key={es} frase={es} lingua={l2 || linguaCorso} userToken={userToken}
+            voceAssistente={l2 ? assistentePer(l2).voceId : null} nomeAssistente={l2 ? assistentePer(l2).nome : ''}
             onEsito={({ punteggio, daRivedere }) => {
               // b.317 — audit B2/6.2: quiz e pronuncia scrivevano sulla STESSA
               // riga (stesso corso+lezione) e l'ultimo cancellava l'altro. La
