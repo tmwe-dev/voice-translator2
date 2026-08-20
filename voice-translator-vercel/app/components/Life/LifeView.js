@@ -420,6 +420,19 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [illustrazione, setIllustrazione] = useState(null);
   const [genIll, setGenIll] = useState(false);
   const tutor = compagni.find((c) => c.id === docenteId) || null;
+  // b.328 — TEMPLATE RESPONSIVE (deciso con Luca): stesso contenuto,
+  // distribuzione diversa. Su schermo largo le immagini vanno A MARGINE
+  // (stile rivista/Wikipedia, accanto al pezzo che rappresentano); su
+  // mobile restano in linea a tutta larghezza.
+  const [schermoLargo, setSchermoLargo] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 900px)');
+    const aggiorna = () => setSchermoLargo(mq.matches);
+    aggiorna();
+    mq.addEventListener('change', aggiorna);
+    return () => mq.removeEventListener('change', aggiorna);
+  }, []);
+
   // b.300 — indice del livello per la barra
   const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
@@ -849,9 +862,18 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 style={{ borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
                   background: evid ? `${accent}14` : 'transparent',
                   borderLeft: `3px solid ${attivo ? accent : 'transparent'}`,
-                  transition: 'background 0.3s, border-color 0.3s' }}>
+                  transition: 'background 0.3s, border-color 0.3s',
+                  // b.328 — chiude il float dell'immagine a margine (desktop)
+                  // prima della sezione successiva.
+                  overflow: schermoLargo ? 'hidden' : undefined }}>
+                {/* b.328 — su schermo largo l'immagine sta PRIMA del testo,
+                    flottata a destra: il testo la abbraccia (stile rivista).
+                    Su mobile resta dopo il paragrafo, a tutta larghezza. */}
+                {immaginiSezioni[i] && schermoLargo && (
+                  <img src={immaginiSezioni[i]} alt="" style={{ float: 'right', width: '42%', marginLeft: 14, marginBottom: 8, borderRadius: 12, objectFit: 'cover', maxHeight: 220, border: bordo }} />
+                )}
                 <TestoRicco testo={p} testoP={testoP} muto={muto} />
-                {immaginiSezioni[i] && (
+                {immaginiSezioni[i] && !schermoLargo && (
                   <img src={immaginiSezioni[i]} alt="" style={{ width: '100%', borderRadius: 14, margin: '6px 0 14px', display: 'block', objectFit: 'cover', maxHeight: 320, border: bordo }} />
                 )}
 

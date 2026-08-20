@@ -614,6 +614,21 @@ export default function useTranslationAPI({
     }
 
     if (uniqueLangCodes.size === 0) {
+      // b.328 — audit Mondo D2 (lato mittente): in una stanza PUBBLICA il
+      // destinatario non e chi c'e ORA, e il pubblico che arrivera. Scrivere
+      // a stanza vuota lasciava i messaggi senza traduzione per sempre.
+      // Le stanze di vetrina si riconoscono dai campi di politica pubblica
+      // (hot/roomType/suApprovazione), che le private non hanno: per quelle
+      // si traduce comunque verso UNA lingua ponte (inglese; italiano se
+      // gia scrivi in inglese). Nelle stanze private resta la regola b.289.
+      const ePubblica = currentRoomInfo.hot !== undefined
+        || currentRoomInfo.roomType !== undefined
+        || currentRoomInfo.suApprovazione !== undefined;
+      if (ePubblica) {
+        const ponte = currentMyLang === 'en' ? 'it' : 'en';
+        const lPonte = getLang(ponte);
+        if (lPonte) return { myL, targetLangs: [lPonte] };
+      }
       // b.289 — tutti parlano la mia lingua (o sono solo): non si paga
       // una traduzione che nessuno leggera.
       return { myL, targetLangs: [] };
