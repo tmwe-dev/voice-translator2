@@ -214,10 +214,14 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.355** (push #594) — traduttore subito nella home (scrivi/
-  detta → voce+testo, faccia a faccia a 180°), ricerca a tre corsie nel
-  Mondo, carosello con trascinamento e auto-selezione; Business/BizCard,
+- Versione: **b.356** (push #595) — home ripulita (icone con descrizione,
+  niente card), "Parla ora" a pagina piena con registro dei messaggi e voce
+  ElevenLabs madrelingua, distintivi negli angoli; Business/BizCard,
   PeepOff, libro di lingue e scanner attendono il collaudo dal vivo di Luca
+- IN SOSPESO dal collaudo del 20/08: la CARTINA di TaxiTalk non funziona e
+  il QR/link va reso funzionante (ordine esplicito di Luca, prossimo lavoro)
+- In sviluppo la CSP concede `unsafe-eval` e localhost su qualunque porto
+  (solo NODE_ENV=development): senza, la pagina locale non parte
 - Test: **2164 verdi su 144 file** · 0 errori di lint (avvisi tollerati)
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.

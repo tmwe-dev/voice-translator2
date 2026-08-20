@@ -45,6 +45,11 @@ function isOriginAllowed(origin) {
   if (!origin) return true; // Same-origin requests (no Origin header)
   if (ALLOWED_ORIGINS.has(origin)) return true;
 
+  // b.356 — SOLO in sviluppo: il server locale puo girare su un porto
+  // qualsiasi (il 3000 era occupato da una copia vecchia proprio mentre
+  // si collaudava). In produzione questa riga non esiste.
+  if (process.env.NODE_ENV === 'development' && /^http:\/\/localhost:\d+$/.test(origin)) return true;
+
   // 1. il dominio del progetto senza suffissi
   if (origin === `https://${NOME_PROGETTO}.vercel.app`) return true;
 
@@ -85,6 +90,14 @@ const SECURITY_HEADERS = {
   // ── DNS prefetch control ──
   'X-DNS-Prefetch-Control': 'on',
 };
+
+// b.356 — SOLO in sviluppo: Next carica i pezzi con `eval`, che la
+// nostra politica vieta. Senza questo permesso locale la pagina resta
+// sulla rotellina per sempre. In produzione non cambia nulla.
+if (process.env.NODE_ENV === 'development') {
+  SECURITY_HEADERS['Content-Security-Policy'] = SECURITY_HEADERS['Content-Security-Policy']
+    .replace("'wasm-unsafe-eval'", "'wasm-unsafe-eval' 'unsafe-eval'");
+}
 
 // ── Pagine di collaudo: utili in sviluppo, invisibili al pubblico ──
 // /testcenter, /debug e /startrek sono 2.168 righe di strumenti interni.

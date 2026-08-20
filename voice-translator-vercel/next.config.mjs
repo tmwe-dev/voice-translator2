@@ -23,7 +23,10 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io https://unpkg.com",
+              // b.356 — il permesso `unsafe-eval` esiste SOLO in sviluppo: Next
+              // carica i pezzi con `eval` e senza questo la pagina locale resta
+              // sulla rotellina. In produzione la politica non cambia.
+              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'" + (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : '') + " blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://accounts.google.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",

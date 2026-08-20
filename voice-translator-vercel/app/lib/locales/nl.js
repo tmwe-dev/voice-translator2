@@ -723,7 +723,7 @@ const locale_nl = {
   "loadingMap": "Kaart laden…",
   "scanWithCamera": "Scan met de camera",
   "taxiSharedDest": "TaxiTalk — Gedeelde bestemming",
-  "hearItWork": "Hoor het werken",
+  "speakNowTitle":"Spreek nu","hearItWork": "Hoor het werken",
   "dontShowAgain": "Niet meer tonen",
   "translatingDots": "Vertalen…",
   "anotherLanguage": "Andere taal",

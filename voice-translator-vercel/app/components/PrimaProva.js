@@ -6,18 +6,19 @@ import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 
 // ═══════════════════════════════════════════════════════════════
-// b.355 — IL TRADUTTORE SUBITO (Luca: «smettila di funzionare in modo
-// intelligente: l'utente scrive o DETTA nel campo e traduce subito,
-// voce e testo»). Il vecchio assaggio a frase fissa e diventato un
-// traduttore vero, faccia a faccia:
+// b.355→b.356 — "PARLA ORA", il traduttore subito.
 //
-// - scrivi o detti (microfono con trascrizione dal vivo dove il
-//   browser la offre) → appena ti fermi la traduzione arriva da sola,
-//   testo E voce;
-// - AMPIO come TaxiTalk, in alto nella pagina;
-// - il tasto FACCIA A FACCIA capovolge il palco: la scrittura scende
-//   in basso, il testone tradotto si gira di 180 gradi — io scrivo,
-//   la persona davanti a me legge dal suo lato e ascolta.
+// Collaudi di Luca, in ordine: «l'utente scrive o DETTA nel campo e
+// traduce direttamente con voce e testo» · «va rinominato e chiuso
+// dietro una icona Parla ora» · «aperto nasconde le altre parti e
+// occupa la pagina» · «piu grande il testo» · «i messaggi si
+// susseguono, non scompaiono».
+//
+// - scrivi o detti: appena ti fermi la frase si traduce da sola,
+//   entra nel REGISTRO (testone) e viene detta a voce;
+// - il campo si svuota da solo: la frase dopo si accoda sotto;
+// - il tasto FACCIA A FACCIA gira il registro di 180 gradi: io
+//   scrivo, la persona davanti a me legge dal suo lato e ascolta.
 // ═══════════════════════════════════════════════════════════════
 
 const FATTA = 'vt-prima-prova-fatta';
@@ -40,7 +41,9 @@ export default function PrimaProva({ onChiudi }) {
   const miaLingua = prefs?.lang || 'it';
   const [meta, setMeta] = useState(() => (RAPIDE.find((m) => m.split('-')[0] !== (prefs?.lang || 'it').split('-')[0]) || 'en-US'));
   const [testo, setTesto] = useState('');
-  const [tradotto, setTradotto] = useState('');
+  // b.356 — i messaggi SI SUSSEGUONO, non scompaiono (collaudo di Luca):
+  // ogni frase tradotta resta nel registro, la nuova si accoda sotto.
+  const [storia, setStoria] = useState([]);
   const [stato, setStato] = useState('quieto'); // quieto | traduco | parlo | errore
   const [capovolto, setCapovolto] = useState(false); // FACCIA A FACCIA
   const [detto, setDetto] = useState(false);         // microfono acceso
@@ -48,7 +51,9 @@ export default function PrimaProva({ onChiudi }) {
   const dettoRef = useRef(false); // per decidere la voce senza rilegare gli effetti
   const timerRef = useRef(null);
   const numeroRef = useRef(0);
+  const testoRef = useRef(''); // specchio del campo, per decidere senza rincorrere lo stato
   const audioRef = useRef(null);
+  const registroRef = useRef(null);
 
   const mete = [...RAPIDE.map((c) => LANGS.find((l) => l.code === c)).filter(Boolean),
     ...LANGS.filter((l) => !RAPIDE.includes(l.code) && l.code !== miaLingua)];
@@ -60,10 +65,25 @@ export default function PrimaProva({ onChiudi }) {
     setStato('parlo');
     try {
       const tgt = getLang(meta);
-      const v = await fetch('/api/tts-edge', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: t, langCode: tgt?.speech || meta }),
-      });
+      const lingua = tgt?.speech || meta;
+      // b.356 — la traduzione la legge una voce ElevenLabs NATIVA della
+      // lingua d'arrivo (collaudo di Luca): la rotta sceglie da se la voce
+      // madrelingua per quella lingua. Se ElevenLabs non risponde — credito
+      // finito, chiave assente, rete — si ripiega sulla voce di sistema:
+      // meglio una voce che nessuna voce.
+      let v = null;
+      try {
+        v = await fetch('/api/tts-elevenlabs', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: t, langCode: lingua }),
+        });
+      } catch { v = null; /* ElevenLabs irraggiungibile: si prova la voce di sistema */ }
+      if (!v || !v.ok) {
+        v = await fetch('/api/tts-edge', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: t, langCode: lingua }),
+        });
+      }
       if (!v.ok) { setStato('quieto'); return; }
       const url = URL.createObjectURL(await v.blob());
       try { audioRef.current?.pause(); } catch { /* la voce precedente era gia ferma: niente da interrompere */ }
@@ -75,10 +95,10 @@ export default function PrimaProva({ onChiudi }) {
     } catch { setStato('quieto'); }
   }, [meta]);
 
-  // ── LA TRADUZIONE, testo e voce insieme ──
+  // ── LA TRADUZIONE: la frase finita entra nel registro, con la voce ──
   const traduci = useCallback(async (daDire) => {
     const t = daDire.trim();
-    if (!t) { setTradotto(''); return; }
+    if (!t) return;
     const mio = ++numeroRef.current;
     setStato('traduco');
     try {
@@ -91,10 +111,18 @@ export default function PrimaProva({ onChiudi }) {
         }),
       });
       const d = await r.json().catch(() => null);
-      if (mio !== numeroRef.current) return; // e gia partita una frase piu nuova
-      if (!d?.translated) { setStato('errore'); return; }
-      setTradotto(d.translated);
-      setStato('quieto');
+      if (!d?.translated) { if (mio === numeroRef.current) setStato('errore'); return; }
+      // Se l'utente sta ANCORA ALLUNGANDO la stessa frase, questa resa e
+      // parziale: si butta, arrivera quella piena. Se invece ha gia
+      // iniziato la frase dopo, questa resta valida e si accoda comunque:
+      // i messaggi si susseguono, non scompaiono (collaudo di Luca).
+      const attuale = testoRef.current.trim();
+      const staAllungando = attuale !== t && attuale.startsWith(t);
+      if (staAllungando) return;
+      // in ordine di partenza, anche se le risposte arrivano scomposte
+      setStoria((prima) => [...prima, { n: mio, detto: t, resa: d.translated }].sort((a, b) => a.n - b.n));
+      if (attuale === t) setTesto('');
+      if (mio === numeroRef.current) setStato('quieto');
       try { memSet(FATTA, '1'); } catch { /* niente memoria: pazienza */ }
       // La voce parte da sola — ma NON mentre il microfono e aperto,
       // altrimenti il telefono detta a se stesso la propria traduzione.
@@ -102,14 +130,21 @@ export default function PrimaProva({ onChiudi }) {
     } catch { if (mio === numeroRef.current) setStato('errore'); }
   }, [miaLingua, meta, parla]);
 
-  // Appena smetti di scrivere (o cambi meta: traduci cambia con lei),
-  // la traduzione parte da sola.
+  useEffect(() => { testoRef.current = testo; }, [testo]);
+
+  // Appena smetti di scrivere, la frase parte da sola.
   useEffect(() => {
     clearTimeout(timerRef.current);
-    if (!testo.trim()) { setTradotto(''); return; }
-    timerRef.current = setTimeout(() => traduci(testo), 750);
+    if (!testo.trim()) return;
+    timerRef.current = setTimeout(() => traduci(testo), 900);
     return () => clearTimeout(timerRef.current);
   }, [testo, traduci]);
+
+  // l'ultima frase del registro sempre in vista
+  useEffect(() => {
+    const el = registroRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [storia, stato]);
 
   // ── LA DETTATURA (trascrizione dal vivo, stessa via di b.352) ──
   const detta = useCallback(() => {
@@ -138,7 +173,7 @@ export default function PrimaProva({ onChiudi }) {
       };
       rec.onend = () => {
         setDetto(false); dettoRef.current = false;
-        // il microfono si e chiuso: ora la voce puo leggere l'ultima frase
+        // il microfono si e chiuso: l'ultima frase parte subito, con la voce
         setTesto((attuale) => { if (attuale.trim()) traduci(attuale); return attuale; });
       };
       rec.onerror = () => { setDetto(false); dettoRef.current = false; };
@@ -157,6 +192,7 @@ export default function PrimaProva({ onChiudi }) {
 
   const micDisponibile = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`;
+  const ultimaResa = storia.length ? storia[storia.length - 1].resa : '';
 
   // ── I DUE BLOCCHI (si scambiano di posto col capovolgimento) ──
   const bloccoScrittura = (
@@ -193,51 +229,70 @@ export default function PrimaProva({ onChiudi }) {
     </div>
   );
 
+  // Il REGISTRO: le frasi si susseguono, l'ultima e un testone.
   const bloccoTradotto = (
-    <div key="letto" style={{
-      flex: capovolto ? 1 : 'none', display: 'flex', flexDirection: 'column',
-      justifyContent: 'center', minHeight: capovolto ? 200 : 96,
+    <div key="letto" ref={registroRef} style={{
+      flex: 1, minHeight: capovolto ? 200 : 140, overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 14,
       padding: capovolto ? '18px 14px' : 13, borderRadius: 16, border: bordo,
       background: 'rgba(255,255,255,0.04)',
       // IL RIBALTONE: la persona davanti legge dal suo lato
       transform: capovolto ? 'rotate(180deg)' : 'none',
     }}>
-      <div style={{ fontSize: capovolto ? 'clamp(26px, 6vw, 44px)' : 20, fontWeight: 800,
-        lineHeight: 1.3, color: C.textPrimary, textAlign: capovolto ? 'center' : 'left',
-        fontFamily: FONT, overflowWrap: 'anywhere' }}>
-        {tradotto || (stato === 'traduco' ? '…' : '')}
-        {!tradotto && stato !== 'traduco' && (
-          <span style={{ color: C.textMuted, fontWeight: 500, fontSize: capovolto ? 22 : 14 }}>
-            {capovolto ? 'La traduzione comparira qui, girata verso chi hai davanti.' : 'Qui la traduzione, testo e voce.'}
-          </span>
-        )}
-      </div>
-      {stato === 'errore' && <div style={{ color: '#ff5470', fontSize: 12, marginTop: 6 }}>La traduzione non e arrivata: riprova.</div>}
+      {storia.length === 0 && stato !== 'traduco' && (
+        <span style={{ color: C.textMuted, fontWeight: 500, fontFamily: FONT,
+          fontSize: capovolto ? 22 : 14, textAlign: capovolto ? 'center' : 'left' }}>
+          {capovolto ? 'La traduzione comparira qui, girata verso chi hai davanti.' : 'Qui la traduzione, testo e voce.'}
+        </span>
+      )}
+      {storia.map((riga, i) => (
+        <div key={i} style={{
+          // b.356 — «piu grande il testo»: l'ultima frase e un testone,
+          // le precedenti restano leggibili ma si fanno da parte.
+          fontSize: i === storia.length - 1
+            ? (capovolto ? 'clamp(34px, 8vw, 58px)' : 26)
+            : (capovolto ? 20 : 15),
+          fontWeight: 800, lineHeight: 1.25,
+          color: i === storia.length - 1 ? C.textPrimary : C.textMuted,
+          textAlign: capovolto ? 'center' : 'left',
+          fontFamily: FONT, overflowWrap: 'anywhere',
+        }}>
+          {riga.resa}
+        </div>
+      ))}
+      {stato === 'traduco' && (
+        <div style={{ fontSize: capovolto ? 28 : 18, color: C.textMuted, fontFamily: FONT,
+          textAlign: capovolto ? 'center' : 'left' }}>…</div>
+      )}
+      {stato === 'errore' && <div style={{ color: '#ff5470', fontSize: 12, fontFamily: FONT }}>La traduzione non e arrivata: riprova.</div>}
     </div>
   );
 
   return (
     <div style={{
       width: '100%', margin: '0 0 14px', boxSizing: 'border-box',
+      // la colonna della home e un flexbox: niente compressione, e anzi
+      // il pannello CRESCE a occupare la pagina (b.356: aperto, e da solo)
+      flex: '1 0 auto',
       display: 'flex', flexDirection: 'column', gap: 10,
-      background: C.cardBg || 'rgba(16,24,48,0.6)', border: `1px solid ${(C.accent || '#5b8cff')}30`,
+      background: C.cardBg || 'rgba(16,24,48,0.6)', border: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`,
       borderRadius: 20, padding: 14,
       minHeight: capovolto ? 'min(72vh, 640px)' : 'auto',
-      boxShadow: `0 10px 40px -12px ${(C.accent || '#5b8cff')}30`,
     }}>
       {/* testata del palco */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <Icon name="speaker" size={16} color={C.accent || '#5b8cff'} />
         <span style={{ flex: 1, fontSize: 14, fontWeight: 800, color: C.textPrimary, fontFamily: FONT }}>
-          {L('hearItWork')}
+          {L('speakNowTitle')}
         </span>
         <button onClick={() => { vibrate(6); setCapovolto((v) => !v); }}
           aria-pressed={capovolto}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 13px', borderRadius: 999,
             cursor: 'pointer', fontFamily: FONT, fontSize: 12.5, fontWeight: 800,
-            background: capovolto ? `linear-gradient(90deg, ${C.accent || '#5b8cff'}, ${C.accent2 || '#38e1ff'})` : 'transparent',
-            border: capovolto ? 'none' : bordo, color: capovolto ? '#04121c' : C.textSecondary }}>
-          <Icon name="swap" size={14} color={capovolto ? '#04121c' : C.textSecondary} />
+            background: capovolto ? `${C.accent || '#5b8cff'}22` : 'transparent',
+            border: capovolto ? `1.5px solid ${C.accent || '#5b8cff'}` : bordo,
+            color: capovolto ? (C.accent || '#5b8cff') : C.textSecondary }}>
+          <Icon name="swap" size={14} color={capovolto ? (C.accent || '#5b8cff') : C.textSecondary} />
           Faccia a faccia
         </button>
         <button onClick={() => { try { memSet(FATTA, '1'); } catch { /* la memoria locale non e disponibile: si chiude lo stesso */ } onChiudi?.(); }}
@@ -249,11 +304,11 @@ export default function PrimaProva({ onChiudi }) {
       {capovolto ? (<>{bloccoTradotto}{bloccoScrittura}</>) : (<>{bloccoScrittura}{bloccoTradotto}</>)}
 
       {/* la voce, sempre a portata di mano per farla ripetere */}
-      <button onClick={() => parla(tradotto)} disabled={!tradotto || stato === 'parlo'}
+      <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa || stato === 'parlo'}
         style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none',
-          cursor: tradotto ? 'pointer' : 'default', fontFamily: FONT, fontSize: 15, fontWeight: 800,
-          background: tradotto ? `linear-gradient(90deg, ${C.accent || '#5b8cff'}, ${C.accent2 || '#38e1ff'})` : 'rgba(255,255,255,0.06)',
-          color: tradotto ? '#04121c' : C.textMuted, opacity: stato === 'parlo' ? 0.7 : 1 }}>
+          cursor: ultimaResa ? 'pointer' : 'default', fontFamily: FONT, fontSize: 15, fontWeight: 800,
+          background: 'rgba(255,255,255,0.06)',
+          color: ultimaResa ? (C.accent || '#5b8cff') : C.textMuted, opacity: stato === 'parlo' ? 0.7 : 1 }}>
         {stato === 'parlo' ? '…' : `▶ ${L('listenWord')}`}
       </button>
     </div>

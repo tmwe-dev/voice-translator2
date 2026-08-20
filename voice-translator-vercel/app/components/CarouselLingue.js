@@ -61,6 +61,18 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
     setCentro((c) => (c + dir + totale) % totale);
   }, [totale]);
 
+  // b.356 — "lo scroll e troppo veloce, una bandiera alla volta" (Luca):
+  // la rotella e il trascinamento sparano decine di eventi per un solo
+  // gesto. Questo cancello lascia passare UN passo ogni 450 ms; le
+  // frecce restano libere, un tocco = un passo per natura.
+  const ultimoPasso = useRef(0);
+  const scorriConCalma = useCallback((dir) => {
+    const ora = Date.now();
+    if (ora - ultimoPasso.current < 450) return;
+    ultimoPasso.current = ora;
+    scorri(dir);
+  }, [scorri]);
+
   const scegli = useCallback((l) => { vibrate(6); onScegli(l); }, [onScegli]);
 
   // le CINQUE in vista: come nel Wueform, il colore racconta la distanza
@@ -163,13 +175,13 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
         onMouseUp={(e) => {
           if (toccoX.current == null) return;
           const d = toccoX.current - e.clientX;
-          if (Math.abs(d) > 40) scorri(d > 0 ? 1 : -1);
+          if (Math.abs(d) > 40) scorriConCalma(d > 0 ? 1 : -1);
           toccoX.current = null;
         }}
         onMouseLeave={() => { toccoX.current = null; }}
         onWheel={(e) => {
           const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-          if (Math.abs(d) > 12) scorri(d > 0 ? 1 : -1);
+          if (Math.abs(d) > 12) scorriConCalma(d > 0 ? 1 : -1);
         }}>
         {freccia(-1, '‹')}
         <div key={salto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
@@ -201,19 +213,17 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
         {freccia(1, '›')}
       </div>
 
-      {/* il nome della lingua al centro, sincronizzato — e la CONFERMA:
-          toccare la bandiera centrale la sceglie (anello del Wueform) */}
-      <button onClick={() => scegli(alCentro)}
-        style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 8, padding: '7px 18px',
-          borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 14, fontWeight: 700,
-          color: C.textPrimary, transition: 'all .3s',
-          background: alCentro.code === selezionata ? `${C.accent}18` : 'rgba(255,255,255,0.05)',
-          border: `1.5px solid ${alCentro.code === selezionata ? C.accent : C.cardBorder}`,
-          boxShadow: alCentro.code === selezionata ? `0 0 24px -6px ${C.accent}80` : 'none' }}>
-        <span style={{ fontSize: 17 }}>{alCentro.flag}</span>
+      {/* b.356 — il bottone col nome del paese e stato tolto (collaudo di
+          Luca: «il nome del paese non serve metterlo in un bottone»). Resta
+          il nome nudo, piccolo, sotto le bandiere: informa e basta. La
+          scelta la fa gia la rotazione (auto-selezione) o il tocco sulla
+          bandiera centrale. */}
+      <div aria-live="polite" style={{ marginTop: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700,
+        color: alCentro.code === selezionata ? C.accent : C.textSecondary,
+        display: 'flex', alignItems: 'center', gap: 6 }}>
         {alCentro.name}
         {alCentro.code === selezionata && <span style={{ color: C.accent, fontSize: 12 }}>✓</span>}
-      </button>
+      </div>
 
       <style>{`
         @keyframes vtScivolaD { from { transform: translateX(52px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

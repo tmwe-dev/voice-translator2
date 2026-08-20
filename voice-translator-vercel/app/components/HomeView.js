@@ -8,11 +8,11 @@ import { useApp } from '../contexts/AppContext.js';
 // vecchia. `toast` e la coda avvisi (lib/avvisi.js), non il disegno.
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
 import { toast } from '../lib/avvisi.js';
-import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
+import { IconQR, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
 import { BatteryPillSlot } from './BatteryPill.js';
-import PrimaProva, { primaProvaGiaFatta, riapriPrimaProva } from './PrimaProva.js'; // b.96
+import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 
 // ═══════════════════════════════════════
@@ -86,9 +86,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   const { L, S, prefs, setPrefs, savePrefs, myLang, setMyLang, setView, theme, setTheme } = useApp();
 
   const [activeRooms, setActiveRooms] = useState([]);
-  // b.96 — la prima prova si mostra una volta sola, e solo al primo avvio
+  // b.356 — il traduttore "Parla ora" sta CHIUSO dietro la sua icona
+  // (collaudo di Luca): niente piu apertura automatica al primo avvio.
   const [mostraPrimaProva, setMostraPrimaProva] = useState(false);
-  useEffect(() => { setMostraPrimaProva(!primaProvaGiaFatta()); }, []);
 
   // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
   const C = useMemo(() => ({
@@ -187,25 +187,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
     }
   };
 
-  // b.354 — LA LUCE CHE SEGUE IL MOUSE (Wueform, tema scuro): un'area
-  // illuminata al centro dei tasti che si muove col puntatore. Handler
-  // condivisi: si appoggiano a variabili CSS sul contenitore.
-  const luce = {
-    onMouseMove: (e) => {
-      const r = e.currentTarget.getBoundingClientRect();
-      e.currentTarget.style.setProperty('--lx', `${e.clientX - r.left}px`);
-      e.currentTarget.style.setProperty('--ly', `${e.clientY - r.top}px`);
-    },
-    onMouseEnter: (e) => e.currentTarget.style.setProperty('--lo', '1'),
-    onMouseLeave: (e) => e.currentTarget.style.setProperty('--lo', '0'),
-  };
-  const veloLuce = (
-    <span aria-hidden style={{
-      position: 'absolute', inset: 0, pointerEvents: 'none', borderRadius: 'inherit',
-      opacity: 'var(--lo, 0)', transition: 'opacity .35s',
-      background: `radial-gradient(200px circle at var(--lx, 50%) var(--ly, 50%), ${C.accent}1f, transparent 70%)`,
-    }} />
-  );
+  // b.356 — la "luce che segue il mouse" di b.354 e stata tolta insieme
+  // alle card: le voci sono icone nude, non hanno piu una superficie.
 
   return (
     <main style={S.page} aria-label={L('homeAria')}>
@@ -228,45 +211,43 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         width: '100%', maxWidth: 680, margin: '0 auto',
       }}>
 
-        {/* ═══ Header ═══ */}
-        <div style={{ paddingTop: 'max(24px, env(safe-area-inset-top))', marginBottom: 24 }}>
-          {/* Language selector + batteria credito */}
-          <div style={{ position: 'relative', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {/* b.191 — icona in alto a sinistra che porta al Mondo (Luca) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              {/* b.265 — numero di rilascio: si vede subito se la pagina
-                  davanti agli occhi e gia quella nuova. Aumenta di uno a
-                  ogni push (PUSH in constants.js). */}
-              <span
-                aria-label={`rilascio numero ${PUSH}`}
-                style={{
-                  fontFamily: FONT, fontSize: 11, fontWeight: 700, lineHeight: 1,
-                  color: C.accent, background: C.cardBg,
-                  border: `1px solid ${C.accent}40`, borderRadius: 8,
-                  padding: '5px 7px', flexShrink: 0, letterSpacing: 0.3,
-                  userSelect: 'text',
-                }}
-              >#{PUSH}</span>
-{/* b.354 — il mondo NON sta piu qui in alto (Luca: «non c'e nelle
-                  altre pagine»): la sua icona vive nella carta "Il mondo ora". */}
-              <BatteryPillSlot />
-            </div>
-{/* b.354 — la dropdown e stata sostituita dal CAROSELLO delle
-                bandiere copiato da Wueform: vive sotto il titolo. */}
-
+        {/* ═══ Header ═══
+            b.356 — collaudo di Luca: «sposta nell'angolo in alto il numero
+            versione, la batteria nell'angolo a destra e fai che non spinga
+            in basso nessun elemento, elimina padding inutili». I due
+            distintivi ora GALLEGGIANO agli angoli: non occupano una riga,
+            il titolo sale, la descrizione gli sta subito sotto. */}
+        <div style={{ marginBottom: 10, position: 'relative', width: '100%', flexShrink: 0 }}>
+          {/* b.265 — numero di rilascio, nell'angolo in alto a sinistra */}
+          <span
+            aria-label={`rilascio numero ${PUSH}`}
+            style={{
+              position: 'absolute', top: 0, left: 0, zIndex: 3,
+              fontFamily: FONT, fontSize: 11, fontWeight: 700, lineHeight: 1,
+              color: C.accent, background: C.cardBg,
+              border: `1px solid ${C.accent}40`, borderRadius: 8,
+              padding: '5px 7px', letterSpacing: 0.3,
+              userSelect: 'text',
+            }}
+          >#{PUSH}</span>
+          {/* la batteria del credito, nell'angolo in alto a destra */}
+          <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 3 }}>
+            <BatteryPillSlot />
           </div>
 
           {/* Title */}
           <h1 style={{
             fontSize: 28, fontWeight: 800, letterSpacing: -0.5,
             color: C.textPrimary, fontFamily: FONT,
-            margin: 0, lineHeight: 1.2,
+            margin: 0, lineHeight: 1.2, textAlign: 'center',
+            /* i due angoli sono occupati dai distintivi: il titolo non ci finisce sotto */
+            padding: '0 56px',
           }}>
             {L('homeTitle')}
           </h1>
 
           {/* Striscia dei fatti: arricchisce senza appesantire */}
-          <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
             {/* Il numero si conta, non si scrive: diceva 32 quando erano 44.
                 b.138 — le tre etichette erano in italiano fisso: chi aveva
                 l'interfaccia in inglese leggeva "44 lingue · Crittografia
@@ -283,6 +264,15 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </div>
         </div>
 
+        {/* ── b.356 — "PARLA ORA" A PAGINA PIENA ──
+            Aperto, il traduttore NASCONDE tutto il resto (collaudo di Luca:
+            «nasconde le altre parti e i pulsanti e occupa la pagina per
+            permettere la traduzione e la visualizzazione ampia»). La ✕
+            riporta alla home normale. */}
+        {mostraPrimaProva ? (
+          <PrimaProva onChiudi={() => setMostraPrimaProva(false)} />
+        ) : (<>
+
         {/* b.354 — IL CAROSELLO DELLE BANDIERE (Wueform) al posto della
             dropdown: la lingua si sceglie qui, sotto il titolo. */}
         <div style={{ margin: '18px 0 6px' }}>
@@ -293,195 +283,92 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             C={C} L={L} />
         </div>
 
-        {/* ── b.355 — IL TRADUTTORE SUBITO (era la "prima prova" b.96) ──
-            Non piu un assaggio a frase fissa: scrivi o detti, la traduzione
-            parte da sola con testo e voce, e col tasto Faccia a faccia il
-            testone si gira verso la persona che hai davanti. Sta in alto,
-            sotto il carosello, con tutto lo spazio che gli serve. */}
-        {mostraPrimaProva ? (
-          <PrimaProva
-            onChiudi={() => setMostraPrimaProva(false)}
-          />
-        ) : (
-          /* b.266 — quando il blocco e chiuso resta questa riga: e la prova
-             audio immediata, e senza di lei l'unico modo di riaverla era
-             svuotare la memoria del browser. */
+        {/* b.356 — l'icona "Parla ora": il traduttore sta chiuso qui
+            dietro e quando si apre prende la pagina intera. */}
+        {(
           <button
             onClick={() => { vibrate(); riapriPrimaProva(); setMostraPrimaProva(true); }}
+            aria-label={L('speakNowTitle')}
+            title={L('speakNowTitle')}
             style={{
-              width: '100%', margin: '0 0 14px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              background: 'none', border: `1px dashed ${C.accent}35`, borderRadius: 14,
-              padding: '9px 12px', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-              fontFamily: FONT, fontSize: 12, fontWeight: 700, color: C.accent,
+              margin: '0 auto 12px', flexShrink: 0,
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', padding: 0,
+              cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
             }}
           >
-            <Icon name="speaker" size={14} color={C.accent} />
-            {L('hearItWork')}
+            <span style={{
+              width: 42, height: 42, borderRadius: 21,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: C.cardBg, border: `1px solid ${C.cardBorder}`,
+            }}>
+              <Icon name="mic" size={18} color={C.accent} />
+            </span>
+            <span style={{ fontFamily: FONT, fontSize: 10.5, fontWeight: 700, color: C.textMuted }}>
+              {L('speakNowTitle')}
+            </span>
           </button>
         )}
         {/* ── FINE b.96 ── */}
 
-        {/* ═══ Le 4 azioni: righe in UNA card (spec sciame) ═══
-            Tile gradiente solo sulla primaria; le altre tenui.
-            Compatta, leggibile, zero card che dilagano. */}
-        <div {...luce} style={{
-          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-          borderRadius: 18, padding: '2px 14px', marginBottom: 12,
-          position: 'relative', overflow: 'hidden',
+        {/* ═══ b.356 — LE VOCI DELLA HOME COME ICONE ═══
+            Collaudo di Luca: «tutti i tasti della home possono diventare
+            icone con descrizione sotto, senza pulsante: cosi e piu pulita».
+            Niente piu card una sotto l'altra: una griglia di icone nude,
+            titolo e descrizione sotto, tutto centrato. */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: '18px 10px', width: '100%', margin: '10px 0 20px', flexShrink: 0,
         }}>
-          {veloLuce}
-          {ACTIONS.map((action, idx) => {
-            const tilePieno = !!action.primary;
-            // b.354 — ogni azione ha il SUO colore: tessere grandi, gradiente
-            // acceso, riflesso in alto e ombra portata — l'effetto 3D chiesto.
-            const TINTE = {
-              qr: ['#5b8cff', '#38e1ff'], mail: ['#a855f7', '#ec4899'],
-              video: ['#f97316', '#ffc44d'], chat: ['#3ddc84', '#38e1ff'],
-              gift: ['#ec4899', '#ffc44d'], taxi: ['#ffc44d', '#f97316'],
-            };
-            const [t1, t2] = TINTE[action.icon] || [C.accent, C.accent2];
-            return (
-              <button
-                key={action.id}
-                onClick={() => handleAction(action.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                  // b.355 — ALTEZZA UNIFORME e opacita ESPLICITA: dal vivo le
-                  // righe potevano restare schiacciate/invisibili ("hai
-                  // schiacciato tutti i pulsanti", collaudo di Luca). Niente
-                  // piu giochi di opacita al passaggio: la luce che segue il
-                  // mouse fa gia il lavoro.
-                  minHeight: 72, opacity: 1,
-                  padding: '13px 2px', background: 'none', textAlign: 'left',
-                  border: 'none', cursor: 'pointer',
-                  borderBottom: idx < ACTIONS.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
-                }}
-              >
-                <span style={{
-                  width: 52, height: 52, borderRadius: 15, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
-                  background: `linear-gradient(150deg, ${t1}, ${t2})`,
-                  border: 'none', color: '#fff', position: 'relative',
-                  boxShadow: `0 6px 16px -5px ${t1}90, inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.25)`,
-                }}>
-                  {action.icon === 'qr' ? <IconQR size={26} />
-                    : action.icon === 'mail' ? <IconMail size={26} />
-                    : action.icon === 'video' ? <IconVideoCall size={26} />
-                    : action.icon === 'gift' ? <Icon name="gift" size={26} color="#fff" />
-                    : action.icon === 'chat' ? <Icon name="chat" size={26} color="#fff" />
-                    : <IconCar size={26} />}
-                </span>
-                <span style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                    {action.title || L(action.titleKey)}
-                  </span>
-                  <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                    {L(action.descKey)}
-                  </span>
-                </span>
-                <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* ═══ Il mondo ora — la Community come riga viva ═══ */}
-        <div {...luce} style={{
-          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-          borderRadius: 18, padding: '2px 14px', marginBottom: 20,
-          position: 'relative', overflow: 'hidden',
-        }}>
-          {veloLuce}
-          <button
-            onClick={() => { vibrate(); setView('mondo'); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-              padding: '13px 2px', background: 'none', textAlign: 'left',
-              border: 'none', cursor: 'pointer',
-            }}
-          >
-            {/* b.354 — il MONDO, sceso dalla testata: la sua icona vive qui,
-                in tessera colorata come le azioni in alto. */}
-            <span style={{
-              width: 52, height: 52, borderRadius: 15, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: `linear-gradient(150deg, #38e1ff, #5b8cff)`, color: '#fff',
-              boxShadow: '0 6px 16px -5px #38e1ff90, inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.25)',
-            }}>
-              <Icon name="globe" size={26} color="#fff" />
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                {L('worldNowTitle')}
+          {[
+            ...ACTIONS,
+            { id: 'mondo', icon: 'globe', titleKey: 'worldNowTitle', descKey: 'worldNowDesc' },
+            { id: 'life', icon: 'star', titleKey: 'lifeEntry', descKey: 'lifeEntryDesc' },
+            { id: 'business', icon: 'credit', titleKey: 'businessEntry', descKey: 'businessEntryDesc' },
+            GIFT,
+          ].map((voce) => (
+            <button
+              key={voce.id}
+              onClick={() => {
+                if (voce.id === 'mondo') { vibrate(); setView('mondo'); return; }
+                if (voce.id === 'life') { vibrate(); setView('life'); return; }
+                if (voce.id === 'business') { vibrate(); setView('business'); return; }
+                handleAction(voce.id);
+              }}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
+                background: 'none', border: 'none', padding: '4px 2px',
+                cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                minHeight: 96, opacity: 1,
+              }}
+            >
+              <span style={{
+                width: 54, height: 54, borderRadius: 16, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+                background: voce.primary ? `linear-gradient(145deg, ${C.accent}, ${C.accent2})` : C.cardBg,
+                border: voce.primary ? 'none' : `1px solid ${C.cardBorder}`,
+                color: voce.primary ? '#fff' : C.textSecondary,
+                boxShadow: voce.primary ? `0 4px 14px -4px ${C.accent}70` : 'none',
+              }}>
+                {/* b.356 — icone parlanti (Luca): il QR per chi hai davanti,
+                    l'invito che parte, il taxi GIALLO, le persone del gruppo. */}
+                {voce.icon === 'qr' ? <IconQR size={26} />
+                  : voce.icon === 'mail' ? <Icon name="share" size={26} color={C.accent} />
+                  : voce.icon === 'car' ? <span style={{ color: '#ffc44d', lineHeight: 0 }}><IconCar size={26} /></span>
+                  : voce.icon === 'chat' ? <Icon name="users" size={26} color={C.textPrimary} />
+                  : voce.icon === 'globe' ? <Icon name="globe" size={26} color={C.accent} />
+                  : voce.icon === 'star' ? <Icon name="star" size={26} color={C.accent} />
+                  : voce.icon === 'credit' ? <Icon name="credit" size={26} color={C.accent} />
+                  : <Icon name="gift" size={26} color={C.accent} />}
               </span>
-              <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                {L('worldNowDesc')}
+              <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, fontFamily: FONT, textAlign: 'center', lineHeight: 1.2 }}>
+                {voce.title || L(voce.titleKey)}
               </span>
-            </span>
-            <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
-          </button>
-        </div>
-
-        {/* ═══ b.198 · Life — Podcast, tutor e corsi coi Compagni ═══ */}
-        <div {...luce} style={{
-          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-          borderRadius: 18, padding: '2px 14px', marginBottom: 20,
-          position: 'relative', overflow: 'hidden',
-        }}>
-          {veloLuce}
-          <button
-            onClick={() => { vibrate(); setView('life'); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-              padding: '13px 2px', background: 'none', textAlign: 'left',
-              border: 'none', cursor: 'pointer',
-            }}
-          >
-            <span style={{ display: 'inline-flex', flexShrink: 0, width: 40, justifyContent: 'center' }}>
-              <Icon name="star" size={20} color={C.accent1 || C.accent} />
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                {L('lifeEntry')}
+              <span style={{ fontSize: 10.5, color: C.textMuted, fontFamily: FONT, textAlign: 'center', lineHeight: 1.35 }}>
+                {L(voce.descKey)}
               </span>
-              <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                {L('lifeEntryDesc')}
-              </span>
-            </span>
-            <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
-          </button>
-        </div>
-
-        {/* ═══ b.346 · Business — sezione parallela per gli strumenti di
-            lavoro (primo: il BizCard Scanner intero, copiato verbatim) ═══ */}
-        <div {...luce} style={{
-          background: C.cardBg, border: `1px solid ${C.cardBorder}`,
-          borderRadius: 18, padding: '2px 14px', marginBottom: 20,
-          position: 'relative', overflow: 'hidden',
-        }}>
-          {veloLuce}
-          <button
-            onClick={() => { vibrate(); setView('business'); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-              padding: '13px 2px', background: 'none', textAlign: 'left',
-              border: 'none', cursor: 'pointer',
-            }}
-          >
-            <span style={{ display: 'inline-flex', flexShrink: 0, width: 40, justifyContent: 'center' }}>
-              <Icon name="credit" size={20} color={C.accent2 || C.accent} />
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-                {L('businessEntry')}
-              </span>
-              <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-                {L('businessEntryDesc')}
-              </span>
-            </span>
-            <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
-          </button>
+            </button>
+          ))}
         </div>
 
         {/* ═══ Active Rooms ═══ */}
@@ -527,38 +414,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </div>
         )}
 
-        {/* ═══ b.183 — Il regalo, in fondo, col fiocco ═══ */}
-        <button
-          onClick={() => handleAction(GIFT.id)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-            padding: '13px 16px', marginTop: 'auto', marginBottom: 8,
-            background: `linear-gradient(135deg, ${C.accent}0F, ${C.accent2}0A)`,
-            border: `1px solid ${C.accent}25`, borderRadius: 16,
-            cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
-            transition: 'opacity 0.2s',
-          }}
-          onMouseOver={(e) => e.currentTarget.style.opacity = 0.85}
-          onMouseOut={(e) => e.currentTarget.style.opacity = 1}
-        >
-          <span style={{
-            width: 40, height: 40, borderRadius: 12, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
-            background: `${C.accent}18`, border: `1px solid ${C.accent}30`,
-          }}>
-            {/* il fiocco: l'icona regalo */}
-            <Icon name="gift" size={20} color={C.accent} />
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 14.5, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-              {L(GIFT.titleKey)}
-            </span>
-            <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
-              {L(GIFT.descKey)}
-            </span>
-          </span>
-          <span style={{ color: C.accent, fontSize: 14, flexShrink: 0 }}>›</span>
-        </button>
+        </>)}
 
       </div>
 

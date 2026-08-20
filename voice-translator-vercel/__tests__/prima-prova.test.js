@@ -10,10 +10,11 @@ const leggi = (p) => fs.readFileSync(path.join(APP, p), 'utf8');
 const src = leggi('components/PrimaProva.js');
 
 describe('il traduttore subito', () => {
-  it('è montato nella Home, non nascosto in una pagina secondaria', () => {
+  it('è montato nella Home, chiuso dietro l\'icona "Parla ora"', () => {
     const home = leggi('components/HomeView.js');
     expect(home).toMatch(/<PrimaProva/);
-    expect(home, 'aperto da solo al primo avvio').toMatch(/primaProvaGiaFatta/);
+    expect(home, 'l\'icona che lo apre esiste').toMatch(/riapriPrimaProva/);
+    expect(home, 'si chiama "Parla ora"').toMatch(/speakNowTitle/);
   });
 
   it('si scrive o si detta, e la traduzione parte da sola', () => {
@@ -24,8 +25,11 @@ describe('il traduttore subito', () => {
     expect(src, 'la trascrizione arriva nel campo mentre parli').toMatch(/interimResults = true/);
   });
 
-  it('la voce arriva insieme al testo, senza premere niente', () => {
-    expect(src, 'senza voce resta un esercizio di lettura').toContain('tts-edge');
+  it('la voce arriva insieme al testo, ed e madrelingua', () => {
+    // b.356 — prima ElevenLabs (voce NATIVA della lingua d'arrivo), e solo
+    // se non risponde la voce di sistema: meglio una voce che nessuna.
+    expect(src, 'la voce madrelingua').toContain('/api/tts-elevenlabs');
+    expect(src, 'il ripiego se ElevenLabs tace').toContain('tts-edge');
     expect(src).toMatch(/new Audio/);
     expect(src, 'la voce parte dalla traduzione appena arrivata').toMatch(/parla\(d\.translated\)/);
     // Ma non mentre il microfono e aperto: il telefono si detterebbe
@@ -61,8 +65,12 @@ describe('il traduttore subito', () => {
     expect(src, 'l\'errore si vede, non resta muto').toContain('La traduzione non e arrivata');
   });
 
-  it('una risposta in ritardo non scavalca una frase più nuova', () => {
-    // Due traduzioni in volo: vince l'ultima chiesta, non l'ultima arrivata.
-    expect(src).toMatch(/mio !== numeroRef\.current/);
+  it('i messaggi si susseguono, e restano in ordine', () => {
+    // b.356 — nessuna frase tradotta viene persa: entra nel registro, e
+    // le risposte che arrivano scomposte si rimettono in fila.
+    expect(src, 'il registro esiste').toMatch(/setStoria/);
+    expect(src, 'in ordine di partenza').toMatch(/sort\(\(a, b\) => a\.n - b\.n\)/);
+    // Ma una resa parziale (l'utente sta ancora allungando la frase) si butta.
+    expect(src).toMatch(/staAllungando/);
   });
 });
