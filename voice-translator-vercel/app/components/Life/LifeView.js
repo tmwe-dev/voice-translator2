@@ -430,6 +430,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const dettaDomanda = useCallback(async () => {
     if (micDomanda === 'registro') { try { micRecRef.current?.stop(); } catch { /* gia fermo: non e un guasto */ } return; }
     if (micDomanda) return;
+    // b.342 — DETTATURA IN DIRETTA: prima il testo compariva tutto insieme
+    // alla fine, "lasciando sorpreso l'utente" (collaudo di Luca). Dove il
+    // browser sa trascrivere in tempo reale (Chrome/Safari), le parole
+    // compaiono MENTRE si parla, gratis. Altrove resta la via registra-poi-
+    // trascrivi, ma con lo stato bene in vista.
+    const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (SR) {
+      try {
+        pausaAudio();
+        const rec = new SR();
+        rec.lang = linguaCorso || 'it';
+        rec.interimResults = true;
+        rec.continuous = true;
+        const base = domanda ? domanda + ' ' : '';
+        let definitivo = '';
+        rec.onresult = (ev) => {
+          let volatile = '';
+          for (let k = ev.resultIndex; k < ev.results.length; k++) {
+            const r = ev.results[k];
+            if (r.isFinal) definitivo += r[0].transcript + ' ';
+            else volatile += r[0].transcript;
+          }
+          setDomanda((base + definitivo + volatile).trimStart());
+        };
+        rec.onend = () => setMicDomanda('');
+        rec.onerror = () => setMicDomanda('');
+        micRecRef.current = rec;
+        rec.start();
+        setMicDomanda('registro');
+      } catch { setMicDomanda(''); }
+      return;
+    }
     try {
       pausaAudio();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -458,12 +490,14 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       rec.start();
       setMicDomanda('registro');
     } catch { setMicDomanda(''); }
-  }, [micDomanda, linguaCorso, userToken]);
+  }, [micDomanda, linguaCorso, userToken, domanda]);
   // b.315 — EVIDENZIA (leggi-e-segui): sfondo diverso al paragrafo che il
   // Maestro sta leggendo, cosi chi ascolta in un'altra lingua vede le parole.
   // E il testo SCORRE per tenere al centro il pezzo in lettura.
   const [evidenzia, setEvidenzia] = useState(true);
   const sezioneRef = useRef(null);
+  const arricchimentoRef = useRef(null); // b.342 — dove atterra "Approfondisci"
+  const fineContenutoRef = useRef(null); // b.342 — dove atterra "Vai a fondo"
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   // b.327 — Ondata A: I MIEI CORSI (persistiti, con progresso) e gli esiti
@@ -693,13 +727,27 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       : (sceltoComunita || 'link');
     try {
       const a = await arricchisciLezione({ modalita: perLivello, titolo: aperta.lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso });
-      if (a) setArricchimento((prec) => {
-        const base = prec && (prec.link || prec.video) ? prec : { link: [], video: [] };
-        return { link: [...(base.link || []), ...(Array.isArray(a.link) ? a.link : [])], video: [...(base.video || []), ...(Array.isArray(a.video) ? a.video : [])] };
-      });
-    } catch { /* la community non risponde: la lezione resta com'e */ }
+      const nLink = Array.isArray(a?.link) ? a.link.length : 0;
+      const nVideo = Array.isArray(a?.video) ? a.video.length : 0;
+      if (a && (nLink || nVideo)) {
+        setArricchimento((prec) => {
+          const base = prec && (prec.link || prec.video) ? prec : { link: [], video: [] };
+          return { link: [...(base.link || []), ...(Array.isArray(a.link) ? a.link : [])], video: [...(base.video || []), ...(Array.isArray(a.video) ? a.video : [])] };
+        });
+        // b.342 — il collaudo diceva "non fa niente": il risultato arrivava
+        // fuori dallo schermo. Ora si va a VEDERLO.
+        setTimeout(() => arricchimentoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 150);
+      } else {
+        setErrore(tt('lifeDeepenEmpty', 'La community non ha trovato materiali nuovi per questa lezione.'));
+        setTimeout(() => setErrore(''), 5000);
+      }
+    } catch (e) {
+      // b.342 — l'errore non si ingoia piu: si dice (credito compreso).
+      setErrore(e?.creditoEsaurito ? L('lifeNoCredit') : tt('lifeDeepenFail', 'La ricerca di materiali non ha risposto. Riprova.'));
+      setTimeout(() => setErrore(''), 5000);
+    }
     finally { setGenAppr(false); }
-  }, [aperta, genAppr, livello, contenuti, argomento, linguaCorso]);
+  }, [aperta, genAppr, livello, contenuti, argomento, linguaCorso, tt, L]);
 
   // b.334 — LEZIONE DI RIPASSO: riprende SOLO le cose rimaste indietro
   // (le date di ripasso sono scadute), con esempi nuovi.
@@ -728,10 +776,18 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         domanda: 'Vai a fondo: portami al livello successivo su questa lezione — le sfumature, un caso complesso, cio che pochi sanno. Prosa da documentario, senza rifare quanto gia detto.',
         modo: 'risposta', docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken,
       });
-      if (risposta) setAperta((a) => a ? { ...a, contenuto: `${a.contenuto}\n\n${risposta}` } : a);
-    } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
+      if (risposta) {
+        setAperta((a) => a ? { ...a, contenuto: `${a.contenuto}\n\n${risposta}` } : a);
+        // b.342 — il nuovo pezzo si aggiunge in coda al testo: ci si va,
+        // altrimenti "non fa niente" (collaudo di Luca).
+        setTimeout(() => fineContenutoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+      } else {
+        setErrore(tt('lifeGoDeepEmpty', 'Il Maestro non ha aggiunto nulla: riprova fra poco.'));
+        setTimeout(() => setErrore(''), 5000);
+      }
+    } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); setTimeout(() => setErrore(''), 6000); }
     finally { setFondoLavoro(false); }
-  }, [aperta, fondoLavoro, argomento, docenteId, livello, linguaCorso, userToken, L]);
+  }, [aperta, fondoLavoro, argomento, docenteId, livello, linguaCorso, userToken, L, tt]);
 
   const quiz = useCallback(async () => {
     if (!aperta) return;
@@ -773,10 +829,15 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setDialogo([]); setDomanda('');
   }, [ascoltando, manoAlzata]);
 
+  // b.342 — la voce EFFETTIVA con cui il Maestro sta leggendo (dichiarata
+  // dalla rotta): bloccata qui e riusata per risposte e rientro, cosi chi
+  // interrompe non si trova davanti "un altro" che risponde al posto suo.
+  const voceMaestroRef = useRef(null);
+
   // b.314 — il Maestro parla con la sua voce (usato per risposta e rientro).
   const diLaVoce = useCallback(async (testo) => {
     if (!testo) return;
-    try { await parlaTurno({ voceId: tutor?.voce?.id, testo, lingua: linguaCorso, userToken }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
+    try { await parlaTurno({ voceId: tutor?.voce?.id || voceMaestroRef.current, testo, lingua: linguaCorso, userToken, onVoce: (v) => { voceMaestroRef.current = v; } }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
   }, [tutor, linguaCorso, userToken]);
 
   // b.313/b.314 — invia la domanda; il Maestro risponde ancorato alla sezione,
@@ -839,7 +900,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         if (stopLetturaRef.current) break;
         setSezioneAttiva(i);
         await parlaBilingue({
-          voceId: tutor?.voce?.id,
+          voceId: tutor?.voce?.id || voceMaestroRef.current,
+          onVoce: (v) => { voceMaestroRef.current = v; },
           // b.323 — il DUETTO: le parti in lingua studiata le dice l'Assistente
           // madrelingua (sempre la stessa voce: lo studente lo riconosce).
           voceAssistente: (l2 && l2 !== linguaCorso) ? assistentePer(l2).voceId : null,
@@ -989,7 +1051,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
         {/* b.299 — l'arricchimento dalla community (Cobra): link o video. */}
         {arricchimento?.link?.length > 0 && (
-          <div style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div ref={arricchimentoRef} style={{ marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
             {arricchimento.link.map((f, i) => (
               <a key={i} href={f.url || f.link} target="_blank" rel="noopener noreferrer"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 11px', borderRadius: 10,
@@ -1097,6 +1159,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                         <Icon name="mic" size={17} color={micDomanda === 'registro' ? '#f87171' : accent} />
                       </button>
                     </div>
+                    {micDomanda === 'registro' && <div style={{ fontSize: 11, color: '#f87171', marginTop: 4 }}>{tt('lifeListeningTap', 'Ti ascolto — parla; tocca di nuovo il microfono per fermare')}</div>}
                     {micDomanda === 'trascrivo' && <div style={{ fontSize: 11, color: muto, marginTop: 4 }}>{tt('lifeTranscribing', 'Trascrivo…')}</div>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <button onClick={inviaDomanda} disabled={chiedendo || !domanda.trim()}
@@ -1173,6 +1236,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             cerca video/articoli dalla community TARATI sul livello (bambino
             -> semplici; universitario -> documenti profondi). Prosegui apre
             la lezione successiva. Poi, quando vuole, il quiz. */}
+        <div ref={fineContenutoRef} />
+        {/* b.342 — l'errore si vede QUI, accanto ai tasti che l'hanno causato:
+            prima compariva solo in cima, fuori schermo, e "i tasti sembravano
+            morti" (collaudo di Luca — era il credito esaurito). */}
+        {errore && <div style={{ marginTop: 12, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.12)', color: '#f87171', fontSize: 13, fontFamily: FONT }}>{errore}</div>}
         <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={approfondisci} disabled={genAppr}
             style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: genAppr ? 0.6 : 1 }}>

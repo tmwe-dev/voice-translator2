@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession } from '../../lib/users.js';
-import { salvaJob, elencaJobs, cambiaStatoJob, eliminaJob, salvaMateriale, elencaMateriali, leggiMateriale } from '../../lib/compagni/compiti.js';
+import { salvaJob, elencaJobs, cambiaStatoJob, eliminaJob, salvaMateriale, elencaMateriali, leggiMateriale, depositaScansione, ritiraScansione } from '../../lib/compagni/compiti.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('compiti');
@@ -18,9 +18,31 @@ async function handlePost(req) {
     const body = await req.json();
     const azione = typeof body.azione === 'string' ? body.azione : '';
     const userToken = typeof body.userToken === 'string' ? body.userToken : null;
+
+    // b.342 — IL TELEFONO COME SCANNER: il deposito della foto arriva dal
+    // telefono che ha inquadrato il QR, che puo NON essere loggato — il
+    // lasciapassare e il sid usa-e-getta (vita breve, si consuma al ritiro).
+    // Sta PRIMA del cancello dell'account, ed e l'unica azione a farlo.
+    if (azione === 'scanDeposita') {
+      const sid = String(body.sid || '');
+      const dato = typeof body.dato === 'string' ? body.dato : '';
+      if (!/^[a-z0-9-]{16,64}$/i.test(sid) || !dato.startsWith('data:image/')) {
+        return NextResponse.json({ error: 'deposito non valido' }, { status: 400 });
+      }
+      const ok = await depositaScansione(sid, dato);
+      return NextResponse.json({ ok });
+    }
+
     const sessione = userToken ? await getSession(userToken) : null;
     if (!sessione?.email) return NextResponse.json({ error: 'Accedi per usare i Compiti' }, { status: 401 });
     const email = sessione.email;
+
+    // b.342 — il PC ritira la foto depositata dal telefono (e la legge in
+    // locale, gratis). Qui il login serve: e la scrivania dello studente.
+    if (azione === 'scanRitira') {
+      const dato = await ritiraScansione(String(body.sid || ''));
+      return NextResponse.json({ ok: true, dato: dato || null });
+    }
 
     if (azione === 'elenca') return NextResponse.json({ ok: true, jobs: await elencaJobs(email) });
     if (azione === 'salva') {

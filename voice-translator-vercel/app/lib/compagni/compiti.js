@@ -118,3 +118,28 @@ export async function leggiMateriale(email, id) {
   if (error || !data) return null;
   return data;
 }
+
+// ═══ b.342 — IL TELEFONO COME SCANNER (QR dal PC) ═══
+// Dal PC si mostra un QR; il telefono lo inquadra, apre /scan, scatta la
+// foto e la DEPOSITA qui con il codice usa-e-getta (sid). Il PC la RITIRA
+// e la legge in locale (Tesseract, gratis). Il deposito non chiede login:
+// il sid e il lasciapassare, vive pochi minuti e si consuma al ritiro.
+
+export async function depositaScansione(sid, dato) {
+  const sb = getSupabaseAdmin();
+  if (!sb || !sid || !dato) return false;
+  // pulizia: i depositi hanno vita breve, qualunque cosa succeda
+  await sb.from('compiti_scansioni').delete().lt('creato', new Date(Date.now() - 15 * 60 * 1000).toISOString());
+  const { error } = await sb.from('compiti_scansioni')
+    .upsert({ sid: String(sid).slice(0, 64), dato: String(dato).slice(0, 4 * 1024 * 1024), creato: new Date().toISOString() }, { onConflict: 'sid' });
+  return !error;
+}
+
+export async function ritiraScansione(sid) {
+  const sb = getSupabaseAdmin();
+  if (!sb || !sid) return null;
+  const { data } = await sb.from('compiti_scansioni').select('dato').eq('sid', String(sid).slice(0, 64)).maybeSingle();
+  if (!data?.dato) return null;
+  await sb.from('compiti_scansioni').delete().eq('sid', String(sid).slice(0, 64));
+  return data.dato;
+}

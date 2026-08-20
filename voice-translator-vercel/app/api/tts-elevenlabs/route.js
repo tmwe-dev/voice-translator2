@@ -289,7 +289,7 @@ async function handlePost(req) {
             riservaId = null;
             creditoEsauritoFb = await creditoFinito(pagante);
           }
-          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), ...(creditoEsauritoFb && { 'X-Credito-Esaurito': '1' }) } });
+          return new NextResponse(buf, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': buf.length.toString(), 'X-Voce': selectedVoice, ...(creditoEsauritoFb && { 'X-Credito-Esaurito': '1' }) } });
         }
       }
 
@@ -338,6 +338,10 @@ async function handlePost(req) {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Content-Length': buffer.length.toString(),
+        // b.342 — la voce EFFETTIVA usata: il client puo bloccarla e riusarla
+        // per i turni successivi (il Maestro che risponde con la stessa voce
+        // con cui leggeva, anche quando la scelta era della predefinita).
+        'X-Voce': selectedVoice,
         // Era l'ultimo: il client passa alla voce standard e avvisa
         ...(creditoEsaurito && { 'X-Credito-Esaurito': '1' })
       }

@@ -132,7 +132,9 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     setOcrLavoro(true); setErrore(''); setSuggerisciAI(false); setOcrProgresso(0);
     try {
       ultimaFotoRef.current = file;
-      const dataUrl = await fotoInTesto(file);
+      // b.342 — accetta anche un dataUrl gia pronto (foto arrivata dal
+      // telefono via QR): stessa cascata, stesso zero-costo.
+      const dataUrl = typeof file === 'string' ? file : await fotoInTesto(file);
       const { testo, fiducia } = await leggiImmagineLocale(dataUrl, lingua || 'it', setOcrProgresso);
       if (testo && testo.length >= 20) {
         setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n') }));
@@ -148,13 +150,31 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     if (!file || ocrLavoro) return;
     setOcrLavoro(true); setErrore('');
     try {
-      const dataUrl = await fotoInTesto(file);
+      const dataUrl = typeof file === 'string' ? file : await fotoInTesto(file);
       const d = await chiama('ocr', { immagine: dataUrl }, userToken);
       setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), titolo: b?.titolo || d.titolo || '', testo: [(b?.testo || ''), d.testo].filter(Boolean).join('\n\n') }));
     } catch (e) {
       setErrore(e.status === 402 ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto'));
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // b.342 — IL TELEFONO COME SCANNER (Luca): dal PC si apre un QR; il
+  // telefono lo inquadra, apre /scan, scatta e deposita; qui si RITIRA in
+  // automatico (sondaggio ogni 3s) e si legge in locale, gratis. Il codice
+  // e usa-e-getta e vive pochi minuti.
+  const [qrSid, setQrSid] = useState(null);
+  useEffect(() => {
+    // Mentre la lettura locale lavora NON si ritira: il ritiro consuma il
+    // deposito, e una seconda pagina arrivata nel frattempo andrebbe persa.
+    if (!qrSid || ocrLavoro) return;
+    const timer = setInterval(async () => {
+      try {
+        const d = await chiama('scanRitira', { sid: qrSid }, userToken);
+        if (d?.dato) fotoGratis(d.dato); // il QR resta aperto: si possono mandare piu pagine
+      } catch { /* si riprova al prossimo giro */ }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [qrSid, userToken, fotoGratis, ocrLavoro]);
 
   // b.334 — PDF: base64 al server, testo indietro, GRATIS (niente wallet).
   const caricaPdf = useCallback(async (file) => {
@@ -350,12 +370,28 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                     {tt('lifeMatAiBoost', 'Lettura difficile: migliora con AI (~1 cent)')}
                   </button>
                 )}
+                {/* b.342 — il TELEFONO come scanner: QR dal PC, foto dal telefono. */}
+                <button onClick={() => setQrSid((s) => s ? null : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)))}
+                  style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: qrSid ? `1px solid ${accent}` : bordo, background: qrSid ? `${accent}14` : 'transparent', color: qrSid ? accent : testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+                  {qrSid ? tt('lifeMatQrOff', 'Chiudi il QR') : `📱 ${tt('lifeMatQrPhone', 'Usa il telefono (QR)')}`}
+                </button>
                 {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
                 <label style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
                   {tt('lifeMatPdf', 'Carica PDF (gratis)')}
                   <input type="file" accept="application/pdf" style={{ display: 'none' }}
                     onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) caricaPdf(f); }} />
                 </label>
+                {qrSid && (
+                  <div style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${accent}44` }}>
+                    <img alt="QR" width={132} height={132} style={{ borderRadius: 8, background: '#fff', padding: 4 }}
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=132x132&data=${encodeURIComponent(`${window.location.origin}/scan?sid=${qrSid}`)}`} />
+                    <div style={{ fontSize: 13, color: testoP, lineHeight: 1.5 }}>
+                      <b>{tt('lifeMatQrTitle', 'Inquadra col telefono')}</b><br />
+                      {tt('lifeMatQrHint', 'Si apre la fotocamera: scatta la pagina e arriva qui da sola, gratis. Puoi mandare più pagine di seguito.')}
+                      <div style={{ color: muto, fontSize: 12, marginTop: 4 }}>{tt('lifeMatQrWait', 'In attesa della foto…')}</div>
+                    </div>
+                  </div>
+                )}
                 <button onClick={salvaMat} disabled={!matBozza.testo.trim()}
                   style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>
                   {tt('lifeSave', 'Salva')}

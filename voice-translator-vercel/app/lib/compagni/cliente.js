@@ -249,11 +249,14 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  * I pezzi vicini nella stessa lingua sono già uniti da segmentiPerVoce, così
  * non si paga una chiamata per ogni parola.
  */
-export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce }, onAudio) {
+export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce }, onAudio) {
   const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
   for (const p of pezzi) {
     const suaLingua = p.lingua === linguaStudiata;
     await parlaTurno({
+      // b.342 — la voce effettiva del MAESTRO (non dell'assistente) risale
+      // al chiamante, che la blocca per le risposte alle interruzioni.
+      onVoce: suaLingua ? undefined : onVoce,
       // La lingua studiata NON usa la voce del Compagno: serve un madrelingua.
       // b.323 — il DUETTO: se c'e l'Assistente madrelingua (personaggio con
       // nome e volto), le parti L2 le dice LUI, sempre la stessa voce —
@@ -269,7 +272,7 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
   }
 }
 
-export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce }, onAudio) {
+export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, onVoce }, onAudio) {
   try {
     const r = await fetch('/api/tts-elevenlabs', {
       method: 'POST',
@@ -279,6 +282,9 @@ export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce },
       body: JSON.stringify({ text: testo, voiceId: voceId, langCode: lingua, userToken, speechMode: modoVoce }),
     });
     if (!r.ok) return; // niente voce: si legge soltanto
+    // b.342 — la rotta dichiara la voce EFFETTIVA: chi chiama puo bloccarla
+    // e ripassarla ai turni successivi (stessa voce per lettura e risposte).
+    try { const v = r.headers.get('X-Voce'); if (v && onVoce) onVoce(v); } catch { /* solo un extra */ }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     await new Promise((risolvi) => {
