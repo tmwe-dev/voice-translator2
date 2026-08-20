@@ -81,7 +81,11 @@ async function handlePost(req) {
     // architettura che abbiamo eliminato. Fra tre mesi qualcuno l'avrebbe
     // letto e ricostruito. Un commento che invecchia e' una trappola.
     const { blocco: regia } = regiaConversazione({ ultimo, storia: messaggi });
-    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona. Rispondi nella lingua: ${lingua}.${blocco}${quantoViConoscete}${bloccoObiettivi}${involucro}\n\n${LENTI_UMANE}${regia}\n\n${ISTRUZIONE_VOCE}`;
+    // b.317 — audit D2: la LINGUA scelta per il Compagno era salvata e mai
+    // letta ("Yuki parla giapponese" parlava in italiano). Ora, se il
+    // Compagno ha una lingua sua, vince quella; altrimenti la lingua dell'app.
+    const linguaEff = compagno.lingua || lingua;
+    const system = `${compagno.personalita || ''}\nSei ${compagno.nome}. Parli con una persona. Rispondi nella lingua: ${linguaEff}.${blocco}${quantoViConoscete}${bloccoObiettivi}${involucro}\n\n${LENTI_UMANE}${regia}\n\n${ISTRUZIONE_VOCE}`;
     const prompt = `${storia ? storia + '\n\n' : ''}[persona]: ${ultimo}\n\nRispondi come ${compagno.nome}.`;
 
     const r = await generaTesto({ system, prompt, provider: compagno.provider, modello: compagno.modello, userToken, maxTokens: 500, temperature: temperaturaLiberta(compagno.liberta) });

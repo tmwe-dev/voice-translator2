@@ -7,6 +7,7 @@ import { PROFILI, PROFILI_ELENCO, SUPERFICI_PROFILO, profiloPerSuperficie } from
 import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
 import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
+import { compatibilitaVoceLingua } from '../../lib/vociLingue.js';
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
 const BARRE = [
@@ -349,6 +350,33 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
             </select>
           </div>
         </div>
+
+        {/* b.317 — audit D1: AVVISO di compatibilità voce↔lingua, gia in fase
+            di creazione (mai piu sorprese al primo ascolto). Se la lingua non
+            ha una voce ElevenLabs dedicata lo si dice; se per quella lingua
+            c'e una voce che rende meglio, la si consiglia con un tasto. */}
+        {(() => {
+          const comp = compatibilitaVoceLingua({ voceId: bozza.voce?.id, lingua: bozza.lingua, genere: bozza.genere || 'neutral' });
+          if (!bozza.lingua) return null;
+          if (!comp.ok) return (
+            <div style={{ marginTop: 8, padding: '9px 12px', borderRadius: 10, background: 'rgba(248,113,113,0.10)', border: '1px solid rgba(248,113,113,0.4)', fontSize: 12, color: '#f87171' }}>
+              {tt('lifeVoceLinguaNo', 'Questa lingua non ha una voce dedicata: la pronuncia potrebbe essere approssimativa.')}
+            </div>
+          );
+          if (comp.consiglio) {
+            const nomeCons = VOCI_ELENCO.find((v) => v.id === comp.consiglio.id)?.nome;
+            return (
+              <div style={{ marginTop: 8, padding: '9px 12px', borderRadius: 10, background: `${accent}12`, border: `1px solid ${accent}44`, fontSize: 12, color: testoP, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span>{tt('lifeVoceConsiglio', 'Per questa lingua c’è una voce che rende meglio')}{nomeCons ? ` (${nomeCons})` : ''}.</span>
+                <button onClick={() => setBozza((b) => ({ ...b, voce: { id: comp.consiglio.id, nome: nomeCons || b.voce?.nome || '' } }))}
+                  style={{ padding: '5px 10px', borderRadius: 8, border: 'none', background: accent, color: '#04121c', fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 12 }}>
+                  {tt('lifeVoceUsala', 'Usa quella')}
+                </button>
+              </div>
+            );
+          }
+          return null;
+        })()}
 
         <label style={etich}>{L('lifeModel')}</label>
         <select value={`${bozza.provider}|${bozza.modello}`} onChange={(e) => { const [p, m] = e.target.value.split('|'); setBozza((b) => ({ ...b, provider: p, modello: m })); }} style={input}>

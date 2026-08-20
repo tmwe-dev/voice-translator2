@@ -33,12 +33,10 @@ const FLASH_SUPPORTED_LANGS = new Set([
 ]);
 
 // ElevenLabs language_code mapping (ISO 639-1 → ElevenLabs code)
-const LANG_CODES = {
-  'it':'it', 'en':'en', 'es':'es', 'fr':'fr', 'de':'de', 'pt':'pt',
-  'zh':'zh', 'ja':'ja', 'ko':'ko', 'ar':'ar', 'hi':'hi', 'ru':'ru',
-  'tr':'tr', 'id':'id', 'ms':'ms', 'nl':'nl', 'pl':'pl', 'sv':'sv',
-  'el':'el', 'cs':'cs', 'ro':'ro', 'fi':'fi', 'th':'th', 'vi':'vi', 'hu':'hu'
-};
+// b.317 — audit D1: LANG_CODES e NATIVE_VOICES_BY_LANG sono saliti nel modulo
+// condiviso lib/vociLingue.js, cosi anche il form dei Compagni puo leggerli
+// (avviso di compatibilita voce↔lingua). Una fonte sola.
+import { LANG_CODES, NATIVE_VOICES_BY_LANG } from '../../lib/vociLingue.js';
 
 // Default curated voices per avatar gender (ElevenLabs premade voice IDs)
 // Male voices:
@@ -83,26 +81,7 @@ const AVATAR_VOICE_MAP = {
 // These are ElevenLabs premade voices that sound natural for each language.
 // Female + male options for each. Falls back to multilingual defaults.
 // ═══════════════════════════════════════════════
-const NATIVE_VOICES_BY_LANG = {
-  'en': { female: 'EXAVITQu4vr4xnSDxMaL', male: 'pNInz6obpgDQGcFmaJgB' },  // Sarah / Adam
-  'it': { female: 'EXAVITQu4vr4xnSDxMaL', male: 'ErXwobaYiN019PkySvjV' },  // Sarah / Antoni
-  'es': { female: 'XB0fDUnXU5powFXDhCwa', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Charlotte / Josh
-  'fr': { female: 'XB0fDUnXU5powFXDhCwa', male: 'GBv7mTt0atIp3Br8iCZE' },  // Charlotte / Thomas
-  'de': { female: 'piTKgcLEGmPE4e6mEKli', male: 'GBv7mTt0atIp3Br8iCZE' },  // Nicole / Thomas
-  'pt': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni
-  'zh': { female: 'XB0fDUnXU5powFXDhCwa', male: 'pNInz6obpgDQGcFmaJgB' },  // Charlotte / Adam
-  'ja': { female: 'piTKgcLEGmPE4e6mEKli', male: 'GBv7mTt0atIp3Br8iCZE' },  // Nicole / Thomas
-  'ko': { female: 'MF3mGyEYCl7XYWbV9V6O', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Elli / Josh
-  'th': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni (multilingual)
-  'vi': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni (multilingual)
-  'ar': { female: 'XB0fDUnXU5powFXDhCwa', male: 'pNInz6obpgDQGcFmaJgB' },  // Charlotte / Adam
-  'hi': { female: '21m00Tcm4TlvDq8ikWAM', male: 'ErXwobaYiN019PkySvjV' },  // Rachel / Antoni
-  'ru': { female: 'piTKgcLEGmPE4e6mEKli', male: 'VR6AewLTigWG4xSOukaG' },  // Nicole / Arnold
-  'tr': { female: 'EXAVITQu4vr4xnSDxMaL', male: '29vD33N1CtxCmqQRPOHJ' },  // Sarah / Drew
-  'nl': { female: 'XB0fDUnXU5powFXDhCwa', male: 'GBv7mTt0atIp3Br8iCZE' },  // Charlotte / Thomas
-  'pl': { female: 'piTKgcLEGmPE4e6mEKli', male: 'VR6AewLTigWG4xSOukaG' },  // Nicole / Arnold
-  'sv': { female: 'MF3mGyEYCl7XYWbV9V6O', male: 'TxGEqnHWrfWFTfGW9XjX' },  // Elli / Josh
-};
+// (mappa spostata in lib/vociLingue.js — vedi import sopra)
 
 async function handlePost(req) {
   // b.164 (punto 1 della roadmap dell'utente dopo b.163) — fuori dal
@@ -254,7 +233,11 @@ async function handlePost(req) {
       body: JSON.stringify({
         text: cleanText,
         model_id: modelId,
-        language_code: elLangCode,
+        // b.317 — audit D8: `language_code` è accettato SOLO da flash/turbo
+        // v2.5; mandarlo a multilingual_v2 (o v3) fa rifiutare la richiesta —
+        // e siccome anche il ripiego lo mandava, il ripiego falliva SEMPRE e
+        // la voce spariva in silenzio. Ora si allega solo dove è supportato.
+        ...((modelId === 'eleven_flash_v2_5' || modelId === 'eleven_turbo_v2_5') && elLangCode ? { language_code: elLangCode } : {}),
         voice_settings: {
           stability,
           similarity_boost: similarityBoost,
@@ -280,7 +263,7 @@ async function handlePost(req) {
           headers: { 'xi-api-key': apiKey, 'Content-Type': 'application/json', 'Accept': 'audio/mpeg' },
           body: JSON.stringify({
             text: cleanText, model_id: fallbackModel,
-            language_code: elLangCode,
+            // b.317 — D8: multilingual_v2 NON accetta language_code (vedi sopra).
             voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: true }
           })
         });

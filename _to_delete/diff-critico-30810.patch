@@ -1,0 +1,2329 @@
+diff --git a/voice-translator-vercel/app/api/room/route.js b/voice-translator-vercel/app/api/room/route.js
+index 603594d..f90becf 100644
+--- a/voice-translator-vercel/app/api/room/route.js
++++ b/voice-translator-vercel/app/api/room/route.js
+@@ -1,6 +1,6 @@
+ import { NextResponse } from 'next/server';
+ import { withApiGuard } from '../../lib/apiGuard.js';
+-import { verifyRoomSession, getRoom } from '../../lib/store.js';
++import { verifyRoomSession, getRoom, removeMember } from '../../lib/store.js';
+ import { sanitizeRoomId, sanitizeName, getClientIP } from '../../lib/validate.js';
+ import {
+   resolveIdentity,
+@@ -54,6 +54,80 @@ async function tierDallaSessione(userToken) {
+   }
+ }
+ 
++// ═══════════════════════════════════════════════════════════════
++// USCIRE DALLA STANZA (b.247)
++//
++// CONFERMATO leggendo lo switch qui sotto: /api/room accettava
++// create, join, heartbeat, speaking, changeMode, changeLang,
++// raiseHand, grantSpeak e check — ma NON esisteva `leave`. Uscire
++// era una faccenda tutta del client: `leaveRoom()` in
++// useRoomPolling.js azzerava roomSessionTokenRef, roomId e roomInfo
++// e basta. Il server non veniva mai avvisato, e `room.members` non
++// ha alcuna scadenza per membro (verificato: nessun `lastSeen`,
++// nessuna potatura dei membri fermi; l'unica scadenza e la TTL di
++// un'ora della stanza intera, per giunta rinnovata a ogni battito
++// di chi e rimasto dentro).
++//
++// Quindi chi usciva restava dentro fino a un'ora:
++//   · membri fantasma nell'elenco dei partecipanti;
++//   · capienza falsata — lo script Lua di join rifiuta col
++//     "La stanza e al completo" contando anche chi se n'e andato;
++//   · presenza falsa — `partnerConnected` nasce da
++//     `room.members.length >= 2`: l'ultimo rimasto continua a
++//     vedere "ospite connesso" con la stanza vuota;
++//   · e chi preme Video chiama un fantasma e aspetta una risposta
++//     che nessuno puo dare.
++//
++// `leave` non sostituisce niente: affianca la TTL rendendo
++// l'uscita IMMEDIATA invece che ritardata di un'ora.
++//
++// b.248 — "nessun lastSeen, nessuna potatura" qui sopra descrive il
++// mondo di PRIMA: ora ogni battito scrive un lastSeen per membro
++// (UPDATE_HEARTBEAT in redisLua.js) e chi resta muto oltre soglia
++// viene tolto alla lettura (potaMembriAssenti in store.js), con la
++// stessa rimozione atomica di questo leave. `leave` resta la via
++// PULITA e immediata; la potatura copre la via SPORCA — rete persa,
++// browser morto — che nessun leave puo coprire.
++//
++// SICUREZZA: stesso identico controllo delle altre azioni protette
++// (heartbeat, speaking, changeLang...): l'azione e nell'elenco
++// `needsIdentity`, quindi passa da resolveIdentity → resolveRoomIdentity,
++// che pretende un roomSessionToken valido PER QUESTA STANZA (il
++// confronto session.roomId === roomId) e che chi lo porta sia ancora
++// membro (b.170). Un gettone di un'altra stanza, o nessun gettone,
++// non basta: senza identita si esce con 401. Il nome dichiarato nel
++// corpo non viene mai usato — se bastasse quello, chiunque potrebbe
++// far uscire chiunque altro.
++//
++// LA STANZA CHE SI SVUOTA: non si inventa nulla di nuovo. Ci si
++// comporta come gia fa l'unico altro punto che toglie un membro —
++// `blocca()` in moderazione.js, che chiama lo stesso removeMember:
++// la stanza resta con l'elenco piu corto e la sua TTL di un'ora, e
++// se non rientra nessuno scade da sola. Chiudere la stanza qui
++// sarebbe un comportamento NUOVO, e butterebbe fuori chi sta
++// rientrando in quel momento.
++// ═══════════════════════════════════════════════════════════════
++async function handleLeave({ roomId, identity }) {
++  if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
++  if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
++  // Rimozione ATOMICA: removeMember passa dallo script Lua REMOVE_MEMBER
++  // (leggi-modifica-riscrivi in un colpo solo su Redis). Farlo qui con
++  // getRoom + filtro + SET perderebbe l'ingresso di chi entra nello
++  // stesso istante — il difetto gia visto con l'heartbeat.
++  const room = await removeMember(roomId, identity.name);
++  // removeMember torna null in due casi innocui: la stanza non c'e piu
++  // (scaduta) oppure il nome non era piu fra i membri (uscita doppia,
++  // o gia espulso). In tutti e due l'esito voluto e lo stesso — quella
++  // persona non e piu dentro — e chi esce non deve mai vedere un errore
++  // per un'uscita andata a buon fine.
++  return NextResponse.json({
++    ok: true,
++    uscito: true,
++    room: room || null,
++    membersCount: Array.isArray(room?.members) ? room.members.length : 0,
++  });
++}
++
+ // POST /api/room - Create, join, or manage a room
+ async function handlePostRoom(req) {
+   try {
+@@ -78,7 +152,10 @@ async function handlePostRoom(req) {
+     const roomSessionToken = typeof body.roomSessionToken === 'string' ? body.roomSessionToken : null;
+ 
+     // For actions that require identity, resolve once
+-    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'raiseHand', 'grantSpeak'];
++    // b.247 — `leave` sta in questo elenco apposta: e cosi che si eredita
++    // il controllo di sicurezza delle altre azioni protette invece di
++    // scriverne uno nuovo (e piu debole) solo per l'uscita.
++    const needsIdentity = ['heartbeat', 'speaking', 'changeMode', 'changeLang', 'raiseHand', 'grantSpeak', 'leave'];
+     let identity = null;
+     if (needsIdentity.includes(action)) {
+       identity = await resolveIdentity(roomSessionToken, name, roomId);
+@@ -121,7 +198,12 @@ async function handlePostRoom(req) {
+         });
+ 
+       case 'heartbeat':
+-        return handleHeartbeat({ roomId, identity });
++        // b.250 — lingua e avatar servono SOLO alla riammissione del
++        // potato vivo (vedi handleHeartbeat): senza, si rientra con 'en'.
++        return handleHeartbeat({ roomId, identity, riammissione: {
++          token: roomSessionToken, lang,
++          avatar: typeof body.avatar === 'string' ? body.avatar.slice(0, 200) : null,
++        } });
+ 
+       case 'speaking':
+         return handleSpeaking({
+@@ -141,6 +223,10 @@ async function handlePostRoom(req) {
+       case 'grantSpeak':
+         return handleGrantSpeak({ roomId, identity, targetMember: body.targetMember });
+ 
++      // b.247 — l'azione che mancava: vedi la nota estesa su handleLeave.
++      case 'leave':
++        return handleLeave({ roomId, identity });
++
+       case 'check':
+         return handleCheck({ roomId });
+ 
+diff --git a/voice-translator-vercel/app/api/tts-elevenlabs/route.js b/voice-translator-vercel/app/api/tts-elevenlabs/route.js
+index 92ec57d..77aa005 100644
+--- a/voice-translator-vercel/app/api/tts-elevenlabs/route.js
++++ b/voice-translator-vercel/app/api/tts-elevenlabs/route.js
+@@ -5,6 +5,7 @@ import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
+ import { MIN_CREDITS, MIN_CHARGE, calcElevenLabsCost, usdToEurCents } from '../../lib/config.js';
+ import { preprocessForTTS } from '../../lib/ttsPreprocessor.js';
+ import { getELVoiceForLang, getELModelForLang } from '../../lib/voiceDefaults.js';
++import { parametriVoce } from '../../lib/voceEspressiva.js';
+ import { createLogger } from '../../lib/logger.js';
+ import { assertElaborazioneConsentita, DirectModeError } from '../../lib/sessionGuard.js';
+ import { creditoFinito, preventivoVocePremium } from '../../wallet/addebita.js';
+@@ -111,7 +112,7 @@ async function handlePost(req) {
+   let riservaId = null;
+   let costoPrevisto = 0;
+   try {
+-    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName } = await req.json();
++    const { text, voiceId, langCode, userToken, roomId, roomSessionToken, avatarName, speechMode } = await req.json();
+ 
+     // ── Direct mode guard ──
+     // b.167 — spostata dopo aver letto roomId/roomSessionToken: prima
+@@ -161,7 +162,16 @@ async function handlePost(req) {
+     const adminDefault = getELVoiceForLang(lang2, genderHint);
+     const nativeVoice = NATIVE_VOICES_BY_LANG[lang2]?.[genderHint]
+       || NATIVE_VOICES_BY_LANG[lang2]?.female;
++    // b.262 — la PREDEFINITA DI SISTEMA ora la decide il backend (tabella
++    // voci_lingue, pannello /voci): viene prima delle cablate qui sotto,
++    // che restano il ripiego per le lingue non ancora curate. L'errore di
++    // lettura non ferma la voce: si passa oltre, come sempre.
++    const dbDefault = voiceId ? null
++      : await import('../../lib/vociCatalogo.js')
++          .then(m => m.predefinitaPer(lang2, genderHint))
++          .catch(() => null);
+     const selectedVoice = voiceId
++      || dbDefault
+       || adminDefault
+       || nativeVoice
+       || (avatarName && AVATAR_VOICE_MAP[avatarName])
+@@ -223,8 +233,16 @@ async function handlePost(req) {
+     // ── Adaptive voice settings for tonal languages ──
+     // Tonal languages need higher stability to preserve tone accuracy
+     const TONAL_LANGS = new Set(['th', 'zh', 'vi', 'ja']);
+-    const stability = TONAL_LANGS.has(lang2) ? 0.75 : 0.65;
+-    const similarityBoost = TONAL_LANGS.has(lang2) ? 0.85 : 0.80;
++    const tonale = TONAL_LANGS.has(lang2);
++    const stabilityBase = tonale ? 0.75 : 0.65;
++    const similarityBoost = tonale ? 0.85 : 0.80;
++    // b.238 — PROSODIA. `style` era 0.0 fisso: il canale espressivo esisteva
++    // ed era spento, e ogni Compagno leggeva tutto con lo stesso tono. Ora
++    // chi parla dichiara COME vuole dirlo (speechMode) e voceEspressiva.js
++    // lo traduce. Senza speechMode nulla cambia rispetto a prima: la
++    // TRADUZIONE fra persone resta neutra per fedeltà, ed è quello che deve
++    // essere — lì si riporta cosa ha detto un altro, non lo si interpreta.
++    const { stability, style } = parametriVoce({ stability: stabilityBase, modo: speechMode, tonale });
+ 
+     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${selectedVoice}`, {
+       method: 'POST',
+@@ -240,7 +258,7 @@ async function handlePost(req) {
+         voice_settings: {
+           stability,
+           similarity_boost: similarityBoost,
+-          style: 0.0,
++          style,
+           use_speaker_boost: true
+         }
+       })
+@@ -263,7 +281,7 @@ async function handlePost(req) {
+           body: JSON.stringify({
+             text: cleanText, model_id: fallbackModel,
+             language_code: elLangCode,
+-            voice_settings: { stability, similarity_boost: similarityBoost, style: 0.0, use_speaker_boost: true }
++            voice_settings: { stability, similarity_boost: similarityBoost, style, use_speaker_boost: true }
+           })
+         });
+         if (fallback.ok) {
+diff --git a/voice-translator-vercel/app/contexts/AppContext.js b/voice-translator-vercel/app/contexts/AppContext.js
+index 9cc67bf..f33b61d 100644
+--- a/voice-translator-vercel/app/contexts/AppContext.js
++++ b/voice-translator-vercel/app/contexts/AppContext.js
+@@ -5,8 +5,8 @@
+ // Components import { useApp } from './contexts/AppContext' instead of 30+ props
+ // ═══════════════════════════════════════════════════════════════
+ 
+-import { createContext, useContext, useCallback, useMemo } from 'react';
+-import { t, mapLang } from '../lib/i18n.js';
++import { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
++import { t, mapLang, preloadLang, ascoltaLingueCaricate } from '../lib/i18n.js';
+ 
+ const AppContext = createContext(null);
+ 
+@@ -30,7 +30,28 @@ export function AppProvider({ children, value }) {
+   // sulla lingua parlata (mappata sulle 15 dell'interfaccia) e solo in
+   // ultima istanza sull'inglese, che e la lingua di riserva di t().
+   const linguaInterfaccia = value.prefs?.uiLang || mapLang(value.prefs?.lang || 'en');
+-  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia]);
++
++  // ═══ INIZIO b.256 — aspettare il pacchetto lingua, e poi ridisegnare ═══
++  // Solo inglese e italiano stanno dentro il programma: le altre tredici
++  // arrivano a parte. `t()` ripiega sull'inglese finche il pacchetto non
++  // c'e — ed e giusto — ma nessuno tornava a disegnare quando arrivava:
++  // chi sceglieva tedesco o spagnolo restava con i menu in inglese.
++  // Qui si chiede il pacchetto e ci si sveglia quando entra in memoria.
++  const [versioneLingua, setVersioneLingua] = useState(0);
++  useEffect(() => { preloadLang(linguaInterfaccia); }, [linguaInterfaccia]);
++  useEffect(() => ascoltaLingueCaricate((codice) => {
++    // Ci si ridisegna solo per la lingua che si sta mostrando: il
++    // precaricamento di un'altra non deve far ridisegnare mezza app.
++    if (codice === linguaInterfaccia) setVersioneLingua((v) => v + 1);
++  }), [linguaInterfaccia]);
++
++  // `versioneLingua` non si legge: serve a far rinascere L() (e quindi a
++  // ridisegnare chi la usa) quando il pacchetto e finalmente pronto.
++  // eslint-disable-next-line react-hooks/exhaustive-deps -- `versioneLingua`
++  // non si legge dentro: e proprio il suo cambiare che deve far rinascere
++  // L() quando il pacchetto lingua arriva. Toglierla rimetterebbe il difetto.
++  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia, versioneLingua]);
++  // ═══ FINE b.256 ═══
+ 
+   const ctx = useMemo(() => ({
+     // ── i18n ──
+diff --git a/voice-translator-vercel/app/hooks/useAudioSystem.js b/voice-translator-vercel/app/hooks/useAudioSystem.js
+index 9abf543..5be1314 100644
+--- a/voice-translator-vercel/app/hooks/useAudioSystem.js
++++ b/voice-translator-vercel/app/hooks/useAudioSystem.js
+@@ -4,6 +4,9 @@ import { getLang } from '../lib/constants.js';
+ import useTTSEngine from './useTTSEngine.js';
+ import { getVolumeTTS } from '../lib/audioPrefs.js';
+ import { creaCodaAudio } from '../lib/codaAudio.js';
++// b.262 — per avvisare (una volta) chi ha l'audio bloccato: vedi sotto.
++import { toast } from '../lib/avvisi.js';
++import { tFuori } from '../lib/i18n.js';
+ 
+ /**
+  * useAudioSystem — Audio orchestration (mic, queue, ducking, playback)
+@@ -47,6 +50,8 @@ export default function useAudioSystem({
+   const codaRef = useRef(null);
+   if (!codaRef.current) codaRef.current = creaCodaAudio();
+   const playedMsgIdsRef = useRef(new Set());
++  // b.262 — l'avviso "audio bloccato" si mostra una volta per sessione.
++  const avvisoAudioMutoRef = useRef(false);
+   const persistentMicRef = useRef(null);
+   const audioEnabledRef = useRef(audioEnabled);
+   const activeBlobUrlsRef = useRef(new Set());
+@@ -305,19 +310,50 @@ export default function useAudioSystem({
+   // =============================================
+ 
+   async function queueAudio(text, lang, msgId) {
+-    if (msgId && playedMsgIdsRef.current.has(msgId)) return;
+-    const contentKey = `${text?.substring(0, 60)}|${lang}`;
+-    if (playedMsgIdsRef.current.has(contentKey)) return;
+-    // Mark as played IMMEDIATELY (like b.41) to prevent duplicates from multi-channel delivery
+-    if (msgId) playedMsgIdsRef.current.add(msgId);
+-    playedMsgIdsRef.current.add(contentKey);
++    // ── b.248 · con un id si dedup SOLO per id, mai per contenuto ──
++    //
++    // Qui c'era una seconda impronta sul testo (`primi 60 caratteri |
++    // lingua`, finestra di 30 s) che scattava ANCHE quando l'id c'era:
++    // due messaggi veri con lo stesso testo ("Si." detto due volte, con
++    // due id di cattura diversi da b.247) perdevano la seconda voce.
++    //
++    // Un id NUOVO si legge SEMPRE, qualunque sia il testo: la protezione
++    // contro lo stesso messaggio arrivato da piu canali (P2P + Realtime +
++    // polling) sta tutta nell'id, che chi chiama passa gia unificato
++    // (l'id di cattura, conservato dalla copia del server come clientId).
++    // Si annota SUBITO, prima di suonare, come da b.41: i canali arrivano
++    // a ~50 ms e la coda e asincrona.
++    //
++    // Il confronto sul contenuto resta SOLO per le chiamate senza id
++    // (client vecchi, riascolti manuali): li si usa il testo INTERO — un
++    // prefisso trasforma due frasi diverse nella stessa — e la chiave
++    // scade dopo 30 s, cosi la stessa frase puo essere ridetta piu tardi.
++    // Le chiavi per id invece NON scadono: un messaggio gia letto non si
++    // rilegge (ci pensa il tetto LRU a non farle crescere per sempre).
++    const chiave = msgId || `testo:${text}|${lang}`;
++    if (playedMsgIdsRef.current.has(chiave)) return;
++    playedMsgIdsRef.current.add(chiave);
+     if (playedMsgIdsRef.current.size > 500) {
+       const first = playedMsgIdsRef.current.values().next().value;
+       playedMsgIdsRef.current.delete(first);
+     }
+-    setTimeout(() => { playedMsgIdsRef.current.delete(contentKey); }, 30000);
+-    if (!audioEnabledRef.current) { playNotifSound(); return; }
+-    accodaConAnticipo(text, lang, msgId || contentKey);
++    if (!msgId) setTimeout(() => { playedMsgIdsRef.current.delete(chiave); }, 30000);
++    // ═══ INIZIO b.264 — l'altoparlante spento non brucia il messaggio ═══
++    // ANALISI SUL CODICE (Luca: "analizza, non voglio test infiniti"):
++    // qui si usciva DOPO aver marcato la chiave per sempre (riga sopra,
++    // b.248). Con l'altoparlante disattivato — o non ancora sbloccato —
++    // ogni messaggio veniva bruciato: riattivandolo, quelli arrivati nel
++    // frattempo non avrebbero parlato MAI PIU. Prima di b.248 la chiave
++    // scadeva in 30 s e si recuperava da soli. Ora nel ramo spento la
++    // chiave torna a scadere: il doppione multi-canale (~50 ms) resta
++    // coperto, e il recupero e di nuovo possibile.
++    if (!audioEnabledRef.current) {
++      setTimeout(() => { playedMsgIdsRef.current.delete(chiave); }, 30000);
++      playNotifSound();
++      return;
++    }
++    // ═══ FINE b.264 ═══
++    accodaConAnticipo(text, lang, chiave);
+   }
+ 
+   /**
+@@ -335,7 +371,26 @@ export default function useAudioSystem({
+       () => tts.procuraVoce(text, lang),
+       async (blob) => {
+         startDucking();
+-        try { await tts.suonaVoce(blob, text, lang); }
++        try {
++          const suonato = await tts.suonaVoce(blob, text, lang);
++          // ═══ INIZIO b.262 — un messaggio rimasto MUTO si puo riprovare ═══
++          // TROVATO DAL VIVO ("l'ospite non sente"): b.248 marca la chiave
++          // PRIMA di suonare e per sempre — giusto contro i doppioni
++          // multi-canale, ma se il primo tentativo fallisce DEL TUTTO
++          // (fornitore giu E audio del telefono ancora bloccato) quel
++          // messaggio restava muto per l'eternita. Ora il fallimento
++          // totale libera la chiave: la prossima consegna dello stesso
++          // messaggio (polling) riprova. E la persona viene AVVISATA,
++          // una volta sola, invece del silenzio.
++          if (suonato === false) {
++            playedMsgIdsRef.current.delete(chiave);
++            if (!avvisoAudioMutoRef.current) {
++              avvisoAudioMutoRef.current = true;
++              toast.warning(tFuori('audioBlockedTapScreen'));
++            }
++          }
++          // ═══ FINE b.262 ═══
++        }
+         finally {
+           stopDucking();
+           // Quando la coda si e svuotata si smette di segnalare "sto
+diff --git a/voice-translator-vercel/app/hooks/useAuth.js b/voice-translator-vercel/app/hooks/useAuth.js
+index be77236..7cb1f48 100644
+--- a/voice-translator-vercel/app/hooks/useAuth.js
++++ b/voice-translator-vercel/app/hooks/useAuth.js
+@@ -30,6 +30,13 @@ export default function useAuth() {
+   const [elevenLabsVoices, setElevenLabsVoices] = useState([]);
+   const [selectedELVoice, setSelectedELVoice] = useState('');
+   const [platformHasEL, setPlatformHasEL] = useState(false);
++  // ═══ b.263 — il tier della STANZA come stato, non solo come ref ═══
++  // TROVATO DAL VIVO ("l'ospite non ha ElevenLabs tra i servizi"):
++  // entrando in una stanza con host PRO l'ospite eredita il tier
++  // (page.js), ma canUseElevenLabs restava quello del login — che un
++  // ospite non ha mai fatto. Il ref non fa girare l'effetto qui sotto:
++  // serve uno stato, cosi i diritti si ricalcolano a ogni entrata/uscita.
++  const [tierStanza, setTierStanza] = useState(null);
+   const [clonedVoiceId, setClonedVoiceId] = useState(null);
+   const [clonedVoiceName, setClonedVoiceName] = useState('');
+ 
+@@ -67,10 +74,15 @@ export default function useAuth() {
+       setCanUseElevenLabs(true);
+       return;
+     }
++    // b.263 — dentro una stanza valgono i diritti dell'HOST: e gia cosi
++    // per il tier (page.js) e per l'addebito (hostEmail, b.107): la voce
++    // premium era l'unico pezzo rimasto indietro. L'addebito della voce
++    // resta sull'host: e il percorso stanza di tts-elevenlabs (b.161/167).
++    const ereditaDallaStanza = !!tierStanza && tierStanza !== 'FREE';
+     if (!userAccount) {
+-      setIsTrial(true);
+-      setIsTopPro(false);
+-      setCanUseElevenLabs(false);
++      setIsTrial(!ereditaDallaStanza);
++      setIsTopPro(tierStanza === 'TOP PRO');
++      setCanUseElevenLabs(ereditaDallaStanza);
+       return;
+     }
+     const tier = userAccount.tier || userAccount.subscription_plan || 'free';
+@@ -79,12 +91,12 @@ export default function useAuth() {
+     // con il saldo (402 se finito, con ripiego sui provider gratuiti).
+     // "Trial" resta solo per chi non ha un account.
+     setIsTrial(false);
+-    setIsTopPro(tier === 'business' || tier === 'top_pro');
++    setIsTopPro(tier === 'business' || tier === 'top_pro' || tierStanza === 'TOP PRO');
+     const hasOwnEL = userAccount.apiKeys?.elevenlabs?.trim?.();
+     // ElevenLabs: disponibile se la piattaforma ha la chiave (il saldo
+     // wallet lo verifica il server a ogni sintesi) o se ha la chiave sua.
+-    setCanUseElevenLabs(platformHasEL || !!hasOwnEL);
+-  }, [userAccount, platformHasEL]);
++    setCanUseElevenLabs(platformHasEL || !!hasOwnEL || ereditaDallaStanza);
++  }, [userAccount, platformHasEL, tierStanza]);
+ 
+   function getEffectiveToken() {
+     if (roomTierOverrideRef.current && roomTierOverrideRef.current !== 'FREE') return undefined;
+@@ -373,6 +385,7 @@ export default function useAuth() {
+     setIsTopPro,
+     canUseElevenLabs,
+     setCanUseElevenLabs,
++    tierStanza, setTierStanza,
+     elevenLabsVoices,
+     setElevenLabsVoices,
+     selectedELVoice,
+diff --git a/voice-translator-vercel/app/hooks/useConversationContext.js b/voice-translator-vercel/app/hooks/useConversationContext.js
+index 78f2d0e..ed6a3bc 100644
+--- a/voice-translator-vercel/app/hooks/useConversationContext.js
++++ b/voice-translator-vercel/app/hooks/useConversationContext.js
+@@ -164,7 +164,23 @@ export default function useConversationContext() {
+ 
+     // Cap allMessages to prevent unbounded growth — keep only last 500
+     if (allMessagesRef.current.length > 500) {
++      // b.247 — era uno slice(-500) secco: il buffer perdeva i messaggi più
++      // vecchi ma summarizedUpToRef restava un indice riferito all'array
++      // VECCHIO. Dopo il taglio, middleEnd resta inchiodato a 490 mentre
++      // l'indice non scende mai: "unsummarized" non tornava più ≥ 5 e il
++      // riassunto smetteva di avanzare per sempre (o, prima di fermarsi,
++      // prendeva lotti a offset slittati, cioè i messaggi sbagliati).
++      // Scelta: si riallinea l'indice sottraendo quanti elementi sono stati
++      // tolti (la forma meno invasiva: un numero di sequenza per messaggio
++      // avrebbe richiesto di toccare anche getContext e resetContext), con
++      // pavimento a EARLY_FULL_COUNT perché le prime 10 posizioni del buffer
++      // attuale sono quelle che getContext mostra integre.
++      const rimossi = allMessagesRef.current.length - 500;
+       allMessagesRef.current = allMessagesRef.current.slice(-500);
++      summarizedUpToRef.current = Math.max(
++        EARLY_FULL_COUNT,
++        summarizedUpToRef.current - rimossi
++      );
+     }
+ 
+     // ── Check if we need to summarize a new batch ──
+@@ -175,11 +191,19 @@ export default function useConversationContext() {
+     // Only summarize if we have more than early + recent + batch
+     if (totalCount > EARLY_FULL_COUNT + RECENT_FULL_COUNT) {
+       const middleEnd = totalCount - RECENT_FULL_COUNT;
+-      const unsummarized = middleEnd - summarizedUpToRef.current;
++      // b.247 — era batchStart = summarizedUpToRef.current secco: il ref parte
++      // da 0, quindi il PRIMO lotto riassumeva i messaggi 0..4 — proprio i
++      // primi EARLY_FULL_COUNT che la struttura promette di conservare
++      // integri (middleStart veniva calcolato ma mai usato). Risultato: i
++      // primi messaggi comparivano due volte nel contesto (integri E
++      // riassunti), sprecando righe del budget e sporcando il riassunto.
++      // Il lotto ora parte dal massimo fra l'inizio del "centro" e quanto
++      // già riassunto: il riassunto non mangia mai i primi 10.
++      const batchStart = Math.max(middleStart, summarizedUpToRef.current);
++      const unsummarized = middleEnd - batchStart;
+ 
+       if (unsummarized >= SUMMARY_BATCH_SIZE) {
+         // Summarize the next batch
+-        const batchStart = summarizedUpToRef.current;
+         const batchEnd = batchStart + SUMMARY_BATCH_SIZE;
+         const batch = allMessagesRef.current.slice(batchStart, batchEnd);
+         const summary = summarizeBatch(batch);
+diff --git a/voice-translator-vercel/app/hooks/useDeepgramSTT.js b/voice-translator-vercel/app/hooks/useDeepgramSTT.js
+index 4757ef5..e241fef 100644
+--- a/voice-translator-vercel/app/hooks/useDeepgramSTT.js
++++ b/voice-translator-vercel/app/hooks/useDeepgramSTT.js
+@@ -1,6 +1,7 @@
+ 'use client';
+ import { useRef, useEffect, useCallback } from 'react';
+ import { getLang } from '../lib/constants.js';
++import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
+ import { createLogger } from '../lib/logger.js';
+ const dbg = createLogger('deepgram');
+ 
+@@ -54,8 +55,17 @@ export default function useDeepgramSTT({
+   // configura DEEPGRAM_API_KEY (con permesso di creare chiavi temporanee)
+   // su Vercel. Le funzioni start/stopDeepgramStreaming restano nel file,
+   // inerti finche availableRef e false.
++  //
++  // b.247 — quel «false» era scritto A MANO qui, e intanto
++  // useStreamingInterpreter.js chiamava /api/stt-token e apriva il suo
++  // WebSocket verso Deepgram: la stessa decisione, presa due volte in due
++  // file che non si parlavano, con esiti opposti. Chi leggeva solo questo
++  // file concludeva che Deepgram fosse spento ovunque, e si sbagliava.
++  // La decisione ora vive in un posto solo, lib/sttPolicy.js, con scritto
++  // il perche; qui la si chiede. L'esito per la traduzione resta false —
++  // il comportamento non cambia, cambia il fatto che sia UNA decisione.
+   useEffect(() => {
+-    deepgramAvailableRef.current = false;
++    deepgramAvailableRef.current = deepgramAmmesso(USO.TRADUZIONE);
+   }, []);
+ 
+   /**
+@@ -64,6 +74,17 @@ export default function useDeepgramSTT({
+    * @returns {Promise<boolean>} — true if connected, false if fallback needed
+    */
+   const startDeepgramStreaming = useCallback(async (langObj) => {
++    // b.247 — seconda porta sulla stessa stanza: questa funzione apriva il
++    // microfono e il WebSocket senza chiedere niente a nessuno, e bastava
++    // una chiamata diretta (o un ripristino distratto della riga qui sopra)
++    // per riaccendere Deepgram senza accorgersene. La guardia sta PRIMA di
++    // qualunque effetto collaterale: niente microfono, niente stato di
++    // registrazione, si torna false e chiama il ripiego.
++    if (!deepgramAmmesso(USO.TRADUZIONE)) {
++      dbg.debug('[STT-Deepgram] non ammesso dalla policy: si usa il ripiego');
++      return false;
++    }
++
+     const speechLang = getLang(langObj)?.speech || 'en-US';
+     const dgLang = speechLang.split('-')[0]; // 'it-IT' → 'it'
+ 
+diff --git a/voice-translator-vercel/app/hooks/useInitializeApp.js b/voice-translator-vercel/app/hooks/useInitializeApp.js
+index 405e159..0b79659 100644
+--- a/voice-translator-vercel/app/hooks/useInitializeApp.js
++++ b/voice-translator-vercel/app/hooks/useInitializeApp.js
+@@ -331,12 +331,41 @@ export default function useInitializeApp({
+   }, []);
+ 
+   // ── Service worker registration ──
++  // ═══ INIZIO b.259 — l'applicazione si accorge da sola dei rilasci ═══
++  // TROVATO DAL VIVO, ed e costato UNA NOTTE: ogni correzione arrivava in
++  // produzione ma la scheda di Luca continuava a eseguire il bundle
++  // vecchio. Il controllo aggiornamenti girava UNA volta, al primo avvio:
++  // una scheda tenuta aperta (o una PWA installata) non veniva mai piu a
++  // sapere di un rilascio, e ogni collaudo inseguiva un fantasma di cache.
++  // Ora: si ricontrolla a ogni ritorno in primo piano e ogni 5 minuti; e
++  // quando il service worker nuovo prende il controllo, la pagina si
++  // ricarica da sola — MA solo se non sei in una stanza, perche un
++  // ricaricamento a meta conversazione butterebbe fuori dalla chiamata.
+   useEffect(() => {
+     if ('serviceWorker' in navigator) {
+       navigator.serviceWorker.register('/sw.js').then(reg => {
+         reg.update().catch(() => {});
++        // Ritorno in primo piano: il momento tipico in cui si riprende in
++        // mano un'app rimasta aperta da ore — e quello in cui il collaudo
++        // di stanotte trovava sempre la versione vecchia.
++        const ricontrolla = () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); };
++        document.addEventListener('visibilitychange', ricontrolla);
++        setInterval(() => reg.update().catch(() => {}), 5 * 60 * 1000);
+       }).catch(err => console.error('SW registration failed:', err));
++
++      // Il service worker nuovo ha preso il controllo (skipWaiting e gia
++      // in sw.js): da questo istante HTML e pagina appartengono a due
++      // versioni diverse. Si ricarica subito, tranne in stanza.
++      let ricaricato = false;
++      navigator.serviceWorker.addEventListener('controllerchange', () => {
++        if (ricaricato) return;
++        ricaricato = true;
++        const inStanza = /room|speaker|taxi/.test(window.location.hash || '') ||
++          document.querySelector('[aria-label*="translation" i], [role="log"]');
++        if (!inStanza) window.location.reload();
++      });
+     }
+     try { initMonitoring(); } catch { /* il monitoraggio e un di piu: se non parte, l applicazione funziona uguale */ }
+   }, []);
++  // ═══ FINE b.259 ═══
+ }
+diff --git a/voice-translator-vercel/app/hooks/useInterpreterMode.js b/voice-translator-vercel/app/hooks/useInterpreterMode.js
+index 0596c41..96b1473 100644
+--- a/voice-translator-vercel/app/hooks/useInterpreterMode.js
++++ b/voice-translator-vercel/app/hooks/useInterpreterMode.js
+@@ -24,6 +24,12 @@ const dbg = createLogger('interpreter');
+ 
+ const CHUNK_DURATION = 3000; // 3 seconds (legacy mode)
+ 
++// b.247 — tetto della coda dei blocchi audio in attesa di essere tradotti.
++// Dodici blocchi da 3 secondi sono 36 secondi di parlato accumulato: oltre
++// quella soglia non si e piu in ritardo, si e in un'altra conversazione, e
++// consegnare quella roba serve solo a confondere. Vedi `accodaChunk`.
++const MAX_CODA_CHUNK = 12;
++
+ export default function useInterpreterMode({
+   webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken, useOwnKeys,
+   startDucking, stopDucking,
+@@ -40,6 +46,9 @@ export default function useInterpreterMode({
+   const activeRef = useRef(false);
+   const processingRef = useRef(false);
+   const processChunkRef = useRef(null);
++  // b.247 — coda FIFO dei blocchi audio (vedi `accodaChunk`)
++  const codaChunkRef = useRef([]);
++  const accodaChunkRef = useRef(null);
+ 
+   // Keep refs in sync
+   useEffect(() => { activeRef.current = active; }, [active]);
+@@ -146,11 +155,21 @@ export default function useInterpreterMode({
+   }, [playBase64Audio]);
+ 
+   // Process a single audio chunk: STT → Translate → TTS → Send
++  //
++  // b.247 — qui c'era `if (!activeRef.current || processingRef.current) return;`
++  // e quel `processingRef.current` BUTTAVA VIA il blocco. Il MediaRecorder ne
++  // consegna uno ogni 3 secondi (CHUNK_DURATION), ma la catena
++  // STT → traduzione → TTS → base64 → DataChannel spesso ci mette di piu: il
++  // blocco successivo arrivava mentre il precedente era ancora in viaggio e
++  // spariva senza un rigo di registro. Su rete lenta si perdevano frasi
++  // intere, in silenzio — in un interprete e il difetto peggiore possibile,
++  // perche chi parla non ha modo di accorgersene.
++  // Ora chi decide l'ordine e la coda (`accodaChunk` / `elaboraCoda`) e
++  // `processingRef` serve solo a garantire che si elabori uno per volta.
+   const processChunk = useCallback(async (blob) => {
+-    if (!activeRef.current || processingRef.current) return;
+-    if (blob.size < 1000) return; // Skip tiny/silent chunks
++    if (!activeRef.current) return;
++    if (!blob || blob.size < 1000) return; // Skip tiny/silent chunks
+ 
+-    processingRef.current = true;
+     try {
+       // 1. STT — Transcribe audio
+       // /api/transcribe reads userToken + sourceLang from formData (NOT headers)
+@@ -167,9 +186,9 @@ export default function useInterpreterMode({
+         fetch('/api/transcribe', { method: 'POST', body: formData })
+       );
+ 
+-      if (!sttRes.ok) { processingRef.current = false; return; }
++      if (!sttRes.ok) { return; }
+       const { original: transcript } = await sttRes.json();
+-      if (!transcript || transcript.trim().length < 2) { processingRef.current = false; return; }
++      if (!transcript || transcript.trim().length < 2) { return; }
+ 
+       // Add to my subtitles
+       const mySub = { text: transcript, lang: myLang, ts: Date.now() };
+@@ -191,9 +210,9 @@ export default function useInterpreterMode({
+         })
+       );
+ 
+-      if (!translateRes.ok) { processingRef.current = false; return; }
++      if (!translateRes.ok) { return; }
+       const { translated } = await translateRes.json();
+-      if (!translated) { processingRef.current = false; return; }
++      if (!translated) { return; }
+ 
+       // 3. TTS — Generate audio of translation
+       // /api/tts-edge expects langCode (not lang)
+@@ -212,7 +231,7 @@ export default function useInterpreterMode({
+         })
+       );
+ 
+-      if (!ttsRes.ok) { processingRef.current = false; return; }
++      if (!ttsRes.ok) { return; }
+       const ttsBlob = await ttsRes.blob();
+       const ttsBuffer = await ttsBlob.arrayBuffer();
+       // Convert to base64 in chunks to avoid "Maximum call stack size exceeded"
+@@ -264,8 +283,6 @@ export default function useInterpreterMode({
+       }
+     } catch (e) {
+       console.warn('[Interpreter] Process chunk error:', e);
+-    } finally {
+-      processingRef.current = false;
+     }
+   }, [myLang, partnerLang, roomId, roomSessionTokenRef, userToken, webrtc]);
+ 
+@@ -273,6 +290,47 @@ export default function useInterpreterMode({
+   // (avoids stale closure if myLang/partnerLang/userToken change mid-recording)
+   useEffect(() => { processChunkRef.current = processChunk; }, [processChunk]);
+ 
++  // ═══ CODA FIFO DEI BLOCCHI AUDIO (b.247) ═══
++  // Elabora la coda un blocco alla volta, in ordine di arrivo. Non salta
++  // niente: se e in corso un'elaborazione questa chiamata torna subito e il
++  // ciclo gia avviato prendera in carico anche i blocchi appena accodati.
++  const elaboraCoda = useCallback(async () => {
++    if (processingRef.current) return;
++    processingRef.current = true;
++    try {
++      while (codaChunkRef.current.length > 0 && activeRef.current) {
++        const blob = codaChunkRef.current.shift();
++        await processChunkRef.current?.(blob);
++      }
++    } finally {
++      processingRef.current = false;
++      // Se nel frattempo l'interprete e stato spento, quello che resta in
++      // coda e roba di una conversazione finita: non si consegna.
++      if (!activeRef.current) codaChunkRef.current = [];
++    }
++  }, []);
++
++  // Accoda un blocco e fa ripartire l'elaborazione.
++  // Il tetto MAX_CODA_CHUNK esiste perche una coda che cresce all'infinito
++  // e un altro modo di rompersi: si finisce a tradurre, con un minuto di
++  // ritardo, frasi a cui nessuno risponde piu. Quando si supera si butta il
++  // PIU VECCHIO (la conversazione recente conta piu di quella vecchia) e lo
++  // si DICHIARA in console: il difetto originale non era lo scarto, era lo
++  // scarto in SILENZIO.
++  const accodaChunk = useCallback((blob) => {
++    if (!activeRef.current) return;
++    if (!blob || blob.size < 1000) return; // blocchi vuoti o di solo silenzio
++    codaChunkRef.current.push(blob);
++    if (codaChunkRef.current.length > MAX_CODA_CHUNK) {
++      const scartati = codaChunkRef.current.length - MAX_CODA_CHUNK;
++      codaChunkRef.current.splice(0, scartati);
++      console.warn(`[Interpreter] b.247 — coda STT piena (max ${MAX_CODA_CHUNK}): scartati ${scartati} blocchi audio, i piu vecchi. La catena STT/traduzione/TTS non tiene il passo del microfono.`);
++    }
++    elaboraCoda();
++  }, [elaboraCoda]);
++
++  useEffect(() => { accodaChunkRef.current = accodaChunk; }, [accodaChunk]);
++
+   // Start recording + processing loop
+   const startInterpreter = useCallback(async () => {
+     try {
+@@ -298,13 +356,18 @@ export default function useInterpreterMode({
+       const recorder = new MediaRecorder(recordStream, { mimeType });
+       recorderRef.current = recorder;
+ 
+-      // Use ref to always call latest processChunk (avoids stale closure)
++      // b.247 — il blocco non si elabora piu qui: si ACCODA. Prima veniva
++      // passato dritto a processChunk, che lo buttava via se era ancora
++      // occupato con il precedente.
+       recorder.ondataavailable = (e) => {
+         if (e.data && e.data.size > 0 && activeRef.current) {
+-          processChunkRef.current?.(e.data);
++          accodaChunkRef.current?.(e.data);
+         }
+       };
+ 
++      // La coda parte vuota: quello che era rimasto da una sessione
++      // precedente non ha piu niente a che fare con questa.
++      codaChunkRef.current = [];
+       recorder.start(CHUNK_DURATION);
+       setActive(true);
+       dbg.debug('[Interpreter] Started');
+@@ -312,11 +375,17 @@ export default function useInterpreterMode({
+       console.error('[Interpreter] Failed to start:', e);
+       setActive(false);
+     }
+-  }, [processChunk]);
++  }, []);
+ 
+   // Stop recording
+   const stopInterpreter = useCallback(() => {
+     setActive(false);
++    // b.247 — activeRef si allinea solo al render successivo: qui lo si
++    // mette a posto subito, altrimenti un blocco consegnato in questo
++    // istante dal MediaRecorder finirebbe ancora in coda. Poi la coda si
++    // svuota: e parlato di una conversazione chiusa.
++    activeRef.current = false;
++    codaChunkRef.current = [];
+     if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+       try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+     }
+@@ -335,6 +404,10 @@ export default function useInterpreterMode({
+   // Cleanup on unmount
+   useEffect(() => {
+     return () => {
++      // b.247 — vedi stopInterpreter: chi se ne va non deve lasciare blocchi
++      // audio in attesa di essere tradotti.
++      activeRef.current = false;
++      codaChunkRef.current = [];
+       if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+         try { recorderRef.current.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+       }
+diff --git a/voice-translator-vercel/app/hooks/useRoomPolling.js b/voice-translator-vercel/app/hooks/useRoomPolling.js
+index bedf22a..e7847ef 100644
+--- a/voice-translator-vercel/app/hooks/useRoomPolling.js
++++ b/voice-translator-vercel/app/hooks/useRoomPolling.js
+@@ -70,6 +70,13 @@ export default function useRoomPolling({
+     }
+   };
+   const pollErrorCountRef = useRef(0);
++  // b.250 — contatore dei 401/403 consecutivi del battito (vedi sotto).
++  const auth401CountRef = useRef(0);
++  // b.264 — cresce a ogni CAMBIO di gettone di stanza (rientro b.250):
++  // il gemello in page.js si sincronizza al cambio di roomId, ma dopo
++  // una riammissione il roomId e lo stesso e il gettone e NUOVO — la
++  // voce premium sarebbe rimasta col gettone vecchio (401 → ripiego).
++  const [versioneToken, setVersioneToken] = useState(0);
+   const [pollError, setPollError] = useState(false);
+   const roomSessionTokenRef = useRef(null);
+   const verifiedNameRef = useRef(null);
+@@ -89,11 +96,12 @@ export default function useRoomPolling({
+   const processedMsgIdsRef = useRef(new Set());
+ 
+   // ── Helper: process incoming message (shared by realtime + polling + P2P) ──
+-  // ALWAYS checks content fingerprint to prevent TTS replay.
+-  // This handles: P2P + Realtime arriving ~50ms apart, and polling replacing temp with server ID.
++  // b.248 — il dedup del TTS e per IDENTIFICATIVO, non piu per contenuto.
++  // Copre: P2P + Realtime a ~50 ms di distanza, e il polling che porta la
++  // copia del server (id nuovo, ma stesso `clientId`) di un messaggio gia letto.
+   const processIncomingMessage = useCallback((msg) => {
+-    if (!msg || !msg.id) { dbg.debug('[TTS-TRACE] skip: no msg/id'); return; }
+-    if (sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
++    if (!msg) { dbg.debug('[TTS-TRACE] skip: no msg'); return; }
++    if (msg.id && sentByMeRef.current.has(msg.id)) { dbg.debug('[TTS-TRACE] skip: sentByMe', msg.id); return; }
+     const myVerifiedName = verifiedNameRef.current || prefsRef.current.name;
+     if (msg.sender === myVerifiedName) { dbg.debug('[TTS-TRACE] skip: sender=me', msg.sender, '=', myVerifiedName); return; }
+ 
+@@ -112,12 +120,37 @@ export default function useRoomPolling({
+     // `processIncomingMessage` lo chiamano tutti e due i percorsi, e ha
+     // gia i controlli giusti sopra: scarta i miei messaggi e quelli gia
+     // visti. Il posto era questo dall'inizio.
+-    try { broadcastAckRef.current?.(msg.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
++    try { if (msg.id) broadcastAckRef.current?.(msg.id); } catch (e) { /* la spunta restera a una: non vale un errore a schermo */ }
+ 
+-    const timeWindow = Math.floor((msg.timestamp || Date.now()) / 30000);
+-    const contentFingerprint = `${msg.sender}|${msg.original?.substring(0,20)}|${timeWindow}`;
+-    if (processedForTTSRef.current.has(contentFingerprint)) {
+-      dbg.debug('[TTS-TRACE] skip: fingerprint dup', contentFingerprint);
++    // ── b.248 · la voce segue l'IDENTITA del messaggio, non il suo testo ──
++    //
++    // Qui c'era un'impronta sul CONTENUTO: `sender | primi 20 caratteri |
++    // finestra di 30 s`. Due messaggi REALMENTE DIVERSI dello stesso
++    // mittente che cominciavano uguale ("Va bene, ci vediamo domani alle
++    // otto" / "...alle nove", entro 30 s) avevano la stessa impronta, e la
++    // voce del secondo spariva senza un errore.
++    //
++    // Da b.247 l'identificativo esiste SEMPRE e viaggia intero: e la
++    // chiave giusta. `clientId` viene prima di `id` perche e l'id di
++    // cattura, quello che NON cambia da un canale all'altro: il broadcast
++    // consegna il messaggio con `id = tmp_...`, il polling porta la copia
++    // del server con un id suo ma con `clientId = tmp_...` (lo conserva
++    // /api/messages). Stessa cattura = stessa chiave = una sola voce, che
++    // e esattamente il caso per cui l'impronta sul contenuto era nata
++    // (stesso messaggio da P2P + Realtime + polling, anche a ~50 ms).
++    //
++    // Ripiego SOLO per i messaggi senza alcun id (client precedenti a
++    // b.126, che il clientId non lo mandano): prima venivano scartati del
++    // tutto (`if (!msg.id) return`) e restavano muti. Ora si leggono, e il
++    // doppione si riconosce dal testo INTERO — non da un prefisso: due
++    // frasi diverse non devono mai diventare "la stessa". La finestra di
++    // 30 s resta solo qui, perche senza identita e l'unico modo di
++    // permettere alla stessa frase di essere ridetta piu tardi.
++    const chiaveTTS = (msg.clientId || msg.id)
++      ? `id:${msg.clientId || msg.id}`
++      : `testo:${msg.sender}|${msg.original}|${Math.floor((msg.timestamp || Date.now()) / 30000)}`;
++    if (processedForTTSRef.current.has(chiaveTTS)) {
++      dbg.debug('[TTS-TRACE] skip: gia letto', chiaveTTS);
+       return;
+     }
+ 
+@@ -146,13 +179,16 @@ export default function useRoomPolling({
+     });
+ 
+     if (textToPlay && prefsRef.current.autoPlay !== false) {
+-      processedForTTSRef.current.add(contentFingerprint);
++      processedForTTSRef.current.add(chiaveTTS);
+       if (processedForTTSRef.current.size > 500) {
+         const first = processedForTTSRef.current.values().next().value;
+         processedForTTSRef.current.delete(first);
+       }
+       dbg.debug('[TTS-TRACE] >>> queueAudio:', textToPlay?.substring(0,30), speechLang);
+-      queueAudio(textToPlay, speechLang, msg.id);
++      // b.248 — alla coda si passa l'id di CATTURA (clientId se c'e):
++      // cosi anche il suo dedup interno vede la stessa chiave su tutti i
++      // canali, copia del server compresa.
++      queueAudio(textToPlay, speechLang, msg.clientId || msg.id);
+     } else {
+       dbg.debug('[TTS-TRACE] no TTS:', textToPlay ? 'autoPlay=false' : 'no textToPlay');
+     }
+@@ -249,7 +285,18 @@ export default function useRoomPolling({
+     // ── Deterministic update ID: same content = same ID across P2P + Realtime ──
+     // Previously used `update_${Date.now()}` which generated different IDs for each
+     // delivery channel, defeating the message-ID dedup guard.
+-    const updateId = data.tempId || `update_${data.sender}|${data.original}`;
++    // ═══ INIZIO b.251 — l'aggiornamento non e il messaggio ═══
++    // TROVATO DAL VIVO (Luca: "l'audio non va piu"): da b.247 la fase 2
++    // porta lo STESSO identificativo di cattura della fase 1 (`tempId`),
++    // e qui lo si usava tale e quale come chiave del dedup. Ma la fase 1
++    // (handleRealtimeMessage) aveva GIA registrato quell'id: la fase 2
++    // risultava quindi "gia processata" e veniva scartata — cioe proprio
++    // il turno che porta la traduzione, l'unico che fa parlare la voce.
++    // Risultato: il testo tradotto arriva a schermo e l'audio resta muto.
++    // La chiave dell'AGGIORNAMENTO deve vivere in uno spazio suo:
++    // stesso messaggio, due eventi diversi.
++    const updateId = `upd:${data.tempId || `${data.sender}|${data.original}`}`;
++    // ═══ FINE b.251 ═══
+ 
+     // ── ID-based guard: skip if already processed by another delivery channel ──
+     const alreadyProcessed = processedMsgIdsRef.current.has(updateId);
+@@ -261,9 +308,22 @@ export default function useRoomPolling({
+       }
+     }
+ 
+-    // Find the message by sender + original text (works for both temp and server IDs)
++    // ── b.247 · prima si cerca per IDENTIFICATIVO, il testo e solo il ripiego ──
++    // Qui si cercava SOLO per `sender + original`, e `findIndex` si ferma
++    // al primo che combacia: con due messaggi identici dello stesso
++    // mittente la traduzione del SECONDO si posava sul PRIMO, e il
++    // secondo restava per sempre senza. Il `tempId` nel payload esisteva
++    // gia (serviva al dedup fra canali, qui sopra), ma per TROVARE il
++    // messaggio non lo guardava nessuno. Il messaggio in elenco si
++    // riconosce o dal suo id (finche e ancora `tmp_...`) o dal
++    // `clientId` (dopo che il polling lo ha sostituito con la copia del
++    // server, che quel campo lo conserva).
+     setMessages(prev => {
+-      const idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
++      let idx = data.tempId
++        ? prev.findIndex(m => m.id === data.tempId || m.clientId === data.tempId)
++        : -1;
++      // Ripiego per i messaggi partiti senza identificativo (client vecchi).
++      if (idx < 0) idx = prev.findIndex(m => m.sender === data.sender && m.original === data.original);
+       if (idx < 0) {
+         // ── Fallback: try matching by sender only + similar original (trim whitespace) ──
+         const trimmedOriginal = data.original?.trim();
+@@ -294,15 +354,22 @@ export default function useRoomPolling({
+     if (!alreadyProcessed && (data.translated || data.translations)) {
+       processIncomingMessage({
+         id: updateId,
++        // b.251 — la chiave della VOCE resta quella della cattura: il
++        // polling porta la stessa traduzione con `clientId = tmp_...`, e
++        // senza questo campo i due canali avrebbero due chiavi diverse e
++        // la frase si sentirebbe DUE volte. Il dedup degli eventi (sopra)
++        // e cosa distinta dal dedup della voce: qui servono entrambi.
++        clientId: data.tempId || undefined,
+         sender: data.sender,
+         original: data.original,
+         translated: data.translated,
+         sourceLang: data.sourceLang,
+         targetLang: data.targetLang,
+         translations: data.translations,
+-        // IMPORTANT: preserve original timestamp for TTS fingerprint dedup.
+-        // Without this, Date.now() is used, which can cross 30-second bucket
+-        // boundaries and cause duplicate TTS playback.
++        // b.248 — il timestamp originale si conserva per il RIPIEGO senza
++        // id (finestra di 30 s sul testo intero): con Date.now() si
++        // cambierebbe finestra e la stessa frase suonerebbe due volte.
++        // Con l'id (il caso normale da b.247) non conta piu per il dedup.
+         timestamp: data.timestamp,
+       });
+     }
+@@ -538,12 +605,49 @@ export default function useRoomPolling({
+         }
+ 
+         // Heartbeat (always needed to keep room alive and detect members)
+-        const heartbeatBody = { action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current, name: prefsRef.current.name };
++        // b.250 — lingua e avatar viaggiano col battito: servono al server
++        // SOLO per riammettere chi e stato potato mentre era vivo (schermo
++        // spento → battiti oltre i 60s). Vedi riammettiConGettone in store.js.
++        const heartbeatBody = {
++          action: 'heartbeat', roomId: rid, roomSessionToken: roomSessionTokenRef.current,
++          name: prefsRef.current.name, lang: prefsRef.current.lang || myLangRef?.current,
++          avatar: prefsRef.current.avatar || null,
++        };
+         const rRes = await fetch('/api/room', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify(heartbeatBody)
+         });
++        // b.250 — il 401 non e piu muto. Prima di questa versione il
++        // telefono di Luca ha battuto per MEZZ'ORA ogni 18 secondi
++        // ricevendo 401 senza che nessuno — ne lui ne il codice — se ne
++        // accorgesse: niente messaggi, niente traduzioni, nessun avviso.
++        // Se il gettone non vale piu (scaduto, o stanza rinata), si
++        // riprova UNA volta a rientrare con nome/lingua/segreto-host; se
++        // anche il rientro fallisce si dichiara l'errore di linea.
++        if (rRes.status === 401 || rRes.status === 403) {
++          auth401CountRef.current++;
++          if (auth401CountRef.current === 2) {
++            let hostSecret = null;
++            try { hostSecret = JSON.parse(localStorage.getItem('vt-host-secrets') || '{}')[rid] || null; } catch { /* nessun segreto: si rientra da guest */ }
++            try {
++              const ri = await fetch('/api/room', {
++                method: 'POST', headers: { 'Content-Type': 'application/json' },
++                body: JSON.stringify({ action: 'join', roomId: rid, name: prefsRef.current.name,
++                  lang: prefsRef.current.lang || 'en', avatar: prefsRef.current.avatar || null, hostSecret }),
++              });
++              if (ri.ok) {
++                const dati = await ri.json();
++                if (dati.roomSessionToken) { roomSessionTokenRef.current = dati.roomSessionToken; setVersioneToken(v => v + 1); }
++                auth401CountRef.current = 0;
++              } else {
++                setPollError(true);
++              }
++            } catch { setPollError(true); }
++          }
++        } else if (auth401CountRef.current > 0 && rRes.ok) {
++          auth401CountRef.current = 0;
++        }
+         if (rRes.ok) {
+           const { room, verifiedName, isHost: hostFlag } = await rRes.json();
+           if (verifiedName) verifiedNameRef.current = verifiedName;
+@@ -878,9 +982,18 @@ export default function useRoomPolling({
+   }
+ 
+   // ── Stable callbacks for two-phase send (avoid cascading re-creations) ──
+-  const updateLocalMessage = useCallback((original, sender, updates) => {
++  // b.247 — `msgId` e l'identificativo della spedizione (`tmp_...`), e
++  // viene PRIMA del contenuto: la ricerca per `sender + original` con
++  // `findIndex` trova sempre il primo che combacia, quindi con due
++  // messaggi identici lo stato e la traduzione del secondo si posavano
++  // sul primo. Il confronto sul testo resta solo come ripiego per le
++  // chiamate che l'identificativo non ce l'hanno.
++  const updateLocalMessage = useCallback((original, sender, updates, msgId) => {
+     setMessages(prev => {
+-      const idx = prev.findIndex(m => m.sender === sender && m.original === original);
++      let idx = msgId
++        ? prev.findIndex(m => m.id === msgId || m.clientId === msgId)
++        : -1;
++      if (idx < 0) idx = prev.findIndex(m => m.sender === sender && m.original === original);
+       if (idx < 0) return prev;
+       const updated = [...prev];
+       updated[idx] = { ...updated[idx], ...updates };
+@@ -896,7 +1009,44 @@ export default function useRoomPolling({
+     });
+   }, []); // setMessages is stable — no deps needed
+ 
++  // ── b.247 · uscire si diceva solo a se stessi ──
++  //
++  // Questa funzione cancellava SOLO lo stato locale (gettone di stanza,
++  // roomId, roomInfo) e non avvisava nessuno: il server continuava a
++  // tenere la persona in `room.members` fino alla scadenza della stanza
++  // (un'ora, per giunta rinnovata dai battiti di chi resta). Da li i
++  // membri fantasma, la capienza sbagliata, `partnerConnected` che resta
++  // vero con la stanza vuota, e la videochiamata che aspetta un fantasma.
++  //
++  // Ordine obbligato: PRIMA si avvisa il server, POI si azzera — dopo
++  // `roomSessionTokenRef.current = null` il gettone non c'e piu e la
++  // chiamata sarebbe rifiutata con 401 (l'azione `leave` pretende un
++  // gettone valido per QUESTA stanza, come tutte le azioni protette).
++  //
++  // E un di piu, non un passaggio obbligato: si parte senza `await` e si
++  // ingoia qualunque errore. Se la rete manca o il server risponde male,
++  // l'utente esce lo stesso e senza attendere — resta il vecchio
++  // comportamento (fantasma fino alla scadenza), che e esattamente cio
++  // che succedeva sempre prima di questa versione. `keepalive` serve
++  // perche l'uscita spesso coincide con un cambio di vista o con la
++  // chiusura della pagina: senza, il browser puo annullare la richiesta
++  // a meta.
++  function avvisaServerDellUscita() {
++    const gettone = roomSessionTokenRef.current;
++    const stanza = roomId;
++    if (!gettone || !stanza) return;
++    try {
++      fetch('/api/room', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ action: 'leave', roomId: stanza, roomSessionToken: gettone }),
++        keepalive: true,
++      }).catch(() => { /* l'uscita non si blocca mai per la rete */ });
++    } catch { /* nemmeno per un fetch che non parte proprio */ }
++  }
++
+   function leaveRoom() {
++    avvisaServerDellUscita();
+     stopPolling();
+     roomSessionTokenRef.current = null;
+     verifiedNameRef.current = null;
+@@ -935,6 +1085,7 @@ export default function useRoomPolling({
+     leaveRoom,
+     sentByMeRef,
+     roomSessionTokenRef,
++    versioneToken,
+     verifiedNameRef,
+     isHostRef,
+     // Realtime broadcast functions (for use in useTranslationAPI)
+diff --git a/voice-translator-vercel/app/hooks/useStanzaVideo.js b/voice-translator-vercel/app/hooks/useStanzaVideo.js
+index 19610b6..4823e66 100644
+--- a/voice-translator-vercel/app/hooks/useStanzaVideo.js
++++ b/voice-translator-vercel/app/hooks/useStanzaVideo.js
+@@ -132,8 +132,18 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
+     const voce = apriPeer(nome);
+     voce.canale = createDataChannel(voce.pc, 'parlato');
+     ascoltaCanale(voce.canale, nome);
+-    voce.pc.addTransceiver('audio', { direction: 'sendrecv' });
+-    if (conVideo) voce.pc.addTransceiver('video', { direction: 'sendrecv' });
++    // b.248 — CONFERMATO (audit esterno): apriPeer aveva GIA messo le
++    // mie tracce con addTrack (una m-line per traccia, in sendrecv), e
++    // qui si aggiungevano COMUNQUE due transceiver espliciti: l'offerta
++    // usciva con le m-line doppie — doppio audio, doppio video, meta
++    // linee senza niente dentro. Fragile e inutile. I transceiver
++    // espliciti servono SOLO per i media che non sto gia inviando
++    // (ricezione sola): senza, l'offerta non chiederebbe il video degli
++    // altri. O le tracce o il transceiver, mai entrambi per lo stesso
++    // media.
++    const giaInviati = new Set(voce.pc.getSenders().map(s => s.track?.kind).filter(Boolean));
++    if (!giaInviati.has('audio')) voce.pc.addTransceiver('audio', { direction: 'recvonly' });
++    if (conVideo && !giaInviati.has('video')) voce.pc.addTransceiver('video', { direction: 'recvonly' });
+     // createOffer restituisce gia una stringa JSON pronta da spedire.
+     const offerta = await createOffer(voce.pc);
+     await api('manda', { a: nome, segnale: { tipo: 'offerta', dati: offerta } });
+@@ -199,6 +209,20 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
+     }
+   }, [api, rispondi, chiudiPeer]);
+ 
++  // b.248 — CONFERMATO (audit esterno): solo "stanza piena" fermava le
++  // tracce; un ingresso fallito per QUALSIASI altro motivo tornava
++  // indietro lasciando camera e microfono accesi — spia verde, senza
++  // essere in stanza. Il rilascio ora e UN punto solo, chiamato da OGNI
++  // percorso di errore e dall'uscita: se il punto e uno, non si puo
++  // dimenticare un ramo.
++  const spegniMioFlusso = useCallback(() => {
++    if (mioStreamRef.current) {
++      mioStreamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia ferma */ } });
++      mioStreamRef.current = null;
++    }
++    setMioStream(null);
++  }, []);
++
+   // ── Entro ──
+   const entra = useCallback(async () => {
+     if (!roomId || !roomSessionToken) return;
+@@ -214,22 +238,25 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
+       const d = await api('entra');
+       if (d?.error === 'stanza piena') {
+         setStanzaPiena(true); setErrore(d.motivo || tFuori('roomFull')); setStato('errore');
+-        flusso.getTracks().forEach(t => t.stop());
++        spegniMioFlusso();
+         return;
+       }
+-      if (!d?.ok) { setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
++      if (!d?.ok) { spegniMioFlusso(); setErrore(tFuori('cannotEnter')); setStato('errore'); return; }
+ 
+       setStato('dentro');
+       // Propongo solo a chi mi tocca: l'ordine alfabetico evita che due
+       // persone si offrano insieme e non si colleghi nessuno.
+       for (const nome of d.devoChiamare || []) await proponi(nome);
+     } catch (e) {
++      // Anche un errore a meta (permesso negato, offerta fallita) non
++      // deve lasciare la spia della camera accesa.
++      spegniMioFlusso();
+       setErrore(e?.name === 'NotAllowedError'
+         ? tFuori('needMicCamPermission')
+         : tFuori('cannotStartMicCam'));
+       setStato('errore');
+     }
+-  }, [roomId, roomSessionToken, conVideo, api, proponi]);
++  }, [roomId, roomSessionToken, conVideo, api, proponi, spegniMioFlusso]);
+ 
+   // ── Esco ──
+   const esci = useCallback(async () => {
+@@ -238,14 +265,10 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
+       chiudiPeer(nome);
+     }
+     await api('esci');
+-    if (mioStreamRef.current) {
+-      mioStreamRef.current.getTracks().forEach(t => t.stop());
+-      mioStreamRef.current = null;
+-    }
+-    setMioStream(null);
++    spegniMioFlusso();
+     setPartecipanti([]);
+     setStato('fermo');
+-  }, [api, chiudiPeer]);
++  }, [api, chiudiPeer, spegniMioFlusso]);
+ 
+   // ── Mando il mio parlato tradotto a tutti ──
+   const mandaTesto = useCallback((testo, lingua) => {
+diff --git a/voice-translator-vercel/app/hooks/useStreamingInterpreter.js b/voice-translator-vercel/app/hooks/useStreamingInterpreter.js
+index c55aa19..41726da 100644
+--- a/voice-translator-vercel/app/hooks/useStreamingInterpreter.js
++++ b/voice-translator-vercel/app/hooks/useStreamingInterpreter.js
+@@ -2,6 +2,7 @@
+ import { useState, useRef, useCallback, useEffect } from 'react';
+ import { getLang } from '../lib/constants.js';
+ import { createNoiseGate } from '../lib/noiseGate.js';
++import { deepgramAmmesso, USO } from '../lib/sttPolicy.js';
+ import { createLogger } from '../lib/logger.js';
+ const dbg = createLogger('streaming');
+ 
+@@ -70,6 +71,11 @@ export default function useStreamingInterpreter({
+ 
+   // ═══ FETCH DEEPGRAM KEY ═══
+   useEffect(() => {
++    // b.247 — la decisione «Deepgram si o no» era scritta in DUE posti che
++    // non si parlavano: useDeepgramSTT.js la spegneva (b.172) e questo file
++    // chiamava /api/stt-token lo stesso. Ora la risposta e una sola e sta in
++    // lib/sttPolicy.js; qui ci si limita a chiederla.
++    if (!deepgramAmmesso(USO.INTERPRETE)) return;
+     // b.161 — roomSessionToken obbligatorio per il percorso roomId (vedi
+     // stt-token/route.js, punto 2 quarto audit).
+     fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) }).then(r => r.ok ? r.json() : null)
+@@ -283,8 +289,67 @@ export default function useStreamingInterpreter({
+     }
+   }, [handleSentenceComplete]);
+ 
++  // ═══ ABORT COMPLETO (b.247) ═══
++  // Era il difetto peggiore della modalita interprete: `start()` poteva
++  // restituire false (errore del WebSocket, o scadenza dei 4 secondi)
++  // LASCIANDO APERTO tutto quello che aveva gia acceso — il WebSocket, il
++  // microfono di getUserMedia, l'AudioContext e lo ScriptProcessor che
++  // continuava a spingere PCM dentro il socket. useInterpreterMode legge
++  // quel false come «streaming non disponibile» e avvia subito la pipeline
++  // a blocchi da 3 secondi: se il WebSocket Deepgram si apriva un istante
++  // dopo, restavano DUE microfoni aperti e DUE trascrizioni in corso sulla
++  // stessa voce — doppio consumo a pagamento, sottotitoli duplicati e
++  // l'audio del dispositivo mai rilasciato.
++  //
++  // Qui si spegne tutto in un colpo solo. E IDEMPOTENTE: ogni pezzo viene
++  // toccato solo se c'e ancora, e il ref viene azzerato subito dopo, cosi
++  // chiamarla due volte (abort + stop, o abort + smontaggio) non e un
++  // guasto. Nessuna dipendenza: lavora solo su ref.
++  const abortaStreaming = useCallback(() => {
++    if (processorRef.current) {
++      try { processorRef.current.onaudioprocess = null; } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
++      try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
++      processorRef.current = null;
++    }
++    if (audioCtxRef.current) {
++      const ctx = audioCtxRef.current;
++      audioCtxRef.current = null;
++      if (ctx.state !== 'closed') { try { ctx.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
++    }
++    if (noiseGateRef.current) {
++      try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
++      noiseGateRef.current = null;
++    }
++    if (streamRef.current) {
++      const tracce = streamRef.current;
++      streamRef.current = null;
++      tracce.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
++    }
++    if (wsRef.current) {
++      const ws = wsRef.current;
++      wsRef.current = null;
++      try {
++        // Si stacca prima l'ascolto: un socket in chiusura puo ancora
++        // consegnare trascrizioni, e finirebbero sui sottotitoli di una
++        // sessione che l'utente ha gia abbandonato.
++        ws.onmessage = null; ws.onerror = null; ws.onclose = null; ws.onopen = null;
++        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'CloseStream' }));
++        ws.close();
++      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
++    }
++    activeRef.current = false;
++    setActive(false);
++  }, []);
++
+   // ═══ START STREAMING ═══
+   const start = useCallback(async () => {
++    // b.247 — chi decide se Deepgram si puo usare e lib/sttPolicy.js, non
++    // questo file (vedi il commento sulla fetch della chiave).
++    if (!deepgramAmmesso(USO.INTERPRETE)) {
++      dbg.debug('[StreamInterp] Deepgram non ammesso dalla policy: si usa la pipeline a blocchi');
++      return false;
++    }
++
+     if (!deepgramKeyRef.current) {
+       // Try to get key
+       try {
+@@ -340,6 +405,24 @@ export default function useStreamingInterpreter({
+       wsRef.current = ws;
+ 
+       return new Promise((resolve) => {
++        // b.247 — UNA SOLA PORTA D'USCITA da questa promessa.
++        // Prima l'esito negativo si dava in due punti scollegati
++        // (`ws.onerror` e un `setTimeout(..., 4000)`) e nessuno dei due
++        // spegneva niente; per giunta il temporizzatore non veniva mai
++        // annullato, quindi continuava a scattare anche dopo una
++        // connessione riuscita. Ora: si esce una volta sola, il
++        // temporizzatore si annulla, e ogni esito NEGATIVO passa
++        // obbligatoriamente dall'abort completo.
++        let risolto = false;
++        let timerAperturaId = null;
++        const concludi = (esito) => {
++          if (risolto) return;
++          risolto = true;
++          clearTimeout(timerAperturaId);
++          if (!esito) abortaStreaming();
++          resolve(esito);
++        };
++
+         ws.onopen = () => {
+           dbg.debug('[StreamInterp] Connected to Deepgram');
+ 
+@@ -365,7 +448,7 @@ export default function useStreamingInterpreter({
+           // Don't connect processor to destination - this causes echo!
+           // Processor only needs to capture audio, not output it
+           setActive(true);
+-          resolve(true);
++          concludi(true);
+         };
+ 
+         ws.onmessage = (event) => {
+@@ -384,15 +467,27 @@ export default function useStreamingInterpreter({
+           } catch { /* messaggio del riconoscitore in un formato inatteso: si aspetta il prossimo */ }
+         };
+ 
+-        ws.onerror = () => { console.warn('[StreamInterp] WS error'); resolve(false); };
+-        ws.onclose = () => { dbg.debug('[StreamInterp] WS closed'); };
+-        setTimeout(() => resolve(false), 4000);
++        ws.onerror = () => { console.warn('[StreamInterp] WS error'); concludi(false); };
++        ws.onclose = () => {
++          dbg.debug('[StreamInterp] WS closed');
++          // Se si chiude PRIMA di essersi aperto (chiave rifiutata, rete
++          // caduta) non ha senso aspettare i 4 secondi: si dichiara subito
++          // il fallimento, cosi la pipeline di ripiego parte prima. Dopo
++          // l'apertura riuscita `risolto` e gia true e questa e una riga
++          // che non fa niente.
++          concludi(false);
++        };
++        timerAperturaId = setTimeout(() => concludi(false), 4000);
+       });
+     } catch (e) {
+       console.error('[StreamInterp] Start failed:', e);
++      // b.247 — anche qui il microfono poteva essere gia stato aperto da
++      // getUserMedia qualche riga sopra: senza abort restava acceso mentre
++      // partiva la pipeline a blocchi.
++      abortaStreaming();
+       return false;
+     }
+-  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId, roomSessionTokenRef]);
++  }, [myLang, handleTranscript, handleUtteranceEnd, userToken, roomId, roomSessionTokenRef, abortaStreaming]);
+ 
+   // ═══ STOP STREAMING ═══
+   const stop = useCallback(() => {
+@@ -405,18 +500,11 @@ export default function useStreamingInterpreter({
+       handleSentenceComplete(currentSentenceRef.current);
+     }
+ 
+-    // Cleanup audio
+-    if (processorRef.current) { try { processorRef.current.disconnect(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } processorRef.current = null; }
+-    if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } audioCtxRef.current = null; }
+-    if (noiseGateRef.current) { try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } noiseGateRef.current = null; }
+-    if (streamRef.current) { streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }); streamRef.current = null; }
+-    if (wsRef.current) {
+-      try {
+-        if (wsRef.current.readyState === WebSocket.OPEN) wsRef.current.send(JSON.stringify({ type: 'CloseStream' }));
+-        wsRef.current.close();
+-      } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+-      wsRef.current = null;
+-    }
++    // b.247 — la chiusura delle risorse era ricopiata qui riga per riga,
++    // mentre i rami di fallimento di start() non ne avevano nessuna. Ora e
++    // una funzione sola: se un giorno si aggiunge una risorsa da spegnere,
++    // la si spegne anche nei rami di fallimento senza doverselo ricordare.
++    abortaStreaming();
+ 
+     // Reset state
+     currentSentenceRef.current = '';
+@@ -424,7 +512,7 @@ export default function useStreamingInterpreter({
+     currentTranslationRef.current = '';
+     setMyLiveText('');
+     setPartnerLiveSubtitle('');
+-  }, [handleSentenceComplete]);
++  }, [handleSentenceComplete, abortaStreaming]);
+ 
+   // ═══ HANDLE INCOMING FROM PARTNER ═══
+   // Il partner che usa lo stesso hook manda subtitle e audio
+@@ -513,15 +601,16 @@ export default function useStreamingInterpreter({
+   // Cleanup on unmount
+   useEffect(() => {
+     return () => {
+-      if (wsRef.current) { try { wsRef.current.close(); } catch { /* il temporizzatore era gia scaduto */ } }
+-      if (streamRef.current) streamRef.current.getTracks().forEach(t => { try { t.stop(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } });
+-      if (audioCtxRef.current?.state !== 'closed') { try { audioCtxRef.current?.close(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ } }
++      // b.247 — qui lo smontaggio dimenticava il filtro del rumore (che
++      // tiene un suo AudioContext) e non azzerava i ref: stessa cura di
++      // stop(), stessa funzione.
++      abortaStreaming();
+       subtitleTimersRef.current.forEach(id => clearTimeout(id));
+       subtitleTimersRef.current = [];
+       clearTimeout(sentencePauseTimerRef.current);
+       clearTimeout(translateTimerRef.current);
+     };
+-  }, []);
++  }, [abortaStreaming]);
+ 
+   return {
+     active,
+diff --git a/voice-translator-vercel/app/hooks/useTTSEngine.js b/voice-translator-vercel/app/hooks/useTTSEngine.js
+index 3638b35..acedf25 100644
+--- a/voice-translator-vercel/app/hooks/useTTSEngine.js
++++ b/voice-translator-vercel/app/hooks/useTTSEngine.js
+@@ -133,9 +133,13 @@ export default function useTTSEngine({
+ 
+   const BROWSER_TTS_RATE = { 'th': 0.8, 'zh': 0.85, 'ja': 0.85, 'ko': 0.88, 'vi': 0.82, 'ar': 0.88, 'hi': 0.9 };
+ 
++  // b.262 — la promessa risolve con true se la voce E' PARTITA (onstart):
++  // "finito" e "mai partito" erano indistinguibili, e un telefono con
++  // l'audio bloccato sembrava aver parlato.
+   function speakChunk(text, lang, voice) {
+     return new Promise((resolve) => {
+-      if (typeof speechSynthesis === 'undefined') { resolve(); return; }
++      if (typeof speechSynthesis === 'undefined') { resolve(false); return; }
++      let partita = false;
+       const u = new SpeechSynthesisUtterance(text);
+       u.lang = lang;
+       const langBase = lang.split('-')[0].toLowerCase();
+@@ -144,8 +148,9 @@ export default function useTTSEngine({
+       u.volume = 1.0;
+       if (voice) u.voice = voice;
+       const timeoutMs = Math.min(20000, Math.max(3000, text.length * 120));
+-      const safetyTimer = setTimeout(() => { speechSynthesis.cancel(); resolve(); }, timeoutMs);
+-      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(); }
++      const safetyTimer = setTimeout(() => { speechSynthesis.cancel(); resolve(partita); }, timeoutMs);
++      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(partita); }
++      u.onstart = () => { partita = true; };
+       u.onend = done;
+       u.onerror = done;
+       if (speechSynthesis.paused) speechSynthesis.resume();
+@@ -158,13 +163,15 @@ export default function useTTSEngine({
+   }
+ 
+   async function browserSpeak(text, lang) {
+-    if (typeof speechSynthesis === 'undefined') return;
++    if (typeof speechSynthesis === 'undefined') return false;
+     speechSynthesis.cancel();
+     const voice = findBestVoice(lang);
+     const chunks = splitTextForSpeech(text);
++    let almenoUno = false;
+     for (const chunk of chunks) {
+-      await speakChunk(chunk, lang, voice);
++      if (await speakChunk(chunk, lang, voice)) almenoUno = true;
+     }
++    return almenoUno;
+   }
+ 
+   function checkVoiceAvailability(lang) {
+@@ -219,7 +226,9 @@ export default function useTTSEngine({
+     activeBlobUrlsRef.current.add(url);
+     let played = await playBlobAudio(url);
+     if (!played) played = await playBlobNewAudio(url);
+-    if (!played) await browserSpeak(text, lang);
++    // b.262 — il ripiego sulla voce del browser, se PARLA, e un successo:
++    // prima qui si ritornava false anche a voce sentita.
++    if (!played) played = await browserSpeak(text, lang);
+     activeBlobUrlsRef.current.delete(url);
+     URL.revokeObjectURL(url);
+     return played;
+@@ -231,7 +240,13 @@ export default function useTTSEngine({
+ 
+   async function fetchEdgeTTSBlob(text, langCode, gender) {
+     const controller = new AbortController();
+-    const timeoutId = setTimeout(() => controller.abort(), 5000);
++    // b.251 — 5s erano troppo pochi: la rotta importa edge-tts a runtime e
++    // parla con Microsoft; su rete mobile, o alla prima voce dopo un cold
++    // start, si superano regolarmente. Ogni sforamento diventava la voce
++    // ROBOTICA del browser (il ripiego) al posto della voce neurale.
++    // Otto secondi restano sotto la soglia di attesa percepita e coprono
++    // il caso normale; oltre, il ripiego resta giusto.
++    const timeoutId = setTimeout(() => controller.abort(), 8000);
+     try {
+       try {
+         const res = await fetch('/api/tts-edge', {
+@@ -418,7 +433,10 @@ export default function useTTSEngine({
+     }
+   }
+ 
+-  /** Fa suonare quello che procuraVoce ha portato. */
++  /** Fa suonare quello che procuraVoce ha portato.
++   * b.262 — ritorna true se QUALCOSA ha suonato (blob o voce browser):
++   * serve a useAudioSystem per liberare la chiave di un messaggio che e
++   * rimasto muto davvero, cosi puo riprovare al prossimo giro. */
+   async function suonaVoce(blob, text, langCode) {
+     if (!blob) return browserSpeak(text, langCode);
+     return playBlobWithFallback(blob, text, langCode);
+diff --git a/voice-translator-vercel/app/hooks/useTranslation.js b/voice-translator-vercel/app/hooks/useTranslation.js
+index b1444e6..f383321 100644
+--- a/voice-translator-vercel/app/hooks/useTranslation.js
++++ b/voice-translator-vercel/app/hooks/useTranslation.js
+@@ -82,6 +82,48 @@ export default function useTranslation({
+   const stoppingRef = useRef(false);
+   const processedFinalsRef = useRef(null);
+ 
++  // ── b.247 · l'identita dell'EVENTO di cattura ──
++  //
++  // Il difetto: piu in basso nella catena (useTranslationAPI) sia il
++  // freno anti doppio invio sia la fase 2 riconoscevano un messaggio dal
++  // suo TESTO. Due "si" di fila erano indistinguibili: il secondo veniva
++  // scambiato per un doppione e spariva, oppure riceveva la traduzione
++  // del primo. Il testo non e l'identita di niente.
++  //
++  // L'identita nasce QUI, dove il testo viene raccolto: una dettatura,
++  // un blocco audio, un invio dal riquadro. Da qui viaggia intera fino al
++  // server come `clientId` e torna nella fase 2, senza mai essere
++  // ricostruita dal contenuto.
++  //
++  // `testoDettato` serve a UNA cosa sola, ed e il caso vero del doppio
++  // scatto: il VAD manda da solo dopo il silenzio mentre il dito preme
++  // il tasto sullo stesso riquadro. Sono due chiamate diverse, ma UNA
++  // cattura — e l'unico modo di accorgersene e che il testo del riquadro
++  // sia ESATTAMENTE quello che la dettatura in corso ha prodotto.
++  // Fuori da quel caso il confronto sul testo non si fa proprio.
++  const catturaRef = useRef({ id: null, testoDettato: null, spedita: 0 });
++
++  const nuovoIdCattura = () => `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
++
++  // Comincia una dettatura nuova: da qui in poi le parole appartengono a
++  // un evento nuovo, anche se dicono la stessa cosa di prima.
++  function apriCattura(testoIniziale = '') {
++    catturaRef.current = { id: nuovoIdCattura(), testoDettato: testoIniziale, spedita: 0 };
++  }
++
++  // Quale evento sta mandando questo testo. Si riusa l'id della dettatura
++  // in corso solo nel caso descritto sopra (e, se e gia partita, entro il
++  // tempo di un doppio scatto). Altrimenti e un evento nuovo e prende un
++  // id nuovo — ed e cosi che "si" detto due volte parte due volte.
++  function idCatturaPer(testo) {
++    const c = catturaRef.current;
++    const stessaCattura = !!c.id
++      && typeof c.testoDettato === 'string'
++      && c.testoDettato.trim() === testo
++      && (!c.spedita || Date.now() - c.spedita < 2500);
++    return stessaCattura ? c.id : nuovoIdCattura();
++  }
++
+   // Whisper-only mode ref (for languages where browser STT is unreliable)
+   const whisperOnlyRef = useRef(false);
+   // Confidence monitoring refs (auto-switch to Whisper if STT quality drops)
+@@ -203,12 +245,22 @@ export default function useTranslation({
+     const targetLangs = opts.targetLangs || getAllTargetLangs().targetLangs;
+     const primaryTargetLang = targetLangs[0]?.code || 'en';
+ 
++    // b.247 — un identificativo solo per tutto il giro: creazione,
++    // traduzione, aggiornamento, invio. Chi ha gia mandato la fase 1 (il
++    // percorso audio) lo passa; gli altri lo chiedono alla cattura.
++    const idCattura = opts.idCattura || idCatturaPer(text);
++
+     // ── PHASE 1: Send original immediately (skip if caller already sent) ──
+     if (!opts.skipPhase1) {
+       getPerf().mark(PERF.PHASE1_SEND);
+-      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null);
++      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura });
+       getPerf().measure(PERF.PHASE1_SEND);
+     }
++    // b.247 — la cattura in corso risulta partita: un secondo invio dello
++    // stesso testo entro il tempo di un doppio scatto riusera questo
++    // identificativo, e sara `sendMessage` a fermarlo perche riconosce la
++    // spedizione, non il contenuto.
++    if (catturaRef.current.id === idCattura) catturaRef.current.spedita = Date.now();
+ 
+     // ── PHASE 2: Translate + update ──
+     getPerf().mark(PERF.TRANSLATE_LATENCY);
+@@ -253,7 +305,10 @@ export default function useTranslation({
+ 
+       getPerf().mark(PERF.PHASE2_SEND);
+       if (primaryTranslated && roomId) {
+-        sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations);
++        // b.247 — la fase 2 dice QUALE messaggio aggiornare, con lo stesso
++        // identificativo della fase 1. Prima lo cercava per contenuto, e
++        // con due messaggi uguali colpiva sempre l'ultimo.
++        sendTranslationUpdate(text, primaryTranslated, myL.code, finalTargetLang, translations, { clientId: idCattura });
+         // Niente refreshBalance qui: era il contatore LEGACY (centesimi Redis)
+         // e con l'unificazione scattava a OGNI messaggio → tempesta di POST
+         // /api/user → 429 anche sul login. Il saldo vero (wallet) lo aggiorna
+@@ -273,7 +328,9 @@ export default function useTranslation({
+       console.error('[translateAndSend] Failed after retry:', e);
+       if (updateLocalMessage) {
+         const senderName = verifiedNameRef?.current || prefsRef.current.name;
+-        updateLocalMessage(text, senderName, { _translationError: true });
++        // b.247 — anche il segnale d'errore nomina il SUO messaggio: per
++        // contenuto, con due messaggi uguali, finiva sul primo.
++        updateLocalMessage(text, senderName, { _translationError: true }, idCattura);
+       }
+     }
+ 
+@@ -310,6 +367,12 @@ export default function useTranslation({
+ 
+         if (!text || processedFinals.has(i)) continue;
+         processedFinals.add(i);
++        // b.247 — il magazzino delle parole era vuoto: comincia una
++        // dettatura nuova, quindi un evento di cattura nuovo. E' qui che
++        // due "si" di fila smettono di essere lo stesso messaggio: il
++        // modo mani libere svuota il magazzino dopo ogni invio, e la
++        // frase successiva nasce con un'identita sua.
++        if (!allWordsRef.current) apriCattura();
+         allWordsRef.current += (allWordsRef.current ? ' ' : '') + text;
+       } else {
+         interimTranscript += event.results[i][0].transcript;
+@@ -318,6 +381,11 @@ export default function useTranslation({
+     // Show interim preview
+     const preview = allWordsRef.current + (interimTranscript ? ' ' + interimTranscript : '');
+     if (preview) {
++      // b.247 — si annota cosa ha prodotto la dettatura in corso: e
++      // l'unico appiglio per riconoscere il tocco sul tasto come LO
++      // STESSO evento dell'auto-invio del VAD (il riquadro qui sotto
++      // riceve esattamente questo testo).
++      if (catturaRef.current.id) catturaRef.current.testoDettato = preview;
+       setStreamingMsg(prev => prev ? { ...prev, original: preview } : null);
+       // Also populate textInput so user can edit before sending
+       setTextInput(preview);
+@@ -371,18 +439,24 @@ export default function useTranslation({
+     if (!original?.trim() || !roomId) return;
+ 
+     // ── Step 2: Phase 1 send + Phase 2 translate via unified helper ──
+-    sendMessage(original, null, myL.code, primaryTarget.code, null);
++    // b.247 — un blocco audio e UN evento di cattura: l'identificativo
++    // nasce qui e accompagna il messaggio fino alla PATCH della
++    // traduzione, che altrimenti se lo sarebbe ricostruito dal testo.
++    const idCattura = nuovoIdCattura();
++    sendMessage(original, null, myL.code, primaryTarget.code, null, { idCattura });
+     setStreamingMsg({ original, translated: '...', isStreaming: false });
+ 
+     try {
+       // L'audio e gia stato scalato da /api/transcribe, che ha lasciato
+       // una ricevuta: la strappa /api/translate, non serve dirglielo.
+-      await translateAndSend(original, { skipPhase1: true, myL, targetLangs });
++      await translateAndSend(original, { skipPhase1: true, myL, targetLangs, idCattura });
+     } catch (e) {
+       console.error('[processAndSendAudio] Translation failed:', e);
+       if (updateLocalMessage) {
+         const senderName = verifiedNameRef?.current || prefsRef.current.name;
+-        updateLocalMessage(original, senderName, { _translationError: true });
++        // b.247 — vedi translateAndSend: l'errore si posa sul messaggio
++        // nominato, non sul primo che ha lo stesso testo.
++        updateLocalMessage(original, senderName, { _translationError: true }, idCattura);
+       }
+     }
+     setStreamingMsg(null);
+@@ -466,6 +540,10 @@ export default function useTranslation({
+ 
+     // Initialize allWordsRef from current textInput so dictation appends to existing text
+     allWordsRef.current = textInputRef.current || '';
++    // b.247 — una registrazione nuova e una cattura nuova, anche quando
++    // continua un testo gia presente nel riquadro (che qui NON svuota il
++    // magazzino, e quindi non farebbe scattare l'apertura automatica).
++    apriCattura(allWordsRef.current);
+     lastInterimRef.current = '';
+     streamingModeRef.current = true;
+     lowConfidenceCountRef.current = 0;
+@@ -594,6 +672,10 @@ export default function useTranslation({
+     // lastInterimRef is a safety net for any remaining unfinalised text.
+     const interimText = lastInterimRef.current?.trim() || '';
+     const allOriginal = (allWordsRef.current + (interimText ? ' ' + interimText : '')).trim();
++    // b.247 — questo e il testo definitivo della dettatura, ed e anche
++    // quello che finisce nel riquadro qui sotto: un tocco sul tasto
++    // subito dopo e lo STESSO evento, non un secondo messaggio.
++    if (catturaRef.current.id) catturaRef.current.testoDettato = allOriginal;
+ 
+     // If no text accumulated but backup recording exists → fallback to Whisper
+     if (!allOriginal && backupRecRef.current && backupRecRef.current.state !== 'inactive') {
+diff --git a/voice-translator-vercel/app/hooks/useTranslationAPI.js b/voice-translator-vercel/app/hooks/useTranslationAPI.js
+index ca00a74..3f13f7a 100644
+--- a/voice-translator-vercel/app/hooks/useTranslationAPI.js
++++ b/voice-translator-vercel/app/hooks/useTranslationAPI.js
+@@ -14,6 +14,12 @@ import { puoPartire } from '../lib/reati.js';
+ import { toast } from '../lib/avvisi.js';
+ const dbg = createLogger('translation-api');
+ 
++// b.247 — lo stesso formato che accetta /api/messages (POST e PATCH).
++// Un identificativo che il server rifiuterebbe non deve nemmeno partire:
++// altrimenti la fase 2 andrebbe a cercare per contenuto senza dirlo a
++// nessuno, che e esattamente il difetto che questo giro elimina.
++const FORMATO_ID_SPEDIZIONE = /^tmp_[\w-]{1,60}$/;
++
+ /**
+  * Translation API hook — handles all translation calls with caching and multi-target support.
+  *
+@@ -59,13 +65,27 @@ export default function useTranslationAPI({
+   const lastServerSaveRef = useRef(null);
+ 
+   // ── Ultimo testo inviato (freno anti doppio invio VAD+tasto) ──
++  // b.247 — resta SOLO come ripiego per chi non dichiara l'origine
++  // dell'invio: vedi la nota lunga dentro `sendMessage`.
+   const lastSentTextRef = useRef({ testo: '', quando: 0 });
+-  // ── b.126 · quale spedizione portava questo testo ──
+-  // `sendMessage` assegna a ogni invio un `tempId` (`tmp_...`) e il
+-  // server lo salva sul messaggio. La fase 2 avviene in un'altra
+-  // funzione, che quel valore non lo riceve: invece di cambiare tutte le
+-  // firme fino a chi chiama, lo si tiene qui — le due funzioni vivono
+-  // nello stesso hook, e distano meno di un secondo.
++  // ── b.247 · il registro delle spedizioni: la chiave e l'IDENTITA ──
++  //
++  // Da b.126 a b.246 questa mappa era TESTO → id (`set(original, tempId)`).
++  // Era sbagliata nel verso: se una persona scriveva "ok" due volte, la
++  // seconda voce SOVRASCRIVEVA la chiave della prima. L'identita del
++  // primo messaggio spariva, e quando le traduzioni tornavano fuori
++  // ordine la PATCH del PRIMO messaggio portava l'identificativo del
++  // SECONDO: la traduzione finiva sul messaggio sbagliato. E' lo stesso
++  // difetto gia corretto sul server in b.126, rimasto qui sul client
++  // perche la mappa lo reintroduceva un attimo prima di parlare.
++  //
++  // Ora la chiave e l'identificativo della spedizione (`tmp_...`, lo
++  // stesso che viaggia fino al server come `clientId`) e il valore dice
++  // a quale messaggio appartiene. Il contenuto non identifica piu niente:
++  // il testo non e l'identita di un evento.
++  //
++  // Lo stesso registro fa da memoria per l'anti doppio invio: una
++  // spedizione gia partita si riconosce dal SUO identificativo.
+   const idSpedizioneRef = useRef(new Map());
+ 
+   /**
+@@ -78,7 +98,12 @@ export default function useTranslationAPI({
+    *
+    * Server save always happens in parallel for persistence.
+    */
+-  const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations) => {
++  // b.247 — `opzioni.idCattura` e l'identificativo dell'EVENTO di cattura,
++  // generato all'origine (la dettatura, il blocco audio, il tocco sul
++  // tasto) da chi quel testo lo ha raccolto. Da qui in poi accompagna il
++  // messaggio fino al server come `clientId` e torna nella fase 2: non
++  // viene mai ricostruito dal contenuto.
++  const sendMessage = useCallback(async (original, translated, sourceLang, targetLang, translations, opzioni = {}) => {
+     if (!roomId) return null;
+ 
+     // ── b.111 · il confine, prima di tutto il resto ──
+@@ -100,28 +125,57 @@ export default function useTranslationAPI({
+       return { bloccato: true, categoria: confine.categoria, motivo: confine.motivo };
+     }
+ 
+-    // ── Freno anti doppio invio ──
+-    // Parlando, l'auto-invio del VAD (silenzio) e il tocco sul tasto possono
+-    // scattare quasi insieme: due invii VERI dello stesso testo → messaggio
+-    // raddoppiato. Stesso testo entro 2,5s = un solo invio.
++    // ── b.247 · il freno anti doppio invio guarda l'EVENTO, non il testo ──
++    //
++    // Prima era: "stesso testo entro 2,5 s = blocca". Era nato per il
++    // doppio scatto — parlando, l'auto-invio del VAD (silenzio) e il
++    // tocco sul tasto partono quasi insieme e mandano DUE VOLTE la
++    // stessa cattura — ma non sapeva distinguerlo da una persona che
++    // dice davvero "si" due volte di fila. Il secondo "si" spariva:
++    // niente errore, niente messaggio, nessun modo di capirlo. E'
++    // esattamente il difetto corretto sul server in b.126, che qui sul
++    // client era rimasto in piedi.
++    //
++    // Ora chi cattura la voce assegna un identificativo all'EVENTO e lo
++    // dichiara: due invii dello stesso evento hanno lo stesso
++    // identificativo — e sono un doppione — mentre due frasi uguali dette
++    // in due momenti diversi hanno identificativi diversi e passano
++    // entrambe.
+     const ora = Date.now();
+-    if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
+-      dbg.debug('[sendMessage] Doppio invio bloccato:', original.slice(0, 30));
++    const idDichiarato = typeof opzioni.idCattura === 'string' && FORMATO_ID_SPEDIZIONE.test(opzioni.idCattura)
++      ? opzioni.idCattura
++      : null;
++    if (idDichiarato) {
++      if (idSpedizioneRef.current.has(idDichiarato)) {
++        dbg.debug('[sendMessage] doppio scatto della stessa cattura, bloccato:', idDichiarato);
++        return null;
++      }
++    } else if (original === lastSentTextRef.current.testo && ora - lastSentTextRef.current.quando < 2500) {
++      // Ripiego per chi NON dichiara l'origine: senza un identificativo
++      // non c'e proprio altro modo di riconoscere il doppio scatto, e
++      // toglierlo qui vorrebbe dire peggiorare la protezione. Resta la
++      // vecchia regola sul testo, ma vale SOLO su questa strada — chi
++      // l'origine la dichiara non ci passa mai.
++      dbg.debug('[sendMessage] Doppio invio bloccato (origine non dichiarata):', original.slice(0, 30));
+       return null;
+     }
+     lastSentTextRef.current = { testo: original, quando: ora };
+ 
+     const senderName = verifiedNameRef?.current || prefsRef.current.name;
+-    const tempId = `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
+-    // b.126 — si annota quale spedizione porta questo testo, cosi la
+-    // fase 2 puo dire QUALE messaggio aggiornare invece di cercarlo per
+-    // contenuto. Si tiene corta: oltre 50 voci si butta la piu vecchia,
+-    // perche una mappa che cresce all'infinito e una perdita di memoria
+-    // con un altro nome (stessa regola della posta in uscita, b.111).
++    // b.247 — l'identificativo della spedizione E quello della cattura,
++    // quando c'e: una cattura produce un messaggio, e avere due nomi per
++    // la stessa cosa e il modo piu rapido per farli divergere.
++    const tempId = idDichiarato || `tmp_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
++    // b.247 — la voce si annota sotto l'identificativo, non sotto il
++    // testo (vedi la nota su `idSpedizioneRef`): cosi due messaggi con
++    // lo stesso contenuto restano due messaggi distinti. Si tiene corta:
++    // oltre 50 voci si butta la piu vecchia, perche una mappa che cresce
++    // all'infinito e una perdita di memoria con un altro nome (stessa
++    // regola della posta in uscita, b.111).
+     if (idSpedizioneRef.current.size > 50) {
+       idSpedizioneRef.current.delete(idSpedizioneRef.current.keys().next().value);
+     }
+-    idSpedizioneRef.current.set(original, tempId);
++    idSpedizioneRef.current.set(tempId, { original, sender: senderName, quando: ora });
+ 
+     // Build a message object for instant delivery
+     const instantMsg = {
+@@ -164,9 +218,14 @@ export default function useTranslationAPI({
+     // La chiave con cui questo messaggio si riconosce dopo, per
+     // aggiornarne lo stato: la stessa che usa la posta in uscita.
+     const chiaveMsg = instantMsg.id || tempId;
++    // b.247 — lo stato si segna sul messaggio NOMINATO col suo
++    // identificativo: prima `updateLocalMessage` lo cercava per
++    // `sender + original`, e con due messaggi identici la spunta del
++    // secondo finiva sul primo. Testo e mittente restano come ripiego,
++    // per i messaggi che un identificativo non ce l'hanno.
+     const segnaStato = (stato) => {
+       if (!updateLocalMessage) return;
+-      updateLocalMessage(original, senderName, { _status: stato });
++      updateLocalMessage(original, senderName, { _status: stato }, tempId);
+     };
+ 
+     if (spedisciContenuto) {
+@@ -205,7 +264,9 @@ export default function useTranslationAPI({
+     // In Translate mode: fire-and-forget for persistence and polling fallback.
+     if (isDirect) {
+       lastServerSaveRef.current = Promise.resolve(null);
+-      return { message: instantMsg, serverSave: Promise.resolve(null) };
++      // b.247 — si restituisce anche l'identificativo: chi ha chiamato
++      // deve poterlo passare alla fase 2 senza andarselo a ricostruire.
++      return { message: instantMsg, serverSave: Promise.resolve(null), clientId: tempId };
+     }
+ 
+     // IMPORTANT: Store the promise so Phase 2 PATCH can await it before updating.
+@@ -251,7 +312,8 @@ export default function useTranslationAPI({
+ 
+     // Return immediately with the instant message — don't await server save
+     // The promise is kept alive so it completes in background
+-    return { message: instantMsg, serverSave: serverSavePromise };
++    // b.247 — vedi sopra: l'identificativo esce insieme al messaggio.
++    return { message: instantMsg, serverSave: serverSavePromise, clientId: tempId };
+   }, [roomId, prefsRef, roomSessionTokenRef, sentByMeRef, broadcastMessage, sendDirectMessage, spedisciContenuto, verifiedNameRef, addLocalMessage, updateLocalMessage]);
+ 
+   /**
+@@ -259,14 +321,43 @@ export default function useTranslationAPI({
+    * Updates local display, broadcasts to partner via P2P + Realtime,
+    * and updates the server-saved message.
+    */
+-    const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations) => {
++  // b.247 — `opzioni.clientId` e l'identificativo che la fase 1 ha dato a
++  // QUESTA spedizione. Arriva da chi chiama, che lo ha ricevuto (o
++  // generato) all'origine: e' l'unico modo perche la traduzione sappia su
++  // quale messaggio posarsi. Prima veniva ripescato da una mappa
++  // TESTO → id, e con due messaggi uguali indicava sempre l'ultimo.
++    const sendTranslationUpdate = useCallback((original, translated, sourceLang, targetLang, translations, opzioni = {}) => {
+     if (!roomId) return;
+     const senderName = verifiedNameRef?.current || prefsRef.current.name;
+-    const updatePayload = { sender: senderName, original, translated, sourceLang, targetLang, translations, timestamp: Date.now() };
++
++    // b.247 — l'identificativo non si cerca piu per contenuto: o viaggia
++    // con la chiamata, o non c'e.
++    const clientId = typeof opzioni.clientId === 'string' && FORMATO_ID_SPEDIZIONE.test(opzioni.clientId)
++      ? opzioni.clientId
++      : '';
++    // b.247 — dal registro si prendono il testo e il mittente ESATTI con
++    // cui la spedizione e partita. I campi `original` e `sender` della
++    // PATCH restano solo come ripiego per i server che non conoscono
++    // ancora l'identificativo: se non combaciassero con quelli salvati,
++    // quel ripiego mancherebbe il bersaglio in silenzio.
++    const spedizione = clientId ? idSpedizioneRef.current.get(clientId) : null;
++    const testoInviato = spedizione ? spedizione.original : original;
++    const mittente = spedizione ? spedizione.sender : senderName;
++
++    // b.247 — `tempId` viaggia anche verso l'altro telefono. Non e un
++    // campo nuovo: `handleMessageUpdate` (useRoomPolling.js) lo legge gia
++    // per non applicare due volte lo stesso aggiornamento arrivato da due
++    // canali — solo che NESSUNO glielo mandava, e ripiegava su
++    // `sender|original`. Con due messaggi uguali quella chiave era la
++    // stessa: il secondo aggiornamento veniva scartato come doppione.
++    const updatePayload = { sender: mittente, original: testoInviato, translated, sourceLang, targetLang, translations, timestamp: Date.now(), ...(clientId && { tempId: clientId }) };
+ 
+     // Update local message immediately (sender sees translation)
++    // b.247 — anche qui si NOMINA il messaggio: senza l'identificativo,
++    // con due messaggi uguali la traduzione del secondo si posava sul
++    // primo anche sullo schermo di chi l'aveva scritta.
+     if (updateLocalMessage) {
+-      updateLocalMessage(original, senderName, { translated, targetLang, translations });
++      updateLocalMessage(testoInviato, mittente, { translated, targetLang, translations }, clientId || undefined);
+     }
+ 
+     const vie = trasportiAmmessi(sessionModeRef?.current);
+@@ -295,16 +386,18 @@ export default function useTranslationAPI({
+           body: JSON.stringify({
+             roomId,
+             roomSessionToken: roomSessionTokenRef?.current || null,
+-            // b.126 — si dice QUALE messaggio, non lo si fa indovinare
+-            // dal contenuto. `original` e `sender` restano per i server
+-            // che non hanno ancora il nuovo percorso.
+             // b.126 — si dice QUALE messaggio aggiornare, invece di
+             // farlo indovinare dal contenuto: due "si" di fila dello
+             // stesso utente sono indistinguibili, e la traduzione del
+             // primo, arrivando tardi, finiva sul secondo.
+-            clientId: idSpedizioneRef.current.get(original) || '',
+-            original,
+-            sender: senderName,
++            // b.247 — e ora l'identificativo arriva davvero dalla fase 1,
++            // invece di essere ripescato da una mappa TESTO → id che con
++            // due messaggi uguali restituiva sempre l'ULTIMO: la PATCH
++            // del primo messaggio finiva sul secondo. `original` e
++            // `sender` restano per i server senza il nuovo percorso.
++            clientId,
++            original: testoInviato,
++            sender: mittente,
+             translated,
+             targetLang,
+             translations,
+diff --git a/voice-translator-vercel/app/hooks/useWebRTC.js b/voice-translator-vercel/app/hooks/useWebRTC.js
+index f8ed5ab..325895c 100644
+--- a/voice-translator-vercel/app/hooks/useWebRTC.js
++++ b/voice-translator-vercel/app/hooks/useWebRTC.js
+@@ -36,6 +36,9 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+   // ── Call type: 'voice' | 'video' | null ──
+   const [callType, setCallType] = useState(null);
+   const callTypeRef = useRef(null);
++  // b.245 — il tipo dell'ULTIMA chiamata, che sopravvive al cleanup: serve
++  // alla riconnessione per ricostruire un video come video.
++  const tipoChiamataPrecedenteRef = useRef(null);
+ 
+   // ── Incoming call state ──
+   const [incomingCall, setIncomingCall] = useState(null); // { from: string, withVideo: boolean } or null
+@@ -123,6 +126,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+     setVideoEnabledState(false);
+     setRemoteVideoActive(false);
+     setCallType(null);
++    // b.245 — il tipo di chiamata si RICORDA prima di azzerarlo: era il
++    // difetto per cui una VIDEOchiamata caduta si riconnetteva come audio.
++    // `cleanup()` smonta la connessione (tecnica); il contesto della
++    // chiamata (logico) deve sopravvivere alla riconnessione.
++    if (callTypeRef.current) tipoChiamataPrecedenteRef.current = callTypeRef.current;
+     callTypeRef.current = null;
+   }, []);
+ 
+@@ -197,6 +205,16 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+     const updatedStream = new MediaStream(remoteStreamRef.current.getTracks());
+     setRemoteStream(updatedStream);
+     if (track.kind === 'video') setRemoteVideoActive(true);
++    // ── b.248 · anche chi RICEVE il video viene promosso ──
++    // Quando l'altro fa "passa a video", qui arriva la sua traccia video
++    // dentro una chiamata nata 'voice' (la rinegoziazione si accetta gia
++    // da sola, senza banner). Senza promozione il partner restava nella
++    // finestra della chiamata vocale e il video, pur ricevuto, non si
++    // vedeva da nessuna parte.
++    if (track.kind === 'video' && callTypeRef.current === 'voice') {
++      setCallType('video');
++      callTypeRef.current = 'video';
++    }
+     track.onended = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
+     track.onmute = () => { if (track.kind === 'video') setRemoteVideoActive(false); };
+     track.onunmute = () => { if (track.kind === 'video') setRemoteVideoActive(true); };
+@@ -349,7 +367,11 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+       try {
+         // Send a new call-request — partner should auto-accept since we were connected before
+         pendingCallRef.current = true;
+-        await sendSignal('call-request', { withVideo: callTypeRef.current === 'video', reconnect: true });
++        // b.245 — si usa il tipo RICORDATO: `callTypeRef` qui e' gia stato
++        // azzerato da cleanup(), e una videochiamata tornava audio.
++        const tipoDaRipristinare = callTypeRef.current || tipoChiamataPrecedenteRef.current;
++        callTypeRef.current = tipoDaRipristinare;
++        await sendSignal('call-request', { withVideo: tipoDaRipristinare === 'video', reconnect: true });
+         timeoutRef.current = setTimeout(() => {
+           if (pendingCallRef.current) {
+             pendingCallRef.current = false;
+@@ -485,6 +507,28 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+     }
+ 
+     if (type === 'call-request') {
++      // ── b.245 · una RICONNESSIONE non e' una chiamata nuova ──
++      // Chi cade manda `reconnect: true` — ma qui non veniva letto, e il
++      // caso piu probabile dopo una caduta e' proprio questo: A vede la
++      // linea giu e richiama, B si crede ancora 'connected' e risponde
++      // BUSY. La riconnessione si autosabotava, ed era il motivo per cui
++      // l'ospite non si riallacciava piu.
++      // Ora: si smonta la vecchia connessione morta e si riaccetta, senza
++      // far ricomparire il banner "chiamata in arrivo".
++      if (payload?.reconnect && (stateRef.current === 'connected' || stateRef.current === 'connecting')) {
++        dbg.debug('[WebRTC] riconnessione del partner: smonto la vecchia e riaccetto');
++        cleanup();
++        const eraVideo = !!payload.withVideo || tipoChiamataPrecedenteRef.current === 'video';
++        const tipo = eraVideo ? 'video' : 'voice';
++        chiusuraVolutaRef.current = false;
++        setCallType(tipo);
++        callTypeRef.current = tipo;
++        setWebrtcState('connecting');
++        stateRef.current = 'connecting';
++        // Si riaccetta subito: nessun banner, e' la stessa chiamata di prima.
++        sendSignal('call-accepted', {}).catch((e) => console.warn('[WebRTC] riaccetto:', e.message));
++        return;
++      }
+       // Someone wants to call us — show incoming call banner
+       if (stateRef.current === 'connecting' || stateRef.current === 'connected') {
+         // Already busy
+@@ -682,6 +726,13 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+   // ── Request call (sends call-request, waits for acceptance) ──
+   const initiateConnection = useCallback(async (withVideo = false) => {
+     if (stateRef.current === 'connecting' || stateRef.current === 'connected') return;
++    // b.245 — da 'failed' si riparte, ma prima si butta via cio che era
++    // rimasto in piedi della chiamata caduta: senza questo la nuova
++    // chiamata nascerebbe sopra una PeerConnection morta.
++    if (stateRef.current === 'failed') {
++      cleanup(); // annulla anche il timer di riconnessione
++      autoReconnectAttemptRef.current = 0; // e' una chiamata NUOVA: i tentativi ripartono
++    }
+     // b.116 — una chiamata NUOVA e una scelta nuova: si riapre la porta
+     // che CHIUDI aveva sbarrato. Senza questa riga, dopo aver chiuso una
+     // volta non si potrebbe piu chiamare per il resto della sessione —
+@@ -775,6 +826,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+           }
+         }
+         sendDirectMessage({ type: 'video-toggle', enabled: true });
++        // ── b.248 · accendere il video PROMUOVE la chiamata ──
++        // "Passa a video" da una chiamata voce arriva qui: la camera e'
++        // accesa e la rinegoziazione e' partita, ma il tipo restava
++        // 'voice' — la finestra giusta non si apriva e una riconnessione
++        // (b.245) avrebbe ricostruito la chiamata come solo-audio.
++        // Si promuove SOLO a video acceso davvero: se l'acquisizione
++        // fallisce si finisce nel catch e il tipo non si tocca.
++        if (callTypeRef.current === 'voice' && localStreamRef.current?.getVideoTracks().length > 0) {
++          setCallType('video');
++          callTypeRef.current = 'video';
++        }
+       } catch (e) {
+         console.warn('[WebRTC] Camera failed:', e);
+       }
+@@ -784,9 +846,17 @@ export default function useWebRTC({ roomId, myName, onDirectMessage, roomSession
+   const flipCamera = useCallback(async () => {
+     if (!localStreamRef.current || sendersRef.current.length === 0) return;
+     try {
+-      const newStream = await switchCamera(localStreamRef.current, sendersRef.current);
+-      localStreamRef.current = newStream;
+-      setLocalStream(newStream);
++      // ── b.248 · il cambio camera non butta piu il microfono ──
++      // switchCamera acquisisce un flusso di SOLO video (il replaceTrack
++      // sul sender lo fa gia lei): assegnarlo intero al ref principale
++      // perdeva la traccia AUDIO originale — il mute non controllava piu
++      // il microfono giusto e il cleanup non lo spegneva. Si ricompone:
++      // audio VECCHIO + video NUOVO, senza mai buttare l'audio.
++      const tracceAudio = localStreamRef.current.getAudioTracks();
++      const soloVideo = await switchCamera(localStreamRef.current, sendersRef.current);
++      const ricomposto = new MediaStream([...tracceAudio, ...soloVideo.getVideoTracks()]);
++      localStreamRef.current = ricomposto;
++      setLocalStream(ricomposto);
+     } catch (e) { console.warn('[WebRTC] flipCamera:', e.message); }
+   }, []);
+ 
+diff --git a/voice-translator-vercel/app/lib/apiAuth.js b/voice-translator-vercel/app/lib/apiAuth.js
+index d7062b6..e1e4a2e 100644
+--- a/voice-translator-vercel/app/lib/apiAuth.js
++++ b/voice-translator-vercel/app/lib/apiAuth.js
+@@ -46,6 +46,9 @@ export async function resolveAuth({
+     elevenlabs: process.env.ELEVENLABS_API_KEY,
+     anthropic: process.env.ANTHROPIC_API_KEY,
+     gemini: process.env.GEMINI_API_KEY,
++    // b.227 — Grok (xAI): la chiave della piattaforma se presente.
++    grok: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
++    xai: process.env.XAI_API_KEY || process.env.GROK_API_KEY,
+   };
+   const defaultKey = envKeys[provider] || process.env.OPENAI_API_KEY;
+ 
+diff --git a/voice-translator-vercel/app/lib/redisLua.js b/voice-translator-vercel/app/lib/redisLua.js
+index 5e0ae56..09ad77d 100644
+--- a/voice-translator-vercel/app/lib/redisLua.js
++++ b/voice-translator-vercel/app/lib/redisLua.js
+@@ -34,6 +34,9 @@ for i, m in ipairs(room.members) do
+     room.members[i].lang = lang
+     room.members[i].joined = now
+     room.members[i].avatar = avatar
++    -- b.248 · chi (ri)entra e presente ADESSO: il dato di presenza
++    -- nasce qui, non al primo battito (che potrebbe non arrivare mai).
++    room.members[i].lastSeen = now
+     found = true
+     break
+   end
+@@ -50,7 +53,7 @@ if not found then
+   if tetto < ${CAPIENZA.MIN} then tetto = ${CAPIENZA.MIN} end
+   if tetto > ${CAPIENZA.MAX} then tetto = ${CAPIENZA.MAX} end
+   if #room.members < tetto then
+-    table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar})
++    table.insert(room.members, {name=name, lang=lang, joined=now, role='guest', avatar=avatar, lastSeen=now})
+   else
+     return 'PIENA'
+   end
+@@ -60,6 +63,52 @@ redis.call('SET', KEYS[1], encoded, 'EX', 3600)
+ return encoded
+ `;
+ 
++/**
++ * Atomic updateHeartbeat — b.248 (P1 confermato da due audit: la
++ * presenza non era individuale).
++ *
++ * Prima il battito era "di sola lettura": store.js faceva GET + EXPIRE
++ * 3600 sulla chiave della stanza INTERA, senza toccare alcun campo del
++ * singolo membro. Quella scelta era nata per una buona ragione — un
++ * GET+SET in JavaScript perdeva l'ingresso di chi entrava nello stesso
++ * istante — ma la ragione vale per il leggi-modifica-riscrivi FUORI da
++ * Redis, non qui dentro: questo script gira atomico come tutti gli
++ * altri di questo file, quindi puo scrivere senza schiacciare nessuno.
++ *
++ * Cosa scrive: `lastSeen = now` sul membro che batte. E la GRAZIA
++ * iniziale: a chi non ha ancora il campo (membri delle stanze nate
++ * prima di b.248, o appena entrati da un client vecchio) viene stampato
++ * `lastSeen = now` al primo giro, cosi ha davanti una soglia INTERA
++ * prima di poter essere potato — mai potato subito, mai lettura rotta.
++ *
++ * La POTATURA dei muti oltre soglia NON sta qui: sta in store.js
++ * (potaMembriAssenti), che riusa la stessa rimozione atomica del leave
++ * b.247 (REMOVE_MEMBER) invece di inventare un secondo meccanismo.
++ *
++ * KEYS[1] = room key
++ * ARGV[1] = memberName, ARGV[2] = now (timestamp del SERVER: il client
++ *           non dichiara mai l'ora, altrimenti un orologio storto
++ *           renderebbe qualcuno impotabile o potato a torto)
++ * Returns: updated room JSON, or nil if room doesn't exist
++ */
++export const UPDATE_HEARTBEAT = `
++local data = redis.call('GET', KEYS[1])
++if not data then return nil end
++local room = cjson.decode(data)
++local name = ARGV[1]
++local now = tonumber(ARGV[2])
++for i, m in ipairs(room.members) do
++  if m.name == name then
++    room.members[i].lastSeen = now
++  elseif type(m.lastSeen) ~= 'number' then
++    room.members[i].lastSeen = now
++  end
++end
++local encoded = cjson.encode(room)
++redis.call('SET', KEYS[1], encoded, 'EX', 3600)
++return encoded
++`;
++
+ /**
+  * Atomic setSpeaking: update speaking/typing state for a member.
+  * KEYS[1] = room key
+@@ -386,6 +435,25 @@ redis.call('SET', KEYS[1], encoded)
+ return encoded
+ `;
+ 
++/**
++ * Ritiro atomico della cassetta dei segnali video di gruppo — b.248.
++ * KEYS[1] = chiave della cassetta (svideo:{stanza}:{nome})
++ * Restituisce: l'elenco grezzo dei segnali (anche vuoto).
++ *
++ * b.248 — CONFERMATO (audit esterno): la rotta faceva LRANGE e poi DEL
++ * come DUE comandi separati. Un candidato ICE arrivato nel mezzo veniva
++ * cancellato senza essere mai stato letto: video che ogni tanto non
++ * partiva, e nessun modo di riprodurlo, perche la finestra e di pochi
++ * millisecondi. Dentro uno script i due passi sono UN comando solo:
++ * un segnale o arriva prima (e viene letto) o arriva dopo (e resta li
++ * per il giro successivo). Perdersi non puo piu.
++ */
++export const RITIRA_CASSETTA = `
++local segnali = redis.call('LRANGE', KEYS[1], 0, -1)
++if #segnali > 0 then redis.call('DEL', KEYS[1]) end
++return segnali
++`;
++
+ /**
+  * Atomic updateConversationSummary.
+  * KEYS[1] = conv key, ARGV[1] = summary JSON
+diff --git a/voice-translator-vercel/app/lib/roomActions.js b/voice-translator-vercel/app/lib/roomActions.js
+index 34e02fd..ff6e077 100644
+--- a/voice-translator-vercel/app/lib/roomActions.js
++++ b/voice-translator-vercel/app/lib/roomActions.js
+@@ -1,5 +1,5 @@
+ import { NextResponse } from 'next/server';
+-import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost } from './store.js';
++import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost, potaMembriAssenti, riammettiConGettone } from './store.js';
+ import { redis } from './redis.js';
+ import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
+ import { createLogger } from './logger.js';
+@@ -123,8 +123,16 @@ export async function handleJoin({ roomId, name, lang, avatar, hostSecret }) {
+ }
+ 
+ // ── Action: heartbeat ──
+-export async function handleHeartbeat({ roomId, identity }) {
++// b.250 — `riammissione` = { token, lang, avatar }: se l'identita manca
++// perche la potatura presenza (b.248) ha espulso un membro vivo (schermo
++// spento → battiti rallentati dal browser oltre i 60s), il gettone ancora
++// valido lo riammette qui, nell'unico punto che batte comunque ogni giro.
++// Vedi riammettiConGettone in store.js per il perche completo.
++export async function handleHeartbeat({ roomId, identity, riammissione }) {
+   if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
++  if (!identity && riammissione?.token) {
++    identity = await riammettiConGettone(roomId, riammissione.token, riammissione.lang, riammissione.avatar);
++  }
+   if (!identity) return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+   const room = await updateHeartbeat(roomId, identity.name);
+   if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
+@@ -223,5 +231,12 @@ export async function handleChangeLang({ roomId, lang, identity }) {
+ export async function handleCheck({ roomId }) {
+   if (!roomId) return NextResponse.json({ error: 'roomId required' }, { status: 400 });
+   const room = await getRoom(roomId);
++  // b.248 — anche questa lettura fa pulizia dei membri muti oltre
++  // soglia (vedi potaMembriAssenti in store.js): HomeView chiama
++  // `check` a ogni avvio, ed e un'occasione in piu per far sparire i
++  // fantasmi anche quando dentro non batte piu nessuno. La risposta
++  // NON cambia forma (exists/ended, come sempre) e la potatura ingoia
++  // da sola ogni suo errore: al peggio il fantasma resta un giro in piu.
++  if (room && !room.ended) await potaMembriAssenti(roomId, room);
+   return NextResponse.json({ exists: !!room, ended: room?.ended || false });
+ }
+diff --git a/voice-translator-vercel/app/lib/store.js b/voice-translator-vercel/app/lib/store.js
+index cb2b50c..34fdd46 100644
+--- a/voice-translator-vercel/app/lib/store.js
++++ b/voice-translator-vercel/app/lib/store.js
+@@ -12,7 +12,7 @@ const log = createLogger('store');
+ import {
+   JOIN_ROOM, SET_SPEAKING, ADD_COST, UPDATE_ROOM_MODE, AGGIORNA_POLITICA_PUBBLICA,
+   CHANGE_MEMBER_LANG, SET_HAND_RAISED, GRANT_SPEAKING, REMOVE_MEMBER,
+-  UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
++  UPDATE_HEARTBEAT, UPDATE_MESSAGE, ADD_MESSAGE, UPDATE_CONV_SUMMARY
+ } from './redisLua.js';
+ 
+ // =============================================
+@@ -73,6 +73,38 @@ export async function resolveRoomIdentity(token, name, roomId) {
+   return null;
+ }
+ 
++// ═══ INIZIO b.250 — la riammissione del potato vivo ═══
++// TROVATO DAL COLLAUDO DAL VIVO (telefono di Luca, log Vercel): con lo
++// schermo spento il browser rallenta i timer fino a ~1 battito al minuto.
++// La potatura b.248 (60s) espelleva quindi un membro VIVO; da quel
++// momento resolveRoomIdentity rispondeva null (non e piu membro) e OGNI
++// battito e OGNI lettura messaggi era 401 — per sempre, in silenzio:
++// il telefono continuava a interrogare ogni 18s e non riceveva piu ne
++// messaggi ne traduzioni. E il "non arriva il testo tradotto" visto dal vivo.
++//
++// La cura: chi si presenta con un GETTONE ANCORA VALIDO per questa
++// stanza e NON e bloccato non e un intruso, e un potato per errore.
++// Lo si riammette con lo stesso join atomico di sempre. Un bloccato
++// resta fuori: la potatura non e un blocco, ma il blocco resta blocco.
++export async function riammettiConGettone(roomId, token, lang, avatar) {
++  if (!token || typeof token !== 'string') return null;
++  const session = await verifyRoomSession(token);
++  if (!session || session.roomId !== roomId.toUpperCase()) return null;
++  try {
++    const { eBloccato } = await import('./moderazione.js');
++    if (await eBloccato(roomId, session.name)) return null;
++  } catch (e) {
++    // fallimento del controllo blocchi: si nega la riammissione (chiusa),
++    // il giro dopo si riprova. Meglio un battito perso che un bloccato dentro.
++    log.warn('controllo blocco non riuscito in riammissione:', e.message);
++    return null;
++  }
++  const esito = await joinRoom(roomId, session.name, lang || 'en', avatar || null);
++  if (!esito || esito.piena) return null;
++  return { name: session.name, role: session.role, verified: true, riammesso: true };
++}
++// ═══ FINE b.250 ═══
++
+ // b.170 — "e' ancora dentro questa stanza?" — la domanda che separa
+ // avere un gettone valido dall'essere ancora un membro. Import dinamico
+ // di moderazione.js (eBloccato) per lo stesso motivo documentato in
+@@ -238,22 +270,97 @@ export async function setSpeaking(roomId, memberName, speaking, liveText = null,
+   try { return JSON.parse(result); } catch (e) { log.warn('Failed to parse setSpeaking result:', e.message); return null; }
+ }
+ 
++// ═══════════════════════════════════════════════════════════════
++// b.248 — LA PRESENZA E DI OGNUNO, NON DELLA STANZA (P1, confermato
++// da due audit).
++//
++// Prima il battito rinnovava la TTL della stanza INTERA e basta:
++// nessun timestamp del singolo membro veniva mai scritto. E il client
++// (useRoomPolling.js) deriva `partnerConnected` da
++// `room.members.length >= 2`. L'uscita PULITA e coperta dal leave di
++// b.247, ma se l'ospite perde la rete o il browser muore nessun leave
++// parte: restava in members finche la stanza viveva — anche ore, visto
++// che il battito dell'altro rinnovava la TTL — e l'ultimo rimasto
++// vedeva "ospite connesso" con la stanza vuota. Premeva Video e il
++// segnale non lo riceveva nessuno.
++//
++// LA SOGLIA: il battito del client (useRoomPolling.js) e ogni 1,5s
++// senza Realtime, 3s con Realtime, e a schermo spento rallenta di 6
++// volte (FRENO_A_SCHERMO_SPENTO) → il battito legittimo piu lento e
++// 18s. Sessanta secondi sono ~3,3 battiti mancati al ritmo piu lento:
++// abbastanza da non potare un telefono vivo ma in tasca (o un blip di
++// rete), abbastanza poco da far sparire un fantasma entro il minuto.
++// ═══════════════════════════════════════════════════════════════
++export const SOGLIA_PRESENZA_MS = 60 * 1000;
++
++/**
++ * Toglie dalla stanza i membri muti oltre soglia. Chiamata alla lettura
++ * (heartbeat, e check in roomActions.js): non c'e un demone, e chi legge
++ * che fa pulizia — come per la TTL della stanza stessa.
++ *
++ * Regole, nell'ordine in cui contano:
++ *   · si giudica SOLO su `lastSeen` scritto dal server (UPDATE_HEARTBEAT
++ *     / JOIN_ROOM): mai l'orologio del client, mai `joined` come
++ *     ripiego — un membro di una stanza nata prima di b.248 avrebbe un
++ *     joined di ore fa e verrebbe potato al primo giro;
++ *   · chi NON ha il campo non si pota MAI qui: e la grazia iniziale —
++ *     UPDATE_HEARTBEAT gli stampa lastSeen=adesso al primo giro, e da
++ *     li ha davanti una soglia intera;
++ *   · l'HOST non si pota mai: la sua voce in members e cio su cui
++ *     ruoloDi() decide al suo rientro (b.169) — potato per un
++ *     inciampo di rete, nemmeno il segreto host gli ridarebbe il ruolo;
++ *   · la rimozione e la STESSA del leave b.247 e di blocca() (b.167):
++ *     removeMember → script Lua REMOVE_MEMBER, atomico. Non un secondo
++ *     meccanismo che un giorno divergerebbe dal primo.
++ *
++ * Un errore qui non deve MAI rompere la lettura: al peggio il fantasma
++ * resta un giro in piu.
++ */
++export async function potaMembriAssenti(roomId, room, adesso = Date.now()) {
++  if (!room || !Array.isArray(room.members)) return room;
++  try {
++    const assenti = room.members.filter((m) =>
++      m &&
++      m.role !== 'host' && m.name !== room.host &&
++      typeof m.lastSeen === 'number' &&
++      adesso - m.lastSeen > SOGLIA_PRESENZA_MS
++    );
++    if (assenti.length === 0) return room;
++    let aggiornata = room;
++    for (const fantasma of assenti) {
++      const dopo = await removeMember(roomId, fantasma.name);
++      // null = gia sparito da solo (o stanza scaduta): l'esito voluto
++      // c'e comunque, si tiene l'ultima fotografia buona.
++      if (dopo) aggiornata = dopo;
++    }
++    return aggiornata;
++  } catch (e) {
++    log.warn('potatura presenza non riuscita:', e.message);
++    return room;
++  }
++}
++
+ export async function updateHeartbeat(roomId, memberName) {
+   const key = `room:${roomId.toUpperCase()}`;
+-  const data = await redis('GET', key);
+-  if (!data) return null;
+-  let room; try { room = JSON.parse(data); } catch (e) { log.warn('Failed to parse room in updateHeartbeat:', e.message); return null; }
+-  // READ-ONLY heartbeat: just refresh TTL without writing room data back.
+-  // This prevents race conditions where heartbeat overwrites a concurrent
+-  // joinRoom operation, effectively removing the guest from the room.
+-  await redis('EXPIRE', key, 3600);
++  // b.248 — prima qui c'era un battito "di sola lettura" (GET + EXPIRE):
++  // la nota diceva, giustamente, che un GET+SET in JavaScript avrebbe
++  // schiacciato il join di chi entrava nello stesso istante. La ragione
++  // resta valida per il leggi-modifica-riscrivi FUORI da Redis; lo
++  // script Lua invece gira atomico come tutti gli altri di redisLua.js,
++  // quindi puo scrivere `lastSeen` del battente senza perdere nessuno.
++  const result = await redis('EVAL', UPDATE_HEARTBEAT, 1, key, memberName, Date.now().toString());
++  if (!result) return null;
++  let room; try { room = JSON.parse(result); } catch (e) { log.warn('Failed to parse room in updateHeartbeat:', e.message); return null; }
+   // b.169 — il segreto host (creaSegretoHost, sopra) ha la stessa TTL
+   // iniziale della stanza: senza questo refresh scadrebbe un'ora dopo
+   // la creazione anche se la stanza (e l'host dentro) e ancora viva.
+   // EXPIRE su una chiave assente non fa nulla (nessun errore): innocuo
+   // per le stanze create prima di questa versione, che non ce l'hanno.
+   await redis('EXPIRE', `roomhost:${roomId.toUpperCase()}`, 3600);
+-  return room;
++  // b.248 — la potatura avviene DOPO la stampa del lastSeen: chi batte
++  // adesso non puo mai risultare muto, e la fotografia restituita al
++  // client e gia senza fantasmi (e da questa che nasce partnerConnected).
++  return potaMembriAssenti(roomId, room);
+ }
+ 
+ export async function addCost(roomId, amount) {
+diff --git a/voice-translator-vercel/public/sw.js b/voice-translator-vercel/public/sw.js
+index 62284c2..ccafd65 100644
+--- a/voice-translator-vercel/public/sw.js
++++ b/voice-translator-vercel/public/sw.js
+@@ -1,5 +1,5 @@
+ // Service Worker for BarTalk — Offline + Push + Badge + Background Sync
+-const CACHE_VERSION = 12;
++const CACHE_VERSION = 13; // b.259 — il salto di versione butta le cache vecchie all attivazione
+ const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
+ const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
+ const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;

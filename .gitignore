@@ -62,3 +62,4 @@ pnpm-debug.log*
 # versione, con dentro il messaggio che era GIA nel commit. Copie di
 # qualcosa che git conserva meglio di noi: `git log` le mostra tutte.
 MESSAGGIO-COMMIT-*.txt
+stato-attuale.tar.gz

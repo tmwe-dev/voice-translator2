@@ -1,0 +1,2800 @@
+diff --git a/voice-translator-vercel/app/components/ApiKeysView.js b/voice-translator-vercel/app/components/ApiKeysView.js
+index b5b3db7..4568f5c 100644
+--- a/voice-translator-vercel/app/components/ApiKeysView.js
++++ b/voice-translator-vercel/app/components/ApiKeysView.js
+@@ -42,7 +42,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
+                 {L('loginBeforeKeysDesc')}
+               </div>
+               <button style={S.btn} onClick={() => setView('account')}>
+-                Accedi / Registrati
++                {L('loginToAccount')}
+               </button>
+             </div>
+           </div>
+@@ -64,17 +64,17 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
+           </div>
+           <div style={S.field}>
+             <div style={S.label}>{L('openaiRequired')}</div>
+-            <input style={S.input} placeholder="sk-proj-..." value={apiKeyInputs.openai}
++            <input style={S.input} type="password" autoComplete="off" placeholder="sk-proj-..." value={apiKeyInputs.openai}
+               onChange={e => setApiKeyInputs({...apiKeyInputs, openai:e.target.value})} />
+           </div>
+           <div style={S.field}>
+             <div style={S.label}>{L('anthropicOptional')}</div>
+-            <input style={S.input} placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
++            <input style={S.input} type="password" autoComplete="off" placeholder="sk-ant-..." value={apiKeyInputs.anthropic}
+               onChange={e => setApiKeyInputs({...apiKeyInputs, anthropic:e.target.value})} />
+           </div>
+           <div style={S.field}>
+             <div style={S.label}>{L('geminiOptional')}</div>
+-            <input style={S.input} placeholder="AIza..." value={apiKeyInputs.gemini}
++            <input style={S.input} type="password" autoComplete="off" placeholder="AIza..." value={apiKeyInputs.gemini}
+               onChange={e => setApiKeyInputs({...apiKeyInputs, gemini:e.target.value})} />
+           </div>
+           <div style={{marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,215,0,0.1)'}}>
+@@ -86,7 +86,7 @@ export default function ApiKeysView({ apiKeyInputs, setApiKeyInputs, saveUserApi
+             </div>
+             <div style={S.field}>
+               <div style={S.label}>ElevenLabs API Key</div>
+-              <input style={S.input} placeholder="xi_..." value={apiKeyInputs.elevenlabs}
++              <input style={S.input} type="password" autoComplete="off" placeholder="xi_..." value={apiKeyInputs.elevenlabs}
+                 onChange={e => setApiKeyInputs({...apiKeyInputs, elevenlabs:e.target.value})} />
+             </div>
+           </div>
+diff --git a/voice-translator-vercel/app/components/CreditsView.js b/voice-translator-vercel/app/components/CreditsView.js
+index 4559345..ad35f6d 100644
+--- a/voice-translator-vercel/app/components/CreditsView.js
++++ b/voice-translator-vercel/app/components/CreditsView.js
+@@ -51,15 +51,20 @@ export default function CreditsView({ userAccount }) {
+   useEffect(() => { carica(); }, [carica]);
+ 
+   async function compra(pacchettoId) {
+-    setCaricando(true);
++    setCaricando(true); setEsito(''); setEsitoOk(false);
+     try {
+       const r = await fetch('/api/wallet/ricarica', {
+         method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+         body: JSON.stringify({ pacchetto: pacchettoId }),
+       });
+-      const { url } = await r.json();
+-      if (url) window.location.href = url;
+-    } finally { setCaricando(false); }
++      const d = await r.json().catch(() => ({}));
++      // b.232 — prima nessun controllo su r.ok: se il server rispondeva 401
++      // (sloggato) o errore, `url` era undefined e non succedeva NULLA. Ora
++      // mostra un messaggio invece del click muto.
++      if (!r.ok || !d.url) { setEsito(d.error || L('genericError')); setEsitoOk(false); return; }
++      window.location.href = d.url;
++    } catch { setEsito(L('genericError')); setEsitoOk(false); }
++    finally { setCaricando(false); }
+   }
+ 
+   // Un solo campo per due cose: i codici che iniziano con GIFT- sono
+@@ -68,14 +73,18 @@ export default function CreditsView({ userAccount }) {
+     setEsito('...'); setEsitoOk(false);
+     const pulito = codice.trim().toUpperCase();
+     const eRegalo = pulito.startsWith('GIFT-');
+-    const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
+-      method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
+-      body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
+-    });
+-    const d = await r.json();
+-    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+-    setEsitoOk(!!d.ok);
+-    if (d.ok) { setCodice(''); carica(); }
++    // b.232 — prima senza try/catch: offline o errore di rete lasciava il
++    // messaggio bloccato su "..." con una promise non gestita.
++    try {
++      const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
++        method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
++        body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
++      });
++      const d = await r.json().catch(() => ({}));
++      setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
++      setEsitoOk(!!d.ok);
++      if (d.ok) { setCodice(''); carica(); }
++    } catch { setEsito(L('genericError')); setEsitoOk(false); }
+   }
+ 
+   // ── Regalare minuti a qualcuno ──
+diff --git a/voice-translator-vercel/app/components/HelpView.js b/voice-translator-vercel/app/components/HelpView.js
+index e290114..6913742 100644
+--- a/voice-translator-vercel/app/components/HelpView.js
++++ b/voice-translator-vercel/app/components/HelpView.js
+@@ -112,7 +112,7 @@ function HelpView() {
+                 backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                 animation: `vtSlideUp 0.3s ease-out ${i * 0.05}s both`,
+               }}>
+-                <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>
++                {f.icon && <div style={{ fontSize: 24, marginBottom: 6 }}>{f.icon}</div>}
+                 <div style={{ fontSize: 12, fontWeight: 700, color: C.textPrimary, marginBottom: 2 }}>{f.title || L(f.titleKey)}</div>
+                 <div style={{ fontSize: 10, color: C.textMuted, lineHeight: 1.4 }}>{L(f.descKey)}</div>
+               </div>
+@@ -145,7 +145,7 @@ function HelpView() {
+                     display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                     WebkitTapHighlightColor: 'transparent',
+                   }}>
+-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>
++                    {faq.icon && <span style={{ fontSize: 20, flexShrink: 0 }}>{faq.icon}</span>}
+                     <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: C.textPrimary, lineHeight: 1.3 }}>
+                       {L(faq.qKey)}
+                     </span>
+diff --git a/voice-translator-vercel/app/components/HomeView.js b/voice-translator-vercel/app/components/HomeView.js
+index 027fd53..4794e80 100644
+--- a/voice-translator-vercel/app/components/HomeView.js
++++ b/voice-translator-vercel/app/components/HomeView.js
+@@ -3,6 +3,11 @@ import { memo, useState, useMemo, useEffect } from 'react';
+ import { FONT, getLang, LANGS, vibrate } from '../lib/constants.js';
+ import { PALETTE } from '../lib/palette.js';
+ import { useApp } from '../contexts/AppContext.js';
++// b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
++// scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella
++// vecchia. `toast` e la coda avvisi (lib/avvisi.js), non il disegno.
++import { t, mapLang, preloadLang } from '../lib/i18n.js';
++import { toast } from '../lib/avvisi.js';
+ import { IconQR, IconMail, IconVideoCall, IconCar } from './Icons.js';
+ import Icon from './Icon.js';
+ import { BatteryPillSlot } from './BatteryPill.js';
+@@ -225,6 +230,25 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
+                   maxHeight: 280, overflowY: 'auto', padding: 6,
+                   boxShadow: '0 12px 48px rgba(0,0,0,0.4)',
+                 }}>
++                  {/* ═══ INIZIO b.253 — dire QUALE lingua si sta scegliendo ═══
++                      COSA: intestazione "La tua lingua" sopra l'elenco, e in
++                      fondo una riga che porta alla lingua dell'interfaccia.
++                      PERCHE (trovato dal vivo, Luca): scegliendo "Dansk" qui
++                      i testi dell'app restavano in italiano, e sembrava un
++                      guasto. Non lo e: qui si sceglie la lingua in cui si
++                      PARLA e si ricevono le traduzioni, mentre la lingua dei
++                      menu e un'altra cosa (b.136: un italiano che parla con
++                      un americano mette "en" per le traduzioni e non vuole
++                      l'applicazione in inglese). Il difetto era che nessuno
++                      lo diceva, e che la lingua dei menu si poteva cambiare
++                      solo scavando nelle Impostazioni. Nessuna stringa nuova:
++                      `yourLang` e `uiLanguage` esistono gia in tutte e 15 le
++                      lingue dell'interfaccia. */}
++                  <div style={{
++                    padding: '6px 12px 8px', fontSize: 10, fontWeight: 800,
++                    letterSpacing: '0.12em', textTransform: 'uppercase',
++                    color: C.textMuted,
++                  }}>{L('yourLang')}</div>
+                   {/* b.146 — Luca: "i paesi devono essere ordinati in ordine
+                       alfabetico". LANGS ha l'ordine storico del file, non
+                       quello che un occhio si aspetta scorrendo un elenco. */}
+@@ -241,7 +265,53 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
+                           cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
+                         }}
+                         onClick={() => {
+-                          vibrate(); savePrefs({ ...prefs, lang: l.code }); setShowLangPicker(false);
++                          vibrate();
++                          // ═══ INIZIO b.254 — cambiare lingua cambia l'applicazione ═══
++                          // Luca, dal vivo, due volte: scelto Dansk (e poi
++                          // Cestina) i menu restavano in italiano. La
++                          // separazione fra lingua parlata e lingua dei menu
++                          // (b.136) resta giusta, ma il valore predefinito
++                          // era CONGELATO alla scelta del paese iniziale e
++                          // non si muoveva mai piu: chi non sapeva di dover
++                          // scavare in Impostazioni non poteva cambiare i
++                          // menu nemmeno volendo.
++                          //
++                          // Ora la lingua dei menu SEGUE quella che dichiari
++                          // di parlare — mappata sulle 15 in cui l'interfaccia
++                          // esiste davvero — a meno che tu non l'abbia scelta
++                          // a mano: in quel caso comanda la tua scelta, e non
++                          // te la si tocca (uiLangScelta, vedi SettingsView).
++                          //
++                          // Il caso che b.136 proteggeva — chi mette "en" per
++                          // avere le TRADUZIONI in inglese e non vuole i menu
++                          // in inglese — non resta scoperto: l'avviso qui
++                          // sotto lo rimette a posto in un tocco, e da quel
++                          // momento la sua scelta diventa esplicita.
++                          const prima = prefs.uiLang || mapLang(prefs.lang || 'en');
++                          const dopo = mapLang(l.code);
++                          const nuove = prefs.uiLangScelta
++                            ? { ...prefs, lang: l.code }
++                            : { ...prefs, lang: l.code, uiLang: dopo };
++                          savePrefs(nuove);
++                          if (!prefs.uiLangScelta && dopo !== prima) {
++                            const nomePrima = getLang(prima)?.name || prima;
++                            // b.257 — l'avviso si scrive DOPO che il pacchetto
++                            // e arrivato. Provato dal vivo: senza l'attesa
++                            // annunciava "Interface language" in inglese
++                            // proprio mentre l'applicazione passava al
++                            // tedesco — l'unico messaggio che non poteva
++                            // permettersi di essere nella lingua sbagliata.
++                            preloadLang(dopo).finally(() =>
++                            toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
++                              duration: 8000,
++                              action: {
++                                label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
++                                onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
++                              },
++                            }));
++                          }
++                          // ═══ FINE b.254 ═══
++                          setShowLangPicker(false);
+                         }}
+                       >
+                         <span style={{ fontSize: 18 }}>{l.flag}</span>
+@@ -250,6 +320,22 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
+                       </button>
+                     );
+                   })}
++                  {/* La via d'uscita per chi cercava QUI la lingua dei menu:
++                      un tocco, invece di sapere che sta sotto Profilo. */}
++                  <button
++                    onClick={() => { vibrate(); setShowLangPicker(false); setView('settings'); }}
++                    style={{
++                      display: 'flex', alignItems: 'center', gap: 8, width: '100%',
++                      marginTop: 6, padding: '10px 12px', borderRadius: 10,
++                      border: 'none', borderTop: `1px solid ${C.cardBorder}`,
++                      background: 'transparent', color: C.textSecondary,
++                      fontSize: 12, cursor: 'pointer', fontFamily: FONT, textAlign: 'left',
++                    }}
++                  >
++                    <Icon name="globe" size={15} color={C.textMuted} />
++                    <span>{L('uiLanguage')}</span>
++                    <span style={{ marginLeft: 'auto', opacity: 0.5 }}>›</span>
++                  </button>
+                 </div>
+               </>
+             )}
+@@ -329,6 +415,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
+                     : action.icon === 'mail' ? <IconMail size={20} />
+                     : action.icon === 'video' ? <IconVideoCall size={20} />
+                     : action.icon === 'gift' ? <Icon name="gift" size={20} color={C.accent} />
++                    : action.icon === 'chat' ? <Icon name="chat" size={20} color={C.textPrimary} />
+                     : <IconCar size={20} />}
+                 </span>
+                 <span style={{ flex: 1, minWidth: 0 }}>
+diff --git a/voice-translator-vercel/app/components/InstallaApp.js b/voice-translator-vercel/app/components/InstallaApp.js
+index db02d93..9692a12 100644
+--- a/voice-translator-vercel/app/components/InstallaApp.js
++++ b/voice-translator-vercel/app/components/InstallaApp.js
+@@ -1,5 +1,6 @@
+ 'use client';
+-import { useState } from 'react';
++import { useState, useEffect } from 'react';
++import { ascoltaPannelloPieno } from '../lib/pannelloPieno.js';
+ import Icon from './Icon.js';
+ import { FONT } from '../lib/constants.js';
+ import getStyles from '../lib/styles.js';
+@@ -67,6 +68,13 @@ export default function InstallaApp({ pwa, theme }) {
+   // nel browser non e piu una scelta, e un indovinello.
+   const { L } = useApp();
+   const [istruzioniAperte, setIstruzioniAperte] = useState(false);
++  // b.255 — non ci si mette davanti a un pannello che sta gia coprendo lo
++  // schermo. Succedeva nel Mondo: i pannelli (discussione, persona,
++  // scheda) non cambiano schermata, quindi la guardia per VISTA di page.js
++  // non li vedeva, e questo banner atterrava sul campo di scrittura e sul
++  // pulsante di invio proprio mentre si stava commentando.
++  const [pannelloPieno, setPannelloPieno] = useState(false);
++  useEffect(() => ascoltaPannelloPieno(setPannelloPieno), []);
+   const S = getStyles(theme);
+   const col = S.colors || {};
+ 
+@@ -81,7 +89,7 @@ export default function InstallaApp({ pwa, theme }) {
+ 
+   const suIPhone = eIPhone();
+ 
+-  if (!pwa?.showInstallBanner) return null;
++  if (!pwa?.showInstallBanner || pannelloPieno) return null;
+ 
+   // ── b.134-bis · TRE SITUAZIONI DIVERSE, NON UNA ──
+   //
+diff --git a/voice-translator-vercel/app/components/InvitaAmici.js b/voice-translator-vercel/app/components/InvitaAmici.js
+index e0741e3..f171ed9 100644
+--- a/voice-translator-vercel/app/components/InvitaAmici.js
++++ b/voice-translator-vercel/app/components/InvitaAmici.js
+@@ -20,7 +20,7 @@
+ // Si mostra UNA volta, alla fine del tutorial. Un rito, non un pedaggio.
+ // ═══════════════════════════════════════════════════════════════
+ 
+-import { memo, useState, useCallback } from 'react';
++import { memo, useState, useCallback, useEffect } from 'react';
+ import { FONT, vibrate } from '../lib/constants.js';
+ import Icon from './Icon.js';
+ import { useApp } from '../contexts/AppContext.js';
+@@ -61,15 +61,32 @@ function InvitaAmici({ aperta, onClose }) {
+     } catch { /* l'utente ha chiuso il foglio di condivisione: scelta sua */ }
+   }, [messaggio]);
+ 
++  // ── b.248 — IL DIALOGO NON AVEVA NESSUNA VIA D'USCITA STANDARD ──
++  // Il collaudo dal vivo lo ha trovato APERTO sopra la home, e non
++  // riusciva a chiuderlo: Escape non era ascoltato da nessuno, il tocco
++  // sullo sfondo scuro non faceva niente (a differenza degli altri modali
++  // del progetto: il popup invito di JoinView e ChatActionsPanel si
++  // chiudono entrambi toccando il velo, con stopPropagation sulla carta),
++  // e l'unico bottone che chiudeva era "Più tardi" (invitaDopo) — testo
++  // localizzato SENZA aria-label, quindi invisibile a qualsiasi ricerca
++  // di chiudi/annulla/× e a chi usa un lettore di schermo. Qui si aggiunge
++  // l'ascolto di Escape; sotto, la chiusura dal velo e l'aria-label.
++  useEffect(() => {
++    if (!aperta) return;
++    const suTasto = (e) => { if (e.key === 'Escape') onClose(); };
++    window.addEventListener('keydown', suTasto);
++    return () => window.removeEventListener('keydown', suTasto);
++  }, [aperta, onClose]);
++
+   if (!aperta) return null;
+ 
+   return (
+-    <div role="dialog" aria-modal="true" style={{
++    <div role="dialog" aria-modal="true" onClick={onClose} style={{
+       position: 'fixed', inset: 0, zIndex: 400,
+       background: 'rgba(3,5,12,0.78)', fontFamily: FONT,
+       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+     }}>
+-      <div style={{
++      <div onClick={e => e.stopPropagation()} style={{
+         width: '100%', maxWidth: 420, maxHeight: '82dvh', overflowY: 'auto',
+         background: C.bg || '#070a14', borderRadius: 22, border: bordo, padding: '22px 20px',
+       }}>
+@@ -131,7 +148,7 @@ function InvitaAmici({ aperta, onClose }) {
+           }}>
+             {L('invitaCondividi')}
+           </button>
+-          <button onClick={() => { vibrate(6); onClose(); }} style={{
++          <button onClick={() => { vibrate(6); onClose(); }} aria-label={L('close')} style={{
+             padding: '10px 0', borderRadius: 13, cursor: 'pointer',
+             background: 'none', border: 'none', color: C.textMuted,
+             fontSize: 13, fontFamily: FONT,
+diff --git a/voice-translator-vercel/app/components/JoinView.js b/voice-translator-vercel/app/components/JoinView.js
+index c866346..f15e303 100644
+--- a/voice-translator-vercel/app/components/JoinView.js
++++ b/voice-translator-vercel/app/components/JoinView.js
+@@ -220,6 +220,14 @@ export default function JoinView({ joinCode,
+           </div>
+ 
+           {/* Room code */}
++          {/* b.248 — IL CAMPO ACCETTAVA 6 CARATTERI, IL CODICE NE HA 8.
++              Il server genera il codice stanza con randomBytes(4)
++              .toString('hex').toUpperCase() (createRoom, store.js): QUATTRO
++              byte esadecimali = OTTO caratteri, sempre. Qui pero c'era
++              maxLength={6} e il placeholder "ABC123": un codice reale come
++              A4F72C19 si fermava a "A4F72C" e l'ingresso manuale era
++              IMPOSSIBILE per costruzione. Ora il campo tiene 8 caratteri e
++              l'esempio mostra la forma vera del codice. */}
+           <div style={{ marginBottom: 14 }}>
+             <div style={{ fontSize: 12, fontWeight: 600, color: C.textMuted, marginBottom: 6 }}>{L('roomCode')}</div>
+             <input style={{
+@@ -228,7 +236,7 @@ export default function JoinView({ joinCode,
+               background: C.input, border: `1px solid ${joinCode.length >= 4 ? `${C.accent}40` : C.inputBorder}`,
+               color: C.textPrimary, fontFamily: FONT, outline: 'none',
+               boxSizing: 'border-box', transition: 'border-color 0.2s',
+-            }} placeholder="ABC123" value={joinCode} maxLength={6}
++            }} placeholder="A4F72C19" value={joinCode} maxLength={8}
+               onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''))} />
+           </div>
+ 
+diff --git a/voice-translator-vercel/app/components/Life/AmicoChat.js b/voice-translator-vercel/app/components/Life/AmicoChat.js
+index ecba855..21fa1a6 100644
+--- a/voice-translator-vercel/app/components/Life/AmicoChat.js
++++ b/voice-translator-vercel/app/components/Life/AmicoChat.js
+@@ -5,6 +5,20 @@ import Icon from '../Icon.js';
+ import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
+ import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+ 
++// b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
++// in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
++const CHIAVE_CHAT = (id) => `vt-chat-${id}`;
++function caricaChat(id) {
++  if (typeof window === 'undefined' || !id) return [];
++  try { const s = localStorage.getItem(CHIAVE_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
++  catch { return []; }
++}
++function salvaChat(id, messaggi) {
++  if (typeof window === 'undefined' || !id) return;
++  try { localStorage.setItem(CHIAVE_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
++  catch { /* quota/privato: si perde solo la persistenza, non la chat viva */ }
++}
++
+ // ═══════════════════════════════════════════════════════════════
+ // AmicoChat — parla con un Compagno. Se ha la memoria accesa (🧠) ti
+ // ricorda nel tempo. Chat semplice + voce opzionale. (Luca)
+@@ -17,22 +31,38 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
+   const [attende, setAttende] = useState(false);
+   const [errore, setErrore] = useState('');
+   const fondo = useRef(null);
++  // b.232 — riferimento sempre aggiornato al Compagno scelto, per evitare che
++  // la risposta di A (in arrivo) finisca nella chat di B se si cambia Compagno.
++  const sceltoRef = useRef(scelto);
++  useEffect(() => { sceltoRef.current = scelto; }, [scelto]);
+ 
+   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
+ 
++  // b.231 — salva la conversazione sul dispositivo a ogni cambiamento.
++  useEffect(() => { if (scelto) salvaChat(scelto.id, messaggi); }, [messaggi, scelto]);
++
++  // b.232 — cambiando Compagno azzera attesa/errore: prima B restava con il
++  // "…" e il tasto invio disabilitato finché la vecchia richiesta di A non finiva.
++  useEffect(() => { setAttende(false); setErrore(''); }, [scelto]);
++
+   const invia = useCallback(async () => {
+     const t = testo.trim();
+     if (!t || !scelto || attende) return;
+     setErrore('');
++    const idAtt = scelto.id;
+     const nuovi = [...messaggi, { ruolo: 'persona', testo: t }];
+     setMessaggi(nuovi); setTesto(''); setAttende(true);
+     try {
+       const d = await parlaAmico({ compagnoId: scelto.id, messaggi: nuovi, lingua, userToken, obiettivi: obiettiviAttivi() });
++      // b.232 — se nel frattempo si è cambiato Compagno, scarta la risposta.
++      if (sceltoRef.current?.id !== idAtt) return;
+       setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
+-      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken });
++      // b.238 — la voce riceve anche COME il Compagno voleva dirlo.
++      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken, modoVoce: d.modoVoce });
+     } catch (e) {
++      if (sceltoRef.current?.id !== idAtt) return;
+       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
+-    } finally { setAttende(false); }
++    } finally { if (sceltoRef.current?.id === idAtt) setAttende(false); }
+   }, [testo, scelto, attende, messaggi, lingua, userToken, L]);
+ 
+   // ── Scelta del Compagno ──
+@@ -42,7 +72,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
+         <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{L('lifePickFriend')}</div>
+         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+           {compagni.map((c) => (
+-            <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi([]); }}
++            <button key={c.id} onClick={() => { vibrate(8); setScelto(c); setMessaggi(caricaChat(c.id)); }}
+               style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
+               <img src={c.avatar} alt="" width={42} height={42} style={{ borderRadius: 10, display: 'block', flexShrink: 0, objectFit: 'cover' }} />
+               <span style={{ flex: 1, minWidth: 0 }}>
+@@ -61,10 +91,10 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
+   return (
+     <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
+       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
+-        <button onClick={() => setScelto(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
++        <button onClick={() => setScelto(null)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
+           <Icon name="back" size={16} color={testoP} />
+         </button>
+-        <img src={scelto.avatar} alt="" width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
++        <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
+         <span style={{ fontWeight: 700, color: testoP }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+       </div>
+ 
+@@ -85,8 +115,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
+ 
+       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
+         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
+-          placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
+-        <button onClick={invia} disabled={attende} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
++          aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
++        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+           <Icon name="send" size={16} color="#04121c" />
+         </button>
+       </div>
+diff --git a/voice-translator-vercel/app/components/Life/Dossier.js b/voice-translator-vercel/app/components/Life/Dossier.js
+index 49d0579..7c6cd76 100644
+--- a/voice-translator-vercel/app/components/Life/Dossier.js
++++ b/voice-translator-vercel/app/components/Life/Dossier.js
+@@ -12,7 +12,8 @@ import { preparaBriefing, generaPodcast, reportFinale } from '../../lib/compagni
+ // Riusa le rotte /api/compagni/dossier e /api/compagni/podcast. (Luca)
+ // ═══════════════════════════════════════════════════════════════
+ 
+-function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
++function Dossier({ compagni, onApriStanza, onDebate, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
++  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+   const [argomento, setArgomento] = useState('');
+   const [scelti, setScelti] = useState(compagni.slice(0, 3).map(c => c.id));
+   const [brief, setBrief] = useState(null);
+@@ -43,7 +44,8 @@ function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, a
+     const discussione = copioni.map(t => `${t.nome}: ${t.testo}`).join('\n\n');
+     try { const d = await reportFinale({ argomento: argomento.trim(), briefing: brief?.articolo || '', discussione, lingua, userToken }); setReport(d.report); }
+     catch (e) { err(e); } finally { setFase(''); }
+-  }, [copioni, brief, argomento, lingua, userToken]);
++    // b.232 — `L` nelle deps come in passo1/passo2: err() lo usa per i messaggi.
++  }, [copioni, brief, argomento, lingua, userToken, L]);
+ 
+   const btn = (onClick, testo, on = true) => (
+     <button onClick={onClick} disabled={!!fase || !on}
+@@ -55,7 +57,7 @@ function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, a
+ 
+   return (
+     <div>
+-      <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeDossierPh')}
++      <input value={argomento} onChange={(e) => setArgomento(e.target.value)} aria-label={L('lifeDossierPh')} placeholder={L('lifeDossierPh')}
+         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box' }} />
+       {btn(passo1, fase === 'briefing' ? L('lifeGenerating') : `📰 ${L('lifeDossierBriefing')}`)}
+       {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
+@@ -110,6 +112,14 @@ function Dossier({ compagni, onApriStanza, L, lingua, userToken, testoP, muto, a
+             </button>
+           )}
+         </div>
++        {/* b.227 — dal Dossier al Debate: porta il tema alla tavola rotonda
++            con un obiettivo già pronto (ricerca → conclusione condivisa). */}
++        {onDebate && (
++          <button onClick={() => onDebate(`${tt('lifeDebateFromDossier', 'Arrivare a una conclusione condivisa su')}: ${argomento.trim()}`)}
++            style={{ width: '100%', marginTop: 8, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
++            ⚖️ {tt('lifeDebateOpen', 'Apri un Debate su questo')}
++          </button>
++        )}
+       </>}
+     </div>
+   );
+diff --git a/voice-translator-vercel/app/components/Life/GestioneCompagni.js b/voice-translator-vercel/app/components/Life/GestioneCompagni.js
+index f8fcfec..2cd0c88 100644
+--- a/voice-translator-vercel/app/components/Life/GestioneCompagni.js
++++ b/voice-translator-vercel/app/components/Life/GestioneCompagni.js
+@@ -1,8 +1,9 @@
+ 'use client';
+ import { memo, useState, useCallback, useEffect, useRef } from 'react';
+-import { FONT, LANGS, vibrate } from '../../lib/constants.js';
++import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
+ import Icon from '../Icon.js';
+ import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
++import { PROFILI, PROFILI_ELENCO, SUPERFICI_PROFILO, profiloPerSuperficie } from '../../lib/compagni/profili.js';
+ import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
+ import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
+ import { componiPersonalita } from '../../lib/compagni/genera.js';
+@@ -42,6 +43,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+   // b.223 — upload della propria immagine + galleria su dispositivo (IndexedDB)
+   const [galleria, setGalleria] = useState([]);
+   const fileRef = useRef(null);
++  const autoAvatarRef = useRef(null); // b.227 — agente+immagine insieme
+ 
+   // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
+   // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
+@@ -78,6 +80,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+       });
+       setErrImg(''); setNGenImg(0);
+       setDescAg('');
++      // b.227 — agente E immagine insieme: subito dopo aver costruito l'agente,
++      // genera anche la sua immagine (una volta). Un effetto la lancia quando la
++      // bozza è pronta, così non dipende dallo stato non ancora committato.
++      autoAvatarRef.current = { nome: a.nome || descAg.trim(), ruolo: a.ruolo || '', genere: a.genere || 'neutral' };
+     } catch (e) {
+       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
+     } finally { setGenerando(false); }
+@@ -142,26 +148,20 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+     } catch { return null; }
+   }, []);
+ 
+-  // b.221/b.223 — genera l'IMMAGINE dell'avatar (gpt-image-1). Se `riferimento`
+-  // è un data URL, il volto arriva da lì (tap-to-restyle); altrimenti nasce dal
+-  // prompt (nome/ruolo/genere). Il costo lo regge il wallet; tetto morbido per
+-  // sessione. Ogni immagine riuscita finisce nella galleria SUL DISPOSITIVO.
+-  const creaAvatar = useCallback(async (riferimento = null) => {
++  // b.221/b.223 — core di generazione immagine (gpt-image-1). Prende i campi
++  // ESPLICITI (così può girare anche subito dopo la creazione, quando la bozza
++  // non è ancora committata). Se `riferimento` è un data URL, il volto arriva da
++  // lì (tap-to-restyle). Costo dal wallet; ogni immagine finisce nella galleria.
++  const eseguiGeneraAvatar = useCallback(async ({ nome = '', ruolo = '', genere = 'neutral' }, riferimento = null) => {
+     if (genImg || nGenImg >= MAX_GEN_IMG) return;
+     setGenImg(true); setErrImg('');
+     try {
+       const rif = riferimento ? await urlToDataUrl(riferimento) : null;
+-      const dataUrl = await generaAvatar({
+-        nome: (bozza?.nome || '').trim(),
+-        ruolo: (bozza?.ruolo || '').trim(),
+-        genere: bozza?.genere || 'neutral',
+-        riferimentoDataUrl: rif,
+-        userToken,
+-      });
++      const dataUrl = await generaAvatar({ nome, ruolo, genere, riferimentoDataUrl: rif, userToken });
+       if (dataUrl) {
+-        setBozza((b) => ({ ...b, avatar: dataUrl }));
++        setBozza((b) => b ? { ...b, avatar: dataUrl } : b);
+         setNGenImg((n) => n + 1);
+-        salvaImmagine(dataUrl, { nome: bozza?.nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
++        salvaImmagine(dataUrl, { nome }).then(() => elencoImmagini(12)).then(setGalleria).catch(() => {});
+       } else setErrImg(tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+     } catch (e) {
+       setErrImg(e.creditoEsaurito ? L('lifeNoCredit')
+@@ -169,7 +169,20 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+         : e.status === 422 ? tt('lifeAvatarRifiuto', 'Il modello ha rifiutato l’immagine: prova a cambiare nome o descrizione.')
+         : tt('lifeAvatarErr', 'Immagine non riuscita, riprova.'));
+     } finally { setGenImg(false); }
+-  }, [bozza, userToken, genImg, nGenImg, urlToDataUrl, L]);
++  }, [genImg, nGenImg, urlToDataUrl, userToken, L]);
++
++  // Il pulsante nel form usa i campi della bozza.
++  const creaAvatar = useCallback((riferimento = null) => {
++    return eseguiGeneraAvatar({ nome: (bozza?.nome || '').trim(), ruolo: (bozza?.ruolo || '').trim(), genere: bozza?.genere || 'neutral' }, riferimento);
++  }, [bozza, eseguiGeneraAvatar]);
++
++  // b.227 — agente+immagine INSIEME: quando la creazione ha appena costruito
++  // la bozza, genera anche l'immagine (una volta). L'effetto legge il ref e lo
++  // azzera subito, così non riparte a ogni render.
++  useEffect(() => {
++    const req = autoAvatarRef.current;
++    if (bozza && req) { autoAvatarRef.current = null; eseguiGeneraAvatar(req); }
++  }, [bozza, eseguiGeneraAvatar]);
+ 
+   // b.223 — carica una tua immagine come avatar (resta sul dispositivo).
+   const caricaImmagine = useCallback((e) => {
+@@ -309,6 +322,32 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+           <span><b style={{ color: testoP }}>{L('lifeMemory')}</b> — {L('lifeMemoryHint')}</span>
+         </label>
+ 
++        {/* b.237 — DEEP SETTING: identità stabile, comportamento per superficie.
++            Un solo Archimede; qui si sceglie COME si comporta in Amico, Impara,
++            Tavolo e Podcast (profili.js). Vuoto = default della superficie.
++            Etichette dei profili da PROFILI_ELENCO (nomi di prodotto). */}
++        <details style={{ marginTop: 14 }}>
++          <summary style={{ ...etich, cursor: 'pointer', listStyle: 'revert' }}>Deep Setting</summary>
++          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 8 }}>
++            {SUPERFICI_PROFILO.map((s) => (
++              <div key={s}>
++                <label style={etich}>{{ amico: 'Amico', impara: 'Impara', tavolo: 'Tavolo', podcast: 'Podcast' }[s]}</label>
++                <select
++                  value={(bozza.profili && bozza.profili[s]) || ''}
++                  onChange={(e) => setBozza((b) => {
++                    const profili = { ...(b.profili || {}) };
++                    if (e.target.value) profili[s] = e.target.value; else delete profili[s];
++                    return { ...b, profili: Object.keys(profili).length ? profili : null };
++                  })}
++                  style={input}>
++                  <option value="">{`— ${PROFILI[profiloPerSuperficie(s)].etichetta}`}</option>
++                  {PROFILI_ELENCO.map((p) => <option key={p.id} value={p.id}>{p.etichetta}</option>)}
++                </select>
++              </div>
++            ))}
++          </div>
++        </details>
++
+         {errore && <div style={{ color: '#f87171', fontSize: 13, margin: '10px 0' }}>{errore}</div>}
+ 
+         <button onClick={salva} disabled={salvando} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: salvando ? 0.6 : 1 }}>
+@@ -320,7 +359,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+ 
+   // ── LISTA ──
+   const carta = (c, mio) => (
+-    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 12, background: card, border: bordo }}>
++    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 12, ...clayCard(card) }}>
+       <img src={c.avatar} alt="" width={38} height={38} style={{ borderRadius: 8 }} />
+       <div style={{ flex: 1, minWidth: 0 }}>
+         <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome}</div>
+@@ -338,7 +377,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
+   return (
+     <div>
+       {/* b.212 — costruzione automatica: scrivi un personaggio e l'AI crea tutto */}
+-      <div style={{ padding: 14, borderRadius: 16, background: card, border: bordo, marginBottom: 12 }}>
++      <div style={{ padding: 14, ...clayCard(card), marginBottom: 12 }}>
+         <div style={{ fontSize: 13, fontWeight: 800, color: testoP, marginBottom: 8 }}>{tt('lifeCreateFrom', 'Crea da un personaggio')}</div>
+         <div style={{ display: 'flex', gap: 8 }}>
+           <input value={descAg} onChange={(e) => setDescAg(e.target.value)}
+diff --git a/voice-translator-vercel/app/components/Life/GestioneObiettivi.js b/voice-translator-vercel/app/components/Life/GestioneObiettivi.js
+index d3a64f5..0d3470e 100644
+--- a/voice-translator-vercel/app/components/Life/GestioneObiettivi.js
++++ b/voice-translator-vercel/app/components/Life/GestioneObiettivi.js
+@@ -1,6 +1,6 @@
+ 'use client';
+ import { memo, useState, useEffect, useCallback } from 'react';
+-import { FONT, vibrate } from '../../lib/constants.js';
++import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
+ import Icon from '../Icon.js';
+ import {
+   elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
+@@ -99,7 +99,7 @@ function GestioneObiettivi({ L, testoP, muto, accent, card, bordo }) {
+         ? <div style={{ fontSize: 13, color: muto, textAlign: 'center', padding: '24px 8px' }}>{tt('lifeGoalEmpty', 'Ancora nessun obiettivo. Aggiungine uno: il tuo Compagno inizierà a tenerlo presente.')}</div>
+         : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+             {lista.map((o) => (
+-              <div key={o.id} style={{ padding: 12, borderRadius: 12, background: card, border: `1px solid ${o.stato === 'attivo' ? accent : (bordo.split(' ').pop())}` }}>
++              <div key={o.id} style={{ padding: 14, ...clayCard(card), ...(o.stato === 'attivo' ? { boxShadow: `${CLAY_OMBRA}, 0 0 0 1.5px ${accent}` } : {}) }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                   <span style={{ fontSize: 18 }}>{iconaCat(o.categoria)}</span>
+                   <div style={{ flex: 1, minWidth: 0 }}>
+diff --git a/voice-translator-vercel/app/components/Life/LifeView.js b/voice-translator-vercel/app/components/Life/LifeView.js
+index 49eb804..8de744e 100644
+--- a/voice-translator-vercel/app/components/Life/LifeView.js
++++ b/voice-translator-vercel/app/components/Life/LifeView.js
+@@ -1,11 +1,14 @@
+ 'use client';
+-import { memo, useState, useRef, useCallback, useEffect } from 'react';
+-import { FONT, LANGS, vibrate } from '../../lib/constants.js';
++import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
++import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
+ import Icon from '../Icon.js';
+ import { useApp } from '../../contexts/AppContext.js';
+ import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
+ import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
+-import { generaPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, elencoMiei } from '../../lib/compagni/cliente.js';
++import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, registraEsito } from '../../lib/compagni/cliente.js';
++import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
++import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
++import PannelloPronuncia from './PannelloPronuncia.js';
+ import GestioneCompagni from './GestioneCompagni.js';
+ import GestioneObiettivi from './GestioneObiettivi.js';
+ import AmicoChat from './AmicoChat.js';
+@@ -25,13 +28,16 @@ function LifeView({ onApriStanza }) {
+   const lingua = prefs?.uiLang || prefs?.lang || 'it';
+   const [scheda, setScheda] = useState('podcast');
+   const [miei, setMiei] = useState([]);
++  const [debateObiettivo, setDebateObiettivo] = useState(''); // b.227 — Dossier→Debate
+ 
+   const caricaMiei = useCallback(async () => {
+     if (!userToken) { setMiei([]); return; }
+     try { setMiei(await elencoMiei(userToken)); } catch { /* senza login o senza rete: solo i predefiniti */ }
+   }, [userToken]);
+   useEffect(() => { caricaMiei(); }, [caricaMiei]);
+-  const tutti = [...COMPAGNI_PREDEFINITI, ...miei];
++  // b.232 — memoizzato: prima si ricreava a ogni render e vanificava il memo()
++  // dei figli (AmicoChat, Tavolo…), che ri-renderizzavano sempre.
++  const tutti = useMemo(() => [...COMPAGNI_PREDEFINITI, ...miei], [miei]);
+ 
+   const testoP = C.textPrimary || '#eef2ff';
+   const muto = C.textMuted || 'rgba(242,244,247,0.6)';
+@@ -68,7 +74,9 @@ function LifeView({ onApriStanza }) {
+           { id: 'tavolo', icon: 'users', label: L('lifeTableTab') },
+           { id: 'dossier', icon: 'doc', label: L('lifeDossierTab') },
+           { id: 'impara', icon: 'graduation', label: L('lifeLearn') },
+-          { id: 'obiettivi', icon: 'target', label: (L('lifeGoalsTab') && L('lifeGoalsTab') !== 'lifeGoalsTab') ? L('lifeGoalsTab') : 'Obiettivi' },
++          // b.247 — la chiave ora esiste in tutti e quindici i pacchetti:
++          // via il ripiego che confrontava il risultato con la chiave stessa.
++          { id: 'obiettivi', icon: 'target', label: L('lifeGoalsTab') },
+           { id: 'compagni', icon: 'star', label: L('lifeCompanionsTab') },
+         ].map((t) => {
+           const on = scheda === t.id;
+@@ -91,8 +99,10 @@ function LifeView({ onApriStanza }) {
+ 
+       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+-      {scheda === 'tavolo' && <Tavolo compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+-      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
++      {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
++      {scheda === 'dossier' && <Dossier compagni={tutti} onApriStanza={onApriStanza}
++        onDebate={(obiettivo) => { setDebateObiettivo(obiettivo || ''); setScheda('tavolo'); }}
++        {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
+       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+@@ -153,14 +163,25 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
+     if (scelti.length < 2) { setErrore(L('lifeNeedCompanions')); return; }
+     setStato('genero'); setCopioni([]); setAttuale(-1); fermatoRef.current = false;
+     try {
+-      const d = await generaPodcast({ argomento: argomento.trim(), compagni: scelti, round, lingua, userToken });
+-      const lista = d.copioni || [];
+-      setCopioni(lista);
++      // ── b.244 · un turno per volta, e si ascolta mentre si genera ──
++      // Prima si aspettava che TUTTI i turni fossero pronti (fino a 16
++      // chiamate in fila, col rischio di timeout) e solo dopo partiva la
++      // voce. Ora il primo turno si sente quasi subito, e mentre parla si
++      // prepara il successivo: nessuna richiesta puo scadere.
++      const lista = [];
+       setStato('ascolto');
+-      for (let i = 0; i < lista.length; i++) {
++      for (let i = 0; ; i++) {
+         if (fermatoRef.current) break;
+-        setAttuale(i);
+-        await parlaTurno({ voceId: lista[i].voceId, testo: lista[i].testo, lingua, userToken }, (a) => { audioRef.current = a; });
++        const d = await generaTurnoPodcast({
++          argomento: argomento.trim(), compagni: scelti, round, lingua, userToken,
++          indice: i, precedenti: lista.slice(-6).map((t) => ({ nome: t.nome, testo: t.testo })),
++        });
++        if (d.fine) break;
++        if (d.saltato || !d.turno) { if (i >= (d.totale || 0) - 1) break; continue; }
++        lista.push(d.turno);
++        setCopioni([...lista]);
++        setAttuale(lista.length - 1);
++        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken }, (a) => { audioRef.current = a; });
+       }
+       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
+     } catch (e) {
+@@ -242,11 +263,51 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+   const [lavoro, setLavoro] = useState(false);
+   const [errore, setErrore] = useState('');
+   const [aperta, setAperta] = useState(null); // { lezione, contenuto, fonti, domande }
++  // b.242 — le risposte date alla sfida: { indiceDomanda: indiceOpzione }.
++  const [risposte, setRisposte] = useState({});
++  const [ascoltando, setAscoltando] = useState(false);
++  const audioLezioneRef = useRef(null);
++  // b.228 — libreria condivisa "Corsi disponibili"
++  const [disponibili, setDisponibili] = useState([]);
++  const [pubblicato, setPubblicato] = useState(false);
++  // b.229 — illustrazione della lezione + tutor "compagno di viaggio"
++  const [illustrazione, setIllustrazione] = useState(null);
++  const [genIll, setGenIll] = useState(false);
++  const tutor = compagni.find((c) => c.id === docenteId) || null;
++  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
++
++  useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
+ 
+   const stileSelect = { flex: 1, padding: 10, borderRadius: 10, border: bordo, background: card, color: testoP, fontFamily: FONT, fontSize: 13 };
+ 
++  // b.228 — apri un corso della libreria: carica struttura e impostazioni; le
++  // lezioni si (ri)generano poi nella lingua scelta (conta per i bambini).
++  const apriPubblico = useCallback((corso) => {
++    setErrore(''); setAperta(null); setPubblicato(false);
++    setArgomento(corso.argomento || corso.titolo || '');
++    setCategoria(corso.categoria || 'altro');
++    setLivello(corso.livello || 'base');
++    setLinguaCorso(corso.lingua || linguaCorso);
++    setLezioni(corso.lezioni || []);
++  }, [linguaCorso]);
++
++  // b.228 — pubblica il corso appena generato nella libreria condivisa.
++  const pubblica = useCallback(async () => {
++    if (!lezioni.length) return;
++    try {
++      await pubblicaCorso({ titolo: argomento.trim(), argomento: argomento.trim(), categoria, livello, lingua: linguaCorso, lezioni, docenteId: docenteId || undefined, userToken });
++      setPubblicato(true);
++      corsiDisponibili({}).then(setDisponibili).catch(() => {});
++    } catch (e) {
++      setErrore(e.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
++    }
++  }, [lezioni, argomento, categoria, livello, linguaCorso, docenteId, userToken, L]);
++
+   const crea = useCallback(async () => {
+-    setErrore(''); setLezioni([]); setAperta(null);
++    // b.232 — reset di `pubblicato`: senza questo, dopo aver pubblicato un
++    // corso il tasto "Pubblica" restava bloccato su "✓ Pubblicato" anche per
++    // il corso nuovo (sbloccabile solo cambiando scheda). apriPubblico lo fa già.
++    setErrore(''); setLezioni([]); setAperta(null); setPubblicato(false);
+     if (!argomento.trim()) { setErrore(L('lifeNeedTopic')); return; }
+     setLavoro(true);
+     try {
+@@ -261,9 +322,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+   }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
+ 
+   const apri = useCallback(async (lezione) => {
+-    setLavoro(true); setErrore('');
++    setLavoro(true); setErrore(''); setIllustrazione(null);
+     try {
+       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
++      setRisposte({});
+       setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
+     } catch (e) {
+       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+@@ -275,23 +337,127 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+     if (!aperta) return;
+     setLavoro(true);
+     try {
+-      const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello });
++      // b.231 — passiamo il CONTENUTO reale della lezione aperta e l'argomento:
++      // il quiz chiede solo ciò che è stato davvero insegnato.
++      const d = await generaQuiz({ lezione: aperta.lezione, lingua: linguaCorso, userToken, livello, contenuto: aperta.contenuto, argomento: argomento.trim() });
++      setRisposte({});
+       setAperta((a) => ({ ...a, domande: d.domande || [] }));
+     } catch (e) {
+       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+     } finally { setLavoro(false); }
+     // b.217 — mancavano `linguaCorso` e `livello`: il quiz usa entrambi
+     // (lingua del corso e registro bambino) ma le deps non li elencavano.
+-  }, [aperta, linguaCorso, livello, userToken, L]);
++  }, [aperta, linguaCorso, livello, userToken, argomento, L]);
++
++  // b.242-bis — leggi la lezione ad alta voce. Se e un corso di LINGUA, le
++  // parti marcate [L2:...] passano a una voce madrelingua: e per questo che
++  // il tag esiste. Altrimenti si comporta come una lettura normale.
++  const ascoltaLezione = useCallback(async () => {
++    if (!aperta || ascoltando) return;
++    setAscoltando(true);
++    try {
++      const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
++      await parlaBilingue({
++        voceId: tutor?.voce?.id,
++        // b.252 — il tag [PRONUNCIA:] va tolto anche dal percorso VOCE.
++        // A schermo era gia staccato (piu sotto), ma qui passava grezzo:
++        // nei corsi di lingua la voce leggeva ad alta voce "PRONUNCIA due
++        // punti ..." in mezzo alla lezione. I tag [L2:] restano: servono a
++        // segmentiPerVoce per far dire la parte straniera a una voce
++        // madrelingua — e tutto il senso della lezione bilingue.
++        testo: staccaEsercizio(aperta.contenuto).testo,
++        linguaParlata: linguaCorso,
++        linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
++        userToken,
++      }, (a) => { audioLezioneRef.current = a; });
++    } catch { /* la voce e un di piu: la lezione resta leggibile */ }
++    finally { setAscoltando(false); }
++  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken]);
++
++  // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
++  // l'esito al Maestro. La registrazione e' un DI PIU': se fallisce (o se non
++  // hai un account) la sfida resta comunque giocata.
++  const rispondi = useCallback((indice, opzione) => {
++    setRisposte((prec) => {
++      if (prec[indice] !== undefined) return prec;
++      const nuove = { ...prec, [indice]: opzione };
++      const domande = aperta?.domande || [];
++      if (domande.length && Object.keys(nuove).length === domande.length) {
++        const giuste = domande.filter((q, i) => nuove[i] === q.corretta).length;
++        const daRivedere = domande.filter((q, i) => nuove[i] !== q.corretta).map((q) => q.domanda);
++        const indiceLezione = Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo));
++        registraEsito({
++          argomento: argomento.trim(),
++          lezioneIndice: indiceLezione,
++          punteggio: Math.round((giuste / domande.length) * 100),
++          daRivedere,
++          userToken,
++        }).catch(() => { /* il ricordo e un di piu: la sfida resta valida */ });
++      }
++      return nuove;
++    });
++  }, [aperta, lezioni, argomento, userToken]);
++
++  // b.229 — illustrazione della lezione (gpt-image-1). Costo dal wallet.
++  const illustra = useCallback(async () => {
++    if (!aperta || genIll) return;
++    setGenIll(true);
++    try {
++      const url = await generaIllustrazione({ titolo: aperta.lezione?.titolo, argomento: argomento.trim(), livello, userToken });
++      if (url) setIllustrazione(url);
++    } catch (e) {
++      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
++    } finally { setGenIll(false); }
++  }, [aperta, genIll, argomento, livello, userToken, L]);
+ 
+   if (aperta) {
+     return (
+       <div>
+-        <button onClick={() => setAperta(null)} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
++        <button onClick={() => { try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
+           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
+         </button>
+-        <h3 style={{ color: testoP, margin: '4px 0 12px' }}>{aperta.lezione.titolo}</h3>
+-        <TestoRicco testo={aperta.contenuto} testoP={testoP} muto={muto} />
++        {/* b.229 — tutor "compagno di viaggio" accanto al titolo. */}
++        <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0 12px' }}>
++          {tutor?.avatar && <img src={tutor.avatar} alt="" width={34} height={34} style={{ borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />}
++          <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
++        </div>
++
++        {/* b.229 — illustrazione della lezione (generata, sfondo trasparente). */}
++        {illustrazione
++          ? <img src={illustrazione} alt="" style={{ width: '100%', borderRadius: 14, marginBottom: 12, display: 'block' }} />
++          : <button onClick={illustra} disabled={genIll}
++              style={{ marginBottom: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: genIll ? 0.6 : 1 }}>
++              {genIll ? '…' : `🎨 ${tt('lifeLessonIllustrate', 'Genera illustrazione')}`}
++            </button>}
++
++        {/* b.242-bis — il tag [L2:...] non si mostra MAI: e un'istruzione per
++            la voce, non testo da leggere. Senza questo, in un corso di lingua
++            si vedeva "[L2: beautiful]" scritto nella lezione. */}
++        <TestoRicco testo={staccaEsercizio(testoVisibile(aperta.contenuto)).testo} testoP={testoP} muto={muto} />
++        {/* b.244 — se il Maestro ha proposto [PRONUNCIA: ...], qui si dice ad
++            alta voce e si scopre subito com'e andata. L'esito torna a lui:
++            le parole sbagliate ricompaiono piu avanti, dentro altre frasi. */}
++        {(() => {
++          const es = staccaEsercizio(testoVisibile(aperta.contenuto)).esercizio;
++          if (!es) return null;
++          const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
++          return <PannelloPronuncia frase={es} lingua={l2 || linguaCorso} userToken={userToken}
++            onEsito={({ punteggio, daRivedere }) => {
++              registraEsito({
++                argomento: argomento.trim(),
++                lezioneIndice: Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo)),
++                punteggio, daRivedere, userToken,
++              }).catch(() => { /* il ricordo e un di piu */ });
++            }}
++            {...{ testoP, muto, accent, card, bordo }} />;
++        })()}
++        {/* La lezione si ASCOLTA: nei corsi di lingua le parti in lingua
++            straniera le dice una voce madrelingua (voce doppia, b.241) —
++            e' tutto il senso del tag L2. */}
++        <button onClick={ascoltaLezione} disabled={ascoltando}
++          style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: ascoltando ? 0.6 : 1 }}>
++          {ascoltando ? tt('lifeListening', 'Sto leggendo…') : tt('lifeListen', 'Ascolta la lezione')}
++        </button>
+         {aperta.fonti.length > 0 && (
+           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
+             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}
+@@ -302,15 +468,48 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+               {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
+             </button>
+           : <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+-              {aperta.domande.map((q, i) => (
+-                <div key={i} style={{ padding: 12, borderRadius: 12, background: card, border: bordo }}>
+-                  <div style={{ fontWeight: 700, color: testoP, marginBottom: 6 }}>{i + 1}. {q.domanda}</div>
+-                  {q.opzioni.map((o, j) => (
+-                    <div key={j} style={{ fontSize: 14, color: j === q.corretta ? accent : testoP, padding: '2px 0' }}>{j === q.corretta ? '✓ ' : '· '}{o}</div>
+-                  ))}
+-                  {q.spiegazione && <div style={{ fontSize: 12, color: muto, marginTop: 6 }}>{q.spiegazione}</div>}
++              {/* ── b.242 · LA SFIDA SI GIOCA ──
++                  Prima le risposte giuste erano gia segnate col ✓: non c'era
++                  niente da rispondere, e quindi niente da imparare e niente
++                  da ricordare. Ora si sceglie, si vede subito com'e andata, e
++                  l'esito arriva al Maestro (registraEsito) che la prossima
++                  volta sa dove sei e cosa e rimasto indietro. */}
++              {aperta.domande.map((q, i) => {
++                const scelta = risposte[i];
++                const data = scelta !== undefined;
++                return (
++                  <div key={i} style={{ padding: 12, borderRadius: 12, background: card, border: bordo }}>
++                    <div style={{ fontWeight: 700, color: testoP, marginBottom: 8 }}>{i + 1}. {q.domanda}</div>
++                    {q.opzioni.map((o, j) => {
++                      const giusta = j === q.corretta;
++                      const miaSbagliata = data && scelta === j && !giusta;
++                      const colore = data ? (giusta ? accent : miaSbagliata ? '#f87171' : muto) : testoP;
++                      return (
++                        <button key={j} onClick={() => !data && rispondi(i, j)} disabled={data}
++                          style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 14, color: colore,
++                            padding: '7px 10px', margin: '3px 0', borderRadius: 9, fontFamily: FONT,
++                            border: `1px solid ${data && (giusta || miaSbagliata) ? colore : 'transparent'}`,
++                            background: data ? 'transparent' : card, cursor: data ? 'default' : 'pointer' }}>
++                          {data ? (giusta ? '✓ ' : miaSbagliata ? '✗ ' : '· ') : '· '}{o}
++                        </button>
++                      );
++                    })}
++                    {data && q.spiegazione && <div style={{ fontSize: 12, color: muto, marginTop: 6 }}>{q.spiegazione}</div>}
++                  </div>
++                );
++              })}
++              {/* Il risultato arriva solo quando hai risposto a tutto. */}
++              {aperta.domande.length > 0 && Object.keys(risposte).length === aperta.domande.length && (
++                <div style={{ padding: 14, borderRadius: 12, background: card, border: `1px solid ${accent}`, color: testoP, fontWeight: 700 }}>
++                  {(() => {
++                    const giuste = aperta.domande.filter((q, i) => risposte[i] === q.corretta).length;
++                    const tot = aperta.domande.length;
++                    return `${giuste}/${tot} — ${giuste === tot ? tt('lifeQuizAll', 'tutte giuste')
++                      : giuste * 2 >= tot ? tt('lifeQuizGood', 'ci siamo')
++                      : tt('lifeQuizRetry', 'da riprendere insieme')}`;
++                  })()}
+                 </div>
+-              ))}
++              )}
+             </div>}
+       </div>
+     );
+@@ -318,6 +517,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+ 
+   return (
+     <div>
++      {/* b.228 — libreria condivisa: corsi già pronti, da avviare con un tocco. */}
++      {disponibili.length > 0 && <div style={{ marginBottom: 16 }}>
++        <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCoursesAvailable', 'Corsi disponibili')}</div>
++        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
++          {disponibili.slice(0, 8).map((corso) => (
++            <button key={corso.id} onClick={() => apriPubblico(corso)}
++              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
++              <div style={{ fontWeight: 700 }}>{corso.perBambini ? '🧒 ' : ''}{corso.titolo}</div>
++              <div style={{ fontSize: 11, color: muto, marginTop: 2 }}>{(LANGS.find(l => l.code === corso.lingua)?.flag || '')} {corso.lezioni?.length || 0} {tt('lifeLessonsCount', 'lezioni')} · {corso.livello}</div>
++            </button>
++          ))}
++        </div>
++      </div>}
++
++      <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCreateOwn', 'Crea un corso')}</div>
+       <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeLearnPh')}
+         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 12 }} />
+ 
+@@ -350,13 +564,20 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+       {lezioni.length > 0 && (
+         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+           <div style={{ fontSize: 12, color: muto }}>{L('lifeLessons')}</div>
+-          {lezioni.map((lz) => (
+-            <button key={lz.indice} onClick={() => apri(lz)} disabled={lavoro}
+-              style={{ textAlign: 'left', padding: 12, borderRadius: 12, background: card, border: bordo, cursor: 'pointer', fontFamily: FONT, color: testoP }}>
+-              <div style={{ fontWeight: 700 }}>{lz.indice + 1}. {lz.titolo}</div>
+-              {lz.obiettivi.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
++          {lezioni.map((lz, i) => (
++            // b.232 — difesa sui corsi della libreria (lezioni grezze dal DB):
++            // `indice`/`obiettivi` possono mancare → key/NaN e crash su .length.
++            <button key={lz.indice ?? i} onClick={() => apri(lz)} disabled={lavoro}
++              style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
++              <div style={{ fontWeight: 700 }}>{(lz.indice ?? i) + 1}. {lz.titolo}</div>
++              {lz.obiettivi?.length > 0 && <div style={{ fontSize: 12, color: muto, marginTop: 3 }}>{lz.obiettivi.join(' · ')}</div>}
+             </button>
+           ))}
++          {/* b.228 — pubblica il corso nella libreria condivisa. */}
++          <button onClick={pubblica} disabled={pubblicato}
++            style={{ marginTop: 6, padding: 12, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, cursor: pubblicato ? 'default' : 'pointer', fontFamily: FONT, opacity: pubblicato ? 0.6 : 1 }}>
++            {pubblicato ? `✓ ${tt('lifeCoursePublished', 'Pubblicato')}` : `📤 ${tt('lifeCoursePublish', 'Pubblica nella libreria')}`}
++          </button>
+         </div>
+       )}
+     </div>
+diff --git a/voice-translator-vercel/app/components/Life/PannelloPronuncia.js b/voice-translator-vercel/app/components/Life/PannelloPronuncia.js
+new file mode 100644
+index 0000000..be2a625
+--- /dev/null
++++ b/voice-translator-vercel/app/components/Life/PannelloPronuncia.js
+@@ -0,0 +1,115 @@
++'use client';
++import { useState, useRef, useCallback, useEffect } from 'react';
++import { FONT } from '../../lib/constants.js';
++import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
++
++// ═══════════════════════════════════════════════════════════════
++// PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
++//
++// Ripreso da RadioChat, dove era la funzione che teneva la gente lì: il
++// Maestro propone una frase, tu la dici, e in due secondi vedi parola per
++// parola com'è andata.
++//
++// La misura è onesta: si registra, si trascrive con Whisper (che BarTalk ha
++// già) e si confronta con la frase proposta. Non è un modello fonetico — ma
++// se la trascrizione ti capisce, un madrelingua ti capisce. È una misura
++// indiretta e VERA, non un punteggio inventato.
++//
++// Il risultato torna al chiamante (onEsito) che lo consegna al Maestro: così
++// le parole andate male tornano più avanti, dentro un'altra frase.
++// ═══════════════════════════════════════════════════════════════
++
++export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, testoP, muto, accent, card, bordo }) {
++  const [stato, setStato] = useState('pronto'); // pronto | registro | valuto | fatto
++  const [esito, setEsito] = useState(null);
++  const [errore, setErrore] = useState('');
++  const recRef = useRef(null);
++  const streamRef = useRef(null);
++
++  // Il microfono si chiude sempre, anche uscendo a metà registrazione.
++  const chiudiMicrofono = useCallback(() => {
++    try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* il microfono era gia stato chiuso: chiuderlo due volte non e un guasto */ }
++    streamRef.current = null;
++  }, []);
++  useEffect(() => () => chiudiMicrofono(), [chiudiMicrofono]);
++
++  const valuta = useCallback(async (blob) => {
++    setStato('valuto');
++    try {
++      const fd = new FormData();
++      fd.append('audio', blob, 'pronuncia.webm');
++      fd.append('sourceLang', lingua || 'en');
++      if (userToken) fd.append('userToken', userToken);
++      const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
++      const d = await r.json().catch(() => null);
++      if (!r.ok || !d) throw new Error('trascrizione non riuscita');
++      const detto = d.text || d.transcript || d.testo || '';
++      const e = valutaPronuncia(frase, detto);
++      setEsito({ ...e, detto });
++      setStato('fatto');
++      onEsito?.({ punteggio: e.punteggio, daRivedere: paroleDaRivedere(e), detto });
++    } catch {
++      setErrore('Non sono riuscito a sentirti. Riprova.');
++      setStato('pronto');
++    }
++  }, [frase, lingua, userToken, onEsito]);
++
++  const registra = useCallback(async () => {
++    if (stato === 'registro') { // secondo tocco: si ferma
++      try { recRef.current?.stop(); } catch { /* la registrazione era gia finita da sola: fermarla di nuovo non e un guasto */ }
++      return;
++    }
++    setErrore(''); setEsito(null);
++    try {
++      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
++      streamRef.current = stream;
++      const pezzi = [];
++      const rec = new MediaRecorder(stream);
++      rec.ondataavailable = (e) => { if (e.data.size > 0) pezzi.push(e.data); };
++      rec.onstop = async () => {
++        chiudiMicrofono();
++        const blob = new Blob(pezzi, { type: rec.mimeType || 'audio/webm' });
++        if (blob.size > 800) await valuta(blob);
++        else { setErrore('Non ho sentito niente. Riprova.'); setStato('pronto'); }
++      };
++      recRef.current = rec;
++      rec.start();
++      setStato('registro');
++    } catch {
++      setErrore('Serve il permesso del microfono.');
++      setStato('pronto');
++    }
++  }, [stato, valuta, chiudiMicrofono]);
++
++  const colorePunteggio = esito ? (esito.punteggio >= 80 ? accent : esito.punteggio >= 50 ? '#f59e0b' : '#f87171') : accent;
++
++  return (
++    <div style={{ marginTop: 12, padding: 14, borderRadius: 14, background: card, border: `1px solid ${accent}` }}>
++      <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>Dillo ad alta voce</div>
++      <div style={{ fontSize: 17, fontWeight: 800, color: testoP, marginBottom: 10 }}>{frase}</div>
++
++      <button onClick={registra} disabled={stato === 'valuto'}
++        style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',
++          background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
++        {stato === 'registro' ? 'Ho finito' : stato === 'valuto' ? 'Ascolto…' : stato === 'fatto' ? 'Riprova' : 'Registra'}
++      </button>
++
++      {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 8 }}>{errore}</div>}
++
++      {esito && (
++        <div style={{ marginTop: 12 }}>
++          <div style={{ fontSize: 22, fontWeight: 900, color: colorePunteggio }}>{esito.punteggio}%</div>
++          {/* Parola per parola: si vede DOVE è andata storta, non solo quanto. */}
++          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
++            {esito.parole.map((p, i) => (
++              <span key={i} style={{ fontSize: 14, padding: '3px 8px', borderRadius: 8,
++                border: `1px solid ${p.ok ? accent : p.vicino ? '#f59e0b' : '#f87171'}`,
++                color: p.ok ? accent : p.vicino ? '#f59e0b' : '#f87171' }}>{p.parola}</span>
++            ))}
++          </div>
++          {esito.detto && <div style={{ fontSize: 12, color: muto, marginTop: 8 }}>Ho sentito: “{esito.detto}”</div>}
++        </div>
++      )}
++    </div>
++  );
++}
+diff --git a/voice-translator-vercel/app/components/Life/Tavolo.js b/voice-translator-vercel/app/components/Life/Tavolo.js
+index 9e4627f..f596670 100644
+--- a/voice-translator-vercel/app/components/Life/Tavolo.js
++++ b/voice-translator-vercel/app/components/Life/Tavolo.js
+@@ -2,7 +2,7 @@
+ import { memo, useState, useRef, useCallback, useEffect } from 'react';
+ import { FONT, vibrate } from '../../lib/constants.js';
+ import Icon from '../Icon.js';
+-import { parlaTavolo, parlaTurno } from '../../lib/compagni/cliente.js';
++import { parlaTavolo, parlaTurno, sintesiTavolo } from '../../lib/compagni/cliente.js';
+ import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+ 
+ // ═══════════════════════════════════════════════════════════════
+@@ -11,14 +11,16 @@ import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+ // autonoma: NON è una stanza WebRTC. (Luca)
+ // ═══════════════════════════════════════════════════════════════
+ 
+-function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
++function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, obiettivoIniziale = '' }) {
+   const [scelti, setScelti] = useState([]);
+   const [avviato, setAvviato] = useState(false);
+   const [messaggi, setMessaggi] = useState([]); // {ruolo:'persona'|nome, testo, emoji, colore}
+   const [testo, setTesto] = useState('');
+   const [attende, setAttende] = useState(false);
+   const [errore, setErrore] = useState('');
++  const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
+   const fondo = useRef(null);
++  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+ 
+   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
+ 
+@@ -34,7 +36,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+     // messaggi per il server: {ruolo, testo} (persona o nome del Compagno)
+     const perServer = storia.map(m => ({ ruolo: m.ruolo, testo: m.testo }));
+     try {
+-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi() });
++      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo });
+       for (const r of (d.risposte || [])) {
+         const c = perId.get(r.compagnoId) || {};
+         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);
+@@ -46,7 +48,20 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+     } catch (e) {
+       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
+     } finally { setAttende(false); }
+-  }, [testo, attende, messaggi, scelti, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
++  }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
++
++  // b.226 — Debate: chiude la tavola con la SINTESI (risultato condiviso).
++  const concludi = useCallback(async () => {
++    if (attende || messaggi.length < 2) return;
++    setErrore(''); setAttende(true);
++    try {
++      const perServer = messaggi.map(m => ({ ruolo: m.ruolo, nome: m.ruolo === 'persona' ? undefined : m.ruolo, testo: m.testo }));
++      const s = await sintesiTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivo });
++      if (s) setMessaggi((m) => [...m, { ruolo: '__sintesi', testo: s }]);
++    } catch (e) {
++      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
++    } finally { setAttende(false); }
++  }, [attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
+ 
+   // ── Scelta dei partecipanti ──
+   if (!avviato) {
+@@ -65,9 +80,13 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+             );
+           })}
+         </div>
++        {/* b.226 — Debate: l'obiettivo comune della tavola (facoltativo). */}
++        <input value={obiettivo} onChange={(e) => setObiettivo(e.target.value)}
++          placeholder={tt('lifeDebateGoalPh', 'Obiettivo del confronto (facoltativo): a cosa volete arrivare?')}
++          style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 10 }} />
+         <button onClick={() => { if (scelti.length >= 2) { vibrate(8); setAvviato(true); setMessaggi([]); } else setErrore(L('lifeNeedCompanions')); }}
+           style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT }}>
+-          💬 {L('lifeTableStart')}
++          ⚖️ {tt('lifeDebateStart', 'Apri il Debate')}
+         </button>
+         {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 10 }}>{errore}</div>}
+       </div>
+@@ -78,7 +97,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+   return (
+     <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
+       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
+-        <button onClick={() => setAvviato(false)} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
++        <button onClick={() => setAvviato(false)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
+           <Icon name="back" size={16} color={testoP} />
+         </button>
+         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+@@ -90,6 +109,14 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+ 
+       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+         {messaggi.map((m, i) => {
++          if (m.ruolo === '__sintesi') {
++            return (
++              <div key={i} style={{ alignSelf: 'stretch', margin: '6px 0', padding: '12px 14px', borderRadius: 14, background: `${accent}18`, border: `1px solid ${accent}`, color: testoP, fontSize: 14, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
++                <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>⚖️ {tt('lifeDebateSynthesis', 'Conclusione condivisa')}</div>
++                {m.testo}
++              </div>
++            );
++          }
+           const mio = m.ruolo === 'persona';
+           return (
+             <div key={i} style={{ alignSelf: mio ? 'flex-end' : 'flex-start', maxWidth: '84%' }}>
+@@ -107,10 +134,16 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
+ 
+       {errore && <div style={{ color: '#f87171', fontSize: 13, padding: '6px 0' }}>{errore}</div>}
+ 
++      {messaggi.length >= 2 && (
++        <button onClick={concludi} disabled={attende} style={{ alignSelf: 'center', margin: '6px 0', padding: '7px 14px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
++          ⚖️ {tt('lifeDebateConclude', 'Concludi: conclusione condivisa')}
++        </button>
++      )}
++
+       <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
+         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
+-          placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
+-        <button onClick={invia} disabled={attende} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
++          aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
++        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+           <Icon name="send" size={16} color="#04121c" />
+         </button>
+       </div>
+diff --git a/voice-translator-vercel/app/components/MondoDiscussioni.js b/voice-translator-vercel/app/components/MondoDiscussioni.js
+index 124a062..5d2e450 100644
+--- a/voice-translator-vercel/app/components/MondoDiscussioni.js
++++ b/voice-translator-vercel/app/components/MondoDiscussioni.js
+@@ -34,6 +34,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
+   const [tradotti, setTradotti] = useState({});
+   // b.187 — chi seguo, per id pubblico (stato ottimistico di sessione)
+   const [seguiti, setSeguiti] = useState(() => new Set());
++  const [likeMessi, setLikeMessi] = useState(() => new Set()); // b.232 — evita il doppio conteggio del like
+   const scrollRef = useRef(null);
+ 
+   const carica = useCallback(async () => {
+@@ -98,12 +99,19 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
+     setSeguiti(s => { const n = new Set(s); if (gia) n.delete(publicId); else n.add(publicId); return n; });
+     vibrate(8);
+     try {
+-      await fetch('/api/mondo/discussioni', {
++      // b.255 — anche una risposta di rifiuto (403, 429, 500) va trattata
++      // come un fallimento: prima si guardava solo l'eccezione di rete, e
++      // un "no" del server lasciava il pulsante acceso per sempre.
++      const r = await fetch('/api/mondo/discussioni', {
+         method: 'POST', headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
+       });
++      if (!r.ok) throw new Error('rifiutato');
+     } catch {
+       setSeguiti(s => { const n = new Set(s); if (gia) n.add(publicId); else n.delete(publicId); return n; });
++      // b.255 — il pulsante tornava indietro DA SOLO, in silenzio: sembrava
++      // che l'applicazione ci ripensasse. Ora si dice che non e riuscito.
++      setErrore(L('genericError'));
+     }
+   }, [userToken, seguiti, L]);
+ 
+@@ -188,7 +196,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
+ 
+       {/* Composer */}
+       <div style={{ padding: '10px 16px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
+-        {errore && <div style={{ fontSize: 11, color: '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
++        {errore && <div style={{ fontSize: 11, color: C.red || '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
+         <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
+           onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}
+           placeholder={L('publicNickname')}
+@@ -211,13 +219,20 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
+   // like: idempotente lato server; aggiorna il conteggio localmente
+   async function metti(commentId) {
+     if (!userToken) { setErrore(L('accessToCreate')); return; }
++    // b.232 — il server è idempotente (un like per persona): se l'avevo già
++    // messo, non re-incremento (prima ogni click faceva +1 in UI, ma il DB
++    // restava a 1). Così l'UI resta allineata al server.
++    if (likeMessi.has(commentId)) return;
+     vibrate(8);
+     try {
+       const r = await fetch('/api/mondo/discussioni', {
+         method: 'POST', headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ azione: 'like', userToken, commentId }),
+       });
+-      if (r.ok) setCommenti(cs => cs.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + 1 } : c));
++      if (r.ok) {
++        setLikeMessi(s => new Set(s).add(commentId));
++        setCommenti(cs => cs.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + 1 } : c));
++      }
+     } catch { /* il like non e critico: nessun errore in faccia */ }
+   }
+ }
+diff --git a/voice-translator-vercel/app/components/MondoNews.js b/voice-translator-vercel/app/components/MondoNews.js
+index d31f0fd..2cb7008 100644
+--- a/voice-translator-vercel/app/components/MondoNews.js
++++ b/voice-translator-vercel/app/components/MondoNews.js
+@@ -22,6 +22,9 @@ import SchedaArgomento from './SchedaArgomento.js';
+ import MondoDiscussioni from './MondoDiscussioni.js';
+ import MondoPersona from './MondoPersona.js';
+ import { useApp } from '../contexts/AppContext.js';
++// b.255 — vedi lib/pannelloPieno.js: un pannello che copre lo schermo lo
++// dichiara, cosi il banner d'installazione non gli finisce sopra.
++import { apriPannelloPieno, chiudiPannelloPieno } from '../lib/pannelloPieno.js';
+ 
+ const CATEGORIE = [
+   { id: 'top',        cat: 'notizie',    labelKey: 'newsTopHeadlines' },
+@@ -63,7 +66,10 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+   const [argomenti, setArgomenti] = useState(null); // null = mai cercato
+   const [stanze, setStanze] = useState([]);
+   const [daCache, setDaCache] = useState(false);
+-  const [errore, setErrore] = useState(false);
++  // b.255 — non piu un booleano: '' = nessun errore, 'account' = serve un
++  // conto, 'guasto' = la ricerca non e riuscita. Due cause diverse non
++  // possono avere lo stesso messaggio.
++  const [errore, setErrore] = useState('');
+   const [chipAttiva, setChipAttiva] = useState(null);
+   // b.153 — la scheda di lettura/visione e i video di YouTube.
+   const [scheda, setScheda] = useState(null); // { tipo: 'articolo'|'video', dati }
+@@ -90,6 +96,15 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+     return () => { vivo = false; };
+   }, [chipAttiva, discAperta]);
+ 
++  // b.255 — finche uno di questi pannelli e aperto, niente si mette
++  // davanti: erano proprio loro (composer di una discussione, scheda di
++  // lettura) a farsi coprire dal banner d'installazione.
++  useEffect(() => {
++    if (!discAperta && !personaAperta && !scheda) return;
++    apriPannelloPieno();
++    return () => chiudiPannelloPieno();
++  }, [discAperta, personaAperta, scheda]);
++
+   const descriviStadio = useCallback((r) => {
+     switch (r.stadio) {
+       case 'stanze':    return L('newsCobraRooms');
+@@ -125,7 +140,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+     abortRef.current?.abort();
+     const ac = new AbortController();
+     abortRef.current = ac;
+-    setCercando(true); setErrore(false); setProcesso([]); setDaCache(false);
++    setCercando(true); setErrore(''); setProcesso([]); setDaCache(false);
+     vibrate(10);
+     try {
+       const paramProfonda = profonda ? `&deep=1&fonti=${numFonti}` : '';
+@@ -150,7 +165,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+             setStanze(r.stanze || []);
+             setDaCache(!!r.daCache);
+           } else if (r.stadio === 'errore') {
+-            setErrore(true);
++            setErrore('guasto');
+           } else {
+             const testo = descriviStadio(r);
+             if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
+@@ -158,7 +173,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+         }
+       }
+     } catch (e) {
+-      if (e.name !== 'AbortError') setErrore(true);
++      if (e.name !== 'AbortError') setErrore('guasto');
+     } finally {
+       setCercando(false);
+     }
+@@ -176,7 +191,11 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+   // account: chi non ce l'ha riceve l'avviso.
+   const apriDiscussione = useCallback(async (t) => {
+     if (creando) return;
+-    if (!userToken) { setErrore(true); return; }
++    // b.255 — qui si diceva "La ricerca non e riuscita" (newsError) a chi
++    // semplicemente non aveva un account: un messaggio che manda a cercare
++    // un guasto inesistente. Il motivo vero e un altro, e la frase giusta
++    // esiste gia ed e usata negli stessi casi altrove (accessToCreate).
++    if (!userToken) { setErrore('account'); return; }
+     setCreando(true); vibrate(12);
+     try {
+       const media = t.url ? { url: t.url, thumb: t.immagine || '', source: (t.fonti?.[0]?.dominio) || '' } : {};
+@@ -190,10 +209,12 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+       });
+       const d = await r.json();
+       if (r.ok && d.id) setDiscAperta(d.id);
+-      else setErrore(true);
+-    } catch { setErrore(true); }
++      else setErrore('guasto');
++    } catch { setErrore('guasto'); }
+     setCreando(false);
+-  }, [creando, userToken, lingua, chipAttiva]);
++    // b.232 — `prefs` nelle deps: il body usa prefs.mondoNick, che prima
++    // poteva essere quello vecchio (stale closure).
++  }, [creando, userToken, lingua, chipAttiva, prefs]);
+ 
+   const quando = (ts) => {
+     if (!ts) return '';
+@@ -327,7 +348,9 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
+ 
+       {/* ─── Esiti vuoti ─── */}
+       {errore && (
+-        <div style={{ padding: '18px 4px', fontSize: 13, color: C.red }}>{L('newsError')}</div>
++        <div role="alert" style={{ padding: '18px 4px', fontSize: 13, color: C.red }}>
++          {errore === 'account' ? L('accessToCreate') : L('newsError')}
++        </div>
+       )}
+       {!errore && !cercando && argomenti !== null && argomenti.length === 0 && (
+         <div style={{ padding: '18px 4px', fontSize: 13, color: C.textMuted }}>{L('newsNoResults')}</div>
+diff --git a/voice-translator-vercel/app/components/MondoPersona.js b/voice-translator-vercel/app/components/MondoPersona.js
+index 5b91148..de97647 100644
+--- a/voice-translator-vercel/app/components/MondoPersona.js
++++ b/voice-translator-vercel/app/components/MondoPersona.js
+@@ -19,6 +19,9 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
+   const [p, setP] = useState(null);
+   const [caricando, setCaricando] = useState(true);
+   const [seguito, setSeguito] = useState(false);
++  // b.255 — mancava del tutto un posto dove dire che il Segui non e
++  // riuscito: il pulsante tornava indietro da solo, senza spiegazioni.
++  const [erroreSegui, setErroreSegui] = useState('');
+ 
+   useEffect(() => {
+     let vivo = true;
+@@ -38,12 +41,14 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
+     setSeguito(!gia);
+     vibrate(8);
+     try {
+-      await fetch('/api/mondo/discussioni', {
++      const r = await fetch('/api/mondo/discussioni', {
+         method: 'POST', headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
+       });
+-    } catch { setSeguito(gia); }
+-  }, [userToken, seguito, publicId]);
++      if (!r.ok) throw new Error('rifiutato');
++      setErroreSegui('');
++    } catch { setSeguito(gia); setErroreSegui(L('genericError')); }
++  }, [userToken, seguito, publicId, L]);
+ 
+   const bg = C.bg || '#0a0e1a';
+   const card = C.glassCard || 'rgba(12,16,30,0.65)';
+@@ -83,6 +88,17 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
+         )}
+       </header>
+ 
++      {/* b.255 — il messaggio che mancava: senza, il pulsante tornava
++          indietro da solo e nessuno sapeva perche. */}
++      {erroreSegui && (
++        <div role="alert" style={{
++          margin: '0 16px 8px', padding: '8px 12px', borderRadius: 10,
++          background: `${C.statusError || '#ef4444'}18`,
++          border: `1px solid ${C.statusError || '#ef4444'}40`,
++          color: C.statusError || '#ef4444', fontSize: 12, fontFamily: FONT,
++        }}>{erroreSegui}</div>
++      )}
++
+       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px 24px', scrollbarWidth: 'none' }}>
+         {p?.discussioni?.length > 0 && (
+           <>
+diff --git a/voice-translator-vercel/app/components/MondoView.js b/voice-translator-vercel/app/components/MondoView.js
+index 0bb9142..4a7d4a9 100644
+--- a/voice-translator-vercel/app/components/MondoView.js
++++ b/voice-translator-vercel/app/components/MondoView.js
+@@ -16,14 +16,26 @@ import { subscribeTick } from '../lib/ticker.js';
+ import { useApp } from '../contexts/AppContext.js';
+ import MondoNews from './MondoNews.js';
+ 
++// ═══ INIZIO b.255 — le etichette delle stanze erano in inglese fisso ═══
++// Sono il testo piu ripetuto della vetrina (una per ogni scheda e per
++// ogni filtro) e restavano "Chat/Classroom/Free Talk/Live" anche con
++// l'interfaccia in coreano o in arabo. Le chiavi esistono gia: sono le
++// STESSE che usa la barra dentro la stanza (MODES in constants.js), cosi
++// la stessa modalita non si chiama in due modi diversi in due schermate.
++// 'interview' e 'conference' restano nella mappa per le stanze vecchie
++// che potrebbero averle salvate (tolte da b.126), ma senza chiave: per
++// quelle si mostra l'identificativo grezzo invece di una bugia tradotta.
+ const MODE_LABELS = {
+-  conversation: { label: 'Chat', icon: '', color: PALETTE.teal },
+-  classroom:    { label: 'Classroom', icon: '', color: '#10B981' },
++  conversation: { labelKey: 'conversation', icon: '', color: PALETTE.teal },
++  classroom:    { labelKey: 'classroom', icon: '', color: '#10B981' },
+   interview:    { label: 'Interview', icon: '', color: '#F59E0B' },
+   conference:   { label: 'Conference', icon: '', color: '#8B5CF6' },
+-  freetalk:     { label: 'Free Talk', icon: '', color: '#EC4899' },
+-  simultaneous: { label: 'Live', icon: '', color: '#EF4444' },
++  freetalk:     { labelKey: 'freeTalk', icon: '', color: '#EC4899' },
++  simultaneous: { labelKey: 'simultaneous', icon: '', color: '#EF4444' },
+ };
++// Il nome da mostrare: la chiave tradotta se c'e, altrimenti cio che c'e.
++const nomeModalita = (info, L) => (info?.labelKey ? L(info.labelKey) : (info?.label || ''));
++// ═══ FINE b.255 ═══
+ 
+ // b.98 — questa mappa era rimasta svuotata dalla ripulitura delle emoji di
+ // b.94: renderizzava uno spazio, e il tipo di stanza non si vedeva piu.
+@@ -63,7 +75,7 @@ const LANG_FILTERS = [
+ ];
+ 
+ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
+-  const { L, S, prefs, setView, theme } = useApp();
++  const { L, setView, theme } = useApp(); // b.232 — rimossi S/prefs inutilizzati
+   const _S = getStyles(theme);
+   const col = _S.colors || {};
+   const C = {
+@@ -99,6 +111,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
+       setLoading(true);
+       const res = await fetch('/api/mondo');
+       if (res.ok) { const data = await res.json(); setRooms(data.rooms || []); setError(null); }
++      else setError(L('loadRoomsFailed')); // b.232 — prima !res.ok (500/429) era silenzioso
+     } catch { setError(L('loadRoomsFailed')); }
+     finally { setLoading(false); }
+   }, [L]);
+@@ -301,7 +314,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
+                 fontSize: 10, fontWeight: 600, fontFamily: FONT,
+                 WebkitTapHighlightColor: 'transparent',
+               }}>
+-                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${info?.label || mode}`}
++                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${nomeModalita(info, L) || mode}`}
+               </button>
+             );
+           })}
+@@ -459,7 +472,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
+                     padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
+                     background: `${modeInfo.color}18`, color: modeInfo.color,
+                   }}>
+-                    {modeInfo.icon} {modeInfo.label}
++                    {modeInfo.icon} {nomeModalita(modeInfo, L)}
+                   </span>
+                 </div>
+ 
+diff --git a/voice-translator-vercel/app/components/RoomHeader.js b/voice-translator-vercel/app/components/RoomHeader.js
+index e4f0a7a..8d82b0e 100644
+--- a/voice-translator-vercel/app/components/RoomHeader.js
++++ b/voice-translator-vercel/app/components/RoomHeader.js
+@@ -193,7 +193,16 @@ const RoomHeader = memo(function RoomHeader({
+                 <button onClick={() => {
+                     if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
+                       setShowVoiceCall(true);
+-                    } else if (webrtc.webrtcState === 'idle') {
++                    } else {
++                      // ── b.248 · stessa cura di b.245, ma sul pulsante VOCE ──
++                      // La guardia `webrtcState === 'idle'` era rimasta QUI:
++                      // dopo una chiamata caduta lo stato resta 'failed' e
++                      // ripremere Voce non faceva piu niente — identico al
++                      // difetto corretto per il Video in b.245. (Il commento
++                      // di b.245 qui sotto diceva che l'audio "non ha mai
++                      // avuto questa guardia": non era vero, ce l'aveva.)
++                      // Chi decide se si puo chiamare e' initiateConnection,
++                      // che gia rifiuta 'connecting' e 'connected'.
+                       webrtc.initiateConnection(false);
+                     }
+                     setShowMoreMenu(false);
+@@ -211,9 +220,30 @@ const RoomHeader = memo(function RoomHeader({
+                 <button onClick={() => {
+                     if (!showVideoCall) {
+                       setShowVideoCall(true);
+-                      if (webrtc.webrtcState === 'idle') webrtc.initiateConnection(true);
++                      // ── b.245 · il pulsante VIDEO non giudica piu lo stato ──
++                      // C'era `if (webrtcState === 'idle')`: dopo una chiamata
++                      // caduta lo stato resta 'failed', e premere Video non
++                      // faceva PIU NIENTE — sembrava che tentasse, e invece
++                      // non partiva nessuna chiamata. Il pulsante AUDIO, due
++                      // righe sopra, non ha mai avuto questa guardia: era solo
++                      // il video a restare bloccato.
++                      // Chi decide se si puo chiamare e' initiateConnection,
++                      // che gia rifiuta 'connecting' e 'connected'.
++                      webrtc.initiateConnection(true);
+                     } else {
++                      // ── b.248 · "chiudi" CHIUDE, non nasconde ──
++                      // Prima qui c'era solo setShowVideoCall(false): la
++                      // finestra spariva ma camera e connessione restavano
++                      // VIVE. Chi vuole solo ridurre la finestra ha gia il
++                      // comando nell'overlay (fullscreen -> riquadro); la
++                      // voce di menu si chiama "Chiudi video" e deve fare
++                      // quello che dice. Si usa la stessa via dei pulsanti
++                      // rossi dell'overlay: disconnect() marca la chiusura
++                      // VOLUTA (b.116), avvisa l'altro con call-ended
++                      // (b.117) e spegne davvero camera e connessione.
++                      webrtc.disconnect();
+                       setShowVideoCall(false);
++                      setVideoFullscreen(false);
+                     }
+                     setShowMoreMenu(false);
+                   }}
+diff --git a/voice-translator-vercel/app/components/RoomView.js b/voice-translator-vercel/app/components/RoomView.js
+index 8cb5557..005513b 100644
+--- a/voice-translator-vercel/app/components/RoomView.js
++++ b/voice-translator-vercel/app/components/RoomView.js
+@@ -39,7 +39,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+   realtimeConnected, webrtc, isHostVerified, verifiedName,
+   setLiveMode, interpreter, onMessageRead,
+   showChatActions, setShowChatActions, localChat, ProviderBadge,
+-  roomSessionToken }) {
++  roomSessionToken, userToken }) {
+   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
+ 
+   // ── b.99 · reazioni durevoli ──
+@@ -139,7 +139,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+         if (!videoFullscreen) setVideoFullscreen(true);
+       }
+     }
+-  }, [webrtc?.webrtcState]);
++    // b.248 — si ascolta anche il TIPO: quando "passa a video" promuove
++    // una chiamata voce (da entrambi i lati), lo stato resta 'connected'
++    // e senza questa dipendenza la finestra video non si apriva mai.
++  }, [webrtc?.webrtcState, webrtc?.callType]);
+ 
+   // Auto-enable ducking when in video call and languages differ
+   useEffect(() => {
+@@ -378,6 +381,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+         totalCost={totalCost} msgCount={msgCount} modeInfo={modeInfo} roomCtx={roomCtx}
+         showModeSelector={showModeSelector} setShowModeSelector={setShowModeSelector}
+         changeRoomMode={changeRoomMode}
++        badge={ProviderBadge && partner
++          ? <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
++          : null}
+       />
+ 
+       {/* Animations */}
+@@ -455,6 +461,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+           interpreter={interpreter}
+           onClose={() => setShowVoiceCall(false)}
+           onUpgradeToVideo={() => {
++            // ── b.248 · "passa a video" accende DAVVERO la camera ──
++            // Prima cambiava solo le finestre: nessuna acquisizione,
++            // nessuna rinegoziazione, il partner non riceveva nulla.
++            // toggleVideo (useWebRTC) fa gia tutto: getUserMedia,
++            // addTrack, offerta di rinegoziazione (che l'altro accetta
++            // da solo, senza riaccettare) e promozione del tipo a
++            // 'video' — bastava chiamarla dal pulsante.
++            webrtc.toggleVideo();
+             setShowVoiceCall(false);
+             setShowVideoCall(true);
+             setVideoFullscreen(true);
+@@ -550,6 +564,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+           liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
+           status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
+           endChatAndSave={endChatAndSave} setView={setView}
++          roomSessionToken={roomSessionToken}
+         />
+ 
+         {/* Risposta citata — subito sopra la riga di testo, legata all'input */}
+@@ -615,12 +630,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+       <ContenutiChat messages={messages} S={S} L={L} onApri={setSchedaChat} />
+       {/* ═══ FINE v.154 ═══ */}
+ 
+-      {/* ═══ Provider Badge ═══ */}
+-      {ProviderBadge && partner && (
+-        <div style={{position:'absolute', top:50, left:8, zIndex:10}}>
+-          <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
+-        </div>
+-      )}
++      {/* ═══ INIZIO b.250 — Provider Badge nel flusso, non piu sospeso ═══
++          COSA: via il contenitore position:absolute (top:50, left:8).
++          PERCHE: atterrava ESATTAMENTE sopra la riga della modalita
++          della barra modalita — i tasti in alto a sinistra sovrapposti
++          visti dal vivo sul telefono. Ora il badge viaggia dentro
++          VoiceEngineBar, nella stessa riga, come elemento di flusso. */}
++      {/* ═══ FINE b.250 ═══ */}
+ 
+       {/* ═══ Interpreter View Overlay ═══ */}
+       {interpreterActive && interpreter?.active && webrtc?.remoteStream && (
+@@ -638,10 +654,20 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+       )}
+ 
+       {/* ═══ Chat Actions Panel ═══ */}
++      {/* b.248 — LE AZIONI AI PARTIVANO SEMPRE SENZA CREDENZIALI.
++          Qui c'era userToken={null} cablato: /api/chat-action autentica
++          proprio con resolveAuth({userToken, lendingCode}) e senza gettone
++          risponde 401 "Authentication required" — anche per un utente
++          loggato con credito. Riassunto, analisi, consigli e vocabolario
++          erano quindi irraggiungibili per chiunque. Ora il gettone vero
++          arriva via prop da page.js (auth.userToken), come per le altre
++          viste. lendingCode resta null: nel client non esiste (ancora)
++          nessun posto che conservi un codice di prestito — non e un
++          cablaggio mancante, e una funzione solo lato server. */}
+       {showChatActions && (
+         <ChatActionsPanel
+           theme={theme} messages={messages} members={roomInfo?.members || []}
+-          mode={roomMode} domain={roomInfo?.context} userToken={null} lendingCode={null}
++          mode={roomMode} domain={roomInfo?.context} userToken={userToken} lendingCode={null}
+           roomId={roomId} roomSessionToken={roomSessionToken}
+           onClose={() => setShowChatActions(false)} t={L}
+         />
+@@ -651,6 +677,11 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
+       <TaxiMode
+         visible={taxiVisible}
+         onClose={() => setTaxiVisible(false)}
++        // b.252 — TaxiMode ascolta l'inclinazione del telefono per aprirsi
++        // da solo quando lo giri verso il tassista, ma la sua guardia esce
++        // subito se manca questo callback: nessuno glielo passava, quindi
++        // l'intero gesto non ha MAI funzionato. Il pulsante resta, ovvio.
++        onAutoActivate={() => setTaxiVisible(true)}
+         originalText={taxiData.original}
+         translatedText={taxiData.translated}
+         fromLang={taxiData.fromLang}
+diff --git a/voice-translator-vercel/app/components/SchedaArgomento.js b/voice-translator-vercel/app/components/SchedaArgomento.js
+index a523f80..e8f5cb7 100644
+--- a/voice-translator-vercel/app/components/SchedaArgomento.js
++++ b/voice-translator-vercel/app/components/SchedaArgomento.js
+@@ -31,12 +31,13 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
+   const [sintesiAI, setSintesiAI] = useState('');
+   const [generando, setGenerando] = useState(false);
+   const [serveAccount, setServeAccount] = useState(false);
++  const [errSintesi, setErrSintesi] = useState(false); // b.232 — 402/500 non erano più mostrati
+ 
+   // Ogni scheda nuova riparte pulita; e appena si apre si CHIEDE la
+   // cache condivisa: se qualcuno ha gia pagato la sintesi, arriva
+   // gratis senza premere niente.
+   useEffect(() => {
+-    setSintesiAI(''); setServeAccount(false); setGenerando(false);
++    setSintesiAI(''); setServeAccount(false); setErrSintesi(false); setGenerando(false);
+     if (!aperta || tipo !== 'articolo' || !dati?.titolo) return;
+     let vivo = true;
+     (async () => {
+@@ -68,11 +69,11 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
+         }),
+       });
+       if (r.status === 401) { setServeAccount(true); return; }
+-      if (r.ok) {
+-        const d = await r.json();
+-        if (d.sintesi) setSintesiAI(d.sintesi);
+-      }
+-    } catch { /* si riprova col bottone */ }
++      // b.232 — prima 402 (credito) e 500 non mostravano nulla: click "morto".
++      if (!r.ok) { setErrSintesi(true); return; }
++      const d = await r.json();
++      if (d.sintesi) setSintesiAI(d.sintesi);
++    } catch { setErrSintesi(true); }
+     finally { setGenerando(false); }
+   }, [dati, generando, prefs.uiLang, userToken]);
+ 
+@@ -164,6 +165,9 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
+                   {serveAccount && (
+                     <div style={{ fontSize: 12, color: C.red, marginTop: 8 }}>{L('schedaAccedi')}</div>
+                   )}
++                  {errSintesi && !serveAccount && (
++                    <div style={{ fontSize: 12, color: C.red, marginTop: 8 }}>{L('genericError')}</div>
++                  )}
+                 </>
+               )}
+             </div>
+diff --git a/voice-translator-vercel/app/components/SettingsView.js b/voice-translator-vercel/app/components/SettingsView.js
+index c4ddec1..dd26485 100644
+--- a/voice-translator-vercel/app/components/SettingsView.js
++++ b/voice-translator-vercel/app/components/SettingsView.js
+@@ -104,7 +104,10 @@ const Scelta = ({ c, attiva, titolo, sotto, onClick }) => (
+ 
+ 
+ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
+-  const { L, S, prefs, setPrefs, savePrefs, setView, theme, setTheme } = useApp();
++  // b.255 — `setPrefs` non si prende piu da qui: era l'unica via per cui
++  // una preferenza poteva restare in memoria senza mai finire su disco.
++  // In questa schermata si scrive SOLO con savePrefs.
++  const { L, S, prefs, savePrefs, setView, theme, setTheme } = useApp();
+   const c = S.colors;
+   const [apertoLingua, setApertoLingua] = useState(false);
+   const [apertoInterfaccia, setApertoInterfaccia] = useState(false);
+@@ -177,7 +180,9 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
+                 return (
+                   <Scelta c={c} key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
+                     titolo={`${l.flag}  ${l.name}`}
+-                    onClick={() => { savePrefs({ ...prefs, uiLang: codice }); setApertoInterfaccia(false); }} />
++                    onClick={() => { /* b.254 — scegliendola QUI la scelta diventa esplicita: da
++                       questo momento la home non la cambia piu da sola. */
++                      savePrefs({ ...prefs, uiLang: codice, uiLangScelta: true }); setApertoInterfaccia(false); }} />
+                 );
+               })}
+             </div>
+@@ -262,7 +267,13 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
+             onClick={() => setView('credits')} />
+           <Riga c={c} icona={<IconKey size={17} />} titolo={L('yourApiKeys')}
+             sotto={L('apiKeysUnlimited')}
+-            valore={apiKeyInputs?.length ? String(apiKeyInputs.length) : L('noneWord')}
++            valore={(() => {
++              // b.232 — apiKeyInputs è un OGGETTO {openai,anthropic,…}: `.length`
++              // era sempre undefined → mostrava sempre "Nessuna". Ora conta le
++              // chiavi effettivamente valorizzate.
++              const n = apiKeyInputs ? Object.values(apiKeyInputs).filter((v) => v && String(v).trim()).length : 0;
++              return n ? String(n) : L('noneWord');
++            })()}
+             onClick={() => setView('apikeys')} />
+           <Riga c={c} icona={<IconUser size={17} />} titolo={L('contactsRow')}
+             sotto={L('contactsRowDesc')}
+@@ -285,7 +296,14 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
+                 {L('e2eDesc')}
+               </span>
+             </span>
+-            <button onClick={() => setPrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
++            {/* b.255 — questo interruttore usava setPrefs, che aggiorna solo
++                lo stato in memoria: TUTTE le altre righe di questa schermata
++                usano savePrefs, che scrive anche su disco. Chi accendeva la
++                crittografia la vedeva accesa, chiudeva l'applicazione e la
++                ritrovava spenta — senza un avviso. Una promessa di
++                riservatezza che non sopravvive a un riavvio e peggio che
++                non averla fatta. */}
++            <button onClick={() => savePrefs({ ...prefs, e2eEncryption: !prefs.e2eEncryption })}
+               aria-pressed={!!prefs.e2eEncryption}
+               style={{ ...S.toggle, width: 40, height: 23, flexShrink: 0,
+                 background: prefs.e2eEncryption ? c.accent1 : c.toggleOff }}>
+diff --git a/voice-translator-vercel/app/components/SpatialBackdrop.js b/voice-translator-vercel/app/components/SpatialBackdrop.js
+index 7d2611f..4378e05 100644
+--- a/voice-translator-vercel/app/components/SpatialBackdrop.js
++++ b/voice-translator-vercel/app/components/SpatialBackdrop.js
+@@ -64,8 +64,13 @@ const SpatialBackdrop = memo(function SpatialBackdrop() {
+     }}>
+       {/* Keyframes globali (vtWave, vtSlideUp, ecc.) — iniettate UNA volta qui,
+           il backdrop è montato in tutte le view. Bug pre-esistente: erano
+-          iniettate solo nel TutorialOverlay. */}
+-      <style>{keyframes}{`
++          iniettate solo nel TutorialOverlay.
++          b.233 — `href`+`precedence`: React 19 sposta i <style> nell'<head> e
++          li DEDUPLICA per href, rendendoli identici fra server e client. Senza,
++          server e client divergevano e partiva l'errore di idratazione #418 a
++          OGNI caricamento (che costringeva React a rigenerare l'albero, con la
++          prima interazione persa). */}
++      <style href="vt-keyframes-globali" precedence="default">{keyframes}{`
+         @keyframes sbDrift { to { transform: translate(-3%, 2.5%) scale(1.06) rotate(2deg); } }
+         @keyframes sbTwinkle { to { opacity: 0.4; } }
+       `}</style>
+diff --git a/voice-translator-vercel/app/components/SpeakerView.js b/voice-translator-vercel/app/components/SpeakerView.js
+index cdf1ce4..59dc7c8 100644
+--- a/voice-translator-vercel/app/components/SpeakerView.js
++++ b/voice-translator-vercel/app/components/SpeakerView.js
+@@ -775,7 +775,9 @@ function SpeakerView({ userToken }) {
+       // e diventava invisibile: si vedeva il suggerimento "Scrivi
+       // messaggio" ma non c'era modo di scrivere.
+       boxSizing: 'border-box',
+-      paddingBottom: 'calc(88px + env(safe-area-inset-bottom))', // b.206 — margine dal FAB sporgente della BottomNav
++      // b.247 — stessi 88px di b.206, ma scritti come 76px di menu + 12px
++      // di margine dal FAB sporgente: cosi si legge da dove viene il numero.
++      paddingBottom: 'calc(76px + 12px + env(safe-area-inset-bottom))',
+       // ── FINE b.90 ──
+     }}>
+ 
+diff --git a/voice-translator-vercel/app/components/TalkControls.js b/voice-translator-vercel/app/components/TalkControls.js
+index b3234b9..aaf5e8a 100644
+--- a/voice-translator-vercel/app/components/TalkControls.js
++++ b/voice-translator-vercel/app/components/TalkControls.js
+@@ -13,6 +13,16 @@ const TalkControls = memo(function TalkControls({
+   liveMode, setLiveModeState, setLiveMode,
+   status, webrtc, myName, roomInfo,
+   endChatAndSave, setView,
++  // b.248 — IL GETTONE DI STANZA ARRIVAVA DA UN POSTO CHE NON ESISTE.
++  // raiseHand e grantSpeak leggevano webrtc?.roomSessionTokenRef?.current,
++  // ma useWebRTC RICEVE roomSessionTokenRef come parametro e non lo espone
++  // nel proprio return (vedi il return di useWebRTC.js): quel percorso era
++  // sempre undefined, il ripiego `|| null` mandava roomSessionToken: null
++  // a /api/room, e resolveIdentity rispondeva 401. Alzare la mano e
++  // concedere la parola non funzionavano MAI. Il gettone ora arriva come
++  // prop dalla catena che lo possiede gia (page.js -> RoomView), la stessa
++  // che serve reazioni, moderazione e stanza video.
++  roomSessionToken,
+ }) {
+   const [handRaising, setHandRaising] = useState(false);
+   const [grantingSpeak, setGrantingSpeak] = useState(null);
+@@ -156,7 +166,7 @@ const TalkControls = memo(function TalkControls({
+               const body = {
+                 action: 'raiseHand', roomId,
+                 raised: true,
+-                roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
++                roomSessionToken: roomSessionToken || null,
+                 name: myName,
+               };
+               try {
+@@ -205,7 +215,7 @@ const TalkControls = memo(function TalkControls({
+                 const body = {
+                   action: 'grantSpeak', roomId,
+                   targetMember: m.name,
+-                  roomSessionToken: webrtc?.roomSessionTokenRef?.current || null,
++                  roomSessionToken: roomSessionToken || null,
+                   name: myName,
+                 };
+                 try {
+diff --git a/voice-translator-vercel/app/components/TaxiDestinationPanel.js b/voice-translator-vercel/app/components/TaxiDestinationPanel.js
+index 5f579ff..0a3b7ec 100644
+--- a/voice-translator-vercel/app/components/TaxiDestinationPanel.js
++++ b/voice-translator-vercel/app/components/TaxiDestinationPanel.js
+@@ -99,6 +99,13 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
+ 
+   const handleQueryChange = useCallback((val) => {
+     setQuery(val);
++    // b.248 — toccare la ricerca dopo aver scelto un posto invalida la
++    // scelta: prima handleConfirm componeva destinationName con la query
++    // NUOVA e lat/lng del posto VECCHIO — campo e mappa dicevano due cose
++    // diverse dentro lo stesso oggetto consegnato al QR. `selectPlace`
++    // reimposta la query per via programmatica (nessun onChange), quindi
++    // il posto appena scelto non si auto-invalida.
++    setSelectedPlace(null);
+     clearTimeout(searchTimerRef.current);
+     searchTimerRef.current = setTimeout(() => doSearch(val), 500);
+   }, [doSearch]);
+diff --git a/voice-translator-vercel/app/components/TaxiMap.js b/voice-translator-vercel/app/components/TaxiMap.js
+index f661bf3..ffee680 100644
+--- a/voice-translator-vercel/app/components/TaxiMap.js
++++ b/voice-translator-vercel/app/components/TaxiMap.js
+@@ -45,6 +45,11 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
+     // esplodeva: la mappa non veniva disegnata (ne dal tassista ne altrove).
+     // Ora si prende il namespace: `Map`/`Marker` sono export nominati.
+     // `mod.default ?? mod` regge anche eventuali versioni vecchie col default.
++    // b.252 — la mappa che si sta per ricreare NON e ancora pronta.
++    // Cambiando destinazione (o tema) l'effetto rigira: senza questo, il
++    // flag restava `true` dal caricamento precedente e per tutto il tempo
++    // del nuovo si vedeva un riquadro VUOTO invece di "carico la mappa".
++    setPronta(false);
+     import('maplibre-gl').then((mod) => {
+       const maplibregl = mod.default ?? mod;
+     // ── FINE b.179 ──
+@@ -92,6 +97,8 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
+       }
+ 
+       mappa.on('load', () => setPronta(true));
++      // b.252 — vedi setPronta(false) a inizio effetto: senza, cambiando
++      // destinazione restava il riquadro vuoto invece di "carico la mappa".
+     });
+ 
+     return () => {
+diff --git a/voice-translator-vercel/app/components/TaxiTalk.js b/voice-translator-vercel/app/components/TaxiTalk.js
+index 0763dc4..6f4777f 100644
+--- a/voice-translator-vercel/app/components/TaxiTalk.js
++++ b/voice-translator-vercel/app/components/TaxiTalk.js
+@@ -27,6 +27,32 @@ import { useApp } from '../contexts/AppContext.js';
+ // trasparente e si vede lo SpatialBackdrop dietro.
+ // ═══════════════════════════════════════════════════════════════
+ 
++// b.247 — le 20 chiavi di questa schermata ora esistono in tutti e quindici
++// i pacchetti: via i ripieghi `L('chiave') || 'testo'`, che erano codice
++// morto (t() torna la chiave, mai undefined, quindi il || non scattava e a
++// schermo compariva la chiave nuda). Via anche la bandiera bianca emoji:
++// come negli altri componenti, senza bandiera si mostra solo il nome.
++
++// b.248 — tre stati che potevano mentire, piu una verifica di fatturazione:
++//   · la traduzione non seguiva ne il campo ne la lingua del tassista:
++//     cambiata la frase (o la lingua) restava sullo schermo — e girata
++//     verso il tassista — la traduzione VECCHIA come se fosse quella nuova.
++//     Ora si ricorda che cosa e stato tradotto e verso quale lingua
++//     (fonteTraduzione) e la si mostra solo se combacia ancora
++//     (tradottoValido): la dettatura incrementale non butta niente, la
++//     traduzione resta solo nascosta finche non torna a corrispondere.
++//   · la destinazione non seguiva la ricerca: scelto un posto, riscrivere
++//     la query lasciava mappa e QR sul posto vecchio. Ora modificarla
++//     invalida la scelta (cambiaQuery), e lo stesso vale nel pannello
++//     "Dove vai?" (TaxiDestinationPanel).
++//   · verificato (§5) il sospetto "il tassista traduce senza credenziale":
++//     TaxiDriverView chiama /api/translate senza gettoni, MA resolveAuth
++//     (apiAuth.js, Path 4) dichiara da b.154 un accesso libero con chiave
++//     di piattaforma, coperto dal tetto giornaliero di piattaforma e dal
++//     limite per IP: il tassista traduce davvero, niente 401/402, e non e
++//     un buco nuovo. Qui, sullo schermo del passeggero, paga come sempre
++//     il passeggero (userToken nel corpo della richiesta).
++
+ // Le lingue del tassista più comuni, in cima; le altre restano nel menu.
+ const LINGUE_TAXI = ['en', 'es', 'fr', 'de', 'pt', 'it', 'ar', 'zh', 'ja', 'ko', 'hi', 'ru', 'tr', 'th', 'vi'];
+ 
+@@ -64,6 +90,10 @@ function TaxiTalk({ userToken }) {
+   // Parla / scrivi
+   const [testo, setTesto] = useState('');
+   const [tradotto, setTradotto] = useState('');
++  // b.248 — che cosa e stato tradotto e verso quale lingua: senza questa
++  // memoria la traduzione restava "vera" per sempre, anche dopo aver
++  // cambiato frase o lingua del tassista.
++  const [fonteTraduzione, setFonteTraduzione] = useState(null); // { testo, lingua }
+   const [traducendo, setTraducendo] = useState(false);
+   const [registrando, setRegistrando] = useState(false);
+   const [erroreTrad, setErroreTrad] = useState('');
+@@ -78,6 +108,14 @@ function TaxiTalk({ userToken }) {
+ 
+   const driverInfo = getLang(driverLang);
+ 
++  // b.248 — il cancello: la traduzione si mostra SOLO se corrisponde ancora
++  // a cio che c'e nel campo e alla lingua scelta. Qualunque modifica
++  // (tastiera, dettatura, cambio lingua) la marca da rifare senza cancellare
++  // nulla: se il testo torna identico, ricompare senza richiedere il server.
++  const tradottoValido = (tradotto && fonteTraduzione
++    && fonteTraduzione.testo === testo.trim()
++    && fonteTraduzione.lingua === driverLang) ? tradotto : '';
++
+   // ── Posizione: fa salire in cima i risultati vicini ──
+   useEffect(() => {
+     if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+@@ -102,18 +140,25 @@ function TaxiTalk({ userToken }) {
+       );
+       if (!res.ok) throw new Error('geocoding');
+       const data = await res.json();
+-      if (data.length === 0) { setErroreDest(L('placeNotFound') || 'Nessun risultato'); }
++      if (data.length === 0) { setErroreDest(L('placeNotFound')); }
+       else if (data.length === 1) {
+         setDest({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), displayName: data[0].display_name });
+       } else {
+         setRisultati(data.map(p => ({ lat: parseFloat(p.lat), lon: parseFloat(p.lon), displayName: p.display_name })));
+       }
+-    } catch { setErroreDest(L('searchError') || 'Errore di ricerca'); }
++    } catch { setErroreDest(L('searchError')); }
+     setCercando(false);
+   }, [userPos, driverLang, L]);
+ 
+   const scegli = useCallback((r) => { vibrate(12); setDest(r); setRisultati([]); setQuery(r.displayName.split(',').slice(0, 3).join(', ')); }, []);
+ 
++  // b.248 — modificare la ricerca dopo aver scelto una destinazione invalida
++  // la scelta: campo, mappa e QR non possono dire due cose diverse. La
++  // riscrittura programmatica di `query` dentro `scegli` non passa da qui
++  // (un input controllato non emette onChange per le scritture da codice),
++  // quindi la destinazione appena scelta non si auto-invalida.
++  const cambiaQuery = useCallback((v) => { setQuery(v); setDest(null); }, []);
++
+   // ── Traduci (percorso /api/translate provato) ──
+   const traduci = useCallback(async (raw) => {
+     const text = (raw ?? testo).trim();
+@@ -129,13 +174,16 @@ function TaxiTalk({ userToken }) {
+           userToken: userToken || '',
+         }),
+       });
+-      if (!res.ok) { setErroreTrad(res.status === 402 ? (L('creditExhausted') || 'Credito esaurito') : (L('translationRetryLater') || 'Riprova tra poco')); setTraducendo(false); return ''; }
++      if (!res.ok) { setErroreTrad(res.status === 402 ? L('creditExhausted') : L('translationRetryLater')); setTraducendo(false); return ''; }
+       const data = await res.json();
+       const out = data.translated || '';
+       setTradotto(out);
++      // b.248 — si fissa la coppia (testo, lingua) a cui questa traduzione
++      // appartiene: e il metro con cui tradottoValido decide se mostrarla.
++      setFonteTraduzione({ testo: text, lingua: driverLang });
+       setTraducendo(false);
+       return out;
+-    } catch { setErroreTrad(L('youHaveNoConnection') || 'Nessuna connessione'); setTraducendo(false); return ''; }
++    } catch { setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
+   }, [testo, myLang, driverLang, userToken, L]);
+ 
+   // ── Voce (Edge → OpenAI, in coda: come SpeakerView) ──
+@@ -179,14 +227,14 @@ function TaxiTalk({ userToken }) {
+ 
+   // ── Dettatura (Web Speech API, nella MIA lingua) ──
+   const dettaturaOff = useCallback(() => {
+-    if (speechRef.current) { try { speechRef.current.stop(); } catch { /* già chiuso */ } speechRef.current = null; }
++    if (speechRef.current) { try { speechRef.current.stop(); } catch { /* il riconoscimento era già chiuso: fermarlo di nuovo non serve */ } speechRef.current = null; }
+     setRegistrando(false);
+   }, []);
+ 
+   const dettatura = useCallback(() => {
+     if (registrando) { dettaturaOff(); return; }
+     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+-    if (!SR) { setErroreTrad(L('speechNotSupported') || 'Dettatura non disponibile: scrivi il testo'); return; }
++    if (!SR) { setErroreTrad(L('speechNotSupported')); return; }
+     vibrate(); setRegistrando(true);
+     const rec = new SR(); speechRef.current = rec;
+     rec.lang = getLang(myLang)?.speech || 'it-IT';
+@@ -204,7 +252,11 @@ function TaxiTalk({ userToken }) {
+     rec.onend = async () => {
+       speechRef.current = null; setRegistrando(false);
+       const t = finale.trim();
+-      if (t) { const out = await traduci(t); if (out) ascolta(out); }
++      // b.248 — il campo si allinea al testo DAVVERO tradotto: onresult
++      // scrive (finale+interim), ma qui si traduce solo `finale`. Se un
++      // residuo provvisorio li facesse divergere, il cancello tradottoValido
++      // nasconderebbe una traduzione appena fatta.
++      if (t) { setTesto(t); const out = await traduci(t); if (out) ascolta(out); }
+     };
+     try { rec.start(); } catch { setRegistrando(false); }
+   }, [registrando, dettaturaOff, myLang, traduci, ascolta, L]);
+@@ -219,7 +271,7 @@ function TaxiTalk({ userToken }) {
+ 
+   const condividiMappa = useCallback(async () => {
+     if (!mapUrl) return; vibrate(12);
+-    if (navigator.share) { try { await navigator.share({ title: 'TaxiTalk', text: dest?.displayName || '', url: mapUrl }); } catch { /* annullato */ } }
++    if (navigator.share) { try { await navigator.share({ title: 'TaxiTalk', text: dest?.displayName || '', url: mapUrl }); } catch { /* l'utente ha annullato la condivisione: nessuna azione necessaria */ } }
+     else { try { await navigator.clipboard.writeText(mapUrl); } catch { /* clipboard non disponibile */ } }
+   }, [mapUrl, dest]);
+ 
+@@ -233,34 +285,34 @@ function TaxiTalk({ userToken }) {
+       {/* Header */}
+       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 2px 6px' }}>
+         {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
+-        <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('back') || 'Indietro'}
++        <button onClick={() => { vibrate(8); setView('home'); }} aria-label={L('back')}
+           style={{ width: 38, height: 38, borderRadius: 12, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+           {'‹'}
+         </button>
+         <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.3px' }}>Taxi<span style={{ color: C.accent }}>Talk</span></div>
+         <button onClick={() => { vibrate(8); setPickerLingua(true); }}
+           style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, padding: '7px 12px', borderRadius: 12, cursor: 'pointer', color: C.text }}>
+-          <span style={{ fontSize: 16 }}>{driverInfo?.flag || '🏳️'}</span>
++          <span style={{ fontSize: 16 }}>{driverInfo?.flag || ''}</span>
+           <span style={{ fontSize: 12, fontWeight: 700 }}>{driverInfo?.name || driverLang.toUpperCase()}</span>
+           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+         </button>
+       </div>
+-      <div style={{ fontSize: 12, color: C.muted, padding: '0 2px 4px' }}>{L('taxiDriverLangHint') || 'Lingua del tassista'}: <b style={{ color: C.text }}>{driverInfo?.name}</b></div>
++      <div style={{ fontSize: 12, color: C.muted, padding: '0 2px 4px' }}>{L('taxiDriverLangHint')}: <b style={{ color: C.text }}>{driverInfo?.name}</b></div>
+ 
+       {/* 1 · DOVE VAI */}
+       <div style={cardStyle}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+           <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#04121c' }}>1</span>
+-          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiWhereTo') || 'Dove vai'}</span>
+-          <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{L('taxiShowOrScan') || 'mostra o fai scansionare'}</span>
++          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiWhereTo')}</span>
++          <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{L('taxiShowOrScan')}</span>
+         </div>
+ 
+         <div style={{ display: 'flex', gap: 8 }}>
+-          <input value={query} onChange={(e) => setQuery(e.target.value)}
++          <input value={query} onChange={(e) => cambiaQuery(e.target.value)}
+             onKeyDown={(e) => { if (e.key === 'Enter' && query.trim()) cerca(query); }}
+-            placeholder={L('searchAddress') || "Scrivi l'indirizzo…"} style={inputStyle} />
++            placeholder={L('searchAddress')} style={inputStyle} />
+           <button onClick={() => query.trim() && cerca(query)} disabled={!query.trim() || cercando} style={miniBtn(!!query.trim() && !cercando)}>
+-            {cercando ? '…' : (L('search') || 'Cerca')}
++            {cercando ? '…' : L('search')}
+           </button>
+         </div>
+ 
+@@ -286,8 +338,8 @@ function TaxiTalk({ userToken }) {
+               {qrSrc
+                 ? <img src={qrSrc} alt="QR" width={104} height={104} style={{ borderRadius: 10, background: '#fff', padding: 6, display: 'block' }} />
+                 : <div style={{ width: 104, height: 104, borderRadius: 10, background: C.card2 }} />}
+-              <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1.35 }}>{L('taxiScanOpensMap') || 'Il tassista inquadra: si apre la sua mappa'}</div>
+-              <button onClick={condividiMappa} style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink') || 'Condividi link'}</button>
++              <div style={{ fontSize: 10, color: C.muted, textAlign: 'center', lineHeight: 1.35 }}>{L('taxiScanOpensMap')}</div>
++              <button onClick={condividiMappa} style={{ fontSize: 11, fontWeight: 700, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', fontFamily: FONT }}>{L('taxiShareLink')}</button>
+             </div>
+           </div>
+         )}
+@@ -297,50 +349,50 @@ function TaxiTalk({ userToken }) {
+       <div style={cardStyle}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 12 }}>
+           <span style={{ width: 22, height: 22, borderRadius: 7, background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#04121c' }}>2</span>
+-          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiSpeakOrType') || 'Parla o scrivi'}</span>
++          <span style={{ fontSize: 14, fontWeight: 800 }}>{L('taxiSpeakOrType')}</span>
+           <span style={{ fontSize: 11, color: C.muted, marginLeft: 'auto' }}>{driverInfo?.name}</span>
+         </div>
+ 
+         <div style={{ display: 'flex', gap: 8 }}>
+           <input value={testo} onChange={(e) => setTesto(e.target.value)}
+             onKeyDown={(e) => { if (e.key === 'Enter' && testo.trim()) traduci(); }}
+-            placeholder={L('taxiTypeHere') || 'Scrivi qui…'} style={inputStyle} />
++            placeholder={L('taxiTypeHere')} style={inputStyle} />
+           <button onClick={() => testo.trim() && traduci()} disabled={!testo.trim() || traducendo} style={miniBtn(!!testo.trim() && !traducendo)}>
+-            {traducendo ? '…' : (L('translate') || 'Traduci')}
++            {traducendo ? '…' : L('translate')}
+           </button>
+         </div>
+ 
+         {erroreTrad && <div style={{ fontSize: 11, color: PALETTE.coral || '#f87171', marginTop: 6 }}>{erroreTrad}</div>}
+ 
+-        {tradotto && (
++        {tradottoValido && (
+           <div style={{ marginTop: 14, background: `linear-gradient(145deg, ${C.accent}14, ${C.purple}0e)`, border: `1px solid ${C.accent}38`, borderRadius: 16, padding: 16 }}>
+             <div style={{ fontSize: 10, fontWeight: 700, color: C.accent, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>{driverInfo?.flag} {driverInfo?.name}</div>
+-            <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.32 }}>{tradotto}</div>
++            <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.32 }}>{tradottoValido}</div>
+             {testo && <div style={{ fontSize: 12, color: C.muted, fontStyle: 'italic', marginTop: 8 }}>{testo}</div>}
+           </div>
+         )}
+ 
+         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+-          <button onClick={() => { if (tradotto) { vibrate(10); setFlip(true); } }} disabled={!tradotto}
+-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradotto ? 'pointer' : 'default', background: tradotto ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradotto ? '#04121c' : C.muted, fontWeight: 800, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
++          <button onClick={() => { if (tradottoValido) { vibrate(10); setFlip(true); } }} disabled={!tradottoValido}
++            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: 'none', cursor: tradottoValido ? 'pointer' : 'default', background: tradottoValido ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card2, color: tradottoValido ? '#04121c' : C.muted, fontWeight: 800, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 2l4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="M7 22l-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></svg>
+-            {L('taxiShowFlipped') || 'Mostra ribaltato'}
++            {L('taxiShowFlipped')}
+           </button>
+-          <button onClick={() => tradotto && ascolta(tradotto)} disabled={!tradotto || suonando}
+-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradotto ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 700, fontSize: 13, fontFamily: FONT, opacity: tradotto ? 1 : 0.6 }}>
++          <button onClick={() => tradottoValido && ascolta(tradottoValido)} disabled={!tradottoValido || suonando}
++            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7, padding: 12, borderRadius: 14, border: `1px solid ${C.border}`, cursor: tradottoValido ? 'pointer' : 'default', background: C.card2, color: C.text, fontWeight: 700, fontSize: 13, fontFamily: FONT, opacity: tradottoValido ? 1 : 0.6 }}>
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /></svg>
+-            {suonando ? '…' : (L('taxiListen') || 'Ascolta')}
++            {suonando ? '…' : L('taxiListen')}
+           </button>
+         </div>
+ 
+         {/* Mic dettatura */}
+         <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+-          <button onClick={dettatura} aria-label={L('taxiDictate') || 'Detta'}
++          <button onClick={dettatura} aria-label={L('taxiDictate')}
+             style={{ width: 64, height: 64, borderRadius: '50%', border: 'none', cursor: 'pointer', background: registrando ? 'linear-gradient(135deg,#ff5a52,#ff2d55)' : `linear-gradient(135deg, ${C.accent}, ${C.purple})`, color: '#04121c', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: registrando ? '0 6px 22px rgba(255,45,85,0.4)' : `0 6px 22px ${C.accent}52`, animation: registrando ? 'ttPulse 1.2s ease-in-out infinite' : 'none' }}>
+             <Icon name="mic" size={24} color="#04121c" />
+           </button>
+         </div>
+-        <div style={{ textAlign: 'center', fontSize: 11, color: C.faint, marginTop: 8 }}>{registrando ? `● ${L('taxiListeningTap') || 'sto ascoltando… tocca per fermare'}` : (L('taxiTapToDictate') || 'tocca per dettare')}</div>
++        <div style={{ textAlign: 'center', fontSize: 11, color: C.faint, marginTop: 8 }}>{registrando ? `● ${L('taxiListeningTap')}` : L('taxiTapToDictate')}</div>
+       </div>
+ 
+       {/* 3 · CHAT opzionale */}
+@@ -350,8 +402,8 @@ function TaxiTalk({ userToken }) {
+           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>
+         </span>
+         <span style={{ flex: 1 }}>
+-          <b style={{ fontSize: 13, fontWeight: 700, display: 'block', color: C.text }}>{L('taxiChatOptional') || 'Chatta con lui (opzionale)'}</b>
+-          <span style={{ fontSize: 11, color: C.muted }}>{L('taxiChatHint') || 'Apre la conversazione tradotta che già usi'}</span>
++          <b style={{ fontSize: 13, fontWeight: 700, display: 'block', color: C.text }}>{L('taxiChatOptional')}</b>
++          <span style={{ fontSize: 11, color: C.muted }}>{L('taxiChatHint')}</span>
+         </span>
+         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+       </button>
+@@ -362,7 +414,7 @@ function TaxiTalk({ userToken }) {
+           style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end' }}>
+           <div style={{ width: '100%', background: C.bg, borderRadius: '20px 20px 0 0', maxHeight: '80dvh', overflowY: 'auto', padding: '16px 16px 24px' }}>
+             <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+-              <div style={{ fontSize: 16, fontWeight: 800 }}>{L('taxiDriverLangHint') || 'Lingua del tassista'}</div>
++              <div style={{ fontSize: 16, fontWeight: 800 }}>{L('taxiDriverLangHint')}</div>
+               <button onClick={() => setPickerLingua(false)} style={{ marginLeft: 'auto', width: 34, height: 34, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`, color: C.muted, cursor: 'pointer' }}>✕</button>
+             </div>
+             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+@@ -371,7 +423,7 @@ function TaxiTalk({ userToken }) {
+                 return (
+                   <button key={code} onClick={() => { vibrate(10); setDriverLang(code); setPickerLingua(false); }}
+                     style={{ padding: '12px 8px', borderRadius: 14, cursor: 'pointer', background: on ? `${C.accent}20` : C.card, border: `1px solid ${on ? C.accent : C.border}`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, fontFamily: FONT }}>
+-                    <span style={{ fontSize: 24 }}>{li?.flag || '🏳️'}</span>
++                    <span style={{ fontSize: 24 }}>{li?.flag || ''}</span>
+                     <span style={{ fontSize: 11, fontWeight: 600, color: on ? C.accent : C.text }}>{li?.name || code}</span>
+                   </button>
+                 );
+@@ -385,17 +437,17 @@ function TaxiTalk({ userToken }) {
+       {flip && (
+         <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: `linear-gradient(180deg, ${C.bg}, #04070f)`, display: 'flex', flexDirection: 'column', animation: 'ttUp 0.28s ease-out' }}>
+           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+-            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver') || 'Girato verso il tassista'}</div>
+-            <button onClick={() => setFlip(false)} aria-label={L('close') || 'Chiudi'} style={{ width: 36, height: 36, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
++            <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver')}</div>
++            <button onClick={() => setFlip(false)} aria-label={L('close')} style={{ width: 36, height: 36, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>
+           </div>
+           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '34px 26px', transform: 'rotate(180deg)' }}>
+             <div style={{ fontSize: 34, marginBottom: 6 }}>{driverInfo?.flag}</div>
+             <div style={{ fontSize: 13, color: C.muted, marginBottom: 22 }}>{driverInfo?.name}</div>
+-            <div style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradotto}</div>
++            <div style={{ fontSize: 30, fontWeight: 800, textAlign: 'center', lineHeight: 1.35, color: C.text, maxWidth: '90%', wordBreak: 'break-word' }}>{tradottoValido}</div>
+             {testo && <div style={{ fontSize: 14, color: C.muted, fontStyle: 'italic', marginTop: 20, textAlign: 'center' }}>{testo}</div>}
+           </div>
+           <div style={{ display: 'flex', justifyContent: 'center', padding: '20px 16px 30px', borderTop: `1px solid ${C.border}` }}>
+-            <button onClick={() => ascolta(tradotto)} disabled={suonando} aria-label={L('taxiListen') || 'Ascolta'}
++            <button onClick={() => ascolta(tradottoValido)} disabled={suonando} aria-label={L('taxiListen')}
+               style={{ width: 72, height: 72, borderRadius: '50%', border: 'none', background: C.amber, color: '#1a1200', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 20px rgba(245,166,35,0.34)' }}>
+               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.5 8.5a5 5 0 0 1 0 7" /><path d="M19 5a10 10 0 0 1 0 14" /></svg>
+             </button>
+diff --git a/voice-translator-vercel/app/components/Toast.js b/voice-translator-vercel/app/components/Toast.js
+index c1f1b27..cfca6e9 100644
+--- a/voice-translator-vercel/app/components/Toast.js
++++ b/voice-translator-vercel/app/components/Toast.js
+@@ -49,11 +49,15 @@ const ToastContainer = memo(function ToastContainer() {
+       maxWidth: 'calc(100vw - 32px)', width: 360,
+       pointerEvents: 'none',
+     }} role="alert" aria-live="assertive">
+-      {toasts.map(t => {
+-        const base = COLORS[t.type] || COLORS.info;
++      {/* b.249 — il parametro si chiamava `t` e OMBREGGIAVA la funzione i18n
++          `t` importata sopra: `t(lingua, 'closeNotification')` chiamava
++          l'oggetto avviso → "t is not a function" → OGNI avviso a schermo
++          faceva cadere l'app intera nell'ErrorBoundary. Da b.138. */}
++      {toasts.map(avviso => {
++        const base = COLORS[avviso.type] || COLORS.info;
+         const c = { ...base, bg: velo(base.tinta, 0.15), border: velo(base.tinta, 0.35), text: base.tinta };
+         return (
+-          <div key={t.id} style={{
++          <div key={avviso.id} style={{
+             display: 'flex', alignItems: 'center', gap: 8,
+             padding: '10px 14px', borderRadius: 12,
+             background: c.bg, border: `1px solid ${c.border}`,
+@@ -67,11 +71,11 @@ const ToastContainer = memo(function ToastContainer() {
+               color: c.text, border: `1px solid ${c.border}`,
+             }}>{c.icon}</span>
+             <span style={{ flex: 1, fontSize: 13, color: c.text, lineHeight: 1.4 }}>
+-              {t.message}
++              {avviso.message}
+             </span>
+-            {t.action && (
++            {avviso.action && (
+               <button
+-                onClick={() => { t.action.onClick(); dismissToast(t.id); }}
++                onClick={() => { avviso.action.onClick(); dismissToast(avviso.id); }}
+                 style={{
+                   padding: '4px 10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                   background: 'rgba(255,255,255,0.1)', border: `1px solid ${c.border}`,
+@@ -79,11 +83,11 @@ const ToastContainer = memo(function ToastContainer() {
+                   WebkitTapHighlightColor: 'transparent',
+                 }}
+               >
+-                {t.action.label}
++                {avviso.action.label}
+               </button>
+             )}
+             <button
+-              onClick={() => dismissToast(t.id)}
++              onClick={() => dismissToast(avviso.id)}
+               aria-label={t(lingua, 'closeNotification')}
+               style={{
+                 background: 'none', border: 'none', color: c.text, cursor: 'pointer',
+diff --git a/voice-translator-vercel/app/components/VoiceEngineBar.js b/voice-translator-vercel/app/components/VoiceEngineBar.js
+index 8dd648f..0d9ce8f 100644
+--- a/voice-translator-vercel/app/components/VoiceEngineBar.js
++++ b/voice-translator-vercel/app/components/VoiceEngineBar.js
+@@ -1,5 +1,5 @@
+ 'use client';
+-import { memo, useState } from 'react';
++import { memo, useState, useEffect } from 'react';
+ import { FONT, MODES, CONTEXTS, AI_MODELS, VOICES } from '../lib/constants.js';
+ import { IconCheck, IconChevronDown } from './Icons.js';
+ import { bandieraVoce, ordinaVociPerPaese } from '../lib/bandiereVoci.js';
+@@ -10,11 +10,40 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
+   elevenLabsVoices, selectedELVoice, setSelectedELVoice,
+   clonedVoiceId, clonedVoiceName,
+   audioEnabled, roomMode, roomInfo, isHost, myLang,
+-  totalCost, msgCount, modeInfo, roomCtx,
++  totalCost, msgCount, modeInfo, roomCtx, badge,
+   showModeSelector, setShowModeSelector, changeRoomMode,
+ }) {
+   const [showAiPicker, setShowAiPicker] = useState(false);
+   const [showVoicePicker, setShowVoicePicker] = useState(false);
++  // b.262 — scelta ESPLICITA del motore (via la rotazione alla cieca).
++  const [showEnginePicker, setShowEnginePicker] = useState(false);
++  // b.262 — il catalogo curato dal backend per la lingua dell'utente:
++  // null = non ancora chiesto; [] = lingua non curata (elenco pieno).
++  const [vociCurate, setVociCurate] = useState(null);
++  useEffect(() => {
++    if (!showVoicePicker || vociCurate !== null) return;
++    fetch(`/api/voci?lang=${encodeURIComponent(myLang || 'en')}`)
++      .then(r => r.ok ? r.json() : { curate: [] })
++      .then(d => setVociCurate(Array.isArray(d.curate) ? d.curate : []))
++      .catch(() => setVociCurate([]));
++  }, [showVoicePicker, vociCurate, myLang]);
++  // b.261 — con piu di cento voci un elenco senza ricerca non si usa:
++  // si filtra per nome o per paese, scrivendo.
++  const [filtroVoce, setFiltroVoce] = useState('');
++
++  // b.262 — il motore che parlera DAVVERO al prossimo messaggio, risolto
++  // con la stessa regola di procuraVoce: e quello che la spilla mostra.
++  const ve = prefs.voiceEngine || 'auto';
++  const motoreAttivo = ve === 'auto'
++    ? (isTrial ? 'edge' : canUseElevenLabs ? 'elevenlabs' : 'openai')
++    : ve;
++  // Le scelte offerte: solo cio che questa persona puo davvero usare.
++  const motoriDisponibili = [
++    ...(canUseElevenLabs ? [{ id: 'elevenlabs', nome: 'ElevenLabs', sotto: L('enginePremiumDesc'), colore: S.colors.goldAccent || '#d4a24e' }] : []),
++    ...(!isTrial ? [{ id: 'openai', nome: 'OpenAI', sotto: L('engineOpenaiDesc'), colore: S.colors.accent2 || S.colors.accent1 }] : []),
++    { id: 'edge', nome: 'Edge TTS', sotto: L('engineStandardDesc'), colore: S.colors.textMuted },
++    ...(!isTrial ? [{ id: 'auto', nome: L('engineAuto'), sotto: L('engineAutoDesc'), colore: S.colors.accent1 }] : []),
++  ];
+ 
+   return (
+     <>
+@@ -38,6 +67,9 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
+           )}
+         </button>
+         <div style={{display:'flex', alignItems:'center', gap:6}}>
++          {/* b.250 — il badge del fornitore sta QUI, nella riga: prima era
++              un absolute in RoomView che copriva il selettore modalita. */}
++          {badge}
+           {isHost && (
+             <span style={{fontSize:9, fontWeight:700, letterSpacing:0.5, padding:'2px 8px', borderRadius:6,
+               background: isTrial ? S.colors.accent4Bg : isTopPro ? `${S.colors.goldAccent}26` : S.colors.accent3Bg,
+@@ -76,33 +108,58 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
+         borderBottom:`1px solid ${S.colors.overlayBorder}`, display:'flex', alignItems:'center',
+         justifyContent:'space-between', flexShrink:0, gap:6, position:'relative'}}>
+         <div style={{display:'flex', alignItems:'center', gap:6, minWidth:0}}>
+-          {/* Voice engine — tappable to cycle */}
+-          <button onClick={() => {
+-            if (isTrial) return;
+-            const voiceEngine = prefs.voiceEngine || 'auto';
+-            const engines = canUseElevenLabs
+-              ? ['auto', 'elevenlabs', 'openai', 'edge']
+-              : ['auto', 'openai', 'edge'];
+-            const nextIdx = (engines.indexOf(voiceEngine) + 1) % engines.length;
+-            savePrefs({...prefs, voiceEngine: engines[nextIdx]});
+-          }} style={{background:'none', border:'none', padding:'1px 4px', cursor: isTrial ? 'default' : 'pointer',
+-            display:'flex', alignItems:'center', gap:4, borderRadius:4,
+-            transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
+-            {(() => {
+-              const ve = prefs.voiceEngine || 'auto';
+-              const engineLabel = ve === 'auto'
+-                ? (isTrial ? 'Edge TTS' : canUseElevenLabs ? 'ElevenLabs' : 'OpenAI')
+-                : ve === 'elevenlabs' ? 'ElevenLabs'
+-                : ve === 'openai' ? 'OpenAI'
+-                : 'Edge TTS';
+-              return (
+-                <span style={{fontSize:9, color:S.colors.textSecondary, fontWeight:600, whiteSpace:'nowrap'}}>
+-                  {engineLabel}
+-                  {!isTrial && <span style={{fontSize:7, color:S.colors.textMuted, marginLeft:2}}>{<IconChevronDown size={8}/>}</span>}
+-                </span>
+-              );
+-            })()}
++          {/* ═══ INIZIO b.262 — il motore si VEDE e si CAMBIA, sempre (Luca) ═══
++              Prima: etichetta da 9px che al tocco RUOTAVA i motori alla
++              cieca, e per i trial era spenta. Ora e una spilla colorata —
++              oro = ElevenLabs (premium), viola = OpenAI, neutra = Edge TTS —
++              e il tocco apre una scelta ESPLICITA. Il cambio vale dal
++              messaggio successivo, senza ricaricare: chi parla legge le
++              preferenze al momento di parlare (procuraVoce). */}
++          <button onClick={() => setShowEnginePicker(!showEnginePicker)}
++            aria-expanded={showEnginePicker}
++            style={{border:'none', padding:'2px 8px', cursor:'pointer', borderRadius:999,
++              display:'flex', alignItems:'center', gap:5,
++              background: motoreAttivo === 'elevenlabs' ? `${S.colors.goldAccent || '#d4a24e'}22`
++                : motoreAttivo === 'openai' ? S.colors.accent2Bg || S.colors.accent1Bg
++                : S.colors.overlayBg,
++              outline: `1px solid ${motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e') + '66' : S.colors.overlayBorder}`,
++              transition:'background 0.15s', WebkitTapHighlightColor:'transparent'}}>
++            <span style={{width:6, height:6, borderRadius:3, flexShrink:0,
++              background: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e')
++                : motoreAttivo === 'openai' ? (S.colors.accent2 || S.colors.accent1)
++                : S.colors.textMuted}} />
++            <span style={{fontSize:10, fontWeight:700, whiteSpace:'nowrap',
++              color: motoreAttivo === 'elevenlabs' ? (S.colors.goldAccent || '#d4a24e') : S.colors.textSecondary}}>
++              {motoreAttivo === 'elevenlabs' ? 'ElevenLabs' : motoreAttivo === 'openai' ? 'OpenAI' : 'Edge TTS'}
++            </span>
++            <span style={{color:S.colors.textMuted, lineHeight:0}}><IconChevronDown size={8}/></span>
+           </button>
++          {showEnginePicker && (
++            <>
++              <div onClick={() => setShowEnginePicker(false)}
++                style={{position:'fixed', inset:0, zIndex:298, background:'rgba(0,0,0,0.35)'}} />
++              <div style={{position:'absolute', top:'100%', left:8, zIndex:300, marginTop:4,
++                background:S.colors.bg || '#0a0f1f', border:`1px solid ${S.colors.cardBorder}`,
++                borderRadius:12, padding:4, width:210, boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
++                {motoriDisponibili.map(m => (
++                  <button key={m.id}
++                    onClick={() => { savePrefs({ ...prefs, voiceEngine: m.id }); setShowEnginePicker(false); }}
++                    style={{display:'flex', alignItems:'center', gap:8, width:'100%', padding:'9px 10px',
++                      borderRadius:8, border:'none', cursor:'pointer', fontFamily:FONT, textAlign:'left',
++                      background: (prefs.voiceEngine || 'auto') === m.id ? S.colors.accent4Bg : 'transparent',
++                      color:S.colors.textPrimary, fontSize:12}}>
++                    <span style={{width:6, height:6, borderRadius:3, background:m.colore, flexShrink:0}} />
++                    <span style={{flex:1}}>
++                      <span style={{display:'block', fontWeight:700}}>{m.nome}</span>
++                      <span style={{display:'block', fontSize:10, color:S.colors.textMuted}}>{m.sotto}</span>
++                    </span>
++                    {(prefs.voiceEngine || 'auto') === m.id && <IconCheck size={12}/>}
++                  </button>
++                ))}
++              </div>
++            </>
++          )}
++          {/* ═══ FINE b.262 ═══ */}
+           {/* Voice name badge */}
+           <button onClick={() => { if (!isTrial) setShowVoicePicker(!showVoicePicker); }}
+             style={{fontSize:8, color:S.colors.textMuted, fontWeight:500,
+@@ -192,13 +249,20 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
+       {/* Voice picker dropdown */}
+       {showVoicePicker && (
+         <>
++          {/* ═══ INIZIO b.261 — il pannello voci era di vetro e sotto i tocchi ═══
++              TROVATO DAL VIVO (Luca): fondo glassCard al 6%% di opacita — i
++              messaggi si leggevano ATTRAVERSO l'elenco — e le bolle con le
++              reazioni si disegnavano sopra, intercettando i clic: una voce
++              non si riusciva proprio a selezionare. Ora fondo pieno del tema
++              e quota sopra ogni cosa della stanza. */}
+           <div onClick={() => setShowVoicePicker(false)}
+-            style={{position:'fixed', inset:0, zIndex:98, background:'transparent'}} />
+-          <div style={{position:'absolute', top:120, left:12, zIndex:100,
+-            background:S.colors.glassCard,
++            style={{position:'fixed', inset:0, zIndex:298, background:'rgba(0,0,0,0.35)'}} />
++          <div style={{position:'absolute', top:120, left:12, zIndex:300,
++            background:S.colors.bg || '#0a0f1f',
+             border:`1px solid ${S.colors.cardBorder}`,
+-            borderRadius:12, padding:'4px 0', width:220, maxHeight:320, overflowY:'auto',
+-            boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>
++            borderRadius:12, padding:'4px 0', width:240, maxHeight:360, overflowY:'auto',
++            boxShadow:'0 8px 32px rgba(0,0,0,0.6)'}}>
++          {/* ═══ FINE b.261 ═══ */}
+             {(() => {
+               const ve = prefs.voiceEngine || 'auto';
+               const activeEngine = ve === 'auto'
+@@ -268,10 +332,46 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
+                     </div>
+                     {!selectedELVoice && <span style={{color:S.colors.statusOk, fontSize:12}}>{<IconCheck size={12}/>}</span>}
+                   </button>
++                  {(elevenLabsVoices || []).length > 5 && (
++                    <div style={{padding:'6px 10px', borderBottom:`1px solid ${S.colors.overlayBorder}`}}>
++                      <input
++                        value={filtroVoce}
++                        onChange={(e) => setFiltroVoce(e.target.value)}
++                        placeholder={L('search')}
++                        aria-label={L('search')}
++                        style={{width:'100%', boxSizing:'border-box', padding:'6px 8px',
++                          borderRadius:8, border:`1px solid ${S.colors.overlayBorder}`,
++                          background:'rgba(255,255,255,0.05)', color:S.colors.textPrimary,
++                          fontSize:12, fontFamily:FONT, outline:'none'}} />
++                    </div>
++                  )}
+                   {(elevenLabsVoices || []).length > 0 && (() => {
+-                    const females = elevenLabsVoices.filter(v => v.gender === 'female');
+-                    const males = elevenLabsVoices.filter(v => v.gender === 'male');
+-                    const other = elevenLabsVoices.filter(v => v.gender !== 'female' && v.gender !== 'male');
++                    // b.262 — se il backend ha curato questa lingua, il
++                    // selettore mostra SOLO le voci approvate (le
++                    // predefinite in testa); altrimenti l'elenco pieno,
++                    // come sempre — ripiego dichiarato, non un buco.
++                    const idCurati = (vociCurate || []).length > 0
++                      ? new Map(vociCurate.map((v, i) => [v.voice_id, { predefinita: v.predefinita, ordine: i }]))
++                      : null;
++                    const base = idCurati
++                      ? elevenLabsVoices
++                          .filter(v => idCurati.has(v.id))
++                          .sort((a, b) => {
++                            const ca = idCurati.get(a.id), cb = idCurati.get(b.id);
++                            return (cb.predefinita ? 1 : 0) - (ca.predefinita ? 1 : 0) || ca.ordine - cb.ordine;
++                          })
++                      : elevenLabsVoices;
++                    // b.261 — il filtro guarda nome e paese, senza maiuscole.
++                    const cerca = filtroVoce.trim().toLowerCase();
++                    const visibili = cerca
++                      ? base.filter(v =>
++                          (v.name || '').toLowerCase().includes(cerca) ||
++                          (v.country || '').toLowerCase().includes(cerca) ||
++                          (v.description || '').toLowerCase().includes(cerca))
++                      : base;
++                    const females = visibili.filter(v => v.gender === 'female');
++                    const males = visibili.filter(v => v.gender === 'male');
++                    const other = visibili.filter(v => v.gender !== 'female' && v.gender !== 'male');
+                     const groups = [
+                       { label: '\u2640 Femminile', voices: females },
+                       { label: '\u2642 Maschile', voices: males },
+diff --git a/voice-translator-vercel/app/lib/i18n.js b/voice-translator-vercel/app/lib/i18n.js
+index b993922..67d090f 100644
+--- a/voice-translator-vercel/app/lib/i18n.js
++++ b/voice-translator-vercel/app/lib/i18n.js
+@@ -22,7 +22,13 @@ import en from './locales/en.js';
+ const log = createLogger('i18n');
+ import it from './locales/it.js';
+ 
+-const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
++const SUPPORTED = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi',
++  // b.260 — pacchetti COMPLETI generati (1182 chiavi ciascuno):
++  'nl','pl','sv','da','cs','ro','hu',
++  // b.260 — mini-pacchetti: la schermata principale parla la lingua
++  // scelta, il resto ripiega sull'inglese finche il pacchetto pieno
++  // non arriva. Meglio una prima schermata giusta che tutto in inglese.
++  'el','fi','uk','nb','he','id','ms','ca','hr','sk','bg','fil','bn','ta','sw','af'];
+ 
+ /**
+  * Le lingue in cui l'INTERFACCIA esiste davvero.
+@@ -48,6 +54,29 @@ const loaders = {
+   hi: () => import('./locales/hi.js'),
+   ru: () => import('./locales/ru.js'),
+   tr: () => import('./locales/tr.js'),
++  nl: () => import('./locales/nl.js'),
++  pl: () => import('./locales/pl.js'),
++  sv: () => import('./locales/sv.js'),
++  da: () => import('./locales/da.js'),
++  cs: () => import('./locales/cs.js'),
++  ro: () => import('./locales/ro.js'),
++  hu: () => import('./locales/hu.js'),
++  el: () => import('./locales/el.js'),
++  fi: () => import('./locales/fi.js'),
++  uk: () => import('./locales/uk.js'),
++  nb: () => import('./locales/nb.js'),
++  he: () => import('./locales/he.js'),
++  id: () => import('./locales/id.js'),
++  ms: () => import('./locales/ms.js'),
++  ca: () => import('./locales/ca.js'),
++  hr: () => import('./locales/hr.js'),
++  sk: () => import('./locales/sk.js'),
++  bg: () => import('./locales/bg.js'),
++  fil: () => import('./locales/fil.js'),
++  bn: () => import('./locales/bn.js'),
++  ta: () => import('./locales/ta.js'),
++  sw: () => import('./locales/sw.js'),
++  af: () => import('./locales/af.js'),
+   vi: () => import('./locales/vi.js'),
+ };
+ 
+@@ -64,6 +93,19 @@ export async function preloadLang(code) {
+   try {
+     const mod = await loader();
+     T[code] = mod.default;
++    // ═══ INIZIO b.256 — chi ha gia disegnato non lo sapeva mai ═══
++    // TROVATO DAL VIVO (Luca): "non riesci neanche a tradurre la lingua
++    // del menu". Vero, ed era qui. Solo inglese e italiano sono dentro
++    // il programma; le altre TREDICI si caricano a parte, e finche non
++    // arrivano `t()` ripiega sull'inglese — giusto. Il difetto e che
++    // quando arrivavano NESSUNO lo veniva a sapere: React aveva gia
++    // disegnato col ripiego e non aveva motivo di rifarlo. Scegliendo
++    // tedesco o spagnolo i menu restavano in inglese finche non
++    // succedeva qualcos'altro che costringesse a ridisegnare.
++    // Funzionava solo alla scelta del paese perche li si cambia
++    // schermata subito dopo, e il cambio di schermata ridisegna.
++    annunciaLingua(code);
++    // ═══ FINE b.256 ═══
+     return true;
+   } catch (e) {
+     log.warn('Failed to load', code, e.message);
+@@ -71,6 +113,25 @@ export async function preloadLang(code) {
+   }
+ }
+ 
++// b.256 — chi disegna si iscrive qui e viene svegliato quando un
++// pacchetto lingua entra davvero in memoria. Deliberatamente senza
++// React: i18n.js e usato anche fuori dai componenti.
++const ascoltatoriLingua = new Set();
++function annunciaLingua(code) {
++  ascoltatoriLingua.forEach((fn) => { try { fn(code); } catch { /* un ascoltatore rotto non deve fermare gli altri */ } });
++}
++
++/** Si iscrive ai pacchetti lingua che arrivano; la funzione restituita disiscrive. */
++export function ascoltaLingueCaricate(fn) {
++  ascoltatoriLingua.add(fn);
++  return () => ascoltatoriLingua.delete(fn);
++}
++
++/** Per i controlli: il pacchetto di questa lingua e gia in memoria? */
++export function linguaPronta(code) {
++  return !!T[code];
++}
++
+ /**
+  * Translate a key for the given language.
+  * Fallback chain: requested lang -> en -> it -> raw key
+@@ -127,8 +188,20 @@ export function tFuori(key) {
+ /** Map unsupported language codes to the closest supported one */
+ export function mapLang(code) {
+   if (T[code] || SUPPORTED.includes(code)) return code;
+-  const map = { 'id':'en', 'ms':'en', 'nl':'en', 'pl':'en', 'sv':'en', 'el':'en', 'cs':'en', 'ro':'en', 'hu':'en', 'fi':'en' };
+-  return map[code] || 'en';
++  // ═══ INIZIO b.258 — le varianti regionali finivano in inglese ═══
++  // TROVATO DAL VIVO (Luca): scelto "العربية (مصر)" i menu restavano in
++  // inglese, mentre col vietnamita cambiavano. La differenza e il codice:
++  // 'vi' e nell'elenco, 'ar-EG' no — e cadeva nel ripiego finale.
++  // Ma l'arabo l'interfaccia CE L'HA: e 'ar'. Lo stesso valeva per
++  // en-GB, es-MX, fr-CA, pt-PT, zh-TW — cinque lingue su sei che
++  // esistono, buttate sull'inglese per via del suffisso regionale.
++  // La lingua di una variante e la sua base: 'ar-EG' e arabo.
++  const base = String(code || '').split(/[-_]/)[0];
++  if (base !== code && (T[base] || SUPPORTED.includes(base))) return base;
++  // ═══ FINE b.258 ═══
++  // b.260 — la mappa 'lingua -> inglese' e sparita: ogni lingua del
++  // selettore ora ha un pacchetto (pieno o della prima schermata).
++  return 'en';
+ }
+ 
+ export default T;
+diff --git a/voice-translator-vercel/app/page.js b/voice-translator-vercel/app/page.js
+index 17cc555..e1f3ee1 100644
+--- a/voice-translator-vercel/app/page.js
++++ b/voice-translator-vercel/app/page.js
+@@ -98,7 +98,10 @@ export default function Home() {
+       {/* Skip-to-content link lives in layout.js (<SkipToContent />) — do not duplicate here */}
+       <NetworkStatus />
+       <ToastContainer />
+-      <div id="main-content" role="main">
++      {/* b.233 — niente più `id="main-content" role="main"` qui: era DUPLICATO
++          del <main id="main-content"> del layout (id ripetuto + due landmark
++          main annidati). Il salta-al-contenuto punta a quello del layout. */}
++      <div>
+         <HomeInner />
+       </div>
+     </ErrorBoundary>
+@@ -429,7 +432,10 @@ function HomeInner() {
+   // e' gia un ref (non stato), valorizzato da handleCreateRoom/handleJoinRoom
+   // nello stesso momento in cui roomId cambia — quindi si aggancia alla
+   // stessa dipendenza.
+-  useEffect(() => { roomSessionTokenRef.current = roomPolling.roomSessionTokenRef?.current || null; }, [roomPolling.roomId, roomPolling.roomSessionTokenRef]);
++  // b.264 — anche `versioneToken` fra le dipendenze: dopo la riammissione
++  // (b.250) il roomId non cambia ma il gettone SI, e il gemello restava
++  // vecchio — la voce premium avrebbe preso 401 e ripiegato su Edge.
++  useEffect(() => { roomSessionTokenRef.current = roomPolling.roomSessionTokenRef?.current || null; }, [roomPolling.roomId, roomPolling.roomSessionTokenRef, roomPolling.versioneToken]);
+   useEffect(() => { clonedVoiceIdRef.current = auth.clonedVoiceId || null; }, [auth.clonedVoiceId]);
+ 
+   // ── b.109 · qui c'era il "ponte" verso stores/appStore.js ──
+@@ -491,7 +497,10 @@ function HomeInner() {
+     return () => window.removeEventListener('online', onOnline);
+   }, [roomPolling.roomId]);
+ 
+-  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages]);
++  // b.250 — lo scroll segue anche il messaggio IN COMPOSIZIONE (dettatura
++  // live / "sto traducendo"), non solo i messaggi arrivati: senza, il campo
++  // di scrittura copriva l'ultima bolla mentre la si stava scrivendo.
++  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages, translation.streamingMsg]);
+ 
+   // ── Escape key: back navigation from any view ──
+   useEffect(() => {
+@@ -737,6 +746,9 @@ function HomeInner() {
+     } catch (e) { console.error('End chat error:', e); }
+     roomPolling.leaveRoom();
+     convContext.resetContext(); // Clear conversation knowledge base
++    // b.263 — vedi leaveRoomTemporary: i diritti della stanza si rendono.
++    auth.roomTierOverrideRef.current = null;
++    auth.setTierStanza(null);
+     setStatus('');
+     setView('home');
+   }
+@@ -763,6 +775,10 @@ function HomeInner() {
+     } catch (e) { console.warn('[Page] Save active rooms failed:', e?.message); }
+     roomPolling.stopPolling();
+     roomPolling.leaveRoom();
++    // b.263 — fuori dalla stanza i diritti tornano i PROPRI: l'ospite di
++    // un host PRO non si porta via ElevenLabs (l'addebito era dell'host).
++    auth.roomTierOverrideRef.current = null;
++    auth.setTierStanza(null);
+     setView('home');
+   }
+ 
+@@ -813,6 +829,10 @@ function HomeInner() {
+ 
+     const hostTier = room.hostTier || 'FREE';
+     auth.roomTierOverrideRef.current = hostTier;
++    // b.263 — il tier della stanza passa anche come STATO: e lui che fa
++    // ricalcolare a useAuth i diritti voce (ElevenLabs per l'ospite di un
++    // host PRO). I set qui sotto restano per l'effetto immediato.
++    auth.setTierStanza(hostTier);
+     if (hostTier === 'FREE') { auth.setIsTrial(true); auth.setIsTopPro(false); }
+     else if (hostTier === 'TOP PRO') { auth.setIsTrial(false); auth.setIsTopPro(true); }
+     else { auth.setIsTrial(false); auth.setIsTopPro(false); }
+@@ -1152,6 +1172,7 @@ function HomeInner() {
+     <Suspense fallback={<LazyFallback />}>
+     <RoomView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo}
+       roomSessionToken={roomPolling.roomSessionTokenRef?.current}
++      userToken={auth.userToken}
+       messages={roomPolling.messages} streamingMsg={translation.streamingMsg} recording={translation.recording}
+       isListening={translation.isListening} partnerConnected={roomPolling.partnerConnected}
+       partnerSpeaking={roomPolling.partnerSpeaking} partnerLiveText={roomPolling.partnerLiveText}
+@@ -1220,7 +1241,7 @@ function HomeInner() {
+     <Suspense fallback={<LazyFallback />}>
+     <LobbyView roomId={roomPolling.roomId} roomInfo={roomPolling.roomInfo} partnerConnected={roomPolling.partnerConnected}
+       inviteLang={inviteLang} setInviteLang={setInviteLang} shareRoom={shareRoom}
+-      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); setView('home'); }} unlockAudio={audio.unlockAudio}
++      leaveRoom={() => { roomPolling.leaveRoom(); convContext.resetContext(); auth.roomTierOverrideRef.current = null; auth.setTierStanza(null); setView('home'); }} unlockAudio={audio.unlockAudio}
+       perVideo={intentoVideo} />
+     {/* La porta per il video di gruppo sta DENTRO LobbyView: messa qui
+         fuori finiva sotto la schermata della stanza e non si poteva

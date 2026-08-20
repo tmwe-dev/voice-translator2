@@ -63,7 +63,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       if (sceltoRef.current?.id !== idAtt) return;
       setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
       // b.238 — la voce riceve anche COME il Compagno voleva dirlo.
-      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua, userToken, modoVoce: d.modoVoce });
+      // b.317 — audit D2: la voce parla nella LINGUA del Compagno, se ne ha una.
+      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce });
     } catch (e) {
       if (sceltoRef.current?.id !== idAtt) return;
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
