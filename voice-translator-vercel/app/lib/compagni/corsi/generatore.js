@@ -238,12 +238,52 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   const maxTokens = Math.min(2800, 500 + nLezioni * 150);
   const r = await generaTesto({ system, prompt, userToken, maxTokens });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
-  const dati = estraiJSON(r.testo);
-  if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'syllabus-illeggibile' };
-  const lezioni = dati
-    .filter(l => l && l.titolo)
+  let elenco = elencoLezioniDa(estraiJSON(r.testo));
+  // b.358 — IL CORSO CHE NON NASCEVA PIU (collaudo di Luca: «il corso di
+  // inglese non viene piu creato», con un "Qualcosa e andato storto" che non
+  // diceva niente). Il docente porta addosso una vocazione lunga e narrativa
+  // ("porta storie, accendi, fai immaginare"): davanti a "rispondi SOLO con
+  // JSON" il modello a volte sceglie il racconto, o incarta l'elenco dentro
+  // un oggetto. Prima bastava questo a uccidere il corso.
+  // Ora si RIPROVA UNA VOLTA, con una veste neutra che chiede solo la lista:
+  // niente personaggio, niente vocazione, nessuna tentazione di raccontare.
+  if (!elenco.length) {
+    log.warn('syllabus illeggibile al primo colpo: si riprova con veste neutra', {
+      argomento: String(opts.argomento || '').slice(0, 120),
+      inizioRisposta: String(r.testo || '').slice(0, 120),
+    });
+    const neutro = await generaTesto({
+      system: `Sei un progettista di percorsi di studio. Rispondi SOLO con JSON valido, senza una parola fuori dal JSON. Scrivi i contenuti in lingua: ${nomeLingua(opts.lingua || 'it')}.`,
+      prompt, userToken, maxTokens,
+    });
+    if (!neutro.ok) return { ok: false, motivo: neutro.motivo, status: neutro.status };
+    elenco = elencoLezioniDa(estraiJSON(neutro.testo));
+  }
+  if (!elenco.length) return { ok: false, motivo: 'syllabus-illeggibile' };
+  const lezioni = elenco
     .map((l, i) => ({ indice: i, titolo: String(l.titolo).slice(0, 160), obiettivi: Array.isArray(l.obiettivi) ? l.obiettivi.slice(0, 6).map(String) : [], peso: ['alto','medio','basso'].includes(l.peso) ? l.peso : 'medio', stato: i === 0 ? 'disponibile' : 'bloccata' }));
   return { ok: true, lezioni };
+}
+
+/**
+ * Le lezioni, comunque il modello le abbia incartate.
+ * b.358 — prima si accettava SOLO un array nudo: se il modello rispondeva
+ * `{"lezioni":[...]}` o `{"syllabus":[...]}` — cosa che fa spesso quando il
+ * system gli ha dato un personaggio — il corso risultava illeggibile e non
+ * nasceva. Qui si guarda dentro l'involucro e si prende la prima lista di
+ * lezioni vere che si trova.
+ */
+export function elencoLezioniDa(dati) {
+  const buone = (a) => Array.isArray(a) ? a.filter(l => l && l.titolo) : [];
+  const dirette = buone(dati);
+  if (dirette.length) return dirette;
+  if (dati && typeof dati === 'object') {
+    for (const valore of Object.values(dati)) {
+      const dentro = buone(valore);
+      if (dentro.length) return dentro;
+    }
+  }
+  return [];
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */

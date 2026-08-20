@@ -32,7 +32,7 @@ import { memGet, memSet } from '../lib/memoria.js';
 // ── b.183 — la home aveva troppe porte ──
 // Via la videochiamata come voce a se: non si lancia dalla home, si
 // chiama da dentro la chat/contatti. Il regalo esce dall'elenco e va in
-// fondo, staccato, col fiocco (vedi GIFT sotto). Restano le porte che
+// fondo, staccato, col fiocco (ora e una riga di SEZIONI). Restano le porte che
 // servono davvero all'inizio: parlare con chi hai davanti, invitare,
 // TaxiTalk, e la stanza.
 const ACTIONS = [
@@ -67,16 +67,16 @@ const ACTIONS = [
   },
 ];
 
-// b.183 — il regalo, in fondo e col fiocco. Resta una voce della Home
-// (id 'regala', porta a 'credits' dove i minuti si scalano), ma staccato
-// dalle azioni principali: e un pensiero per qualcun altro, non una
-// funzione che usi per te.
-const GIFT = {
-  id: 'regala',
-  icon: 'gift',
-  titleKey: 'actGiftTitle',
-  descKey: 'actGiftDesc',
-};
+// b.358 — LE SEZIONI: dove si va, non come si parla. Sono righe larghe in
+// una sola card (Luca: «allargali come prima per differenziarli dai
+// pulsanti della barra»). Le PORTE per parlare stanno invece dietro il
+// barcode grande, tutte insieme.
+const SEZIONI = [
+  { id: 'mondo', vista: 'mondo', icon: 'globe', titleKey: 'worldNowTitle', descKey: 'worldNowDesc' },
+  { id: 'life', vista: 'life', icon: 'star', titleKey: 'lifeEntry', descKey: 'lifeEntryDesc' },
+  { id: 'business', vista: 'business', icon: 'credit', titleKey: 'businessEntry', descKey: 'businessEntryDesc' },
+  { id: 'regala', icon: 'gift', titleKey: 'actGiftTitle', descKey: 'actGiftDesc' },
+];
 
 
 
@@ -89,6 +89,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // b.356 — il traduttore "Parla ora" sta CHIUSO dietro la sua icona
   // (collaudo di Luca): niente piu apertura automatica al primo avvio.
   const [mostraPrimaProva, setMostraPrimaProva] = useState(false);
+  // b.358 — la tendina con TUTTE le scelte di comunicazione, dietro il barcode
+  const [mostraScelte, setMostraScelte] = useState(false);
 
   // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
   const C = useMemo(() => ({
@@ -135,6 +137,18 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
     }
     checkActiveRooms();
   }, []);
+
+  // b.358 — dove porta ogni sezione, scritto per esteso. La guardia sulle
+  // viste irraggiungibili cerca `setView('nome')` alla lettera: un rimando
+  // calcolato a runtime le nasconderebbe la strada, e domani nessuno si
+  // accorgerebbe di una pagina rimasta senza porta.
+  function apriSezione(id) {
+    vibrate();
+    if (id === 'mondo') return setView('mondo');
+    if (id === 'life') return setView('life');
+    if (id === 'business') return setView('business');
+    return handleAction(id);
+  }
 
   // Handle action card clicks
   function handleAction(actionId) {
@@ -311,62 +325,89 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         )}
         {/* ── FINE b.96 ── */}
 
-        {/* ═══ b.356 — LE VOCI DELLA HOME COME ICONE ═══
-            Collaudo di Luca: «tutti i tasti della home possono diventare
-            icone con descrizione sotto, senza pulsante: cosi e piu pulita».
-            Niente piu card una sotto l'altra: una griglia di icone nude,
-            titolo e descrizione sotto, tutto centrato. */}
+        {/* ═══ b.358 — IL BARCODE GRANDE ═══
+            Collaudo di Luca: «se metti solo un barcode grande che tocchi e
+            mostra tutte le scelte di comunicazione... alleggeriamo».
+            Le quattro porte per parlare con qualcuno non occupano piu mezza
+            home: stanno dietro questo, e si aprono tutte insieme. */}
+        <button
+          onClick={() => { vibrate(); setMostraScelte(true); }}
+          aria-haspopup="dialog"
+          style={{
+            // b.358 — NIENTE CORNICE attorno ai telefoni (collaudo di Luca:
+            // «togli il bottone intorno ai telefoni e qr code»): l'immagine
+            // ha gia lo sfondo trasparente, la scatola la spegneva soltanto.
+            width: '100%', flexShrink: 0, margin: '4px 0 18px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+            padding: '6px 4px 10px', cursor: 'pointer',
+            background: 'none', border: 'none',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {/* b.358 — l'immagine di Luca al posto dell'icona: due telefoni e
+              un QR in mezzo. Dice da sola cosa succede qui, e ha lo sfondo
+              trasparente, quindi vive sul tema scuro senza riquadri. */}
+          <img
+            src="/qr-faccia-a-faccia.webp"
+            alt=""
+            aria-hidden
+            width={1200} height={619}
+            style={{ width: '100%', maxWidth: 400, height: 'auto', display: 'block' }}
+          />
+          <span style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, fontFamily: FONT, textAlign: 'center' }}>
+            {L('actFaceTitle')}
+          </span>
+          <span style={{ fontSize: 12, color: C.textMuted, fontFamily: FONT, textAlign: 'center', lineHeight: 1.4 }}>
+            {L('homeAllWaysDesc')}
+          </span>
+        </button>
+
+        {/* ═══ b.358 — LE SEZIONI TORNANO PULSANTI LARGHI ═══
+            Collaudo di Luca: «fai ritornare pulsanti queste icone, allargali
+            come prima per differenziarli dai pulsanti della barra».
+            Erano icone quadrate come quelle della barra in basso e ci si
+            confondeva: qui tornano righe larghe, che occupano tutta la
+            colonna e non somigliano a nulla della barra. */}
         <div style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-          gap: '18px 10px', width: '100%', margin: '10px 0 20px', flexShrink: 0,
+          // b.358 — EFFETTO VETRO (collaudo di Luca): sfondo quasi
+          // trasparente, un filo di azzurro sul bordo, e l'ombra che cade a
+          // sinistra e sotto sfumando nel neutro. La card si vede perche
+          // rifrange, non perche e piu chiara.
+          background: 'rgba(255,255,255,0.045)',
+          backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+          border: `1px solid ${C.accent}38`,
+          borderRadius: 18, padding: '2px 14px', marginBottom: 20, flexShrink: 0,
+          boxShadow: `-10px 14px 34px -18px ${C.accent}55, -2px 6px 18px -10px rgba(0,0,0,0.55)`,
         }}>
-          {[
-            ...ACTIONS,
-            { id: 'mondo', icon: 'globe', titleKey: 'worldNowTitle', descKey: 'worldNowDesc' },
-            { id: 'life', icon: 'star', titleKey: 'lifeEntry', descKey: 'lifeEntryDesc' },
-            { id: 'business', icon: 'credit', titleKey: 'businessEntry', descKey: 'businessEntryDesc' },
-            GIFT,
-          ].map((voce) => (
+          {SEZIONI.map((voce, idx) => (
             <button
               key={voce.id}
-              onClick={() => {
-                if (voce.id === 'mondo') { vibrate(); setView('mondo'); return; }
-                if (voce.id === 'life') { vibrate(); setView('life'); return; }
-                if (voce.id === 'business') { vibrate(); setView('business'); return; }
-                handleAction(voce.id);
-              }}
+              onClick={() => apriSezione(voce.id)}
               style={{
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7,
-                background: 'none', border: 'none', padding: '4px 2px',
-                cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
-                minHeight: 96, opacity: 1,
+                display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+                minHeight: 74, opacity: 1,
+                padding: '14px 2px', background: 'none', textAlign: 'left',
+                border: 'none', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                borderBottom: idx < SEZIONI.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
               }}
             >
+              {/* b.358 — «togli i bordi da intorno alle icone»: l'icona sta
+                  nuda, senza riquadro e senza fondo. */}
               <span style={{
-                width: 54, height: 54, borderRadius: 16, flexShrink: 0,
+                width: 46, height: 46, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
-                background: voce.primary ? `linear-gradient(145deg, ${C.accent}, ${C.accent2})` : C.cardBg,
-                border: voce.primary ? 'none' : `1px solid ${C.cardBorder}`,
-                color: voce.primary ? '#fff' : C.textSecondary,
-                boxShadow: voce.primary ? `0 4px 14px -4px ${C.accent}70` : 'none',
               }}>
-                {/* b.356 — icone parlanti (Luca): il QR per chi hai davanti,
-                    l'invito che parte, il taxi GIALLO, le persone del gruppo. */}
-                {voce.icon === 'qr' ? <IconQR size={26} />
-                  : voce.icon === 'mail' ? <Icon name="share" size={26} color={C.accent} />
-                  : voce.icon === 'car' ? <span style={{ color: '#ffc44d', lineHeight: 0 }}><IconCar size={26} /></span>
-                  : voce.icon === 'chat' ? <Icon name="users" size={26} color={C.textPrimary} />
-                  : voce.icon === 'globe' ? <Icon name="globe" size={26} color={C.accent} />
-                  : voce.icon === 'star' ? <Icon name="star" size={26} color={C.accent} />
-                  : voce.icon === 'credit' ? <Icon name="credit" size={26} color={C.accent} />
-                  : <Icon name="gift" size={26} color={C.accent} />}
+                <Icon name={voce.icon} size={25} color={C.accent} />
               </span>
-              <span style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, fontFamily: FONT, textAlign: 'center', lineHeight: 1.2 }}>
-                {voce.title || L(voce.titleKey)}
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+                  {L(voce.titleKey)}
+                </span>
+                <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+                  {L(voce.descKey)}
+                </span>
               </span>
-              <span style={{ fontSize: 10.5, color: C.textMuted, fontFamily: FONT, textAlign: 'center', lineHeight: 1.35 }}>
-                {L(voce.descKey)}
-              </span>
+              <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
             </button>
           ))}
         </div>
@@ -417,6 +458,85 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         </>)}
 
       </div>
+
+      {/* ═══ b.358 — LA TENDINA DELLE SCELTE (stile Wueform) ═══
+          Il barcode grande la apre: qui dentro ci sono TUTTE le porte per
+          parlare con qualcuno, una sotto l'altra, larghe e leggibili.
+          Fuori dalla tendina la home resta leggera. */}
+      {mostraScelte && (
+        <div
+          role="dialog" aria-modal="true" aria-label={L('actFaceTitle')}
+          onClick={() => setMostraScelte(false)}
+          style={{
+            // b.358 — sopra la barra in basso (che sta a 50): altrimenti
+            // l'ultima scelta finiva nascosta sotto i tasti della barra.
+            position: 'fixed', inset: 0, zIndex: 90,
+            background: 'rgba(0,0,0,0.62)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 680, margin: '0 auto',
+              // b.358 — fondo PIENO: prima si vedeva la home attraverso la
+              // tendina e le due scritte si sovrapponevano, illeggibili.
+              background: S.colors.bg,
+              borderTopLeftRadius: 22, borderTopRightRadius: 22,
+              borderTop: `1px solid ${C.accent}38`,
+              // b.358 — «ricordati di mostrare TUTTI i valori» (Luca): la
+              // barra in basso viene disegnata sopra la tendina, quindi
+              // l'ultima scelta ci finiva sotto. Qui si lascia in fondo
+              // l'altezza della barra (77px) piu il margine del telefono:
+              // cosi tutte e quattro le voci restano leggibili per intero.
+              padding: '10px 16px calc(96px + env(safe-area-inset-bottom))',
+              maxHeight: '86dvh', overflowY: 'auto',
+              boxShadow: '0 -18px 50px -12px rgba(0,0,0,0.75)',
+            }}
+          >
+            {/* la linguetta da tirare, come in Wueform */}
+            <div aria-hidden style={{
+              margin: '0 auto 12px', height: 4, width: 44, borderRadius: 2,
+              background: C.textMuted, opacity: 0.5,
+            }} />
+            {ACTIONS.map((action, idx) => (
+              <button
+                key={action.id}
+                onClick={() => { setMostraScelte(false); handleAction(action.id); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 14, width: '100%',
+                  minHeight: 74, opacity: 1,
+                  padding: '14px 2px', background: 'none', textAlign: 'left',
+                  border: 'none', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
+                  borderBottom: idx < ACTIONS.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
+                }}
+              >
+                {/* b.358 — niente fondo azzurro e niente riquadro: le icone
+                    stanno nude anche qui dentro. */}
+                <span style={{
+                  width: 48, height: 48, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
+                  color: C.textSecondary,
+                }}>
+                  {action.icon === 'qr' ? <span style={{ color: C.accent, lineHeight: 0 }}><IconQR size={26} /></span>
+                    : action.icon === 'mail' ? <Icon name="share" size={26} color={C.accent} />
+                    : action.icon === 'car' ? <span style={{ color: '#ffc44d', lineHeight: 0 }}><IconCar size={26} /></span>
+                    : <Icon name="users" size={26} color={C.accent} />}
+                </span>
+                <span style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
+                    {action.title || L(action.titleKey)}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 11.5, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+                    {L(action.descKey)}
+                  </span>
+                </span>
+                <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <style>{`
         @media (prefers-reduced-motion: reduce) {

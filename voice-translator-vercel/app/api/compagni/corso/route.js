@@ -40,6 +40,10 @@ async function handlePost(req) {
     const rispostaEsito = (r) => {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      // b.358 — il motivo del guasto finiva SOLO nella risposta, e il client
+      // lo buttava: quando a Luca non nasceva piu il corso, nei registri di
+      // produzione non c'era una riga per capire perche. Ora si scrive.
+      log.warn('generazione non riuscita', { azione, motivo: r.motivo || 'ignoto', argomento: argomento.slice(0, 120), livello, categoria });
       return NextResponse.json({ error: 'Generazione non riuscita', motivo: r.motivo }, { status: 502 });
     };
 

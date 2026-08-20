@@ -21,6 +21,9 @@ async function postJSON(url, corpo) {
     const err = new Error((dati && dati.error) || 'errore');
     err.status = r.status;
     err.creditoEsaurito = !!(dati && dati.creditoEsaurito);
+    // b.358 — il MOTIVO tecnico arrivava dal server e veniva buttato qui:
+    // in superficie restava solo "Qualcosa e andato storto". Ora viaggia.
+    err.motivo = (dati && dati.motivo) || '';
     throw err;
   }
   return dati;

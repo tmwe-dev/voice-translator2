@@ -709,7 +709,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       }
       setEsitiLezioni({});
     } catch (e) {
-      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+      // b.358 — l'errore diceva sempre la stessa cosa («Qualcosa e andato
+      // storto») qualunque fosse la causa: sessione scaduta, credito finito o
+      // generazione fallita. Ora dice QUALE, e per il guasto tecnico porta
+      // anche il motivo del server: senza, non si puo riparare niente.
+      if (e.creditoEsaurito) setErrore(L('lifeNoCredit'));
+      else if (e.status === 401) setErrore(L('lifeLoginNeeded'));
+      else setErrore(e.motivo ? `${L('lifeError')} (${e.motivo})` : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — `linguaCorso` andava nelle deps: il callback lo usa ma prima
     // elencava `lingua` (la lingua app, che non cambia mai). Chi cambiava

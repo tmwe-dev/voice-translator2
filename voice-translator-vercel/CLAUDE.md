@@ -214,7 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.357** (push #596) — "Parla ora": niente doppia lettura, il
+- Versione: **b.358** (push #597) — home col QR grande di Luca (immagine
+  trasparente) che apre tutte le scelte di comunicazione, sezioni tornate
+  pulsanti larghi in vetro, corso di lingua che nasce di nuovo
+- Versione precedente: **b.357** (push #596) — "Parla ora": niente doppia lettura, il
   contenitore resta dentro lo schermo, il registro scorre col verso giusto
   anche capovolto, e una traduzione respinta dal server non viene piu
   spacciata per buona; Business/BizCard, PeepOff, libro di lingue e scanner
