@@ -22,6 +22,7 @@ import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTur
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
+import CompagnoLive from './CompagnoLive.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
@@ -421,6 +422,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.334 — DETTARE la domanda: registra col microfono, trascrive, riempie
   // il campo. Secondo tocco = stop. La lezione va in pausa mentre registri.
   const [micDomanda, setMicDomanda] = useState(''); // '' | 'registro' | 'trascrivo'
+  // b.335 — CONVERSAZIONE A VOCE COL MADRELINGUA (Modulo Lingue): il
+  // contenitore dal-vivo di Amico, con l'Assistente come personaggio.
+  const [parlaAssist, setParlaAssist] = useState(false);
   const micRecRef = useRef(null);
   const micStreamRef = useRef(null);
   const dettaDomanda = useCallback(async () => {
@@ -920,13 +924,32 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             if (!l2c || l2c === linguaCorso) return null;
             const assist = assistentePer(l2c);
             return (
-              <span title={`${assist.nome} — madrelingua`} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: card, border: bordo, flexShrink: 0 }}>
+              <button onClick={() => { vibrate(8); fermaLettura(); setParlaAssist((v) => !v); }}
+                title={`Parla dal vivo con ${assist.nome} (madrelingua)`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 9px', borderRadius: 999, background: parlaAssist ? `${accent}22` : card, border: parlaAssist ? `1px solid ${accent}` : bordo, flexShrink: 0, cursor: 'pointer', fontFamily: FONT }}>
                 <img src={assist.avatar} alt="" width={22} height={22} style={{ borderRadius: '50%', objectFit: 'cover' }} />
-                <span style={{ fontSize: 11, fontWeight: 700, color: muto }}>{assist.nome}</span>
-              </span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: parlaAssist ? accent : muto }}>{parlaAssist ? 'Chiudi' : `Parla con ${assist.nome}`}</span>
+              </button>
             );
           })()}
         </div>
+
+        {/* b.335 — la conversazione VOCALE col Madrelingua: role-play vero,
+            in lingua originale, dentro la lezione. */}
+        {parlaAssist && (() => {
+          const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          if (!l2c) return null;
+          const assist = assistentePer(l2c);
+          const finto = {
+            nome: assist.nome,
+            ruolo: 'insegnante madrelingua',
+            avatar: assist.avatar,
+            personalita: `Sei ${assist.nome}, insegnante madrelingua (${assist.tratto}). Stai facendo CONVERSAZIONE con uno studente che studia la tua lingua (lezione: "${aperta.lezione?.titolo || argomento}"). Parla SOLO nella tua lingua, con frasi brevi e chiare, adattate al livello che senti; se lo studente si blocca, rallenta e semplifica; correggi NEL FLUSSO ripetendo bene la frase, senza fermare la conversazione per la grammatica. Metti lo studente in situazioni vere (ordinare, chiedere, raccontare) e fallo parlare piu di te.`,
+            lingua: l2c,
+          };
+          return <CompagnoLive compagno={finto} lingua={l2c} onChiudi={() => setParlaAssist(false)}
+            {...{ testoP, muto, accent, card, bordo }} />;
+        })()}
 
         {/* b.315 — CONTROLLI IN ALTO: ascolta/ferma, evidenzia, alza la mano.
             Restano in cima mentre il testo scorre sotto. */}

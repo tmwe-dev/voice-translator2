@@ -1,9 +1,10 @@
 'use client';
-import { memo, useState, useEffect, useCallback } from 'react';
+import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
+import { leggiImmagineLocale } from '../../lib/ocrLocale.js';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -119,6 +120,29 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     fr.onerror = rej;
     fr.readAsDataURL(file);
   }), []);
+
+  // b.335 — FOTO GRATIS (Tesseract nel dispositivo): il gradino zero-costo
+  // della cascata. Se il risultato e povero (manoscritto, foto storta) si
+  // PROPONE il gradino AI — mai in automatico, mai a sorpresa.
+  const ultimaFotoRef = useRef(null);
+  const [ocrProgresso, setOcrProgresso] = useState(0);
+  const [suggerisciAI, setSuggerisciAI] = useState(false);
+  const fotoGratis = useCallback(async (file) => {
+    if (!file || ocrLavoro) return;
+    setOcrLavoro(true); setErrore(''); setSuggerisciAI(false); setOcrProgresso(0);
+    try {
+      ultimaFotoRef.current = file;
+      const dataUrl = await fotoInTesto(file);
+      const { testo, fiducia } = await leggiImmagineLocale(dataUrl, lingua || 'it', setOcrProgresso);
+      if (testo && testo.length >= 20) {
+        setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n') }));
+      }
+      if (!testo || testo.length < 20 || fiducia < 60) setSuggerisciAI(true);
+    } catch {
+      // il motore locale non e partito (rete/CSP): resta la via AI
+      setSuggerisciAI(true);
+    } finally { setOcrLavoro(false); setOcrProgresso(0); }
+  }, [ocrLavoro, fotoInTesto, lingua]);
 
   const scattaOcr = useCallback(async (file) => {
     if (!file || ocrLavoro) return;
@@ -316,10 +340,16 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                 style={{ ...input, resize: 'vertical', marginBottom: 8 }} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <label style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
-                  {ocrLavoro ? tt('lifeMatReading', 'Leggo la pagina…') : tt('lifeMatPhoto', 'Fotografa la pagina (AI, ~1 cent)')}
+                  {ocrLavoro ? `${tt('lifeMatReading', 'Leggo la pagina…')} ${ocrProgresso ? Math.round(ocrProgresso * 100) + '%' : ''}` : tt('lifeMatPhotoFree', 'Fotografa la pagina (gratis)')}
                   <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) scattaOcr(f); }} />
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) fotoGratis(f); }} />
                 </label>
+                {suggerisciAI && (
+                  <button onClick={() => { if (ultimaFotoRef.current) scattaOcr(ultimaFotoRef.current); setSuggerisciAI(false); }} disabled={ocrLavoro}
+                    style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+                    {tt('lifeMatAiBoost', 'Lettura difficile: migliora con AI (~1 cent)')}
+                  </button>
+                )}
                 {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
                 <label style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
                   {tt('lifeMatPdf', 'Carica PDF (gratis)')}

@@ -113,7 +113,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // vuoti. Risultato: OGNI esercizio dava 0% con tutte le parole rosse,
       // da sempre. Ora si legge il campo giusto (gli alias restano come rete).
       const detto = d.original || d.text || d.transcript || d.testo || '';
-      const e = valutaPronuncia(frase, detto);
+      const e = valutaPronuncia(frase, detto, lingua); // b.335 — CJK: confronto per caratteri
       setEsito({ ...e, detto });
       setStato('fatto');
       // b.334 — DRILL AUTOMATICO (deciso): se il server segnala che una

@@ -36,6 +36,22 @@ export function parole(testo) {
   return n ? n.split(' ') : [];
 }
 
+// ── b.335 — LE ASIATICHE NEL CONFRONTO (Modulo Lingue) ──
+// Cinese, giapponese e thai NON hanno spazi: il confronto "per parole"
+// vedeva UNA parola sola ed era cieco. Per queste scritture l'unita giusta
+// e il CARATTERE (in cinese un carattere = una sillaba = un'unita di
+// senso): il confronto diventa carattere-per-carattere, e i badge a
+// schermo mostrano i caratteri giusti/sbagliati uno per uno.
+const SENZA_SPAZI = /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\u0e00-\u0e7f]/; // kana, kanji/hanzi, thai
+
+export function unita(testo, lingua = '') {
+  const lang2 = String(lingua || '').replace(/-.*/, '');
+  const usaCaratteri = ['zh', 'ja', 'th'].includes(lang2) || SENZA_SPAZI.test(String(testo || ''));
+  if (!usaCaratteri) return parole(testo);
+  // caratteri: si tengono solo lettere/ideogrammi, niente punteggiatura
+  return [...String(testo || '')].filter((c) => /[\p{L}\p{N}]/u.test(c));
+}
+
 /** Distanza di edit fra due parole (quanti ritocchi per passare dall'una all'altra). */
 export function distanza(a, b) {
   a = String(a || ''); b = String(b || '');
@@ -72,9 +88,9 @@ export function somiglianza(a, b) {
  * @param {string} detto    la trascrizione di ciò che hai detto
  * @returns {{punteggio:number, parole:{parola:string, ok:boolean, vicino:boolean}[]}}
  */
-export function valutaPronuncia(atteso, detto) {
-  const A = parole(atteso);
-  const D = parole(detto);
+export function valutaPronuncia(atteso, detto, lingua = '') {
+  const A = unita(atteso, lingua);
+  const D = unita(detto, lingua);
   if (!A.length) return { punteggio: 0, parole: [] };
 
   const disponibili = [...D];

@@ -96,6 +96,32 @@ async function handlePost(req) {
       return NextResponse.json({ ok: true, risposta: r.risposta, salta: r.salta || 0 });
     }
 
+    // b.335 — I 5 ASSI della conversazione libera (Modulo Lingue): mai un
+    // numero solo. Pronuncia qui NON si valuta (serve l'audio): dagli scritti
+    // si giudicano GRAMMATICA, VOCABOLARIO, FLUIDITA (scorrevolezza delle
+    // frasi), CONTENUTO (quanto dici davvero) e COMPRENSIBILITA. Separati.
+    if (azione === 'cinqueAssi') {
+      const turni = Array.isArray(body.turni) ? body.turni.slice(-10).map((t) => String(t || '').slice(0, 400)) : [];
+      const linguaStudiata = typeof body.linguaStudiata === 'string' ? body.linguaStudiata.slice(0, 8) : 'en';
+      if (!turni.length) return NextResponse.json({ error: 'Servono i turni' }, { status: 400 });
+      const { generaTesto } = await import('../../../lib/compagni/ponte.js');
+      const { estraiJSON } = await import('../../../lib/compagni/corsi/generatore.js');
+      const system = `Sei un insegnante madrelingua di ${linguaStudiata}. Valuti la produzione SCRITTA di uno studente su CINQUE assi SEPARATI, mai mischiati. Onesto ma incoraggiante. Rispondi SOLO con JSON valido.`;
+      const prompt = 'Turni dello studente (in ' + linguaStudiata + '):\n'
+        + turni.map((t, i) => (i + 1) + '. ' + t).join('\n')
+        + '\n\nValuta 0-100 ogni asse, con UNA riga di consiglio concreto ciascuno, in lingua ' + lingua + ':\n'
+        + '{"comprensibilita":{"voto":0,"consiglio":"..."},"grammatica":{"voto":0,"consiglio":"..."},"vocabolario":{"voto":0,"consiglio":"..."},"fluidita":{"voto":0,"consiglio":"..."},"contenuto":{"voto":0,"consiglio":"..."}}';
+      const r = await generaTesto({ system, prompt, userToken, maxTokens: 500, temperature: 0.3 });
+      if (!r.ok) return rispostaEsito(r);
+      const d = estraiJSON(r.testo);
+      const assi = {};
+      for (const k of ['comprensibilita', 'grammatica', 'vocabolario', 'fluidita', 'contenuto']) {
+        const v2 = d?.[k] || {};
+        assi[k] = { voto: Math.max(0, Math.min(100, Number(v2.voto) || 0)), consiglio: String(v2.consiglio || '').slice(0, 200) };
+      }
+      return NextResponse.json({ ok: true, assi });
+    }
+
     // b.331 — DRILL delle coppie minime: da una parola andata male nasce
     // l'esercizio mirato sul suono che inganna (Teaching Policy).
     if (azione === 'drill') {

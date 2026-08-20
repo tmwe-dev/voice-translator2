@@ -150,6 +150,12 @@ export async function mieiCorsiUtente(userToken) {
 export function segnaLibroCorso({ argomento, indice, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'segnalibro', argomento, indice, userToken });
 }
+/** b.335 — I 5 ASSI della conversazione libera (dagli scritti in L2). */
+export async function valutaCinqueAssi({ turni, linguaStudiata, lingua, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'cinqueAssi', turni, linguaStudiata, lingua, userToken });
+  return d.assi || null;
+}
+
 /** b.331 — DRILL coppie minime per una parola andata male. */
 export async function drillPronuncia({ parola, linguaStudiata, lingua, userToken }) {
   const d = await postJSON('/api/compagni/corso', { azione: 'drill', parola, linguaStudiata, lingua, userToken });

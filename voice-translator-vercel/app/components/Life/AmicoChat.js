@@ -2,7 +2,7 @@
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
+import { parlaAmico, parlaTurno, valutaCinqueAssi } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 import { memGet, memSet, sesGet, sesDel } from '../../lib/memoria.js';
 import CompagnoLive from './CompagnoLive.js';
@@ -35,6 +35,19 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   // b.316 — conversazione VOCALE dal vivo (widget ElevenLabs, personalita
   // del Compagno iniettata all'avvio). Un contenitore, mille personaggi.
   const [dalVivo, setDalVivo] = useState(false);
+  // b.335 — I 5 ASSI: quando parli con un Compagno in un'ALTRA lingua, un
+  // tasto valuta i tuoi ultimi messaggi su cinque assi SEPARATI.
+  const [assi, setAssi] = useState(null);
+  const [assiLavoro, setAssiLavoro] = useState(false);
+  const valutaAssi = useCallback(async () => {
+    if (assiLavoro || !scelto?.lingua) return;
+    const turni = messaggi.filter((m) => m.ruolo === 'persona').slice(-8).map((m) => m.testo);
+    if (!turni.length) return;
+    setAssiLavoro(true);
+    try { setAssi(await valutaCinqueAssi({ turni, linguaStudiata: scelto.lingua, lingua, userToken })); }
+    catch { /* la valutazione e un di piu */ }
+    finally { setAssiLavoro(false); }
+  }, [assiLavoro, scelto, messaggi, lingua, userToken]);
   const fondo = useRef(null);
   // b.232 — riferimento sempre aggiornato al Compagno scelto, per evitare che
   // la risposta di A (in arrivo) finisca nella chat di B se si cambia Compagno.
@@ -112,6 +125,13 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         </button>
         <img src={scelto.avatar} alt={scelto.nome} width={32} height={32} style={{ borderRadius: 8, display: 'block', objectFit: 'cover' }} />
         <span style={{ fontWeight: 700, color: testoP, flex: 1 }}>{scelto.nome} {scelto.memoria ? '🧠' : ''}</span>
+        {scelto.lingua && scelto.lingua !== lingua && (
+          <button onClick={valutaAssi} disabled={assiLavoro} title="Valuta i tuoi ultimi messaggi su 5 assi"
+            style={{ padding: '8px 10px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 800,
+              border: `1px solid ${accent}`, background: 'transparent', color: accent, opacity: assiLavoro ? 0.6 : 1 }}>
+            {assiLavoro ? '…' : '5 assi'}
+          </button>
+        )}
         {/* b.316 — parla DAL VIVO col Compagno: voce in tempo reale. */}
         <button onClick={() => { vibrate(8); setDalVivo((v) => !v); }} aria-pressed={dalVivo}
           style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT, fontSize: 13, fontWeight: 800,
@@ -123,6 +143,31 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       {dalVivo && (
         <CompagnoLive compagno={scelto} lingua={lingua} onChiudi={() => setDalVivo(false)}
           {...{ testoP, muto, accent, card, bordo }} />
+      )}
+
+      {assi && (
+        <div style={{ padding: 12, borderRadius: 12, background: card, border: `1px solid ${accent}44`, marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ flex: 1, fontSize: 12, fontWeight: 800, color: testoP }}>I tuoi 5 assi (mai un numero solo)</span>
+            <button onClick={() => setAssi(null)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 16 }}>✕</button>
+          </div>
+          {[['comprensibilita', 'Comprensibilità'], ['grammatica', 'Grammatica'], ['vocabolario', 'Vocabolario'], ['fluidita', 'Fluidità'], ['contenuto', 'Contenuto']].map(([k, et]) => {
+            const a = assi[k] || { voto: 0, consiglio: '' };
+            const col = a.voto >= 70 ? accent : a.voto >= 45 ? '#f59e0b' : '#f87171';
+            return (
+              <div key={k} style={{ marginBottom: 7 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: testoP }}>
+                  <b>{et}</b><b style={{ color: col }}>{a.voto}</b>
+                </div>
+                <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden', margin: '3px 0' }}>
+                  <div style={{ width: `${a.voto}%`, height: '100%', background: col }} />
+                </div>
+                {a.consiglio && <div style={{ fontSize: 11, color: muto }}>{a.consiglio}</div>}
+              </div>
+            );
+          })}
+          <div style={{ fontSize: 10, color: muto, marginTop: 4 }}>La pronuncia si valuta a voce (lezioni e lettura guidata), non da qui.</div>
+        </div>
       )}
 
       <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>

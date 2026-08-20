@@ -97,7 +97,18 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // b.147 — Mondo si divide in due anime: le STANZE (quello che c'era)
   // e le NEWS (il seminatore di conversazioni). Un tab, non due pagine:
   // la gerarchia resta Mondo → argomento → persone → conversazione.
-  const [tab, setTab] = useState('stanze');
+  // b.335 — HOME MONDO NUOVA: si atterra su "Per te" — cosa e caldo ADESSO
+  // (discussioni piu vive, stanze piu piene), a colpo d'occhio.
+  const [tab, setTab] = useState('perte');
+  const [feedCaldo, setFeedCaldo] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    fetch('/api/mondo/discussioni')
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (vivo && d) setFeedCaldo(d.discussioni || []); })
+      .catch(() => { if (vivo) setFeedCaldo([]); });
+    return () => { vivo = false; };
+  }, []);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -217,6 +228,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* ═══ TAB: STANZE | NEWS ═══ */}
       <div style={{ display: 'flex', gap: 6, padding: '0 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5 }}>
         {[
+          { id: 'perte', labelKey: 'tabForYou' },
           { id: 'stanze', labelKey: 'tabRooms' },
           { id: 'news', labelKey: 'tabNews' },
         ].map(t => {
@@ -236,6 +248,60 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           );
         })}
       </div>
+
+      {/* ═══ TAB PER TE (b.335) — la home: caldo adesso ═══ */}
+      {tab === 'perte' && (
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+            {/* TREND: le discussioni piu vive (commenti, poi recenza) */}
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
+            {feedCaldo === null && <div style={{ fontSize: 12, color: C.textMuted, padding: '8px 0' }}>…</div>}
+            {Array.isArray(feedCaldo) && feedCaldo.length === 0 && (
+              <div style={{ fontSize: 12, color: C.textMuted, padding: '8px 0 14px' }}>{(L('trendEmpty') !== 'trendEmpty' ? L('trendEmpty') : 'Ancora niente di caldo: apri tu la prima discussione dalla scheda News.')}</div>
+            )}
+            {(feedCaldo || [])
+              .slice()
+              .sort((a, b) => ((b.commentCount || b.commenti || 0) - (a.commentCount || a.commenti || 0)) || ((b.createdAt || 0) - (a.createdAt || 0)))
+              .slice(0, 6)
+              .map((d, i) => (
+                <button key={d.id || i} onClick={() => setTab('news')}
+                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: C.accent, width: 20 }}>{i + 1}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || d.titolo}</div>
+                      <div style={{ fontSize: 11, color: C.textMuted }}>{(d.commentCount || d.commenti || 0)} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
+                    </div>
+                    <span style={{ color: C.textMuted }}>›</span>
+                  </div>
+                </button>
+              ))}
+
+            {/* STANZE VIVE: dove si sta parlando adesso */}
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('liveRoomsNow') !== 'liveRoomsNow' ? L('liveRoomsNow') : 'STANZE VIVE ADESSO')}</div>
+            {rooms.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: '4px 0 12px' }}>{(L('noLiveRooms') !== 'noLiveRooms' ? L('noLiveRooms') : 'Nessuna stanza aperta al momento.')}</div>}
+            {rooms.slice(0, 4).map((r) => (
+              <button key={r.roomId || r.id} onClick={() => onJoinRoom?.(r.roomId || r.id)}
+                style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || r.nome || r.roomId}</div>
+                <div style={{ fontSize: 11, color: C.textMuted }}>{(r.members ?? r.partecipanti ?? 0)} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${r.lang}` : ''}</div>
+              </button>
+            ))}
+
+            {/* SCORCIATOIE: cerca per interesse */}
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('exploreWord') !== 'exploreWord' ? L('exploreWord') : 'ESPLORA')}</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 10 }}>
+              {['stanze', 'news'].map((dest) => (
+                <button key={dest} onClick={() => setTab(dest)}
+                  style={{ padding: '9px 14px', borderRadius: 999, background: 'transparent', border: `1px solid ${C.accent}55`, color: C.accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                  {dest === 'stanze' ? L('tabRooms') : L('tabNews')} →
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ═══ TAB NEWS ═══ */}
       {tab === 'news' && (
