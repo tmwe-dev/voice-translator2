@@ -222,10 +222,12 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
       {/* AI model picker dropdown */}
       {showAiPicker && (
         <>
+          {/* b.325 (era b.265) — velo trasparente e z 98/100 lasciavano il
+              menu SOTTO altri pannelli e illeggibile sopra la chat. */}
           <div onClick={() => setShowAiPicker(false)}
-            style={{position:'fixed', inset:0, zIndex:98, background:'transparent'}} />
-          <div style={{position:'absolute', top:120, right:12, zIndex:100,
-            background:S.colors.glassCard,
+            style={{position:'fixed', inset:0, zIndex:298, background:'rgba(0,0,0,0.35)'}} />
+          <div style={{position:'absolute', top:120, right:12, zIndex:300,
+            background:S.colors.bg || '#0a0f1f',
             border:`1px solid ${S.colors.cardBorder}`,
             borderRadius:12, padding:'4px 0', width:220, maxHeight:260, overflowY:'auto',
             boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}}>

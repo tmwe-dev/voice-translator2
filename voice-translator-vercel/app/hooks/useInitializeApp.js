@@ -380,7 +380,12 @@ export default function useInitializeApp({
       navigator.serviceWorker.addEventListener('controllerchange', () => {
         if (ricaricato) return;
         ricaricato = true;
-        const inStanza = /room|speaker|taxi/.test(window.location.hash || '') ||
+        // b.325 (era b.265) — la guardia di b.259 non guardava mai la cosa
+        // giusta: l'hash non viene MAI impostato e [role="log"] esiste solo
+        // in chat: in interprete o video di gruppo la pagina si ricaricava a
+        // meta conversazione. page.js ora pubblica la vista in window.__vtVista.
+        const vista = (typeof window !== 'undefined' && window.__vtVista) || '';
+        const inStanza = /room|speaker|taxi|lobby|join|video/.test(vista) ||
           document.querySelector('[aria-label*="translation" i], [role="log"]');
         if (!inStanza) window.location.reload();
       });

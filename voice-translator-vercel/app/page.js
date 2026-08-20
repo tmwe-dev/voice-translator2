@@ -115,6 +115,9 @@ function HomeInner() {
   // LOCAL STATE
   // =============================================
   const [view, setView] = useState('loading');
+  // b.325 (era b.265) — la vista corrente e pubblicata su window per la
+  // guardia anti-ricaricamento del service worker (useInitializeApp).
+  useEffect(() => { if (typeof window !== 'undefined') window.__vtVista = view; }, [view]);
   // b.136 — `lang` e la lingua PARLATA, `uiLang` quella dell'INTERFACCIA,
   // `country` il paese (bandiera del profilo). Prima esisteva solo
   // `lang` e faceva tutti e tre i mestieri.

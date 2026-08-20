@@ -7,6 +7,7 @@ import { creaCodaAudio } from '../lib/codaAudio.js';
 // b.262 — per avvisare (una volta) chi ha l'audio bloccato: vedi sotto.
 import { toast } from '../lib/avvisi.js';
 import { tFuori } from '../lib/i18n.js';
+import { segnalaVoceMuta } from '../lib/segnaleVoce.js';
 import { prendiVoce, rendiVoce } from '../lib/microfonoMaster.js';
 
 /**
@@ -441,6 +442,11 @@ export default function useAudioSystem({
           // una volta sola, invece del silenzio.
           if (suonato === false) {
             playedMsgIdsRef.current.delete(chiave);
+            // b.325 (era b.265, mai arrivato su GitHub) — anche lo strato
+            // ESTERNO (processedForTTSRef in useRoomPolling) deve liberare la
+            // sua chiave: senza, la consegna successiva veniva scartata prima
+            // di arrivare qui e il messaggio restava muto per sempre.
+            segnalaVoceMuta(chiave);
             if (!avvisoAudioMutoRef.current) {
               avvisoAudioMutoRef.current = true;
               toast.warning(tFuori('audioBlockedTapScreen'));

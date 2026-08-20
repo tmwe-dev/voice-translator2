@@ -5,6 +5,7 @@ import useRealtimeRoom from './useRealtimeRoom.js';
 import { createLogger } from '../lib/logger.js';
 // b.138 — gli avvisi di questo hook si leggono a schermo: vanno tradotti.
 import { tFuori } from '../lib/i18n.js';
+import { ascoltaVociMute } from '../lib/segnaleVoce.js';
 import { memGet, memSet } from '../lib/memoria.js';
 const dbg = createLogger('polling');
 
@@ -104,6 +105,12 @@ export default function useRoomPolling({
   // ── Unified dedup: track ALL message IDs that have been processed for TTS ──
   // This prevents TTS replay when polling replaces a temp message with a server version
   const processedForTTSRef = useRef(new Set());
+  // b.325 (era b.265) — quando una voce resta muta DEL TUTTO, anche questo
+  // strato libera la sua chiave: senza, il recupero promesso dal b.262 non
+  // poteva mai avvenire. La chiave interna e l'id nudo; qui e prefissata id:.
+  useEffect(() => ascoltaVociMute((chiave) => {
+    processedForTTSRef.current.delete(`id:${chiave}`);
+  }), []);
 
   // ── Guard: track message IDs that have already been through processIncomingMessage ──
   // This prevents calling processIncomingMessage twice for the same message when both
@@ -642,7 +649,10 @@ export default function useRoomPolling({
         // anche il rientro fallisce si dichiara l'errore di linea.
         if (rRes.status === 401 || rRes.status === 403) {
           auth401CountRef.current++;
-          if (auth401CountRef.current === 2) {
+          // b.325 (era b.265) — prima si riprovava UNA volta sola per
+          // sessione: se anche il rientro falliva si restava fuori per
+          // sempre, in silenzio. Ora si riprova anche ogni 10 battiti.
+          if (auth401CountRef.current === 2 || auth401CountRef.current % 10 === 0) {
             let hostSecret = null;
             try { hostSecret = JSON.parse(memGet('vt-host-secrets') || '{}')[rid] || null; } catch { /* nessun segreto: si rientra da guest */ }
             try {
