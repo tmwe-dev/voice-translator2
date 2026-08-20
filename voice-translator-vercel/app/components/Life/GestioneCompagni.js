@@ -50,7 +50,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
 
   const nuovo = () => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza(compagnoVuoto()); };
-  const modifica = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c }); };
+  // b.317 — audit D6: in modifica le barre ripartivano NEUTRE, e toccarne una
+  // ricomponeva la personalita azzerando le altre cinque. Ora si ripartono
+  // dalle barre salvate del Compagno.
+  const modifica = (c) => { setErrore(''); setBarre(c.barre && typeof c.barre === 'object' ? { ...BARRE_NEUTRE, ...c.barre } : BARRE_NEUTRE); setBozza({ ...c }); };
   const daBase = (c) => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza({ ...c, id: '', nome: `${c.nome} (mio)`, predefinito: false }); };
 
   // ── Costruzione automatica del Compagno (stile RadioChat) ──
@@ -129,9 +132,11 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     try {
       // b.305 — rete di sicurezza: se l'avatar e ancora un data URL pesante
       // (es. caricato da fuori), lo si rimpicciolisce prima di spedire.
-      let daSalvare = bozza;
+      // b.317 — audit D5/D6: si salvano anche le BARRE (dal cursore) e il
+      // genere: prima si perdevano al salvataggio.
+      let daSalvare = { ...bozza, barre };
       if (bozza.avatar && bozza.avatar.startsWith('data:') && bozza.avatar.length > 180000) {
-        daSalvare = { ...bozza, avatar: await rimpicciolisci(bozza.avatar) };
+        daSalvare = { ...daSalvare, avatar: await rimpicciolisci(bozza.avatar) };
         setBozza(daSalvare);
       }
       await salvaMio(daSalvare, userToken);
@@ -140,7 +145,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     } catch (e) {
       setErrore(e.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
     } finally { setSalvando(false); }
-  }, [bozza, userToken, onCambiato, L]);
+  }, [bozza, barre, userToken, onCambiato, L]);
 
   const elimina = useCallback(async (id) => {
     if (!userToken) return;
@@ -156,7 +161,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     const nome = (bozza?.nome || '').trim();
     const ruolo = (bozza?.ruolo || '').trim();
     const campione = nome ? `${nome}.${ruolo ? ' ' + ruolo + '.' : ''}` : L('lifeVoiceSample');
-    parlaTurno({ voceId, testo: campione, lingua, userToken });
+    // b.317 — audit D4: l'anteprima provava la voce nella lingua dell'APP,
+    // non in quella scelta per il Compagno: creavi "Yuki, maestra di
+    // giapponese" e la sentivi in italiano. Ora prova la combinazione vera.
+    parlaTurno({ voceId, testo: campione, lingua: bozza?.lingua || lingua, userToken });
   }, [bozza, lingua, userToken, L]);
 
   // b.223 — carica la galleria locale (IndexedDB) quando si apre un form.

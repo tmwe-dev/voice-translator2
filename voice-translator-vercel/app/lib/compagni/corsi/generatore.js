@@ -72,7 +72,7 @@ export function estraiJSON(testo) {
   return null;
 }
 
-function vestePocente(docente) {
+function vesteDocente(docente) {
   // b.237 — il profilo DIDATTICO (profili.js): la comprensione viene prima
   // del programma, verifica nei punti chiave, un concetto per volta. Vale
   // anche per il docente generico; per un Compagno scelto conta l'eventuale
@@ -97,7 +97,7 @@ STAI INSEGNANDO A UN BAMBINO. Usa parole semplici e frasi brevi, tono caldo, inc
 
 // ── PROMPT: syllabus (elenco lezioni) ──
 export function promptSyllabus({ argomento, livello = 'base', categoria = 'altro', direzione = '', nLezioni = 5, lingua = 'it', docente = null } = {}) {
-  const system = `${vestePocente(docente)}
+  const system = `${vesteDocente(docente)}
 Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const dir = direzione ? ` Taglio richiesto: ${direzione}.` : '';
   const prompt =
@@ -123,7 +123,7 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
   const profondita = livelloAlto
     ? `\nQUESTO E UN LIVELLO ${livello.toUpperCase()}: vai in profondita. Struttura la lezione in piu passaggi collegati; includi la METODOLOGIA (come si ragiona in questo campo, non solo cosa si sa), almeno un PROBLEMA o CASO concreto da analizzare, e le sfumature/dibattiti aperti. Cita i titoli delle fonti quando usi un dato. Niente semplificazioni da manuale introduttivo.`
     : '';
-  const system = `${vestePocente(docente)}
+  const system = `${vesteDocente(docente)}
 Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
@@ -157,7 +157,20 @@ ${ISTRUZIONE_APPUNTO}`;
 export function promptQuiz({ lezione, contenuto = '', argomento = '', lingua = 'it', nDomande = 3, livello = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   // b.240 — la sfida la lancia il MAESTRO, non un "valutatore didattico":
   // era la voce sbagliata, e trasformava ogni verifica in un esame.
-  const system = `${vestePocente(docente)}\nOra metti alla prova la persona su ciò che le hai appena insegnato. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
+  // b.317 — PUNTO DELL'AUDIT: il livello non calibrava la DIFFICOLTÀ delle
+  // domande (cambiava solo il numero). Ora ogni livello ha una consegna
+  // operativa: base = riconoscere, intermedio = capire, avanzato = applicare
+  // a un caso nuovo, universitario = analizzare, ricercatore = valutare.
+  const DIFFICOLTA = {
+    bambino: 'Domande semplicissime, sul riconoscere le cose appena viste.',
+    base: 'Domande sul RICONOSCERE e ricordare i punti chiave.',
+    intermedio: 'Domande sul CAPIRE: parafrasi, perché, collegamenti fra due punti della lezione.',
+    avanzato: 'Domande che APPLICANO i concetti a un piccolo caso nuovo (ma risolvibile SOLO col contenuto della lezione).',
+    universitario: 'Domande che ANALIZZANO: distinguere cause ed effetti, confrontare posizioni presenti nella lezione.',
+    ricercatore: 'Domande che VALUTANO: giudicare un’affermazione o un’obiezione alla luce di quanto insegnato.',
+  };
+  const consegnaDifficolta = DIFFICOLTA[livello] || DIFFICOLTA.base;
+  const system = `${vesteDocente(docente)}\nOra metti alla prova la persona su ciò che le hai appena insegnato. Scrivi in lingua: ${nomeLingua(lingua)}.\nDIFFICOLTÀ (livello ${livello || 'base'}): ${consegnaDifficolta}${registroBambini(livello, lingua)}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const testo = String(contenuto || '').slice(0, 4000);
   const prompt =
@@ -261,7 +274,7 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 // stava spiegando, breve e naturale, poi lascia riprendere. Non e una chat a
 // parte: e lo stesso docente, che si gira verso di te un momento.
 export async function generaRispostaDomanda({ argomento = '', lezione = null, sezione = '', prossime = [], domanda = '', storia = [], modo = 'risposta', livello = 'base', lingua = 'it', docente = null } = {}, { userToken = null } = {}) {
-  const persona = vestePocente(docente);
+  const persona = vesteDocente(docente);
   const storiaTxt = (Array.isArray(storia) ? storia.slice(-8) : [])
     .map((t) => `[${t.ruolo === 'maestro' ? 'Maestro' : 'Studente'}]: ${String(t.testo || '').slice(0, 500)}`).join('\n');
   const pezzo = `"""${String(sezione || '').slice(0, 1400)}"""`;
@@ -318,6 +331,14 @@ export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDo
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'quiz-illeggibile' };
   const domande = dati
     .filter(d => d && d.domanda && Array.isArray(d.opzioni))
-    .map(d => ({ domanda: String(d.domanda), opzioni: d.opzioni.slice(0, 4).map(String), corretta: Math.max(0, Math.min(3, Number(d.corretta) || 0)), spiegazione: String(d.spiegazione || '') }));
+    .map(d => {
+      const opzioni = d.opzioni.slice(0, 4).map(String);
+      // b.317 — B7 dell'audit: l'indice della risposta era limitato a 0-3 ma
+      // NON al numero reale di opzioni: con 3 opzioni e corretta=3 la domanda
+      // diventava IMPOSSIBILE (nessuna opzione giusta). Ora l'indice e sempre
+      // dentro l'elenco.
+      const corretta = Math.max(0, Math.min(opzioni.length - 1, Number(d.corretta) || 0));
+      return { domanda: String(d.domanda), opzioni, corretta, spiegazione: String(d.spiegazione || '') };
+    });
   return { ok: true, domande };
 }

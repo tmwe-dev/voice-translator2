@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
+import { parlaTurno } from '../../lib/compagni/cliente.js';
+import { pausa as pausaAudioLife } from '../../lib/audioLife.js';
 
 // ═══════════════════════════════════════════════════════════════
 // PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
@@ -31,7 +33,13 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
     try { streamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* il microfono era gia stato chiuso: chiuderlo due volte non e un guasto */ }
     streamRef.current = null;
   }, []);
-  useEffect(() => () => chiudiMicrofono(), [chiudiMicrofono]);
+  // b.317 — audit 6.11: allo smontaggio si ferma anche il REGISTRATORE, non
+  // solo le tracce: altrimenti onstop scattava su un componente morto e si
+  // pagava una trascrizione che nessuno avrebbe visto.
+  useEffect(() => () => {
+    try { if (recRef.current && recRef.current.state !== 'inactive') { recRef.current.onstop = null; recRef.current.stop(); } } catch { /* il registratore era gia fermo: fermarlo due volte non e un guasto */ }
+    chiudiMicrofono();
+  }, [chiudiMicrofono]);
 
   const valuta = useCallback(async (blob) => {
     setStato('valuto');
@@ -42,8 +50,17 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
       if (userToken) fd.append('userToken', userToken);
       const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
       const d = await r.json().catch(() => null);
-      if (!r.ok || !d) throw new Error('trascrizione non riuscita');
-      const detto = d.text || d.transcript || d.testo || '';
+      // b.317 — GESTIONE VERA degli errori (audit 6.10): un 402 di credito non
+      // e un guasto del microfono, e va detto per quello che e.
+      if (!r.ok || !d) {
+        if (r.status === 402 || d?.creditoEsaurito) { setErrore('Credito esaurito: ricarica per continuare a esercitarti.'); setStato('pronto'); return; }
+        throw new Error('trascrizione non riuscita');
+      }
+      // b.317 — IL BLOCCANTE dell'audit (6.1): la rotta risponde col campo
+      // `original`, ma qui si leggevano solo text/transcript/testo — sempre
+      // vuoti. Risultato: OGNI esercizio dava 0% con tutte le parole rosse,
+      // da sempre. Ora si legge il campo giusto (gli alias restano come rete).
+      const detto = d.original || d.text || d.transcript || d.testo || '';
       const e = valutaPronuncia(frase, detto);
       setEsito({ ...e, detto });
       setStato('fatto');
@@ -54,6 +71,18 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
     }
   }, [frase, lingua, userToken, onEsito]);
 
+  // b.317 — ASCOLTA LA FRASE (audit 6.5): prima si chiedeva di pronunciare
+  // una frase MAI SENTITA. Ora la voce la dice, alla velocita giusta,
+  // nella lingua studiata; poi la ripeti.
+  const [ascoltoFrase, setAscoltoFrase] = useState(false);
+  const ascoltaFrase = useCallback(async () => {
+    if (ascoltoFrase) return;
+    setAscoltoFrase(true);
+    try { await parlaTurno({ voceId: null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }); }
+    catch { /* la voce e un di piu */ }
+    finally { setAscoltoFrase(false); }
+  }, [ascoltoFrase, frase, lingua, userToken]);
+
   const registra = useCallback(async () => {
     if (stato === 'registro') { // secondo tocco: si ferma
       try { recRef.current?.stop(); } catch { /* la registrazione era gia finita da sola: fermarla di nuovo non e un guasto */ }
@@ -61,6 +90,10 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
     }
     setErrore(''); setEsito(null);
     try {
+      // b.317 — audit 6.7: se la lezione sta ancora parlando, il microfono
+      // catturava il TTS e lo mandava a trascrivere. Prima si registra, si
+      // mette in PAUSA la voce in corso.
+      pausaAudioLife();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const pezzi = [];
@@ -88,11 +121,18 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
       <div style={{ fontSize: 12, color: muto, marginBottom: 6 }}>Dillo ad alta voce</div>
       <div style={{ fontSize: 17, fontWeight: 800, color: testoP, marginBottom: 10 }}>{frase}</div>
 
-      <button onClick={registra} disabled={stato === 'valuto'}
-        style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',
-          background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
-        {stato === 'registro' ? 'Ho finito' : stato === 'valuto' ? 'Ascolto…' : stato === 'fatto' ? 'Riprova' : 'Registra'}
-      </button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button onClick={ascoltaFrase} disabled={ascoltoFrase || stato === 'registro'}
+          style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${accent}`, fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
+            background: 'transparent', color: accent, opacity: (ascoltoFrase || stato === 'registro') ? 0.6 : 1 }}>
+          {ascoltoFrase ? '…' : '▶ Ascolta la frase'}
+        </button>
+        <button onClick={registra} disabled={stato === 'valuto'}
+          style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',
+            background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
+          {stato === 'registro' ? 'Ho finito' : stato === 'valuto' ? 'Ascolto…' : stato === 'fatto' ? 'Riprova' : 'Registra'}
+        </button>
+      </div>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 8 }}>{errore}</div>}
 

@@ -32,6 +32,11 @@ function daRiga(r) {
     avatar: r.avatar || '/avatars/9.png', voce: { id: r.voce_id, nome: r.voce_nome || '' },
     provider: r.provider, modello: r.modello, liberta: r.liberta, personalita: r.personalita || '',
     lingua: r.lingua || '', memoria: !!r.memoria, predefinito: false,
+    // b.317 — audit D5/D6: genere e barre ora SOPRAVVIVONO al salvataggio.
+    // Prima si perdevano: riaprire una "Marilyn" e premere Ridisegna dava un
+    // volto neutro, e toccare UNA barra azzerava le altre cinque.
+    genere: r.genere || 'neutral',
+    barre: r.barre && typeof r.barre === 'object' ? r.barre : null,
     // b.237 — Deep Setting: override dei profili per superficie (o null).
     profili: pulisciProfili(r.profili),
   };
@@ -69,6 +74,9 @@ export async function salvaCompagno(email, c) {
     liberta: c.liberta || 'balanced',
     lingua: (c.lingua || '').slice(0, 8) || null,
     memoria: !!c.memoria,
+    // b.317 — audit D5/D6: genere e barre si salvano (colonne aggiunte in DB).
+    genere: ['male', 'female', 'neutral'].includes(c.genere) ? c.genere : 'neutral',
+    barre: c.barre && typeof c.barre === 'object' ? c.barre : null,
     personalita: (c.personalita || '').slice(0, 4000),
     // b.237 — Deep Setting: si salva SOLO ciò che passa il validatore
     // (superfici note, profili esistenti); il resto si butta.

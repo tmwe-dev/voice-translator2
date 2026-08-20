@@ -119,9 +119,24 @@ Usalo con misura: una frase per volta, semplice all'inizio e più lunga quando r
  * Stacca l'esercizio dal testo: il tag non si mostra e non si legge.
  * @returns {{testo:string, esercizio:string|null}}
  */
+const TAG_TUTTI = /\[PRONUNCIA:\s*[^\]]*?\s*\]/gi;
+
 export function staccaEsercizio(testo) {
   const s = String(testo || '');
   const m = s.match(TAG);
   if (!m) return { testo: s, esercizio: null };
-  return { testo: s.replace(TAG, '').replace(/\s{2,}/g, ' ').trim(), esercizio: (m[1] || '').trim() || null };
+  // b.317 — DUE difetti trovati dall'audit, entrambi qui.
+  // B1: il vecchio `.replace(/\s{2,}/g,' ')` appiattiva TUTTI i doppi a-capo
+  // della lezione in spazi: i paragrafi collassavano in uno solo e le
+  // diapositive/evidenziazione morivano proprio nei corsi di lingua (dove il
+  // tag c'e sempre). Ora si compattano solo spazi e tab: i capoversi restano.
+  // B12: il modello a volte propone DUE tag; il vecchio replace toglieva solo
+  // il primo e il secondo veniva mostrato e letto ad alta voce. Ora si tolgono
+  // tutti; l'esercizio proposto resta il primo.
+  const pulito = s.replace(TAG_TUTTI, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { testo: pulito, esercizio: (m[1] || '').trim() || null };
 }

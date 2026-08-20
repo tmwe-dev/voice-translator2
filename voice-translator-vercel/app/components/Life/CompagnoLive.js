@@ -14,6 +14,12 @@ import { FONT, getLang } from '../../lib/constants.js';
 
 // L'agente "Compagno Live — BarTalk (Amico)" su ElevenLabs.
 const AGENTE_LIVE_ID = process.env.NEXT_PUBLIC_ELEVENLABS_AMICO_AGENT || 'agent_9101m0ev7nh8fa0ag1n2ys1s6p1n';
+// b.317 — VOCE DEL SINGOLO COMPAGNO nel dal-vivo. Richiede che sull'agente
+// ElevenLabs siano ABILITATI gli overrides (pannello → Security → voice_id):
+// senza, la sessione con override viene rifiutata. Finché Luca non li abilita
+// resta spento e tutti parlano con la voce di default dell'agente (italiana).
+// Per accendere: NEXT_PUBLIC_ELEVEN_VOICE_OVERRIDE=1 su Vercel.
+const OVERRIDE_VOCE = process.env.NEXT_PUBLIC_ELEVEN_VOICE_OVERRIDE === '1';
 const SCRIPT_WIDGET = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
 
 let scriptRichiesto = false;
@@ -74,6 +80,7 @@ function CompagnoLive({ compagno, lingua, onChiudi, testoP, muto, accent, card, 
           agent-id={AGENTE_LIVE_ID}
           dynamic-variables={variabili}
           variant="expanded"
+          {...(OVERRIDE_VOCE && compagno?.voce?.id ? { 'override-voice-id': compagno.voce.id } : {})}
         />
       )}
     </div>

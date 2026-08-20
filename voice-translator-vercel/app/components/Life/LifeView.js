@@ -680,8 +680,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       if (domande.length && Object.keys(nuove).length === domande.length) {
         const giuste = domande.filter((q, i) => nuove[i] === q.corretta).length;
         const daRivedere = domande.filter((q, i) => nuove[i] !== q.corretta).map((q) => q.domanda);
-        const indiceLezione = Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo));
-        registraEsito({
+        // b.317 — audit B3: con Math.max(0, findIndex) un titolo non trovato
+        // (corso di libreria, titolo cambiato) attribuiva il voto alla PRIMA
+        // lezione in silenzio. Se non si trova, non si registra: l'esito e
+        // un di piu, un esito sbagliato e peggio di nessun esito.
+        const indiceLezione = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
+        if (indiceLezione >= 0) registraEsito({
           argomento: argomento.trim(),
           lezioneIndice: indiceLezione,
           punteggio: Math.round((giuste / domande.length) * 100),
@@ -844,11 +848,19 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           const es = staccaEsercizio(testoVisibile(aperta.contenuto)).esercizio;
           if (!es) return null;
           const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
-          return <PannelloPronuncia frase={es} lingua={l2 || linguaCorso} userToken={userToken}
+          // b.317 — audit 6.8: senza `key`, cambiando lezione React riusava il
+          // pannello e si vedeva il punteggio della frase precedente sotto la
+          // frase nuova. Con key={es} il pannello riparte pulito.
+          return <PannelloPronuncia key={es} frase={es} lingua={l2 || linguaCorso} userToken={userToken}
             onEsito={({ punteggio, daRivedere }) => {
-              registraEsito({
-                argomento: argomento.trim(),
-                lezioneIndice: Math.max(0, lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo)),
+              // b.317 — audit B2/6.2: quiz e pronuncia scrivevano sulla STESSA
+              // riga (stesso corso+lezione) e l'ultimo cancellava l'altro. La
+              // pronuncia ora vive sotto una chiave-corso separata; e con
+              // findIndex non trovato non si registra (vedi sopra).
+              const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
+              if (idx >= 0) registraEsito({
+                argomento: `${argomento.trim()} · pronuncia`,
+                lezioneIndice: idx,
                 punteggio, daRivedere, userToken,
               }).catch(() => { /* il ricordo e un di piu */ });
             }}
