@@ -38,7 +38,20 @@ export default class ErrorBoundary extends Component {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  handleReload = () => {
+  // b.337 — la ricarica deve essere VERA. Il service worker serve il codice
+  // prima dalla cache e aggiorna solo in sottofondo: se in cache c'e un
+  // pacchetto rotto, reload() da solo riesegue il codice rotto e l'utente
+  // resta prigioniero di questa schermata (successo con b.335). Quindi
+  // prima si buttano le cache e si congeda il service worker, POI si ricarica.
+  handleReload = async () => {
+    try {
+      if (typeof caches !== 'undefined') {
+        const nomi = await caches.keys();
+        await Promise.all(nomi.map((n) => caches.delete(n)));
+      }
+      const regs = await navigator.serviceWorker?.getRegistrations?.();
+      await Promise.all((regs || []).map((r) => r.unregister()));
+    } catch (e) { console.warn('[ErrorBoundary] Pulizia cache fallita:', e?.message); }
     window.location.reload();
   };
 

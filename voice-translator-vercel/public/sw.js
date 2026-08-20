@@ -1,5 +1,5 @@
 // Service Worker for BarTalk — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 13; // b.259 — il salto di versione butta le cache vecchie all attivazione
+const CACHE_VERSION = 14; // b.337 — butta il pacchetto b.335 (crollo di Life) rimasto in cache sui client
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;
