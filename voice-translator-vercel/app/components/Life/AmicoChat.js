@@ -84,7 +84,9 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       const d = await parlaAmico({ compagnoId: scelto.id, messaggi: nuovi, lingua, userToken, obiettivi: obiettiviAttivi() });
       // b.232 — se nel frattempo si è cambiato Compagno, scarta la risposta.
       if (sceltoRef.current?.id !== idAtt) return;
-      setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta }]);
+      // b.337 — la voce del turno resta SUL messaggio: senza, un messaggio si
+      // poteva sentire solo all'arrivo e mai piu (riascolto impossibile).
+      setMessaggi((m) => [...m, { ruolo: 'compagno', testo: d.risposta, voceId: d.voceId || null, modoVoce: d.modoVoce || null }]);
       // b.238 — la voce riceve anche COME il Compagno voleva dirlo.
       // b.317 — audit D2: la voce parla nella LINGUA del Compagno, se ne ha una.
       if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce });
@@ -93,6 +95,20 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { if (sceltoRef.current?.id === idAtt) setAttende(false); }
   }, [testo, scelto, attende, messaggi, lingua, userToken, L]);
+
+  // b.337 — RIASCOLTA: ogni messaggio del Compagno ha l'altoparlante. Per i
+  // messaggi vecchi (salvati senza voce) la rotta sceglie da sé una voce
+  // adatta alla lingua: meglio una voce plausibile che il silenzio.
+  const [sentendo, setSentendo] = useState(-1);
+  const riascolta = useCallback(async (i) => {
+    const m = messaggi[i];
+    if (!m || sentendo >= 0) return;
+    setSentendo(i);
+    try {
+      await parlaTurno({ voceId: m.voceId || null, testo: m.testo, lingua: scelto?.lingua || lingua, userToken, modoVoce: m.modoVoce || null });
+    } catch { /* la voce e un di piu: il testo resta leggibile */ }
+    finally { setSentendo(-1); }
+  }, [messaggi, sentendo, scelto, lingua, userToken]);
 
   // ── Scelta del Compagno ──
   if (!scelto) {
@@ -177,6 +193,13 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
             background: m.ruolo === 'persona' ? accent : card, color: m.ruolo === 'persona' ? '#04121c' : testoP,
             border: m.ruolo === 'persona' ? 'none' : bordo }}>
             {m.testo}
+            {m.ruolo === 'compagno' && (
+              <button onClick={() => riascolta(i)} disabled={sentendo >= 0} aria-label={L('listenWord')} title={L('listenWord')}
+                style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8, padding: 2, border: 'none',
+                  background: 'transparent', cursor: 'pointer', opacity: sentendo === i ? 1 : 0.55 }}>
+                <Icon name="speaker" size={14} color={sentendo === i ? accent : testoP} />
+              </button>
+            )}
           </div>
         ))}
         {attende && <div style={{ alignSelf: 'flex-start', color: muto, fontSize: 13, padding: '4px 8px' }}>…</div>}

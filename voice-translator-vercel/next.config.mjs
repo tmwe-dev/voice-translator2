@@ -23,7 +23,7 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io https://unpkg.com",
+              "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdnjs.cloudflare.com https://js.stripe.com https://plausible.io https://unpkg.com",
               "style-src 'self' 'unsafe-inline' https://accounts.google.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
