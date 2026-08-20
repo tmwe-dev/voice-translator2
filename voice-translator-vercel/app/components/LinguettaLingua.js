@@ -12,7 +12,7 @@ import Icon from './Icon.js';
 // Semplice e con icone grandi (regola anziani/bambini).
 // ═══════════════════════════════════════════════════════════════
 
-function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0' }) {
+function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0', batteria = null }) {
   const [aperto, setAperto] = useState(false);
   const [cerca, setCerca] = useState('');
 
@@ -37,20 +37,34 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
 
   return (
     <>
-      {/* La linguetta sul bordo sinistro */}
+      {/* b.359 — la linguetta STACCATA dal bordo, PIU GRANDE del 50%, con la
+          pila del credito VERTICALE impilata sopra, a sinistra (collaudo di
+          Luca). Un solo blocco fisso: la pila in cima, la linguetta sotto. */}
       {!aperto && (
-        <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
-          style={{
-            position: 'fixed', left: 0, top: 'max(96px, calc(env(safe-area-inset-top) + 72px))', zIndex: 60, // b.355 — all'altezza del titolo, non a meta schermo (Luca)
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-            padding: '12px 7px 12px 5px', border: 'none', cursor: 'pointer',
-            background: card, borderTop: bordo, borderRight: bordo, borderBottom: bordo,
-            borderTopRightRadius: 14, borderBottomRightRadius: 14, fontFamily: FONT,
-            boxShadow: '2px 2px 14px rgba(0,0,0,0.35)', WebkitTapHighlightColor: 'transparent',
-          }}>
-          <span style={{ fontSize: 22, lineHeight: 1 }}>{linguaAttuale?.flag || <Icon name="globe" size={20} color={accent} />}</span>
-          <span style={{ fontSize: 12, color: accent }}>›</span>
-        </button>
+        <div style={{
+          position: 'fixed', left: 10, top: 'max(96px, calc(env(safe-area-inset-top) + 72px))', zIndex: 60,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+        }}>
+          {batteria && (
+            <div style={{
+              display: 'flex', justifyContent: 'center', padding: '6px 6px 4px',
+              background: card, border: bordo, borderRadius: 16,
+              boxShadow: '2px 2px 14px rgba(0,0,0,0.35)',
+            }}>
+              {batteria}
+            </div>
+          )}
+          <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              padding: '15px 14px', border: bordo, cursor: 'pointer',
+              background: card, borderRadius: 18, fontFamily: FONT,
+              boxShadow: '2px 2px 14px rgba(0,0,0,0.35)', WebkitTapHighlightColor: 'transparent',
+            }}>
+            <span style={{ fontSize: 33, lineHeight: 1 }}>{linguaAttuale?.flag || <Icon name="globe" size={30} color={accent} />}</span>
+            <span style={{ fontSize: 16, color: accent, lineHeight: 1 }}>›</span>
+          </button>
+        </div>
       )}
 
       {/* Pannello a scomparsa */}

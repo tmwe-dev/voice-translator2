@@ -11,7 +11,6 @@ import { toast } from '../lib/avvisi.js';
 import { IconQR, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
-import { BatteryPillSlot } from './BatteryPill.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 
@@ -244,17 +243,15 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               userSelect: 'text',
             }}
           >#{PUSH}</span>
-          {/* la batteria del credito, nell'angolo in alto a destra */}
-          <div style={{ position: 'absolute', top: 0, right: 0, zIndex: 3 }}>
-            <BatteryPillSlot />
-          </div>
+          {/* b.359 — la batteria NON sta piu qui nell'angolo: e passata
+              verticale, sopra la linguetta della lingua, a sinistra (Luca). */}
 
           {/* Title */}
           <h1 style={{
             fontSize: 28, fontWeight: 800, letterSpacing: -0.5,
             color: C.textPrimary, fontFamily: FONT,
             margin: 0, lineHeight: 1.2, textAlign: 'center',
-            /* i due angoli sono occupati dai distintivi: il titolo non ci finisce sotto */
+            /* l'angolo sinistro ha il numero di rilascio: il titolo lo scavalca */
             padding: '0 56px',
           }}>
             {L('homeTitle')}

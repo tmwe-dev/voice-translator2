@@ -214,7 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.359** (push #598) — il GLOBO di Luca (file bartalk-completo_2
+- Versione: **b.360** (push #599) — linguetta lingua piu grande (+50%) e
+  staccata dal bordo, con la pila del credito VERTICALE impilata sopra a
+  sinistra (via a batteria dall'angolo destro della home)
+- Versione precedente: **b.359** (push #598) — il GLOBO di Luca (file bartalk-completo_2
   copiato VERBATIM in public/mondo-globo.html) montato dentro Mondo via
   iframe pilotato su 'community'; e il PERMESSO DI NON SAPERE per gli agenti
   (non rispondono piu per forza: non lo so / non ho capito / la domanda non

@@ -34,6 +34,7 @@ import WelcomeView from './components/WelcomeView.js';
 // pigra, altrimenti al primo avvio si vede lo spinner al posto suo.
 import SceltaPaeseView from './components/SceltaPaeseView.js';
 import LinguettaLingua from './components/LinguettaLingua.js';
+import { BatteryPillSlot } from './components/BatteryPill.js'; // b.359 — la pila, verticale, sopra la linguetta
 import CondivisoSheet from './components/CondivisoSheet.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
@@ -1287,7 +1288,7 @@ function HomeInner() {
           (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
           (voicetest). Da qui si cambia lingua e voce al volo. */}
       {!['loading', 'paese', 'welcome', 'room', 'speaker', 'taxi-chat', 'taxi', 'lobby', 'summary', 'join', 'voicetest'].includes(view) && (
-        <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} />
+        <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} batteria={<BatteryPillSlot verticale />} />
       )}
     </AppProvider>
   );

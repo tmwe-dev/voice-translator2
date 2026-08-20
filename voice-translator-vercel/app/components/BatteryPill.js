@@ -14,14 +14,14 @@ import { memDel, memGet, memSet } from '../lib/memoria.js';
 const COLORI = { verde: '#3ddc84', giallo: '#ffc44d', rosso: '#ff5470' };
 
 /** Slot: mostra la pila solo se conosciamo l'utente loggato. */
-export function BatteryPillSlot() {
+export function BatteryPillSlot({ verticale = false }) {
   const { auth } = useApp();
   const utente = auth?.userAccount?.email || null;
   if (!utente) return null;
-  return <BatteryPill utente={utente} />;
+  return <BatteryPill utente={utente} verticale={verticale} />;
 }
 
-export default function BatteryPill({ utente }) {
+export default function BatteryPill({ utente, verticale = false }) {
   // ── b.138 · la pila del credito parlava italiano a tutti ──
   //
   // E il comando piu visto dell'app — sta in cima a ogni schermata — e
@@ -127,29 +127,9 @@ export default function BatteryPill({ utente }) {
     if (d.ok) { setCodice(''); carica(); }
   }
 
-  return (
-    <>
-      {/* ── La pila in header ── */}
-      <button onClick={() => setAperto(true)} aria-label={`${L('creditRow')}: ${dati.testo}`} style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
-        background: tc.cardBg || 'rgba(140,170,255,0.06)', border: `1px solid ${tc.cardBorder || 'rgba(160,190,255,0.14)'}`,
-        borderRadius: 999, padding: '5px 11px', fontFamily: 'inherit',
-      }}>
-        {/* corpo pila */}
-        <span style={{ position: 'relative', width: 24, height: 12, borderRadius: 3,
-          border: `1.5px solid ${colore}`, display: 'inline-block' }}>
-          <span style={{ position: 'absolute', left: 1.5, top: 1.5, bottom: 1.5,
-            width: `${Math.max(6, dati.percento)}%`, maxWidth: 'calc(100% - 3px)',
-            background: colore, borderRadius: 1.5 }} />
-          {/* polo della pila */}
-          <span style={{ position: 'absolute', right: -4.5, top: 3, width: 3, height: 6,
-            background: colore, borderRadius: 1 }} />
-        </span>
-        <span style={{ fontSize: 12, fontWeight: 750, color: tc.textPrimary || '#eef2ff' }}>{dati.testo}</span>
-      </button>
-
-      {/* ── Popup ── */}
-      {aperto && (
+  // b.359 — il popup del credito, condiviso dai due aspetti (pila
+  // orizzontale in header, pila verticale accanto alla linguetta).
+  const popup = aperto ? (
         <div onClick={() => setAperto(false)} style={{
           position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.55)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
@@ -238,7 +218,59 @@ export default function BatteryPill({ utente }) {
             }}>{L('closeWord')}</button>
           </div>
         </div>
-      )}
+  ) : null;
+
+  // b.359 — LA PILA VERTICALE (collaudo di Luca: «la pila elettrica mettila
+  // verticale sopra la linguetta a sinistra»): la stessa pila, ruotata in
+  // piedi col polo in su e la percentuale sotto. Il riempimento sale dal
+  // basso, come una batteria vera.
+  if (verticale) {
+    return (
+      <>
+        <button onClick={() => setAperto(true)} aria-label={`${L('creditRow')}: ${dati.testo}`} style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer',
+          background: 'none', border: 'none', padding: 2, fontFamily: 'inherit',
+          WebkitTapHighlightColor: 'transparent',
+        }}>
+          {/* il polo, in alto */}
+          <span style={{ width: 8, height: 3, borderRadius: 1, background: colore }} />
+          {/* corpo pila, in piedi: il credito riempie dal basso */}
+          <span style={{ position: 'relative', width: 18, height: 30, borderRadius: 4,
+            border: `2px solid ${colore}`, display: 'block' }}>
+            <span style={{ position: 'absolute', left: 1.5, right: 1.5, bottom: 1.5,
+              height: `calc(${Math.max(8, dati.percento)}% - 3px)`, maxHeight: 'calc(100% - 3px)',
+              background: colore, borderRadius: 2 }} />
+          </span>
+          <span style={{ fontSize: 9.5, fontWeight: 800, color: colore, lineHeight: 1 }}>{dati.testo}</span>
+        </button>
+        {aperto && popup}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* ── La pila in header ── */}
+      <button onClick={() => setAperto(true)} aria-label={`${L('creditRow')}: ${dati.testo}`} style={{
+        display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer',
+        background: tc.cardBg || 'rgba(140,170,255,0.06)', border: `1px solid ${tc.cardBorder || 'rgba(160,190,255,0.14)'}`,
+        borderRadius: 999, padding: '5px 11px', fontFamily: 'inherit',
+      }}>
+        {/* corpo pila */}
+        <span style={{ position: 'relative', width: 24, height: 12, borderRadius: 3,
+          border: `1.5px solid ${colore}`, display: 'inline-block' }}>
+          <span style={{ position: 'absolute', left: 1.5, top: 1.5, bottom: 1.5,
+            width: `${Math.max(6, dati.percento)}%`, maxWidth: 'calc(100% - 3px)',
+            background: colore, borderRadius: 1.5 }} />
+          {/* polo della pila */}
+          <span style={{ position: 'absolute', right: -4.5, top: 3, width: 3, height: 6,
+            background: colore, borderRadius: 1 }} />
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 750, color: tc.textPrimary || '#eef2ff' }}>{dati.testo}</span>
+      </button>
+
+      {/* ── Popup ── */}
+      {popup}
     </>
   );
 }
