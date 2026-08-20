@@ -26,7 +26,7 @@ async function handlePost(req) {
     if (azione === 'scanDeposita') {
       const sid = String(body.sid || '');
       const dato = typeof body.dato === 'string' ? body.dato : '';
-      if (!/^[a-z0-9-]{16,64}$/i.test(sid) || !dato.startsWith('data:image/')) {
+      if (!/^[a-z0-9-]{8,64}$/i.test(sid) || !dato.startsWith('data:image/')) {
         return NextResponse.json({ error: 'deposito non valido' }, { status: 400 });
       }
       const ok = await depositaScansione(sid, dato);

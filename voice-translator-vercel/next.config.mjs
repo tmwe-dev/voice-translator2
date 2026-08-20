@@ -27,7 +27,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://accounts.google.com",
               "img-src 'self' data: blob: https:",
               "font-src 'self' data:",
-              "connect-src 'self' https://unpkg.com https://tessdata.projectnaptha.com https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://*.upstash.io https://api.anthropic.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io",
+              "connect-src 'self' https://unpkg.com https://tessdata.projectnaptha.com https://0.peerjs.com wss://0.peerjs.com https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://*.upstash.io https://api.anthropic.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io",
               "media-src 'self' blob: data:",
               "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
               "worker-src 'self' blob:",

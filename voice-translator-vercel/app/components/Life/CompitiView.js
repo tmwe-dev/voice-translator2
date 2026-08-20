@@ -4,7 +4,7 @@ import { FONT, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
-import { leggiImmagineLocale } from '../../lib/ocrLocale.js';
+import ScannerMateriali from './ScannerMateriali.js';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -121,30 +121,11 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     fr.readAsDataURL(file);
   }), []);
 
-  // b.335 — FOTO GRATIS (Tesseract nel dispositivo): il gradino zero-costo
-  // della cascata. Se il risultato e povero (manoscritto, foto storta) si
-  // PROPONE il gradino AI — mai in automatico, mai a sorpresa.
+  // b.343 — la lettura gratis (Tesseract) vive ora in ScannerMateriali,
+  // col motore copiato dal BizCard. Qui restano il ricordo dell'ultima
+  // foto (per il gradino AI a scelta) e il suggerimento stesso.
   const ultimaFotoRef = useRef(null);
-  const [ocrProgresso, setOcrProgresso] = useState(0);
   const [suggerisciAI, setSuggerisciAI] = useState(false);
-  const fotoGratis = useCallback(async (file) => {
-    if (!file || ocrLavoro) return;
-    setOcrLavoro(true); setErrore(''); setSuggerisciAI(false); setOcrProgresso(0);
-    try {
-      ultimaFotoRef.current = file;
-      // b.342 — accetta anche un dataUrl gia pronto (foto arrivata dal
-      // telefono via QR): stessa cascata, stesso zero-costo.
-      const dataUrl = typeof file === 'string' ? file : await fotoInTesto(file);
-      const { testo, fiducia } = await leggiImmagineLocale(dataUrl, lingua || 'it', setOcrProgresso);
-      if (testo && testo.length >= 20) {
-        setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n') }));
-      }
-      if (!testo || testo.length < 20 || fiducia < 60) setSuggerisciAI(true);
-    } catch {
-      // il motore locale non e partito (rete/CSP): resta la via AI
-      setSuggerisciAI(true);
-    } finally { setOcrLavoro(false); setOcrProgresso(0); }
-  }, [ocrLavoro, fotoInTesto, lingua]);
 
   const scattaOcr = useCallback(async (file) => {
     if (!file || ocrLavoro) return;
@@ -158,23 +139,8 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // b.342 — IL TELEFONO COME SCANNER (Luca): dal PC si apre un QR; il
-  // telefono lo inquadra, apre /scan, scatta e deposita; qui si RITIRA in
-  // automatico (sondaggio ogni 3s) e si legge in locale, gratis. Il codice
-  // e usa-e-getta e vive pochi minuti.
-  const [qrSid, setQrSid] = useState(null);
-  useEffect(() => {
-    // Mentre la lettura locale lavora NON si ritira: il ritiro consuma il
-    // deposito, e una seconda pagina arrivata nel frattempo andrebbe persa.
-    if (!qrSid || ocrLavoro) return;
-    const timer = setInterval(async () => {
-      try {
-        const d = await chiama('scanRitira', { sid: qrSid }, userToken);
-        if (d?.dato) fotoGratis(d.dato); // il QR resta aperto: si possono mandare piu pagine
-      } catch { /* si riprova al prossimo giro */ }
-    }, 3000);
-    return () => clearInterval(timer);
-  }, [qrSid, userToken, fotoGratis, ocrLavoro]);
+  // b.343 — l'acquisizione (QR, telefono, multiscansione, maschera) vive
+  // ora in ScannerMateriali, copiata dal BizCard Scanner come ordinato.
 
   // b.334 — PDF: base64 al server, testo indietro, GRATIS (niente wallet).
   const caricaPdf = useCallback(async (file) => {
@@ -358,40 +324,31 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
               <textarea value={matBozza.testo} onChange={(e) => setMatBozza((b) => ({ ...b, testo: e.target.value }))} rows={7}
                 placeholder={tt('lifeMatPaste', 'Incolla qui il testo degli appunti (gratis)… oppure fotografa la pagina qui sotto.')}
                 style={{ ...input, resize: 'vertical', marginBottom: 8 }} />
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <label style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
-                  {ocrLavoro ? `${tt('lifeMatReading', 'Leggo la pagina…')} ${ocrProgresso ? Math.round(ocrProgresso * 100) + '%' : ''}` : tt('lifeMatPhotoFree', 'Fotografa la pagina (gratis)')}
-                  <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) fotoGratis(f); }} />
-                </label>
-                {suggerisciAI && (
-                  <button onClick={() => { if (ultimaFotoRef.current) scattaOcr(ultimaFotoRef.current); setSuggerisciAI(false); }} disabled={ocrLavoro}
-                    style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-                    {tt('lifeMatAiBoost', 'Lettura difficile: migliora con AI (~1 cent)')}
-                  </button>
-                )}
-                {/* b.342 — il TELEFONO come scanner: QR dal PC, foto dal telefono. */}
-                <button onClick={() => setQrSid((s) => s ? null : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)))}
-                  style={{ flex: 1, minWidth: 150, padding: 11, borderRadius: 12, border: qrSid ? `1px solid ${accent}` : bordo, background: qrSid ? `${accent}14` : 'transparent', color: qrSid ? accent : testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-                  {qrSid ? tt('lifeMatQrOff', 'Chiudi il QR') : `📱 ${tt('lifeMatQrPhone', 'Usa il telefono (QR)')}`}
+              {/* b.343 — L'AREA UNICA di acquisizione, copiata dal BizCard
+                  Scanner: trascina/seleziona (foto e PDF insieme) + QR che
+                  collega la fotocamera del telefono, maschera con i campi
+                  rilevati in tempo reale, multiscansione con fusione. */}
+              <ScannerMateriali
+                lingua={lingua} userToken={userToken} chiama={chiama}
+                onTesto={(testo, info) => {
+                  setMatBozza((b) => ({
+                    ...(b || { titolo: '', materia: '', testo: '' }),
+                    titolo: b?.titolo || info?.titolo || '',
+                    materia: b?.materia || info?.materia || '',
+                    testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n'),
+                  }));
+                  if ((info?.fiducia || 0) < 60) setSuggerisciAI(true);
+                }}
+                onPdf={caricaPdf}
+                onFotoPerAI={(dataUrl) => { ultimaFotoRef.current = dataUrl; }}
+                {...{ testoP, muto, accent, card, bordo }} />
+              {suggerisciAI && (
+                <button onClick={() => { if (ultimaFotoRef.current) scattaOcr(ultimaFotoRef.current); setSuggerisciAI(false); }} disabled={ocrLavoro}
+                  style={{ width: '100%', marginTop: 8, padding: 11, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+                  {tt('lifeMatAiBoost', 'Lettura difficile: migliora con AI (~1 cent)')}
                 </button>
-                {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
-                <label style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
-                  {tt('lifeMatPdf', 'Carica PDF (gratis)')}
-                  <input type="file" accept="application/pdf" style={{ display: 'none' }}
-                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) caricaPdf(f); }} />
-                </label>
-                {qrSid && (
-                  <div style={{ flexBasis: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: `1px solid ${accent}44` }}>
-                    <img alt="QR" width={132} height={132} style={{ borderRadius: 8, background: '#fff', padding: 4 }}
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=132x132&data=${encodeURIComponent(`${window.location.origin}/scan?sid=${qrSid}`)}`} />
-                    <div style={{ fontSize: 13, color: testoP, lineHeight: 1.5 }}>
-                      <b>{tt('lifeMatQrTitle', 'Inquadra col telefono')}</b><br />
-                      {tt('lifeMatQrHint', 'Si apre la fotocamera: scatta la pagina e arriva qui da sola, gratis. Puoi mandare più pagine di seguito.')}
-                      <div style={{ color: muto, fontSize: 12, marginTop: 4 }}>{tt('lifeMatQrWait', 'In attesa della foto…')}</div>
-                    </div>
-                  </div>
-                )}
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                 <button onClick={salvaMat} disabled={!matBozza.testo.trim()}
                   style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>
                   {tt('lifeSave', 'Salva')}
