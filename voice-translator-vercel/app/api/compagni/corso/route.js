@@ -7,6 +7,7 @@ import { lezioniProfonde, domandePerLivello } from '../../../lib/compagni/corsi/
 import { generaSyllabus, generaLezione, generaQuiz, generaRispostaDomanda } from '../../../lib/compagni/corsi/generatore.js';
 import { pubblicaCorso, elencaCorsiPubblici } from '../../../lib/compagni/corsi/pubblici.js';
 import { leggiOsservazioni, aggiungiOsservazioni, leggiProgresso, salvaEsito } from '../../../lib/compagni/corsi/studente.js';
+import { salvaCorsoUtente, mieiCorsi, segnaUltimaLezione, leggiProfiloStudente, salvaProfiloStudente, contestoProfilo, aggiornaProfiloPronuncia } from '../../../lib/compagni/corsi/biblioteca.js';
 
 const log = createLogger('compagni-corso');
 
@@ -56,10 +57,14 @@ async function handlePost(req) {
       // b.242 — il Maestro RICORDA: cosa sa di questa persona e dove siete
       // arrivati nel corso. Due letture leggere, nessuna chiamata al modello
       // in piu; se l'utente non ha un account, semplicemente non c'e ricordo.
-      const [osservazioni, progresso] = sessione?.email
-        ? await Promise.all([leggiOsservazioni(sessione.email), leggiProgresso(sessione.email, argomento)])
-        : [[], []];
-      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso }, { userToken });
+      const [osservazioni, progresso, datiProfilo] = sessione?.email
+        ? await Promise.all([leggiOsservazioni(sessione.email), leggiProgresso(sessione.email, argomento), leggiProfiloStudente(sessione.email)])
+        : [[], [], null];
+      // b.321 — Ondata A/B: il Maestro CONOSCE chi ha davanti (Learner
+      // Profile) e rispetta la durata di sessione scelta.
+      const notaPersona = contestoProfilo(datiProfilo);
+      const durata = datiProfilo?.preferenze?.durata || body.durata || '';
+      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       // b.244 — quello che il Maestro ha notato di questa persona si salva
       // DOPO aver risposto: la lezione non deve aspettare.
@@ -107,6 +112,38 @@ async function handlePost(req) {
       return NextResponse.json({ ok: true, progresso: await leggiProgresso(sessione.email, argomento) });
     }
 
+    // ── b.321 · ONDATA A — LA BIBLIOTECA DEI CORSI DELL'UTENTE ──
+    // Il corso si SALVA (syllabus stabile) e si riprende: niente piu
+    // rigenerazioni pagate per contenuto gia visto, niente progresso
+    // disallineato. Piu percorsi insieme, ciascuno col suo segnalibro.
+    if (azione === 'salvaCorsoMio') {
+      if (!sessione?.email) return NextResponse.json({ error: 'Accedi per salvare i tuoi corsi' }, { status: 401 });
+      const salvato = await salvaCorsoUtente(sessione.email, {
+        argomento, titolo: body.titolo, categoria, livello, lingua,
+        docenteId: body.docenteId, lezioni: Array.isArray(body.lezioni) ? body.lezioni : [],
+        obiettivoId: typeof body.obiettivoId === 'string' ? body.obiettivoId.slice(0, 80) : null,
+      });
+      return NextResponse.json({ ok: true, salvato: !!salvato });
+    }
+    if (azione === 'mieiCorsi') {
+      if (!sessione?.email) return NextResponse.json({ ok: true, corsi: [] });
+      return NextResponse.json({ ok: true, corsi: await mieiCorsi(sessione.email) });
+    }
+    if (azione === 'segnalibro') {
+      if (sessione?.email && argomento) await segnaUltimaLezione(sessione.email, argomento, body.indice);
+      return NextResponse.json({ ok: true });
+    }
+    // ── b.321 · profilo dello studente (Learner Profile + preferenze) ──
+    if (azione === 'profiloStudente') {
+      if (!sessione?.email) return NextResponse.json({ ok: true, dati: null });
+      return NextResponse.json({ ok: true, dati: await leggiProfiloStudente(sessione.email) });
+    }
+    if (azione === 'salvaProfiloStudente') {
+      if (!sessione?.email) return NextResponse.json({ error: 'Accedi per salvare il profilo' }, { status: 401 });
+      const ok = await salvaProfiloStudente(sessione.email, { profilo: body.profilo, comunicazione: body.comunicazione, preferenze: body.preferenze });
+      return NextResponse.json({ ok });
+    }
+
     // b.242 — REGISTRA com'e andata: e cio che rende possibili la
     // motivazione ("guarda dov'eri"), il ripasso mirato e un percorso che si
     // adatta. Senza account non si salva niente, e va bene cosi.
@@ -118,6 +155,13 @@ async function handlePost(req) {
       const osservazioni = Array.isArray(body.osservazioni) ? body.osservazioni.slice(0, 6).map(t => String(t).slice(0, 160)) : [];
       const salvato = await salvaEsito(sessione.email, { corso: argomento, lezione: indice, punteggio, daRivedere });
       if (osservazioni.length) await aggiungiOsservazioni(sessione.email, osservazioni);
+      // b.321 — Ondata C: se l'esito e di PRONUNCIA, aggiorna anche il
+      // profilo pronuncia persistente (errori ricorrenti + trend): e da li
+      // che nascono i drill mirati e i ritorni futuri.
+      if (body.tipo === 'pronuncia' && typeof body.linguaStudiata === 'string') {
+        try { await aggiornaProfiloPronuncia(sessione.email, body.linguaStudiata.slice(0, 8), { punteggio, parole: daRivedere }); }
+        catch { /* il profilo pronuncia e un di piu: l'esito resta salvato */ }
+      }
       return NextResponse.json({ ok: true, salvato });
     }
 

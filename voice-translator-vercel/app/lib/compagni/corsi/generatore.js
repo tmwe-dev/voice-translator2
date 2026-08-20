@@ -110,7 +110,16 @@ Niente testo fuori dal JSON.`;
 }
 
 // ── PROMPT: contenuto di una lezione (fondato sulle fonti, se presenti) ──
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false } = {}) {
+// b.321 — Ondata A/B: la DURATA della sessione la decide l'utente (linea di
+// Luca: corsi e lezioni LEGGERI di default, ma con i comandi in mano a chi
+// studia). breve = micro-sessione 3-5 min; normale = 6-10; approfondita = 10-15.
+const ISTRUZIONI_DURATA = {
+  breve: '\nDURATA: micro-sessione BREVE (3-5 minuti di ascolto). UN concetto solo, dritto al punto, un esempio. Se il tema e grande, chiudi il pezzo di oggi con naturalezza: il resto verra nella prossima micro-sessione. Breve NON significa superficiale: significa un morso alla volta.',
+  normale: '\nDURATA: sessione normale (6-10 minuti di ascolto). Pochi concetti, ben digeriti.',
+  approfondita: '\nDURATA: sessione approfondita (10-15 minuti di ascolto): piu esempi, piu sfumature, piu collegamenti.',
+};
+
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '' } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
@@ -123,8 +132,9 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
   const profondita = livelloAlto
     ? `\nQUESTO E UN LIVELLO ${livello.toUpperCase()}: vai in profondita. Struttura la lezione in piu passaggi collegati; includi la METODOLOGIA (come si ragiona in questo campo, non solo cosa si sa), almeno un PROBLEMA o CASO concreto da analizzare, e le sfumature/dibattiti aperti. Cita i titoli delle fonti quando usi un dato. Niente semplificazioni da manuale introduttivo.`
     : '';
+  const bloccoDurata = ISTRUZIONI_DURATA[durata] || '';
   const system = `${vesteDocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoDurata}${notaPersona}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -216,7 +226,7 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
-export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [] } = {}, { userToken = null } = {}) {
+export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '' } = {}, { userToken = null } = {}) {
   let fonti = [];
   // ── INIZIO b.247 — FAIL-CLOSED sulle materie certificate ──
   // Scelta dichiarata: per una materia che PRETENDE fonti (medicina,
@@ -253,12 +263,14 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
     }
   }
   // ── FINE b.247 ──
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate });
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata });
   // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
   // b.308 — spazio piu generoso: una lezione da documentario non deve
   // uscire tagliata a meta per un tetto stretto. Il costo segue la mole, ma
   // il principio e non bloccare/non mozzare: chi va in profondita ha respiro.
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: livelloAlto ? 2400 : 1200 });
+  // b.321 — la micro-sessione breve accorcia anche lo spazio (meno costo,
+  // meno attesa); la scelta resta dell'utente.
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: durata === 'breve' ? 700 : (livelloAlto ? 2400 : 1200) });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   // b.244 — l'appunto del Maestro si stacca qui: non deve MAI comparire nella
   // lezione. Le osservazioni NUOVE tornano al chiamante, che le salva (il
