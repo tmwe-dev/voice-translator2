@@ -22,6 +22,15 @@ const STRUMENTI = [
     url: '/scanner/index.html?skin=bartalk',
     icona: 'credit',
   },
+  // b.349 — PEEPOFF, l'app sorella: messaggi che non passano mai da un
+  // server. L'indirizzo e la tua email con # al posto di @.
+  {
+    id: 'peepoff',
+    nome: 'PeepOff — posta segreta',
+    descrizione: 'Messaggi diretti cifrati: il contenuto non tocca mai un server',
+    url: '/posta',
+    icona: 'lock',
+  },
 ];
 
 function BusinessView({ onBack }) {
