@@ -112,9 +112,12 @@ export async function chiediAlMaestro({ argomento, lezione, sezione, prossime, d
  * `osservazioni` cosa ha imparato su questa persona. Senza account non salva
  * nulla e non è un errore.
  */
-export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere, osservazioni, userToken }) {
+export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere, osservazioni, userToken, tipo, linguaStudiata }) {
   return postJSON('/api/compagni/corso', {
     azione: 'esito', argomento, lezioneIndice, punteggio, daRivedere, osservazioni, userToken,
+    // b.330 — un esito di PRONUNCIA alimenta anche il profilo persistente
+    // (errori ricorrenti + trend) per i drill futuri.
+    tipo, linguaStudiata,
   });
 }
 

@@ -20,7 +20,8 @@ const IDEE_CORSO = [
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
-import { rilevaLinguaStudiata, testoVisibile } from '../../lib/compagni/corsi/lingua.js';
+import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
+import PannelloLettura from './PannelloLettura.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
@@ -440,13 +441,15 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
   // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
   // (lavagna/articolo), e deve coincidere fra i due.
-  const { paragrafiLezione, immaginiSezioni } = useMemo(() => {
-    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [] };
-    const testoPulito = staccaEsercizio(testoVisibile(aperta.contenuto)).testo;
-    const parti = testoPulito.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-    const paragrafi = parti.length > 1 ? parti : [testoPulito];
+  const { paragrafiLezione, immaginiSezioni, frasiLettura } = useMemo(() => {
+    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [], frasiLettura: [] };
+    // b.330 — il brano di LETTURA si stacca dal testo: diventa il pannello
+    // dedicato, non prosa da mostrare o leggere nella narrazione.
+    const { testo: senzaLettura, frasi } = staccaLettura(staccaEsercizio(testoVisibile(aperta.contenuto)).testo);
+    const parti = senzaLettura.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const paragrafi = parti.length > 1 ? parti : [senzaLettura];
     const items = [...new Map((arricchimento?.link || []).filter((l) => l.immagine).map((l) => [l.immagine, l])).values()];
-    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione) };
+    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione), frasiLettura: frasi };
   }, [aperta, arricchimento, illustrazione]);
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
@@ -683,7 +686,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // b.312 — si legge SEZIONE per SEZIONE (paragrafi): cosi la lavagna puo
     // mostrare l'immagine giusta mentre la voce parla di quel pezzo. I tag
     // [L2:]/[PRONUNCIA:] restano gestiti da parlaBilingue dentro ogni pezzo.
-    const testoTot = staccaEsercizio(aperta.contenuto).testo;
+    const testoTot = staccaLettura(staccaEsercizio(aperta.contenuto).testo).testo;
     const parti = testoTot.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
     const lista = parti.length > 1 ? parti : [testoTot];
     const aspettaDialogo = async () => { while (inDomandaRef.current && !stopLetturaRef.current) await attendi(150); };
@@ -940,6 +943,28 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 argomento: `${argomento.trim()} · pronuncia`,
                 lezioneIndice: idx,
                 punteggio, daRivedere, userToken,
+                // b.330 — l'esito alimenta anche il PROFILO PRONUNCIA
+                // persistente (errori ricorrenti + trend, per i drill futuri).
+                tipo: 'pronuncia', linguaStudiata: l2 || linguaCorso,
+              }).catch(() => { /* il ricordo e un di piu */ });
+            }}
+            {...{ testoP, muto, accent, card, bordo }} />;
+        })()}
+
+        {/* b.330 — LETTURA GUIDATA (duetto): il brano in lingua originale,
+            frase per frase — l'Assistente la dice (anche lenta), poi la
+            leggi tu, col confronto e il grafico della fonia. */}
+        {frasiLettura.length > 0 && (() => {
+          const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          if (!l2c) return null;
+          const assist = assistentePer(l2c);
+          return <PannelloLettura frasi={frasiLettura} lingua={l2c}
+            voceAssistente={assist.voceId} nomeAssistente={assist.nome} userToken={userToken}
+            onEsito={({ punteggio, daRivedere }) => {
+              const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
+              if (idx >= 0) registraEsito({
+                argomento: `${argomento.trim()} · pronuncia`, lezioneIndice: idx,
+                punteggio, daRivedere, userToken, tipo: 'pronuncia', linguaStudiata: l2c,
               }).catch(() => { /* il ricordo e un di piu */ });
             }}
             {...{ testoP, muto, accent, card, bordo }} />;

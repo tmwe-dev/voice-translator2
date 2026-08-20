@@ -128,6 +128,8 @@ FALLA PARLARE: non limitarti a spiegare. Metti la persona in una situazione vera
 
 ${ISTRUZIONE_PRONUNCIA}
 
+LETTURA GUIDATA: chiudi la lezione con un piccolo brano da leggere ad alta voce, nel tag [LETTURA: frase1 | frase2 | frase3] — 2-4 frasi BREVI, solo in ${studiata}, coerenti con la lezione e in difficoltà crescente. Il sistema le trasforma in un esercizio: ${nomeAssistente || 'la voce madrelingua'} le legge una per una (anche lentamente) e poi le legge la persona, con il confronto. Non spiegare il tag: mettilo e basta, una sola volta.
+
 QUANDO SBAGLIA, non fermare la conversazione per una lezione di grammatica. Scegli: se l'errore non impedisce di capirsi, lascialo correre per ora; se conta, correggilo NEL FLUSSO ripetendo bene la frase ("Ah, [L2: you went yesterday]! E poi?"); e tieni da parte le due o tre cose importanti per dirle alla fine, insieme.`;
 }
 
@@ -138,6 +140,24 @@ const TAG_L2 = /\[L2:\s*([^\]]*?)\s*\]/gi;
 /** Il testo da MOSTRARE: i tag spariscono, il contenuto resta. */
 export function testoVisibile(testo) {
   return String(testo || '').replace(TAG_L2, '$1').trim();
+}
+
+// ── b.330 — L'ESERCIZIO DI LETTURA (il duetto di Luca) ──
+// Il Maestro chiude la lezione di lingua con [LETTURA: frase1 | frase2 | ...]:
+// un piccolo brano in lingua originale, frase per frase. Il tag NON si mostra
+// e NON si legge nella narrazione: diventa il pannello di lettura, dove
+// l'Assistente madrelingua dice ogni frase (anche lenta) e poi la leggi tu.
+const TAG_LETTURA = /\[LETTURA:\s*([^\]]*?)\s*\]/i;
+const TAG_LETTURA_TUTTI = /\[LETTURA:\s*[^\]]*?\s*\]/gi;
+
+/** Stacca il brano di lettura dal testo. @returns {{testo, frasi:string[]}} */
+export function staccaLettura(testo) {
+  const s = String(testo || '');
+  const m = s.match(TAG_LETTURA);
+  if (!m) return { testo: s, frasi: [] };
+  const frasi = (m[1] || '').split('|').map((f) => f.trim()).filter(Boolean).slice(0, 6);
+  const pulito = s.replace(TAG_LETTURA_TUTTI, '').replace(/\n{3,}/g, '\n\n').trim();
+  return { testo: pulito, frasi };
 }
 
 /**
