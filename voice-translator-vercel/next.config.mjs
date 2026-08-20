@@ -29,7 +29,7 @@ const nextConfig = {
               "font-src 'self' data:",
               "connect-src 'self' data: https://unpkg.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://0.peerjs.com wss://0.peerjs.com https://api.stripe.com https://api.openai.com https://*.google.com https://*.googleapis.com https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://*.upstash.io https://api.anthropic.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io",
               "media-src 'self' blob: data:",
-              "frame-src https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
+              "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
               "worker-src 'self' blob:",
               "base-uri 'self'",
               "form-action 'self'",
@@ -37,7 +37,7 @@ const nextConfig = {
             ].join('; '),
           },
           // ── Prevent clickjacking ──
-          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' }, // b.346 — Business incornicia lo Scanner
           // ── Prevent MIME type sniffing ──
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           // ── Referrer policy: don't leak full URL to third parties ──

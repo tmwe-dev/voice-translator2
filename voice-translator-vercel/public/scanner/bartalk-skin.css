@@ -1,0 +1,27 @@
+/* ═══════════════════════════════════════════════════════════════
+   b.346 — LA PELLE BARTALK per il BizCard Scanner.
+   Ordine di Luca: prima il codice copiato ESATTO, poi l'adattamento
+   alla nostra grafica. Questo file e TUTTO l'adattamento: solo le
+   variabili di colore e qualche angolo, nessuna riga di logica.
+   Si carica soltanto con ?skin=bartalk (vedi js/bartalk-skin.js):
+   il programma originale resta intatto e aggiornabile.
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:      #05070f;                      /* bgDeep di BarTalk */
+  --bg2:     rgba(14, 19, 34, .78);
+  --bg3:     rgba(36, 46, 76, .5);
+  --bg4:     rgba(56, 66, 106, .4);
+  --fg:      #eef2ff;                      /* grayLight */
+  --fg2:     #b8bdd0;
+  --fg3:     #7c82a0;
+  --fg4:     #4e5470;
+  --accent:  #5b8cff;                      /* purple/blue BarTalk */
+  --accent2: #38e1ff;                      /* cyan BarTalk */
+  --accent3: #9db9ff;
+  --green:   #3ddc84;                      /* green BarTalk */
+  --red:     #ff5470;                      /* coral BarTalk */
+  --orange:  #ffc44d;                      /* amber BarTalk */
+}
+
+/* Il marchio in testata: qui dentro e uno strumento di BarTalk. */
+header .logo-badge, .app-title .badge { filter: hue-rotate(-25deg); }

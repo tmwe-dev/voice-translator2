@@ -4,6 +4,7 @@ import { FONT, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
+import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -136,8 +137,22 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // b.343 — l'acquisizione (QR, telefono, multiscansione, maschera) vive
-  // ora in ScannerMateriali, copiata dal BizCard Scanner come ordinato.
+  // b.346 — IL RITORNO DEI DATI: lo scanner (modo documenti) rimanda il
+  // testo acquisito su questo canale; qui diventa la bozza del materiale,
+  // gia aperta e pronta da salvare. Prima riga come titolo proposto.
+  useEffect(() => {
+    const spegni = ascoltaScansioni(({ testo, dest }) => {
+      if (dest && dest !== 'materiali') return; // destinato a un'altra area
+      setVista('materiali');
+      const righe = String(testo).split('\n').map((r) => r.trim()).filter(Boolean);
+      setMatBozza((b) => ({
+        titolo: b?.titolo || (righe[0] || '').slice(0, 80),
+        materia: b?.materia || '',
+        testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n'),
+      }));
+    });
+    return spegni;
+  }, []);
 
   // b.334 — PDF: base64 al server, testo indietro, GRATIS (niente wallet).
   const caricaPdf = useCallback(async (file) => {
@@ -327,7 +342,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                   Remoto col QR che collega il telefono, File; multiscansione,
                   scheda dei campi in tempo reale. I dati poi si incollano o
                   esportano qui, e in seguito verranno agganciati in automatico. */}
-              <button onClick={() => window.open('/scanner/index.html', '_blank', 'noopener')}
+              <button onClick={() => apriScanner({ doc: true, dest: 'materiali' })}
                 style={{ width: '100%', padding: 16, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: FONT,
                   background: `linear-gradient(135deg, ${accent}, #06b6d4)`, color: '#04121c', fontWeight: 800, fontSize: 15 }}>
                 Apri lo Scanner (camera, telefono remoto, file)

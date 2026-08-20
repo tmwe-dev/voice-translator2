@@ -61,6 +61,7 @@ const ContactsView = lazy(() => import('./components/ContactsView.js'));
 const VoiceCloneView = lazy(() => import('./components/VoiceCloneView.js'));
 const MondoView = lazy(() => import('./components/MondoView.js'));
 const LifeView = lazy(() => import('./components/Life/LifeView.js'));
+const BusinessView = lazy(() => import('./components/BusinessView.js'));
 const SpeakerView = lazy(() => import('./components/SpeakerView.js'));
 const TaxiTalk = lazy(() => import('./components/TaxiTalk.js')); // b.205 — TaxiTalk rifatto
 const QuickInvite = lazy(() => import('./components/QuickInvite.js'));
@@ -1562,6 +1563,14 @@ function HomeInner() {
   if (view === 'taxi-driver') return wrap(
     <Suspense fallback={<LazyFallback />}>
       <TaxiDriverView destId={taxiDestId} decryptionKey={taxiKey} />
+    </Suspense>
+  );
+
+  // b.346 — SEZIONE BUSINESS: parallela e indipendente dalle altre; ospita
+  // gli strumenti di lavoro (primo: il BizCard Scanner intero, verbatim).
+  if (view === 'business') return wrap(
+    <Suspense fallback={<LazyFallback />}>
+      <BusinessView onBack={() => setView('home')} />
     </Suspense>
   );
 

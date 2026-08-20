@@ -24,6 +24,8 @@ import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/co
 import PannelloLettura from './PannelloLettura.js';
 import CompagnoLive from './CompagnoLive.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
+import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
+import { sesSet } from '../../lib/memoria.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
 import GestioneCompagni from './GestioneCompagni.js';
@@ -57,6 +59,23 @@ function LifeView({ onApriStanza }) {
       if (p?.scheda === 'impara') { setImparaPreset(p.testo || ''); setScheda('impara'); }
       else if (p?.scheda === 'tavolo') { setTavoloPreset(p.testo || ''); setScheda('tavolo'); }
     } catch { /* nessun preset in attesa */ }
+  }, []);
+
+  // b.346 — DOCUMENTI DALLO SCANNER destinati ad Amico o al Tavolo: il
+  // testo acquisito porta la scheda giusta gia carica. (La destinazione
+  // "impara" la gestisce la scheda Impara, che ha il telaio dei corsi.)
+  useEffect(() => {
+    const spegni = ascoltaScansioni(({ testo, dest }) => {
+      const t = String(testo || '');
+      if (dest === 'amico') {
+        try { sesSet('vt-coach-brief', `Ho scansionato questo documento, aiutami a studiarlo:\n\n${t.slice(0, 2400)}`); } catch { /* niente memoria di sessione */ }
+        setScheda('amico');
+      } else if (dest === 'tavolo') {
+        setTavoloPreset(t.slice(0, 400));
+        setScheda('tavolo');
+      }
+    });
+    return spegni;
   }, []);
   const [miei, setMiei] = useState([]);
   const [debateObiettivo, setDebateObiettivo] = useState(''); // b.227 — Dossier→Debate
@@ -400,6 +419,36 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [aperta, setAperta] = useState(null); // { lezione, contenuto, fonti, domande }
   // b.242 — le risposte date alla sfida: { indiceDomanda: indiceOpzione }.
   const [risposte, setRisposte] = useState({});
+
+  // b.346 — DOCUMENTO DALLO SCANNER → LEZIONE. Il testo acquisito diventa un
+  // Materiale e la lezione nasce SOLO da quello (stesso telaio di b.333).
+  // DEVE stare DOPO le dichiarazioni qui sopra: elencandole fra le
+  // dipendenze, se sta prima la pagina crolla al primo render (gia visto).
+  useEffect(() => {
+    const spegni = ascoltaScansioni(async ({ testo, dest }) => {
+      if (dest !== 'impara') return;
+      const t = String(testo || '');
+      const titolo = (t.split('\n').map((r) => r.trim()).find(Boolean) || 'Documento scansionato').slice(0, 80);
+      if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
+      setLavoro(true); setErrore(''); setArgomento(titolo);
+      try {
+        const r = await fetch('/api/compiti', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ azione: 'salvaMateriale', userToken, materiale: { titolo, testo: t, origine: 'scanner' } }),
+        });
+        const d = await r.json().catch(() => null);
+        if (!d?.materiale?.id) throw new Error(d?.error || 'materiale non salvato');
+        const lez = await generaLezione({ argomento: titolo, categoria: 'altro', livello, lezione: { indice: 0, titolo }, lingua: linguaCorso, userToken, materialeId: d.materiale.id });
+        setRisposte({});
+        setAperta({ lezione: { titolo }, contenuto: lez.contenuto, fonti: lez.fonti || [], domande: null });
+      } catch (e) {
+        setErrore(e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+      } finally { setLavoro(false); }
+    });
+    return spegni;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userToken, livello, linguaCorso]);
+
   const [ascoltando, setAscoltando] = useState(false);
   const audioLezioneRef = useRef(null);
   // b.312 — LEZIONE DINAMICA: quando la si ASCOLTA diventa una presentazione
@@ -1496,6 +1545,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
       <button onClick={crea} disabled={lavoro} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: lavoro ? 0.6 : 1 }}>
         {lavoro ? L('lifeGenerating') : `📚 ${L('lifeCreateCourse')}`}
+      </button>
+      {/* b.346 — la lezione puo nascere da un DOCUMENTO SCANSIONATO: si apre
+          lo scanner (il BizCard in modo documenti), e al ritorno del testo la
+          lezione si costruisce SOLO su quello (via Materiali, come da b.333). */}
+      <button onClick={() => apriScanner({ doc: true, dest: 'impara' })} disabled={lavoro}
+        style={{ width: '100%', marginTop: 8, padding: 12, borderRadius: 14, border: `1px solid ${accent}`, cursor: 'pointer', background: 'transparent', color: accent, fontWeight: 700, fontSize: 14, fontFamily: FONT }}>
+        {tt('lifeFromScan', 'Crea da un documento (scanner)')}
       </button>
 
       {lezioni.length > 0 && (
