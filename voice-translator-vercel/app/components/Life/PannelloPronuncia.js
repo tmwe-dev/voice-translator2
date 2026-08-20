@@ -4,6 +4,8 @@ import { FONT } from '../../lib/constants.js';
 import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
 import { parlaTurno } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudioLife } from '../../lib/audioLife.js';
+import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
+import GraficoFonia from './GraficoFonia.js';
 
 // ═══════════════════════════════════════════════════════════════
 // PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
@@ -27,6 +29,23 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
   const [errore, setErrore] = useState('');
   const recRef = useRef(null);
   const streamRef = useRef(null);
+  // b.322 — ANALISI GRAFICA (Luca): la fascia della pronuncia ATTESA e la
+  // tua onda sopra, colorata verde/arancio/rosso. `rifRef` e l'analisi del
+  // riferimento vocale (catturata quando ascolti la frase); `confronto` e il
+  // grafico corrente; `confrontoPrec` il tentativo prima (tratteggiato).
+  const audioCtxRef = useRef(null);
+  const rifRef = useRef(null);
+  const [confronto, setConfronto] = useState(null);
+  const [confrontoPrec, setConfrontoPrec] = useState(null);
+
+  const decodifica = useCallback(async (blob) => {
+    if (!audioCtxRef.current) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      audioCtxRef.current = new AC();
+    }
+    const buf = await audioCtxRef.current.decodeAudioData(await blob.arrayBuffer());
+    return { campioni: buf.getChannelData(0), sr: buf.sampleRate };
+  }, []);
 
   // Il microfono si chiude sempre, anche uscendo a metà registrazione.
   const chiudiMicrofono = useCallback(() => {
@@ -43,6 +62,20 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
 
   const valuta = useCallback(async (blob) => {
     setStato('valuto');
+    // b.322 — QUALITY GATE (piano di Luca): un campione inaffidabile NON si
+    // giudica e NON si paga: si dice il motivo e si richiede. E l'analisi
+    // grafica: la tua onda contro la fascia attesa (se hai ascoltato la frase).
+    let analisiUte = null;
+    try {
+      const { campioni, sr } = await decodifica(blob);
+      const gate = qualityGate(campioni, sr);
+      if (!gate.ok) { setErrore(gate.motivo); setStato('pronto'); return; }
+      analisiUte = analizza(campioni, sr);
+    } catch { /* l'analisi locale e un di piu: si prosegue con la trascrizione */ }
+    if (analisiUte && rifRef.current) {
+      setConfrontoPrec(confronto);
+      setConfronto(confronta(rifRef.current, analisiUte));
+    }
     try {
       const fd = new FormData();
       fd.append('audio', blob, 'pronuncia.webm');
@@ -69,7 +102,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
       setErrore('Non sono riuscito a sentirti. Riprova.');
       setStato('pronto');
     }
-  }, [frase, lingua, userToken, onEsito]);
+  }, [frase, lingua, userToken, onEsito, decodifica, confronto]);
 
   // b.317 — ASCOLTA LA FRASE (audit 6.5): prima si chiedeva di pronunciare
   // una frase MAI SENTITA. Ora la voce la dice, alla velocita giusta,
@@ -78,10 +111,20 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
   const ascoltaFrase = useCallback(async () => {
     if (ascoltoFrase) return;
     setAscoltoFrase(true);
-    try { await parlaTurno({ voceId: null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }); }
+    try {
+      await parlaTurno({ voceId: null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }, async (audio) => {
+        // b.322 — mentre la voce dice la frase, si CATTURA il riferimento e
+        // se ne calcola l'analisi: e la "fascia attesa" del grafico.
+        try {
+          const b = await fetch(audio.src).then((r) => r.blob());
+          const { campioni, sr } = await decodifica(b);
+          rifRef.current = analizza(campioni, sr);
+        } catch { /* niente riferimento: il grafico restera vuoto, il resto funziona */ }
+      });
+    }
     catch { /* la voce e un di piu */ }
     finally { setAscoltoFrase(false); }
-  }, [ascoltoFrase, frase, lingua, userToken]);
+  }, [ascoltoFrase, frase, lingua, userToken, decodifica]);
 
   const registra = useCallback(async () => {
     if (stato === 'registro') { // secondo tocco: si ferma
@@ -135,6 +178,16 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, t
       </div>
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginTop: 8 }}>{errore}</div>}
+
+      {/* b.322 — L'ANALISI GRAFICA: fascia attesa + la tua onda a colori.
+          Compare appena c'e un confronto (serve aver ascoltato la frase). */}
+      {confronto && <GraficoFonia confronto={confronto} precedente={confrontoPrec} muto={muto} card="rgba(255,255,255,0.04)" />}
+      {confronto && (
+        <div style={{ fontSize: 12, color: muto, marginTop: 4 }}>
+          Fonia (melodia e ritmo): <b style={{ color: confronto.somiglianza >= 70 ? accent : confronto.somiglianza >= 45 ? '#f59e0b' : '#f87171' }}>{confronto.somiglianza}%</b>
+          {confronto.rapportoDurata > 1.35 ? ' — sei più lento del riferimento' : confronto.rapportoDurata < 0.7 ? ' — sei più veloce del riferimento' : ''}
+        </div>
+      )}
 
       {esito && (
         <div style={{ marginTop: 12 }}>
