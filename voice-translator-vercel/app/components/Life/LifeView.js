@@ -525,6 +525,24 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.334 — karaoke della frase + ripasso consigliato del corso aperto
   const [fraseK, setFraseK] = useState(-1);
   const [ripassoDa, setRipassoDa] = useState(0);
+
+  // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
+  // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
+  // (lavagna/articolo), e deve coincidere fra i due.
+  const { paragrafiLezione, immaginiSezioni, frasiLettura } = useMemo(() => {
+    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [], frasiLettura: [] };
+    // b.330 — il brano di LETTURA si stacca dal testo: diventa il pannello
+    // dedicato, non prosa da mostrare o leggere nella narrazione.
+    const { testo: senzaLettura, frasi } = staccaLettura(staccaEsercizio(testoVisibile(aperta.contenuto)).testo);
+    const parti = senzaLettura.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const paragrafi = parti.length > 1 ? parti : [senzaLettura];
+    const items = [...new Map((arricchimento?.link || []).filter((l) => l.immagine).map((l) => [l.immagine, l])).values()];
+    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione), frasiLettura: frasi };
+  }, [aperta, arricchimento, illustrazione]);
+
+  // b.336 — questo effetto DEVE stare dopo il memo qui sopra: elencando
+  // paragrafiLezione fra le dipendenze, se sta prima la pagina crolla al
+  // primo render ("Cannot access before initialization"). Gia successo.
   useEffect(() => {
     if (!ascoltando || sezioneAttiva < 0) { setFraseK(-1); return; }
     const timer = setInterval(() => {
@@ -540,20 +558,6 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     }, 250);
     return () => clearInterval(timer);
   }, [ascoltando, sezioneAttiva, paragrafiLezione]);
-
-  // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
-  // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
-  // (lavagna/articolo), e deve coincidere fra i due.
-  const { paragrafiLezione, immaginiSezioni, frasiLettura } = useMemo(() => {
-    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [], frasiLettura: [] };
-    // b.330 — il brano di LETTURA si stacca dal testo: diventa il pannello
-    // dedicato, non prosa da mostrare o leggere nella narrazione.
-    const { testo: senzaLettura, frasi } = staccaLettura(staccaEsercizio(testoVisibile(aperta.contenuto)).testo);
-    const parti = senzaLettura.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
-    const paragrafi = parti.length > 1 ? parti : [senzaLettura];
-    const items = [...new Map((arricchimento?.link || []).filter((l) => l.immagine).map((l) => [l.immagine, l])).values()];
-    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione), frasiLettura: frasi };
-  }, [aperta, arricchimento, illustrazione]);
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
 
