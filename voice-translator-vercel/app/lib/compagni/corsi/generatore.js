@@ -260,15 +260,48 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
 // e fa una domanda; il Maestro risponde NEL PERSONAGGIO, ancorato al pezzo che
 // stava spiegando, breve e naturale, poi lascia riprendere. Non e una chat a
 // parte: e lo stesso docente, che si gira verso di te un momento.
-export async function generaRispostaDomanda({ argomento = '', lezione = null, sezione = '', domanda = '', livello = 'base', lingua = 'it', docente = null } = {}, { userToken = null } = {}) {
-  if (!domanda || !domanda.trim()) return { ok: false, motivo: 'domanda-mancante' };
-  const system = `${vestePocente(docente)}
-Stai tenendo una lezione e lo studente ha ALZATO LA MANO per chiederti una cosa. Rispondi come il docente che sei: naturale, caldo, BREVE e diretto, nella lingua: ${nomeLingua(lingua)}. Rispondi SOLO alla domanda, aggiungendo il dettaglio utile; niente elenchi, niente titoli, non rifare la lezione. Il testo si legge ad alta voce: nessuna domanda retorica, nessun tag. CHIUDI riassumendo in UNA frase il punto che stavate trattando e invitando a riprendere (es. "Dunque, tornando a ...: riprendiamo").${registroBambini(livello, lingua)}`;
-  const prompt = `LEZIONE: "${lezione?.titolo || argomento}".
-Stavi spiegando proprio questo pezzo:
-"""${String(sezione || '').slice(0, 1400)}"""
+export async function generaRispostaDomanda({ argomento = '', lezione = null, sezione = '', prossime = [], domanda = '', storia = [], modo = 'risposta', livello = 'base', lingua = 'it', docente = null } = {}, { userToken = null } = {}) {
+  const persona = vestePocente(docente);
+  const storiaTxt = (Array.isArray(storia) ? storia.slice(-8) : [])
+    .map((t) => `[${t.ruolo === 'maestro' ? 'Maestro' : 'Studente'}]: ${String(t.testo || '').slice(0, 500)}`).join('\n');
+  const pezzo = `"""${String(sezione || '').slice(0, 1400)}"""`;
 
-Lo studente alza la mano e chiede: "${domanda.trim().slice(0, 400)}"
+  // b.314/b.315 — RIENTRO: lo studente ha finito. Il Maestro torna alla
+  // lezione con UNA frase cortese. Ma prima GUARDA cosa viene dopo: se la
+  // chiacchierata ha gia coperto la sezione (o due) successive, lo dice ("di
+  // questo abbiamo gia parlato, proseguiamo") e propone di SALTARLE — come un
+  // professore vero. Ritorna anche `salta` = quante sezioni successive omettere.
+  if (modo === 'ripresa') {
+    const prox = (Array.isArray(prossime) ? prossime.slice(0, 2) : [])
+      .map((p, k) => `[SEZIONE SUCCESSIVA ${k + 1}]: ${String(p || '').slice(0, 700)}`).join('\n');
+    const system = `${persona}
+Lo studente ha finito le domande e si RIPRENDE la lezione. Parla nella lingua: ${nomeLingua(lingua)}, a voce (niente tag).
+Guarda le SEZIONI SUCCESSIVE: se quello che vi siete gia detti nella conversazione COPRE gia una o entrambe, comportati da professore — dillo con garbo ("di questo abbiamo gia parlato, proseguiamo") e proponi di saltarle. Altrimenti riprendi normalmente ("Se non vi dispiace, riprendiamo...").
+Rispondi SOLO con JSON: {"salta": N, "frase": "..."} dove N e' quante sezioni successive saltare (0, 1 o 2) perche gia trattate, e "frase" e' la battuta cortese di ripresa (una o due frasi).${registroBambini(livello, lingua)}`;
+    const prompt = `Eravate a questo punto:\n${pezzo}\n${prox ? `\n${prox}\n` : ''}${storiaTxt ? `\nVi siete detti:\n${storiaTxt}\n` : ''}\nDecidi salta e frase.`;
+    const r = await generaTesto({ system, prompt, userToken, maxTokens: 260, temperature: 0.5 });
+    if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
+    const d = estraiJSON(r.testo);
+    if (d && typeof d === 'object' && !Array.isArray(d)) {
+      const salta = Math.max(0, Math.min(2, Number(d.salta) || 0));
+      return { ok: true, risposta: String(d.frase || '').trim() || staccaAppunto(r.testo).testo, salta };
+    }
+    return { ok: true, risposta: staccaAppunto(r.testo).testo, salta: 0 };
+  }
+
+  if (!domanda || !domanda.trim()) return { ok: false, motivo: 'domanda-mancante' };
+  // b.314 — un Maestro VERO non risponde e scappa: risponde, poi si ACCERTA
+  // che sia chiaro e CHIEDE se vuoi un altro dettaglio o hai altre curiosita,
+  // lasciando a te decidere quando riprendere. Niente auto-rientro qui.
+  // b.315 — e VIVE la lezione con te: puo divagare un poco, tenendo pero la
+  // lezione come bussola.
+  const system = `${persona}
+Stai tenendo una lezione e lo studente ha ALZATO LA MANO. Rispondi come il docente che sei: naturale, caldo, BREVE, nella lingua: ${nomeLingua(lingua)}. Dai il dettaglio utile; puoi divagare un poco ma tieni la lezione come bussola; niente elenchi, niente titoli, non rifare la lezione. Il testo si legge ad alta voce: nessun tag.
+NON tornare da solo alla lezione. Alla fine ACCERTATI che sia chiaro e CHIEDI, con una domanda breve, se vuole un altro dettaglio o ha altre curiosita — sta a lui decidere se riprendere.${registroBambini(livello, lingua)}`;
+  const prompt = `LEZIONE: "${lezione?.titolo || argomento}".
+Stavi spiegando questo pezzo:\n${pezzo}
+${storiaTxt ? `\nFin qui vi siete detti:\n${storiaTxt}\n` : ''}
+Lo studente ora dice: "${domanda.trim().slice(0, 400)}"
 
 Rispondi tu, a voce, come faresti in aula.`;
   const r = await generaTesto({ system, prompt, userToken, maxTokens: 600, temperature: 0.7 });

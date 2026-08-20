@@ -101,9 +101,9 @@ export function generaQuiz({ lezione, lingua, userToken, livello, contenuto, arg
  * b.313 — ALZO LA MANO: durante la lezione lo studente interrompe e chiede.
  * Il Maestro risponde nel personaggio, ancorato alla sezione in corso.
  */
-export async function chiediAlMaestro({ argomento, lezione, sezione, domanda, docenteId, livello, lingua, userToken }) {
-  const d = await postJSON('/api/compagni/corso', { azione: 'domanda', argomento, lezione, sezione, domanda, docenteId, livello, lingua, userToken });
-  return d.risposta || '';
+export async function chiediAlMaestro({ argomento, lezione, sezione, prossime, domanda, storia, modo, docenteId, livello, lingua, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'domanda', argomento, lezione, sezione, prossime, domanda, storia, modo, docenteId, livello, lingua, userToken });
+  return { risposta: d.risposta || '', salta: d.salta || 0 };
 }
 
 /**

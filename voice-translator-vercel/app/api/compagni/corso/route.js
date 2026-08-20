@@ -72,12 +72,15 @@ async function handlePost(req) {
     // b.313 — "alzo la mano e chiedo": lo studente interrompe la lezione,
     // il Maestro risponde nel personaggio, ancorato al pezzo in corso.
     if (azione === 'domanda') {
+      const modo = body.modo === 'ripresa' ? 'ripresa' : 'risposta';
       const domanda = typeof body.domanda === 'string' ? body.domanda : '';
-      if (!domanda.trim()) return NextResponse.json({ error: 'Serve la domanda' }, { status: 400 });
+      if (modo === 'risposta' && !domanda.trim()) return NextResponse.json({ error: 'Serve la domanda' }, { status: 400 });
       const sezione = typeof body.sezione === 'string' ? body.sezione : (typeof body.contenuto === 'string' ? body.contenuto : '');
-      const r = await generaRispostaDomanda({ argomento, lezione: body.lezione, sezione, domanda, livello, lingua, docente }, { userToken });
+      const storia = Array.isArray(body.storia) ? body.storia.slice(-10).map((t) => ({ ruolo: t?.ruolo === 'maestro' ? 'maestro' : 'studente', testo: String(t?.testo || '').slice(0, 600) })) : [];
+      const prossime = Array.isArray(body.prossime) ? body.prossime.slice(0, 2).map((p) => String(p || '').slice(0, 900)) : [];
+      const r = await generaRispostaDomanda({ argomento, lezione: body.lezione, sezione, prossime, domanda, storia, modo, livello, lingua, docente }, { userToken });
       if (!r.ok) return rispostaEsito(r);
-      return NextResponse.json({ ok: true, risposta: r.risposta });
+      return NextResponse.json({ ok: true, risposta: r.risposta, salta: r.salta || 0 });
     }
 
     if (azione === 'quiz') {

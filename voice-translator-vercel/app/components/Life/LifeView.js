@@ -387,10 +387,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [manoAlzata, setManoAlzata] = useState(false);
   const [maestroStaFinendo, setMaestroStaFinendo] = useState(false);
   const [domanda, setDomanda] = useState('');
-  const [rispostaMaestro, setRispostaMaestro] = useState('');
+  const [dialogo, setDialogo] = useState([]); // [{ ruolo:'studente'|'maestro', testo }]
   const [chiedendo, setChiedendo] = useState(false);
   const inDomandaRef = useRef(false);
   const interruzionePendenteRef = useRef(false);
+  const saltaRef = useRef(0); // b.315 — sezioni da saltare al rientro (gia trattate parlando)
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -559,34 +560,54 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     interruzionePendenteRef.current = true;
     setMaestroStaFinendo(true);
     setManoAlzata(true);
-    setRispostaMaestro(''); setDomanda('');
+    setDialogo([]); setDomanda('');
   }, [ascoltando, manoAlzata]);
 
-  // b.313 — chiusa la parentesi, si torna alla lezione: la lettura riparte
-  // dal punto dopo (il paragrafo era gia finito).
-  const riprendiLezione = useCallback(() => {
-    inDomandaRef.current = false;
-    setManoAlzata(false); setMaestroStaFinendo(false);
-    setDomanda(''); setRispostaMaestro('');
-  }, []);
+  // b.314 — il Maestro parla con la sua voce (usato per risposta e rientro).
+  const diLaVoce = useCallback(async (testo) => {
+    if (!testo) return;
+    try { await parlaTurno({ voceId: tutor?.voce?.id, testo, lingua: linguaCorso, userToken }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
+  }, [tutor, linguaCorso, userToken]);
 
-  // b.313 — invia la domanda; il Maestro risponde ancorato alla sezione in
-  // corso, e la dice con la sua voce.
+  // b.313/b.314 — invia la domanda; il Maestro risponde ancorato alla sezione,
+  // poi CHIEDE se vuoi altro (non torna da solo). Dialogo a piu battute.
   const inviaDomanda = useCallback(async () => {
     const q = domanda.trim();
     if (!q || chiedendo) return;
     setChiedendo(true);
+    const storiaPrec = dialogo;
+    setDialogo((d) => [...d, { ruolo: 'studente', testo: q }]);
+    setDomanda('');
     try {
       const sez = paragrafiLezione[Math.max(0, sezioneAttiva)] || aperta?.contenuto || '';
-      const risposta = await chiediAlMaestro({ argomento: argomento.trim(), lezione: aperta?.lezione, sezione: sez, domanda: q, docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken });
-      setRispostaMaestro(risposta || '');
-      if (risposta) {
-        try { await parlaTurno({ voceId: tutor?.voce?.id, testo: risposta, lingua: linguaCorso, userToken }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
-      }
+      const { risposta } = await chiediAlMaestro({ argomento: argomento.trim(), lezione: aperta?.lezione, sezione: sez, domanda: q, storia: storiaPrec, modo: 'risposta', docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken });
+      setDialogo((d) => [...d, { ruolo: 'maestro', testo: risposta || '' }]);
+      await diLaVoce(risposta);
     } catch (e) {
-      setRispostaMaestro(e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
+      setDialogo((d) => [...d, { ruolo: 'maestro', testo: e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError') }]);
     } finally { setChiedendo(false); }
-  }, [domanda, chiedendo, paragrafiLezione, sezioneAttiva, aperta, argomento, docenteId, livello, linguaCorso, userToken, tutor, L]);
+  }, [domanda, chiedendo, dialogo, paragrafiLezione, sezioneAttiva, aperta, argomento, docenteId, livello, linguaCorso, userToken, diLaVoce, L]);
+
+  // b.314 — chiusa la parentesi, il Maestro RIENTRA con garbo ("se non vi
+  // dispiace, riprendiamo...") e solo dopo la lettura riparte dal punto dopo.
+  const riprendiLezione = useCallback(async () => {
+    if (chiedendo) return;
+    setChiedendo(true);
+    try {
+      const sez = paragrafiLezione[Math.max(0, sezioneAttiva)] || aperta?.contenuto || '';
+      const prossime = paragrafiLezione.slice(Math.max(0, sezioneAttiva) + 1, Math.max(0, sezioneAttiva) + 3);
+      const { risposta: rientro, salta } = await chiediAlMaestro({ argomento: argomento.trim(), lezione: aperta?.lezione, sezione: sez, prossime, modo: 'ripresa', storia: dialogo, docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken });
+      // b.315 — se parlando avete gia coperto le prossime sezioni, si saltano.
+      saltaRef.current = Math.max(0, Math.min(prossime.length, Number(salta) || 0));
+      await diLaVoce(rientro);
+    } catch { /* niente rientro parlato: si riprende comunque */ }
+    finally {
+      setChiedendo(false);
+      setManoAlzata(false); setMaestroStaFinendo(false);
+      setDomanda(''); setDialogo([]);
+      inDomandaRef.current = false; // sblocca la lettura
+    }
+  }, [chiedendo, paragrafiLezione, sezioneAttiva, aperta, argomento, dialogo, docenteId, livello, linguaCorso, userToken, diLaVoce]);
 
   const ascoltaLezione = useCallback(async () => {
     if (!aperta) return;
@@ -623,6 +644,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           setMaestroStaFinendo(false);
           await aspettaDialogo();
           if (stopLetturaRef.current) break;
+          // b.315 — al rientro il Maestro puo aver deciso di saltare le sezioni
+          // gia coperte parlando: si avanza di conseguenza.
+          if (saltaRef.current > 0) { i += saltaRef.current; saltaRef.current = 0; }
         }
         // b.312 — RITMO DA DOCUMENTARIO: dopo aver letto una sezione, si
         // PRENDE IL TEMPO — piu lungo se c'e un'immagine da osservare — cosi
@@ -750,24 +774,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                     {maestroStaFinendo
                       ? <div style={{ fontSize: 12, color: muto, marginBottom: 10 }}>✋ {tt('lifeHandUp', 'Mano alzata — il Maestro finisce la frase e si gira verso di te…')}</div>
                       : <div style={{ fontSize: 12, fontWeight: 700, color: accent, marginBottom: 10 }}>{tt('lifeAskNow', 'Il Maestro ti ascolta. Cosa vuoi chiedere?')}</div>}
+
+                    {/* b.314 — il DIALOGO a piu battute: domanda, risposta, e lui
+                        che chiede se vuoi altro. Si riprende quando sei tu a dirlo. */}
+                    {dialogo.length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 10 }}>
+                        {dialogo.map((t, k) => (
+                          <div key={k} style={{ alignSelf: t.ruolo === 'studente' ? 'flex-end' : 'flex-start', maxWidth: '90%',
+                            padding: '9px 12px', borderRadius: 12,
+                            background: t.ruolo === 'studente' ? `${accent}1f` : 'rgba(255,255,255,0.05)',
+                            border: t.ruolo === 'studente' ? `1px solid ${accent}44` : bordo }}>
+                            {t.ruolo === 'maestro'
+                              ? <TestoRicco testo={t.testo} testoP={testoP} muto={muto} />
+                              : <span style={{ fontSize: 14, color: testoP }}>{t.testo}</span>}
+                          </div>
+                        ))}
+                        {chiedendo && <div style={{ alignSelf: 'flex-start', fontSize: 12, color: muto }}>…</div>}
+                      </div>
+                    )}
+
                     <textarea value={domanda} onChange={(e) => setDomanda(e.target.value)} rows={2}
-                      placeholder={tt('lifeAskPh', 'La tua domanda…')}
+                      placeholder={dialogo.length ? tt('lifeAskMore', 'Un’altra domanda…') : tt('lifeAskPh', 'La tua domanda…')}
                       style={{ width: '100%', padding: 11, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.04)', color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', resize: 'vertical' }} />
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <button onClick={inviaDomanda} disabled={chiedendo || !domanda.trim()}
                         style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (chiedendo || !domanda.trim()) ? 0.6 : 1 }}>
                         {chiedendo ? '…' : tt('lifeAsk', 'Chiedi')}
                       </button>
-                      <button onClick={riprendiLezione}
-                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
+                      <button onClick={riprendiLezione} disabled={chiedendo}
+                        style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, opacity: chiedendo ? 0.6 : 1 }}>
                         {tt('lifeResumeLesson', 'Riprendi la lezione')} →
                       </button>
                     </div>
-                    {rispostaMaestro && (
-                      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
-                        <TestoRicco testo={rispostaMaestro} testoP={testoP} muto={muto} />
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
