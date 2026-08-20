@@ -4,8 +4,42 @@ import { createLogger } from '../../../lib/logger.js';
 import { generaAvatar } from '../../../lib/compagni/ponte.js';
 import { promptAvatar, promptIllustrazione } from '../../../lib/compagni/genera.js';
 import { promptScena, promptIcona, AMBIENTI } from '../../../lib/compagni/corsi/scena.js';
+import { getSupabaseAdmin } from '../../../lib/supabase.js';
+import { createHash } from 'crypto';
 
 const log = createLogger('compagni-avatar');
+
+// ── b.350 — IL CASSETTO DELLE TAVOLE (Luca: «così le immagini prodotte
+// da ognuno andranno perse per gli altri?»). Le tavole e le icone di un
+// corso si disegnano UNA volta sola: il primo che apre la lezione paga
+// la generazione, tutti gli altri ricevono la STESSA tavola dal cassetto
+// — gratis, e identica per ogni studente, come le pagine di un libro
+// stampato. La chiave ignora i dettagli personali: stesso corso, stessa
+// lezione, stesso livello, stesso ambiente → stessa tavola per tutti.
+
+function chiaveCassetto(tipo, pezzi) {
+  const h = createHash('sha256').update(pezzi.map((p) => String(p || '').toLowerCase().trim()).join('|')).digest('hex');
+  return `${tipo}/${h}.png`;
+}
+
+async function dalCassetto(sb, chiave) {
+  try {
+    const { data } = await sb.storage.from('tavole').list(chiave.split('/')[0], { search: chiave.split('/')[1], limit: 1 });
+    if (!data?.length) return null;
+    return sb.storage.from('tavole').getPublicUrl(chiave).data?.publicUrl || null;
+  } catch { return null; }
+}
+
+async function riponi(sb, chiave, dataUrl) {
+  try {
+    const base64 = dataUrl.split(',')[1];
+    if (!base64) return null;
+    const { error } = await sb.storage.from('tavole')
+      .upload(chiave, Buffer.from(base64, 'base64'), { contentType: 'image/png', upsert: true });
+    if (error) { log.warn('cassetto: riporre fallito:', error.message); return null; }
+    return sb.storage.from('tavole').getPublicUrl(chiave).data?.publicUrl || null;
+  } catch (e) { log.warn('cassetto: riporre fallito:', e?.message); return null; }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // /api/compagni/avatar — genera l'IMMAGINE dell'avatar di un Compagno con
@@ -48,12 +82,31 @@ async function handlePost(req) {
       : promptAvatar({ nome, ruolo, genere, descrizione });
     // La tavola e larga (come nei libri), l'icona quadrata.
     const dimensione = (tipo === 'lezione' || tipo === 'scena') ? '1536x1024' : '1024x1024';
+
+    // b.350 — le immagini DI CORSO (tavole, icone, illustrazioni) passano dal
+    // cassetto condiviso: prima si guarda, poi eventualmente si disegna e si
+    // ripone. Gli AVATAR restano personali: mai in cassetto.
+    const sb = tipo !== 'avatar' ? getSupabaseAdmin() : null;
+    const chiave = sb ? chiaveCassetto(tipo,
+      tipo === 'scena' ? [descrizione, nome, livelloReq, ambienteReq?.id || 'auto']
+      : tipo === 'icona' ? [descrizione || nome, livelloReq]
+      : [nome, descrizione, livelloReq]) : null;
+    if (sb && chiave) {
+      const giaPronta = await dalCassetto(sb, chiave);
+      if (giaPronta) return NextResponse.json({ ok: true, url: giaPronta, dalCassetto: true });
+    }
+
     const r = await generaAvatar({ prompt, userToken, riferimentoDataUrl, dimensione });
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
       if (r.motivo === 'rifiutata') return NextResponse.json({ error: 'Immagine rifiutata dal modello', motivo: 'rifiutata' }, { status: 422 });
       return NextResponse.json({ error: 'Generazione non riuscita', motivo: r.motivo }, { status: 502 });
+    }
+
+    if (sb && chiave) {
+      const url = await riponi(sb, chiave, r.dataUrl);
+      if (url) return NextResponse.json({ ok: true, url });
     }
     return NextResponse.json({ ok: true, dataUrl: r.dataUrl });
   } catch (e) {

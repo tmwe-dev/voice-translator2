@@ -55,7 +55,8 @@ export async function generaAvatar({ nome, ruolo, genere, descrizione, riferimen
 /** b.229 — genera l'ILLUSTRAZIONE di una lezione (stessa rotta, tipo:'lezione'). */
 export async function generaIllustrazione({ titolo, argomento, livello, userToken }) {
   const d = await postJSON('/api/compagni/avatar', { tipo: 'lezione', nome: titolo, descrizione: argomento, livello, userToken });
-  return d.dataUrl;
+  // b.350 — dal cassetto condiviso arriva un URL: stessa immagine per tutti.
+  return d.url || d.dataUrl;
 }
 
 // b.348 — LA TAVOLA DEL LIBRO (corsi di lingua): la scena dichiarata dalla
@@ -63,12 +64,12 @@ export async function generaIllustrazione({ titolo, argomento, livello, userToke
 // che si imparano a nominare. E l'ICONA che accompagna il corso.
 export async function generaTavola({ titolo, argomento, livello, ambienteId, elementi = [], userToken }) {
   const d = await postJSON('/api/compagni/avatar', { tipo: 'scena', nome: titolo, descrizione: argomento, livello, ambienteId, elementi, userToken });
-  return d.dataUrl;
+  return d.url || d.dataUrl;
 }
 
 export async function generaIconaCorso({ argomento, livello, userToken }) {
   const d = await postJSON('/api/compagni/avatar', { tipo: 'icona', nome: argomento, descrizione: argomento, livello, userToken });
-  return d.dataUrl;
+  return d.url || d.dataUrl;
 }
 
 // b.299 — l'arricchimento della lezione dalla COMMUNITY (il seminatore,
