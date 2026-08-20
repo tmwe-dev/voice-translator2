@@ -149,6 +149,12 @@ export async function mieiCorsiUtente(userToken) {
 export function segnaLibroCorso({ argomento, indice, userToken }) {
   return postJSON('/api/compagni/corso', { azione: 'segnalibro', argomento, indice, userToken });
 }
+/** b.331 — DRILL coppie minime per una parola andata male. */
+export async function drillPronuncia({ parola, linguaStudiata, lingua, userToken }) {
+  const d = await postJSON('/api/compagni/corso', { azione: 'drill', parola, linguaStudiata, lingua, userToken });
+  return { suono: d.suono || '', coppie: d.coppie || [] };
+}
+
 /** Il progresso di UN corso (per le spunte in lista). */
 export async function progressoCorso({ argomento, userToken }) {
   const d = await postJSON('/api/compagni/corso', { azione: 'progresso', argomento, userToken });

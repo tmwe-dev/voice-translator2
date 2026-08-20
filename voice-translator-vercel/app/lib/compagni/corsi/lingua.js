@@ -142,6 +142,22 @@ export function testoVisibile(testo) {
   return String(testo || '').replace(TAG_L2, '$1').trim();
 }
 
+// ── b.331 — IL DRILL DELLE COPPIE MINIME (Teaching Policy) ──
+// Quando una parola va male, non si ripete a pappagallo: si allena il
+// CONTRASTO che inganna l'orecchio (ship/sheep, think/sink). Il prompt e
+// puro; la generazione passa dalla cerniera come tutto il resto.
+export function promptDrill({ parola = '', lingua = 'en', linguaParlata = 'it' } = {}) {
+  const studiata = nomeLinguaStudiata(lingua);
+  const parlata = nomeLinguaStudiata(linguaParlata);
+  const system = `Sei un coach di pronuncia madrelingua di ${studiata}. Costruisci mini-esercizi di COPPIE MINIME: due parole vere che differiscono per il solo suono che inganna. Rispondi SOLO con JSON valido.`;
+  const prompt = `La persona (che parla ${parlata}) ha pronunciato male la parola "${parola}" in ${studiata}.
+1. Individua il suono critico che probabilmente l'ha tradita.
+2. Dai 3 coppie minime VERE in ${studiata} centrate su quel suono (la parola data, o parole con lo stesso contrasto).
+Rispondi SOLO con JSON:
+{"suono":"descrizione brevissima del contrasto in ${parlata}","coppie":[{"a":"...","b":"..."},{"a":"...","b":"..."},{"a":"...","b":"..."}]}`;
+  return { system, prompt };
+}
+
 // ── b.330 — L'ESERCIZIO DI LETTURA (il duetto di Luca) ──
 // Il Maestro chiude la lezione di lingua con [LETTURA: frase1 | frase2 | ...]:
 // un piccolo brano in lingua originale, frase per frase. Il tag NON si mostra

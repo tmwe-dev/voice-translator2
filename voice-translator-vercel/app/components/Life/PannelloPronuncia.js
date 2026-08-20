@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
-import { parlaTurno } from '../../lib/compagni/cliente.js';
+import { parlaTurno, drillPronuncia } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudioLife } from '../../lib/audioLife.js';
 import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
 import GraficoFonia from './GraficoFonia.js';
@@ -37,6 +37,22 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
   const rifRef = useRef(null);
   const [confronto, setConfronto] = useState(null);
   const [confrontoPrec, setConfrontoPrec] = useState(null);
+  // b.331 — DRILL: dalla parola rossa nasce l'esercizio sul suono che
+  // inganna (coppie minime), dette dalla voce madrelingua.
+  const [drill, setDrill] = useState(null); // { parola, suono, coppie }
+  const [drillCarico, setDrillCarico] = useState(false);
+  const allena = useCallback(async (parola) => {
+    if (drillCarico) return;
+    setDrillCarico(true);
+    try {
+      const d = await drillPronuncia({ parola, linguaStudiata: lingua || 'en', lingua: 'it', userToken });
+      setDrill({ parola, ...d });
+    } catch { /* il drill e un di piu: l'esercizio resta valido */ }
+    finally { setDrillCarico(false); }
+  }, [drillCarico, lingua, userToken]);
+  const diParola = useCallback((testo) => {
+    parlaTurno({ voceId: voceAssistente || null, testo, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }).catch(() => {});
+  }, [voceAssistente, lingua, userToken]);
 
   const decodifica = useCallback(async (blob) => {
     if (!audioCtxRef.current) {
@@ -225,6 +241,40 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
             ))}
           </div>
           {esito.detto && <div style={{ fontSize: 12, color: muto, marginTop: 8 }}>Ho sentito: “{esito.detto}”</div>}
+
+          {/* b.331 — le parole ANDATE MALE si allenano: coppie minime sul
+              suono che inganna, dette dalla voce madrelingua. */}
+          {(() => {
+            const rosse = (esito.parole || []).filter((p) => !p.ok && !p.vicino).map((p) => p.parola).slice(0, 2);
+            if (!rosse.length) return null;
+            return (
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                {rosse.map((w) => (
+                  <button key={w} onClick={() => allena(w)} disabled={drillCarico}
+                    style={{ padding: '6px 11px', borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: drillCarico ? 0.6 : 1 }}>
+                    {drillCarico ? '…' : `Alleniamo «${w}»`}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+          {drill && (
+            <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: bordo }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: testoP, marginBottom: 8 }}>
+                Coppie minime — {drill.suono || `il suono di «${drill.parola}»`}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {drill.coppie.map((c, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button onClick={() => diParola(c.a)} style={{ padding: '5px 10px', borderRadius: 8, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>▶ {c.a}</button>
+                    <span style={{ color: muto, fontSize: 12 }}>contro</span>
+                    <button onClick={() => diParola(c.b)} style={{ padding: '5px 10px', borderRadius: 8, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>▶ {c.b}</button>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: muto, marginTop: 8 }}>Ascoltale in coppia, poi riprova la frase: l'orecchio guida la bocca.</div>
+            </div>
+          )}
         </div>
       )}
     </div>

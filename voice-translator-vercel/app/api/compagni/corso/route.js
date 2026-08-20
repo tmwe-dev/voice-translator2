@@ -88,6 +88,24 @@ async function handlePost(req) {
       return NextResponse.json({ ok: true, risposta: r.risposta, salta: r.salta || 0 });
     }
 
+    // b.331 — DRILL delle coppie minime: da una parola andata male nasce
+    // l'esercizio mirato sul suono che inganna (Teaching Policy).
+    if (azione === 'drill') {
+      const parola = typeof body.parola === 'string' ? body.parola.trim().slice(0, 40) : '';
+      if (!parola) return NextResponse.json({ error: 'Serve la parola' }, { status: 400 });
+      const { promptDrill } = await import('../../../lib/compagni/corsi/lingua.js');
+      const { generaTesto } = await import('../../../lib/compagni/ponte.js');
+      const { estraiJSON } = await import('../../../lib/compagni/corsi/generatore.js');
+      const linguaStudiata = typeof body.linguaStudiata === 'string' ? body.linguaStudiata.slice(0, 8) : 'en';
+      const { system, prompt } = promptDrill({ parola, lingua: linguaStudiata, linguaParlata: lingua });
+      const r = await generaTesto({ system, prompt, userToken, maxTokens: 260, temperature: 0.4 });
+      if (!r.ok) return rispostaEsito(r);
+      const d = estraiJSON(r.testo);
+      const coppie = Array.isArray(d?.coppie) ? d.coppie.filter((c) => c?.a && c?.b).slice(0, 3).map((c) => ({ a: String(c.a).slice(0, 40), b: String(c.b).slice(0, 40) })) : [];
+      if (!coppie.length) return NextResponse.json({ error: 'Drill non riuscito' }, { status: 502 });
+      return NextResponse.json({ ok: true, suono: String(d?.suono || '').slice(0, 160), coppie });
+    }
+
     if (azione === 'quiz') {
       const lezione = body.lezione;
       if (!lezione?.titolo) return NextResponse.json({ error: 'Serve la lezione' }, { status: 400 });
