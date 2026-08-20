@@ -10,6 +10,7 @@ import Icon from './Icon.js';
 
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
+import GloboMondo from './GloboMondo.js'; // b.359 — il pianeta dal file di Luca
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
 import { subscribeTick } from '../lib/ticker.js';
@@ -355,6 +356,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {tab === 'perte' && !cercando && (
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
+
+            {/* b.359 — IL PIANETA (il file di Luca, copia esatta) in cima */}
+            <div style={{ margin: '2px 0 16px' }}>
+              <GloboMondo altezza="66vh" />
+            </div>
 
             {/* TREND: le discussioni piu vive (commenti, poi recenza) */}
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>

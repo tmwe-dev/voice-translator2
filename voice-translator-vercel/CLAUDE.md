@@ -214,10 +214,14 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.358** (push #597) — home col QR grande di Luca (immagine
-  trasparente) che apre tutte le scelte di comunicazione, sezioni tornate
-  pulsanti larghi in vetro, corso di lingua che nasce di nuovo
-- Versione precedente: **b.357** (push #596) — "Parla ora": niente doppia lettura, il
+- Versione: **b.359** (push #598) — il GLOBO di Luca (file bartalk-completo_2
+  copiato VERBATIM in public/mondo-globo.html) montato dentro Mondo via
+  iframe pilotato su 'community'; e il PERMESSO DI NON SAPERE per gli agenti
+  (non rispondono piu per forza: non lo so / non ho capito / la domanda non
+  sta in piedi / mi manca un dato), attivo su ogni superficie via involucro
+- REGOLA (memoria): file/repo dati da Luca si COPIANO ESATTI (schema iframe
+  BizCard), non si riscrivono ne si reimplementa di iniziativa
+- Versioni precedenti: **b.358** (#597), **b.357** (#596) — "Parla ora": niente doppia lettura, il
   contenitore resta dentro lo schermo, il registro scorre col verso giusto
   anche capovolto, e una traduzione respinta dal server non viene piu
   spacciata per buona; Business/BizCard, PeepOff, libro di lingue e scanner
