@@ -438,6 +438,8 @@ function HomeInner() {
     startDucking: audio.startDucking,
     stopDucking: audio.stopDucking,
     conversationContext: convContext,  // Subtitle-first pipeline: context memory for disambiguation
+    // b.352 — chi ha scelto la voce premium la sente ANCHE dall'interprete.
+    preferisciEleven: prefs.voiceEngine === 'elevenlabs' && !!auth.canUseElevenLabs,
   });
 
   // Sync interpreterRef so handleDirectMessage can access it without circular deps

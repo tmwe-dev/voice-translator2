@@ -69,9 +69,16 @@ describe('P0-1: Direct Mode non si fida piu solo dell\'intestazione client', () 
 
     for (const hook of ['app/hooks/useInterpreterMode.js', 'app/hooks/useStreamingInterpreter.js']) {
       const src = leggi(hook);
-      const i = src.indexOf("fetch('/api/tts-edge'");
+      // b.352 — l'interprete ora ha PIU motori (edge + premium con ripiego):
+      // la rotta edge non e piu in una fetch fissa ma nell'elenco dei motori.
+      const i = src.indexOf("'/api/tts-edge'");
       expect(i, hook).toBeGreaterThan(-1);
-      const blocco = src.slice(i, i + 500);
+      // b.352 — nello streaming la voce passa da chiediVoce (piu motori con
+      // ripiego): i pegni di stanza stanno nel corpo comune costruito li,
+      // qualche riga PRIMA dell'elenco delle rotte. Si controlla la
+      // FUNZIONE intera, non le righe subito dopo la stringa.
+      const inizio = Math.max(0, src.lastIndexOf('const base', i));
+      const blocco = src.slice(Math.min(inizio, i), i + 500);
       expect(blocco, hook).toContain('roomId');
       expect(blocco, hook).toContain('roomSessionToken');
     }

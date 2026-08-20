@@ -490,6 +490,6 @@ describe('ciò che non deve essersi rotto', () => {
     const s = streaming();
     expect(s).toContain("type: 'interpreter-subtitle'");
     expect(s).toContain("type: 'interpreter-audio'");
-    expect(s).toContain("fetch('/api/tts-edge'");
+    expect(s).toContain("'/api/tts-edge'");
   });
 });

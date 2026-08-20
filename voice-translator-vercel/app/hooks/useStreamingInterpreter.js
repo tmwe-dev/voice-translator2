@@ -37,6 +37,9 @@ export default function useStreamingInterpreter({
   conversationContext,  // { getContext, addMessage }
   startDucking,
   stopDucking,
+  // b.352 — la voce PREMIUM in chiamata finalmente esiste: quando la
+  // preferenza dell'utente e ElevenLabs, l'interprete la usa per primo.
+  preferisciEleven = false,
 }) {
   const [active, setActive] = useState(false);
   const [myLiveText, setMyLiveText] = useState('');           // Testo STT in tempo reale (mio)
@@ -151,23 +154,57 @@ export default function useStreamingInterpreter({
   }, [webrtc, myLang, partnerLang]);
 
   // ═══ TTS + SEND AUDIO ═══
+  // b.352 — RIFATTO (collaudo di Luca: «la voce non parte, non va niente»).
+  // Prima: SOLO la voce edge, e a un fallimento (successo oggi, 503) si
+  // taceva per sempre — sottotitoli vivi, voce morta, nessun avviso. E la
+  // voce premium ElevenLabs in chiamata NON esisteva proprio.
+  // Ora: il motore preferito prova per primo (premium se l'utente l'ha
+  // scelta), l'altro fa da ripiego, ognuno con una seconda possibilita.
+  // Se TUTTO fallisce, il partner riceve l'avviso "voce non disponibile"
+  // invece del silenzio inspiegabile.
+  const preferisciElevenRef = useRef(false);
+  useEffect(() => { preferisciElevenRef.current = !!preferisciEleven; }, [preferisciEleven]);
+  const [voceGuasta, setVoceGuasta] = useState(false);
+  const [partnerVoceMancata, setPartnerVoceMancata] = useState(false);
+  const voceMancataTimerRef = useRef(null);
+  const audioCorrenteRef = useRef(null);
+
+  const chiediVoce = useCallback(async (testo) => {
+    const base = {
+      text: testo, langCode: partnerLang, roomId,
+      roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
+      userToken: userToken || undefined,
+    };
+    const motori = preferisciElevenRef.current
+      ? ['/api/tts-elevenlabs', '/api/tts-edge']
+      : ['/api/tts-edge', '/api/tts-elevenlabs'];
+    for (const rotta of motori) {
+      for (let tentativo = 0; tentativo < 2; tentativo++) {
+        try {
+          const r = await fetch(rotta, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(base),
+          });
+          if (r.ok) return await r.blob();
+          // credito esaurito sulla premium: inutile riprovarla, si passa oltre
+          if (r.status === 402) break;
+        } catch { /* rete inciampata: il prossimo giro riprova */ }
+      }
+    }
+    return null;
+  }, [partnerLang, roomId, roomSessionTokenRef, userToken]);
+
   const speakAndSend = useCallback(async (translatedText) => {
     if (!translatedText || translatedText.trim().length < 2) return;
     try {
-      const ttsRes = await fetch('/api/tts-edge', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          text: translatedText, langCode: partnerLang,
-          // b.167 — stesso motivo delle altre chiamate di questo file
-          // verso /api/stt-token qualche riga sopra.
-          roomId,
-          roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
-        }),
-      });
-      if (!ttsRes.ok) return;
-
-      const ttsBlob = await ttsRes.blob();
+      const ttsBlob = await chiediVoce(translatedText);
+      if (!ttsBlob) {
+        // Il silenzio non resta mai muto: chi ascolta vede il perche.
+        webrtc?.sendDirectMessage?.({ type: 'interpreter-voce-mancata' });
+        setVoceGuasta(true);
+        setTimeout(() => setVoceGuasta(false), 8000);
+        return;
+      }
       const buffer = await ttsBlob.arrayBuffer();
       const bytes = new Uint8Array(buffer);
       let binary = '';
@@ -197,7 +234,7 @@ export default function useStreamingInterpreter({
     } catch (e) {
       console.warn('[StreamInterp] TTS error:', e);
     }
-  }, [partnerLang, webrtc, roomId, roomSessionTokenRef]);
+  }, [webrtc, chiediVoce]);
 
   // ═══ TTS QUEUE PROCESSOR ═══
   // Processa la coda TTS sequenzialmente (una frase alla volta)
@@ -208,15 +245,15 @@ export default function useStreamingInterpreter({
       while (ttsQueueRef.current.length > 0) {
         const item = ttsQueueRef.current.shift();
         if (item?.text) {
-          startDucking?.();
+          // b.352 — niente attenuazione qui: il mittente non riproduce nulla
+          // in locale, avvolgeva solo una chiamata di rete.
           await speakAndSend(item.text);
-          stopDucking?.();
         }
       }
     } finally {
       processingTTSRef.current = false;
     }
-  }, [speakAndSend, startDucking, stopDucking]);
+  }, [speakAndSend]);
 
   // ═══ HANDLE SENTENCE COMPLETE ═══
   // Chiamata quando una frase è completa (pausa rilevata)
@@ -615,6 +652,11 @@ export default function useStreamingInterpreter({
     }
 
     // Audio playback (same logic as old interpreter)
+    if (msg.type === 'interpreter-voce-mancata') {
+      setPartnerVoceMancata(true);
+      clearTimeout(voceMancataTimerRef.current);
+      voceMancataTimerRef.current = setTimeout(() => setPartnerVoceMancata(false), 8000);
+    }
     if (msg.type === 'interpreter-audio' && msg.data) {
       playBase64Audio(msg.data);
     }
@@ -640,6 +682,10 @@ export default function useStreamingInterpreter({
       const volume = getVolumeTTS();
       if (volume <= 0) { URL.revokeObjectURL(url); return; }
       audio.volume = volume;
+      // b.352 — il cursore agisce ANCHE sulla frase in corso: prima il
+      // volume si leggeva solo all'avvio e muoverlo durante il parlato
+      // non faceva nulla ("i comandi non funzionano", collaudo di Luca).
+      audioCorrenteRef.current = audio;
       // b.276 — P1: L'ATTENUAZIONE DELL'ORIGINALE.
       // startDucking abbassa un volume interno che la voce del partner
       // in videochiamata non attraversa: "Solo tradotta / Attenuata /
@@ -670,6 +716,18 @@ export default function useStreamingInterpreter({
       playBase64Audio(full);
     }
   }, [playBase64Audio]);
+
+  // b.352 — il cursore del volume comanda anche l'audio GIA in corsa.
+  useEffect(() => {
+    const suVolume = () => {
+      const a = audioCorrenteRef.current;
+      if (!a) return;
+      const v = getVolumeTTS();
+      try { a.volume = v; if (v <= 0) a.pause(); } catch { /* l'audio era gia finito: nulla da regolare */ }
+    };
+    window.addEventListener('bartalk:vol-tts', suVolume);
+    return () => window.removeEventListener('bartalk:vol-tts', suVolume);
+  }, []);
 
   // Cleanup stale audio buffers
   useEffect(() => {
@@ -708,5 +766,7 @@ export default function useStreamingInterpreter({
     mySubtitles,                   // Cronologia frasi tradotte mie
     partnerSubtitles,              // Cronologia frasi tradotte partner
     handleIncomingMessage,         // Handler per messaggi P2P dal partner
+    voceGuasta,                    // b.352 — la MIA voce tradotta non e partita (tutti i motori giu)
+    partnerVoceMancata,            // b.352 — la voce del partner non arrivera: leggi i sottotitoli
   };
 }

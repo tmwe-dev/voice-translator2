@@ -6,7 +6,6 @@ import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCa
 import { PALETTE } from '../lib/palette.js';
 import { traccia } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';
-import CostTicker from './CostTicker.js';
 import { getVolumeTTS, setVolumeTTS, getAttenuazione, setAttenuazione, PRESET_ATTENUAZIONE } from '../lib/audioPrefs.js';
 import { useApp } from '../contexts/AppContext.js';
 
@@ -81,32 +80,6 @@ const RecordingIndicator = ({ L, recording, isListening }) => {
 };
 
 // ── Volume control component ──
-const VolumeControl = ({ compact, partnerVolume, setPartnerVolume }) => (
-  <div style={{
-    display: 'flex', alignItems: 'center', gap: compact ? 6 : 10,
-    padding: compact ? '6px 10px' : '8px 16px',
-    borderRadius: 24, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)',
-  }}>
-    <button onClick={() => setPartnerVolume(partnerVolume > 0.01 ? 0 : 0.7)}
-      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: compact ? 18 : 22, lineHeight: 1 }}>
-      {partnerVolume < 0.01 ? '\u{1F507}' : partnerVolume < 0.4 ? '\u{1F509}' : '\u{1F50A}'}
-    </button>
-    <input type="range" min="0" max="100" step="5"
-      value={Math.round(partnerVolume * 100)}
-      onChange={e => setPartnerVolume(Number(e.target.value) / 100)}
-      style={{
-        width: compact ? 90 : 120, height: compact ? 6 : 8,
-        accentColor: PALETTE.blue, borderRadius: 4,
-      }} />
-    <span style={{
-      fontSize: compact ? 10 : 12, color: '#94a3b8',
-      fontFamily: 'monospace', minWidth: 32, textAlign: 'right', fontWeight: 600,
-    }}>
-      {Math.round(partnerVolume * 100)}%
-    </span>
-  </div>
-);
-
 /**
  * VideoCallOverlay — Beautiful, child-simple video call UI.
  *
@@ -152,7 +125,6 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   const localVideoInlineRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const remoteVideoInlineRef = useRef(null);
-  const [showVolumeSlider, setShowVolumeSlider] = useState(false);
   // Comandi del pannello traduzione (persistenti tra le chiamate)
   const [mostraTesto, setMostraTesto] = useState(true);
 
@@ -185,20 +157,12 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
   // b.176 — Versione B: due interruttori grandi. "Avanzate" nasconde i
   // controlli fini (modi SENTI + volume partner). Il ref ricorda il
   // volume voce prima di spegnerla, per ripristinarlo alla riaccensione.
-  const [mostraAvanzate, setMostraAvanzate] = useState(false);
-  // b.278 — il cassetto laterale dei controlli traduzione (linguetta -> apre)
-  const [pannelloAperto, setPannelloAperto] = useState(false);
+  // b.352 — il pannello Volumi: l'unico secondario sopravvissuto alla
+  // demolizione delle tre superfici di comandi accumulate.
+  const [volumiAperti, setVolumiAperti] = useState(false);
   const volTTSPrimaRef = useRef(volTTS > 0.01 ? volTTS : 0.7);
   // Il contatore € deve usare la tariffa VERA (premium se voce ElevenLabs)
   const { L, prefs, savePrefs } = useApp();
-  // b.278 — P2: IL CONTATORE DEVE DIRE LA TARIFFA DELLA VOCE CHE SUONA.
-  // Guardava solo il motore SCELTO nelle impostazioni: ma quando
-  // l'interprete e acceso la voce che suona e SEMPRE quella veloce
-  // standard (e la scelta di progetto: la simultanea privilegia la
-  // rapidita). Con l'interprete acceso il contatore diceva "premium" e
-  // si pagava... la voce standard. Ora la tariffa segue la voce vera:
-  // interprete acceso -> standard, altrimenti il motore scelto.
-  const vocePremiumAttiva = !interpreterActive && prefs?.voiceEngine === 'elevenlabs';
 
   // Attach local video stream to BOTH fullscreen and inline elements
   useEffect(() => {
@@ -232,7 +196,17 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
     return (
       <div style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200,
-        background: '#000', display: 'flex', flexDirection: 'column',
+        background: '#03050c', display: 'flex', alignItems: 'stretch', justifyContent: 'center',
+      }}>
+      {/* b.352 — IL CONTAINER: anche a pieno schermo la chiamata vive in una
+          cornice da app (larghezza contenuta sui grandi schermi, bordi e
+          colori del design system), non in un buco nero senza forma. */}
+      <div style={{
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        width: 'min(920px, 100vw)', height: '100%',
+        background: '#000', overflow: 'hidden',
+        borderLeft: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.14)'}`,
+        borderRight: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.14)'}`,
       }}>
         {/* Remote video area */}
         <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -329,22 +303,6 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             <PartnerActivityBadge L={L} partner={partner} partnerSpeaking={partnerSpeaking} partnerTyping={partnerTyping} />
           </div>
 
-          {/* Volume control (tap speaker icon to show/hide slider) */}
-          <div style={{
-            position: 'absolute', bottom: 110, right: 16,
-            display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-end',
-          }}>
-            {showVolumeSlider && <VolumeControl compact={false} partnerVolume={partnerVolume} setPartnerVolume={setPartnerVolume} />}
-            <button onClick={() => setShowVolumeSlider(!showVolumeSlider)}
-              style={{
-                width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
-                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
-                color: '#fff', fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-              {partnerVolume < 0.01 ? <IconVolumeOff size={20}/> : <IconVolume size={20}/>}
-            </button>
-          </div>
-
           {/* b.284 — il costo non sta piu sopra il video: vive nel
               cassetto (•••), la pagina resta vuota. */}
 
@@ -435,156 +393,6 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               </div>
               )}
 
-              {/* (3) il cassetto laterale: si apre dalla linguetta, si
-                  chiude toccando fuori o la X. Dentro ci sono GLI STESSI
-                  controlli del pannello b.176: spostati, non riscritti. */}
-              {pannelloAperto && (
-                <>
-                  <div onClick={() => setPannelloAperto(false)}
-                    style={{ position: 'absolute', inset: 0, zIndex: 8, background: 'rgba(0,0,0,0.45)' }} />
-                  <div role="dialog" aria-label={L('settings')} style={{
-                    position: 'absolute', top: 0, right: 0, bottom: 0, zIndex: 9,
-                    width: 'min(320px, 88vw)', overflowY: 'auto',
-                    background: 'rgba(8,11,22,0.96)', backdropFilter: 'blur(20px)',
-                    borderLeft: '1px solid rgba(160,190,255,0.18)',
-                    padding: '18px 16px calc(18px + env(safe-area-inset-bottom))',
-                    boxShadow: '-16px 0 48px rgba(0,0,0,0.5)',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span style={{ fontSize: 14, fontWeight: 800, color: '#eef2ff' }}>{L('interpreterModeName')}</span>
-                      <button onClick={() => setPannelloAperto(false)} aria-label={L('close')}
-                        style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 18, cursor: 'pointer', padding: 4 }}>
-                        {'\u2715'}
-                      </button>
-                    </div>
-
-                    {/* b.284 — il costo della chiamata, spostato qui dal video */}
-                    <div style={{ marginBottom: 10 }}>
-                      <CostTicker attivo={true} vocePremium={vocePremiumAttiva} />
-                    </div>
-
-                    {/* b.290 — LA VOCE DELLA TRADUZIONE SI CAMBIA QUI, IN
-                        CHIAMATA, con pulsanti GRANDI (regola: anziani e
-                        bambini, uso elementare). Tre scelte in parole
-                        semplici, la scelta vale subito, dal prossimo
-                        messaggio. Scrive la stessa preferenza delle
-                        Impostazioni: un posto solo per la verita. */}
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: 'rgba(238,242,255,0.55)', marginBottom: 7 }}>
-                        {L('voiceEngine')}
-                      </div>
-                      {[
-                        { id: 'edge', nome: L('engineStandardDesc') },
-                        { id: 'elevenlabs', nome: L('enginePremiumDesc') },
-                        { id: 'auto', nome: L('engineAutoDesc') },
-                      ].map(m => {
-                        const attivo = (prefs?.voiceEngine || 'auto') === m.id;
-                        return (
-                          <button key={m.id}
-                            onClick={() => savePrefs && savePrefs({ ...prefs, voiceEngine: m.id })}
-                            aria-pressed={attivo}
-                            style={{
-                              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                              padding: '13px 12px', marginBottom: 6, borderRadius: 12, cursor: 'pointer',
-                              fontFamily: 'inherit', textAlign: 'left',
-                              background: attivo ? 'rgba(61,220,132,0.14)' : 'rgba(255,255,255,0.05)',
-                              border: `2px solid ${attivo ? '#3ddc84' : 'rgba(160,190,255,0.15)'}`,
-                              color: '#eef2ff', fontSize: 14, fontWeight: 700,
-                            }}>
-                            <span aria-hidden="true" style={{ fontSize: 16, width: 20, textAlign: 'center', color: attivo ? '#3ddc84' : 'rgba(238,242,255,0.35)' }}>
-                              {attivo ? '\u2713' : '\u25CB'}
-                            </span>
-                            {m.nome}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                {/* ═══ INIZIO b.176 — Versione B: due interruttori grandi ═══
-                    COSA: al posto di "Testo" + 3 modi SENTI + 2 slider
-                    (confusi), due sole levette — "Vedi i sottotitoli" e
-                    "Ascolta la voce" — con il volume che compare SOLO se la
-                    voce e accesa. I controlli fini (modi SENTI + volume
-                    partner) restano sotto "Avanzate": nessun handler perso.
-                    PERCHE: "non si capisce come configurare testo/traduzione,
-                    infiniti tasti" (Luca). Scelta versione B. */}
-                <div style={{ display: 'flex', flexDirection: 'column',
-                  paddingTop: 8, borderTop: '1px solid rgba(160,190,255,0.12)' }}>
-
-                  {/* Interruttore 1 — sottotitoli */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px' }}>
-                    <span style={{ fontSize: 22 }}>{'\u{1F4D6}'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 750 }}>Vedi i sottotitoli</div>
-                      <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.5)' }}>Il testo tradotto sullo schermo</div>
-                    </div>
-                    <button onClick={() => setMostraTesto(v => !v)} aria-pressed={mostraTesto} aria-label="Vedi i sottotitoli"
-                      style={{ width: 52, height: 30, borderRadius: 16, border: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative',
-                        background: mostraTesto ? `linear-gradient(90deg, ${acc1}, ${acc})` : 'rgba(255,255,255,0.14)', transition: 'background .2s' }}>
-                      <span style={{ position: 'absolute', top: 3, left: mostraTesto ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
-                    </button>
-                  </div>
-
-                  {/* Interruttore 2 — voce tradotta */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 2px', borderTop: '1px solid rgba(160,190,255,0.08)' }}>
-                    <span style={{ fontSize: 22 }}>{'\u{1F50A}'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 750 }}>Ascolta la voce</div>
-                      <div style={{ fontSize: 11, color: 'rgba(238,242,255,0.5)' }}>Una voce traduce ad alta voce</div>
-                    </div>
-                    <button aria-pressed={volTTS > 0.01} aria-label="Ascolta la voce"
-                      onClick={() => {
-                        if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); }
-                        else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
-                      }}
-                      style={{ width: 52, height: 30, borderRadius: 16, border: 'none', cursor: 'pointer', flexShrink: 0, position: 'relative',
-                        background: volTTS > 0.01 ? `linear-gradient(90deg, ${acc1}, ${acc})` : 'rgba(255,255,255,0.14)', transition: 'background .2s' }}>
-                      <span style={{ position: 'absolute', top: 3, left: volTTS > 0.01 ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', transition: 'left .2s' }} />
-                    </button>
-                  </div>
-
-                  {/* Volume voce — solo se la voce e accesa */}
-                  {volTTS > 0.01 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '4px 2px 8px' }}>
-                      <span style={{ fontSize: 15 }}>{'\u{1F508}'}</span>
-                      <input type="range" min="0" max="1" step="0.05" value={volTTS}
-                        onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
-                        aria-label={L('translatedVolume')} style={{ flex: 1, accentColor: acc1, height: 3 }} />
-                      <span style={{ fontSize: 15 }}>{'\u{1F50A}'}</span>
-                    </div>
-                  )}
-
-                  {/* Avanzate — modi "come senti il partner" + volume partner (niente perso) */}
-                  <button onClick={() => setMostraAvanzate(v => !v)}
-                    style={{ background: 'none', border: 'none', color: 'rgba(56,225,255,0.9)', fontSize: 12, fontWeight: 700, cursor: 'pointer', padding: '6px 2px', textAlign: 'left' }}>
-                    {'⚙︎'} {mostraAvanzate ? 'Nascondi avanzate' : 'Avanzate'}
-                  </button>
-                  {mostraAvanzate && (
-                    <div style={{ padding: '2px 2px 6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap', marginBottom: 8 }}>
-                        <span style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, color: 'rgba(238,242,255,0.45)' }}>SENTI</span>
-                        {PRESET_ATTENUAZIONE.map(p => (
-                          <button key={p.id}
-                            onClick={() => { setAttenuazione(p.valore); setLivelloAtt(p.valore); if (setVideoDucking) setVideoDucking(p.valore < 0.5); }}
-                            aria-pressed={livelloAtt === p.valore}
-                            style={livelloAtt === p.valore ? pillOn : pillOff}>
-                            {L(p.chiave)}
-                          </button>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 9, fontWeight: 750, letterSpacing: 0.5, color: 'rgba(238,242,255,0.5)', width: 58 }}>PARTNER</span>
-                        <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
-                          onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
-                          aria-label={L('partnerVolume')} style={{ flex: 1, accentColor: acc, height: 3 }} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {/* ═══ FINE b.176 ═══ */}
-                  </div>
-                </>
-              )}
               {/* ═══ FINE b.278 ═══ */}
               </>
             );
@@ -619,101 +427,99 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
           </div>
         )}
 
-        {/* ═══ INIZIO b.286 — IL BORDO DESTRO: COME SENTI E COME LEGGI ═══
-            Ordine di Luca: tre interruttori (testo si/no, voce tradotta
-            si/no, traduzione si/no) e DUE volumi sempre a vista — voce
-            dell'ospite e voce del traduttore — sul bordo destro, al
-            centro. L'utente decide a piacere quanto sentire l'originale
-            e quanto la traduzione. */}
-        <div style={{
-          position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)',
-          zIndex: 6, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center',
-          padding: '10px 8px', borderRadius: 18,
-          background: 'rgba(5,7,15,0.55)', backdropFilter: 'blur(14px)',
-          border: '1px solid rgba(160,190,255,0.14)', width: 96,
-        }}>
-          <ControlBtn
-            onClick={() => setMostraTesto(v => !v)}
-            active={mostraTesto}
-            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
-            label={mostraTesto ? 'Testo' : 'No testo'}
-            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={44}
-          />
-          <ControlBtn
-            onClick={() => {
-              if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); }
-              else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
-            }}
-            active={volTTS > 0.01}
-            icon={volTTS > 0.01 ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
-            label={volTTS > 0.01 ? 'Voce' : 'No voce'}
-            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={44}
-          />
-          {setInterpreterActive && (
-            <ControlBtn
-              onClick={() => {
-                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
-                // b.289 — nel gruppo il comando dice la verita: l'interprete
-                // simultaneo e un impianto a due e tradurrebbe per UNO solo.
-                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
-                setInterpreterActive(!interpreterActive);
-              }}
-              active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
-              icon={<IconGlobe size={18}/>}
-              label={stanzaDiretta ? 'Diretta' : stanzaConPiuDiDue ? 'A due' : interpreterActive ? 'Traduce' : 'Traduci'}
-              color={(stanzaDiretta || stanzaConPiuDiDue) ? '#8b93a7' : '#3ddc84'}
-              activeColor="rgba(61,220,132,0.18)" size={44}
-            />
-          )}
-          {/* volume OSPITE (voce originale) */}
-          <div style={{ width: '100%' }}>
-            <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(238,242,255,0.55)', textAlign: 'center', marginBottom: 3 }}>OSPITE</div>
-            <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
-              onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
-              aria-label={L('partnerVolume')} style={{ width: '100%', accentColor: '#38e1ff', height: 3 }} />
-          </div>
-          {/* volume TRADUTTORE (voce tradotta) */}
-          <div style={{ width: '100%' }}>
-            <div style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: 0.8, color: 'rgba(238,242,255,0.55)', textAlign: 'center', marginBottom: 3 }}>TRADUTTORE</div>
-            <input type="range" min="0" max="1" step="0.05" value={volTTS}
-              onChange={(e) => { const v = parseFloat(e.target.value); setVolTTS(v); setVolumeTTS(v); }}
-              aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: '#3ddc84', height: 3 }} />
-          </div>
-        </div>
-        {/* ═══ FINE b.286 ═══ */}
 
-        {/* ═══ INIZIO b.284 — BARRA LATERALE + BARRA BASSA ESSENZIALE ═══
-            COSA: i sei comandi (camera, micro, traduci, sottotitoli,
-            gira, riduci) stanno in una COLONNA di sole icone sul bordo
-            sinistro, sempre visibile; in basso restano SOLO Termina e
-            il menu ••• che apre il cassetto con tutto il resto (volume,
-            avanzate, costo). STESSI onClick di prima: spostati, non
-            riscritti. PERCHE: "la pagina deve rimanere praticamente
-            vuota" (Luca) — comandi sparsi in alto e in basso
-            confondevano durante la chiamata. */}
+
+        {/* ═══ b.352 — LA PLANCIA UNICA (collaudo di Luca: «i comandi sono
+            incomprensibili, i menu devono sempre essere raggiungibili, la
+            grafica deve essere quella dell'app»). Tre superfici accumulate
+            (colonna destra b.286, colonna sinistra b.284, cassetto b.278
+            con doppioni, contatore e motore-voce) sono state DEMOLITE.
+            Resta UNA barra in basso, sempre visibile, con parole chiare
+            sotto ogni tasto, nello stile dell'app. Il pannello Volumi e
+            l'unico secondario: si apre sopra la barra, non copre nulla. */}
+
+        {/* Il pannello VOLUMI: due cursori con nomi umani + come sentire
+            l'originale mentre parla la traduzione. Stile carta dell'app. */}
+        {volumiAperti && (
+          <div style={{
+            position: 'absolute', left: '50%', transform: 'translateX(-50%)',
+            bottom: 'calc(96px + env(safe-area-inset-bottom))', zIndex: 8,
+            width: 'min(360px, calc(100vw - 28px))',
+            background: S?.colors?.cardBg || 'rgba(10,14,26,0.96)',
+            border: `1px solid ${S?.colors?.overlayBorder || 'rgba(160,190,255,0.18)'}`,
+            borderRadius: 18, padding: 14, backdropFilter: 'blur(20px)',
+            boxShadow: '0 14px 48px rgba(0,0,0,0.55)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 800, color: '#eef2ff' }}>Volumi</span>
+              <button onClick={() => setVolumiAperti(false)} aria-label={L('close')}
+                style={{ background: 'none', border: 'none', color: 'rgba(238,242,255,0.6)', fontSize: 16, cursor: 'pointer', padding: 4 }}>{'\u2715'}</button>
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+                {`Voce di ${partner?.name || 'chi parla'}`}
+              </div>
+              <input type="range" min="0" max="1" step="0.05" value={partnerVolume ?? 1}
+                onChange={(e) => setPartnerVolume && setPartnerVolume(parseFloat(e.target.value))}
+                aria-label={L('partnerVolume')} style={{ width: '100%', accentColor: S?.colors?.accent2 || '#38e1ff', height: 4 }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(238,242,255,0.75)', marginBottom: 5 }}>
+                Voce che traduce
+              </div>
+              <input type="range" min="0" max="1" step="0.05" value={volTTS}
+                onChange={(e) => {
+                  const v = parseFloat(e.target.value);
+                  setVolTTS(v); setVolumeTTS(v);
+                  // b.352 — agisce anche sulla frase GIA in corso
+                  try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser nessuno ascolta */ }
+                }}
+                aria-label={L('translatedVolume')} style={{ width: '100%', accentColor: S?.colors?.accent1 || '#5b8cff', height: 4 }} />
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(238,242,255,0.75)', marginBottom: 6 }}>
+              Mentre parla la traduzione:
+            </div>
+            {PRESET_ATTENUAZIONE.map(pz => {
+              const on = livelloAtt === pz.valore;
+              return (
+                <button key={pz.id}
+                  onClick={() => { setAttenuazione(pz.valore); setLivelloAtt(pz.valore); if (setVideoDucking) setVideoDucking(pz.valore < 0.5); }}
+                  aria-pressed={on}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left',
+                    padding: '10px 12px', marginBottom: 5, borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit',
+                    background: on ? 'rgba(91,140,255,0.16)' : 'rgba(255,255,255,0.04)',
+                    border: `1.5px solid ${on ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(160,190,255,0.14)'}`,
+                    color: '#eef2ff', fontSize: 13.5, fontWeight: 700,
+                  }}>
+                  <span aria-hidden="true" style={{ width: 16, textAlign: 'center', color: on ? (S?.colors?.accent1 || '#5b8cff') : 'rgba(238,242,255,0.35)' }}>{on ? '\u2713' : '\u25CB'}</span>
+                  {L(pz.chiave)}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* LA BARRA: sempre visibile, parole sotto le icone, rosso al centro */}
         <div style={{
-          position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
-          zIndex: 6, display: 'flex', flexDirection: 'column', gap: 10,
-          padding: '10px 6px', borderRadius: 18,
-          background: 'rgba(5,7,15,0.55)', backdropFilter: 'blur(14px)',
-          border: '1px solid rgba(160,190,255,0.14)',
+          padding: '10px 10px', paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
+          display: 'flex', justifyContent: 'center', alignItems: 'flex-end', gap: 10, flexWrap: 'wrap',
+          background: 'linear-gradient(to top, rgba(3,5,12,0.97) 55%, rgba(0,0,0,0))',
         }}>
           <ControlBtn
             onClick={() => webrtc.toggleVideo()}
             active={webrtc.videoEnabled}
             icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
-            label={webrtc.videoEnabled ? 'Camera' : 'Spenta'}
+            label="Camera"
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
           <ControlBtn
             onClick={() => webrtc.toggleAudio()}
             active={webrtc.audioEnabled}
             icon={webrtc.audioEnabled ? <IconMic size={20}/> : <IconVolumeOff size={20}/>}
-            label={webrtc.audioEnabled ? 'Micro' : 'Muto'}
+            label="Micro"
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
-          {/* b.286 — CC e Traduci vivono ora sul bordo DESTRO, con i
-              volumi: a sinistra resta solo il TUO segnale. */}
           <ControlBtn
             onClick={() => webrtc.flipCamera()}
             active={false}
@@ -721,57 +527,71 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             label={L('rotateWord')}
             color="#94a3b8" size={46}
           />
-          {/* b.293 — condivisione schermo: solo dove il browser la offre
-              (computer). Sui telefoni il pulsante non compare. */}
-          {typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo && (
-            <ControlBtn
-              onClick={() => webrtc.condividiSchermo()}
-              active={!!webrtc.schermoCondiviso}
-              icon={<span style={{ fontSize: 16 }}>{'\u{1F5A5}'}</span>}
-              label={L('screenWord')}
-              color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
-            />
-          )}
-          <ControlBtn
-            onClick={() => setVideoFullscreen(false)}
-            active={false}
-            icon={<IconMinimize size={18}/>}
-            label={L('navChat')}
-            color="#94a3b8" size={46}
-          />
-        </div>
 
-        {/* barra bassa: SOLO l'essenziale, il piu in basso possibile */}
-        <div style={{
-          padding: '8px 16px', paddingBottom: 'max(14px, env(safe-area-inset-bottom))',
-          display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 22,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.95), rgba(0,0,0,0.0))',
-        }}>
-          {/* TERMINA — il protagonista, impossibile sbagliarsi */}
+          {/* TERMINA — al centro, impossibile sbagliarsi */}
           <button
             onClick={() => { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }}
             aria-label={L('endCall')}
             style={{
-              width: 64, height: 64, borderRadius: 32, border: 'none', cursor: 'pointer',
+              width: 62, height: 62, borderRadius: 31, border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+              margin: '0 6px',
               background: 'linear-gradient(145deg, #ef4444, #dc2626)', color: '#fff',
-              boxShadow: '0 6px 24px rgba(239,68,68,0.5), 0 0 0 6px rgba(239,68,68,0.12)',
+              boxShadow: '0 6px 24px rgba(239,68,68,0.5)',
               WebkitTapHighlightColor: 'transparent',
             }}>
             <IconPhoneOff size={24}/>
-            <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: 1 }}>TERMINA</span>
           </button>
 
-          {/* ••• — tutto il secondario vive nel cassetto */}
+          {setInterpreterActive && (
+            <ControlBtn
+              onClick={() => {
+                if (stanzaDiretta) { toast.info(L('directNoCloud')); return; }
+                if (stanzaConPiuDiDue) { toast.info(L('interpreterTwoOnly')); return; }
+                setInterpreterActive(!interpreterActive);
+              }}
+              active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
+              icon={<IconGlobe size={18}/>}
+              label={interpreterActive ? 'Traduce' : 'Traduci'}
+              color={(stanzaDiretta || stanzaConPiuDiDue) ? '#8b93a7' : '#3ddc84'}
+              activeColor="rgba(61,220,132,0.18)" size={46}
+            />
+          )}
           <ControlBtn
-            onClick={() => setPannelloAperto(true)}
-            active={pannelloAperto}
-            icon={<span style={{ fontSize: 18, fontWeight: 900, lineHeight: 0.4 }}>{'\u22EF'}</span>}
-            label={L('settings')}
-            color="#94a3b8" size={46}
+            onClick={() => setMostraTesto(v => !v)}
+            active={mostraTesto}
+            icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
+            label="Sottotitoli"
+            color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
           />
+          <ControlBtn
+            onClick={() => {
+              if (volTTS > 0.01) { volTTSPrimaRef.current = volTTS; setVolTTS(0); setVolumeTTS(0); try { window.dispatchEvent(new CustomEvent('bartalk:vol-tts')); } catch { /* fuori dal browser non c'e nessuno in ascolto dell'evento */ } }
+              else { const v = volTTSPrimaRef.current > 0.01 ? volTTSPrimaRef.current : 0.7; setVolTTS(v); setVolumeTTS(v); }
+            }}
+            active={volTTS > 0.01}
+            icon={volTTS > 0.01 ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
+            label="Voce"
+            color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
+          />
+          <ControlBtn
+            onClick={() => setVolumiAperti(v => !v)}
+            active={volumiAperti}
+            icon={<IconVolumeLow size={18}/>}
+            label="Volumi"
+            color="#94a3b8" activeColor="rgba(148,163,184,0.2)" size={46}
+          />
+          {typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo && (
+            <ControlBtn
+              onClick={() => webrtc.condividiSchermo()}
+              active={!!webrtc.schermoCondiviso}
+              icon={<IconExpand size={18}/>}
+              label={L('screenWord')}
+              color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
+            />
+          )}
         </div>
-        {/* ═══ FINE b.284 ═══ */}
+      </div>
       </div>
     );
   }

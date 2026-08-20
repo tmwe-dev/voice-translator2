@@ -36,6 +36,7 @@ export default function useInterpreterMode({
   webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken, useOwnKeys,
   startDucking, stopDucking,
   conversationContext,  // NEW: { getContext, addMessage } from useConversationContext
+  preferisciEleven = false, // b.352 — la voce premium in chiamata
 }) {
   const [active, setActive] = useState(false);
   const [mySubtitles, setMySubtitles] = useState([]);
@@ -474,6 +475,7 @@ export default function useInterpreterMode({
     webrtc, myLang, partnerLang, roomId, roomSessionTokenRef, userToken,
     conversationContext,
     startDucking, stopDucking,
+    preferisciEleven,
   });
 
   // ═══ UNIFIED API ═══
@@ -537,5 +539,8 @@ export default function useInterpreterMode({
     start: startUnified,
     stop: stopUnified,
     handleInterpreterMessage: handleUnifiedMessage,
+    // b.352 — il silenzio spiegato: la voce non partita si dichiara.
+    voceGuasta: streaming.voceGuasta,
+    partnerVoceMancata: streaming.partnerVoceMancata,
   };
 }
