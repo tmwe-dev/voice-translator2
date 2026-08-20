@@ -303,6 +303,40 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
 // ─────────────────────────────────────────────────────────────────
 // SCHEDA IMPARA (corsi)
 // ─────────────────────────────────────────────────────────────────
+// b.312 — SELEZIONE IMMAGINI PER LA LEZIONE DINAMICA (Luca).
+// Non "immagini a caso distribuite", ma: per ogni SEZIONE si sceglie
+// l'immagine che meglio RAPPRESENTA quel pezzo (parole in comune fra il
+// testo della sezione e titolo/sintesi dell'articolo), preferendo FONTI
+// NUOVE (domini non ancora usati) — cosi la presentazione esplora risorse
+// diverse invece di ripetere sempre la stessa. Se un'immagine coerente non
+// c'e, la sezione resta senza (il documentario respira, non riempie a forza).
+function dominioDi(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
+function paroleChiave(s) { return new Set((String(s || '').toLowerCase().match(/\p{L}{4,}/gu) || [])); }
+function assegnaImmagini(paragrafi, items, illustrazione) {
+  const usatiUrl = new Set();
+  const usatiDomini = new Set();
+  const disponibili = items.filter((it) => it && it.immagine);
+  const scelte = paragrafi.map((p) => {
+    const pw = paroleChiave(p);
+    let best = null, bestScore = -1;
+    for (const it of disponibili) {
+      if (usatiUrl.has(it.immagine)) continue;
+      const iw = paroleChiave(`${it.titolo || ''} ${it.sintesi || ''}`);
+      let overlap = 0; for (const w of iw) if (pw.has(w)) overlap++;
+      const dom = dominioDi(it.url);
+      // preferenza alle FONTI NUOVE: un dominio gia usato pesa meno.
+      const score = overlap + (dom && !usatiDomini.has(dom) ? 1.2 : 0);
+      if (score > bestScore) { bestScore = score; best = it; }
+    }
+    if (best && bestScore > 0) { usatiUrl.add(best.immagine); const d = dominioDi(best.url); if (d) usatiDomini.add(d); return best.immagine; }
+    return null;
+  });
+  // se NESSUNA sezione ha trovato un'immagine ma c'e l'illustrazione AI,
+  // la si usa come diapositiva d'apertura.
+  if (illustrazione && scelte.every((x) => !x)) scelte[0] = illustrazione;
+  return scelte;
+}
+
 function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
   const [argomento, setArgomento] = useState('');
   const [categoria, setCategoria] = useState('altro');
@@ -340,6 +374,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [risposte, setRisposte] = useState({});
   const [ascoltando, setAscoltando] = useState(false);
   const audioLezioneRef = useRef(null);
+  // b.312 — LEZIONE DINAMICA: quando la si ASCOLTA diventa una presentazione
+  // a diapositive (la "lavagna"), che avanza sezione per sezione con la voce.
+  // `sezioneAttiva` e il paragrafo in lettura; `stopLetturaRef` ferma il giro.
+  const [sezioneAttiva, setSezioneAttiva] = useState(-1);
+  const stopLetturaRef = useRef(false);
   // b.228 — libreria condivisa "Corsi disponibili"
   const [disponibili, setDisponibili] = useState([]);
   const [pubblicato, setPubblicato] = useState(false);
@@ -350,6 +389,18 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.300 — indice del livello per la barra
   const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+
+  // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
+  // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
+  // (lavagna/articolo), e deve coincidere fra i due.
+  const { paragrafiLezione, immaginiSezioni } = useMemo(() => {
+    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [] };
+    const testoPulito = staccaEsercizio(testoVisibile(aperta.contenuto)).testo;
+    const parti = testoPulito.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const paragrafi = parti.length > 1 ? parti : [testoPulito];
+    const items = [...new Map((arricchimento?.link || []).filter((l) => l.immagine).map((l) => [l.immagine, l])).values()];
+    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione) };
+  }, [aperta, arricchimento, illustrazione]);
 
   useEffect(() => { corsiDisponibili({}).then(setDisponibili).catch(() => {}); }, []);
 
@@ -478,27 +529,46 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.242-bis — leggi la lezione ad alta voce. Se e un corso di LINGUA, le
   // parti marcate [L2:...] passano a una voce madrelingua: e per questo che
   // il tag esiste. Altrimenti si comporta come una lettura normale.
+  // b.312 — ferma la lettura/presentazione in corso.
+  const fermaLettura = useCallback(() => {
+    stopLetturaRef.current = true;
+    try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ }
+    setSezioneAttiva(-1);
+    setAscoltando(false);
+  }, []);
+
   const ascoltaLezione = useCallback(async () => {
-    if (!aperta || ascoltando) return;
+    if (!aperta) return;
+    if (ascoltando) { fermaLettura(); return; } // il tasto fa anche da STOP
     setAscoltando(true);
+    stopLetturaRef.current = false;
+    const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+    // b.312 — si legge SEZIONE per SEZIONE (paragrafi): cosi la lavagna puo
+    // mostrare l'immagine giusta mentre la voce parla di quel pezzo. I tag
+    // [L2:]/[PRONUNCIA:] restano gestiti da parlaBilingue dentro ogni pezzo.
+    const testoTot = staccaEsercizio(aperta.contenuto).testo;
+    const parti = testoTot.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const lista = parti.length > 1 ? parti : [testoTot];
+    const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
     try {
-      const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
-      await parlaBilingue({
-        voceId: tutor?.voce?.id,
-        // b.252 — il tag [PRONUNCIA:] va tolto anche dal percorso VOCE.
-        // A schermo era gia staccato (piu sotto), ma qui passava grezzo:
-        // nei corsi di lingua la voce leggeva ad alta voce "PRONUNCIA due
-        // punti ..." in mezzo alla lezione. I tag [L2:] restano: servono a
-        // segmentiPerVoce per far dire la parte straniera a una voce
-        // madrelingua — e tutto il senso della lezione bilingue.
-        testo: staccaEsercizio(aperta.contenuto).testo,
-        linguaParlata: linguaCorso,
-        linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
-        userToken,
-      }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Lezione'); });
+      for (let i = 0; i < lista.length; i++) {
+        if (stopLetturaRef.current) break;
+        setSezioneAttiva(i);
+        await parlaBilingue({
+          voceId: tutor?.voce?.id,
+          testo: lista[i],
+          linguaParlata: linguaCorso,
+          linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
+          userToken,
+        }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Lezione'); });
+        // b.312 — RITMO DA DOCUMENTARIO: dopo aver letto una sezione, si
+        // PRENDE IL TEMPO — piu lungo se c'e un'immagine da osservare — cosi
+        // chi ascolta guarda e pensa prima che la voce riparta.
+        if (!stopLetturaRef.current && i < lista.length - 1) await attendi(immaginiSezioni[i] ? 2200 : 800);
+      }
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
-    finally { setAscoltando(false); }
-  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken]);
+    finally { setAscoltando(false); setSezioneAttiva(-1); }
+  }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni]);
 
   // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
   // l'esito al Maestro. La registrazione e' un DI PIU': se fallisce (o se non
@@ -539,7 +609,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   if (aperta) {
     return (
       <div>
-        <button onClick={() => { try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
+        <button onClick={() => { stopLetturaRef.current = true; try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setSezioneAttiva(-1); setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
         {/* b.229 — tutor "compagno di viaggio" accanto al titolo. */}
@@ -582,9 +652,48 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         )}
 
         {/* b.242-bis — il tag [L2:...] non si mostra MAI: e un'istruzione per
-            la voce, non testo da leggere. Senza questo, in un corso di lingua
-            si vedeva "[L2: beautiful]" scritto nella lezione. */}
-        <TestoRicco testo={staccaEsercizio(testoVisibile(aperta.contenuto)).testo} testoP={testoP} muto={muto} />
+            la voce, non testo da leggere.
+            b.312 — LEZIONE DINAMICA: in ASCOLTO diventa una lavagna (immagine
+            della sezione + testo di quel pezzo, che avanza con la voce); in
+            LETTURA le immagini reali sono impaginate fra i paragrafi, come in
+            un articolo di giornale. Le immagini vengono dalla community
+            (anteprime reali del web), gratis; l'illustrazione AI resta in cima. */}
+        {(() => {
+          const paragrafi = paragrafiLezione;
+
+          // ASCOLTO → lavagna: l'immagine della sezione in corso + il suo testo,
+          // con la barra di avanzamento delle diapositive.
+          if (ascoltando && sezioneAttiva >= 0) {
+            const i = Math.max(0, Math.min(sezioneAttiva, paragrafi.length - 1));
+            const img = immaginiSezioni[i];
+            return (
+              <div style={{ marginBottom: 4 }}>
+                {img && <img src={img} alt="" style={{ width: '100%', maxHeight: 300, objectFit: 'cover', borderRadius: 14, marginBottom: 10, display: 'block', border: bordo }} />}
+                <div style={{ display: 'flex', gap: 5, marginBottom: 10 }}>
+                  {paragrafi.map((_, k) => (
+                    <span key={k} style={{ flex: 1, height: 4, borderRadius: 2, background: k <= i ? accent : card, transition: 'background 0.3s' }} />
+                  ))}
+                </div>
+                <TestoRicco testo={paragrafi[i] || ''} testoP={testoP} muto={muto} />
+              </div>
+            );
+          }
+
+          // LETTURA → articolo tipo Wikipedia: immagine reale accanto al pezzo
+          // che rappresenta, impaginata fra i paragrafi.
+          return (
+            <div>
+              {paragrafi.map((p, i) => (
+                <div key={i}>
+                  <TestoRicco testo={p} testoP={testoP} muto={muto} />
+                  {immaginiSezioni[i] && (
+                    <img src={immaginiSezioni[i]} alt="" style={{ width: '100%', borderRadius: 14, margin: '6px 0 14px', display: 'block', objectFit: 'cover', maxHeight: 320, border: bordo }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
         {/* b.244 — se il Maestro ha proposto [PRONUNCIA: ...], qui si dice ad
             alta voce e si scopre subito com'e andata. L'esito torna a lui:
             le parole sbagliate ricompaiono piu avanti, dentro altre frasi. */}
@@ -605,9 +714,9 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* La lezione si ASCOLTA: nei corsi di lingua le parti in lingua
             straniera le dice una voce madrelingua (voce doppia, b.241) —
             e' tutto il senso del tag L2. */}
-        <button onClick={ascoltaLezione} disabled={ascoltando}
-          style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, opacity: ascoltando ? 0.6 : 1 }}>
-          {ascoltando ? tt('lifeListening', 'Sto leggendo…') : tt('lifeListen', 'Ascolta la lezione')}
+        <button onClick={ascoltaLezione}
+          style={{ marginTop: 12, padding: '8px 12px', borderRadius: 10, border: `1px solid ${accent}`, background: ascoltando ? `${accent}18` : 'transparent', color: accent, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+          {ascoltando ? `■ ${tt('lifeStopListen', 'Ferma la presentazione')}` : `▶ ${tt('lifeListen', 'Ascolta la lezione')}`}
         </button>
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>

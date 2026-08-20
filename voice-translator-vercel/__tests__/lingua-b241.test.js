@@ -155,7 +155,13 @@ describe('il tag L2 arriva alla voce, e non arriva mai agli occhi', () => {
   it('a schermo la lezione passa da testoVisibile: niente "[L2:" scritto', () => {
     // b.244 — al testo visibile si toglie anche l'esercizio di pronuncia, che
     // apre un pannello a parte: entrambi i tag restano fuori dagli occhi.
-    expect(ui()).toMatch(/TestoRicco testo=\{staccaEsercizio\(testoVisibile\(aperta\.contenuto\)\)\.testo\}/);
+    // b.312 — la lezione ora si spezza in paragrafi (lavagna/articolo), ma il
+    // testo mostrato DERIVA sempre da staccaEsercizio(testoVisibile(...)):
+    // e quella derivazione a togliere [L2:] e l'esercizio dagli occhi, non la
+    // riga letterale. Si verifica la derivazione, non piu la vecchia riga.
+    expect(ui()).toMatch(/staccaEsercizio\(testoVisibile\(aperta\.contenuto\)\)\.testo/);
+    // e non deve restare un render del contenuto GREZZO senza testoVisibile
+    expect(ui()).not.toMatch(/TestoRicco testo=\{aperta\.contenuto\}/);
   });
 
   it('e la lezione si puo ASCOLTARE con la voce doppia', () => {
