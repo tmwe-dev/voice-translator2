@@ -52,6 +52,7 @@ export default function PrimaProva({ onChiudi }) {
   const timerRef = useRef(null);
   const numeroRef = useRef(0);
   const testoRef = useRef(''); // specchio del campo, per decidere senza rincorrere lo stato
+  const giaChiestaRef = useRef(''); // l'ultima frase gia chiesta: non si chiede due volte
   const audioRef = useRef(null);
   const registroRef = useRef(null);
 
@@ -99,6 +100,14 @@ export default function PrimaProva({ onChiudi }) {
   const traduci = useCallback(async (daDire) => {
     const t = daDire.trim();
     if (!t) return;
+    // b.357 — NIENTE DOPPIONI (collaudo di Luca: «raddoppia la lettura della
+    // traduzione»). Alla fine della dettatura la frase partiva subito, ma il
+    // timer della scrittura era ancora armato e la faceva ripartire: due
+    // traduzioni identiche, due righe nel registro e la voce che leggeva due
+    // volte. La stessa frase, verso la stessa lingua, si chiede UNA volta.
+    const impronta = `${meta}|${t}`;
+    if (giaChiestaRef.current === impronta) return;
+    giaChiestaRef.current = impronta;
     const mio = ++numeroRef.current;
     setStato('traduco');
     try {
@@ -112,6 +121,16 @@ export default function PrimaProva({ onChiudi }) {
       });
       const d = await r.json().catch(() => null);
       if (!d?.translated) { if (mio === numeroRef.current) setStato('errore'); return; }
+      // b.357 — QUANDO LA TRADUZIONE NON C'E, NON SI FINGE. Se il controllo
+      // di qualita del server la respinge, la risposta torna col testo
+      // ORIGINALE dentro: finiva nel registro come se fosse tradotto (nello
+      // schermo di Luca comparivano frasi italiane sotto la bandiera tedesca)
+      // e la voce le leggeva pure. Meglio dirlo e lasciar riprovare.
+      if (d.validationFailed) {
+        giaChiestaRef.current = ''; // riprovare la stessa frase deve essere possibile
+        if (mio === numeroRef.current) setStato('errore');
+        return;
+      }
       // Se l'utente sta ANCORA ALLUNGANDO la stessa frase, questa resa e
       // parziale: si butta, arrivera quella piena. Se invece ha gia
       // iniziato la frase dopo, questa resta valida e si accoda comunque:
@@ -173,7 +192,10 @@ export default function PrimaProva({ onChiudi }) {
       };
       rec.onend = () => {
         setDetto(false); dettoRef.current = false;
-        // il microfono si e chiuso: l'ultima frase parte subito, con la voce
+        // il microfono si e chiuso: l'ultima frase parte SUBITO, con la voce.
+        // E si disarma il timer della scrittura, altrimenti la stessa frase
+        // ripartirebbe una seconda volta (b.357).
+        clearTimeout(timerRef.current);
         setTesto((attuale) => { if (attuale.trim()) traduci(attuale); return attuale; });
       };
       rec.onerror = () => { setDetto(false); dettoRef.current = false; };
@@ -196,7 +218,7 @@ export default function PrimaProva({ onChiudi }) {
 
   // ── I DUE BLOCCHI (si scambiano di posto col capovolgimento) ──
   const bloccoScrittura = (
-    <div key="scrivi">
+    <div key="scrivi" style={{ flexShrink: 0 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
         <textarea value={testo} onChange={(e) => setTesto(e.target.value)} rows={capovolto ? 2 : 3}
           placeholder={detto ? 'Ti ascolto: parla…' : 'Scrivi o detta qui: la traduzione parte da sola'}
@@ -232,13 +254,24 @@ export default function PrimaProva({ onChiudi }) {
   // Il REGISTRO: le frasi si susseguono, l'ultima e un testone.
   const bloccoTradotto = (
     <div key="letto" ref={registroRef} style={{
-      flex: 1, minHeight: capovolto ? 200 : 140, overflowY: 'auto',
-      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', gap: 14,
+      // b.357 — il registro SCORRE dentro il pannello e non lo sfonda:
+      // `minHeight: 0` e cio che permette a un figlio flessibile di
+      // rimpicciolirsi invece di spingere fuori schermo il contenitore.
+      flex: '1 1 auto', minHeight: 0, overflowY: 'auto',
+      display: 'flex', flexDirection: 'column', gap: 14,
       padding: capovolto ? '18px 14px' : 13, borderRadius: 16, border: bordo,
       background: 'rgba(255,255,255,0.04)',
-      // IL RIBALTONE: la persona davanti legge dal suo lato
+      // IL RIBALTONE: la persona davanti legge dal suo lato. Girando di 180°
+      // anche lo scorrimento si gira: le frasi nuove entrano dal SUO basso e
+      // spingono in alto le vecchie, nel verso opposto al mio — naturalmente.
       transform: capovolto ? 'rotate(180deg)' : 'none',
     }}>
+      {/* b.357 — le frasi stanno IN BASSO, ma senza `justify-content:flex-end`:
+          con quello, quando il testo supera l'altezza, la parte che esce sopra
+          diventa irraggiungibile (si vedeva la frase nuova tagliata a meta).
+          Un distanziatore che si mangia lo spazio libero fa la stessa cosa e
+          lascia scorrere tutto. */}
+      <div aria-hidden style={{ marginTop: 'auto' }} />
       {storia.length === 0 && stato !== 'traduco' && (
         <span style={{ color: C.textMuted, fontWeight: 500, fontFamily: FONT,
           fontSize: capovolto ? 22 : 14, textAlign: capovolto ? 'center' : 'left' }}>
@@ -271,16 +304,23 @@ export default function PrimaProva({ onChiudi }) {
   return (
     <div style={{
       width: '100%', margin: '0 0 14px', boxSizing: 'border-box',
-      // la colonna della home e un flexbox: niente compressione, e anzi
-      // il pannello CRESCE a occupare la pagina (b.356: aperto, e da solo)
-      flex: '1 0 auto',
+      // b.357 — IL CONTENITORE RESTA DENTRO LO SCHERMO (collaudo di Luca:
+      // «mantieni la chat e il contenitore all'interno dello schermo»).
+      // Prima cresceva col testo e usciva dal video, tagliando in alto la
+      // frase piu nuova. Ora ha un'altezza sua, misurata sullo schermo
+      // vero (dvh tiene conto delle barre del telefono), e a scorrere e
+      // il registro dentro di lui.
+      flex: '1 1 auto',
+      minHeight: 0,
+      height: 'calc(100dvh - 210px)',
+      maxHeight: 'calc(100dvh - 190px)',
       display: 'flex', flexDirection: 'column', gap: 10,
+      overflow: 'hidden',
       background: C.cardBg || 'rgba(16,24,48,0.6)', border: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`,
       borderRadius: 20, padding: 14,
-      minHeight: capovolto ? 'min(72vh, 640px)' : 'auto',
     }}>
       {/* testata del palco */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
         <Icon name="speaker" size={16} color={C.accent || '#5b8cff'} />
         <span style={{ flex: 1, fontSize: 14, fontWeight: 800, color: C.textPrimary, fontFamily: FONT }}>
           {L('speakNowTitle')}
@@ -305,7 +345,7 @@ export default function PrimaProva({ onChiudi }) {
 
       {/* la voce, sempre a portata di mano per farla ripetere */}
       <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa || stato === 'parlo'}
-        style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none',
+        style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none', flexShrink: 0,
           cursor: ultimaResa ? 'pointer' : 'default', fontFamily: FONT, fontSize: 15, fontWeight: 800,
           background: 'rgba(255,255,255,0.06)',
           color: ultimaResa ? (C.accent || '#5b8cff') : C.textMuted, opacity: stato === 'parlo' ? 0.7 : 1 }}>

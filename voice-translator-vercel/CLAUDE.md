@@ -214,10 +214,14 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.356** (push #595) — home ripulita (icone con descrizione,
-  niente card), "Parla ora" a pagina piena con registro dei messaggi e voce
-  ElevenLabs madrelingua, distintivi negli angoli; Business/BizCard,
-  PeepOff, libro di lingue e scanner attendono il collaudo dal vivo di Luca
+- Versione: **b.357** (push #596) — "Parla ora": niente doppia lettura, il
+  contenitore resta dentro lo schermo, il registro scorre col verso giusto
+  anche capovolto, e una traduzione respinta dal server non viene piu
+  spacciata per buona; Business/BizCard, PeepOff, libro di lingue e scanner
+  attendono il collaudo dal vivo di Luca
+- TRAPPOLA: /api/translate, quando la validazione fallisce, risponde 200 col
+  TESTO ORIGINALE e `validationFailed: true`. Chi lo chiama DEVE guardare
+  quel campo, altrimenti mostra l'originale come se fosse tradotto.
 - IN SOSPESO dal collaudo del 20/08: la CARTINA di TaxiTalk non funziona e
   il QR/link va reso funzionante (ordine esplicito di Luca, prossimo lavoro)
 - In sviluppo la CSP concede `unsafe-eval` e localhost su qualunque porto
