@@ -4,7 +4,7 @@ import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
-import { memGet, memSet } from '../../lib/memoria.js';
+import { memGet, memSet, sesGet, sesDel } from '../../lib/memoria.js';
 import CompagnoLive from './CompagnoLive.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
@@ -49,6 +49,16 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   // b.232 — cambiando Compagno azzera attesa/errore: prima B restava con il
   // "…" e il tasto invio disabilitato finché la vecchia richiesta di A non finiva.
   useEffect(() => { setAttende(false); setErrore(''); }, [scelto]);
+
+  // b.333 — il COACH dei Compiti: se l'agenda ha lasciato un brief, il campo
+  // messaggio arriva GIA scritto (l'utente lo rilegge e invia). Una volta sola.
+  useEffect(() => {
+    if (!scelto) return;
+    try {
+      const brief = sesGet('vt-coach-brief');
+      if (brief) { setTesto(brief); sesDel('vt-coach-brief'); }
+    } catch { /* niente brief in attesa */ }
+  }, [scelto]);
 
   const invia = useCallback(async () => {
     const t = testo.trim();

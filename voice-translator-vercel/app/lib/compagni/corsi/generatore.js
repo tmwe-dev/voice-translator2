@@ -120,7 +120,7 @@ const ISTRUZIONI_DURATA = {
   approfondita: '\nDURATA: sessione approfondita (10-15 minuti di ascolto): piu esempi, piu sfumature, piu collegamenti.',
 };
 
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '' } = {}) {
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '', materialeTesto = '' } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
@@ -148,6 +148,12 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
   // trovato nulla: il silenzio non basta. Prima il blocco FONTI spariva e
   // basta, e il modello scriveva lo stesso citando studi "a memoria" — cioè
   // inventandoli. Ora glielo si dice in faccia: niente fonti, niente citazioni.
+  // b.333 — LEZIONE DAL MATERIALE (Compiti): quando c'e il materiale dello
+  // studente (appunti fotografati, testo incollato), la lezione si fonda
+  // ESCLUSIVAMENTE su quello — e la sua dispensa, non un tema libero.
+  const bloccoMateriale = materialeTesto
+    ? `\n\nMATERIALE DELLO STUDENTE (UNICA base ammessa per questa lezione — spiega QUESTO, con le sue parole rese chiare; non aggiungere fatti esterni, non cambiare argomento):\n"""\n${String(materialeTesto).slice(0, 6000)}\n"""`
+    : '';
   const bloccoSenzaFonti = (!bloccoFonti && fontiNonTrovate)
     ? `\n\nATTENZIONE: la ricerca di fonti per questa materia (che le pretende) NON ha restituito alcun documento. NON hai fonti. Insegna solo ciò che è consolidato, NON citare studi, linee guida, statistiche, dosaggi o riferimenti bibliografici (nemmeno a memoria), e dichiara apertamente quali punti vanno verificati su una fonte autorevole o con un professionista.`
     : '';
@@ -159,7 +165,7 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
 `Corso: "${argomento}" (livello ${livello}). Scrivi la lezione: "${lezione?.titolo || ''}".
 Obiettivi: ${obiettivi}.
 ${RITMO_LEZIONE}
-Tono adatto al livello.${bloccoFonti}${bloccoSenzaFonti}
+Tono adatto al livello.${bloccoMateriale}${bloccoFonti}${bloccoSenzaFonti}
 
 ${ISTRUZIONE_APPUNTO}`;
   return { system, prompt };
@@ -230,7 +236,7 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
-export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '' } = {}, { userToken = null } = {}) {
+export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '', materialeTesto = '' } = {}, { userToken = null } = {}) {
   let fonti = [];
   // ── INIZIO b.247 — FAIL-CLOSED sulle materie certificate ──
   // Scelta dichiarata: per una materia che PRETENDE fonti (medicina,
@@ -246,7 +252,9 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
   // sono obbligatorie SEMPRE, non solo per medicina/psicologia. A quei
   // livelli una lezione "a memoria" non basta: deve poggiare su documenti.
   const livelloAlto = livello === 'universitario' || livello === 'ricercatore';
-  if (categoriaCertificata(categoria) || livelloAlto) {
+  // b.333 — col materiale dello studente NON si cerca in rete: la base e il
+  // suo materiale, punto (e non si paga una ricerca che non serve).
+  if (!materialeTesto && (categoriaCertificata(categoria) || livelloAlto)) {
     const query = `${argomento} ${lezione?.titolo || ''}`.trim();
     const esito = leggiEsitoRicerca(await cerca(query, { lingua, profonda: true, fonti: livelloAlto ? 6 : 4 }));
     if (!esito.ok) {
@@ -267,7 +275,7 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
     }
   }
   // ── FINE b.247 ──
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata });
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata, materialeTesto });
   // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
   // b.308 — spazio piu generoso: una lezione da documentario non deve
   // uscire tagliata a meta per un tetto stretto. Il costo segue la mole, ma

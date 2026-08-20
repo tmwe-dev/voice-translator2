@@ -42,6 +42,32 @@ async function handlePost(req) {
       return salvato ? NextResponse.json({ ok: true, materiale: salvato })
         : NextResponse.json({ error: 'Materiale non salvato' }, { status: 500 });
     }
+    // b.333 — OCR con l'AI (il gradino a pagamento della cascata): la foto
+    // degli appunti diventa testo fedele + una tabella strutturata. Costa
+    // frazioni di centesimo dal wallet dell'UTENTE (il gradino gratis e
+    // incollare il testo). L'immagine arriva gia rimpicciolita dal client.
+    if (azione === 'ocr') {
+      const img = typeof body.immagine === 'string' ? body.immagine : '';
+      const { leggiImmagine } = await import('../../lib/compagni/ponte.js');
+      const r = await leggiImmagine({
+        immagineDataUrl: img,
+        istruzione: `Trascrivi FEDELMENTE tutto il testo di questa pagina di appunti/libro (niente riassunti, niente aggiunte). Poi strutturala. Rispondi SOLO con JSON valido:
+{"titolo":"un titolo breve per questo materiale","testo":"la trascrizione fedele completa","tabella":{"sezioni":[{"voce":"titoletto o concetto","contenuto":"il testo di quella parte"}]}}`,
+        userToken,
+      });
+      if (!r.ok) {
+        if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+        return NextResponse.json({ error: 'Lettura non riuscita', motivo: r.motivo }, { status: 502 });
+      }
+      const { estraiJSON } = await import('../../lib/compagni/corsi/generatore.js');
+      const d = estraiJSON(r.testo);
+      if (d && typeof d === 'object' && d.testo) {
+        return NextResponse.json({ ok: true, titolo: String(d.titolo || '').slice(0, 160), testo: String(d.testo).slice(0, 40000), tabella: d.tabella && typeof d.tabella === 'object' ? d.tabella : null });
+      }
+      // JSON non riuscito: la trascrizione grezza vale comunque.
+      return NextResponse.json({ ok: true, titolo: '', testo: r.testo.slice(0, 40000), tabella: null });
+    }
+
     if (azione === 'leggiMateriale') {
       const m = await leggiMateriale(email, String(body.id || ''));
       return m ? NextResponse.json({ ok: true, materiale: m })

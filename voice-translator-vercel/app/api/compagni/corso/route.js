@@ -64,7 +64,15 @@ async function handlePost(req) {
       // Profile) e rispetta la durata di sessione scelta.
       const notaPersona = contestoProfilo(datiProfilo);
       const durata = datiProfilo?.preferenze?.durata || body.durata || '';
-      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata }, { userToken });
+      // b.333 — LEZIONE DAL MATERIALE (Compiti): se arriva materialeId, la
+      // lezione si fonda esclusivamente su quel materiale dello studente.
+      let materialeTesto = '';
+      if (typeof body.materialeId === 'string' && body.materialeId && sessione?.email) {
+        const { leggiMateriale } = await import('../../../lib/compagni/compiti.js');
+        const m = await leggiMateriale(sessione.email, body.materialeId);
+        materialeTesto = m?.testo || '';
+      }
+      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata, materialeTesto }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       // b.244 — quello che il Maestro ha notato di questa persona si salva
       // DOPO aver risposto: la lezione non deve aspettare.

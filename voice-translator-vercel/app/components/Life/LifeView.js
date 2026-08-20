@@ -134,7 +134,7 @@ function LifeView({ onApriStanza }) {
       {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
       {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'compiti' && <CompitiView {...{ L, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'compiti' && <CompitiView {...{ L, userToken, lingua, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
 

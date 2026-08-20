@@ -184,6 +184,59 @@ export async function cerca(query, { lingua = 'it', profonda = false, fonti = 6 
 // nostra + questa cerniera), non nel client. Addebito dal wallet come il testo.
 // La chiave OpenAI passa da resolveAuth (piattaforma o chiave dell'utente).
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// b.333 — LEGGI IMMAGINE (visione): la foto degli appunti diventa testo.
+// Serve ai Materiali dei Compiti: l'utente fotografa la pagina, l'AI la
+// trascrive fedelmente e la struttura. E il gradino A PAGAMENTO della
+// cascata (frazioni di centesimo, wallet dell'utente): il gradino gratis
+// e incollare il testo. Stessa disciplina di generaTesto: riserva →
+// chiamata → commit al costo vero; niente output = rilascio.
+// ═══════════════════════════════════════════════════════════════
+export async function leggiImmagine({ immagineDataUrl = '', istruzione = '', userToken = null, maxTokens = 1500 } = {}) {
+  if (!immagineDataUrl || !immagineDataUrl.startsWith('data:image/')) {
+    return { ok: false, motivo: 'immagine-mancante' };
+  }
+  let auth;
+  try { auth = await resolveAuth({ userToken, provider: 'openai' }); }
+  catch { return { ok: false, motivo: 'non-autorizzato', status: 401 }; }
+  const { apiKey, isOwnKey, billingEmail } = auth;
+
+  let riservaId = null;
+  const paga = billingEmail && !isOwnKey;
+  if (paga) {
+    const caratteriStima = maxTokens * CARATTERI_PER_TOKEN_STIMA;
+    const r = await riserva(billingEmail, preventivoTesto(caratteriStima), { tipo: 'compagno', caratteri: caratteriStima });
+    if (!r.ok) return { ok: false, motivo: 'credito-insufficiente', status: 402 };
+    riservaId = r.riservaId;
+  }
+  try {
+    const openai = new OpenAI({ apiKey });
+    const resp = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      max_tokens: maxTokens,
+      temperature: 0.1, // trascrizione fedele, non creativa
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: istruzione || 'Trascrivi fedelmente tutto il testo leggibile in questa immagine.' },
+          { type: 'image_url', image_url: { url: immagineDataUrl, detail: 'high' } },
+        ],
+      }],
+    });
+    const testo = (resp?.choices?.[0]?.message?.content || '').trim();
+    if (!testo) {
+      if (riservaId) await release(riservaId, 'nessun-output').catch(() => {});
+      return { ok: false, motivo: 'nessun-output' };
+    }
+    if (riservaId) await commit(riservaId, preventivoTesto(testo.length), { tipo: 'compagno', caratteri: testo.length }).catch(() => {});
+    return { ok: true, testo };
+  } catch (e) {
+    if (riservaId) await release(riservaId, 'errore-visione').catch(() => {});
+    log.error('leggiImmagine fallita:', e?.message || e);
+    return { ok: false, motivo: 'visione-fallita', status: 502 };
+  }
+}
+
 export async function generaAvatar({ prompt = '', userToken = null, riferimentoDataUrl = null, dimensione = '1024x1024', qualita = 'low' } = {}) {
   if (!prompt) return { ok: false, motivo: 'prompt-mancante' };
 

@@ -88,8 +88,9 @@ export function generaSyllabus({ argomento, categoria, livello, docenteId, direz
 }
 
 /** Genera il contenuto di una lezione. */
-export function generaLezione({ argomento, categoria, livello, lezione, docenteId, lingua, userToken }) {
-  return postJSON('/api/compagni/corso', { azione: 'lezione', argomento, categoria, livello, lezione, docenteId, lingua, userToken });
+export function generaLezione({ argomento, categoria, livello, lezione, docenteId, lingua, userToken, materialeId }) {
+  // b.333 — con materialeId la lezione si fonda SOLO sul materiale dello studente (Compiti).
+  return postJSON('/api/compagni/corso', { azione: 'lezione', argomento, categoria, livello, lezione, docenteId, lingua, userToken, materialeId });
 }
 
 /** Genera il quiz di una lezione. b.231 — passa il contenuto reale. */
