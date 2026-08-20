@@ -31,51 +31,82 @@ function CompagnoLive({ compagno, lingua, contesto, onChiudi, testoP, muto, acce
   const [modo, setModo] = useState('listening'); // listening | speaking
   const [micSpento, setMicSpento] = useState(false);
   const [righe, setRighe] = useState([]); // trascrizione dal vivo [{chi, testo}]
+  const [dettaglio, setDettaglio] = useState(''); // b.341 — l'errore VERO, mostrato
   const convRef = useRef(null);
+  const vivoRef = useRef(true);
   const fondoRef = useRef(null);
 
   const nomeLingua = getLang(lingua)?.name || 'Italiano';
   const conTesto = String(contesto || '').slice(0, 4000);
 
-  useEffect(() => {
-    let vivo = true;
-    (async () => {
+  // b.341 — l'apertura e una funzione richiamabile (tasto Riprova), non piu
+  // sepolta nell'effetto; e l'errore vero viene mostrato, non un indovinello:
+  // prima QUALSIASI guasto diceva "controlla il microfono" anche a chi il
+  // permesso l'aveva gia dato.
+  const apriLinea = useCallback(async () => {
+    setStato('collego'); setDettaglio('');
+    try {
+      // Prima il microfono, da solo: cosi un guasto di PERMESSO e distinto
+      // da un guasto di COLLEGAMENTO, e il messaggio dice quello giusto.
       try {
-        const { Conversation } = await import('@elevenlabs/client');
-        const conv = await Conversation.startSession({
-          agentId: AGENTE_LIVE_ID,
-          connectionType: 'websocket',
-          // Le variabili che il prompt dell'agente si aspetta: {{nome}},
-          // {{ruolo}}, {{personalita}}, {{lingua}}, {{contesto}}, {{aggancio}}.
-          // Il personaggio (e la discussione gia fatta) arrivano da QUI.
-          dynamicVariables: {
-            nome: compagno?.nome || 'il tuo Compagno',
-            ruolo: compagno?.ruolo || '',
-            personalita: (compagno?.personalita || '').slice(0, 2400),
-            lingua: nomeLingua,
-            contesto: conTesto || '(nessuna: la conversazione comincia adesso)',
-            aggancio: conTesto
-              ? 'Ho qui la nostra conversazione — riprendiamo da dove eravamo?'
-              : 'Che bello sentirti a voce — dimmi pure, di cosa parliamo?',
-          },
-          ...(OVERRIDE_VOCE && compagno?.voce?.id ? { overrides: { tts: { voiceId: compagno.voce.id } } } : {}),
-          onConnect: () => { if (vivo) setStato('vivo'); },
-          onDisconnect: () => { if (vivo) setStato((s) => (s === 'errore' ? s : 'chiuso')); },
-          onError: () => { if (vivo) setStato('errore'); },
-          onModeChange: ({ mode }) => { if (vivo) setModo(mode); },
-          onMessage: ({ message, source }) => {
-            if (!vivo || !message) return;
-            setRighe((r) => [...r.slice(-24), { chi: source === 'user' ? 'tu' : 'lui', testo: String(message) }]);
-          },
-        });
-        if (!vivo) { conv.endSession().catch(() => {}); return; }
-        convRef.current = conv;
-      } catch {
-        if (vivo) setStato('errore');
+        const flusso = await navigator.mediaDevices.getUserMedia({ audio: true });
+        flusso.getTracks().forEach((t) => t.stop());
+      } catch (e) {
+        if (vivoRef.current) { setStato('errore'); setDettaglio(`Microfono non disponibile (${e?.name || 'permesso negato'}). Controlla il permesso e riprova.`); }
+        return;
       }
-    })();
+      const { Conversation } = await import('@elevenlabs/client');
+      const conv = await Conversation.startSession({
+        agentId: AGENTE_LIVE_ID,
+        connectionType: 'websocket',
+        // Le variabili che il prompt dell'agente si aspetta: {{nome}},
+        // {{ruolo}}, {{personalita}}, {{lingua}}, {{contesto}}, {{aggancio}}.
+        // Il personaggio (e la discussione gia fatta) arrivano da QUI.
+        dynamicVariables: {
+          nome: compagno?.nome || 'il tuo Compagno',
+          ruolo: compagno?.ruolo || '',
+          personalita: (compagno?.personalita || '').slice(0, 2400),
+          lingua: nomeLingua,
+          contesto: conTesto || '(nessuna: la conversazione comincia adesso)',
+          aggancio: conTesto
+            ? 'Ho qui la nostra conversazione — riprendiamo da dove eravamo?'
+            : 'Che bello sentirti a voce — dimmi pure, di cosa parliamo?',
+        },
+        ...(OVERRIDE_VOCE && compagno?.voce?.id ? { overrides: { tts: { voiceId: compagno.voce.id } } } : {}),
+        onConnect: () => { if (vivoRef.current) setStato('vivo'); },
+        onDisconnect: (d) => {
+          if (!vivoRef.current) return;
+          setStato((s) => (s === 'errore' ? s : 'chiuso'));
+          if (d?.reason === 'error') setDettaglio(String(d?.message || ''));
+        },
+        onError: (messaggio) => {
+          console.warn('[CompagnoLive] errore di linea:', messaggio);
+          if (!vivoRef.current) return;
+          // A linea gia aperta un errore puo essere passeggero: si mostra
+          // senza buttare giu la chiamata. Prima dell'apertura, e fatale.
+          setDettaglio(String(messaggio || ''));
+          setStato((s) => (s === 'vivo' ? s : 'errore'));
+        },
+        onModeChange: ({ mode }) => { if (vivoRef.current) setModo(mode); },
+        onMessage: ({ message, source }) => {
+          if (!vivoRef.current || !message) return;
+          setRighe((r) => [...r.slice(-24), { chi: source === 'user' ? 'tu' : 'lui', testo: String(message) }]);
+        },
+      });
+      if (!vivoRef.current) { conv.endSession().catch(() => {}); return; }
+      convRef.current = conv;
+    } catch (e) {
+      console.warn('[CompagnoLive] apertura fallita:', e);
+      if (vivoRef.current) { setStato('errore'); setDettaglio(String(e?.message || e || 'guasto sconosciuto')); }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compagno, nomeLingua, conTesto]);
+
+  useEffect(() => {
+    vivoRef.current = true;
+    apriLinea();
     return () => {
-      vivo = false;
+      vivoRef.current = false;
       convRef.current?.endSession?.().catch?.(() => {});
       convRef.current = null;
     };
@@ -105,7 +136,7 @@ function CompagnoLive({ compagno, lingua, contesto, onChiudi, testoP, muto, acce
 
   const statoTesto =
     stato === 'collego' ? 'Compongo il numero…'
-    : stato === 'errore' ? 'La linea non si apre. Controlla il permesso del microfono e riprova; la chat scritta funziona comunque.'
+    : stato === 'errore' ? (dettaglio || 'La linea non si apre. La chat scritta funziona comunque.')
     : stato === 'chiuso' ? 'Conversazione chiusa.'
     : micSpento ? 'Microfono spento — lui non ti sente'
     : modo === 'speaking' ? `${compagno?.nome || 'Il Compagno'} sta parlando…`
@@ -126,6 +157,13 @@ function CompagnoLive({ compagno, lingua, contesto, onChiudi, testoP, muto, acce
             {statoTesto}
           </div>
         </div>
+        {(stato === 'errore' || stato === 'chiuso') && (
+          <button onClick={apriLinea} aria-label="Riprova"
+            style={{ background: accent, border: 'none', borderRadius: 8, padding: '6px 12px',
+              cursor: 'pointer', color: '#04121c', fontFamily: FONT, fontSize: 13, fontWeight: 800 }}>
+            Riprova
+          </button>
+        )}
         {stato === 'vivo' && (
           <button onClick={commutaMic} aria-pressed={micSpento} aria-label={micSpento ? 'Riaccendi microfono' : 'Spegni microfono'}
             style={{ background: micSpento ? '#f8717122' : 'none', border: bordo, borderRadius: 8, padding: '6px 10px',
