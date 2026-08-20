@@ -58,6 +58,19 @@ export async function generaIllustrazione({ titolo, argomento, livello, userToke
   return d.dataUrl;
 }
 
+// b.348 — LA TAVOLA DEL LIBRO (corsi di lingua): la scena dichiarata dalla
+// lezione diventa un disegno coerente col livello, con dentro gli oggetti
+// che si imparano a nominare. E l'ICONA che accompagna il corso.
+export async function generaTavola({ titolo, argomento, livello, ambienteId, elementi = [], userToken }) {
+  const d = await postJSON('/api/compagni/avatar', { tipo: 'scena', nome: titolo, descrizione: argomento, livello, ambienteId, elementi, userToken });
+  return d.dataUrl;
+}
+
+export async function generaIconaCorso({ argomento, livello, userToken }) {
+  const d = await postJSON('/api/compagni/avatar', { tipo: 'icona', nome: argomento, descrizione: argomento, livello, userToken });
+  return d.dataUrl;
+}
+
 // b.299 — l'arricchimento della lezione dalla COMMUNITY (il seminatore,
 // "Cobra"): link di approfondimento, video, o foto reali. Non e un
 // secondo sistema: sono le stesse rotte /api/topics gia collaudate in

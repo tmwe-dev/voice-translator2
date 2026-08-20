@@ -15,6 +15,7 @@ import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
 import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, RITMO_LINGUA, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
+import { istruzioneScena } from './scena.js';
 import { assistentePer } from './assistenti.js';
 
 import { getLang } from '../../constants.js';
@@ -128,7 +129,9 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
   const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
   // b.323 — nel duetto il Maestro presenta l'Assistente madrelingua per nome.
   const bloccoLingua = (l2 && l2 !== lingua)
-    ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2, nomeAssistente: assistentePer(l2).nome })
+    // b.348 — la lezione di lingua dichiara anche la sua TAVOLA (scena +
+    // oggetti): e cosi che un libro di lingue accompagna il testo.
+    ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2, nomeAssistente: assistentePer(l2).nome }) + istruzioneScena(livello)
     : '';
   // b.301 — PUNTO 5: a livello universitario/ricercatore la lezione ha
   // un'altra stazza. Non piu 900 token di prosa: piu moduli, metodologia,

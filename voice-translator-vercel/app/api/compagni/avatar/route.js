@@ -3,6 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { generaAvatar } from '../../../lib/compagni/ponte.js';
 import { promptAvatar, promptIllustrazione } from '../../../lib/compagni/genera.js';
+import { promptScena, promptIcona, AMBIENTI } from '../../../lib/compagni/corsi/scena.js';
 
 const log = createLogger('compagni-avatar');
 
@@ -31,11 +32,22 @@ async function handlePost(req) {
       ? body.riferimentoDataUrl : null;
 
     // b.229 — stessa rotta genera anche le ILLUSTRAZIONI delle lezioni (tipo).
-    const tipo = body.tipo === 'lezione' ? 'lezione' : 'avatar';
-    const prompt = tipo === 'lezione'
-      ? promptIllustrazione({ titolo: nome, argomento: descrizione, livello: typeof body.livello === 'string' ? body.livello : 'base' })
+    // b.348 — e ora le TAVOLE del libro di lingue ('scena': ambiente + oggetti
+    // da nominare, stile fisso per livello) e l'ICONA che accompagna il corso.
+    const tipi = ['lezione', 'scena', 'icona'];
+    const tipo = tipi.includes(body.tipo) ? body.tipo : 'avatar';
+    const livelloReq = typeof body.livello === 'string' ? body.livello : 'base';
+    const ambienteReq = typeof body.ambienteId === 'string'
+      ? AMBIENTI.find((a) => a.id === body.ambienteId) || null : null;
+    const elementiReq = Array.isArray(body.elementi)
+      ? body.elementi.filter((x) => typeof x === 'string').map((x) => x.slice(0, 40)).slice(0, 8) : [];
+    const prompt =
+      tipo === 'scena' ? promptScena({ titolo: nome, argomento: descrizione, livello: livelloReq, ambiente: ambienteReq, elementi: elementiReq })
+      : tipo === 'icona' ? promptIcona({ argomento: descrizione || nome, livello: livelloReq })
+      : tipo === 'lezione' ? promptIllustrazione({ titolo: nome, argomento: descrizione, livello: livelloReq })
       : promptAvatar({ nome, ruolo, genere, descrizione });
-    const dimensione = tipo === 'lezione' ? '1536x1024' : '1024x1024';
+    // La tavola e larga (come nei libri), l'icona quadrata.
+    const dimensione = (tipo === 'lezione' || tipo === 'scena') ? '1536x1024' : '1024x1024';
     const r = await generaAvatar({ prompt, userToken, riferimentoDataUrl, dimensione });
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });

@@ -18,12 +18,13 @@ const IDEE_CORSO = [
   { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, generaIconaCorso, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import CompagnoLive from './CompagnoLive.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
+import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 import { sesSet } from '../../lib/memoria.js';
 import { staccaEsercizio } from '../../lib/compagni/corsi/pronuncia.js';
@@ -722,7 +723,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
       setRisposte({});
-      setAperta({ lezione, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
+      // b.348 — il tag [SCENA:] si stacca PRIMA di mostrare: e un'istruzione
+      // per la tavola, non prosa da leggere ad alta voce.
+      const { testo: contenutoPulito, scena } = staccaScena(d.contenuto || '');
+      setAperta({ lezione, contenuto: contenutoPulito, fonti: d.fonti || [], domande: null });
       // b.299 — l'arricchimento segue il flag scelto alla creazione:
       // 'disegni' -> illustrazione del Maestro; 'foto'/'link'/'video' ->
       // dalla community (Cobra). 'nessuno' -> niente. Non blocca la
@@ -730,9 +734,16 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // b.306 — piu contenuti INSIEME: se c'e 'disegni' si genera
       // l'illustrazione; per 'foto'/'link'/'video' si interroga la community e
       // si UNISCONO i risultati (link e video) in un solo blocco.
-      if (contenuti.includes('disegni')) {
+      // b.348 — LA TAVOLA DEL LIBRO: se la lezione ha dichiarato la sua scena
+      // (corsi di lingua), si disegna QUELLA — ambiente e oggetti da nominare,
+      // nello stile del livello — e non serve aver scelto "disegni": in un
+      // libro di lingue la tavola non e un extra, e parte della lezione.
+      if (scena) {
+        generaTavola({ titolo: lezione?.titolo, argomento: argomento.trim(), livello, ambienteId: scena.ambienteId, elementi: scena.elementi, userToken })
+          .then((url) => url && setIllustrazione(url)).catch(() => { /* la tavola e un di piu: la lezione resta leggibile */ });
+      } else if (contenuti.includes('disegni')) {
         generaIllustrazione({ titolo: lezione?.titolo, argomento: argomento.trim(), livello, userToken })
-          .then((url) => url && setIllustrazione(url)).catch(() => {});
+          .then((url) => url && setIllustrazione(url)).catch(() => { /* niente disegno: si prosegue */ });
       }
       // b.334 — la manopola "Contenuti extra": minimi = niente community
       // (solo l'eventuale disegno), ricchi = tutto quello che c'e.
