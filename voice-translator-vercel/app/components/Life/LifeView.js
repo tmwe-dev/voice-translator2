@@ -890,9 +890,24 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           )}
         </div>
         {!aperta.domande
-          ? <button onClick={quiz} disabled={lavoro} style={{ marginTop: 10, padding: 12, borderRadius: 12, border: 'none', background: card, color: testoP, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, width: '100%' }}>
-              {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
-            </button>
+          ? <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+              <button onClick={quiz} disabled={lavoro} style={{ flex: 1, padding: 12, borderRadius: 12, border: 'none', background: card, color: testoP, fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
+                {lavoro ? L('lifeGenerating') : `📝 ${L('lifeQuiz')}`}
+              </button>
+              {/* b.320 — decisione di Luca: il quiz NON e obbligatorio, si puo
+                  SALTARE. Ma il salto viene REGISTRATO (lezione vista senza
+                  verifica, punteggio nullo): incide sulla valutazione globale
+                  del raggiungimento dell'obiettivo. */}
+              <button onClick={() => {
+                  const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
+                  if (idx >= 0) registraEsito({ argomento: argomento.trim(), lezioneIndice: idx, punteggio: null, daRivedere: [], userToken })
+                    .catch(() => { /* il ricordo e un di piu */ });
+                  if (prossimaLezione) apri(prossimaLezione); else setAperta(null);
+                }} disabled={lavoro}
+                style={{ padding: '12px 14px', borderRadius: 12, border: bordo, background: 'transparent', color: muto, fontWeight: 700, cursor: 'pointer', fontFamily: FONT, fontSize: 13 }}>
+                {tt('lifeQuizSkip', 'Salta')} →
+              </button>
+            </div>
           : <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* ── b.242 · LA SFIDA SI GIOCA ──
                   Prima le risposte giuste erano gia segnate col ✓: non c'era
