@@ -34,6 +34,7 @@ import WelcomeView from './components/WelcomeView.js';
 // pigra, altrimenti al primo avvio si vede lo spinner al posto suo.
 import SceltaPaeseView from './components/SceltaPaeseView.js';
 import LinguettaLingua from './components/LinguettaLingua.js';
+import CondivisoSheet from './components/CondivisoSheet.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
@@ -118,6 +119,29 @@ function HomeInner() {
   // b.325 (era b.265) — la vista corrente e pubblicata su window per la
   // guardia anti-ricaricamento del service worker (useInitializeApp).
   useEffect(() => { if (typeof window !== 'undefined') window.__vtVista = view; }, [view]);
+
+  // b.329 — CONDIVIDI -> BARTALK: il manifest registra gia l'app come share
+  // target (/?source=share&title&text&url) ma nessuno lo consumava. Qui si
+  // legge il contenuto condiviso (da Instagram, YouTube, X, un giornale...)
+  // e si apre il foglio "Hai condiviso" con Parlane.
+  const [condiviso, setCondiviso] = useState(null);
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('source') !== 'share') return;
+      const testo = q.get('text') || '';
+      // molte app mettono l'URL dentro `text`: si estrae il primo link.
+      const urlDaTesto = (testo.match(/https?:\/\/\S+/) || [])[0] || '';
+      const dati = {
+        titolo: q.get('title') || '',
+        testo: testo.replace(urlDaTesto, '').trim(),
+        url: q.get('url') || urlDaTesto || '',
+      };
+      if (dati.titolo || dati.testo || dati.url) setCondiviso(dati);
+      // l'URL si pulisce: un ricaricamento non deve rilanciare il foglio.
+      window.history.replaceState({}, '', window.location.pathname);
+    } catch { /* niente condivisione da leggere */ }
+  }, []);
   // b.136 — `lang` e la lingua PARLATA, `uiLang` quella dell'INTERFACCIA,
   // `country` il paese (bandiera del profilo). Prima esisteva solo
   // `lang` e faceva tutti e tre i mestieri.
@@ -1239,6 +1263,17 @@ function HomeInner() {
           }}
         />
       </Suspense>
+      {/* b.329 — il foglio "Hai condiviso" (share target): Parlane apre la
+          creazione stanza precompilata, che ora vive anch'essa nell'imbuto. */}
+      {condiviso && (
+        <CondivisoSheet condiviso={condiviso} L={L}
+          onChiudi={() => setCondiviso(null)}
+          onParlane={({ titolo, sintesi, url }) => {
+            setCondiviso(null);
+            setTopicPreset({ nome: (titolo || '').slice(0, 60), descrizione: [sintesi, url].filter(Boolean).join(' — ').slice(0, 200) });
+            setShowCreateRoom(true);
+          }} />
+      )}
       {/* b.311 — LINGUETTA lingua/voce sul bordo sinistro, sulle schermate
           calme: non in onboarding (paese/welcome/loading), non in chiamata
           (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
