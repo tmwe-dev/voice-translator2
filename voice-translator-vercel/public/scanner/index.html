@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>BizCard Scanner 4Business</title>
+<meta name="description" content="BizCard Scanner 4Business — edizione professionale per team e CRM. OCR AI, multi-lingua, export vCard/CSV/XLSX, webhook, sync cloud.">
+<meta name="theme-color" content="#0a0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BizCard 4B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="msapplication-TileColor" content="#0a0e1a">
+<meta name="msapplication-TileImage" content="/scanner/icon-192x192.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="/scanner/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/scanner/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="/scanner/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="144x144" href="/scanner/icon-192x192.png">
+<link rel="apple-touch-icon" sizes="128x128" href="/scanner/icon-192x192.png">
+<link rel="stylesheet" href="/scanner/styles.css">
+</head>
+<body>
+<header>
+  <h1>
+    <svg class="header-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--lilac)" stroke-width="1.5"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M4 18c0-2 2.5-3.5 5-3.5s5 1.5 5 3.5"/><line x1="15" y1="9" x2="20" y2="9"/><line x1="15" y1="12" x2="19" y2="12"/></svg>
+    BizCard <span class="version-badge" style="background:linear-gradient(135deg,#c084fc,#818cf8);color:#fff">4Business</span>
+  </h1>
+</header>
+
+<!-- API Key Bar -->
+<div class="api-key-bar" id="apiKeyBar">
+  <div class="api-key-inner">
+    <span class="api-key-label">🔑 OpenAI API Key</span>
+    <div class="api-key-input-wrap">
+      <input type="password" id="openaiKeyInput" placeholder="sk-..." autocomplete="off" spellcheck="false">
+      <button class="api-key-toggle" id="btnToggleKey" title="Mostra/nascondi">👁️</button>
+      <button class="api-key-save" id="btnSaveKey">Salva</button>
+    </div>
+    <span class="api-key-status" id="apiKeyStatus"></span>
+  </div>
+</div>
+
+<nav role="tablist" aria-label="Sezioni principali">
+  <button class="active" data-tab="scanner" role="tab" aria-selected="true" aria-controls="panel-scanner">
+    <svg class="nav-ico" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+    <span class="nav-label">Scan</span>
+  </button>
+  <button data-tab="contacts" role="tab" aria-selected="false" aria-controls="panel-contacts">
+    <svg class="nav-ico" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span class="nav-label">Contatti</span>
+  </button>
+  <button data-tab="export" role="tab" aria-selected="false" aria-controls="panel-export">
+    <svg class="nav-ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <span class="nav-label">Esporta</span>
+  </button>
+  <button data-tab="settings" role="tab" aria-selected="false" aria-controls="panel-settings">
+    <svg class="nav-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span class="nav-label">Setup</span>
+  </button>
+</nav>
+
+<main>
+  <!-- ═══ SCANNER TAB ═══ -->
+  <div class="panel active" id="panel-scanner" role="tabpanel">
+   <div class="scanner-split">
+    <!-- ─── LEFT: Camera + Controls ─── -->
+    <div class="scanner-left">
+    <div class="mode-selector" role="radiogroup" aria-label="Modalità acquisizione">
+      <div class="mode-btn active" data-mode="local" role="radio" aria-checked="true" tabindex="0">
+        <span class="mode-icon">📷</span><span class="mode-label">Camera</span>
+      </div>
+      <div class="mode-btn" data-mode="remote" role="radio" aria-checked="false" tabindex="0">
+        <span class="mode-icon">📱</span><span class="mode-label">Remoto</span>
+      </div>
+      <div class="mode-btn" data-mode="upload" role="radio" aria-checked="false" tabindex="0">
+        <span class="mode-icon">📁</span><span class="mode-label">File</span>
+      </div>
+    </div>
+
+    <!-- Local Camera View -->
+    <div id="viewLocal">
+      <div class="camera-area" role="img" aria-label="Anteprima fotocamera">
+        <video id="video" autoplay playsinline muted></video>
+        <div class="guide" id="cameraGuide"></div>
+        <canvas id="arCanvas" class="ar-canvas"></canvas>
+        <div class="ar-complete-card" id="arCompleteCard">
+          <div class="ar-card-inner" id="arCardInner">
+            <div class="ar-card-front" id="arCardFront"></div>
+            <div class="ar-card-back">
+              <div class="ar-card-check">✅</div>
+              <div class="ar-card-msg">Acquisizione completa!</div>
+            </div>
+          </div>
+        </div>
+        <div class="ar-hud" id="arHud" style="display:none">
+          <div class="ar-hud-top">
+            <span class="ar-hud-label">🔍 AR SCAN</span>
+            <span class="ar-hud-pct" id="arHudPct">0%</span>
+          </div>
+          <div class="ar-hud-bar"><div class="ar-hud-fill" id="arHudFill"></div></div>
+          <div class="ar-hud-fields" id="arHudFields"></div>
+        </div>
+        <div class="scanner-placeholder" id="placeholder" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p>Camera non disponibile.<br>Prova "Remoto" o "File".</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn btn-primary btn-scan-main" id="btnSmartScan" disabled aria-label="Scansiona">
+          <svg class="btn-ico" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span id="btnScanLabel">Scansiona</span>
+        </button>
+        <button class="btn btn-icon dual-face-toggle" id="btnDualFace" title="Biglietto a 2 facciate" aria-label="Modalità doppia facciata">
+          <svg class="btn-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/><text x="7" y="14" font-size="8" fill="currentColor" stroke="none" text-anchor="middle">1</text><text x="17" y="14" font-size="8" fill="currentColor" stroke="none" text-anchor="middle">2</text></svg>
+        </button>
+        <button class="btn btn-secondary btn-icon" id="btnFlip" style="display:none" aria-label="Inverti fotocamera" title="Inverti">
+          <svg class="btn-ico" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="btn btn-secondary btn-icon" id="btnTorch" style="display:none" aria-label="Flash" title="Flash">
+          <svg class="btn-ico" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Remote Phone View -->
+    <div id="viewRemote" style="display:none">
+      <div class="qr-section" id="qrSection">
+        <h3>📱 Collega il telefono</h3>
+        <div class="qr-sub">Scansiona il QR con la fotocamera del telefono</div>
+        <canvas id="qrCanvas" width="180" height="180" aria-label="QR Code per connessione telefono"></canvas>
+        <div class="session-code" id="sessionCode" aria-label="Codice sessione">---</div>
+        <div class="qr-url" id="qrUrl" aria-label="URL connessione">---</div>
+        <div class="qr-status">
+          <div class="dot waiting" id="qrDot" role="status"></div>
+          <span id="qrStatusText">In attesa del telefono...</span>
+        </div>
+        <div style="margin-top:12px">
+          <button class="btn btn-accent btn-small" id="btnRemoteSmartScan" disabled>
+            <svg class="btn-ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Smart Scan
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload View -->
+    <div id="viewUpload" style="display:none">
+      <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Trascina o seleziona un'immagine">
+        <div class="drop-icon">📁</div>
+        <h3 style="font-size:.9rem">Trascina un'immagine qui</h3>
+        <div class="qr-sub">oppure clicca per selezionare</div>
+        <input type="file" id="fileInputUpload" accept="image/*" style="display:none" aria-hidden="true">
+      </div>
+    </div>
+    </div><!-- /scanner-left -->
+
+    <!-- ─── RIGHT: Live Card + Results ─── -->
+    <div class="scanner-right">
+
+    <!-- Dual Face Status -->
+    <div class="dual-face-status" id="dualFaceStatus">📸 Facciata 1 di 2 — scansiona il fronte del biglietto</div>
+
+    <!-- Smart Scan Progress Overlay (shared by local + remote) -->
+    <div class="smart-scan-overlay" id="smartScanOverlay" style="display:none">
+      <!-- Compact progress bar at top -->
+      <div class="ss-top-bar">
+        <div class="ss-top-status" id="ssStatus">📸 Acquisizione...</div>
+        <div class="ss-top-progress"><div class="ss-top-fill" id="ssTopFill"></div></div>
+      </div>
+
+      <!-- Live building card -->
+      <div class="live-card" id="liveCard">
+        <div class="live-card-flag" id="liveFlag" style="display:none">
+          <img id="liveFlagImg" alt="">
+        </div>
+        <div class="live-card-header">
+          <div class="live-field live-name" id="liveName">
+            <div class="shimmer-line" style="width:70%"></div>
+          </div>
+          <div class="live-field live-role" id="liveRole">
+            <div class="shimmer-line" style="width:50%"></div>
+          </div>
+          <div class="live-field live-company" id="liveCompany">
+            <div class="shimmer-line" style="width:60%"></div>
+          </div>
+        </div>
+        <div class="live-card-body" id="liveCardBody">
+          <!-- Fields appear here dynamically -->
+        </div>
+      </div>
+
+      <div class="ss-detail" id="ssDetail"></div>
+      <button class="btn btn-secondary btn-small" id="btnSmartScanStop">⏹ Interrompi</button>
+    </div>
+
+    <!-- OCR Status -->
+    <div class="ocr-status" id="ocrStatus" style="display:none" role="status" aria-live="polite">
+      <div class="spinner"></div>
+      <span id="ocrStatusText">Analisi in corso...</span>
+      <div class="progress-bar"><div class="fill" id="ocrProgress" style="width:0"></div></div>
+    </div>
+
+    <!-- Session Banner -->
+    <div class="session-banner" id="sessionBanner" style="display:none">
+      <div class="session-banner-left">
+        <span class="session-pulse"></span>
+        <span class="session-banner-text">Sessione attiva</span>
+      </div>
+      <div class="session-banner-right">
+        <span id="sessionCardCount">0</span> contatti &bull;
+        <span id="sessionTimer">00:00</span>
+      </div>
+    </div>
+
+    <!-- Results — Clean Contact Card -->
+    <div class="result-section" id="resultSection" style="display:none">
+      <div class="clean-card" id="cleanCard">
+        <!-- 3D Flag -->
+        <div class="cc-flag-wrap" id="ccFlagWrap" style="display:none">
+          <div class="cc-flag-3d">
+            <img class="cc-flag-img" id="ccFlagImg" alt="" loading="lazy">
+            <div class="cc-flag-shadow"></div>
+          </div>
+          <span class="cc-flag-country" id="ccFlagCountry"></span>
+        </div>
+        <div class="clean-card-header">
+          <img class="clean-card-photo" id="photoPreview" alt="Foto acquisita" loading="lazy">
+          <div class="clean-card-identity">
+            <div class="clean-card-name" id="ccName"></div>
+            <div class="clean-card-role" id="ccRole"></div>
+            <div class="clean-card-company" id="ccCompany"></div>
+          </div>
+        </div>
+        <div class="clean-card-fields" id="cleanCardFields"></div>
+        <div class="clean-card-logo" id="ccLogo" style="display:none"></div>
+      </div>
+      <!-- Hidden legacy containers -->
+      <div id="ocrEngineLabel" style="display:none"></div>
+      <div id="textBlocksContainer" style="display:none"></div>
+      <div id="fieldSummary" style="display:none"><div id="fieldRows"></div></div>
+
+      <!-- Session scan result summary (red accent row) -->
+      <div class="scan-result-row" id="scanResultRow" style="display:none">
+        <span class="scan-result-icon">✅</span>
+        <span class="scan-result-text" id="scanResultText">Contatto salvato</span>
+        <span class="scan-result-count" id="scanResultCount">#1</span>
+      </div>
+
+      <!-- Progressive action buttons -->
+      <div class="controls session-controls" style="margin-top:12px;margin-bottom:0">
+        <button class="btn btn-success btn-scan-main" id="btnScanNext">
+          <svg class="btn-ico" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Prossimo
+        </button>
+        <button class="btn btn-secondary" id="btnEndSession">
+          <svg class="btn-ico" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+          Termina
+        </button>
+      </div>
+    </div>
+
+    </div><!-- /scanner-right -->
+   </div><!-- /scanner-split -->
+
+    <!-- Session Summary (shown after ending session) -->
+    <div class="session-summary" id="sessionSummary" style="display:none">
+      <div class="session-summary-header">📊 Riepilogo sessione</div>
+      <div class="session-summary-stats" id="sessionStats"></div>
+      <div class="controls" style="margin-top:12px">
+        <button class="btn btn-primary" id="btnNewSession">
+          <svg class="btn-ico" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          Nuova sessione
+        </button>
+        <button class="btn btn-accent" id="btnExportSession">
+          <svg class="btn-ico" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Esporta
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ CONTACTS TAB ═══ -->
+  <div class="panel" id="panel-contacts" role="tabpanel">
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="searchInput" placeholder="Cerca contatti..." aria-label="Cerca contatti">
+    </div>
+    <div class="contact-sort-bar" id="contactSortBar">
+      <span class="sort-label">Ordina:</span>
+      <button class="sort-btn active" data-sort="date" title="Per data">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        Data <span class="sort-arrow">↓</span>
+      </button>
+      <button class="sort-btn" data-sort="name" title="Per nome">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Nome <span class="sort-arrow">↓</span>
+      </button>
+      <button class="sort-btn" data-sort="company" title="Per azienda">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v3"/></svg>
+        Azienda <span class="sort-arrow">↓</span>
+      </button>
+      <button class="sort-btn" data-sort="country" title="Per paese">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        Paese <span class="sort-arrow">↓</span>
+      </button>
+    </div>
+    <div id="contactList" class="contact-list" role="list"></div>
+    <div class="empty-state" id="emptyContacts">
+      <div class="empty-icon">👥</div>
+      <h3>Nessun contatto</h3>
+      <p>Scansiona un biglietto da visita per iniziare</p>
+    </div>
+  </div>
+
+  <!-- ═══ EXPORT TAB ═══ -->
+  <div class="panel" id="panel-export" role="tabpanel">
+    <div class="export-options">
+      <div class="export-card" id="exportVcard" role="button" tabindex="0">
+        <div class="export-icon">📇</div><h4>vCard (.vcf)</h4><p>Per rubrica e CRM</p>
+      </div>
+      <div class="export-card" id="exportCsv" role="button" tabindex="0">
+        <div class="export-icon">📊</div><h4>CSV</h4><p>Per Excel, Google Sheets</p>
+      </div>
+      <div class="export-card" id="exportJson" role="button" tabindex="0">
+        <div class="export-icon">🔧</div><h4>JSON</h4><p>Per sviluppatori e API</p>
+      </div>
+      <div class="export-card" id="exportWebhook" role="button" tabindex="0">
+        <div class="export-icon">🔗</div><h4>Webhook CRM</h4><p>Invio diretto al tuo CRM</p>
+      </div>
+    </div>
+    <div style="margin-top:16px;text-align:center">
+      <button class="btn btn-primary" id="btnAdvancedExport" style="font-size:.95rem;padding:12px 28px">
+        ⚙️ Export Avanzato — Scegli formato, colonne e separatore
+      </button>
+    </div>
+    <div class="empty-state" id="emptyExport" style="display:none">
+      <div class="empty-icon">📤</div><p>Nessun contatto da esportare.</p>
+    </div>
+
+    <!-- Export History -->
+    <div class="export-history" id="exportHistory" style="display:none">
+      <div class="export-history-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Cronologia esportazioni
+      </div>
+      <div class="export-history-list" id="exportHistoryList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ ADVANCED EXPORT MODAL ═══ -->
+  <div class="export-modal-backdrop" id="exportModalBackdrop">
+    <div class="export-modal" role="dialog" aria-label="Export avanzato">
+      <div class="export-modal-header">
+        <h3>⚙️ Export Avanzato</h3>
+        <button class="export-modal-close" id="exportModalClose" aria-label="Chiudi">&times;</button>
+      </div>
+      <div class="export-modal-body">
+
+        <!-- FORMAT -->
+        <div class="export-section">
+          <div class="export-section-title">📄 Formato</div>
+          <div class="export-format-grid" id="exportFormatGrid">
+            <div class="export-format-btn active" data-format="csv"><span class="fmt-icon">📊</span>CSV</div>
+            <div class="export-format-btn" data-format="tsv"><span class="fmt-icon">📋</span>TSV</div>
+            <div class="export-format-btn" data-format="custom"><span class="fmt-icon">✂️</span>Custom</div>
+            <div class="export-format-btn" data-format="json"><span class="fmt-icon">🔧</span>JSON</div>
+            <div class="export-format-btn" data-format="jsonl"><span class="fmt-icon">📝</span>JSONL</div>
+            <div class="export-format-btn" data-format="xml"><span class="fmt-icon">📄</span>XML</div>
+            <div class="export-format-btn" data-format="xlsx"><span class="fmt-icon">📗</span>XLSX</div>
+            <div class="export-format-btn" data-format="vcard"><span class="fmt-icon">📇</span>vCard</div>
+          </div>
+        </div>
+
+        <!-- SEPARATOR (visible for csv/tsv/custom) -->
+        <div class="export-section" id="exportSepSection">
+          <div class="export-section-title">🔤 Separatore</div>
+          <div class="export-separator-row">
+            <select id="exportSepSelect">
+              <option value=",">Virgola (,)</option>
+              <option value=";">Punto e virgola (;)</option>
+              <option value="\t">Tab</option>
+              <option value="|">Pipe (|)</option>
+              <option value="custom">Personalizzato...</option>
+            </select>
+            <input type="text" id="exportSepCustom" placeholder="es: ::" maxlength="4" style="display:none">
+          </div>
+        </div>
+
+        <!-- COLUMNS -->
+        <div class="export-section" id="exportColSection">
+          <div class="export-section-title">📋 Colonne</div>
+          <div class="export-col-actions">
+            <button id="exportColAll">Seleziona tutte</button>
+            <button id="exportColNone">Deseleziona tutte</button>
+            <button id="exportColEssential">Solo essenziali</button>
+          </div>
+          <div class="export-columns-grid" id="exportColumnsGrid">
+            <!-- Generated by JS -->
+          </div>
+        </div>
+
+        <!-- PREVIEW -->
+        <div class="export-section">
+          <div class="export-section-title">👁️ Anteprima (primi 2 record)</div>
+          <div class="export-preview-box" id="exportPreview">Seleziona un formato...</div>
+        </div>
+
+      </div>
+      <div class="export-modal-footer">
+        <span class="export-count" id="exportRecordCount">0 contatti</span>
+        <button class="btn btn-success" id="btnExportDownload" style="font-size:.95rem">💾 Scarica</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SETTINGS TAB ═══ -->
+  <div class="panel" id="panel-settings" role="tabpanel">
+    <div class="settings-section">
+      <h3>🤖 Motore OCR</h3>
+      <div class="setting-row"><label>Stato API</label><span id="ocrApiStatus">Verifico...</span></div>
+      <div class="setting-row"><label>Motore attivo</label><span id="ocrEngineActive">—</span></div>
+    </div>
+    <div class="settings-section">
+      <h3>🔗 Webhook CRM</h3>
+      <div style="margin-bottom:10px">
+        <label style="font-size:.75rem;color:var(--fg4);display:block;margin-bottom:4px">URL Webhook</label>
+        <input type="url" id="webhookUrl" placeholder="https://api.tuocrm.com/webhook" style="width:100%">
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:.75rem;color:var(--fg4);display:block;margin-bottom:4px">Authorization Header</label>
+        <input type="text" id="webhookAuth" placeholder="Bearer xxx..." style="width:100%">
+      </div>
+      <button class="btn btn-primary btn-small" id="btnSaveSettings">💾 Salva impostazioni</button>
+    </div>
+    <div class="settings-section">
+      <h3>📊 Statistiche</h3>
+      <div class="setting-row"><label>Contatti salvati</label><span id="statContacts">0</span></div>
+      <div class="setting-row"><label>Scansioni effettuate</label><span id="statScans">0</span></div>
+    </div>
+    <div class="settings-section">
+      <h3>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="2"/><path d="M7 2v20"/><path d="M17 2v20"/><path d="M2 12h20"/><path d="M2 7h5"/><path d="M2 17h5"/><path d="M17 7h5"/><path d="M17 17h5"/></svg>
+        Archiviazione locale
+      </h3>
+      <div class="setting-row"><label>Dati salvati su</label><span id="storageLocation" style="color:var(--green)">📱 Locale + ☁️ Cloud</span></div>
+      <div class="setting-row"><label>Spazio locale</label><span id="storageUsage">Calcolo...</span></div>
+      <div class="setting-row"><label>Esportazioni salvate</label><span id="exportCount">0</span></div>
+      <div class="setting-row"><label>Sync cloud</label><span id="cloudSyncStatus">⏳ Verifica...</span></div>
+      <div class="setting-row">
+        <label>Ultimo sync</label><span id="lastSyncTime">—</span>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:6px">
+        <button class="btn btn-primary btn-small" id="btnForceSync">
+          <svg class="btn-ico" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Sincronizza ora
+        </button>
+      </div>
+      <div style="margin-top:8px;font-size:.68rem;color:var(--fg4);line-height:1.4">
+        I dati sono salvati sul dispositivo e sincronizzati con Supabase. Le chiavi API restano solo su questo dispositivo. Ogni dispositivo ha un ID univoco.
+      </div>
+      <div class="setting-row" style="margin-top:6px"><label>Device ID</label><span id="deviceIdDisplay" style="font-family:monospace;font-size:.65rem;color:var(--fg4)">—</span></div>
+    </div>
+    <div class="settings-section">
+      <h3>🗑️ Gestione dati</h3>
+      <button class="btn btn-danger btn-small" id="btnClearAll">Cancella tutti i contatti</button>
+      <button class="btn btn-secondary btn-small" id="btnClearExports" style="margin-top:6px">Cancella cronologia esportazioni</button>
+    </div>
+  </div>
+</main>
+
+<!-- PWA Install Banner -->
+<div class="pwa-install-banner" id="pwaInstallBanner">
+  <div class="pwa-install-inner">
+    <img class="pwa-install-icon" src="/scanner/icon-96x96.png" alt="BizCard 4Business">
+    <div class="pwa-install-text">
+      <div class="pwa-install-title">Installa BizCard 4Business</div>
+      <div class="pwa-install-sub">Accesso rapido dalla home del dispositivo</div>
+    </div>
+    <div class="pwa-install-actions">
+      <button class="btn btn-primary btn-small" id="btnPwaInstall">Installa</button>
+      <button class="pwa-install-close" id="btnPwaDismiss">&times;</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts" aria-live="polite"></div>
+
+<!-- External Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+
+<!-- App Modules (order matters — globals shared) -->
+<script src="/scanner/js/app-config.js"></script>
+<script src="/scanner/js/supabase-sync.js"></script>
+<script src="/scanner/js/scanner.js"></script>
+<script src="/scanner/js/smart-scan.js"></script>
+<script src="/scanner/js/phone-bridge.js"></script>
+<script src="/scanner/js/ocr-pipeline.js"></script>
+<script src="/scanner/js/contacts.js"></script>
+<script src="/scanner/js/export.js"></script>
+<script src="/scanner/js/ui-init.js"></script>
+</body>
+</html>

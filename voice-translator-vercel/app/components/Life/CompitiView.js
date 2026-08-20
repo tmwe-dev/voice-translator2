@@ -4,7 +4,6 @@ import { FONT, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
-import ScannerMateriali from './ScannerMateriali.js';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -121,12 +120,10 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     fr.readAsDataURL(file);
   }), []);
 
-  // b.343 — la lettura gratis (Tesseract) vive ora in ScannerMateriali,
-  // col motore copiato dal BizCard. Qui restano il ricordo dell'ultima
-  // foto (per il gradino AI a scelta) e il suggerimento stesso.
-  const ultimaFotoRef = useRef(null);
-  const [suggerisciAI, setSuggerisciAI] = useState(false);
-
+  // b.344 — l'acquisizione vive nello Scanner (la pagina BizCard copiata
+  // tale e quale, /scanner). Qui resta il gradino AI a pagamento per chi
+  // vorra migliorarne l'esito: verra riagganciato quando i dati dello
+  // Scanner confluiranno in automatico.
   const scattaOcr = useCallback(async (file) => {
     if (!file || ocrLavoro) return;
     setOcrLavoro(true); setErrore('');
@@ -324,31 +321,24 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
               <textarea value={matBozza.testo} onChange={(e) => setMatBozza((b) => ({ ...b, testo: e.target.value }))} rows={7}
                 placeholder={tt('lifeMatPaste', 'Incolla qui il testo degli appunti (gratis)… oppure fotografa la pagina qui sotto.')}
                 style={{ ...input, resize: 'vertical', marginBottom: 8 }} />
-              {/* b.343 — L'AREA UNICA di acquisizione, copiata dal BizCard
-                  Scanner: trascina/seleziona (foto e PDF insieme) + QR che
-                  collega la fotocamera del telefono, maschera con i campi
-                  rilevati in tempo reale, multiscansione con fusione. */}
-              <ScannerMateriali
-                lingua={lingua} userToken={userToken} chiama={chiama}
-                onTesto={(testo, info) => {
-                  setMatBozza((b) => ({
-                    ...(b || { titolo: '', materia: '', testo: '' }),
-                    titolo: b?.titolo || info?.titolo || '',
-                    materia: b?.materia || info?.materia || '',
-                    testo: [(b?.testo || ''), testo].filter(Boolean).join('\n\n'),
-                  }));
-                  if ((info?.fiducia || 0) < 60) setSuggerisciAI(true);
-                }}
-                onPdf={caricaPdf}
-                onFotoPerAI={(dataUrl) => { ultimaFotoRef.current = dataUrl; }}
-                {...{ testoP, muto, accent, card, bordo }} />
-              {suggerisciAI && (
-                <button onClick={() => { if (ultimaFotoRef.current) scattaOcr(ultimaFotoRef.current); setSuggerisciAI(false); }} disabled={ocrLavoro}
-                  style={{ width: '100%', marginTop: 8, padding: 11, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-                  {tt('lifeMatAiBoost', 'Lettura difficile: migliora con AI (~1 cent)')}
-                </button>
-              )}
+              {/* b.344 — LO SCANNER: la pagina del BizCard v5.2, copiata TALE
+                  E QUALE dentro l'app (ordine di Luca: stesso codice, stessa
+                  pagina, stesso procedimento). Camera col riquadro-guida,
+                  Remoto col QR che collega il telefono, File; multiscansione,
+                  scheda dei campi in tempo reale. I dati poi si incollano o
+                  esportano qui, e in seguito verranno agganciati in automatico. */}
+              <button onClick={() => window.open('/scanner/index.html', '_blank', 'noopener')}
+                style={{ width: '100%', padding: 16, borderRadius: 14, border: 'none', cursor: 'pointer', fontFamily: FONT,
+                  background: `linear-gradient(135deg, ${accent}, #06b6d4)`, color: '#04121c', fontWeight: 800, fontSize: 15 }}>
+                Apri lo Scanner (camera, telefono remoto, file)
+              </button>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
+                {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
+                <label style={{ flex: 1, minWidth: 130, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
+                  {ocrLavoro ? tt('lifeMatReading', 'Leggo la pagina…') : tt('lifeMatPdf', 'Carica PDF (gratis)')}
+                  <input type="file" accept="application/pdf" style={{ display: 'none' }}
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) caricaPdf(f); }} />
+                </label>
                 <button onClick={salvaMat} disabled={!matBozza.testo.trim()}
                   style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>
                   {tt('lifeSave', 'Salva')}
