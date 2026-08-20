@@ -107,10 +107,32 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
     const memberNames = c.members?.filter(m => m !== (verifiedName || prefs.name)) || [];
     const displayName = c.topic || memberNames.join(', ') || L('conversation');
 
+    // b.353 — l'esportazione dal posto giusto (Luca: «esporta conversazione
+    // dovrebbe essere dentro l'elenco delle conversazioni»): il testo del
+    // dialogo scende in un file, senza dover aprire nulla.
+    const esporta = (ev) => {
+      ev.stopPropagation();
+      const righe = (c.messages || []).map((m) => {
+        const chi = m.sender || '';
+        const che = m.original || m.text || '';
+        const trad = m.translated ? ('  \u2192  ' + m.translated) : '';
+        return chi + ': ' + che + trad;
+      });
+      const testo = displayName + String.fromCharCode(10) + '\u2550'.repeat(30) + String.fromCharCode(10, 10) + righe.join(String.fromCharCode(10)) + String.fromCharCode(10);
+      const blob = new Blob([testo], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = `conversazione-${(displayName || 'chat').replace(/[^\w-]+/g, '_').slice(0, 40)}.txt`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    };
+
     return (
-      <button
+      <div
+        role="button" tabIndex={0}
         key={c.id || index}
         onClick={() => viewConversation(c.id)}
+        onKeyDown={(e) => { if (e.key === 'Enter') viewConversation(c.id); }}
         style={{
           width: '100%',
           padding: '14px 12px',
@@ -217,7 +239,16 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
             </span>
           </div>
         </div>
-      </button>
+
+        {/* b.353 — Esporta, sulla riga: il posto giusto per portarsi via
+            il testo (prima viveva sepolto nel menu della stanza). */}
+        <button onClick={esporta} aria-label={L('exportConversation')} title={L('exportConversation')}
+          style={{ flexShrink: 0, width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
+            border: `1px solid ${C.cardBorder}`, background: 'transparent', color: C.textMuted,
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+      </div>
     );
   };
 

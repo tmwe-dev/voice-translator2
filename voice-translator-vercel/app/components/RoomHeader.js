@@ -143,6 +143,30 @@ const RoomHeader = memo(function RoomHeader({
         {/* ── b.193 · Consumo sempre a vista (cresce dal vivo) ── */}
         <ConsumoChip roomId={roomId} />
 
+        {/* ── b.353 — CHIAMATE A PORTATA DI DITO (Luca: «dietro icona
+            dedicata in alto», non sepolte nel menu). Stessi handler di
+            prima, spostati; nelle stanze solo-testo restano nascoste. */}
+        {webrtc && !stanzaSoloTesto && (
+          <button onClick={() => {
+              if (webrtc.webrtcConnected && webrtc.callType === 'voice') setShowVoiceCall(true);
+              else webrtc.initiateConnection(false);
+            }}
+            title={L('voiceCall')} aria-label={L('startVoiceCall')}
+            style={{...veste(S, webrtc.webrtcConnected && webrtc.callType === 'voice'), width:38, height:38, borderRadius:12, flexShrink:0}}>
+            <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </button>
+        )}
+        {webrtc && !stanzaSoloTesto && (
+          <button onClick={() => {
+              if (!showVideoCall) { setShowVideoCall(true); webrtc.initiateConnection(true); }
+              else { webrtc.disconnect(); setShowVideoCall(false); setVideoFullscreen(false); }
+            }}
+            title={showVideoCall ? L('closeVideo') : L('videoCallWord')} aria-label={showVideoCall ? L('closeVideo') : L('videoCallWord')}
+            style={{...veste(S, showVideoCall), width:38, height:38, borderRadius:12, flexShrink:0}}>
+            <IconCamera size={18}/>
+          </button>
+        )}
+
         {/* ── Destra: speaker (accesso rapido) + menu ••• ── */}
         {/* b.175 — l'icona speaker torna VISIBILE in barra: durante una
             chiamata serve a portata di dito per attivare/disattivare la
@@ -152,6 +176,18 @@ const RoomHeader = memo(function RoomHeader({
           aria-label={audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}
           style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0}}>
           {audioEnabled ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
+        </button>
+
+        {/* b.353 — RAPPORTO TECNICO dietro la sua icona in barra (Luca):
+            un tocco copia la scatola nera della chiamata + catena voce. */}
+        <button onClick={async () => {
+            const testo = ultimoRapportoTesto() + '\n\n— CATENA VOCE / TESTO —\n' + rapportoMonitorTesto();
+            try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
+            catch { toast.info(testo.slice(0, 300)); }
+          }}
+          title={L('techReport')} aria-label={L('techReport')}
+          style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0}}>
+          <IconClipboard size={16}/>
         </button>
 
         {/* ── Destra: un solo menu ••• ── */}
@@ -189,119 +225,15 @@ const RoomHeader = memo(function RoomHeader({
                 {!showVideoCall && <span style={{marginLeft:'auto'}}><BatteryPillSlot /></span>}
               </div>
 
-              {/* b.173 — AZIONI spostate qui dalla barra (stesso onClick).
-                  Chiamata vocale e video restano nascoste nelle stanze
-                  solo-testo di Mondo, come prima (regola b.152). */}
-              {webrtc && !stanzaSoloTesto && (
-                <button onClick={() => {
-                    if (webrtc.webrtcConnected && webrtc.callType === 'voice') {
-                      setShowVoiceCall(true);
-                    } else {
-                      // ── b.248 · stessa cura di b.245, ma sul pulsante VOCE ──
-                      // La guardia `webrtcState === 'idle'` era rimasta QUI:
-                      // dopo una chiamata caduta lo stato resta 'failed' e
-                      // ripremere Voce non faceva piu niente — identico al
-                      // difetto corretto per il Video in b.245. (Il commento
-                      // di b.245 qui sotto diceva che l'audio "non ha mai
-                      // avuto questa guardia": non era vero, ce l'aveva.)
-                      // Chi decide se si puo chiamare e' initiateConnection,
-                      // che gia rifiuta 'connecting' e 'connected'.
-                      webrtc.initiateConnection(false);
-                    }
-                    setShowMoreMenu(false);
-                  }}
-                  style={rigaMenu(S)} aria-label={L('startVoiceCall')}>
-                  <span style={iconaMenu}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                  </span>
-                  <span>{L('voiceCall')}</span>
-                  {webrtc.webrtcConnected && webrtc.callType === 'voice' &&
-                    <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
-                </button>
-              )}
-              {webrtc && !stanzaSoloTesto && (
-                <button onClick={() => {
-                    if (!showVideoCall) {
-                      setShowVideoCall(true);
-                      // ── b.245 · il pulsante VIDEO non giudica piu lo stato ──
-                      // C'era `if (webrtcState === 'idle')`: dopo una chiamata
-                      // caduta lo stato resta 'failed', e premere Video non
-                      // faceva PIU NIENTE — sembrava che tentasse, e invece
-                      // non partiva nessuna chiamata. Il pulsante AUDIO, due
-                      // righe sopra, non ha mai avuto questa guardia: era solo
-                      // il video a restare bloccato.
-                      // Chi decide se si puo chiamare e' initiateConnection,
-                      // che gia rifiuta 'connecting' e 'connected'.
-                      webrtc.initiateConnection(true);
-                    } else {
-                      // ── b.248 · "chiudi" CHIUDE, non nasconde ──
-                      // Prima qui c'era solo setShowVideoCall(false): la
-                      // finestra spariva ma camera e connessione restavano
-                      // VIVE. Chi vuole solo ridurre la finestra ha gia il
-                      // comando nell'overlay (fullscreen -> riquadro); la
-                      // voce di menu si chiama "Chiudi video" e deve fare
-                      // quello che dice. Si usa la stessa via dei pulsanti
-                      // rossi dell'overlay: disconnect() marca la chiusura
-                      // VOLUTA (b.116), avvisa l'altro con call-ended
-                      // (b.117) e spegne davvero camera e connessione.
-                      webrtc.disconnect();
-                      setShowVideoCall(false);
-                      setVideoFullscreen(false);
-                    }
-                    setShowMoreMenu(false);
-                  }}
-                  style={rigaMenu(S)} aria-label={showVideoCall ? L('closeVideo') : L('videoCallWord')}>
-                  <span style={iconaMenu}><IconCamera size={16}/></span>
-                  <span>{showVideoCall ? L('closeVideo') : L('videoCallWord')}</span>
-                  {showVideoCall && <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
-                </button>
-              )}
-              {setTaxiVisible && !showVideoCall && (
-                <button onClick={() => { attivaTaxi(); setShowMoreMenu(false); }}
-                  style={rigaMenu(S)} aria-label="TaxiTalk">
-                  <span style={iconaMenu}>
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M5 17h14M5 17a2 2 0 1 0 0 .01M19 17a2 2 0 1 0 0 .01M6 17l1.5-5h9L18 17M9 12V9h6v3M10 6h4"/></svg>
-                  </span>
-                  <span>TaxiTalk</span>
-                </button>
-              )}
-              {/* b.175 — audio traduzioni NON piu qui: l'icona speaker e
-                  tornata VISIBILE in barra (accesso rapido). Doppione tolto. */}
-
-              <div style={{height:1, background:S.colors.overlayBorder, margin:'4px 0'}} />
-
-              {/* Sottotitoli */}
-              <button onClick={() => { setShowCaptions(!showCaptions); setShowMoreMenu(false); }}
-                style={rigaMenu(S)}>
-                <span style={iconaMenu}>{showCaptions ? 'CC' : 'cc'}</span>
-                <span>{showCaptions ? L('hideCaptions') : L('showCaptions')}</span>
-                {showCaptions && <span style={{marginLeft:'auto', color:S.colors.statusOk}}><IconCheck size={12}/></span>}
-              </button>
-              {/* Esporta */}
-              <button onClick={() => { exportConversation(); setShowMoreMenu(false); }}
-                style={rigaMenu(S)}>
-                <span style={iconaMenu}><IconClipboard size={15}/></span>
-                <span>{L('exportConversation')}</span>
-              </button>
-              {/* b.274 — la scatola nera della chiamata, copiabile.
-                  Serve a rispondere con i FATTI quando una chiamata non
-                  si allaccia: che codifica e stata scelta, per che strada
-                  passava, e dove si e fermata. Su un telefono non c'e
-                  altro modo di leggerla. */}
-              <button onClick={async () => {
-                  // b.275 — un solo tocco porta via tutto: la chiamata e
-                  // la catena della voce. Chi prova sul telefono non deve
-                  // ricordarsi di copiare due cose.
-                  const testo = ultimoRapportoTesto()
-                    + '\n\n— CATENA VOCE / TESTO —\n' + rapportoMonitorTesto();
-                  try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
-                  catch { toast.info(testo.slice(0, 300)); }
-                  setShowMoreMenu(false);
-                }}
-                style={rigaMenu(S)} aria-label={L('techReport')}>
-                <span style={iconaMenu}><IconClipboard size={15}/></span>
-                <span>{L('techReport')}</span>
-              </button>
+              {/* b.353 — MENU RIPULITO (collaudo di Luca: «il menu in alto
+                  e incomprensibile»). Via da qui: chiamata vocale e video
+                  (ora ICONE in barra), TaxiTalk (si raggiunge dalla Home),
+                  sottotitoli (si gestiscono dentro la chiamata), esporta
+                  (vive nell'elenco conversazioni), rapporto tecnico (icona
+                  in barra durante la chiamata), "abbassa la musica" (i
+                  volumi vivono nel pannello Volumi della chiamata).
+                  Restano: lo stato qui sopra, gli strumenti AI, la
+                  chiusura, la batteria. */}
               {/* Azioni AI */}
               {messages.length >= 3 && (
                 <button onClick={() => { setShowChatActions(true); setShowMoreMenu(false); }}
@@ -310,21 +242,6 @@ const RoomHeader = memo(function RoomHeader({
                   <span>{L('aiActionsTitle')}</span>
                 </button>
               )}
-              {/* Audio Ducking */}
-              <div style={{padding:'8px 12px'}}>
-                <div style={{display:'flex', alignItems:'center', gap:10, marginBottom:6}}>
-                  <span style={iconaMenu}><IconMusic size={15}/></span>
-                  <span style={{fontSize:13, fontWeight:500, color:S.colors.textPrimary}}>{L('audioDuckingLabel')}</span>
-                  <span style={{marginLeft:'auto', fontSize:11, color:S.colors.textSecondary, fontFamily:'monospace'}}>
-                    {Math.round((duckingLevel || 0.2) * 100)}%
-                  </span>
-                </div>
-                <input type="range" min="5" max="80" step="5"
-                  value={Math.round((duckingLevel || 0.2) * 100)}
-                  onChange={e => { if (setDuckingLevel) setDuckingLevel(Number(e.target.value) / 100); }}
-                  style={{width:'100%', accentColor:S.colors.accent4Border, height:4}} />
-                <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>{L('duckingHint')}</div>
-              </div>
               {/* Chiudi e archivia */}
               <button onClick={() => { setShowMoreMenu(false); endChatAndSave(); }}
                 style={{...rigaMenu(S), color: S.colors.statusError || PALETTE.coral, fontWeight:600,

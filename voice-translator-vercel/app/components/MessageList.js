@@ -180,11 +180,26 @@ const MessageList = memo(function MessageList({
                     copre in faccia: sa cosa ha scritto. Si vela solo cio
                     che arriva dagli altri. */}
                 <ForseVelato messaggio={m} attivo={!isMine} hot={!!roomInfo?.hot} C={S.colors}>
-                  {/* Primary line: original for sender, translation for receiver */}
-                  <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary}}>
-                    {isMine ? m.original : (hasTranslation ? translationForMe : m.original)}
+                  {/* b.353 — LA MIA BOLLA PARLA LA LINGUA DELL'ALTRO (Luca:
+                      «se scrivo in italiano e traduci in inglese, non
+                      riscrivere in italiano: mostra la traduzione, col
+                      pallino verde quando e stata consegnata»). In grande
+                      la TRADUZIONE; sotto, piccolo, quello che ho scritto
+                      io — cosi ognuno controlla la propria frase. */}
+                  <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary, display:'flex', alignItems:'baseline', gap:6}}>
+                    <span style={{flex:1, minWidth:0}}>
+                      {isMine
+                        ? (hasTranslation ? translationForMe : m.original)
+                        : (hasTranslation ? translationForMe : m.original)}
+                    </span>
+                    {isMine && hasTranslation && (
+                      <span title="Tradotto"
+                        aria-label="tradotto"
+                        style={{width:8, height:8, borderRadius:4, background:'#3ddc84', flexShrink:0,
+                          boxShadow:'0 0 6px rgba(61,220,132,0.6)'}} />
+                    )}
                   </div>
-                  {/* Secondary line: translation for sender, original for receiver */}
+                  {/* Secondary line: original for sender (small), original for receiver */}
                   {pendingTranslation ? (
                     isMine ? (
                       <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
@@ -207,7 +222,8 @@ const MessageList = memo(function MessageList({
                     })()
                   ) : (
                     <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
-                      {isMine ? translationForMe : m.original}
+                      {/* b.353 — per me: sotto c'e il MIO originale; per lui: l'originale dell'altro */}
+                      {isMine ? m.original : m.original}
                     </div>
                   )}
                 </ForseVelato>

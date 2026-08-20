@@ -200,7 +200,7 @@ function ChatActionsPanel({
                 <div>
                   <div style={{ fontWeight: 500 }}>{t(action.nameKey) || action.name}</div>
                   <div style={{ fontSize: 12, color: s.textTertiary, marginTop: 2 }}>
-                    {action.description}
+                    {t(action.nameKey + 'Desc') || action.description}
                   </div>
                 </div>
                 {loading === action.id && (

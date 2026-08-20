@@ -529,7 +529,7 @@ function HomeInner() {
   // b.250 — lo scroll segue anche il messaggio IN COMPOSIZIONE (dettatura
   // live / "sto traducendo"), non solo i messaggi arrivati: senza, il campo
   // di scrittura copriva l'ultima bolla mentre la si stava scrivendo.
-  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages, translation.streamingMsg]);
+  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth', block:'end' }); }, [roomPolling.messages, translation.streamingMsg]);
 
   // b.324 — audit Mondo D5: da dove sei ENTRATO in stanza. Chi entra da
   // Mondo, uscendo torna a Mondo (con ricerca e posizione ancora vive),

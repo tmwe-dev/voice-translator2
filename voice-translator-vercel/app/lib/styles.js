@@ -498,7 +498,12 @@ export default function getStyles(theme = 'deep') {
       animation:'vtPulse 1.2s infinite ease-in-out', display:'inline-block' },
 
     // === CHAT ===
-    chatArea: { flex:1, overflowY:'auto', padding:'14px 12px', minHeight:0, WebkitOverflowScrolling:'touch' },
+    // b.353 — RESPIRO IN FONDO (collaudo di Luca: «l'elenco arriva troppo
+    // in basso e l'ultimo messaggio finisce nascosto sotto i tasti»). Il
+    // fondo della lista tiene 96px di aria: l'ultimo messaggio resta
+    // SEMPRE visibile sopra la barra di scrittura, e lo scorrimento
+    // automatico lo porta li, mai sotto.
+    chatArea: { flex:1, overflowY:'auto', padding:'14px 12px 96px', minHeight:0, WebkitOverflowScrolling:'touch', scrollPaddingBottom:'96px' },
     // ── Nuvolette di VETRO (spec sciame) ──
     // La MIA: grigio-nero fumé, neutra su ogni tema.
     // La SUA: vetro tinto col colore del tema (violetto/lilla, orange/terra…).

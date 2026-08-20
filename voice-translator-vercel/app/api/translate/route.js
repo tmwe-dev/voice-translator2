@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
+import { proteggiEmoji, ripristinaEmoji } from '../../lib/emojiScudo.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addCost } from '../../lib/store.js';
 import { deductLendingTokens } from '../../lib/users.js';
@@ -50,10 +51,17 @@ async function handlePost(req) {
       return apiError(ErrorCode.INVALID_INPUT, inputValidation.error);
     }
 
-    const { text, sourceLang, targetLang, sourceLangName, targetLangName,
+    const { text: testoOriginale, sourceLang, targetLang, sourceLangName, targetLangName,
             roomId, context, isReview, domainContext, description, userToken, aiModel, lendingCode,
             roomMode, nativeLang, conversationContext,
             glossario } = { ...rawBody, ...inputValidation.data }; // b.95
+    // b.353 — LE EMOTICON NON SI TRADUCONO MAI (collaudo di Luca): ogni
+    // gruppo emoji diventa un segnaposto prima che il testo veda un
+    // modello, e torna identico al suo posto in ogni risposta. La cache
+    // resta coerente: chiave e valore viaggiano entrambi protetti qui e
+    // ripristinati la, in modo deterministico.
+    const { protetto: text, mappa: mappaEmoji } = proteggiEmoji(testoOriginale);
+    const conEmoji = (t) => ripristinaEmoji(t, mappaEmoji);
     // b.161 — non ancora nello schema (vedi schemas.js): stesso trattamento
     // gia riservato a `glossario` qui sopra, un gettone opaco non ha
     // bisogno di sanificazione testuale, solo del controllo tipo fatto
@@ -108,7 +116,7 @@ async function handlePost(req) {
     if (cachedTranslation) {
       const cachedConfidence = calcConfidence(text, cachedTranslation, sourceLang, targetLang);
       return NextResponse.json({
-        translated: cachedTranslation,
+        translated: conEmoji(cachedTranslation),
         confidence: cachedConfidence,
         cost: 0,
         costEurCents: 0,
@@ -416,7 +424,7 @@ async function handlePost(req) {
           if (riservaId) { await release(riservaId, 'validazione_fallita'); riservaId = null; }
           const failureConfidence = calcConfidence(text, text, sourceLang, targetLang);
           return NextResponse.json({
-            translated: text,
+            translated: conEmoji(text),
             confidence: failureConfidence,
             cost: roundCost(calcGptCost(usage || { prompt_tokens: 0, completion_tokens: 0 })),
             costEurCents: 0,
@@ -598,7 +606,7 @@ async function handlePost(req) {
     }
 
     return NextResponse.json({
-      translated,
+      translated: conEmoji(translated),
       confidence,
       provider: motoreUsato, // b.234 — motore reale (asia/qwen-mt / global-fallback / openai…)
       cost: roundCost(msgCostUsd),
@@ -630,7 +638,10 @@ async function handlePost(req) {
       const { text, sourceLang, targetLang } = await leggiCorpoPerRipiego(req);
       if (text && sourceLang && targetLang) {
         const { tryGoogleTranslate } = await import('../../lib/providers.js');
-        const ripiego = await tryGoogleTranslate(text, sourceLang, targetLang);
+        // b.353 — anche qui le emoticon restano intatte (scudo locale).
+        const scudo = proteggiEmoji(text);
+        const ripiegoGrezzo = await tryGoogleTranslate(scudo.protetto, sourceLang, targetLang);
+        const ripiego = ripiegoGrezzo ? ripristinaEmoji(ripiegoGrezzo, scudo.mappa) : ripiegoGrezzo;
         if (ripiego) {
           log.warn('Traduzione servita dalla rete di sicurezza (IA non disponibile)');
           return NextResponse.json({
