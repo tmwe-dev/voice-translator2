@@ -188,7 +188,9 @@ function CreateRoomSheet({ open, onClose, onCreate, preimpostato }) {
             <label htmlFor="stanza-nome" style={{ fontSize: 11, fontWeight: 600, color: textMuted, marginBottom: 6, display: 'block', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               {L('roomNameOrTopic')}
             </label>
-            <input id="stanza-nome" type="text" value={nome} maxLength={60}
+            {/* b.324 — audit Mondo D7: il focus iniziale cadeva sulla X e le
+                prime lettere digitate si perdevano. Ora si parte dal nome. */}
+            <input id="stanza-nome" type="text" value={nome} maxLength={60} autoFocus
               onChange={(e) => setNome(e.target.value)}
               placeholder={L('roomNamePlaceholder')}
               style={{

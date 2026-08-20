@@ -36,6 +36,15 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
   // Ogni scheda nuova riparte pulita; e appena si apre si CHIEDE la
   // cache condivisa: se qualcuno ha gia pagato la sintesi, arriva
   // gratis senza premere niente.
+  // b.324 — audit Mondo D5: Escape chiude il LETTORE (non butta alla Home:
+  // il gestore globale ora lascia la mano ai dialoghi aperti).
+  useEffect(() => {
+    if (!aperta) return;
+    const suTasto = (e) => { if (e.key === 'Escape') onClose?.(); };
+    document.addEventListener('keydown', suTasto);
+    return () => document.removeEventListener('keydown', suTasto);
+  }, [aperta, onClose]);
+
   useEffect(() => {
     setSintesiAI(''); setServeAccount(false); setErrSintesi(false); setGenerando(false);
     if (!aperta || tipo !== 'articolo' || !dati?.titolo) return;
@@ -91,6 +100,9 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
       }}>
       <div style={{
         width: '100%', maxWidth: 680, maxHeight: '88dvh', overflowY: 'auto',
+        // b.324 — D4: lo scorrimento del corpo deve funzionare anche col
+        // dito sopra il video e senza trascinarsi dietro la pagina sotto.
+        WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain',
         background: C.bg || '#070a14', borderRadius: '20px 20px 0 0',
         border: bordo, borderBottom: 'none', fontFamily: FONT,
       }}>
@@ -184,8 +196,12 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
             </blockquote>
           )}
 
-          {/* ─── Le azioni: la fonte prima di tutto ─── */}
-          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          {/* ─── Le azioni: la fonte prima di tutto ───
+              b.324 — audit Mondo D4: i pulsanti erano SOTTO la piega e con
+              contenuti lunghi diventavano irraggiungibili. Ora la fila e
+              APPICCICATA in fondo alla scheda (sticky): sempre visibile,
+              qualunque sia la lunghezza del corpo. */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16, position: 'sticky', bottom: 0, padding: '10px 0 4px', background: C.bg || '#070a14' }}>
             {tipo === 'articolo' && dati.url && (
               <a href={dati.url} target="_blank" rel="noopener noreferrer" onClick={() => vibrate(8)}
                 style={{

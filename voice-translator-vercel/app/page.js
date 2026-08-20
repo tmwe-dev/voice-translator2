@@ -501,10 +501,19 @@ function HomeInner() {
   // di scrittura copriva l'ultima bolla mentre la si stava scrivendo.
   useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [roomPolling.messages, translation.streamingMsg]);
 
+  // b.324 — audit Mondo D5: da dove sei ENTRATO in stanza. Chi entra da
+  // Mondo, uscendo torna a Mondo (con ricerca e posizione ancora vive),
+  // non in Home.
+  const vistaOrigineRef = useRef('home');
+
   // ── Escape key: back navigation from any view ──
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape') {
+        // b.324 — audit Mondo D5: se c'e un DIALOGO aperto (lettore
+        // articolo/video, foglio di creazione), Escape chiude QUELLO,
+        // non butta alla Home perdendo ricerca e posizione.
+        if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
         if (view === 'room') { /* stay in room — Escape does nothing */ }
         else if (view !== 'home' && view !== 'loading') { setView('home'); }
       }
@@ -750,7 +759,8 @@ function HomeInner() {
     auth.roomTierOverrideRef.current = null;
     auth.setTierStanza(null);
     setStatus('');
-    setView('home');
+    // b.324 — D5: si torna DA DOVE si era entrati (Mondo resta Mondo).
+    setView(vistaOrigineRef.current === 'mondo' ? 'mondo' : 'home');
   }
 
   function leaveRoomTemporary() {
@@ -782,7 +792,8 @@ function HomeInner() {
     // un host PRO non si porta via ElevenLabs (l'addebito era dell'host).
     auth.roomTierOverrideRef.current = null;
     auth.setTierStanza(null);
-    setView('home');
+    // b.324 — D5: idem, uscita temporanea.
+    setView(vistaOrigineRef.current === 'mondo' ? 'mondo' : 'home');
   }
 
 
@@ -859,6 +870,7 @@ function HomeInner() {
         activeRooms = activeRooms.filter(r => r.roomId !== rid);
         memSet('vt-active-rooms', JSON.stringify(activeRooms));
       } catch (e) { console.warn('[Page] Update active rooms on rejoin failed:', e?.message); }
+      vistaOrigineRef.current = view;
       setView('room');
       setStatus('');
     } catch (e) {
@@ -1069,6 +1081,7 @@ function HomeInner() {
       // b.269 — dentro davvero: l'invito ha finito il suo lavoro e si
       // toglie, cosi un ricaricamento non prova a rientrare da solo.
       try { sesDel('vt-invito-in-corso'); } catch { /* niente memoria di sessione */ }
+      vistaOrigineRef.current = view;
       setView('room');
       setStatus('');
     } catch (e) { setStatus('Error: ' + e.message); }

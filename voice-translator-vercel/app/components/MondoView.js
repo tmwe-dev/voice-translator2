@@ -240,7 +240,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* ═══ TAB NEWS ═══ */}
       {tab === 'news' && (
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5 }}>
-          <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+          {/* b.324 — audit Mondo D8: su schermo largo il contenuto andava a
+              tutta larghezza; ora sta nella colonna centrata (regola di Luca,
+              gia standard in Life). */}
+          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+            <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+          </div>
         </div>
       )}
 
@@ -325,6 +330,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {tab === 'stanze' && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
+        {/* b.324 — D8: colonna centrata anche qui. */}
+        <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
         {/* Loading skeleton */}
         {loading && rooms.length === 0 && (
@@ -520,6 +527,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             </button>
           );
         })}
+        </div>
       </div>
       )}
 

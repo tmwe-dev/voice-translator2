@@ -129,7 +129,16 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
       if (!r.ok) return;
       const d = await r.json();
       setVideoAttivi(!!d.disponibile);
-      if (d.disponibile) setVideo(d.video || []);
+      // b.324 — audit Mondo D6: la griglia mostrava lo stesso video due
+      // volte (fonti diverse, stesso id). Dedup per id/url prima di mostrare.
+      if (d.disponibile) {
+        const visti = new Set();
+        setVideo((d.video || []).filter((v) => {
+          const k = v?.id || v?.url || v?.titolo;
+          if (!k || visti.has(k)) return false;
+          visti.add(k); return true;
+        }));
+      }
     } catch { /* i video sono un di piu, mai un errore in faccia */ }
   }, [lingua]);
 
