@@ -41,7 +41,7 @@ function caricaScript(onPronto, onErrore) {
   document.head.appendChild(s);
 }
 
-function CompagnoLive({ compagno, lingua, onChiudi, testoP, muto, accent, card, bordo }) {
+function CompagnoLive({ compagno, lingua, contesto, onChiudi, testoP, muto, accent, card, bordo }) {
   const [stato, setStato] = useState('carico'); // carico | pronto | errore
 
   useEffect(() => {
@@ -52,12 +52,21 @@ function CompagnoLive({ compagno, lingua, onChiudi, testoP, muto, accent, card, 
 
   const nomeLingua = getLang(lingua)?.name || 'Italiano';
   // Le variabili che il prompt dell'agente si aspetta: {{nome}}, {{ruolo}},
-  // {{personalita}}, {{lingua}}. Il personaggio arriva da QUI, non dall'agente.
+  // {{personalita}}, {{lingua}}, {{contesto}}, {{aggancio}}. Il personaggio
+  // arriva da QUI, non dall'agente.
+  // b.339 (Luca) — {{contesto}}: la discussione gia fatta in chat entra nella
+  // sessione dal vivo, cosi il Compagno riprende il filo invece di ripartire
+  // da zero. {{aggancio}} adatta il saluto: continuazione o primo incontro.
+  const conTesto = String(contesto || '').slice(0, 4000);
   const variabili = JSON.stringify({
     nome: compagno?.nome || 'il tuo Compagno',
     ruolo: compagno?.ruolo || '',
     personalita: (compagno?.personalita || '').slice(0, 2400),
     lingua: nomeLingua,
+    contesto: conTesto || '(nessuna: la conversazione comincia adesso)',
+    aggancio: conTesto
+      ? 'Ho qui la nostra conversazione — riprendiamo da dove eravamo?'
+      : 'Che bello sentirti a voce — dimmi pure, di cosa parliamo?',
   });
 
   return (

@@ -157,7 +157,13 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       </div>
 
       {dalVivo && (
+        // b.339 — la discussione scritta ENTRA nella sessione dal vivo: gli
+        // ultimi scambi (i piu recenti pesano di piu) diventano il {{contesto}}
+        // dell'agente, che riprende il filo invece di ripartire da zero.
         <CompagnoLive compagno={scelto} lingua={lingua} onChiudi={() => setDalVivo(false)}
+          contesto={messaggi.slice(-14).map((m) =>
+            `${m.ruolo === 'persona' ? 'Persona' : (scelto?.nome || 'Tu')}: ${String(m.testo || '').slice(0, 400)}`
+          ).join('\n')}
           {...{ testoP, muto, accent, card, bordo }} />
       )}
 
