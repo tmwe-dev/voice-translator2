@@ -18,7 +18,7 @@ import Icon from './Icon.js';
 
 function dominioDi(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
 
-function CondivisoSheet({ condiviso, onParlane, onChiudi, L }) {
+function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
   const [meta, setMeta] = useState(null);
   const tt = (k, f) => { const v = L ? L(k) : k; return v && v !== k ? v : f; };
 
@@ -63,8 +63,19 @@ function CondivisoSheet({ condiviso, onParlane, onChiudi, L }) {
           style={{ width: '100%', padding: 13, borderRadius: 13, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Icon name="mic" size={16} color="#04121c" /> {tt('newsTalkAbout', 'Parlane')}
         </button>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          {/* b.334 — le altre destinazioni del piano: Spiegamelo (Impara) e la Tavola. */}
+          <button onClick={() => onLife?.('impara', titolo)}
+            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            {tt('sharedExplain', 'Spiegamelo')}
+          </button>
+          <button onClick={() => onLife?.('tavolo', titolo)}
+            style={{ flex: 1, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+            {tt('sharedTable', 'Alla Tavola')}
+          </button>
+        </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 8, textAlign: 'center' }}>
-          {tt('sharedTalkHint', 'Si apre una stanza già pronta su questo contenuto: invita chi vuoi, o parlane col mondo.')}
+          {tt('sharedTalkHint', 'Parlane apre una stanza già pronta; Spiegamelo la lezione; la Tavola il dibattito dei tuoi Compagni.')}
         </div>
       </div>
     </div>

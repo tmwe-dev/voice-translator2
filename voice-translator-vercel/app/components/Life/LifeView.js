@@ -18,7 +18,7 @@ const IDEE_CORSO = [
   { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
@@ -43,6 +43,20 @@ function LifeView({ onApriStanza }) {
   const C = S?.colors || {};
   const lingua = prefs?.uiLang || prefs?.lang || 'it';
   const [scheda, setScheda] = useState('podcast');
+  // b.334 — arrivo da "Condividi -> BarTalk": la scheda giusta si apre da
+  // sola col contenuto gia dentro (Spiegamelo -> Impara; Tavola -> Tavolo).
+  const [imparaPreset, setImparaPreset] = useState('');
+  const [tavoloPreset, setTavoloPreset] = useState('');
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('vt-life-preset');
+      if (!raw) return;
+      sessionStorage.removeItem('vt-life-preset');
+      const p = JSON.parse(raw);
+      if (p?.scheda === 'impara') { setImparaPreset(p.testo || ''); setScheda('impara'); }
+      else if (p?.scheda === 'tavolo') { setTavoloPreset(p.testo || ''); setScheda('tavolo'); }
+    } catch { /* nessun preset in attesa */ }
+  }, []);
   const [miei, setMiei] = useState([]);
   const [debateObiettivo, setDebateObiettivo] = useState(''); // b.227 — Dossier→Debate
 
@@ -130,10 +144,10 @@ function LifeView({ onApriStanza }) {
 
       {scheda === 'podcast' && <Podcast compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'amico' && <AmicoChat compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'tavolo' && <Tavolo compagni={tutti} obiettivoIniziale={tavoloPreset || debateObiettivo} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
       {/* b.302 — 'dossier' non e piu una scheda: chi ci arriva vede la Tavola. */}
-      {scheda === 'impara' && <Impara compagni={tutti} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
-      {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'impara' && <Impara compagni={tutti} argomentoIniziale={imparaPreset} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
+      {scheda === 'obiettivi' && <GestioneObiettivi {...{ L, userToken, testoP, muto, accent, card, bordo }} />}
       {scheda === 'compiti' && <CompitiView {...{ L, userToken, lingua, testoP, muto, accent, card, bordo }} cambiaScheda={setScheda} />}
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
@@ -317,6 +331,12 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
 // diverse invece di ripetere sempre la stessa. Se un'immagine coerente non
 // c'e, la sezione resta senza (il documentario respira, non riempie a forza).
 const attendi = (ms) => new Promise((r) => setTimeout(r, ms));
+// b.334 — KARAOKE PER FRASE: il paragrafo attivo si spezza in frasi e quella
+// in lettura si illumina. Stima onesta: proporzione del tempo audio sulla
+// lunghezza del testo (precisa quando la sezione e un audio solo).
+function spezzaFrasi(testo) {
+  return String(testo || '').match(/[^.!?…]+[.!?…]+["»']?\s*|[^.!?…]+$/g)?.map((f) => f.trim()).filter(Boolean) || [String(testo || '')];
+}
 function dominioDi(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; } }
 function paroleChiave(s) { return new Set((String(s || '').toLowerCase().match(/\p{L}{4,}/gu) || [])); }
 function assegnaImmagini(paragrafi, items, illustrazione) {
@@ -344,8 +364,8 @@ function assegnaImmagini(paragrafi, items, illustrazione) {
   return scelte;
 }
 
-function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo }) {
-  const [argomento, setArgomento] = useState('');
+function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, argomentoIniziale = '' }) {
+  const [argomento, setArgomento] = useState(argomentoIniziale || '');
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
   const [linguaCorso, setLinguaCorso] = useState(lingua || 'it'); // b.213 — lingua del corso, scelta esplicita (conta per i bambini)
@@ -398,6 +418,43 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const inDomandaRef = useRef(false);
   const interruzionePendenteRef = useRef(false);
   const saltaRef = useRef(0); // b.315 — sezioni da saltare al rientro (gia trattate parlando)
+  // b.334 — DETTARE la domanda: registra col microfono, trascrive, riempie
+  // il campo. Secondo tocco = stop. La lezione va in pausa mentre registri.
+  const [micDomanda, setMicDomanda] = useState(''); // '' | 'registro' | 'trascrivo'
+  const micRecRef = useRef(null);
+  const micStreamRef = useRef(null);
+  const dettaDomanda = useCallback(async () => {
+    if (micDomanda === 'registro') { try { micRecRef.current?.stop(); } catch { /* gia fermo: non e un guasto */ } return; }
+    if (micDomanda) return;
+    try {
+      pausaAudio();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      const pezzi = [];
+      const rec = new MediaRecorder(stream);
+      rec.ondataavailable = (e) => { if (e.data.size > 0) pezzi.push(e.data); };
+      rec.onstop = async () => {
+        try { micStreamRef.current?.getTracks().forEach((t) => t.stop()); } catch { /* microfono gia chiuso: non e un guasto */ }
+        const blob = new Blob(pezzi, { type: rec.mimeType || 'audio/webm' });
+        if (blob.size < 800) { setMicDomanda(''); return; }
+        setMicDomanda('trascrivo');
+        try {
+          const fd = new FormData();
+          fd.append('audio', blob, 'domanda.webm');
+          fd.append('sourceLang', linguaCorso || 'it');
+          if (userToken) fd.append('userToken', userToken);
+          const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
+          const d = await r.json().catch(() => null);
+          const t = d?.original || '';
+          if (t) setDomanda((prev) => (prev ? prev + ' ' : '') + t);
+        } catch { /* la dettatura e un di piu: si scrive a mano */ }
+        finally { setMicDomanda(''); }
+      };
+      micRecRef.current = rec;
+      rec.start();
+      setMicDomanda('registro');
+    } catch { setMicDomanda(''); }
+  }, [micDomanda, linguaCorso, userToken]);
   // b.315 — EVIDENZIA (leggi-e-segui): sfondo diverso al paragrafo che il
   // Maestro sta leggendo, cosi chi ascolta in un'altra lingua vede le parole.
   // E il testo SCORRE per tenere al centro il pezzo in lettura.
@@ -441,6 +498,44 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.300 — indice del livello per la barra
   const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+
+  // b.334 — PROFILO STUDENTE (chi sei, perche studi) + preferenze esperienza
+  // (durata, stile, contenuti extra): si compilano QUI, una volta, e il
+  // Maestro le riceve a ogni lezione. "Riduci o procedi" vive nella durata.
+  const [prof, setProf] = useState({ eta: '', professione: '', obiettivo: '', interessi: '' });
+  const [pref, setPref] = useState({ durata: 'normale', stile: '', extra: 'bilanciati' });
+  const profCaricato = useRef(false);
+  useEffect(() => {
+    if (!userToken || profCaricato.current) return;
+    profCaricato.current = true;
+    profiloStudente(userToken).then((d) => {
+      if (d?.profilo) setProf((p) => ({ ...p, ...d.profilo }));
+      if (d?.preferenze) setPref((x) => ({ ...x, ...d.preferenze }));
+    }).catch(() => {});
+  }, [userToken]);
+  const salvaProf = useCallback((profNuovo, prefNuove) => {
+    if (!userToken) return;
+    salvaProfiloStudente({ profilo: profNuovo, preferenze: prefNuove, userToken }).catch(() => {});
+  }, [userToken]);
+
+  // b.334 — karaoke della frase + ripasso consigliato del corso aperto
+  const [fraseK, setFraseK] = useState(-1);
+  const [ripassoDa, setRipassoDa] = useState(0);
+  useEffect(() => {
+    if (!ascoltando || sezioneAttiva < 0) { setFraseK(-1); return; }
+    const timer = setInterval(() => {
+      const a = audioLezioneRef.current;
+      const par = paragrafiLezione[sezioneAttiva] || '';
+      const frasi = spezzaFrasi(par);
+      if (!a || !a.duration || frasi.length < 2) { setFraseK(0); return; }
+      const f = Math.min(0.999, (a.currentTime || 0) / a.duration);
+      const pos = f * par.length;
+      let acc = 0, idx = 0;
+      for (let k = 0; k < frasi.length; k++) { acc += frasi[k].length + 1; if (pos <= acc) { idx = k; break; } idx = k; }
+      setFraseK(idx);
+    }, 250);
+    return () => clearInterval(timer);
+  }, [ascoltando, sezioneAttiva, paragrafiLezione]);
 
   // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
   // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
@@ -489,6 +584,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setLezioni(Array.isArray(c.lezioni) ? c.lezioni : []);
     const m = {}; for (const e of c.esiti || []) m[e.lezione] = e.punteggio;
     setEsitiLezioni(m);
+    setRipassoDa(c.daRipassare || 0); // b.334 — ripasso a intervalli
   }, [linguaCorso]);
 
   // b.228 — pubblica il corso appena generato nella libreria condivisa.
@@ -547,7 +643,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         generaIllustrazione({ titolo: lezione?.titolo, argomento: argomento.trim(), livello, userToken })
           .then((url) => url && setIllustrazione(url)).catch(() => {});
       }
-      const comunita = contenuti.filter((c) => c === 'foto' || c === 'link' || c === 'video');
+      // b.334 — la manopola "Contenuti extra": minimi = niente community
+      // (solo l'eventuale disegno), ricchi = tutto quello che c'e.
+      const comunita = pref.extra === 'minimi' ? []
+        : pref.extra === 'ricchi' ? ['foto', 'link', 'video']
+        : contenuti.filter((c) => c === 'foto' || c === 'link' || c === 'video');
       if (comunita.length) {
         Promise.all(comunita.map((m) => arricchisciLezione({ modalita: m, titolo: lezione?.titolo, argomento: argomento.trim(), lingua: linguaCorso }).catch(() => null)))
           .then((esiti) => {
@@ -560,7 +660,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
-  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L, contenuti]);
+  }, [argomento, categoria, livello, docenteId, linguaCorso, userToken, L, contenuti, pref.extra]);
 
   // b.304 — la lezione successiva nell'elenco, per il tasto "Prosegui".
   const prossimaLezione = (() => {
@@ -592,6 +692,38 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch { /* la community non risponde: la lezione resta com'e */ }
     finally { setGenAppr(false); }
   }, [aperta, genAppr, livello, contenuti, argomento, linguaCorso]);
+
+  // b.334 — LEZIONE DI RIPASSO: riprende SOLO le cose rimaste indietro
+  // (le date di ripasso sono scadute), con esempi nuovi.
+  const faiRipasso = useCallback(async () => {
+    if (lavoro) return;
+    setLavoro(true); setErrore(''); setIllustrazione(null); setArricchimento(null);
+    try {
+      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: `Ripasso — ${argomento.trim()}` }, docenteId: docenteId || undefined, lingua: linguaCorso, userToken, ripasso: true });
+      setRisposte({});
+      setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
+      setRipassoDa(0);
+    } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
+    finally { setLavoro(false); }
+  }, [lavoro, argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
+
+  // b.334 — VAI A FONDO (terzo livello): il Maestro scava oltre, e il nuovo
+  // pezzo si AGGIUNGE alla lezione (diapositive ricalcolate da sole).
+  const [fondoLavoro, setFondoLavoro] = useState(false);
+  const vaiAFondo = useCallback(async () => {
+    if (!aperta || fondoLavoro) return;
+    setFondoLavoro(true);
+    try {
+      const { risposta } = await chiediAlMaestro({
+        argomento: argomento.trim(), lezione: aperta.lezione,
+        sezione: (aperta.contenuto || '').slice(-1600),
+        domanda: 'Vai a fondo: portami al livello successivo su questa lezione — le sfumature, un caso complesso, cio che pochi sanno. Prosa da documentario, senza rifare quanto gia detto.',
+        modo: 'risposta', docenteId: docenteId || undefined, livello, lingua: linguaCorso, userToken,
+      });
+      if (risposta) setAperta((a) => a ? { ...a, contenuto: `${a.contenuto}\n\n${risposta}` } : a);
+    } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
+    finally { setFondoLavoro(false); }
+  }, [aperta, fondoLavoro, argomento, docenteId, livello, linguaCorso, userToken, L]);
 
   const quiz = useCallback(async () => {
     if (!aperta) return;
@@ -879,7 +1011,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                 {immaginiSezioni[i] && schermoLargo && (
                   <img src={immaginiSezioni[i]} alt="" style={{ float: 'right', width: '42%', marginLeft: 14, marginBottom: 8, borderRadius: 12, objectFit: 'cover', maxHeight: 220, border: bordo }} />
                 )}
-                <TestoRicco testo={p} testoP={testoP} muto={muto} />
+                {attivo && evidenzia && fraseK >= 0 ? (
+                  // b.334 — KARAOKE: la frase che la voce sta dicendo e accesa,
+                  // le gia dette restano piene, quelle in arrivo sono tenui.
+                  <div style={{ fontSize: 15, lineHeight: 1.65, color: testoP }}>
+                    {spezzaFrasi(p).map((f, k) => (
+                      <span key={k} style={{
+                        opacity: k < fraseK ? 0.85 : k === fraseK ? 1 : 0.38,
+                        background: k === fraseK ? `${accent}1f` : 'transparent',
+                        borderRadius: 6, padding: k === fraseK ? '1px 3px' : 0,
+                        transition: 'opacity 0.25s, background 0.25s' }}>{f} </span>
+                    ))}
+                  </div>
+                ) : (
+                  <TestoRicco testo={p} testoP={testoP} muto={muto} />
+                )}
                 {immaginiSezioni[i] && !schermoLargo && (
                   <img src={immaginiSezioni[i]} alt="" style={{ width: '100%', borderRadius: 14, margin: '6px 0 14px', display: 'block', objectFit: 'cover', maxHeight: 320, border: bordo }} />
                 )}
@@ -906,9 +1052,21 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                         {chiedendo && <div style={{ alignSelf: 'flex-start', fontSize: 12, color: muto }}>…</div>}
                       </div>
                     )}
-                    <textarea value={domanda} onChange={(e) => setDomanda(e.target.value)} rows={2}
-                      placeholder={dialogo.length ? tt('lifeAskMore', 'Un’altra domanda…') : tt('lifeAskPh', 'La tua domanda…')}
-                      style={{ width: '100%', padding: 11, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.04)', color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', resize: 'vertical' }} />
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+                      <textarea value={domanda} onChange={(e) => setDomanda(e.target.value)} rows={2}
+                        placeholder={dialogo.length ? tt('lifeAskMore', 'Un’altra domanda…') : tt('lifeAskPh', 'La tua domanda… (o dettala col microfono)')}
+                        style={{ flex: 1, padding: 11, borderRadius: 10, border: bordo, background: 'rgba(255,255,255,0.04)', color: testoP, fontSize: 14, fontFamily: FONT, boxSizing: 'border-box', resize: 'vertical' }} />
+                      {/* b.334 — la domanda si puo DETTARE: registra, trascrive, riempie. */}
+                      <button onClick={dettaDomanda}
+                        aria-label={tt('lifeDictate', 'Detta la domanda')}
+                        style={{ width: 44, height: 44, borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                          border: micDomanda === 'registro' ? '2px solid #f87171' : `1px solid ${accent}`,
+                          background: micDomanda === 'registro' ? 'rgba(248,113,113,0.15)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon name="mic" size={17} color={micDomanda === 'registro' ? '#f87171' : accent} />
+                      </button>
+                    </div>
+                    {micDomanda === 'trascrivo' && <div style={{ fontSize: 11, color: muto, marginTop: 4 }}>{tt('lifeTranscribing', 'Trascrivo…')}</div>}
                     <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                       <button onClick={inviaDomanda} disabled={chiedendo || !domanda.trim()}
                         style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: (chiedendo || !domanda.trim()) ? 0.6 : 1 }}>
@@ -943,12 +1101,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               // pronuncia ora vive sotto una chiave-corso separata; e con
               // findIndex non trovato non si registra (vedi sopra).
               const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
-              if (idx >= 0) registraEsito({
+              // b.334 — la risposta TORNA al pannello: se una parola e alla
+              // seconda volta, il drill parte da solo.
+              if (idx >= 0) return registraEsito({
                 argomento: `${argomento.trim()} · pronuncia`,
                 lezioneIndice: idx,
                 punteggio, daRivedere, userToken,
-                // b.330 — l'esito alimenta anche il PROFILO PRONUNCIA
-                // persistente (errori ricorrenti + trend, per i drill futuri).
                 tipo: 'pronuncia', linguaStudiata: l2 || linguaCorso,
               }).catch(() => { /* il ricordo e un di piu */ });
             }}
@@ -966,7 +1124,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             voceAssistente={assist.voceId} nomeAssistente={assist.nome} userToken={userToken}
             onEsito={({ punteggio, daRivedere }) => {
               const idx = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
-              if (idx >= 0) registraEsito({
+              if (idx >= 0) return registraEsito({
                 argomento: `${argomento.trim()} · pronuncia`, lezioneIndice: idx,
                 punteggio, daRivedere, userToken, tipo: 'pronuncia', linguaStudiata: l2c,
               }).catch(() => { /* il ricordo e un di piu */ });
@@ -988,6 +1146,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           <button onClick={approfondisci} disabled={genAppr}
             style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: genAppr ? 0.6 : 1 }}>
             {genAppr ? '…' : `🔎 ${tt('lifeDeepen', 'Approfondisci')}`}
+          </button>
+          {/* b.334 — il TERZO livello: il Maestro scava oltre e il nuovo pezzo
+              si aggiunge alla lezione (diapositive ricalcolate da sole). */}
+          <button onClick={vaiAFondo} disabled={fondoLavoro}
+            style={{ flex: 1, minWidth: 130, padding: 12, borderRadius: 12, border: `2px solid ${accent}`, background: `${accent}14`, color: accent, fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: fondoLavoro ? 0.6 : 1 }}>
+            {fondoLavoro ? '…' : tt('lifeGoDeep', 'Vai a fondo')}
           </button>
           {prossimaLezione && (
             <button onClick={() => apri(prossimaLezione)} disabled={lavoro}
@@ -1194,6 +1358,41 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         </div>
       </div>
 
+      {/* b.334 — IL MAESTRO TI CONOSCE: chi sei e come preferisci imparare.
+          Compilato una volta, arriva in ogni lezione. La DURATA e la manopola
+          "riduci o procedi": leggero di default, comandi all'utente. */}
+      <details style={{ marginBottom: 12 }}>
+        <summary style={{ fontSize: 12, color: muto, cursor: 'pointer', fontWeight: 700 }}>{tt('lifeProfileTitle', 'Il Maestro ti conosce (chi sei, come preferisci imparare)')}</summary>
+        <div style={{ padding: 12, marginTop: 8, borderRadius: 12, background: card, border: bordo }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <input value={prof.eta} onChange={(e) => { const p2 = { ...prof, eta: e.target.value }; setProf(p2); salvaProf(p2, pref); }}
+              placeholder={tt('lifeProfAge', 'Età')} style={stileSelect} />
+            <input value={prof.professione} onChange={(e) => { const p2 = { ...prof, professione: e.target.value }; setProf(p2); salvaProf(p2, pref); }}
+              placeholder={tt('lifeProfJob', 'Professione')} style={stileSelect} />
+          </div>
+          <input value={prof.obiettivo} onChange={(e) => { const p2 = { ...prof, obiettivo: e.target.value }; setProf(p2); salvaProf(p2, pref); }}
+            placeholder={tt('lifeProfWhy', 'Perché studi? (es. lavoro, viaggio, esame)')} style={{ ...stileSelect, width: '100%', marginBottom: 8, boxSizing: 'border-box' }} />
+          <div style={{ fontSize: 11, fontWeight: 800, color: muto, margin: '6px 0 4px' }}>{tt('lifeProfDuration', 'Durata sessione')}</div>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            {[['breve', tt('lifeDurShort', 'Breve 3-5’')], ['normale', tt('lifeDurNormal', 'Normale 6-10’')], ['approfondita', tt('lifeDurLong', 'Approfondita 10-15’')]].map(([id, et]) => (
+              <button key={id} onClick={() => { const x = { ...pref, durata: id }; setPref(x); salvaProf(prof, x); }}
+                style={{ flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 700,
+                  background: pref.durata === id ? `${accent}22` : 'transparent', color: pref.durata === id ? accent : muto,
+                  border: pref.durata === id ? `1px solid ${accent}` : bordo }}>{et}</button>
+            ))}
+          </div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: muto, margin: '6px 0 4px' }}>{tt('lifeProfExtra', 'Contenuti extra')}</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {[['minimi', tt('lifeExtraMin', 'Minimi')], ['bilanciati', tt('lifeExtraMid', 'Bilanciati')], ['ricchi', tt('lifeExtraMax', 'Ricchi')]].map(([id, et]) => (
+              <button key={id} onClick={() => { const x = { ...pref, extra: id }; setPref(x); salvaProf(prof, x); }}
+                style={{ flex: 1, padding: '8px 4px', borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 11, fontWeight: 700,
+                  background: pref.extra === id ? `${accent}22` : 'transparent', color: pref.extra === id ? accent : muto,
+                  border: pref.extra === id ? `1px solid ${accent}` : bordo }}>{et}</button>
+            ))}
+          </div>
+        </div>
+      </details>
+
       {errore && <div style={{ color: '#f87171', fontSize: 13, marginBottom: 10 }}>{errore}</div>}
 
       <button onClick={crea} disabled={lavoro} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: lavoro ? 0.6 : 1 }}>
@@ -1203,12 +1402,22 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       {lezioni.length > 0 && (
         <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 12, color: muto }}>{L('lifeLessons')}</div>
+          {/* b.334 — RIPASSO A INTERVALLI: quando delle lezioni sono "scadute",
+              il ripasso si propone da solo (mai obbligo, sempre invito). */}
+          {ripassoDa > 0 && (
+            <button onClick={faiRipasso} disabled={lavoro}
+              style={{ padding: 12, borderRadius: 12, border: '1px solid #f59e0b', background: 'rgba(245,158,11,0.10)', color: '#f59e0b', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, textAlign: 'left' }}>
+              {tt('lifeReviewDue', 'Ripasso consigliato')} — {ripassoDa} {tt('lifeReviewLessons', 'lezioni da riprendere')} →
+            </button>
+          )}
           {lezioni.map((lz, i) => (
             // b.232 — difesa sui corsi della libreria (lezioni grezze dal DB):
             // `indice`/`obiettivi` possono mancare → key/NaN e crash su .length.
             <button key={lz.indice ?? i} onClick={() => apri(lz)} disabled={lavoro}
               style={{ textAlign: 'left', padding: 13, ...clayCard(card), cursor: 'pointer', fontFamily: FONT, color: testoP }}>
               <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {/* b.334 — Content Value: i concetti FONDAMENTALI hanno la stella. */}
+                {lz.peso === 'alto' && <Icon name="star" size={12} color="#f1c40f" />}
                 <span style={{ flex: 1 }}>{(lz.indice ?? i) + 1}. {lz.titolo}</span>
                 {/* b.327 — l'esito si VEDE: voto, oppure "saltata" (pesa meta). */}
                 {(() => {

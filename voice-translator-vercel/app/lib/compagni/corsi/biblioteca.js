@@ -66,7 +66,7 @@ export async function mieiCorsi(email) {
     .eq('owner', owner).order('aggiornato', { ascending: false }).limit(20);
   if (error || !corsi?.length) return [];
   const { data: prog } = await sb.from('imparare_progresso')
-    .select('corso, lezione, punteggio').eq('owner', owner);
+    .select('corso, lezione, punteggio, prossimo_ripasso').eq('owner', owner);
   const perCorso = new Map();
   for (const p of prog || []) {
     const k = p.corso;
@@ -87,6 +87,9 @@ export async function mieiCorsi(email) {
       // % di completamento VERIFICATO: le lezioni saltate contano meta
       // (viste ma non verificate) — e il "pesa sulla valutazione" deciso.
       percento: totale ? Math.round(((superate + saltate * 0.5) / totale) * 100) : 0,
+      // b.334 — RIPASSO A INTERVALLI: quante lezioni sono "scadute" e vanno
+      // riprese oggi (data di ripasso raggiunta e punteggio non brillante).
+      daRipassare: righe.filter((r) => r.prossimo_ripasso && r.prossimo_ripasso <= new Date().toISOString().slice(0, 10) && (r.punteggio === null || r.punteggio < 80)).length,
       // dettaglio per lezione per la spunta in lista
       esiti: righe.map((r) => ({ lezione: r.lezione, punteggio: r.punteggio })),
     };
@@ -165,4 +168,5 @@ export async function aggiornaProfiloPronuncia(email, lingua, { punteggio, parol
   const ultimi = Array.isArray(attuale.trend.ultimi) ? attuale.trend.ultimi : [];
   const trend = { ultimi: [...ultimi, Number(punteggio) || 0].slice(-10) };
   await sb.from('pronuncia_profilo').upsert({ owner, lingua, errori, trend, aggiornato: new Date().toISOString() }, { onConflict: 'owner,lingua' });
+  return { errori, trend }; // b.334 — serve al drill automatico (2ª volta)
 }

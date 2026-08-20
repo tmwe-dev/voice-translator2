@@ -39,6 +39,10 @@ async function handlePost(req) {
     const formData = await req.formData();
     const audioFile = formData.get('audio');
     const sourceLang = formData.get('sourceLang');
+    // b.334 — ascolto LIBERO (drill di pronuncia): senza lingua forzata
+    // l'ASR non "autocorregge" — se dici male "sheep" scrive "ship", e noi
+    // lo vediamo. Con la lingua forzata la pronuncia mediocre passava liscia.
+    const libera = formData.get('libera') === '1';
     const userToken = formData.get('userToken') || '';
     const roomId = formData.get('roomId') || '';
     const lendingCode = formData.get('lendingCode') || '';
@@ -146,7 +150,7 @@ async function handlePost(req) {
       transcription = await openai.audio.transcriptions.create({
         file: createReadStream(tempPath),
         model: 'gpt-4o-mini-transcribe',
-        language: sourceLang || undefined,
+        language: libera ? undefined : (sourceLang || undefined),
       });
     } catch (e) {
       // Whisper e' fallito: il servizio non e' stato consegnato, la

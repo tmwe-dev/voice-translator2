@@ -1268,6 +1268,11 @@ function HomeInner() {
       {condiviso && (
         <CondivisoSheet condiviso={condiviso} L={L}
           onChiudi={() => setCondiviso(null)}
+          onLife={(schedaLife, titolo) => {
+            setCondiviso(null);
+            try { sessionStorage.setItem('vt-life-preset', JSON.stringify({ scheda: schedaLife, testo: (titolo || '').slice(0, 160) })); } catch { /* niente memoria di sessione */ }
+            setView('life');
+          }}
           onParlane={({ titolo, sintesi, url }) => {
             setCondiviso(null);
             setTopicPreset({ nome: (titolo || '').slice(0, 60), descrizione: [sintesi, url].filter(Boolean).join(' — ').slice(0, 200) });

@@ -132,6 +132,19 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // b.334 — PDF: base64 al server, testo indietro, GRATIS (niente wallet).
+  const caricaPdf = useCallback(async (file) => {
+    if (!file || ocrLavoro) return;
+    if (file.size > 5 * 1024 * 1024) { setErrore(tt('lifeMatPdfBig', 'PDF troppo grande (max 5MB)')); return; }
+    setOcrLavoro(true); setErrore('');
+    try {
+      const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+      const d = await chiama('pdf', { pdf: b64 }, userToken);
+      setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), titolo: b?.titolo || file.name.replace(/\.pdf$/i, ''), testo: [(b?.testo || ''), d.testo].filter(Boolean).join('\n\n') }));
+    } catch { setErrore(tt('lifeMatPdfErr', 'PDF non leggibile (se è una scansione, usa la foto)')); }
+    finally { setOcrLavoro(false); }
+  }, [ocrLavoro, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const salvaMat = useCallback(async () => {
     if (!matBozza?.testo?.trim()) return;
     try {
@@ -306,6 +319,12 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
                   {ocrLavoro ? tt('lifeMatReading', 'Leggo la pagina…') : tt('lifeMatPhoto', 'Fotografa la pagina (AI, ~1 cent)')}
                   <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
                     onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) scattaOcr(f); }} />
+                </label>
+                {/* b.334 — PDF: testo estratto LATO SERVER, gratis (fino a 30 pagine). */}
+                <label style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT, textAlign: 'center', opacity: ocrLavoro ? 0.6 : 1 }}>
+                  {tt('lifeMatPdf', 'Carica PDF (gratis)')}
+                  <input type="file" accept="application/pdf" style={{ display: 'none' }}
+                    onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) caricaPdf(f); }} />
                 </label>
                 <button onClick={salvaMat} disabled={!matBozza.testo.trim()}
                   style={{ flex: 1, minWidth: 120, padding: 11, borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT, opacity: matBozza.testo.trim() ? 1 : 0.5 }}>

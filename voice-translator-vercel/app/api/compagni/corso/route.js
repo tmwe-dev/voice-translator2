@@ -72,7 +72,7 @@ async function handlePost(req) {
         const m = await leggiMateriale(sessione.email, body.materialeId);
         materialeTesto = m?.testo || '';
       }
-      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata, materialeTesto }, { userToken });
+      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata, materialeTesto, ripasso: body.ripasso === true }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       // b.244 — quello che il Maestro ha notato di questa persona si salva
       // DOPO aver risposto: la lezione non deve aspettare.
@@ -184,11 +184,17 @@ async function handlePost(req) {
       // b.321 — Ondata C: se l'esito e di PRONUNCIA, aggiorna anche il
       // profilo pronuncia persistente (errori ricorrenti + trend): e da li
       // che nascono i drill mirati e i ritorni futuri.
+      let ricorrenti = [];
       if (body.tipo === 'pronuncia' && typeof body.linguaStudiata === 'string') {
-        try { await aggiornaProfiloPronuncia(sessione.email, body.linguaStudiata.slice(0, 8), { punteggio, parole: daRivedere }); }
-        catch { /* il profilo pronuncia e un di piu: l'esito resta salvato */ }
+        try {
+          const profilo = await aggiornaProfiloPronuncia(sessione.email, body.linguaStudiata.slice(0, 8), { punteggio, parole: daRivedere });
+          // b.334 — DRILL AUTOMATICO (Teaching Policy, deciso): la parola
+          // sbagliata per la SECONDA volta torna come esercizio da sola.
+          const insistenti = new Set((profilo?.errori || []).filter((e) => e.volte >= 2).map((e) => e.parola));
+          ricorrenti = daRivedere.map((w) => String(w).toLowerCase()).filter((w) => insistenti.has(w)).slice(0, 2);
+        } catch { /* il profilo pronuncia e un di piu: l'esito resta salvato */ }
       }
-      return NextResponse.json({ ok: true, salvato });
+      return NextResponse.json({ ok: true, salvato, ricorrenti });
     }
 
     // b.228 — libreria condivisa: sfoglia i corsi disponibili (nessun account

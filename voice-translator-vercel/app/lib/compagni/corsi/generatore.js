@@ -104,8 +104,9 @@ Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${no
   const prompt =
 `Progetta il syllabus di un corso su "${argomento}" (categoria: ${categoria}, livello: ${livello}).${dir}
 Genera ESATTAMENTE ${nLezioni} lezioni, in ordine progressivo.
+PESO: non tutti i concetti valgono uguale. Segna "peso":"alto" per i concetti fondamentali (alta frequenza d'uso, prerequisito di altri), "medio" per quelli utili, "basso" per i dettagli marginali. I concetti ad alto peso meritano piu spazio, esempi e verifiche.
 Rispondi SOLO con JSON valido, un array di oggetti con questa forma:
-[{"titolo":"...","obiettivi":["...","..."]}]
+[{"titolo":"...","obiettivi":["...","..."],"peso":"alto|medio|basso"}]
 Niente testo fuori dal JSON.`;
   return { system, prompt };
 }
@@ -120,7 +121,7 @@ const ISTRUZIONI_DURATA = {
   approfondita: '\nDURATA: sessione approfondita (10-15 minuti di ascolto): piu esempi, piu sfumature, piu collegamenti.',
 };
 
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '', materialeTesto = '' } = {}) {
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '', materialeTesto = '', ripasso = false } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
@@ -137,8 +138,15 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
     ? `\nQUESTO E UN LIVELLO ${livello.toUpperCase()}: vai in profondita. Struttura la lezione in piu passaggi collegati; includi la METODOLOGIA (come si ragiona in questo campo, non solo cosa si sa), almeno un PROBLEMA o CASO concreto da analizzare, e le sfumature/dibattiti aperti. Cita i titoli delle fonti quando usi un dato. Niente semplificazioni da manuale introduttivo.`
     : '';
   const bloccoDurata = ISTRUZIONI_DURATA[durata] || '';
+  // b.334 — LEZIONE DI RIPASSO: si riprendono SOLO le cose rimaste indietro
+  // (il progresso in ingresso le elenca), con esempi NUOVI — mai la stessa
+  // spiegazione ripetuta. Qui la regola-quiz si allenta apposta: il ripasso
+  // DEVE toccare cio che era andato male.
+  const bloccoRipasso = ripasso
+    ? '\nQUESTA E UNA LEZIONE DI RIPASSO: riprendi SOLO le cose rimaste indietro elencate nel percorso della persona, spiegandole in un MODO NUOVO (altri esempi, altra angolazione). Breve, mirata, incoraggiante: si chiude quando i punti deboli sono stati ripresi tutti.'
+    : '';
   const system = `${vesteDocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoDurata}${notaPersona}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoDurata}${bloccoRipasso}${notaPersona}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
@@ -231,12 +239,12 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'syllabus-illeggibile' };
   const lezioni = dati
     .filter(l => l && l.titolo)
-    .map((l, i) => ({ indice: i, titolo: String(l.titolo).slice(0, 160), obiettivi: Array.isArray(l.obiettivi) ? l.obiettivi.slice(0, 6).map(String) : [], stato: i === 0 ? 'disponibile' : 'bloccata' }));
+    .map((l, i) => ({ indice: i, titolo: String(l.titolo).slice(0, 160), obiettivi: Array.isArray(l.obiettivi) ? l.obiettivi.slice(0, 6).map(String) : [], peso: ['alto','medio','basso'].includes(l.peso) ? l.peso : 'medio', stato: i === 0 ? 'disponibile' : 'bloccata' }));
   return { ok: true, lezioni };
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
-export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '', materialeTesto = '' } = {}, { userToken = null } = {}) {
+export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '', materialeTesto = '', ripasso = false } = {}, { userToken = null } = {}) {
   let fonti = [];
   // ── INIZIO b.247 — FAIL-CLOSED sulle materie certificate ──
   // Scelta dichiarata: per una materia che PRETENDE fonti (medicina,
@@ -275,7 +283,7 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
     }
   }
   // ── FINE b.247 ──
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata, materialeTesto });
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata, materialeTesto, ripasso });
   // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
   // b.308 — spazio piu generoso: una lezione da documentario non deve
   // uscire tagliata a meta per un tetto stretto. Il costo segue la mole, ma

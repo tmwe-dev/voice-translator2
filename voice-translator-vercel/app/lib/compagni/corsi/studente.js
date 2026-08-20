@@ -72,6 +72,14 @@ export async function salvaEsito(email, { corso, lezione = 0, punteggio = null, 
     lezione: Number(lezione) || 0,
     punteggio: punteggio === null ? null : Math.max(0, Math.min(100, Math.round(Number(punteggio) || 0))),
     da_rivedere: (Array.isArray(daRivedere) ? daRivedere : []).slice(0, MAX_DA_RIVEDERE).map(String),
+    // b.334 — RIPASSO A INTERVALLI: la data in cui questa lezione "scade" e
+    // va ripresa. Male (<50) domani; cosi cosi (<80) fra tre giorni; bene
+    // fra sette. Saltata (null) fra due: vista ma mai verificata.
+    prossimo_ripasso: (() => {
+      const g = punteggio === null ? 2 : punteggio < 50 ? 1 : punteggio < 80 ? 3 : 7;
+      const d = new Date(); d.setDate(d.getDate() + g);
+      return d.toISOString().slice(0, 10);
+    })(),
     updated_at: new Date().toISOString(),
   }, { onConflict: 'owner,corso,lezione' });
   return !error;
@@ -83,7 +91,7 @@ export async function leggiProgresso(email, corso) {
   const sb = owner && getSupabaseAdmin();
   if (!sb || !corso) return [];
   const { data, error } = await sb.from('imparare_progresso')
-    .select('lezione, punteggio, da_rivedere')
+    .select('lezione, punteggio, da_rivedere, prossimo_ripasso')
     .eq('owner', owner).eq('corso', chiaveCorso(corso))
     .order('lezione', { ascending: true });
   if (error || !data) return [];

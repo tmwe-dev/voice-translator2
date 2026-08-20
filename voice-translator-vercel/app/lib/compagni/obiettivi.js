@@ -50,7 +50,31 @@ export function normalizzaObiettivo(o = {}) {
     stato: STATI_OBIETTIVO.includes(o.stato) ? o.stato : 'attivo',
     priorita: Math.max(1, Math.min(3, Number(o.priorita) || 2)),
     progresso: Math.max(0, Math.min(100, Math.round(Number(o.progresso) || 0))),
+    // b.334 — il CORSO collegato: quando si supera una lezione, la barra
+    // dell'obiettivo si muove DA SOLA (basta obiettivi finti spostati a mano).
+    corsoId: String(o.corsoId || '').slice(0, 120) || null,
   };
+}
+
+/**
+ * b.334 — SINCRONIZZA gli obiettivi con i corsi: per ogni obiettivo con un
+ * corso collegato, il progresso diventa la percentuale del corso; al 100%
+ * lo stato passa a "raggiunto" (la coppa). Ritorna true se qualcosa e cambiato.
+ */
+export function sincronizzaConCorsi(corsi = []) {
+  const perId = new Map((corsi || []).map((c) => [c.id, c]));
+  const lista = elencoObiettivi();
+  let cambiato = false;
+  const nuova = lista.map((o) => {
+    if (!o.corsoId || !perId.has(o.corsoId)) return o;
+    const c = perId.get(o.corsoId);
+    const pct = Math.max(0, Math.min(100, Number(c.percento) || 0));
+    if (pct === o.progresso && (pct < 100 || o.stato === 'raggiunto')) return o;
+    cambiato = true;
+    return { ...o, progresso: pct, stato: pct >= 100 ? 'raggiunto' : o.stato };
+  });
+  if (cambiato) scrivi(nuova);
+  return cambiato;
 }
 
 /** Tutti gli obiettivi salvati (sul dispositivo). */

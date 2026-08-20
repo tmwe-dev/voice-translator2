@@ -68,6 +68,24 @@ async function handlePost(req) {
       return NextResponse.json({ ok: true, titolo: '', testo: r.testo.slice(0, 40000), tabella: null });
     }
 
+    // b.334 — PDF: il testo si estrae LATO SERVER, gratis (niente AI):
+    // dispense e capitoli entrano nei Materiali senza toccare il wallet.
+    if (azione === 'pdf') {
+      const b64 = typeof body.pdf === 'string' ? body.pdf.replace(/^data:application\/pdf;base64,/, '') : '';
+      if (!b64) return NextResponse.json({ error: 'PDF mancante' }, { status: 400 });
+      try {
+        const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
+        const buf = Buffer.from(b64, 'base64');
+        const out = await pdfParse(buf, { max: 30 }); // fino a 30 pagine
+        const testo = (out?.text || '').trim().slice(0, 40000);
+        if (!testo) return NextResponse.json({ error: 'PDF senza testo leggibile (scansione? usa la foto)' }, { status: 422 });
+        return NextResponse.json({ ok: true, testo, pagine: out?.numpages || 0 });
+      } catch (e) {
+        log.warn('pdf non leggibile:', e?.message);
+        return NextResponse.json({ error: 'PDF non leggibile' }, { status: 422 });
+      }
+    }
+
     if (azione === 'leggiMateriale') {
       const m = await leggiMateriale(email, String(body.id || ''));
       return m ? NextResponse.json({ ok: true, materiale: m })
@@ -81,4 +99,7 @@ async function handlePost(req) {
   }
 }
 
-export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'compiti' });
+// b.334 — BUG mio corretto: il tetto standard di 256KB avrebbe respinto la
+// FOTO degli appunti (413) prima ancora dell'OCR. Le foto rimpicciolite e i
+// PDF stanno larghi in 6MB.
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'compiti', maxBodySize: 6 * 1024 * 1024 });

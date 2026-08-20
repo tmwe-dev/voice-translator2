@@ -2,10 +2,9 @@
 import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
 import Icon from '../Icon.js';
-import {
-  elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
-  CATEGORIE_OBIETTIVO, STATI_OBIETTIVO,
-} from '../../lib/compagni/obiettivi.js';
+import { mieiCorsiUtente } from '../../lib/compagni/cliente.js';
+import { elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
+  CATEGORIE_OBIETTIVO, STATI_OBIETTIVO, sincronizzaConCorsi } from '../../lib/compagni/obiettivi.js';
 
 // b.224 — OBIETTIVI DI VITA (il "tutor che ti accompagna"). Qui li imposti;
 // quando parli con un Compagno (Amico/Tavolo), lui li CONOSCE e ti aiuta a
@@ -13,14 +12,25 @@ import {
 
 const STATO_ETI = { attivo: 'Attivo', raggiunto: 'Raggiunto', pausa: 'In pausa' };
 
-function GestioneObiettivi({ L, testoP, muto, accent, card, bordo }) {
+function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) {
   const [lista, setLista] = useState([]);
   const [bozza, setBozza] = useState(null); // null = elenco; oggetto = form
 
   useEffect(() => { setLista(elencoObiettivi()); }, []);
 
   const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
-  const vuoto = () => ({ id: '', titolo: '', descrizione: '', categoria: 'crescita', stato: 'attivo', priorita: 2, progresso: 0 });
+  // b.334 — i corsi dell'utente: per collegare un obiettivo a un corso e per
+  // muovere le barre DA SOLE (sincronizzaConCorsi) all'apertura della scheda.
+  const [corsiMiei, setCorsiMiei] = useState([]);
+  useEffect(() => {
+    if (!userToken) return;
+    mieiCorsiUtente(userToken).then((cs) => {
+      setCorsiMiei(cs || []);
+      if (sincronizzaConCorsi(cs || [])) setLista(elencoObiettivi());
+    }).catch(() => {});
+  }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const vuoto = () => ({ id: '', titolo: '', descrizione: '', categoria: 'crescita', stato: 'attivo', priorita: 2, progresso: 0, corsoId: null });
   const campo = (k) => (e) => setBozza((b) => ({ ...b, [k]: e.target.value }));
 
   const salva = useCallback(() => {
@@ -75,6 +85,16 @@ function GestioneObiettivi({ L, testoP, muto, accent, card, bordo }) {
         <select value={bozza.stato} onChange={campo('stato')} style={input}>
           {STATI_OBIETTIVO.map((s) => <option key={s} value={s}>{STATO_ETI[s] || s}</option>)}
         </select>
+
+        {/* b.334 — CORSO COLLEGATO: superare le lezioni muove la barra da
+            sola; al 100% arriva la coppa. Basta obiettivi spostati a mano. */}
+        {corsiMiei.length > 0 && <>
+          <label style={etich}>{tt('lifeGoalCourse', 'Corso collegato (la barra si muove da sola)')}</label>
+          <select value={bozza.corsoId || ''} onChange={(e) => setBozza((b) => ({ ...b, corsoId: e.target.value || null }))} style={input}>
+            <option value="">{tt('lifeGoalNoCourse', '— nessuno')}</option>
+            {corsiMiei.map((c) => <option key={c.id} value={c.id}>{c.titolo || c.argomento} ({c.percento}%)</option>)}
+          </select>
+        </>}
 
         <button onClick={salva} disabled={!bozza.titolo.trim()} style={{ width: '100%', marginTop: 16, padding: 14, borderRadius: 14, border: 'none', cursor: 'pointer', background: accent, color: '#04121c', fontWeight: 800, fontSize: 15, fontFamily: FONT, opacity: bozza.titolo.trim() ? 1 : 0.6 }}>
           ✅ {tt('lifeGoalSave', 'Salva obiettivo')}

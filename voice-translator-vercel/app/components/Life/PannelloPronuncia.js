@@ -96,6 +96,9 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       const fd = new FormData();
       fd.append('audio', blob, 'pronuncia.webm');
       fd.append('sourceLang', lingua || 'en');
+      // b.334 — ascolto LIBERO: senza lingua forzata l'ASR non autocorregge
+      // (se dici male "sheep" scrive "ship", e noi lo vediamo).
+      fd.append('libera', '1');
       if (userToken) fd.append('userToken', userToken);
       const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
       const d = await r.json().catch(() => null);
@@ -113,12 +116,16 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       const e = valutaPronuncia(frase, detto);
       setEsito({ ...e, detto });
       setStato('fatto');
-      onEsito?.({ punteggio: e.punteggio, daRivedere: paroleDaRivedere(e), detto });
+      // b.334 — DRILL AUTOMATICO (deciso): se il server segnala che una
+      // parola e alla SECONDA volta, l'esercizio parte da solo.
+      Promise.resolve(onEsito?.({ punteggio: e.punteggio, daRivedere: paroleDaRivedere(e), detto }))
+        .then((r) => { if (r?.ricorrenti?.[0]) allena(r.ricorrenti[0]); })
+        .catch(() => { /* l'esito e un di piu */ });
     } catch {
       setErrore('Non sono riuscito a sentirti. Riprova.');
       setStato('pronto');
     }
-  }, [frase, lingua, userToken, onEsito, decodifica, confronto]);
+  }, [frase, lingua, userToken, onEsito, decodifica, confronto, allena]);
 
   // b.317 — ASCOLTA LA FRASE (audit 6.5): prima si chiedeva di pronunciare
   // una frase MAI SENTITA. Ora la voce la dice, alla velocita giusta,
