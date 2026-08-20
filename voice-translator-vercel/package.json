@@ -17,6 +17,7 @@
   "dependencies": {
     "@andresaya/edge-tts": "^1.0.0",
     "@anthropic-ai/sdk": "^0.78.0",
+    "@elevenlabs/client": "^1.21.0",
     "@google/generative-ai": "^0.24.1",
     "@sentry/nextjs": "^10.42.0",
     "@supabase/supabase-js": "^2.98.0",

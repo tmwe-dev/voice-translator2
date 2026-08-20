@@ -13,7 +13,7 @@
 import { generaTesto, cerca } from '../ponte.js';
 import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
-import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
+import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, RITMO_LINGUA, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 import { assistentePer } from './assistenti.js';
 
@@ -172,7 +172,7 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
 // filosofia narrativa, non uno schema da eseguire alla lettera.
 `Corso: "${argomento}" (livello ${livello}). Scrivi la lezione: "${lezione?.titolo || ''}".
 Obiettivi: ${obiettivi}.
-${RITMO_LEZIONE}
+${bloccoLingua ? RITMO_LINGUA : RITMO_LEZIONE}
 Tono adatto al livello.${bloccoMateriale}${bloccoFonti}${bloccoSenzaFonti}
 
 ${ISTRUZIONE_APPUNTO}`;

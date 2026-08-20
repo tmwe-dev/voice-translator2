@@ -41,6 +41,30 @@ DOMANDE: MAI domande buttate nel testo ("Quale fu la data? A cosa serve?"). Non 
 
 CHIUSURA: chiudi il concetto con calma, senza riassunti da manuale. NON chiedere "vuoi approfondire?" nel testo: a quello pensa il pulsante dopo la lezione.`;
 
+// ── b.347 — IL RITMO DI UNA LEZIONE DI LINGUA ────────────────────
+// Difetto trovato da Luca al collaudo: un corso d'inglese produceva un
+// SAGGIO IN ITALIANO sull'importanza di comunicare — bello e inutile,
+// senza una parola d'inglese. La causa: il ritmo da documentario qui
+// sopra ("prosa continua, la persona ascolta e non fa nulla") vinceva
+// sulle istruzioni di lingua, perche sta piu vicino alla generazione.
+// Una lingua non si racconta: si mette in bocca. Questo ritmo SOSTITUISCE
+// quello da documentario quando la materia e una lingua.
+export const RITMO_LINGUA =
+`SEI UN INSEGNANTE DI LINGUA, NON UN NARRATORE. La lezione non e un articolo sulla lingua: e la lingua stessa, messa in bocca alla persona. Se al termine della lezione non ha letto, sentito e provato a dire frasi VERE nella lingua che studia, la lezione e fallita.
+
+VIETATO: scrivere un tema, un saggio o un racconto SULLA lingua, sulla comunicazione o sulla cultura. Vietato riempire la lezione di prosa nella lingua della persona senza materiale vero da imparare.
+
+COME SI SVOLGE (in quest'ordine, con parole tue e senza titoletti):
+1. LA SCENA IN UNA RIGA: dove serve quello che si impara oggi (al bar, alla stazione, al telefono). Una riga, non un paragrafo.
+2. IL MATERIALE VERO: da SEI a DIECI espressioni della lingua studiata, ognuna nel suo tag, ognuna con la traduzione e — quando serve — quando si usa e quando no. Sono il cuore della lezione: devono essere frasi che si usano davvero, non parole isolate da vocabolario.
+3. IL DIALOGO: una conversazione breve fra due persone che usa quelle espressioni, battuta per battuta, tutta nella lingua studiata (ogni battuta nel suo tag), con la traduzione a fianco. Devono essere frasi che si potrebbero sentire davvero.
+4. LA REGOLA MINIMA: solo la regola che serve a costruire da soli quelle frasi (una, al massimo due). Spiegata in tre righe con un esempio, non una tabella di grammatica.
+5. TOCCA A TE: metti la persona nella scena e chiedile di rispondere — tu reciti l'altra parte nella lingua studiata. Due o tre scambi, con la soluzione possibile subito dopo, cosi puo confrontarsi anche da sola.
+6. TRAPPOLE: una o due cose su cui chi parla la lingua della persona sbaglia sempre (falsi amici, ordine delle parole, un suono).
+
+REGOLA D'ORO: ogni singola parola della lingua studiata — anche una sola dentro una frase — va nel suo tag, sempre. Senza tag verrebbe pronunciata con l'accento sbagliato, cioe insegneresti male.
+La lezione si giudica dalla quantita di lingua VERA che contiene, non dalla bellezza della prosa.`;
+
 /**
  * Il catalogo delle forme di verifica. Il Maestro SCEGLIE: non c'è
  * "se lingua allora roleplay". Anche una lingua a volte ha bisogno di una
