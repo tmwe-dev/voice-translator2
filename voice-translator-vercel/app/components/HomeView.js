@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { ombraAcciaio, faroAcciaio } from '../lib/acciaio.js';
+import { ombraAcciaio } from '../lib/acciaio.js';
 import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
@@ -377,7 +377,6 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 // dentro da 36 a 54.
                 width: 60, height: 60, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
-                background: voce.img ? faroAcciaio(1) : 'none', borderRadius: '50%',
               }}>
                 {voce.img
                   ? <img src={voce.img} alt="" aria-hidden width={108} height={108}

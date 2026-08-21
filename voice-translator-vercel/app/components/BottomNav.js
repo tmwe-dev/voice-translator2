@@ -1,7 +1,6 @@
 'use client';
 
 import { memo } from 'react';
-import { ombraAcciaio, faroAcciaio } from '../lib/acciaio.js';
 import { vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -9,37 +8,17 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 // SVG Nav Icons — clean, modern, 2px stroke
 // ═══════════════════════════════════════════════════════════════
-// b.361 — le immagini in acciaio di Luca al posto delle icone del menu, dove
-// le ho: la casa per Home, il globo per Community.
-const IMG_MENU = {
-  home: '/sezioni/menu-home.webp',
-  conversations: '/sezioni/menu-chat.webp',   // il fumetto in acciaio per Chat
-  community: '/sezioni/sez-mondo.webp',        // il globo in acciaio
-  profile: '/sezioni/menu-profilo.webp',       // la porta in acciaio per Profilo
-};
+// b.363 — VIA L'ACCIAIO DAL MENU IN BASSO. Le immagini d'acciaio erano
+// disegni ricchi, con riflessi e profondita: alla misura di un menu si
+// leggevano come macchie grigie, e l'ombra che avrebbe dovuto staccarle
+// non si vedeva perche il fondo e quasi nero. Luca: «sostituisci le
+// icone del menu in basso con icone semplicissime bianche, stessa
+// dimensione». Sono tornate quelle al tratto, bianche, alla misura che
+// avevano prese le altre: 48.
+const MISURA_MENU = 48;
 
-const NavIcon = ({ id, color, size = 22 }) => {
-  if (IMG_MENU[id]) {
-    // b.363 — le icone in acciaio del menu in basso vanno al DOPPIO
-    // (ordine di Luca). Le altre voci, che sono disegni al tratto,
-    // restano come sono: qui raddoppia solo l'acciaio.
-    // b.363 — il doppio era troppo: si scende del 20% (da 60 a 48).
-    const acciaio = Math.round((size + 8) * 2 * 0.8);
-    // b.363 — il faro e l'ombra dell'acciaio (vedi lib/acciaio.js): l'alone
-    // caldo sta dietro, appoggiato in basso a sinistra; l'ombra segue la
-    // sagoma dell'icona e cade dalla stessa parte, sfumando.
-    return (
-      <span style={{
-        width: acciaio, height: acciaio, display: 'block',
-        background: faroAcciaio(1), borderRadius: '50%',
-      }}>
-        <img src={IMG_MENU[id]} alt="" aria-hidden width={acciaio} height={acciaio}
-          style={{ width: acciaio, height: acciaio, objectFit: 'contain', display: 'block',
-            filter: ombraAcciaio(1.4) }} />
-      </span>
-    );
-  }
-  const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
+const NavIcon = ({ id, color, size = MISURA_MENU }) => {
+  const s = { stroke: color, strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   switch (id) {
     case 'home': return (
       <svg width={size} height={size} viewBox="0 0 24 24" {...s}>
@@ -99,6 +78,10 @@ const BottomNav = ({ currentView, onNewConversation }) => {
   const renderTab = (item) => {
     const isActive = item.views.includes(currentView);
     const color = isActive ? accentColor : (C.textMuted || 'rgba(250,250,250,0.40)');
+    // b.363 — l'ICONA e bianca e basta (ordine di Luca): piena sulla voce
+    // attiva, smorzata sulle altre. L'etichetta sotto tiene il colore di
+    // prima, cosi si continua a vedere a colpo d'occhio dove si e.
+    const coloreIcona = isActive ? '#ffffff' : 'rgba(255,255,255,0.45)';
     return (
       <button
         key={item.id}
@@ -116,7 +99,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
         aria-label={item.label}
         aria-current={isActive ? 'page' : undefined}
       >
-        <NavIcon id={item.id} color={color} size={22} />
+        <NavIcon id={item.id} color={coloreIcona} size={MISURA_MENU} />
         <span style={{ fontSize: '10px', fontWeight: '600', color, letterSpacing: '0.2px' }}>{item.label}</span>
       </button>
     );

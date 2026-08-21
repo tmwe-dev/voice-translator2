@@ -1,51 +1,47 @@
 // ═══════════════════════════════════════════════════════════════
-// L'ACCIAIO — come si illuminano le icone d'argento di BarTalk.
+// L'ACCIAIO — come si stacca dal fondo un'icona d'argento.
 //
-// Ordine di Luca (b.363): «dietro le icone metti una ombreggiatura
-// leggera a sinistra e in basso che sfumi. crea un effetto sulle icone
-// come di un faro che le illumina da sinistra e in basso».
+// b.363, secondo giro. Il primo tentativo aveva DUE cose: un alone caldo
+// dietro l'icona (il "faro") e un'ombra nera sfumata. Luca le ha bocciate
+// tutte e due: «il faro fa cagare eliminalo, e l'ombreggiatura non si
+// vede». Aveva ragione su entrambe, e la seconda ha una spiegazione
+// precisa che vale la pena scrivere qui perche non si ripeta:
 //
-// Due cose, non una sola:
+//   IL FONDO DELL'APP E #05070f, cioe quasi nero. Un'ombra nera sfumata
+//   appoggiata li sopra e NERO SU NERO: non c'e niente da vedere. Piu la
+//   si sfuma e meno si vede, perche si spalma su un fondo che ha gia quel
+//   colore. Era invisibile per forza, non per sbaglio.
 //
-// 1. L'OMBRA. Non e un rettangolo dietro: e l'ombra della SAGOMA. Le
-//    icone sono ritagliate (fondo trasparente), quindi l'ombra segue il
-//    profilo del trofeo, della porta, del globo — non il riquadro che li
-//    contiene. Cade a sinistra e in basso, e si perde sfumando.
+// Quindi l'ombra non si butta sul fondo: si appoggia SUL METALLO. Un
+// bordo scuro netto, senza sfumatura, spostato a sinistra e in basso:
+// dove tocca l'argento si vede benissimo, perche li il contrasto e fra
+// nero e metallo chiaro, non fra nero e nero. E' l'ombra che l'oggetto
+// getta su se stesso — quella che nelle monete fa leggere il rilievo.
 //
-// 2. IL FARO. Una luce bassa da sinistra: un alone caldo appoggiato
-//    all'angolo in basso a sinistra dell'icona, che si spegne salendo.
-//    Sta DIETRO l'icona, cosi il metallo la riprende sui bordi.
+// Sotto, una seconda ombra piu larga e morbida: da sola non si vedrebbe,
+// ma sotto la prima da il peso e impedisce che il bordo netto sembri un
+// contorno disegnato.
 //
-// Un posto solo: se domani la luce va spostata, si sposta qui e cambia
+// Un posto solo: se la luce va cambiata, si cambia qui e cambia
 // dappertutto — menu in alto, menu in basso, home.
 // ═══════════════════════════════════════════════════════════════
 
 /**
- * L'ombra della sagoma, a sinistra e in basso. `scala` segue la misura
- * dell'icona: un'icona doppia vuole un'ombra doppia, altrimenti sparisce.
+ * L'ombra dell'acciaio: netta sul metallo, morbida sul fondo, sempre a
+ * sinistra e in basso. `scala` segue la misura dell'icona — un'icona
+ * grande vuole uno stacco piu lungo, altrimenti sparisce sotto la sagoma.
  */
 export function ombraAcciaio(scala = 1) {
   const r = (n) => Math.round(n * 10) / 10;   // niente code decimali nel foglio di stile
-  const x = r(-3 * scala);
-  const y = r(4 * scala);
-  const sf1 = r(6 * scala);
-  const sf2 = r(12 * scala);
   return [
-    `drop-shadow(${x}px ${y}px ${sf1}px rgba(0,0,0,0.55))`,
-    `drop-shadow(${r(x * 1.6)}px ${r(y * 1.6)}px ${sf2}px rgba(0,0,0,0.32))`,
-    // la luce radente che accende il bordo basso-sinistro del metallo
-    `drop-shadow(${r(-1 * scala)}px ${r(1.5 * scala)}px ${r(0.5 * scala)}px rgba(226,238,255,0.30))`,
-    'brightness(1.05)',
-    'contrast(1.04)',
+    // 1. lo stacco NETTO, senza sfumatura: e questo che si vede, perche
+    //    cade sull'argento e non sul fondo nero.
+    `drop-shadow(${r(-2 * scala)}px ${r(2.5 * scala)}px 0 rgba(0,0,0,0.92))`,
+    // 2. il peso: larga e morbida, tiene insieme il resto.
+    `drop-shadow(${r(-5 * scala)}px ${r(6 * scala)}px ${r(7 * scala)}px rgba(0,0,0,0.7))`,
+    // 3. il metallo un filo piu inciso, cosi lo stacco non sembra un
+    //    contorno appiccicato ma un rilievo.
+    'contrast(1.08)',
+    'brightness(1.03)',
   ].join(' ');
-}
-
-/**
- * L'alone del faro: sta dietro l'icona, appoggiato in basso a sinistra,
- * e si spegne salendo. Va messo come sfondo del contenitore.
- */
-export function faroAcciaio(intensita = 1) {
-  const a = 0.20 * intensita;
-  const b = 0.09 * intensita;
-  return `radial-gradient(60% 60% at 22% 82%, rgba(198,220,255,${a}) 0%, rgba(198,220,255,${b}) 38%, rgba(198,220,255,0) 72%)`;
 }
