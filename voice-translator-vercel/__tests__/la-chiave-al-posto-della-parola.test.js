@@ -51,7 +51,17 @@ import path from 'node:path';
 const RADICE = path.resolve(__dirname, '..');
 const CARTELLA_LOCALI = path.join(RADICE, 'app/lib/locales');
 
-const LINGUE = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ko', 'th', 'ar', 'hi', 'ru', 'tr', 'vi'];
+// b.370 — LE LINGUE NON SI SCRIVONO PIU A MANO QUI.
+// Questa lista diceva quindici. Le lingue sono TRENTOTTO, e le altre
+// ventitre non le controllava nessuno: e cosi che sedici pacchetti sono
+// arrivati ad avere un sesto delle parole senza che una prova fiatasse.
+// Luca l'ha scoperto aprendo l'app in thailandese.
+// Adesso la lista si legge dalla cartella: una lingua nuova entra nelle
+// prove il giorno che nasce, senza che nessuno si ricordi di aggiungerla.
+const LINGUE = fs.readdirSync(CARTELLA_LOCALI)
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => f.replace('.js', ''))
+  .sort();
 
 function leggiPacchetto(lingua) {
   const sorgente = fs.readFileSync(path.join(CARTELLA_LOCALI, `${lingua}.js`), 'utf8');

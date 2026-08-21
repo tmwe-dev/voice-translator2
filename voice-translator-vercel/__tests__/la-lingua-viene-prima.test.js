@@ -67,7 +67,19 @@ const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
 const senzaCommenti = (s) =>
   s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-const LINGUE = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
+const CARTELLA_LOCALI_AUTO = path.join(path.resolve(__dirname, '..'), 'app/lib/locales');
+// b.370 — LE LINGUE NON SI SCRIVONO PIU A MANO QUI.
+// Questa lista diceva quindici. Le lingue sono TRENTOTTO, e le altre
+// ventitre non le controllava nessuno: e cosi che sedici pacchetti sono
+// arrivati ad avere un sesto delle parole senza che una prova fiatasse.
+// Luca l'ha scoperto aprendo l'app in thailandese.
+// Adesso la lista si legge dalla cartella: una lingua nuova entra nelle
+// prove il giorno che nasce, senza che nessuno si ricordi di aggiungerla.
+const LINGUE = fs.readdirSync(CARTELLA_LOCALI_AUTO)
+  .filter((f) => f.endsWith('.js'))
+  .map((f) => f.replace('.js', ''))
+  .sort();
+
 const pacchetti = {};
 for (const l of LINGUE) {
   // I pacchetti sono un unico oggetto su una riga: si legge il file e
