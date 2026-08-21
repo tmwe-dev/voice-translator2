@@ -54,8 +54,14 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
         // cinquanta staccata di dieci, con due arrotondamenti diversi.
         <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
           style={{
+            // b.363 — ALL'ALTEZZA DEL MICROFONO (ordine di Luca). Era scesa
+            // in fondo, sopra l'icona Home: li stava lontana da tutto
+            // quello a cui serve. La lingua si sceglie mentre si guarda il
+            // microfono di "Parla ora", ed e li che deve stare la mano.
+            // L'altezza e quella del tondo azzurro: la linguetta e alta 58,
+            // quindi il suo bordo alto va 29 sopra il centro del microfono.
             ...formaLinguetta({ card, cardBorder: null }, {
-              bottom: 'calc(94px + 20px + env(safe-area-inset-bottom))',
+              top: 'max(168px, calc(env(safe-area-inset-top) + 148px))',
             }),
             border: bordo, borderLeft: 'none',
             fontFamily: FONT, zIndex: 60,
