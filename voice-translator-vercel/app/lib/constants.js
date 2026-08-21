@@ -8,7 +8,7 @@ export const APP_VERSION = 'b.363';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 631;
+export const PUSH = 632;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -174,15 +174,16 @@ export const VAD_PRESETS = {
   noisy:  { threshold: 60, silenceDelay: 2500, minVoiceDuration: 250 },  // Noisy environment
   street: { threshold: 80, silenceDelay: 3000, minVoiceDuration: 400 },  // Street / crowd
 };
-export const REVIEW_INTERVAL = 8000;        // ms between translation reviews (was 12000)
-export const CHUNK_MIN_WORDS = 3;           // words before emitting translation chunk (was 4)
-export const CHUNK_MAX_WORDS = 10;          // interim words before force-emit (was 12)
+// b.363 — REVIEW_INTERVAL, CHUNK_MIN_WORDS e CHUNK_MAX_WORDS sono stati
+// tolti: nessuna riga del programma li leggeva. Erano manopole finte —
+// chi le girava credendo di cambiare il ritmo della traduzione a voce
+// non cambiava niente, perche quel ritmo lo decide altro codice.
 export const LIVE_TEXT_THROTTLE = 600;      // ms throttle for live text broadcast (was 800)
 export const TYPING_TIMEOUT = 5000;         // ms before typing indicator expires
 export const SPEAKING_TIMEOUT = 30000;      // ms before speaking indicator expires
-export const STATUS_DISPLAY_TIME = 2000;    // ms to show status messages
-export const BROWSER_SPEAK_MIN_DURATION = 1500;
-export const BROWSER_SPEAK_CHAR_RATE = 80;
+// b.363 — tolti anche STATUS_DISPLAY_TIME, BROWSER_SPEAK_MIN_DURATION e
+// BROWSER_SPEAK_CHAR_RATE: stessa storia, tre tempi dichiarati qui e mai
+// consultati da nessuno.
 
 // STT Engine Selection — languages where browser SpeechRecognition is unreliable
 // These languages use Whisper/gpt-4o-mini-transcribe as PRIMARY STT engine
