@@ -8,3 +8,6 @@ _collaudo/
 _prove/
 stato-attuale.tar.gz
 _to_delete/
+
+# b.363 — le copie di riserva del globo restano sul disco, non nel repository
+*.html.bak
