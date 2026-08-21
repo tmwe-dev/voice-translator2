@@ -1,7 +1,6 @@
 'use client';
 import Icon from './Icon.js';
 import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, bandieraPaese } from '../lib/schedaMondo.js';
-import { ombraAcciaio } from '../lib/acciaio.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import Scelta from './ui/Scelta.js';
@@ -312,6 +311,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {(tab === 'stanze' || tab === 'news') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi} titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
+          {/* b.367 — «IL PROTAGONISTA NON E' IL GLOBO» (Luca). Era vero
+              alla lettera: il pianeta prendeva mezza pagina in pieno
+              contrasto e gli elenchi restavano schiacciati sotto. Un velo
+              lo manda dietro — si vede ancora, gira ancora, ma smette di
+              gridare. Non e stato tolto niente: e cambiato chi comanda. */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: 'linear-gradient(180deg, rgba(5,7,15,0.42) 0%, rgba(5,7,15,0.66) 42%, rgba(5,7,15,0.86) 100%)',
+          }} />
         </div>
       )}
 
@@ -326,56 +334,21 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
           con la freccia a sinistra e a destra che scorrono le schede. Sopra
           l'area di ricerca. Le icone sono quelle in acciaio. ═══ */}
+      {/* b.367 — LA TESTATA DIMAGRISCE. Qui stavano un'icona da 62 pixel
+          e due frecce: quasi novanta pixel di altezza spesi per dire in
+          che sezione sei, in cima a una pagina che deve essere fatta di
+          elenchi. Ora resta il nome, e la scelta della sezione e scesa
+          in fondo, dove arriva il pollice (vedi la tendina sotto). */}
       <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
-        padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '12px 22px 6px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        {(() => {
-          // b.361 — due schede: STANZE (icona porta, Luca: «cambia in porta le
-          // stanze») e NEWS. Il logo/icona sta nell'angolo a SINISTRA; al
-          // centro il testo con le frecce che scorrono le schede.
-          const schede = [
-            { id: 'stanze', labelKey: 'tabRooms', img: '/sezioni/menu-profilo.webp' },
-            { id: 'news', labelKey: 'tabNews', img: '/sezioni/sez-news.webp' },
-          ];
-          const idx = Math.max(0, schede.findIndex(s => s.id === tab));
-          const cur = schede[idx];
-          const vai = (d) => setTab(schede[(idx + d + schede.length) % schede.length].id);
-          const freccia = { fontSize: 30, lineHeight: 1, cursor: 'pointer', padding: 4,
-            background: 'none', border: 'none', WebkitTapHighlightColor: 'transparent',
-            backgroundImage: 'linear-gradient(145deg, #f2f4f8, #b9c0cc 45%, #7d8492 80%, #aeb6c4)',
-            WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' };
-          return (
-            <>
-              {/* b.363 — SCAMBIO (ordine di Luca): il NOME della sezione va
-                  nell'angolo in alto a sinistra, e l'ICONA sale al centro
-                  fra le due frecce. Prima era il contrario, e l'icona —
-                  alta il doppio della riga che la ospita — sbordava e si
-                  prendeva l'angolo che serviva al nome. */}
-              {/* b.363 — il nome della sezione era incollato al bordo: a
-                  quattordici punti da un lato dello schermo sembra caduto
-                  li, non messo. Ventidue, come il respiro che hanno le
-                  altre schermate. */}
-              <span style={{
-                position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5,
-                whiteSpace: 'nowrap',
-              }}>
-                {L(cur.labelKey)}
-              </span>
-              <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
-              <span style={{
-                width: 62, height: 62, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <img src={cur.img} alt="" aria-hidden width={62} height={62}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain',
-                    filter: ombraAcciaio(1.1) }} />
-              </span>
-              <button onClick={() => vai(1)} aria-label={L('nextWord')} style={freccia}>›</button>
-            </>
-          );
-        })()}
+        <span style={{
+          fontSize: 21, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5,
+          whiteSpace: 'nowrap',
+        }}>
+          {L(tab === 'news' ? 'tabNews' : 'tabRooms')}
+        </span>
       </header>
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
@@ -548,7 +521,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i
       // pulsanti veri li riprendono.
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(154px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ maxWidth: 440, margin: '0 auto', pointerEvents: 'auto' }}>
 
@@ -727,6 +700,31 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         })}
         </div>
       </div>
+      )}
+
+      {/* ═══ b.367 — LA TENDINA IN FONDO (ordine di Luca: «vai sopra il
+          globo a tutta pagina con gli elenchi e tendina sotto»).
+          La scelta della sezione stava in cima, dentro una testata alta
+          novanta pixel che rubava spazio agli elenchi. Qui in fondo non
+          ruba niente — galleggia — e soprattutto sta dove arriva il
+          pollice senza cambiare presa al telefono, che e l'unico posto
+          giusto per un comando che si usa di continuo. ═══ */}
+      {!cercando && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, zIndex: 20,
+          bottom: 'calc(84px + env(safe-area-inset-bottom))',
+          display: 'flex', justifyContent: 'center', pointerEvents: 'none',
+        }}>
+          <div style={{ pointerEvents: 'auto', minWidth: 172 }}>
+            <Scelta C={C} versoAlto
+              valore={tab}
+              opzioni={[
+                { valore: 'stanze', etichetta: L('tabRooms'), conto: rooms?.length || null },
+                { valore: 'news', etichetta: L('tabNews') },
+              ]}
+              onCambia={(v) => { vibrate(6); setTab(v); }} />
+          </div>
+        </div>
       )}
 
       {/* CSS */}

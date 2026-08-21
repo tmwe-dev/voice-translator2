@@ -335,7 +335,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     <Ribalta girato={!!(lettura || discAperta)}
       fronte={
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
-      <div style={{ padding: '0 16px 96px', fontFamily: FONT, maxWidth: 680, margin: '0 auto' }}>
+      <div style={{ padding: '0 16px 154px', fontFamily: FONT, maxWidth: 680, margin: '0 auto' }}>
 
       {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
           restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due

@@ -27,7 +27,7 @@ const COLORE_VALORE = 'rgba(236,243,255,0.96)';
 // colonna si leggono a colpo d'occhio; quaranta pillole no.
 // ═══════════════════════════════════════════════════════════════
 
-export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona = null }) {
+export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona = null, versoAlto = false }) {
   const [aperta, setAperta] = useState(false);
   const mio = useRef(null);
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.10)'}`;
@@ -44,15 +44,19 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
   const scelta = opzioni.find((o) => o.valore === valore) || opzioni[0];
 
   return (
-    <div ref={mio} style={{ position: 'relative', marginBottom: 12 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 7,
-        fontSize: 12, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT,
-        marginBottom: 6, letterSpacing: 0.2,
-      }}>
-        {icona && <Icon name={icona} size={13} color={COLORE_TITOLO} />}
-        {etichetta}
-      </div>
+    <div ref={mio} style={{ position: 'relative', marginBottom: (etichetta || icona) ? 12 : 0 }}>
+      {/* b.367 — senza titolo non si lascia una riga vuota: la tendina in
+          fondo alla pagina non ne ha, e quello spazio era un buco. */}
+      {(etichetta || icona) && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 7,
+          fontSize: 12, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT,
+          marginBottom: 6, letterSpacing: 0.2,
+        }}>
+          {icona && <Icon name={icona} size={13} color={COLORE_TITOLO} />}
+          {etichetta}
+        </div>
+      )}
 
       <button onClick={() => { vibrate(6); setAperta((v) => !v); }}
         aria-haspopup="listbox" aria-expanded={aperta}
@@ -75,13 +79,18 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
         </span>
         <span style={{
           color: COLORE_TITOLO, fontSize: 11, flexShrink: 0,
-          transform: aperta ? 'rotate(180deg)' : 'none', transition: 'transform .18s',
+          transform: aperta !== versoAlto ? 'rotate(180deg)' : 'none', transition: 'transform .18s',
         }}>▾</span>
       </button>
 
       {aperta && (
         <div role="listbox" style={{
-          position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, zIndex: 5,
+          // b.367 — in fondo alla pagina una tendina che si apre verso il
+          // basso finisce fuori dallo schermo: li si apre all'insu.
+          position: 'absolute', left: 0, right: 0, zIndex: 5,
+          ...(versoAlto
+            ? { bottom: '100%', marginBottom: 4 }
+            : { top: '100%', marginTop: 4 }),
           background: C.bg || '#0b0f1c', border: bordo, borderRadius: 12,
           boxShadow: '0 14px 34px rgba(0,0,0,0.55)', overflow: 'hidden',
           maxHeight: 260, overflowY: 'auto',

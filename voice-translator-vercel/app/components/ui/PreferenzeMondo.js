@@ -16,6 +16,15 @@ import { bandieraPaese } from '../../lib/schedaMondo.js';
 //    leggibili i testi, usa due colori per titolo e valore. non usare
 //    grigio scuro sul nero»
 //
+// b.367 — «LA SIDE BAR E' PER UN BAMBINO O UN ANZIANO?» (Luca, e aveva
+// ragione). C'era un paragrafo di spiegazione sotto OGNI voce: quattro
+// blocchi di prosa per quattro scelte che si capiscono guardandole. Un
+// pannello che spiega e un pannello che non si fida di chi lo usa —
+// e si legge come un foglietto illustrativo.
+// Via tutte le spiegazioni. Restano: un'icona GRANDE, il nome della
+// cosa, e il comando. Chi non capisce una scelta la tocca e vede cosa
+// fa: sono tutte reversibili in un tocco.
+//
 // COSA DISTINGUE UN TASTO DA UNA TENDINA. Non e questione di gusto:
 //   DUE o TRE risposte  -> TASTI affiancati. Si vedono TUTTE senza
 //     aprire niente, e si cambia con un tocco solo. Nasconderle dentro
@@ -47,14 +56,12 @@ const PREFERENZE = [
     tipo: 'paesi',
     icona: 'target',
     titoloKey: 'prefPositionTitle',
-    descKey: 'prefPositionDesc',
   },
   {
     chiave: 'mondoTitoli',
     predefinito: 'originali',
     icona: 'swap',
     titoloKey: 'prefTitlesTitle',
-    descKey: 'prefTitlesDesc',
     scelte: [
       { valore: 'tradotti', etichettaKey: 'prefTitlesTranslated' },
       { valore: 'originali', etichettaKey: 'prefTitlesOriginal' },
@@ -69,7 +76,6 @@ const PREFERENZE = [
     tipo: 'interruttore',
     icona: 'zap',
     titoloKey: 'prefModeTitle',
-    descKey: 'prefModeDesc',
     scelte: [
       { valore: 'veloce', etichettaKey: 'newsModeFast', icona: 'zap' },
       { valore: 'approfondita', etichettaKey: 'newsModeDeep', icona: 'graduation' },
@@ -80,7 +86,6 @@ const PREFERENZE = [
     predefinito: 'richiesta',
     icona: 'refresh',
     titoloKey: 'prefRefreshTitle',
-    descKey: 'prefRefreshDesc',
     scelte: [
       { valore: 'apertura', etichettaKey: 'prefRefreshOnOpen' },
       { valore: 'richiesta', etichettaKey: 'prefRefreshOnDemand' },
@@ -129,23 +134,17 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
           {L('preferencesWord')}
         </span>
       </div>
-      <div style={{ fontSize: 11.5, color: COLORE_SPIEGA, fontFamily: FONT, lineHeight: 1.5, marginBottom: 16 }}>
-        {L('preferencesDesc')}
-      </div>
 
       {PREFERENZE.map((p) => {
         const attuale = prefs?.[p.chiave] || p.predefinito;
         return (
-          <div key={p.chiave} style={{ marginBottom: 18 }}>
-            {/* il titolo: dice DI COSA si tratta */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 3 }}>
-              <Icon name={p.icona} size={14} color={COLORE_TITOLO} />
-              <span style={{ fontSize: 13, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT }}>
+          <div key={p.chiave} style={{ marginBottom: 22 }}>
+            {/* b.367 — icona grande, nome, e basta. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 9 }}>
+              <Icon name={p.icona} size={22} color={accento} />
+              <span style={{ fontSize: 15, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT }}>
                 {L(p.titoloKey)}
               </span>
-            </div>
-            <div style={{ fontSize: 11, color: COLORE_SPIEGA, fontFamily: FONT, lineHeight: 1.45, marginBottom: 8 }}>
-              {L(p.descKey)}
             </div>
 
             {/* b.363 — IL MISTO (ordine di Luca): non tutto e uguale, e non
@@ -172,8 +171,8 @@ export default function PreferenzeMondo({ C, bandieraMia }) {
                       aria-pressed={attiva}
                       style={{
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                        padding: '9px 10px', borderRadius: 11, cursor: 'pointer', fontFamily: FONT,
-                        fontSize: 12.5, fontWeight: attiva ? 800 : 600,
+                        padding: '13px 12px', borderRadius: 13, cursor: 'pointer', fontFamily: FONT,
+                        fontSize: 14, fontWeight: attiva ? 800 : 600,
                         background: attiva ? `${accento}1E` : 'rgba(255,255,255,0.045)',
                         border: `1px solid ${attiva ? `${accento}55` : 'rgba(255,255,255,0.09)'}`,
                         color: attiva ? accento : 'rgba(214,226,245,0.85)',
