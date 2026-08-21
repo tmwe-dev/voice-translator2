@@ -214,7 +214,10 @@ textarea.campo{min-height:96px;resize:vertical}
 .pagina .tendina .voce .cnt{font-size:11px;color:var(--acc2);font-weight:800}
 .pagina .foglio{position:absolute;left:50%;transform:translate(-50%,105%);bottom:0;z-index:40;
   width:min(560px,100%);max-height:56vh;
-  background:rgba(12,18,34,.52);border:1px solid rgba(255,255,255,.09);border-bottom:none;
+  /* b.363 — la tendina del paese era trasparente al 48%%: le targhette delle
+     citta che gli aerei lasciano quando atterrano si leggevano ATTRAVERSO,
+     e sembravano appiccicate sopra il pannello. Ora copre. */
+  background:rgba(9,13,26,.97);border:1px solid rgba(255,255,255,.09);border-bottom:none;
   border-radius:22px 22px 0 0;
   backdrop-filter:blur(26px) saturate(1.5);-webkit-backdrop-filter:blur(26px) saturate(1.5);
   box-shadow:0 -12px 50px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.07);
@@ -284,6 +287,12 @@ textarea.campo{min-height:96px;resize:vertical}
 .uppercase{text-transform:uppercase}.tracking-wider{letter-spacing:.05em}
 .z-10{z-index:10}.z-50{z-index:50}
 .top-4{top:1rem}.bottom-4{bottom:1rem}.left-4{left:1rem}.bottom-8{bottom:2rem}
+/* b.363 — LA REGOLA CHE MANCAVA. Il tasto "Reset zoom" e scritto da sempre
+   "in alto a DESTRA", ma qui la regola per destra non esisteva: riceveva
+   solo "in alto" e cadeva a sinistra, sotto l'icona della porta. Tre volte
+   l'ho cercato nella pagina, e tre volte non era li: era questa riga. */
+.right-4{right:1rem}.fixed{position:fixed}
+
 .left-1\/2{left:50%}
 .-translate-x-1\/2{transform:translateX(-50%)}
 .translate-y-0{--vy:0px}.translate-y-4{--vy:1rem}
