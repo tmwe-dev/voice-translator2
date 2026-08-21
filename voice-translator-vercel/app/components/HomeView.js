@@ -352,7 +352,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
           border: `1px solid ${C.accent}38`,
           borderRadius: 18, padding: '2px 14px', marginBottom: 20, flexShrink: 0,
-          boxShadow: `-10px 14px 34px -18px ${C.accent}55, -2px 6px 18px -10px rgba(0,0,0,0.55)`,
+          // b.361 — VIA l'ombra azzurra offset (collaudo di Luca: «sono le
+          // ombre dei tasti menu precedenti»): su fondo scuro appariva come
+          // strisce. Niente ombra.
         }}>
           {SEZIONI.map((voce, idx) => (
             <button
