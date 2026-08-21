@@ -24,7 +24,6 @@ import { createLogger } from './logger.js';
 const log = createLogger('mondoDB');
 
 export const GIORNI_ARCHIVIAZIONE = 15;   // silenzio oltre il quale si archivia
-export const TRADUCI_TOP_N = 10;          // messaggi principali tradotti dal tasto
 
 function db() {
   const c = getSupabaseAdmin();
@@ -95,12 +94,21 @@ export async function elencoDiscussioni({ topic = null, country = null, lang = n
 export async function getDiscussione(id) {
   const { data, error } = await db().from('mondo_discussions').select('*').eq('id', id).maybeSingle();
   if (error) throw new Error('getDiscussione: ' + error.message);
+  // b.363 — NASCOSTA VUOL DIRE NASCOSTA: una discussione tolta da tre
+  // segnalazioni o da un moderatore restava leggibile con il link diretto
+  // e si poteva ancora commentare. L'elenco la filtrava, l'apertura no.
+  if (data && data.hidden) return null;
   return data || null;
 }
 
 export async function contaVista(id) {
-  try { await db().rpc('mondo_conta_vista', { p_discussion: id }); }
-  catch (e) { log.warn('contaVista:', e.message); } // il contatore vista non e critico
+  // b.363 — il client non LANCIA sugli errori SQL: li restituisce. Il vecchio
+  // try/catch prendeva solo i guasti di rete, quindi il contatore poteva
+  // fallire per sempre in silenzio.
+  try {
+    const { error } = await db().rpc('mondo_conta_vista', { p_discussion: id });
+    if (error) log.warn('contaVista:', error.message);
+  } catch (e) { log.warn('contaVista:', e.message); } // il contatore vista non e critico
 }
 
 // ═══════════════════════ COMMENTI ═══════════════════════
@@ -112,16 +120,6 @@ export async function commenti(discussionId, { limit = 100 } = {}) {
     .order('created_at', { ascending: true })
     .limit(Math.min(limit, 300));
   if (error) throw new Error('commenti: ' + error.message);
-  return data || [];
-}
-
-// I messaggi principali per il tasto Traduci: i piu importanti.
-export async function commentiPrincipali(discussionId, n = TRADUCI_TOP_N) {
-  const { data, error } = await db().from('mondo_comments')
-    .select('id, text, lang')
-    .eq('discussion_id', discussionId).eq('hidden', false)
-    .order('importance', { ascending: false }).limit(n);
-  if (error) throw new Error('commentiPrincipali: ' + error.message);
   return data || [];
 }
 
@@ -142,13 +140,31 @@ export async function commenta({ discussionId, authorEmail, authorName = '', tex
 
 // ═══════════════════════ MI PIACE (idempotente) ═══════════════════════
 
+// b.363 — restituisce il conteggio VERO. Prima tornava vuoto e il cuore
+// veniva contato dal telefono: dopo un ricarico l'elenco dei "gia messi"
+// ripartiva vuoto, si toccava di nuovo, il server (giustamente) non
+// contava nulla e lo schermo mostrava un cuore in piu che non esisteva.
 export async function mettiMiPiace({ commentId, email }) {
   const uid = idPubblico(email);
   if (!uid) throw new Error('utente mancante');
   const { error } = await db().from('mondo_comment_likes').insert({ comment_id: commentId, user_id: uid });
-  if (error && !/duplicate|unique/i.test(error.message)) throw new Error('mettiMiPiace: ' + error.message);
+  const gia = !!(error && /duplicate|unique/i.test(error.message));
+  if (error && !gia) throw new Error('mettiMiPiace: ' + error.message);
   const { error: e2 } = await db().rpc('mondo_ricalcola_like', { p_comment: commentId });
   if (e2) log.warn('mondo_ricalcola_like:', e2.message);
+  const { data } = await db().from('mondo_comments').select('like_count').eq('id', commentId).maybeSingle();
+  return { gia, like_count: data?.like_count ?? null };
+}
+
+// I cuori che questa persona ha gia messo, fra quelli mostrati: serve a
+// ricostruire lo stato dopo un ricarico della pagina.
+export async function mieiMiPiace({ email, commentIds = [] }) {
+  const uid = idPubblico(email);
+  if (!uid || !commentIds.length) return [];
+  const { data, error } = await db().from('mondo_comment_likes')
+    .select('comment_id').eq('user_id', uid).in('comment_id', commentIds.slice(0, 300));
+  if (error) { log.warn('mieiMiPiace:', error.message); return []; }
+  return (data || []).map((r) => r.comment_id);
 }
 
 // ═══════════════════════ FOLLOW ═══════════════════════
@@ -174,14 +190,6 @@ export async function contaSeguaci(publicId) {
     .select('*', { count: 'exact', head: true }).eq('followed_user_id', publicId);
   if (error) throw new Error('contaSeguaci: ' + error.message);
   return count || 0;
-}
-
-export async function seguo(followerEmail, followedPublicId) {
-  const follower = idPubblico(followerEmail);
-  if (!follower) return false;
-  const { data } = await db().from('mondo_follows').select('follower_user_id')
-    .eq('follower_user_id', follower).eq('followed_user_id', followedPublicId).maybeSingle();
-  return !!data;
 }
 
 // Il nome piu recente con cui una persona ha firmato (snapshot).
@@ -213,25 +221,6 @@ export async function attivitaPersona(publicId, { limit = 30 } = {}) {
       .order('created_at', { ascending: false }).limit(limit),
   ]);
   return { discussioni: disc.data || [], commenti: com.data || [] };
-}
-
-// ═══════════════════════ TRADUZIONI (cache a richiesta) ═══════════════════════
-
-export async function traduzioneTitoloSalvata(discussionId, targetLang) {
-  const { data } = await db().from('mondo_title_translations')
-    .select('text').eq('discussion_id', discussionId).eq('target_lang', targetLang).maybeSingle();
-  return data?.text || null;
-}
-export async function salvaTraduzioneTitolo(discussionId, targetLang, text) {
-  await db().from('mondo_title_translations').upsert({ discussion_id: discussionId, target_lang: targetLang, text });
-}
-export async function traduzioneCommentoSalvata(commentId, targetLang) {
-  const { data } = await db().from('mondo_comment_translations')
-    .select('text').eq('comment_id', commentId).eq('target_lang', targetLang).maybeSingle();
-  return data?.text || null;
-}
-export async function salvaTraduzioneCommento(commentId, targetLang, text) {
-  await db().from('mondo_comment_translations').upsert({ comment_id: commentId, target_lang: targetLang, text });
 }
 
 // ═══════════════════════ RETENTION ═══════════════════════

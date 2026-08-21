@@ -249,7 +249,6 @@ async function handleGetRoom(req) {
     // b.363 — l'UNICA entrata dell'area che non validava il codice stanza:
     // la stringa grezza finiva dritta nella chiave del deposito.
     const id = sanitizeRoomId(searchParams.get('id') || '');
-    if (!id) return NextResponse.json({ error: 'Room id required' }, { status: 400 });
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
     const room = await getRoom(id);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });

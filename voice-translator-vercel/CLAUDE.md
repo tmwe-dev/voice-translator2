@@ -214,32 +214,14 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.361** (push #602) — immagini metalliche di Luca nei pulsanti
-  sezione (globo/trofeo/carta/regalo, sfondo trasparente, 70% dimensione), il
-  tasto "+" della barra reso argento, titolo/sottotitoli home tolti, linguetta
-  allineata al microfono senza freccia
-- Versione precedente: **b.360** (push #599-601) — linguetta lingua piu grande (+50%) e
-  staccata dal bordo, con la pila del credito VERTICALE impilata sopra a
-  sinistra (via a batteria dall'angolo destro della home)
-- Versione precedente: **b.359** (push #598) — il GLOBO di Luca (file bartalk-completo_2
-  copiato VERBATIM in public/mondo-globo.html) montato dentro Mondo via
-  iframe pilotato su 'community'; e il PERMESSO DI NON SAPERE per gli agenti
-  (non rispondono piu per forza: non lo so / non ho capito / la domanda non
-  sta in piedi / mi manca un dato), attivo su ogni superficie via involucro
-- REGOLA (memoria): file/repo dati da Luca si COPIANO ESATTI (schema iframe
-  BizCard), non si riscrivono ne si reimplementa di iniziativa
-- Versioni precedenti: **b.358** (#597), **b.357** (#596) — "Parla ora": niente doppia lettura, il
-  contenitore resta dentro lo schermo, il registro scorre col verso giusto
-  anche capovolto, e una traduzione respinta dal server non viene piu
-  spacciata per buona; Business/BizCard, PeepOff, libro di lingue e scanner
-  attendono il collaudo dal vivo di Luca
-- TRAPPOLA: /api/translate, quando la validazione fallisce, risponde 200 col
-  TESTO ORIGINALE e `validationFailed: true`. Chi lo chiama DEVE guardare
-  quel campo, altrimenti mostra l'originale come se fosse tradotto.
-- IN SOSPESO dal collaudo del 20/08: la CARTINA di TaxiTalk non funziona e
-  il QR/link va reso funzionante (ordine esplicito di Luca, prossimo lavoro)
-- In sviluppo la CSP concede `unsafe-eval` e localhost su qualunque porto
-  (solo NODE_ENV=development): senza, la pagina locale non parte
+- Versione: **b.362** (push #622) — refactoring dall'audit totale: agenti
+  senza ordini di riempimento e col canale passo/domanda ACCESO (Tavolo e
+  Podcast leggono [esito:...]), syllabus con veste neutra e temperatura
+  bassa, dati Mondo normalizzati, tt/leggiEsitoRicerca deduplicate,
+  debounce sul profilo studente, codice morto rimosso (ramo podcast
+  intero, segnala/modera, refreshAnim). Globo dimagrito 4,9→2 MB (texture
+  a meta risoluzione, schermate demo rimosse dal file).
+  L'audit a 8 aree e in corso: i reperti verificati vanno riparati TUTTI.
 - Test: **2164 verdi su 144 file** · 0 errori di lint (avvisi tollerati)
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.

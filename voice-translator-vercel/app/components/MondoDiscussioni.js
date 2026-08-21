@@ -34,6 +34,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   const [tradotti, setTradotti] = useState({});
   // b.187 — chi seguo, per id pubblico (stato ottimistico di sessione)
   const [seguiti, setSeguiti] = useState(() => new Set());
+  const [segnalati, setSegnalati] = useState(() => new Set());
   const [likeMessi, setLikeMessi] = useState(() => new Set()); // b.232 — evita il doppio conteggio del like
   const scrollRef = useRef(null);
 
@@ -67,7 +68,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
         }),
       });
       const d = await r.json();
-      setTradotti(t => ({ ...t, [chiave]: d.translated || d.translation || testoOrig }));
+      // b.363 — non si spaccia l'ORIGINALE per traduzione: se la risposta non
+      // e valida (errore, credito finito, o traduzione respinta dal controllo
+      // qualita) si toglie la voce invece di salvare il testo di partenza.
+      const buona = r.ok && !d.validationFailed && (d.translated || d.translation);
+      if (!buona) { setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; }); return; }
+      setTradotti(t => ({ ...t, [chiave]: buona }));
     } catch {
       setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; });
     }
@@ -189,6 +195,13 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               <button onClick={() => metti(c.id)} style={{ background: 'none', border: 'none', color: muto, cursor: 'pointer', fontSize: 11, fontWeight: 700, padding: 0 }}>
                 ♥ {L('like')}
               </button>
+              {/* b.363 — la segnalazione ESISTEVA solo sul server: nessuno
+                  poteva usarla perche non c'era da nessuna parte un modo
+                  per dirlo. Ecco il modo. */}
+              <button onClick={() => segnalaCommento(c.id)} disabled={segnalati.has(c.id)}
+                style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1 }}>
+                {segnalati.has(c.id) ? L('reportCopied') : L('reportWord')}
+              </button>
             </div>
           </div>
         ))}
@@ -216,6 +229,23 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     </div>
   );
 
+  // b.363 — segnala un commento: una volta sola per persona, e alla
+  // soglia il contenuto si nasconde da solo (regola gia sul server).
+  async function segnalaCommento(commentId) {
+    if (!userToken) { setErrore(L('accessToCreate')); return; }
+    if (segnalati.has(commentId)) return;
+    vibrate(8);
+    setSegnalati((v) => new Set(v).add(commentId));
+    try {
+      const r = await fetch('/api/mondo/discussioni', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ azione: 'segnala', userToken, tipo: 'commento', contenuto: commentId }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.nascosto) setCommenti((cs) => cs.filter((c) => c.id !== commentId));
+    } catch { /* la segnalazione non e critica: resta presa in carico sullo schermo */ }
+  }
+
   // like: idempotente lato server; aggiorna il conteggio localmente
   async function metti(commentId) {
     if (!userToken) { setErrore(L('accessToCreate')); return; }
@@ -229,9 +259,15 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'like', userToken, commentId }),
       });
+      const d = await r.json().catch(() => ({}));
       if (r.ok) {
         setLikeMessi(s => new Set(s).add(commentId));
-        setCommenti(cs => cs.map(c => c.id === commentId ? { ...c, like_count: (c.like_count || 0) + 1 } : c));
+        // b.363 — il numero lo dice il server, non il telefono: dopo un
+        // ricarico il "gia messo" era dimenticato e il conteggio locale
+        // saliva su un cuore che il database non aveva registrato.
+        setCommenti(cs => cs.map(c => c.id === commentId
+          ? { ...c, like_count: typeof d.like_count === 'number' ? d.like_count : (d.gia ? (c.like_count || 0) : (c.like_count || 0) + 1) }
+          : c));
       }
     } catch { /* il like non e critico: nessun errore in faccia */ }
   }

@@ -91,7 +91,7 @@ function normalizzaDiscussione(d) {
   if (!d) return d;
   return { ...d,
     titolo: d.titolo || d.title || '',
-    commenti: (d.commentCount ?? d.commenti ?? 0),
+    commenti: (d.comment_count ?? d.commentCount ?? d.commenti ?? 0),
   };
 }
 
@@ -136,6 +136,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const [search, setSearch] = useState('');
   const [langFilter, setLangFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
+  // b.363 — dai risultati di ricerca la discussione va APERTA, non solo la
+  // scheda News: prima l'id veniva buttato e si atterrava sul generico.
+  const [apriDiscussione, setApriDiscussione] = useState(null);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -215,7 +218,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           pagina Mondo (Luca: «invece di integrarlo»). La testata, le schede e
           la ricerca qui sotto gli fluttuano sopra: una sola chrome, quella di
           BarTalk. Sta nella scheda "Per te"; nelle altre le liste lo coprono. */}
-      {tab === 'stanze' && !cercando && <GloboMondo sfondo />}
+      {/* b.363 — il pianeta resta MONTATO anche mentre si cerca: prima al
+          primo carattere digitato l'iframe veniva smontato (e ricaricato da
+          zero all'uscita), mentre la popup prometteva «il pianeta resta
+          dietro». Qui si nasconde soltanto. */}
+      {tab === 'stanze' && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0, visibility: cercando ? 'hidden' : 'visible' }}>
+          <GloboMondo sfondo />
+        </div>
+      )}
 
       {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
           con la freccia a sinistra e a destra che scorrono le schede. Sopra
@@ -252,11 +263,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 <img src={cur.img} alt="" aria-hidden width={72} height={72}
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </span>
-              <button onClick={() => vai(-1)} aria-label="precedente" style={freccia}>‹</button>
+              <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
               <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
                 {L(cur.labelKey)}
               </span>
-              <button onClick={() => vai(1)} aria-label="successiva" style={freccia}>›</button>
+              <button onClick={() => vai(1)} aria-label={L('nextWord')} style={freccia}>›</button>
             </>
           );
         })()}
@@ -272,7 +283,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           borderRadius: 14, padding: '10px 14px',
         }}>
-          <span style={{ fontSize: 14, opacity: 0.4 }}></span>
+          <Icon name="globe" size={14} color={C.textMuted} />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder={L('searchRooms')}
             style={{
@@ -297,7 +308,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           <div style={{ width: '100%', maxWidth: 420, maxHeight: '68vh', overflowY: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto', background: C.card, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: 14, boxShadow: '0 24px 60px -14px rgba(0,0,0,0.65)' }}>
 
             {risultati.paesi.length > 0 && (<>
-              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>PAESI E LINGUE</div>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{L('searchCountriesLangs')}</div>
               {risultati.paesi.map((l) => (
                 <button key={l.code} onClick={() => { setLangFilter(l.code); setSearch(''); setTab('stanze'); }}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -328,7 +339,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             {risultati.discussioni.length > 0 && (<>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
               {risultati.discussioni.map((d, i) => (
-                <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); }}
+                <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); setApriDiscussione(d.id || null); }}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
                   <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titolo}</div>
                   <div style={{ fontSize: 11, color: C.textMuted }}>{d.commenti} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
@@ -338,7 +349,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
             {risultati.paesi.length === 0 && risultati.stanze.length === 0 && risultati.discussioni.length === 0 && (
               <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '30px 0', lineHeight: 1.6 }}>
-                Niente con questo nome, per ora.<br />Apri tu la prima stanza: il Mondo si accende cosi.
+                Niente con questo nome, per ora.<br />{L('searchOpenFirst')}: il Mondo si accende cosi.
               </div>
             )}
           </div>
@@ -353,7 +364,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ maxWidth: 440, margin: '0 auto' }}>
-            <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+            <MondoNews apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}
@@ -365,7 +376,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
         maxWidth: 460, margin: '0 auto', width: '100%', justifyContent: 'flex-start',
       }}>
-        {LANG_FILTERS.map(lf => {
+        {/* b.363 — cercando una lingua fuori dalle 12 pillole (es. il russo)
+            il filtro si applicava ma NESSUNA pillola risultava attiva: la
+            lista sembrava vuota senza motivo e non si poteva togliere il
+            filtro. Qui la lingua scelta compare comunque. */}
+        {(LANG_FILTERS.some(l => l.code === langFilter) ? LANG_FILTERS
+          : [...LANG_FILTERS, { code: langFilter, flag: getLangFlag(langFilter), name: (getLangName(langFilter) || langFilter).slice(0, 12) }]
+        ).map(lf => {
           const active = langFilter === lf.code;
           return (
             <button key={lf.code} onClick={() => setLangFilter(lf.code)} style={{

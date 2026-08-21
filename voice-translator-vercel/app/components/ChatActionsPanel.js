@@ -149,7 +149,7 @@ function ChatActionsPanel({
               {result.text}
             </div>
             <div style={{ marginTop: 12, fontSize: 12, color: s.textTertiary }}>
-              Provider: {result.provider}
+              {t('providerWord')} {result.provider}
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button
@@ -221,7 +221,7 @@ function ChatActionsPanel({
           <div style={{
             marginTop: 12, fontSize: 13, color: s.textTertiary, textAlign: 'center',
           }}>
-            Need at least 3 messages for analysis
+            {t('needThreeMessages')}
           </div>
         )}
       </div>

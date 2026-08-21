@@ -19,7 +19,32 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { getSession } from '../../../lib/users.js';
 import { createLogger } from '../../../lib/logger.js';
 import { redis } from '../../../lib/redis.js';
-import { segnala, impostaVisibilita, autoreDi, puoModerareContenuto, tipoValido, SOGLIA_NASCONDI } from '../../../lib/moderazioneMondo.js';
+import { segnala, impostaVisibilita, autoreDi, puoModerareContenuto, tipoValido, SOGLIA_NASCONDI, impronaPerTipo } from '../../../lib/moderazioneMondo.js';
+
+// b.363 — IL MEDIA ARRIVAVA DAL CLIENT E FINIVA IN PIAZZA COSI COM'ERA:
+// nessun controllo di protocollo, forma o lunghezza. Poi veniva reso a
+// tutti come link e come immagine: bastava un url `javascript:` o `data:`
+// per piazzare una trappola in una pagina pubblica. Qui si tiene SOLO
+// cio che si riconosce, e solo se e davvero un indirizzo web.
+function urlWeb(v, max = 2000) {
+  if (typeof v !== 'string' || v.length > max) return null;
+  try {
+    const u = new URL(v.trim());
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+  } catch { return null; }
+}
+function mediaSicuro(grezzo) {
+  if (!grezzo || typeof grezzo !== 'object' || Array.isArray(grezzo)) return {};
+  const pulito = {};
+  const url = urlWeb(grezzo.url);
+  if (url) pulito.url = url;
+  const thumb = urlWeb(grezzo.thumb);
+  if (thumb) pulito.thumb = thumb;
+  if (typeof grezzo.source === 'string') pulito.source = grezzo.source.slice(0, 120);
+  if (typeof grezzo.tipo === 'string') pulito.tipo = grezzo.tipo.slice(0, 40);
+  return pulito;
+}
+
 import {
   elencoDiscussioni, getDiscussione, contaVista, commenti,
   creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire, archiviaInattive,
@@ -105,7 +130,7 @@ async function handlePost(req) {
           topic: body.topic || null,
           country: body.country || null,
           lang: body.lang || null,
-          media: body.media || {},
+          media: mediaSicuro(body.media),
           roomId: body.roomId || null,
         });
         return NextResponse.json({ id });
@@ -120,8 +145,8 @@ async function handlePost(req) {
       }
       case 'like': {
         if (!body.commentId) return NextResponse.json({ error: 'commentId mancante' }, { status: 400 });
-        await mettiMiPiace({ commentId: body.commentId, email: authorEmail });
-        return NextResponse.json({ ok: true });
+        const esitoLike = await mettiMiPiace({ commentId: body.commentId, email: authorEmail });
+        return NextResponse.json({ ok: true, ...esitoLike });
       }
       // b.244 — SEGNALA: chiunque abbia un account, una volta sola per
       // contenuto. A SOGLIA_NASCONDI segnalazioni sparisce da solo.
@@ -140,7 +165,8 @@ async function handlePost(req) {
         if (!tipoValido(tipo) || !body.contenuto) return NextResponse.json({ error: 'richiesta non valida' }, { status: 400 });
         const idAutore = await autoreDi({ tipo, contenuto: body.contenuto });
         const permesso = puoModerareContenuto({
-          idUtente: idPubblico(authorEmail),
+          // b.363 — l'impronta giusta per il tipo (i corsi ne usano un'altra)
+          idUtente: impronaPerTipo(tipo, authorEmail),
           idAutore,
           emailUtente: authorEmail,
           emailAdmin: process.env.ADMIN_EMAIL,

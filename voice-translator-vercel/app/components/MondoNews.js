@@ -48,12 +48,18 @@ const QUERY_RAPIDE = {
   arte:       { it: 'arte cultura', en: 'art culture', es: 'arte cultura', fr: 'art culture', de: 'kunst kultur' },
 };
 
-function MondoNews({ C, onJoinRoom, onParlane }) {
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione }) {
   const { L, prefs, userToken } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
   // persistente aperta da una card (id) e il flag di creazione in corso.
   const [discAperta, setDiscAperta] = useState(null);
+  // b.363 — la discussione scelta nei risultati di ricerca si apre davvero
+  useEffect(() => {
+    if (!apriDiscussioneId) return;
+    setDiscAperta(apriDiscussioneId);
+    suApertaDiscussione?.();
+  }, [apriDiscussioneId, suApertaDiscussione]);
   const [creando, setCreando] = useState(false);
   // b.187 — il FEED sfogliabile delle discussioni pubbliche persistenti.
   const [feed, setFeed] = useState(null);
@@ -80,6 +86,8 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   const [profonda, setProfonda] = useState(false);
   const [numFonti, setNumFonti] = useState(6);
   const abortRef = useRef(null);
+  const [feedGuasto, setFeedGuasto] = useState(false);
+  const [riprova, setRiprova] = useState(0);
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -88,13 +96,18 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
   useEffect(() => {
     let vivo = true;
     (async () => {
+      // b.363 — un feed CADUTO non e un feed VUOTO: prima entrambi
+      // mostravano la stessa pagina bianca e sembrava che nel mondo non
+      // parlasse nessuno. Ora il guasto si dichiara e si puo riprovare.
       try {
         const r = await fetch(`/api/mondo/discussioni${chipAttiva ? `?topic=${encodeURIComponent(chipAttiva)}` : ''}`);
-        if (r.ok && vivo) { const d = await r.json(); setFeed(d.discussioni || []); }
-      } catch { /* il feed e un di piu, mai un errore in faccia */ }
+        if (!vivo) return;
+        if (r.ok) { const d = await r.json(); setFeed(d.discussioni || []); setFeedGuasto(false); }
+        else setFeedGuasto(true);
+      } catch { if (vivo) setFeedGuasto(true); }
     })();
     return () => { vivo = false; };
-  }, [chipAttiva, discAperta]);
+  }, [chipAttiva, discAperta, riprova]);
 
   // b.255 — finche uno di questi pannelli e aperto, niente si mette
   // davanti: erano proprio loro (composer di una discussione, scheda di
@@ -388,7 +401,7 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
                 {s.nome || s.description}
               </span>
               <span style={{ fontSize: 11, color: C.textMuted, flexShrink: 0 }}>
-                {s.members || 1} · {s.lang?.toUpperCase()}
+                {s.memberCount || s.members || 1} · {s.lang?.toUpperCase()}
               </span>
             </button>
           ))}
@@ -400,6 +413,18 @@ function MondoNews({ C, onJoinRoom, onParlane }) {
           velo per card, ripetuto per tutte, diventa nebbia sull'intera
           pagina. Il fondo translucido basta; il blur vive solo su
           elementi singoli come il pannello COBRA. */}
+      {/* b.363 — il feed e caduto: si dice, e si puo riprovare */}
+      {feedGuasto && (!feed || feed.length === 0) && (
+        <button onClick={() => { vibrate(8); setFeedGuasto(false); setRiprova(n => n + 1); }}
+          style={{
+            width: '100%', marginBottom: 16, padding: '12px 14px', borderRadius: 12,
+            background: 'none', border: `1px solid ${C.border || 'rgba(255,255,255,0.12)'}`,
+            color: C.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: 'pointer',
+          }}>
+          {L('newsError')} · {L('retryWord')}
+        </button>
+      )}
+
       {/* ─── b.187 · Feed delle discussioni pubbliche persistenti ─── */}
       {feed && feed.length > 0 && (
         <div style={{ marginBottom: 16 }}>

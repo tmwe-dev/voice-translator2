@@ -20,6 +20,9 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { getSupabaseAdmin } from './supabase.js';
+// b.363 — le due impronte: le discussioni usano idPubblico, i corsi idUtente.
+import { idPubblico } from './mondoDB.js';
+import { idUtente } from './compagni/persistenza.js';
 import { createLogger } from './logger.js';
 
 const log = createLogger('moderazione-mondo');
@@ -88,10 +91,22 @@ export async function impostaVisibilita({ tipo, contenuto, nascondi = true } = {
 }
 
 /** L'autore di un contenuto (per sapere se chi chiede può moderarlo). */
+/**
+ * b.363 — le due tabelle usano DUE impronte diverse: le discussioni
+ * `idPubblico`, i corsi `idUtente`. Confrontare quella sbagliata rendeva
+ * impossibile riconoscere l'autore. Qui si sceglie quella giusta.
+ */
+export function impronaPerTipo(tipo, email) {
+  return tipo === 'corso' ? idUtente(email) : idPubblico(email);
+}
+
 export async function autoreDi({ tipo, contenuto } = {}) {
   const sb = getSupabaseAdmin();
   if (!sb || !tipoValido(tipo) || !contenuto) return null;
-  const colonna = tipo === 'corso' ? 'owner' : 'author_user_id';
+  // b.363 — LA COLONNA SBAGLIATA: i corsi pubblicati salvano l'autore in
+  // `autore` (vedi corsi/pubblici.js), non in `owner`. La select falliva
+  // sempre e l'autore di un corso non poteva mai moderare il proprio corso.
+  const colonna = tipo === 'corso' ? 'autore' : 'author_user_id';
   const { data, error } = await sb.from(TIPI[tipo]).select(colonna).eq('id', String(contenuto)).maybeSingle();
   if (error || !data) return null;
   return data[colonna] || null;

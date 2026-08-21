@@ -47,18 +47,23 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora' }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
 
   const cambiaCielo = () => {
+    // b.363 — l'icona avanzava PRIMA di sapere se il comando era arrivato: se
+    // il pianeta non era ancora pronto, mostrava il sole mentre il cielo
+    // restava notte. Ora avanza solo a comando dato davvero.
     const prossimo = (stato + 1) % STATI.length;
-    setStato(prossimo);
     try {
       const doc = ref.current?.contentWindow?.document;
       const bottoni = doc?.querySelectorAll('.terra-sw button, .terra-sw [role="button"]');
-      if (bottoni && bottoni[prossimo]) bottoni[prossimo].click();
-    } catch { /* il file non e ancora pronto */ }
+      if (bottoni && bottoni[prossimo]) {
+        bottoni[prossimo].click();
+        setStato(prossimo);
+      }
+    } catch { /* il file non e ancora pronto: l'icona non mente, resta com'e */ }
   };
 
   const contenitore = sfondo
@@ -71,7 +76,7 @@ export default function GloboMondo({ sfondo = false }) {
         <iframe
           ref={ref}
           src="/mondo-globo.html"
-          title="Il mondo ora"
+          title={titolo}
           allow="accelerometer; gyroscope"
           style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
         />
