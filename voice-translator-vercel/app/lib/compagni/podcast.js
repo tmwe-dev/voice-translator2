@@ -79,7 +79,7 @@ export function promptTurno({ compagno, argomento, round = 1, totaleRound = 1, p
 Sei ${nome}, in un podcast a piu voci, IN TEMPO REALE, come persone vere al bar — non in un'aula. Parli in prima persona, con la tua voce. Rispondi nella lingua: ${lingua}.
 
 ${regoleDibattito(lingua)}
-Porta SEMPRE una tua posizione (mai "non c'e nulla da dire"), ma dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast') })}`;
+Quando hai una posizione fondata, dilla BREVE e viva: quando ti aggancia una frase di un altro, nominalo e reagisci a QUELLA. Niente monologhi. Se su questo giro non hai nulla di fondato, va bene dirlo in una riga e passare: al bar succede.${involucroCompagno({ liberta: compagno && compagno.liberta, capacita: { ricerca: false, fonti: false, memoria: false }, profilo: profiloEffettivo(compagno, 'podcast'), esitoTipizzato: true })}`;
 
   // b.303 — turni BREVI e umani (come RadioChat): 2-4 frasi, non paragrafi.
   const cornice = round === 1

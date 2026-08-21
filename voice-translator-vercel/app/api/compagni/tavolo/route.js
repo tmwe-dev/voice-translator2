@@ -7,7 +7,7 @@ import { promptTavolo, promptSintesi, TAVOLO_MAX } from '../../../lib/compagni/t
 import { analizzaConvergenza, istruzioneConvergenza, puoSaltare } from '../../../lib/compagni/orchestratore.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
-import { temperaturaLiberta } from '../../../lib/compagni/contratto.js';
+import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-tavolo');
 
@@ -75,8 +75,14 @@ async function handlePost(req) {
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
         continue; // un Compagno muto non ferma il tavolo
       }
-      risposte.push({ compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo: r.testo });
-      altriQuestoGiro.push({ nome: c.nome, testo: r.testo });
+      // b.362 — L'ESITO TIPIZZATO letto davvero: chi marca "passo" tace
+      // (a meno che il giro resti vuoto: allora la sua riga di spiegazione
+      // vale come intervento). "domanda" e "risposta" parlano normalmente.
+      const { testo, esito } = staccaEsito(r.testo);
+      if (!testo) continue;
+      if (esito === 'passo' && risposte.length > 0) continue;
+      risposte.push({ compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo, esito });
+      altriQuestoGiro.push({ nome: c.nome, testo });
     }
 
     if (risposte.length === 0) return NextResponse.json({ error: 'Nessuna risposta' }, { status: 502 });

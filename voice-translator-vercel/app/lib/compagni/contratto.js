@@ -166,7 +166,7 @@ export function involucroCompagno({ liberta = LIB_DEF, capacita = {}, antiRipeti
   if (esitoTipizzato) parti.push(ISTRUZIONE_ESITO);
   if (profilo) parti.push(promptProfilo(profilo));
   if (antiRipetizione) {
-    parti.push('Non ripeterti: se hai già detto una cosa in questa conversazione, aggiungi un punto NUOVO invece di riformularla.');
+    parti.push('Non ripeterti: se hai già detto una cosa in questa conversazione, aggiungi un punto NUOVO invece di riformularla — oppure di\' apertamente che non hai altro da aggiungere su questo.');
   }
   return '\n\n' + parti.join('\n\n');
 }

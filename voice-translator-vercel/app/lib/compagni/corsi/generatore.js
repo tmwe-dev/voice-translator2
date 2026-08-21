@@ -225,7 +225,7 @@ Rispondi SOLO con JSON valido:
 
 /** Genera l'elenco lezioni. Ritorna { ok, lezioni } o { ok:false, motivo }. */
 export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
-  const { system, prompt } = promptSyllabus(opts);
+  const { prompt } = promptSyllabus(opts);
   // b.306 — il tetto di 700 token era FISSO, ma b.301 ha portato le lezioni a
   // 12 (universitario) e 14 (ricercatore): il JSON di 12+ lezioni con titoli e
   // obiettivi sfonda i 700 token, esce TRONCATO e illeggibile — "syllabus
@@ -236,7 +236,12 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   // b.308 — tetto alzato a 2800: anche un syllabus da 14 lezioni (ricercatore)
   // ci sta dentro con margine, senza riabbattere contro il soffitto.
   const maxTokens = Math.min(2800, 500 + nLezioni * 150);
-  const r = await generaTesto({ system, prompt, userToken, maxTokens });
+  // b.362 — LA CAUSA RADICE, non piu solo la pezza: per il SYLLABUS il
+  // personaggio del docente non serve (serve alla lezione) e faceva solo
+  // danni davanti a "rispondi SOLO con JSON". Qui la veste e NEUTRA gia al
+  // primo colpo, e la temperatura e bassa: un elenco non e un racconto.
+  const vesteNeutra = `Sei un progettista di percorsi di studio. Rispondi SOLO con JSON valido, senza una parola fuori dal JSON. Scrivi i contenuti in lingua: ${nomeLingua(opts.lingua || 'it')}.`;
+  const r = await generaTesto({ system: vesteNeutra, prompt, userToken, maxTokens, temperature: 0.25 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   let elenco = elencoLezioniDa(estraiJSON(r.testo));
   // b.358 — IL CORSO CHE NON NASCEVA PIU (collaudo di Luca: «il corso di
@@ -248,14 +253,11 @@ export async function generaSyllabus(opts = {}, { userToken = null } = {}) {
   // Ora si RIPROVA UNA VOLTA, con una veste neutra che chiede solo la lista:
   // niente personaggio, niente vocazione, nessuna tentazione di raccontare.
   if (!elenco.length) {
-    log.warn('syllabus illeggibile al primo colpo: si riprova con veste neutra', {
+    log.warn('syllabus illeggibile al primo colpo: si riprova', {
       argomento: String(opts.argomento || '').slice(0, 120),
       inizioRisposta: String(r.testo || '').slice(0, 120),
     });
-    const neutro = await generaTesto({
-      system: `Sei un progettista di percorsi di studio. Rispondi SOLO con JSON valido, senza una parola fuori dal JSON. Scrivi i contenuti in lingua: ${nomeLingua(opts.lingua || 'it')}.`,
-      prompt, userToken, maxTokens,
-    });
+    const neutro = await generaTesto({ system: vesteNeutra, prompt, userToken, maxTokens, temperature: 0.25 });
     if (!neutro.ok) return { ok: false, motivo: neutro.motivo, status: neutro.status };
     elenco = elencoLezioniDa(estraiJSON(neutro.testo));
   }
@@ -400,7 +402,7 @@ Rispondi tu, a voce, come faresti in aula.`;
 /** Genera il quiz di una lezione. */
 export async function generaQuiz(lezione, { lingua = 'it', userToken = null, nDomande = 3, livello = '', contenuto = '', argomento = '', docente = null, osservazioni = [], progresso = [] } = {}) {
   const { system, prompt } = promptQuiz({ lezione, contenuto, argomento, lingua, nDomande, livello, docente, osservazioni, progresso });
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: Math.min(2200, 400 + nDomande * 260) });   // b.308: tetto piu alto, il quiz a 6 domande non si tronca piu
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: Math.min(2200, 400 + nDomande * 260), temperature: 0.3 });   // b.308: tetto piu alto, il quiz a 6 domande non si tronca piu
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const dati = estraiJSON(r.testo);
   if (!Array.isArray(dati) || dati.length === 0) return { ok: false, motivo: 'quiz-illeggibile' };

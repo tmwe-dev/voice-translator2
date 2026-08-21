@@ -27,7 +27,7 @@ const REGOLE_DIBATTITO =
 `REGOLE DEL TAVOLO (valgono su tutto):
 • Ascolta davvero gli altri prima di rispondere.
 • Aggiungi VALORE NUOVO: mai ripetere ciò che è già stato detto.
-• Se concordi con qualcuno, approfondisci o estendi il suo punto.
+• Se concordi con qualcuno, approfondisci o estendi il suo punto — oppure, se non hai nulla di fondato da aggiungere, dillo in una riga e passa: vale piu di un punto costruito per forza.
 • Se dissenti, spiega perché con argomenti concreti.
 • Tono collaborativo ma non conformista: dì la tua anche fuori dal tuo ruolo.
 • L'OBIETTIVO è CONVERGERE, insieme, verso la risposta migliore possibile.`;
@@ -46,7 +46,8 @@ export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQue
   const nome = (compagno && compagno.nome) || 'Ospite';
   const persona = (compagno && compagno.personalita) || '';
   const bloccoObiettivo = obiettivo
-    ? `\n\nOBIETTIVO COMUNE DELLA TAVOLA (tieni SEMPRE la rotta su questo; ogni tuo intervento deve avvicinare il gruppo al risultato): ${obiettivo}`
+    ? `\n\nOBIETTIVO COMUNE DELLA TAVOLA (tieni la rotta su questo): ${obiettivo}
+Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che manca, un'ambiguita della domanda o un presupposto non verificato E' un passo avanti.`
     : '';
   const bloccoConvergenza = convergenza ? `\n\n${convergenza}` : '';
   // b.231 — involucro comune: al Tavolo nessuno ha ricerca/fonti in tempo
@@ -58,6 +59,10 @@ export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQue
     // b.237 — al Tavolo si dibatte: steelman, prove, concessioni, convergenza.
     // Il Deep Setting del Compagno può cambiarlo per questa superficie.
     profilo: profiloEffettivo(compagno, 'tavolo'),
+    // b.362 — il canale per TACERE o CHIEDERE, finalmente acceso: il
+    // marcatore [esito: risposta/domanda/passo] arriva alla route, che sa
+    // saltare chi passa. Era scritto da b.359 ma nessuno lo attivava.
+    esitoTipizzato: true,
   });
   const system =
 `${persona}
@@ -71,7 +76,7 @@ ${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoConvergenza}${involucro}`;
     ? `\n\nIn questo giro hanno già detto:\n${altriQuestoGiro.map(a => `${a.nome}: ${a.testo}`).join('\n')}`
     : '';
   const prompt =
-`${passato ? passato + '\n\n' : ''}[persona]: ${ultimoUmano}${oraAltri}\n\nRispondi come ${nome}: aggiungi qualcosa di nuovo e avvicina il gruppo all'obiettivo.`;
+`${passato ? passato + '\n\n' : ''}[persona]: ${ultimoUmano}${oraAltri}\n\nRispondi come ${nome} SOLO se hai qualcosa di fondato: in quel caso aggiungi un punto nuovo. Se la domanda non e chiara, chiedi il chiarimento. Se ti manca un dato, di' quale. Se non hai nulla oltre a cio che e gia stato detto, passa.`;
   return { system, prompt };
 }
 
@@ -98,14 +103,3 @@ Niente ripetizioni inutili, vai al sodo. Onestà prima di completezza: se manca 
   return { system, prompt };
 }
 
-/**
- * Istruzione di convergenza in base allo stato del giro (adattata da RadioChat):
- * spinge il gruppo a convergere ed evita stagnazione.
- */
-export function istruzioneConvergenza(giro = 0) {
-  if (giro <= 0) return 'Primi scambi: metti sul tavolo la TUA posizione distintiva sull\'obiettivo.';
-  // b.231 — no falso consenso: se i dati non bastano, convergere su ciò che
-  // è certo e dichiarare apertamente cosa resta incerto e perché.
-  if (giro >= 2) return '⚠️ Non girate a vuoto: puntate alla conclusione migliore possibile. Se i dati NON permettono un accordo, convergete su ciò che è certo, dite chiaramente cosa resta incerto e PERCHÉ — senza fabbricare un consenso artificiale.';
-  return 'Costruite l\'uno sull\'altro: convergete verso la risposta migliore, senza ripetervi e senza appiattire un disaccordo reale.';
-}

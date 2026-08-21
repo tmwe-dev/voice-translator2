@@ -5,7 +5,7 @@ import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
-import { temperaturaLiberta } from '../../../lib/compagni/contratto.js';
+import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-podcast');
 
@@ -72,49 +72,21 @@ async function handlePost(req) {
         if (esito.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
         return NextResponse.json({ ok: true, saltato: true, indice: i, totale: tutti.length });
       }
+      // b.362 — l'esito tipizzato anche qui: chi marca "passo" salta il
+      // turno (il client passa al successivo), la sua riga non va in onda.
+      const { testo: testoTurno, esito: tipoTurno } = staccaEsito(esito.testo);
+      if (tipoTurno === 'passo' || !testoTurno) {
+        return NextResponse.json({ ok: true, saltato: true, indice: i, totale: tutti.length });
+      }
       return NextResponse.json({
         ok: true, indice: i, totale: tutti.length,
-        turno: { ordine: t.ordine, round: t.round, compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo: esito.testo },
+        turno: { ordine: t.ordine, round: t.round, compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo: testoTurno },
       });
     }
-    const totaleRound = Math.max(PODCAST_LIMITI.MIN_ROUND, Math.min(Number(round) || PODCAST_LIMITI.ROUND_PREDEFINITI, PODCAST_LIMITI.MAX_ROUND));
-    const turni = ordineTurni(compagni, totaleRound);
-
-    const copioni = [];
-    const precedenti = []; // {nome, testo} — cresce lungo il podcast
-
-    for (const t of turni) {
-      const c = perId.get(t.compagnoId);
-      if (!c) continue;
-      const { system, user } = promptTurno({
-        compagno: c, argomento, round: t.round, totaleRound,
-        precedenti: precedenti.slice(-6), // gli ultimi interventi, per non gonfiare il prompt
-        lingua,
-      });
-      const esito = await generaTesto({
-        system, prompt: user,
-        provider: c.provider, modello: c.modello,
-        userToken, maxTokens: t.round === 1 ? 200 : 150,   // b.303: turni brevi e umani
-        temperature: temperaturaLiberta(c.liberta),
-      });
-      if (!esito.ok) {
-        // Un turno fallito non deve buttare giù tutto il podcast: si salta,
-        // ma se è per credito/auth si ferma e lo dice.
-        if (esito.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
-        if (esito.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
-        log.warn('turno saltato:', t.compagnoId, esito.motivo);
-        continue;
-      }
-      const voce = { ordine: t.ordine, round: t.round, compagnoId: c.id, nome: c.nome, voceId: c.voce?.id, testo: esito.testo };
-      copioni.push(voce);
-      precedenti.push({ nome: c.nome, testo: esito.testo });
-    }
-
-    if (copioni.length === 0) {
-      return NextResponse.json({ error: 'Podcast non generato' }, { status: 502 });
-    }
-
-    return NextResponse.json({ ok: true, argomento, lingua, totaleRound, copioni });
+    // b.362 — il ramo "tutto in una chiamata" e stato rimosso: era morto.
+    // Il client incatena SEMPRE un turno per volta (azione 'turno', b.244);
+    // il vecchio percorso non era piu raggiungibile da nessuna chiamata.
+    return NextResponse.json({ error: "Usa l'azione 'turno'" }, { status: 400 });
   } catch (e) {
     log.error('Errore:', e);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });

@@ -61,14 +61,14 @@ export function analizzaConvergenza(interventi, lingua = 'it') {
 
 const ISTRUZIONI_CONVERGENZA = {
   it: {
-    stagnation: '\n⚠️ LA CONVERSAZIONE È STAGNANTE. Porta un punto di vista COMPLETAMENTE NUOVO o una direzione inaspettata. Cambia prospettiva, usa un\'analogia diversa, o sfida un presupposto condiviso.',
-    agreement: '\nGli agenti stanno convergendo. Approfondisci un aspetto che nessuno ha ancora esplorato, oppure trova una criticità o un\'eccezione alla posizione condivisa.',
+    stagnation: '\n⚠️ LA CONVERSAZIONE È STAGNANTE. Se hai un angolo nuovo FONDATO, portalo: cambia prospettiva o sfida un presupposto condiviso. Altrimenti dillo apertamente: il tema sembra esaurito — e indica cosa servirebbe per andare avanti (un dato, una precisazione della persona).',
+    agreement: '\nGli agenti stanno convergendo. Se vedi una criticità REALE o un\'eccezione vera, dilla; se l\'accordo regge perché è fondato, riconoscilo senza costruire un\'obiezione per non ripeterti.',
     divergence: '\nCi sono opinioni diverse. Cerca un punto di sintesi che integri le prospettive migliori, o proponi un compromesso costruttivo.',
     neutral: '',
   },
   en: {
-    stagnation: '\n⚠️ THE CONVERSATION IS STAGNATING. Bring a COMPLETELY NEW perspective or an unexpected direction. Change angle, use a different analogy, or challenge a shared assumption.',
-    agreement: '\nThe agents are converging. Dive into an aspect no one explored yet, or find a criticism/exception to the shared position.',
+    stagnation: '\n⚠️ THE CONVERSATION IS STAGNATING. If you have a NEW, GROUNDED angle, bring it: change perspective or challenge a shared assumption. Otherwise say openly the topic seems exhausted — and name what would move it forward (a datum, a clarification).',
+    agreement: '\nThe agents are converging. If you see a REAL criticism or true exception, say it; if the agreement holds because it is grounded, acknowledge it rather than inventing an objection.',
     divergence: '\nThere are different opinions. Seek a synthesis of the best perspectives, or propose a constructive compromise.',
     neutral: '',
   },

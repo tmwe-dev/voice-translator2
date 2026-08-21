@@ -29,10 +29,6 @@ async function postJSON(url, corpo) {
   return dati;
 }
 
-/** Genera il copione del podcast: [{ordine, round, compagnoId, nome, voceId, testo}]. */
-export function generaPodcast({ argomento, compagni, round, lingua, userToken }) {
-  return postJSON('/api/compagni/podcast', { argomento, compagni, round, lingua, userToken });
-}
 
 /**
  * b.244 — UN TURNO del podcast. Il client li incatena: cosi nessuna richiesta
@@ -139,19 +135,7 @@ export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere,
   });
 }
 
-/**
- * b.244 — SEGNALA un contenuto della piazza o della libreria. Chiunque abbia
- * un account, una volta sola: a 3 segnalazioni sparisce da solo.
- * `tipo`: 'discussione' | 'commento' | 'corso'.
- */
-export function segnalaContenuto({ tipo, contenuto, motivo, userToken }) {
-  return postJSON('/api/mondo/discussioni', { azione: 'segnala', tipo, contenuto, motivo, userToken });
-}
 
-/** b.244 — nascondi/riapri a mano: solo admin o chi ha aperto la discussione. */
-export function moderaContenuto({ tipo, contenuto, nascondi = true, userToken }) {
-  return postJSON('/api/mondo/discussioni', { azione: 'modera', tipo, contenuto, nascondi, userToken });
-}
 
 // ── b.327 · Ondata A — LA BIBLIOTECA DEI MIEI CORSI ──
 /** Salva il corso appena generato (syllabus stabile). Fallisce in silenzio. */
