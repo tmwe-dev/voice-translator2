@@ -328,7 +328,9 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             alt=""
             aria-hidden
             width={1200} height={619}
-            style={{ width: '100%', maxWidth: 400, height: 'auto', display: 'block' }}
+            // b.363 — al 75% (ordine di Luca): occupava tutta la colonna e
+            // spingeva il titolo e le sezioni troppo in basso.
+            style={{ width: '75%', maxWidth: 300, height: 'auto', display: 'block' }}
           />
           <span style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, fontFamily: FONT, textAlign: 'center' }}>
             {L('actFaceTitle')}
