@@ -4,6 +4,7 @@ import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/sched
 import { ombraAcciaio } from '../lib/acciaio.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
+import Scelta from './ui/Scelta.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -389,6 +390,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* in News il pannello lo riempie MondoNews coi suoi strumenti */}
       <PannelloLaterale aperto={strumenti && tab === 'stanze'} onChiudi={() => setStrumenti(false)}
         titolo={L('tabRooms')} C={C}>
+      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca): sono le
+          decisioni che valgono sempre, e chi apre il pannello deve
+          vederle subito invece di scoprirle in fondo. */}
+      <PreferenzeMondo C={C} />
+
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: '100%', maxWidth: 420,
@@ -412,70 +418,34 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       </div>
-      {/* b.363 — anche le pillole dei filtri stanno dietro la maniglia:
-          sopra il pianeta restavano accese sempre, anche senza usarle. */}
-      {tab === 'stanze' && strumenti && !cercando && (
-      <div style={{
-        display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
-        maxWidth: 460, margin: '0 auto', width: '100%', justifyContent: 'flex-start',
-      }}>
-        {/* b.363 — cercando una lingua fuori dalle 12 pillole (es. il russo)
-            il filtro si applicava ma NESSUNA pillola risultava attiva: la
-            lista sembrava vuota senza motivo e non si poteva togliere il
-            filtro. Qui la lingua scelta compare comunque. */}
-        {(LANG_FILTERS.some(l => l.code === langFilter) ? LANG_FILTERS
-          : [...LANG_FILTERS, { code: langFilter, flag: getLangFlag(langFilter), name: (getLangName(langFilter) || langFilter).slice(0, 12) }]
-        ).map(lf => {
-          const active = langFilter === lf.code;
-          return (
-            <button key={lf.code} onClick={() => { setLangFilter(lf.code); setPaeseScelto(lf.code === 'all' ? null : lf.code.toUpperCase()); }} style={{
-              padding: '5px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-              background: active ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
-              border: active ? 'none' : `1px solid ${C.cardBorder}`,
-              color: active ? '#fff' : C.textSecondary,
-              fontSize: 11, fontWeight: 600, fontFamily: FONT,
-              display: 'flex', alignItems: 'center', gap: 4,
-              WebkitTapHighlightColor: 'transparent',
-              boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
-            }}>
-              <span>{lf.flag}</span>
-              {/* b.363 — il numero: quante stanze ci sono davvero dietro */}
-              {lf.code !== 'all' && perLingua[lf.code] > 0 && (
-                <span style={{ opacity: 0.65, fontWeight: 700 }}>{perLingua[lf.code]}</span>
-              )}
-              <span>{lf.nameKey ? L(lf.nameKey) : lf.name}</span>
-            </button>
-          );
-        })}
-      </div>
-      )}
+      {/* b.363 — DUE TENDINE al posto di due file di pillole: la lingua e
+          il tipo di stanza sono scelte SINGOLE, e una fila di bottoni che
+          va a capo prometteva il contrario. Ognuna dice quante stanze ci
+          sono dietro, cosi si sceglie prima di toccare. */}
+      <Scelta C={C}
+        etichetta={L('yourLang')}
+        valore={langFilter}
+        opzioni={[
+          { valore: 'all', etichetta: L('filterAllVoices'), conto: rooms.length },
+          ...LANG_FILTERS.filter((l) => l.code !== 'all').map((l) => ({
+            valore: l.code,
+            etichetta: `${l.flag} ${l.nameKey ? L(l.nameKey) : l.name}`,
+            conto: perLingua[l.code] || 0,
+          })),
+        ]}
+        onCambia={(v) => { setLangFilter(v); setPaeseScelto(v === 'all' ? null : v.toUpperCase()); }} />
 
-      {/* ═══ MODE PILLS ═══ */}
-      {tab === 'stanze' && strumenti && availableModes.length > 2 && (
-        <div style={{
-          display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
-        }}>
-          {availableModes.map(mode => {
-            const active = modeFilter === mode;
-            const info = MODE_LABELS[mode];
-            return (
-              <button key={mode} onClick={() => setModeFilter(mode)} style={{
-                padding: '4px 10px', borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-                background: active ? `${info?.color || C.accent}18` : 'transparent',
-                border: active ? `1px solid ${info?.color || C.accent}35` : '1px solid transparent',
-                color: active ? (info?.color || C.accent) : C.textMuted,
-                fontSize: 10, fontWeight: 600, fontFamily: FONT,
-                WebkitTapHighlightColor: 'transparent',
-              }}>
-                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${nomeModalita(info, L) || mode}`}
-              </button>
-            );
-          })}
-        </div>
+      {availableModes.length > 2 && (
+        <Scelta C={C}
+          etichetta={L('roomTypeWord')}
+          valore={modeFilter}
+          opzioni={availableModes.map((m) => ({
+            valore: m,
+            etichetta: m === 'all' ? L('filterAllVoices') : (nomeModalita(MODE_LABELS[m], L) || m),
+            conto: m === 'all' ? rooms.length : rooms.filter((r) => r.mode === m).length,
+          }))}
+          onCambia={setModeFilter} />
       )}
-
-        <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo

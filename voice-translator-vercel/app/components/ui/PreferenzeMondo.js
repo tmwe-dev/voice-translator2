@@ -1,6 +1,7 @@
 'use client';
 import { FONT, vibrate } from '../../lib/constants.js';
 import { useApp } from '../../contexts/AppContext.js';
+import Scelta from './Scelta.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LE PREFERENZE DI MONDO — le decisioni che si prendono una volta.
@@ -43,11 +44,33 @@ const PREFERENZE = [
       { valore: 'originali', etichettaKey: 'prefTitlesOriginal' },
     ],
   },
+  // b.363 — "pulsanti per automatizzare i processi desiderati per
+  // default" (Luca): il modo di ricerca era una scelta che si rifaceva a
+  // ogni apertura. Ora si decide una volta e resta.
+  {
+    chiave: 'mondoModo',
+    predefinito: 'veloce',
+    titoloKey: 'prefModeTitle',
+    descKey: 'prefModeDesc',
+    scelte: [
+      { valore: 'veloce', etichettaKey: 'newsModeFast' },
+      { valore: 'approfondita', etichettaKey: 'newsModeDeep' },
+    ],
+  },
+  {
+    chiave: 'mondoAggiorna',
+    predefinito: 'richiesta',
+    titoloKey: 'prefRefreshTitle',
+    descKey: 'prefRefreshDesc',
+    scelte: [
+      { valore: 'apertura', etichettaKey: 'prefRefreshOnOpen' },
+      { valore: 'richiesta', etichettaKey: 'prefRefreshOnDemand' },
+    ],
+  },
 ];
 
 export default function PreferenzeMondo({ C }) {
   const { L, prefs, savePrefs } = useApp();
-  const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.10)'}`;
 
   const cambia = (chiave, valore) => {
     vibrate(6);
@@ -55,46 +78,24 @@ export default function PreferenzeMondo({ C }) {
   };
 
   return (
-    <div style={{ borderTop: bordo, paddingTop: 14 }}>
+    <div style={{ marginBottom: 4 }}>
       <div style={{
         fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted,
-        textTransform: 'uppercase', marginBottom: 10, fontFamily: FONT,
+        textTransform: 'uppercase', marginBottom: 4, fontFamily: FONT,
       }}>
         {L('preferencesWord')}
       </div>
+      <div style={{ fontSize: 11.5, color: C.textMuted, fontFamily: FONT, lineHeight: 1.45, marginBottom: 12 }}>
+        {L('preferencesDesc')}
+      </div>
 
-      {PREFERENZE.map((p) => {
-        const attuale = prefs?.[p.chiave] || p.predefinito;
-        return (
-          <div key={p.chiave} style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
-              {L(p.titoloKey)}
-            </div>
-            <div style={{ fontSize: 11.5, color: C.textMuted, fontFamily: FONT, lineHeight: 1.45, marginTop: 2, marginBottom: 8 }}>
-              {L(p.descKey)}
-            </div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              {p.scelte.map((s) => {
-                const attiva = attuale === s.valore;
-                return (
-                  <button key={s.valore} onClick={() => cambia(p.chiave, s.valore)}
-                    aria-pressed={attiva}
-                    style={{
-                      padding: '7px 13px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                      fontSize: 12, fontWeight: attiva ? 800 : 600,
-                      background: attiva ? `${C.accent}18` : C.card,
-                      border: attiva ? `1px solid ${C.accent}40` : bordo,
-                      color: attiva ? C.accent : C.textSecondary,
-                      WebkitTapHighlightColor: 'transparent',
-                    }}>
-                    {L(s.etichettaKey)}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
+      {PREFERENZE.map((p) => (
+        <Scelta key={p.chiave} C={C}
+          etichetta={L(p.titoloKey)}
+          valore={prefs?.[p.chiave] || p.predefinito}
+          opzioni={p.scelte.map((s) => ({ valore: s.valore, etichetta: L(s.etichettaKey) }))}
+          onCambia={(v) => cambia(p.chiave, v)} />
+      ))}
     </div>
   );
 }

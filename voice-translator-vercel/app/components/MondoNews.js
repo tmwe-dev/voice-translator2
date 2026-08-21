@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import Scelta from './ui/Scelta.js';
 import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -86,10 +87,24 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [videoAttivi, setVideoAttivi] = useState(false);
   // b.185 — seconda modalita: Veloce (default) o Approfondita (piu fonti,
   // Wikipedia in testa). `numFonti` = quanto approfondire (3/6/10).
-  const [profonda, setProfonda] = useState(false);
+  // b.363 — il modo lo dice la PREFERENZA: si decide una volta e resta.
+  const profonda = (prefs?.mondoModo || 'veloce') === 'approfondita';
   const [numFonti, setNumFonti] = useState(6);
   const abortRef = useRef(null);
   const [feedGuasto, setFeedGuasto] = useState(false);
+  // b.363 — LA PREFERENZA "QUANDO AGGIORNO", che fa una cosa vera: se e
+  // impostata su "all'apertura", le notizie si cercano da sole appena si
+  // entra, una volta sola. Altrimenti si aspetta che tu tocchi Aggiorna,
+  // che e il modo di non spendere credito senza averlo chiesto.
+  const giaCercato = useRef(false);
+  useEffect(() => {
+    if ((prefs?.mondoAggiorna || 'richiesta') !== 'apertura') return;
+    if (giaCercato.current || !userToken) return;
+    giaCercato.current = true;
+    cercaChip(CATEGORIE[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs?.mondoAggiorna, userToken]);
+
   // b.363 — l'argomento scelto fra quelli VERI delle discussioni aperte
   const [argomentoFiltro, setArgomentoFiltro] = useState(null);
   const [riprova, setRiprova] = useState(0);
@@ -309,6 +324,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           quando nessuno li stava usando. Ora si aprono toccando l'icona
           del giornale in alto a sinistra, e si richiudono. */}
       <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
+      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca). Sono le
+          decisioni che valgono sempre: si sistemano una volta e poi non
+          si toccano piu. Metterle in cima vuol dire che chi apre il
+          pannello la prima volta le vede, invece di scoprirle in fondo
+          dopo tre file di bottoni. */}
+      <PreferenzeMondo C={C} />
+
       {/* ─── Cerca + Aggiorna ─── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
@@ -338,98 +360,57 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         </button>
       </div>
 
-      {/* ─── b.185 · Modalita: Veloce / Approfondita + quante fonti ─── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', gap: 4, background: C.card, border: bordo, borderRadius: 999, padding: 3 }}>
-          <button onClick={() => { setProfonda(false); vibrate(10); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
-              background: !profonda ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
-              border: 'none', color: !profonda ? '#fff' : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-            <Icon name="zap" size={13} color={!profonda ? '#fff' : C.textMuted} /> {L('newsModeFast')}
-          </button>
-          <button onClick={() => { setProfonda(true); vibrate(10); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
-              background: profonda ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : 'transparent',
-              border: 'none', color: profonda ? '#fff' : C.textSecondary, fontSize: 12, fontWeight: 700, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-            <Icon name="graduation" size={13} color={profonda ? '#fff' : C.textMuted} /> {L('newsModeDeep')}
-          </button>
-        </div>
-        {profonda && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 11, color: C.textMuted, fontFamily: FONT }}>{L('newsSourcesShort')}</span>
-            {[3, 6, 10].map(n => (
-              <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
-                style={{
-                  width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 700,
-                  background: numFonti === n ? `${C.accent}20` : C.card,
-                  border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
-                  color: numFonti === n ? C.accent : C.textSecondary,
-                  WebkitTapHighlightColor: 'transparent',
-                }}>{n}</button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* b.363 — IL SELETTORE ARGOMENTI: quelli di cui si parla qui dentro */}
-      {argomentiVeri.length > 0 && (
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
-            {L('topicsWord')}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
-            <button onClick={() => { vibrate(6); setArgomentoFiltro(null); }}
+      {/* b.363 — I DUE MODI SONO DIVENTATI UNA PREFERENZA (qui sopra):
+          era una scelta da rifare a ogni apertura, e invece e una cosa
+          che si decide una volta. Qui resta solo quante fonti leggere
+          quando si va a fondo, che e un dettaglio del momento. */}
+      {profonda && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <span style={{ fontSize: 11, color: C.textMuted, fontFamily: FONT }}>{L('newsSourcesShort')}</span>
+          {[3, 6, 10].map(n => (
+            <button key={n} onClick={() => { setNumFonti(n); vibrate(8); }}
               style={{
-                padding: '6px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                fontSize: 12, fontWeight: argomentoFiltro === null ? 800 : 600,
-                background: argomentoFiltro === null ? `${C.accent}18` : C.card,
-                border: argomentoFiltro === null ? `1px solid ${C.accent}40` : bordo,
-                color: argomentoFiltro === null ? C.accent : C.textSecondary,
+                width: 30, height: 28, borderRadius: 9, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 700,
+                background: numFonti === n ? `${C.accent}20` : C.card,
+                border: numFonti === n ? `1px solid ${C.accent}45` : bordo,
+                color: numFonti === n ? C.accent : C.textSecondary,
                 WebkitTapHighlightColor: 'transparent',
-              }}>{L('allTopicsWord')}</button>
-            {argomentiVeri.map(([arg, n]) => {
-              const attivo = argomentoFiltro === arg;
-              return (
-                <button key={arg} onClick={() => { vibrate(6); setArgomentoFiltro(attivo ? null : arg); }}
-                  style={{
-                    padding: '6px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
-                    fontSize: 12, fontWeight: attivo ? 800 : 600,
-                    background: attivo ? `${C.accent}18` : C.card,
-                    border: attivo ? `1px solid ${C.accent}40` : bordo,
-                    color: attivo ? C.accent : C.textSecondary,
-                    WebkitTapHighlightColor: 'transparent',
-                  }}>
-                  {arg} <span style={{ opacity: 0.6, fontWeight: 600 }}>{n}</span>
-                </button>
-              );
-            })}
-          </div>
+              }}>{n}</button>
+          ))}
         </div>
       )}
 
-      {/* ─── Scorciatoie ─── */}
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10 }}>
-        {CATEGORIE.map(c => (
-          <button key={c.id} onClick={() => cercaChip(c)} disabled={cercando}
-            style={{
-              padding: '7px 13px', borderRadius: 999, whiteSpace: 'nowrap', cursor: 'pointer',
-              background: chipAttiva === c.id ? `${C.accent}18` : C.card,
-              border: chipAttiva === c.id ? `1px solid ${C.accent}40` : bordo,
-              color: chipAttiva === c.id ? C.accent : C.textSecondary,
-              fontSize: 12, fontWeight: chipAttiva === c.id ? 700 : 500, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent',
-            }}>
-            {L(c.labelKey)}
-          </button>
-        ))}
-      </div>
-      <PreferenzeMondo C={C} />
+      {/* b.363 — DUE TENDINE AL POSTO DI DUE PARETI DI PILLOLE (ordine di
+          Luca: «in dropdown se la scelta e singola»). Erano quaranta
+          bottoni su otto righe, per due scelte che sono SINGOLE: una fila
+          di pillole promette "puoi averne piu di una", una tendina dice
+          la verita, e occupa una riga invece di otto.
+          Sono due cose diverse e vanno tenute distinte: la prima filtra
+          cio che c'e QUI DENTRO, la seconda va a cercare LA FUORI. */}
+      {argomentiVeri.length > 0 && (
+        <Scelta C={C}
+          etichetta={L('topicsWord')}
+          valore={argomentoFiltro || ''}
+          opzioni={[
+            { valore: '', etichetta: L('allTopicsWord'), conto: feed?.length || 0 },
+            ...argomentiVeri.map(([arg, n]) => ({ valore: arg, etichetta: arg, conto: n })),
+          ]}
+          onCambia={(v) => setArgomentoFiltro(v || null)} />
+      )}
+
+      <Scelta C={C}
+        etichetta={L('searchCategoryWord')}
+        valore={chipAttiva || ''}
+        opzioni={[
+          { valore: '', etichetta: L('allTopicsWord') },
+          ...CATEGORIE.map((c) => ({ valore: c.id, etichetta: L(c.labelKey) })),
+        ]}
+        onCambia={(v) => {
+          if (!v) { setChipAttiva(null); return; }
+          const c = CATEGORIE.find((x) => x.id === v);
+          if (c) cercaChip(c);
+        }} />
+
       </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}

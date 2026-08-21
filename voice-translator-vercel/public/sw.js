@@ -1,5 +1,5 @@
 // Service Worker for BarTalk — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 14; // b.337 — butta il pacchetto b.335 (crollo di Life) rimasto in cache sui client
+const CACHE_VERSION = 15; // b.363 — butta i pezzi misti rimasti sui client dopo i rilasci di oggi
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;
@@ -328,7 +328,14 @@ self.addEventListener('fetch', (event) => {
           }
           return res;
         });
-        return cached || networkFetch;
+        // b.363 — PRIMA LA RETE, POI LA CACHE. Qui era il contrario, e
+        // costava caro: dopo un rilascio il browser continuava a servire i
+        // pezzi di programma vecchi finche erano in cache. Mescolati ai
+        // pezzi nuovi davano errori incomprensibili — "non posso accedere a
+        // X prima che sia pronto" — e schermate rotte su un'app che in
+        // realta era sana. Ora la rete comanda e la cache resta quello che
+        // deve essere: la rete di sicurezza per quando si e senza linea.
+        return networkFetch.catch(() => cached);
       })
     );
     return;
