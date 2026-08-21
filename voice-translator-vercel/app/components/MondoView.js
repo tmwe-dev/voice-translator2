@@ -521,12 +521,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
 
       {/* ═══ TAB NEWS ═══ */}
+      {/* b.365 — QUI NON SI SCORRE PIU. Da quando il pannello si
+          RIBALTA per leggere un articolo, lo scorrimento deve stare
+          DENTRO la faccia che si vede: se restasse qui, girando il
+          foglio l'elenco perderebbe il segno e l'articolo si
+          troverebbe gia a meta pagina. */}
       {tab === 'news' && !cercando && (
-        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5 }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 5 }}>
           {/* b.324 — audit Mondo D8: su schermo largo il contenuto andava a
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
-          <div style={{ maxWidth: 440, margin: '0 auto' }}>
+          <div style={{ maxWidth: 440, margin: '0 auto', width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>

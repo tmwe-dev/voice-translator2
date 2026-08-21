@@ -26,6 +26,8 @@ import Icon from './Icon.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import SchedaArgomento from './SchedaArgomento.js';
 import MondoDiscussioni from './MondoDiscussioni.js';
+import Ribalta from './ui/Ribalta.js';
+import LettoreArticolo from './ui/LettoreArticolo.js';
 import MondoPersona from './MondoPersona.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.255 — vedi lib/pannelloPieno.js: un pannello che copre lo schermo lo
@@ -60,6 +62,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
   // persistente aperta da una card (id) e il flag di creazione in corso.
   const [discAperta, setDiscAperta] = useState(null);
+  // b.365 — cosa c'e sull'altra faccia del foglio: un articolo da
+  // leggere, oppure niente (allora dietro ci va la discussione).
+  const [lettura, setLettura] = useState(null);
   // b.363 — la discussione scelta nei risultati di ricerca si apre davvero
   useEffect(() => {
     if (!apriDiscussioneId) return;
@@ -320,12 +325,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
   const bordo = `1px solid ${C.cardBorder}`;
 
+  // b.149 — su un monitor largo le card diventavano lenzuola con
+  // riquadri-immagine giganteschi (schermate di Luca). Le news hanno
+  // il passo di un telefono: colonna centrata, mai piu larga di 680px,
+  // come la Home.
   return (
-    // b.149 — su un monitor largo le card diventavano lenzuola con
-    // riquadri-immagine giganteschi (schermate di Luca). Le news hanno
-    // il passo di un telefono: colonna centrata, mai piu larga di 680px,
-    // come la Home.
-    <div style={{ padding: '0 16px 96px', fontFamily: FONT, maxWidth: 680, margin: '0 auto' }}>
+    <>
+    <Ribalta girato={!!(lettura || discAperta)}
+      fronte={
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
+      <div style={{ padding: '0 16px 96px', fontFamily: FONT, maxWidth: 680, margin: '0 auto' }}>
 
       {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
           restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due
@@ -528,87 +537,161 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               const eta = quando(d.last_activity_at || d.created_at, L);
               const vita = viva(d.comment_count);
               const eti = stileEtichetta(C);
+              const foto = d.media?.thumb;
+              const leggibile = !!d.media?.url;
+              // b.365 — L'IMMAGINE COMANDA (ordine di Luca). Misurate le
+              // foto che Cobra porta a casa: 1400x933 e 1218x762. Erano
+              // vere fotografie, e le stavamo spegnendo dentro un
+              // francobollo da 62 pixel accanto al testo. Ora prendono
+              // tutta la larghezza, in 16:9, e sono la prima cosa che
+              // l'occhio incontra — come su qualunque giornale.
               return (
-                <button key={d.id} onClick={() => {
-                    vibrate(8);
-                    setDiscAperta(d.id);
-                    // b.363 — quello che uno APRE vale piu di quello che
-                    // dichiara: si tiene il conto, e ordina il prossimo giro.
-                    if (d.topic && savePrefs) savePrefs(segnaApertura(prefs, d.topic));
-                  }}
-                  style={{
-                    width: '100%', textAlign: 'left', display: 'flex', gap: 12, alignItems: 'flex-start',
-                    padding: 12, marginBottom: 8, borderRadius: 14,
-                    background: 'rgba(11,15,28,0.94)', border: bordo,
-                    cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
-                  }}>
-                  <span style={{ flex: 1, minWidth: 0 }}>
-                    {/* 1. DA DOVE, DI COSA, QUANDO */}
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
-                      {/* b.363 — IL PAESE A UN TOCCO (ordine di Luca): la
-                          bandiera non e una decorazione, e un comando. Si
-                          tocca e l'elenco resta solo su quel paese; si
-                          ritocca e torna il mondo intero. Non e un
-                          bottone dentro un bottone (che il browser
-                          rifiuta): e la bandiera stessa che intercetta il
-                          tocco e non lo lascia passare alla scheda. */}
-                      {bandiera && (
-                        <span role="button" tabIndex={0}
-                          aria-label={d.country}
-                          onClick={(e) => { e.stopPropagation(); vibrate(6); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); } }}
-                          style={{
-                            fontSize: 13, lineHeight: 1, cursor: 'pointer', borderRadius: 4,
-                            padding: '1px 2px',
-                            outline: paeseFiltro === d.country ? `1px solid ${C.accent}` : 'none',
-                          }}>{bandiera}</span>
-                      )}
-                      {d.topic && <span style={eti}>{d.topic}</span>}
-                      {d.topic && eta && <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>}
-                      {eta && <span style={eti}>{eta}</span>}
-                    </span>
+                <article key={d.id} style={{
+                  marginBottom: 12, borderRadius: 16, overflow: 'hidden',
+                  background: 'rgba(11,15,28,0.94)', border: bordo, fontFamily: FONT,
+                }}>
+                  <button onClick={() => {
+                      vibrate(8);
+                      // b.363 — quello che uno APRE vale piu di quello che
+                      // dichiara: si tiene il conto, e ordina il prossimo giro.
+                      if (d.topic && savePrefs) savePrefs(segnaApertura(prefs, d.topic));
+                      // b.365 — leggere l'articolo RIBALTA l'elenco; se non
+                      // c'e un articolo da leggere si apre la discussione.
+                      if (leggibile) setLettura({ url: d.media.url, titolo: d.title, fonte });
+                      else setDiscAperta(d.id);
+                    }}
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left', padding: 0,
+                      background: 'none', border: 'none', cursor: 'pointer',
+                      fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
+                    }}>
 
-                    {/* 2. IL TITOLO: due righe piene, il pezzo piu grosso */}
+                    {/* LA FOTO, a tutta larghezza. Se non c'e, non si lascia
+                        un buco: resta l'iniziale della fonte su un fondale,
+                        della STESSA altezza, cosi le schede restano in riga. */}
                     <span style={{
-                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden', fontSize: 14, fontWeight: 600, lineHeight: 1.35,
-                      color: C.textPrimary,
-                    }}>{d.title || '—'}</span>
-
-                    {/* 3. CHI, COS'E', E QUANTA VITA C'E' DENTRO */}
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-                      {fonte && <span style={eti}>{fonte}</span>}
-                      {tipo && tipo !== 'articolo' && (
-                        <span style={{
-                          ...eti, color: C.accent, background: `${C.accent}18`,
-                          borderRadius: 5, padding: '1px 6px',
-                        }}>{L(tipo === 'video' ? 'videoWord' : 'postWord')}</span>
+                      display: 'block', position: 'relative', width: '100%', aspectRatio: '16 / 9',
+                      background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)`, overflow: 'hidden',
+                    }}>
+                      {/* b.365 — IL RIPIEGO STA SEMPRE SOTTO, non al posto.
+                          Misurato dal vivo: parecchi giornali (Sky fra
+                          questi) RIFIUTANO di servire la loro foto a un
+                          altro sito. Con la miniatura da 62 pixel era una
+                          macchia; con l'immagine a tutta larghezza sarebbe
+                          un buco enorme con dentro l'icona di immagine
+                          rotta del browser. Quindi l'iniziale della fonte
+                          si disegna SEMPRE, e la foto ci sta sopra: se
+                          muore in volo, si toglie solo lei e sotto c'e gia
+                          qualcosa di decente. */}
+                      <span style={{
+                        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 34, fontWeight: 800, color: `${C.accent}55`, letterSpacing: 1,
+                      }}>{(fonte || d.title || '\u00b7').slice(0, 1).toUpperCase()}</span>
+                      {foto && (
+                        <AnteprimaCoperta src={foto} contenuto={d.media} L={L}
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          stile={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       )}
-                      {vita.n > 0 && (
-                        <span style={{ ...eti, color: vita.accesa ? C.accent : C.textMuted, fontWeight: vita.accesa ? 800 : 700 }}>
-                          {vita.n} {L('commentsWord')}
-                        </span>
-                      )}
-                    </span>
-                  </span>
-
-                  {/* 4. LA FACCIA: e la prima cosa che l'occhio prende. Se e
-                      un video, il triangolo dice "questo si guarda". */}
-                  {d.media?.thumb ? (
-                    <span style={{ position: 'relative', flexShrink: 0 }}>
-                      <AnteprimaCoperta src={d.media.thumb} contenuto={d.media} L={L}
-                        stile={{ width: 62, height: 62, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+                      {/* il velo in basso: il titolo qui sotto resta leggibile
+                          anche sopra una foto chiara */}
+                      <span style={{
+                        position: 'absolute', inset: 0, pointerEvents: 'none',
+                        background: 'linear-gradient(180deg, transparent 58%, rgba(11,15,28,0.92))',
+                      }} />
+                      {/* se e un video il triangolo lo dice da lontano */}
                       {tipo === 'video' && (
                         <span style={{
                           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(0,0,0,0.35)', borderRadius: 10, color: '#fff', fontSize: 17,
-                        }}>▶</span>
+                          pointerEvents: 'none',
+                        }}>
+                          <span style={{
+                            width: 46, height: 46, borderRadius: 999, background: 'rgba(6,9,18,0.62)',
+                            border: '1px solid rgba(255,255,255,0.25)', display: 'flex',
+                            alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 17,
+                          }}>&#9654;</span>
+                        </span>
                       )}
+                      {/* DA DOVE, DI COSA, QUANDO — sopra la foto, in alto */}
+                      <span style={{
+                        position: 'absolute', top: 8, left: 10, right: 10,
+                        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+                      }}>
+                        {bandiera && (
+                          <span role="button" tabIndex={0}
+                            aria-label={d.country}
+                            onClick={(e) => { e.stopPropagation(); vibrate(6); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); } }}
+                            style={{
+                              fontSize: 14, lineHeight: 1, cursor: 'pointer', borderRadius: 5,
+                              padding: '2px 4px', background: 'rgba(6,9,18,0.6)',
+                              outline: paeseFiltro === d.country ? `1px solid ${C.accent}` : 'none',
+                            }}>{bandiera}</span>
+                        )}
+                        {d.topic && (
+                          <span style={{
+                            ...eti, background: 'rgba(6,9,18,0.6)', borderRadius: 5, padding: '2px 6px',
+                            color: 'rgba(226,236,252,0.9)',
+                          }}>{d.topic}</span>
+                        )}
+                        {tipo && tipo !== 'articolo' && (
+                          <span style={{
+                            ...eti, color: C.accent, background: 'rgba(6,9,18,0.6)',
+                            borderRadius: 5, padding: '2px 6px',
+                          }}>{L(tipo === 'video' ? 'videoWord' : 'postWord')}</span>
+                        )}
+                      </span>
                     </span>
-                  ) : (
-                    <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0, alignSelf: 'center' }}>›</span>
-                  )}
-                </button>
+
+                    {/* IL TITOLO: il pezzo piu grosso, sotto la foto */}
+                    <span style={{ display: 'block', padding: '10px 12px 8px' }}>
+                      <span style={{
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden', fontSize: 15, fontWeight: 700, lineHeight: 1.35,
+                        color: C.textPrimary,
+                      }}>{d.title || '\u2014'}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                        {fonte && <span style={eti}>{fonte}</span>}
+                        {fonte && eta && <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>}
+                        {eta && <span style={eti}>{eta}</span>}
+                      </span>
+                    </span>
+                  </button>
+
+                  {/* LA RIGA DEI GESTI: leggere e commentare sono due cose
+                      diverse e vanno toccate separatamente. Prima erano lo
+                      stesso tocco e non si poteva scegliere. */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '8px 12px 10px', borderTop: bordo,
+                  }}>
+                    <button onClick={() => { vibrate(6); setDiscAperta(d.id); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 6, padding: '7px 11px',
+                        borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12,
+                        background: 'rgba(255,255,255,0.045)', border: bordo,
+                        color: vita.accesa ? C.accent : C.textMuted,
+                        fontWeight: vita.accesa ? 800 : 700, WebkitTapHighlightColor: 'transparent',
+                      }}>
+                      <Icon name="chat" size={13} color={vita.accesa ? C.accent : C.textMuted} />
+                      {vita.n > 0 ? `${vita.n} ${L('commentsWord')}` : L('commentsWord')}
+                    </button>
+
+                    <span style={{ flex: 1 }} />
+
+                    {leggibile && (
+                      <button onClick={() => { vibrate(6); setLettura({ url: d.media.url, titolo: d.title, fonte }); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 6, padding: '7px 13px',
+                          borderRadius: 10, cursor: 'pointer', fontFamily: FONT, fontSize: 12, fontWeight: 800,
+                          background: `${C.accent}1A`, border: `1px solid ${C.accent}44`, color: C.accent,
+                          WebkitTapHighlightColor: 'transparent',
+                        }}>
+                        <Icon name="doc" size={13} color={C.accent} />
+                        {L('readWord')}
+                      </button>
+                    )}
+                  </div>
+                </article>
               );
             })()
           ))}
@@ -789,18 +872,31 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           setScheda(null);
         }} />
 
-      {/* b.186 — il thread di una discussione pubblica persistente */}
-      {discAperta && (
-        <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)}
-          onOpenPersona={(id) => setPersonaAperta(id)} />
-      )}
+      </div>
+      </div>
+      }
+      // b.365 — L'ALTRA FACCIA (ordine di Luca: «ribalta il container
+      // elenco di 180 gradi e permetti di leggere l'articolo; fai la
+      // stessa cosa per i commenti o per entrare nella chat»).
+      // L'articolo ha la precedenza: se uno stava leggendo e poi apre i
+      // commenti, si torna indietro di un passo alla volta.
+      retro={
+        lettura ? (
+          <LettoreArticolo url={lettura.url} titolo={lettura.titolo} fonte={lettura.fonte}
+            C={C} L={L} onIndietro={() => setLettura(null)} />
+        ) : discAperta ? (
+          <MondoDiscussioni discussionId={discAperta} onClose={() => setDiscAperta(null)}
+            onOpenPersona={(id) => setPersonaAperta(id)} />
+        ) : null
+      } />
 
-      {/* b.188 — il profilo pubblico di una persona (sopra il thread) */}
+      {/* b.188 — il profilo pubblico di una persona: sta SOPRA tutto, non
+          su una faccia del foglio, se no girando sparirebbe. */}
       {personaAperta && (
         <MondoPersona publicId={personaAperta} onClose={() => setPersonaAperta(null)}
           onOpenDiscussione={(id) => { setPersonaAperta(null); setDiscAperta(id); }} />
       )}
-    </div>
+    </>
   );
 }
 

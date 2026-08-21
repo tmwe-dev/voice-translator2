@@ -65,6 +65,10 @@ export default function AnteprimaCoperta({ src, contenuto, stile = {}, alt = '',
           sfocatura non lasci un alone chiaro sui bordi. */}
       <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer"
         aria-hidden="true"
+        // b.365 — anche coperta puo essere un'immagine morta (parecchi
+        // giornali le rifiutano a chi non e loro): se muore si toglie e
+        // resta il velo, non l'icona di rotto del browser.
+        onError={(e) => { e.currentTarget.style.display = 'none'; }}
         style={{
           width: '100%', height: '100%', objectFit: 'cover', display: 'block',
           filter: 'blur(18px) saturate(0.6)', transform: 'scale(1.25)',
