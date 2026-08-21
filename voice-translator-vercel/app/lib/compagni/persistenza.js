@@ -29,7 +29,7 @@ function slug(s) {
 function daRiga(r) {
   return {
     id: r.id, nome: r.nome, ruolo: r.ruolo || '', emoji: r.emoji || '✨', colore: r.colore || '#26D9B0',
-    avatar: r.avatar || '/avatars/9.png', voce: { id: r.voce_id, nome: r.voce_nome || '' },
+    avatar: r.avatar || '/avatars/9.webp', voce: { id: r.voce_id, nome: r.voce_nome || '' },
     provider: r.provider, modello: r.modello, liberta: r.liberta, personalita: r.personalita || '',
     lingua: r.lingua || '', memoria: !!r.memoria, predefinito: false,
     // b.317 — audit D5/D6: genere e barre ora SOPRAVVIVONO al salvataggio.
@@ -60,7 +60,7 @@ export async function elencaCompagni(email) {
 // percorso interno, un indirizzo web corto, o un'immagine incorporata
 // solo se sta sotto una soglia ragionevole.
 const TETTO_DATAURL = 300 * 1024; // ~300 KB di base64
-const AVATAR_PREDEFINITO = '/avatars/9.png';
+const AVATAR_PREDEFINITO = '/avatars/9.webp';
 
 // b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
 // il progetto senza che nessuno la chiedesse.

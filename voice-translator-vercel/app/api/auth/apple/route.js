@@ -134,7 +134,7 @@ async function appleHandler(req) {
     let user = await getUser(email);
     const isNewUser = !user;
     if (!user) {
-      user = await createUser(email, name, 'it', '/avatars/1.png');
+      user = await createUser(email, name, 'it', '/avatars/1.webp');
     }
 
     // Apply referral bonus if provided and new user

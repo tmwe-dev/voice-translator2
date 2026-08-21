@@ -33,7 +33,7 @@ async function handlePost(req) {
     // Create or get test user
     let user = await getUser(TEST_EMAIL);
     if (!user) {
-      user = await createUser(TEST_EMAIL, 'Test User', 'it', '/avatars/1.png');
+      user = await createUser(TEST_EMAIL, 'Test User', 'it', '/avatars/1.webp');
     }
 
     // Set up test API keys (use platform keys from env)

@@ -105,7 +105,7 @@ async function handler(req) {
       let user = await getUser(email);
       const isNewUser = !user;
       if (!user) {
-        user = await createUser(email, name || '', lang || 'it', avatar || '/avatars/1.png');
+        user = await createUser(email, name || '', lang || 'it', avatar || '/avatars/1.webp');
       }
 
       // Apply referral bonus if referral code provided and this is a new user
@@ -139,7 +139,7 @@ async function handler(req) {
             supabaseUserId = existing.id;
             await sb.from('profiles').update({
               name: user.name || name || '',
-              avatar: user.avatar || avatar || '/avatars/1.png',
+              avatar: user.avatar || avatar || '/avatars/1.webp',
               lang: user.lang || lang || 'it',
               last_login: new Date().toISOString(),
               updated_at: new Date().toISOString(),
@@ -156,7 +156,7 @@ async function handler(req) {
                 id: matchedUser.id,
                 email,
                 name: user.name || name || '',
-                avatar: user.avatar || avatar || '/avatars/1.png',
+                avatar: user.avatar || avatar || '/avatars/1.webp',
                 lang: user.lang || lang || 'it',
                 tier: user.tier || 'free',
                 credits: user.credits || 0,

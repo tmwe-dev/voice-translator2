@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
+import { formaLinguetta, LINGUETTA } from '../lib/righello.js';
 import { FONT, LANGS, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { conRipiego } from '../lib/ripiego.js';
@@ -47,21 +48,21 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
           sul bordo sinistro. E la pila non le sta piu sopra: se n'e
           andata nell'angolo in alto a destra, per conto suo. */}
       {!aperto && (
-        <div style={{
-          position: 'fixed', left: 10, zIndex: 60,
-          bottom: 'calc(94px + 20px + env(safe-area-inset-bottom))',
-        }}>
-          <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '14px 14px', border: bordo, cursor: 'pointer',
-              background: card, borderRadius: 18, fontFamily: FONT,
-              boxShadow: '2px 2px 14px rgba(0,0,0,0.35)', WebkitTapHighlightColor: 'transparent',
-            }}>
-            {/* b.360 — via la freccia verde (Luca): resta la sola bandiera */}
-            <span style={{ fontSize: 33, lineHeight: 1 }}>{linguaAttuale?.flag || <Icon name="globe" size={30} color={accent} />}</span>
-          </button>
-        </div>
+        // b.363 — GEMELLA della linguetta del pannello: stessa larghezza,
+        // stessa forma, attaccata allo stesso bordo. Prima erano due cose
+        // diverse sullo stesso lato — una larga trenta attaccata, una larga
+        // cinquanta staccata di dieci, con due arrotondamenti diversi.
+        <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
+          style={{
+            ...formaLinguetta({ card, cardBorder: null }, {
+              bottom: 'calc(94px + 20px + env(safe-area-inset-bottom))',
+            }),
+            border: bordo, borderLeft: 'none',
+            fontFamily: FONT, zIndex: 60,
+          }}>
+          {/* b.360 — via la freccia verde (Luca): resta la sola bandiera */}
+          <span style={{ fontSize: 26, lineHeight: 1 }}>{linguaAttuale?.flag || <Icon name="globe" size={LINGUETTA.icona} color={accent} />}</span>
+        </button>
       )}
 
       {/* Pannello a scomparsa */}

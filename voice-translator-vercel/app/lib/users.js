@@ -45,7 +45,7 @@ export async function createUser(email, name, lang, avatar) {
     email: email.toLowerCase(),
     name: name || '',
     lang: lang || 'it',
-    avatar: avatar || '/avatars/1.png',
+    avatar: avatar || '/avatars/1.webp',
     credits: 0,
     totalSpent: 0,
     totalMessages: 0,

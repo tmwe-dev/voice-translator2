@@ -462,16 +462,31 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
             {L('worldNowTitle')}
           </div>
           {feed.slice(0, 12).map(d => (
+            // b.363 — LE SCHEDE ERANO ILLEGGIBILI. Il fondo era quello
+            // translucido delle card, ma dietro non c'e piu una pagina
+            // scura: c'e il PIANETA, che e chiaro e brillante. Il titolo
+            // bianco finiva sopra l'alone azzurro e non si leggeva. Ora la
+            // scheda copre. E il titolo non si taglia piu a meta parola
+            // dopo una riga: ne ha due, che bastano per capire di cosa si
+            // parla senza aprire.
             <button key={d.id} onClick={() => { vibrate(8); setDiscAperta(d.id); }}
               style={{
-                width: '100%', textAlign: 'left', display: 'flex', gap: 10, alignItems: 'center',
-                padding: '10px 12px', marginBottom: 8, borderRadius: 12, background: C.card, border: bordo,
+                width: '100%', textAlign: 'left', display: 'flex', gap: 11, alignItems: 'center',
+                padding: '12px 13px', marginBottom: 8, borderRadius: 14,
+                background: 'rgba(11,15,28,0.94)', border: bordo,
                 cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
               }}>
               {d.media?.thumb && <img src={d.media.thumb} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || '—'}</span>
-                <span style={{ display: 'block', fontSize: 11, color: C.textMuted }}>{d.comment_count} · {d.author_name || ''}</span>
+                <span style={{
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden', fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
+                  color: C.textPrimary,
+                }}>{d.title || '—'}</span>
+                <span style={{ display: 'block', fontSize: 11, color: C.textMuted, marginTop: 3 }}>
+                  {d.author_name || ''}
+                  {d.comment_count > 0 && ` · ${d.comment_count} ${L('commentsWord')}`}
+                </span>
               </span>
               <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
             </button>

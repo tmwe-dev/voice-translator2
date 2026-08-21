@@ -1,0 +1,123 @@
+[
+  {
+    "chiave": "conv:1C7166BA",
+    "tipo": "string",
+    "valore": "{\"id\":\"1C7166BA\",\"created\":1787052306111,\"ended\":1787052709424,\"mode\":\"conversation\",\"host\":\"Luca\",\"members\":[{\"name\":\"Luca\",\"lang\":\"it\",\"role\":\"host\",\"avatar\":\"/avatars/1.png\"},{\"name\":\"jose\",\"lang\":\"es\",\"role\":\"guest\",\"avatar\":\"/avatars/1.png\"}],\"totalCost\":0,\"msgCount\":26,\"messages\":[{\"clientId\":\"tmp_1787052372190_aac47715\",\"id\":\"msykucg9f8f389\",\"original\":\"Hola\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052373641,\"translated\":\"Ciao\",\"translations\":{\"it\":\"Ciao\"}},{\"clientId\":\"tmp_1787052382875_ced88f75\",\"id\":\"msykukoob9d4ee\",\"original\":\"que tal?\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052384312,\"translated\":\"Come stai?\",\"translations\":{\"it\":\"Come stai?\"}},{\"clientId\":\"tmp_1787052392829_948f600d\",\"id\":\"msykusgje4d622\",\"original\":\"Come va ragazzo\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052394387,\"translated\":\"¿Qué pasa chico?\",\"translations\":{\"es\":\"¿Qué pasa chico?\"}},{\"clientId\":\"tmp_1787052400212_a51a05c4\",\"id\":\"msykuy5k882919\",\"original\":\"Io sto bene\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052401768,\"translated\":\"Estoy bien\",\"translations\":{\"es\":\"Estoy bien\"}},{\"clientId\":\"tmp_1787052408742_45f9eaf1\",\"id\":\"msykv4oa52cd29\",\"original\":\"la traduccion funciona bien\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052410218,\"translated\":\"la traduzione funziona bene\",\"translations\":{\"it\":\"la traduzione funziona bene\"}},{\"clientId\":\"tmp_1787052421003_d32b554f\",\"id\":\"msykve3t53369c\",\"original\":\"y va rapido\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052422441,\"translated\":\"y va rapido\",\"translations\":{\"it\":\"y va rapido\"}},{\"clientId\":\"tmp_1787052429181_ca82e5f7\",\"id\":\"msykvkmc2cb152\",\"original\":\"Davvero ?? Fantastico dobbiamo provare a scrivere testo\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052430884,\"translated\":\"En realidad ?? Genial, tenemos que intentar escribir texto.\",\"translations\":{\"es\":\"En realidad ?? Genial, tenemos que intentar escribir texto.\"}},{\"clientId\":\"tmp_1787052447847_5f9c060d\",\"id\":\"msykvyxcbe7d84\",\"original\":\"Senti l’audio ?\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052449424,\"translated\":\"¿Escuchas el audio?\",\"translations\":{\"es\":\"¿Escuchas el audio?\"}},{\"clientId\":\"tmp_1787052454595_31f6ee9b\",\"id\":\"msykw41w3a9fe2\",\"original\":\"si\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052456068,\"translated\":\"Sì\",\"translations\":{\"it\":\"Sì\"}},{\"clientId\":\"tmp_1787052463050_a4157e25\",\"id\":\"msykwalg4d36ab\",\"original\":\"E la pronuncia va bene ?\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052464548,\"translated\":\"¿Y la pronunciación está bien?\",\"translations\":{\"es\":\"¿Y la pronunciación está bien?\"}},{\"clientId\":\"tmp_1787052474682_4a07b1a6\",\"id\":\"msykwjkp47d19e\",\"original\":\"si, acento de mardid\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052476185,\"translated\":\"sì, accento mardido\",\"translations\":{\"it\":\"sì, accento mardido\"}},{\"clientId\":\"tmp_1787052499087_838d9d88\",\"id\":\"msykx2em1bc587\",\"original\":\"Accento ?\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052500590,\"translated\":\"Acento ?\",\"translations\":{\"es\":\"Acento ?\"}},{\"clientId\":\"tmp_1787052519440_85e3d5fd\",\"id\":\"msykxi3j598730\",\"original\":\"Provo con il video adesso\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052520927,\"translated\":\"Probaré el vídeo ahora.\",\"translations\":{\"es\":\"Probaré el vídeo ahora.\"}},{\"clientId\":\"tmp_1787052525396_6daa8b03\",\"id\":\"msykxmo9dc69ac\",\"original\":\"si, la forma de hablar es madrid\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052526857,\"translated\":\"sì, il modo di parlare è madrid\",\"translations\":{\"it\":\"sì, il modo di parlare è madrid\"}},{\"clientId\":\"tmp_1787052533421_fdee4838\",\"id\":\"msykxsuo0202d0\",\"original\":\"estoy desde la PC\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052534864,\"translated\":\"Vengo dal PC\",\"translations\":{\"it\":\"Vengo dal PC\"}},{\"clientId\":\"tmp_1787052536503_11cce201\",\"id\":\"msykxva6034450\",\"original\":\"Perfeto\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052538014,\"translated\":\"Perfecto\",\"translations\":{\"es\":\"Perfecto\"}},{\"clientId\":\"tmp_1787052539786_2c93e557\",\"id\":\"msykxxsqd4e1b4\",\"original\":\"prueba\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052541274,\"translated\":\"prova\",\"translations\":{\"it\":\"prova\"}},{\"clientId\":\"tmp_1787052544237_aef90ba2\",\"id\":\"msyky182fbddda\",\"original\":\"Ok\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052545714,\"translated\":\"Bueno\",\"translations\":{\"es\":\"Bueno\"}},{\"clientId\":\"tmp_1787052578337_a5e04893\",\"id\":\"msykyrxq944e56\",\"original\":\"hola\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052580334,\"translated\":\"Ciao\",\"translations\":{\"it\":\"Ciao\"}},{\"clientId\":\"tmp_1787052584575_f840308c\",\"id\":\"msykywmg83fb9f\",\"original\":\"me ves?\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052586408,\"translated\":\"mi vedi?\",\"translations\":{\"it\":\"mi vedi?\"}},{\"clientId\":\"tmp_1787052586755_3ce641fc\",\"id\":\"msykyyfo8b22b5\",\"original\":\"Non si connette\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052588756,\"translated\":\"no se conecta\",\"translations\":{\"es\":\"no se conecta\"}},{\"clientId\":\"tmp_1787052597234_e6ef429b\",\"id\":\"msykz6gqc2fd00\",\"original\":\"No\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052599162,\"translated\":\"No\",\"translations\":{\"es\":\"No\"}},{\"clientId\":\"tmp_1787052619702_7272cc61\",\"id\":\"msykznr15ceb09\",\"original\":\"la camara mia se queda activa\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052621565,\"translated\":\"la mia fotocamera rimane attiva\",\"translations\":{\"it\":\"la mia fotocamera rimane attiva\"}},{\"clientId\":\"tmp_1787052633439_ca1fc258\",\"id\":\"msykzygz3dbba0\",\"original\":\"Aspetta\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"es\",\"timestamp\":1787052635459,\"translated\":\"Esperar\",\"translations\":{\"es\":\"Esperar\"}},{\"clientId\":\"tmp_1787052639723_072e2361\",\"id\":\"msyl030sdfb615\",\"original\":\"Esco e rientro\",\"sender\":\"Luca\",\"sourceLang\":\"it\",\"targetLang\":\"en\",\"timestamp\":1787052641356,\"translated\":\"I go out and come back\",\"translations\":{\"en\":\"I go out and come back\"}},{\"clientId\":\"tmp_1787052655615_21c75177\",\"id\":\"msyl0f6d715803\",\"original\":\"ok\",\"sender\":\"jose\",\"sourceLang\":\"es\",\"targetLang\":\"it\",\"timestamp\":1787052657109,\"translated\":\"ok\",\"translations\":{\"it\":\"ok\"}}],\"summary\":null}",
+    "scadenza": 340889
+  },
+  {
+    "chiave": "convlist:Luca",
+    "tipo": "list",
+    "valore": [
+      "{\"id\":\"1C7166BA\",\"created\":1787052306111,\"ended\":1787052709424,\"host\":\"Luca\",\"members\":[\"Luca\",\"jose\"],\"msgCount\":26,\"hasSummary\":false}"
+    ],
+    "scadenza": 340885
+  },
+  {
+    "chiave": "convlist:jose",
+    "tipo": "list",
+    "valore": [
+      "{\"id\":\"1C7166BA\",\"created\":1787052306111,\"ended\":1787052709424,\"host\":\"Luca\",\"members\":[\"Luca\",\"jose\"],\"msgCount\":26,\"hasSummary\":false}"
+    ],
+    "scadenza": 340880
+  },
+  {
+    "chiave": "mondo:archive:last",
+    "tipo": "string",
+    "valore": "1787050117124",
+    "scadenza": -1
+  },
+  {
+    "chiave": "push:lucaarcana@gmail.com",
+    "tipo": "set",
+    "valore": [
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/cLAzsrJcZF8:APA91bEpqQhHYNmtozlIU5qwHrH14kST9aWXgdXGwVNNbtIZxcdL2pSFrf0v8AVmMh8jeFqzsJPKRGlvGCal_Y9X-Y6pgPZFib6TnBx5uXcydgS86297eJwVik7KQDbi6olGK8_A7U7w\",\"keys\":{\"p256dh\":\"BKW4e6nq3WdQ-yX0z6twT_8PIIFpEWbnvtd_fWtDPii8GNx5xiu62XxEf-6v9ivN1gfOmm4wk7-zOxxKriU4bPA\",\"auth\":\"zThYh9zA4eKPns6tc-2cYg\"},\"creata\":1787002133411}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/cPsSSaUzqrE:APA91bHXfstyRAltWXOvQ56xKBt7BO4yD61l07U2MO62PL2w7Gu-z1AXrmH12rTMgTVwUCowgafc59UvqbAFmxGE-xE0bTgt1lC548A_amgvxrIyzP0p7IQqOu6UsB7UIaj8GKhZtzHL\",\"keys\":{\"p256dh\":\"BCD9cERdXDxTeaPwkKZmRfmgLenkJIbWKcwp3wySHV5dGUFd2AhHSROgxYy3myEiYh2r4TNv05a2HpFgD3ncE6g\",\"auth\":\"0Bcnxt8OV9WtTmWUBiAGXQ\"},\"creata\":1787008756467}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/ckcEPrADDec:APA91bGsY14qjoGwCQWdiCDqiM6GGhqvolC1dr5k5MRN_x264NIlb1ll4w9qfJlVoBgQ28QsRRZ_MDBfnmHCYB-yHM62fzsWmmeFHuKk8SxnPROwy8ek34RnuLszE5GV1CSkdW7q30w-\",\"keys\":{\"p256dh\":\"BBBi4c8dDL1f5EBy9hiFcQyeuR23rDfAWjV3YvlHRrZdoDkCViGUkYDGjsQJUSvSpkWkY0oIRuuEaHXcRPJfKxY\",\"auth\":\"Xor3y-o1RyR22024PBk-2w\"},\"creata\":1787142157882}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/dLY3BD_sA_c:APA91bGmeMWD8dP486-n9_fq9-_EoYEh2lCOBKLwDysl1u8ecL3UbAaKL15V-ReLSWACNHxOsMfsfYMYBUG3Gswm5ll5Xvbl542eZ23oJ3m5LdtUaRMPuCUEq9cQhAfCaiBCzuPSlZNB\",\"keys\":{\"p256dh\":\"BA9fgrbRjlVAnTzbSzdxs8bhO1_eQXGPgFJ-ydxMU-Rv-8jAMOCff3Tavn4wHobZoIA4Di6wrZEwTBgP1lPTYhI\",\"auth\":\"Dk8aRDrY8InyDiOiaFznQQ\"},\"creata\":1787152523245}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/e-sL6WAALxQ:APA91bHsp8YvrhmmZ8qt3dHHsYMU0kxTawpRHn0zGTOTKNslY8uL5JxaRplm50P_sp0e8kKMR8SAAxsnrVp5h8Ur-hI2fxMM-mI_BEFRdbJzGb8JtF3HnnNhpqDcmA9XQ7xtIJt7_y2Q\",\"keys\":{\"p256dh\":\"BOnjy8UNZdit1bdu1qsFBFkp6M21acfVIHemQ29fscuHXtdi7-AQsR248yQm0mv3N6zO7pdLD3-Ic5_mcT273No\",\"auth\":\"0CIYsC23IAIam6UhJVRgiQ\"},\"creata\":1787018223608}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/eZPg4nYW7CE:APA91bGneux4VmWqPtOn2rNRBDF19p8KYIfWQXmftq99o1mgUhUjGiA09tDR1r8N4lL0wYrGLUcu2s2l8hQv_Ch-qKIy5Ql5i57aqt_UKmKdfK4iPHTD2BOJvOowS4jo-HVZrk_4AxiI\",\"keys\":{\"p256dh\":\"BLeG81zcdbL0I8CTRysvRhYX845Bs5ngq9QkU6os74UMuUakSDf_Vek3nHpoghg5_-bE2A3xQgckpV_fI20pLzk\",\"auth\":\"T4MgQKYOd536oD813OTRyQ\"},\"creata\":1786999351400}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/egqK3X62sTs:APA91bH6qQ5m1nJpNeyVDhjqUOxek01p45pPXOgo1uvkpGhoNtUdklxAvJsunJqlEn4q6cK5ZPUD9PIZVtB5hU99ywSPju-vwQ0EwG3kx8uS-Cg9NPy_ZmNzjynAIom4M5Jr-lrHFLRY\",\"keys\":{\"p256dh\":\"BIcgePlhDOgAyzMPtpQsCmBod9iiv0HVyDu2LFY6-m6KRae2z19kg5HDxXnK84-mXtbQmvu7Vu_C9kF04rLn5VY\",\"auth\":\"pSE22WXsbh5wvPsy0TjMBw\"},\"creata\":1787004407408}",
+      "{\"endpoint\":\"https://fcm.googleapis.com/fcm/send/fGwCGvnRDoY:APA91bGf2X7tWAITMXoFf0yDxfoquBpD_J7PrYtOfDv61EkahwqYgRQAiuOU7WNHXzkkNWShRlYT7C9_BgWZI1d7VYfiitGIbaYJfRedGG_W2ZtXsiBeixLQB8pfM-6XPSTEH6PjsrRp\",\"keys\":{\"p256dh\":\"BF5HFmXoks8_8SMIA8Oy4l4wfR58gGbQg3CdDUkbyno-FLm8d_U57Aj8wr0wc2hdt_n6rcuIsSgtNrePDQL0NVk\",\"auth\":\"4JvXoB5E3prWwGSDZzLCxw\"},\"creata\":1787008171920}"
+    ],
+    "scadenza": 2427880
+  },
+  {
+    "chiave": "ref:code:16D678",
+    "tipo": "string",
+    "valore": "ernechat@yahoo.es",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:code:2D7FC2",
+    "tipo": "string",
+    "valore": "rebeccagao.853@gmail.com",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:code:B6186A",
+    "tipo": "string",
+    "valore": "josegabrielespinosa2015@gmail.com",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:code:FE7418",
+    "tipo": "string",
+    "valore": "lucaarcana@gmail.com",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:email:ernechat@yahoo.es",
+    "tipo": "string",
+    "valore": "16D678",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:email:josegabrielespinosa2015@gmail.com",
+    "tipo": "string",
+    "valore": "B6186A",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:email:lucaarcana@gmail.com",
+    "tipo": "string",
+    "valore": "FE7418",
+    "scadenza": -1
+  },
+  {
+    "chiave": "ref:email:rebeccagao.853@gmail.com",
+    "tipo": "string",
+    "valore": "2D7FC2",
+    "scadenza": -1
+  },
+  {
+    "chiave": "session:afa46228-897c-443f-b2cd-2af6539d3f14-msw16lr5",
+    "tipo": "string",
+    "valore": "{\"email\":\"lucaarcana@gmail.com\",\"created\":1786898420897}",
+    "scadenza": 186497
+  },
+  {
+    "chiave": "user:ernechat@yahoo.es",
+    "tipo": "string",
+    "valore": "{\"email\":\"ernechat@yahoo.es\",\"name\":\"Ernesto EP\",\"lang\":\"it\",\"avatar\":\"/avatars/1.png\",\"credits\":0,\"totalSpent\":0,\"totalMessages\":0,\"apiKeys\":{},\"useOwnKeys\":false,\"created\":1785853928202,\"lastLogin\":1785853928636}",
+    "scadenza": -1
+  },
+  {
+    "chiave": "user:josegabrielespinosa2015@gmail.com",
+    "tipo": "string",
+    "valore": "{\"email\":\"josegabrielespinosa2015@gmail.com\",\"name\":\"José Gabriel Espinosa Ramirez\",\"lang\":\"it\",\"avatar\":\"/avatars/1.png\",\"credits\":0,\"totalSpent\":0,\"totalMessages\":0,\"apiKeys\":{},\"useOwnKeys\":false,\"created\":1785839128918,\"lastLogin\":1785839129368}",
+    "scadenza": -1
+  },
+  {
+    "chiave": "user:lucaarcana@gmail.com",
+    "tipo": "string",
+    "valore": "{\"email\":\"lucaarcana@gmail.com\",\"name\":\"luca arcana\",\"lang\":\"it\",\"avatar\":\"/avatars/1.png\",\"credits\":0,\"totalSpent\":0,\"totalMessages\":0,\"apiKeys\":{},\"useOwnKeys\":false,\"created\":1785733716434,\"lastLogin\":1786898421285}",
+    "scadenza": -1
+  },
+  {
+    "chiave": "user:rebeccagao.853@gmail.com",
+    "tipo": "string",
+    "valore": "{\"email\":\"rebeccagao.853@gmail.com\",\"name\":\"Rebecca Gao\",\"lang\":\"it\",\"avatar\":\"/avatars/1.png\",\"credits\":0,\"totalSpent\":0,\"totalMessages\":0,\"apiKeys\":{},\"useOwnKeys\":false,\"created\":1785941618043,\"lastLogin\":1785941618505}",
+    "scadenza": -1
+  }
+]

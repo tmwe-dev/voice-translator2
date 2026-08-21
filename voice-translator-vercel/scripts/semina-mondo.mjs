@@ -99,14 +99,14 @@ const STANZE = [
 // Con link veri e riconoscibili: e cosi che si vede come si presenta una
 // discussione nata da un articolo.
 const DISCUSSIONI = [
-  { titolo: 'Il treno ad alta velocità Milano–Parigi riapre dopo due anni', topic: 'trasporti', paese: 'IT', lang: 'it',
+  { titolo: 'Il treno ad alta velocità Milano–Parigi riapre dopo due anni', autore: 'Marta', topic: 'trasporti', paese: 'IT', lang: 'it',
     media: { url: 'https://www.ilpost.it/2026/07/12/treno-milano-parigi/', source: 'Il Post', tipo: 'articolo' },
     commenti: [
       { n: 'Marta', t: 'Ci ho messo sei ore in macchina l\'estate scorsa. Sei ore.', l: 'it' },
       { n: 'Élise', t: 'Depuis Paris on attendait ça depuis longtemps.', l: 'fr' },
       { n: 'Luca', t: 'Quanto costa il biglietto? Se costa come l\'aereo cambia tutto.', l: 'it' },
     ] },
-  { titolo: 'A new study says learning a language after 40 works better than we thought', topic: 'formazione', paese: 'US', lang: 'en',
+  { titolo: 'A new study says learning a language after 40 works better than we thought', autore: 'Tom', topic: 'formazione', paese: 'US', lang: 'en',
     media: { url: 'https://www.nature.com/articles/s41562-026-01887-2', source: 'Nature Human Behaviour', tipo: 'articolo' },
     commenti: [
       { n: 'Tom', t: 'I started Spanish at 47. It is slower but it sticks better.', l: 'en' },
@@ -114,64 +114,64 @@ const DISCUSSIONI = [
       { n: 'Yuki', t: '40代で英語を始めました。会話が一番効きます。', l: 'ja' },
       { n: 'Sarah', t: 'Same. Talking to people beat every app I tried.', l: 'en' },
     ] },
-  { titolo: 'España aprueba la semana laboral de cuatro días para empresas pequeñas', topic: 'economia', paese: 'ES', lang: 'es',
+  { titolo: 'España aprueba la semana laboral de cuatro días para empresas pequeñas', autore: 'Carmen', topic: 'economia', paese: 'ES', lang: 'es',
     media: { url: 'https://elpais.com/economia/2026-06-30/semana-cuatro-dias.html', source: 'El País', tipo: 'articolo' },
     commenti: [
       { n: 'Carmen', t: 'En mi empresa lo probamos seis meses. Nadie quiere volver atrás.', l: 'es' },
       { n: 'Diego', t: '¿Y el sueldo? Esa es la pregunta de verdad.', l: 'es' },
       { n: 'Jonas', t: 'In Deutschland wird das auch diskutiert, aber langsamer.', l: 'de' },
     ] },
-  { titolo: 'Le prix du café atteint son plus haut niveau depuis quarante ans', topic: 'economia', paese: 'FR', lang: 'fr',
+  { titolo: 'Le prix du café atteint son plus haut niveau depuis quarante ans', autore: 'Élise', topic: 'economia', paese: 'FR', lang: 'fr',
     media: { url: 'https://www.lemonde.fr/economie/article/2026/08/02/prix-cafe.html', source: 'Le Monde', tipo: 'articolo' },
     commenti: [
       { n: 'Élise', t: 'Le petit noir du matin va devenir un luxe.', l: 'fr' },
       { n: 'Ana', t: 'Aqui no Brasil a colheita foi péssima este ano. É por isso.', l: 'pt' },
     ] },
-  { titolo: 'Tokyo apre la prima linea di metropolitana interamente automatica', topic: 'tecnologia', paese: 'JP', lang: 'ja',
+  { titolo: 'Tokyo apre la prima linea di metropolitana interamente automatica', autore: 'Yuki', topic: 'tecnologia', paese: 'JP', lang: 'ja',
     media: { url: 'https://www3.nhk.or.jp/news/html/20260715/k10014567891000.html', source: 'NHK', tipo: 'articolo' },
     commenti: [
       { n: 'Yuki', t: '乗ってきました。運転席がないのは不思議な感じです。', l: 'ja' },
       { n: 'Wei', t: '上海也有类似的线路，已经用了几年了。', l: 'zh' },
       { n: 'Tom', t: 'Meanwhile my city cannot keep two escalators working.', l: 'en' },
     ] },
-  { titolo: 'Brasil bate recorde de energia solar: metade da rede in un solo giorno', topic: 'ambiente', paese: 'BR', lang: 'pt',
+  { titolo: 'Brasil bate recorde de energia solar: metade da rede in un solo giorno', autore: 'Ana', topic: 'ambiente', paese: 'BR', lang: 'pt',
     media: { url: 'https://g1.globo.com/economia/noticia/2026/07/28/energia-solar-recorde.ghtml', source: 'G1', tipo: 'articolo' },
     commenti: [
       { n: 'Ana', t: 'Metade da rede em um dia. Há dez anos isso era ficção.', l: 'pt' },
       { n: 'Diego', t: 'En España pasó algo parecido en mayo.', l: 'es' },
     ] },
-  { titolo: 'Der Streit über die Rückkehr ins Büro ist noch nicht vorbei', topic: 'lavoro', paese: 'DE', lang: 'de',
+  { titolo: 'Der Streit über die Rückkehr ins Büro ist noch nicht vorbei', autore: 'Jonas', topic: 'lavoro', paese: 'DE', lang: 'de',
     media: { url: 'https://www.zeit.de/arbeit/2026-08/rueckkehr-buero-debatte', source: 'Die Zeit', tipo: 'articolo' },
     commenti: [
       { n: 'Jonas', t: 'Drei Tage im Büro, zwei zu Hause. Für mich passt das.', l: 'de' },
       { n: 'Chiara', t: 'Da noi è tornato tutto come prima, senza dirlo apertamente.', l: 'it' },
       { n: 'Sarah', t: 'My team is fully remote across four countries. It works.', l: 'en' },
     ] },
-  { titolo: 'Perché le città stanno togliendo i parcheggi dal centro', topic: 'citta', paese: 'IT', lang: 'it',
+  { titolo: 'Perché le città stanno togliendo i parcheggi dal centro', autore: 'Luca', topic: 'citta', paese: 'IT', lang: 'it',
     media: { url: 'https://www.internazionale.it/notizie/2026/07/05/citta-senza-auto', source: 'Internazionale', tipo: 'articolo' },
     commenti: [
       { n: 'Luca', t: 'A Milano l\'hanno fatto in centro e i negozi hanno protestato. Poi hanno smesso.', l: 'it' },
       { n: 'Élise', t: 'Paris a fait pareil. Au début tout le monde râle, après personne ne revient en arrière.', l: 'fr' },
       { n: 'Marta', t: 'Io ci vado in bici, ma con due bambini piccoli non è così semplice.', l: 'it' },
     ] },
-  { titolo: 'The video that explains inflation better than any textbook', topic: 'economia', paese: 'GB', lang: 'en',
+  { titolo: 'The video that explains inflation better than any textbook', autore: 'Sarah', topic: 'economia', paese: 'GB', lang: 'en',
     media: { url: 'https://www.youtube.com/watch?v=T8-85cZRI9o', source: 'YouTube', tipo: 'video', thumb: 'https://i.ytimg.com/vi/T8-85cZRI9o/hqdefault.jpg' },
     commenti: [
       { n: 'Tom', t: 'Twelve minutes and I finally get it.', l: 'en' },
       { n: 'Wei', t: '这个视频有中文字幕吗？', l: 'zh' },
     ] },
-  { titolo: 'Что изменилось в правилах въезда этим летом', topic: 'viaggi', paese: 'RU', lang: 'ru',
+  { titolo: 'Что изменилось в правилах въезда этим летом', autore: 'Ирина', topic: 'viaggi', paese: 'RU', lang: 'ru',
     media: { url: 'https://www.rbc.ru/society/2026/07/20/pravila-vezda', source: 'РБК', tipo: 'articolo' },
     commenti: [
       { n: 'Ирина', t: 'Проверила вчера — всё работает как написано.', l: 'ru' },
     ] },
-  { titolo: 'كيف غيّرت الترجمة الفورية طريقة عملنا', topic: 'tecnologia', paese: 'AE', lang: 'ar',
+  { titolo: 'كيف غيّرت الترجمة الفورية طريقة عملنا', autore: 'سامي', topic: 'tecnologia', paese: 'AE', lang: 'ar',
     media: { url: 'https://www.aljazeera.net/tech/2026/8/1/live-translation', source: 'الجزيرة', tipo: 'articolo' },
     commenti: [
       { n: 'سامي', t: 'صرت أحضر اجتماعات بلغات لا أعرفها إطلاقاً.', l: 'ar' },
       { n: 'Sarah', t: 'This is exactly what we use BarTalk for at work.', l: 'en' },
     ] },
-  { titolo: '中国高铁网络突破五万公里', topic: 'trasporti', paese: 'CN', lang: 'zh',
+  { titolo: '中国高铁网络突破五万公里', autore: 'Wei', topic: 'trasporti', paese: 'CN', lang: 'zh',
     media: { url: 'https://www.xinhuanet.com/2026-07/18/c_1130456789.htm', source: '新华网', tipo: 'articolo' },
     commenti: [
       { n: 'Wei', t: '从北京到上海四个半小时，飞机都比不了。', l: 'zh' },
@@ -183,35 +183,19 @@ const DISCUSSIONI = [
 function codiceStanza(i) { return `MOCK${String(i + 1).padStart(2, '0')}`; }
 
 async function semina() {
-  console.log('Semina in corso…\n');
+  // b.363 — SI PULISCE PRIMA. Lanciando la semina due volte, la seconda
+  // aggiungeva un secondo mazzo identico: in Mondo comparivano tutti gli
+  // articoli doppi. Un seminatore che non sa se ha gia seminato non e un
+  // seminatore, e un guaio. Ora la semina e sempre la stessa cosa,
+  // quante volte la si lanci.
+  console.log('Tolgo cio che era gia stato seminato…');
+  const vecchie = await sql(`mondo_discussions?author_user_id=eq.${MARCHIO}&select=id`);
+  for (const r of vecchie || []) await sql(`mondo_comments?discussion_id=eq.${r.id}`, { method: 'DELETE' });
+  if ((vecchie || []).length) await sql(`mondo_discussions?author_user_id=eq.${MARCHIO}`, { method: 'DELETE' });
+  console.log(`  ${(vecchie || []).length} tolte\n`);
 
-  // ── 1. le stanze nella vetrina ──
-  const MONDO_KEY = 'mondo:rooms';
+  console.log('Semina in corso…\n');
   const ora = Date.now();
-  let stanzeFatte = 0;
-  for (let i = 0; i < STANZE.length; i++) {
-    const st = STANZE[i];
-    const id = codiceStanza(i);
-    const voce = {
-      roomId: id, host: st.host, nome: st.nome, description: st.desc,
-      mode: st.mode, categoria: st.mode, lang: st.lang, hostLang: st.lang,
-      roomType: 'public', suApprovazione: false, hot: false,
-      maxPartecipanti: 20, memberCount: st.membri,
-      createdAt: ora, seminato: true,
-    };
-    // la stanza vera, cosi si puo anche entrare
-    await redis('SET', `room:${id}`, JSON.stringify({
-      id, host: st.host, hostLang: st.lang, lang: st.lang, mode: st.mode,
-      description: st.desc, nome: st.nome, createdAt: ora, seminato: true,
-      members: [{ name: st.host, lang: st.lang, joinedAt: ora }],
-      maxPartecipanti: 20, roomType: 'public',
-    }), 'EX', 3600);
-    await redis('LPUSH', MONDO_KEY, JSON.stringify(voce));
-    stanzeFatte++;
-  }
-  await redis('LTRIM', MONDO_KEY, 0, 29);
-  await redis('EXPIRE', MONDO_KEY, 3600);
-  console.log(`  ${stanzeFatte} stanze aperte nella vetrina (durano un'ora)`);
 
   // ── 2. le discussioni, con i loro commenti ──
   let disc = 0, com = 0;
@@ -220,7 +204,7 @@ async function semina() {
     const [riga] = await sql('mondo_discussions', {
       method: 'POST',
       body: JSON.stringify({
-        author_user_id: MARCHIO, author_name: 'BarTalk',
+        author_user_id: MARCHIO, author_name: d.autore,
         title: d.titolo, title_lang: d.lang, topic: d.topic,
         country: d.paese, lang: d.lang, media: d.media,
         comment_count: d.commenti.length, view_count: 40 + disc * 17,
@@ -244,7 +228,45 @@ async function semina() {
     }
     process.stdout.write(`\r  ${disc} discussioni · ${com} commenti`);
   }
-  console.log('\n\nFatto. Apri Mondo.');
+
+  // b.363 — LE STANZE PER ULTIME, E UN LORO GUASTO NON FERMA TUTTO.
+  // Prima venivano per prime: col deposito veloce al tetto, la semina
+  // moriva li e gli articoli — che stanno in un altro magazzino, sano —
+  // non venivano nemmeno tentati. Un magazzino bloccato non deve
+  // impedire all'altro di lavorare.
+  try {
+  // ── 1. le stanze nella vetrina ──
+    const MONDO_KEY = 'mondo:rooms';
+    let stanzeFatte = 0;
+    for (let i = 0; i < STANZE.length; i++) {
+      const st = STANZE[i];
+      const id = codiceStanza(i);
+      const voce = {
+        roomId: id, host: st.host, nome: st.nome, description: st.desc,
+        mode: st.mode, categoria: st.mode, lang: st.lang, hostLang: st.lang,
+        roomType: 'public', suApprovazione: false, hot: false,
+        maxPartecipanti: 20, memberCount: st.membri,
+        createdAt: ora, seminato: true,
+      };
+      // la stanza vera, cosi si puo anche entrare
+      await redis('SET', `room:${id}`, JSON.stringify({
+        id, host: st.host, hostLang: st.lang, lang: st.lang, mode: st.mode,
+        description: st.desc, nome: st.nome, createdAt: ora, seminato: true,
+        members: [{ name: st.host, lang: st.lang, joinedAt: ora }],
+        maxPartecipanti: 20, roomType: 'public',
+      }), 'EX', 3600);
+      await redis('LPUSH', MONDO_KEY, JSON.stringify(voce));
+      stanzeFatte++;
+    }
+    await redis('LTRIM', MONDO_KEY, 0, 29);
+    await redis('EXPIRE', MONDO_KEY, 3600);
+    console.log(`  ${stanzeFatte} stanze aperte nella vetrina (durano un'ora)`);
+  } catch (e) {
+    console.log(`\n  ! stanze NON seminate: ${e.message}`);
+    console.log('    (gli articoli qui sopra ci sono lo stesso)');
+  }
+
+  console.log('\nFatto. Apri Mondo.');
   console.log('Per togliere tutto:  node scripts/semina-mondo.mjs --pulisci');
 }
 

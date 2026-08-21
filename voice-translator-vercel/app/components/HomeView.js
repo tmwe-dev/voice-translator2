@@ -3,9 +3,11 @@ import { memo, useState, useMemo, useEffect } from 'react';
 import { ombraAcciaio } from '../lib/acciaio.js';
 import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
-// b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
-// scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella
-import { t, mapLang, preloadLang } from '../lib/i18n.js';
+// b.363 — `t` serviva solo all'avviso del cambio lingua, che e stato tolto:
+// restava importato senza che nessuno lo chiamasse. Restano `mapLang` — la
+// lingua dei menu esiste in 15 lingue, non nelle 44 in cui si traduce — e
+// `preloadLang`, che porta avanti il pacchetto nuovo appena si conferma.
+import { mapLang, preloadLang } from '../lib/i18n.js';
 import { IconQR, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';

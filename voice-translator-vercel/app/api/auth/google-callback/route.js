@@ -131,7 +131,7 @@ async function handleGet(req) {
     // Create or get user
     let user = await getUser(email);
     if (!user) {
-      user = await createUser(email, name, 'it', '/avatars/1.png');
+      user = await createUser(email, name, 'it', '/avatars/1.webp');
     }
 
     // Create session

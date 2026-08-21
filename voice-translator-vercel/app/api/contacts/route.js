@@ -70,7 +70,7 @@ async function handlePost(req) {
         contact: {
           email: targetUser.email,
           name: targetUser.name || '',
-          avatar: targetUser.avatar || '/avatars/1.png',
+          avatar: targetUser.avatar || '/avatars/1.webp',
           lang: targetUser.lang || 'it',
         }
       });
@@ -130,7 +130,7 @@ async function handlePost(req) {
           return {
             email: user.email,
             name: user.name || '',
-            avatar: user.avatar || '/avatars/1.png',
+            avatar: user.avatar || '/avatars/1.webp',
             lang: user.lang || 'it',
             online,
             lastSeen,
@@ -207,7 +207,7 @@ async function handlePost(req) {
         inviter: {
           email: invite.from,
           name: inviterUser?.name || invite.fromName || '',
-          avatar: inviterUser?.avatar || '/avatars/1.png',
+          avatar: inviterUser?.avatar || '/avatars/1.webp',
         }
       };
 

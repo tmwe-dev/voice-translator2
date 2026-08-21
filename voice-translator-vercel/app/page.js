@@ -5,6 +5,7 @@
 // che si fanno useTranslationAPI e le rotte: ora la risposta viene dal file
 // unico delle decisioni, cosi non puo separarsi da loro.
 import { trasportoAmmesso, TRASPORTO, modalitaDiStanza, vaInVetrina } from './lib/decisioni.js';
+import { postoADestra } from './lib/righello.js';
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
 import { t, mapLang, preloadLang } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
@@ -1303,14 +1304,11 @@ function HomeInner() {
               sopra la bandiera, a sinistra; ora vive per conto suo
               nell'angolo in ALTO A DESTRA, piu piccola (terza volta che
               Luca lo chiede). Sotto di lei ci sta il comando del cielo. */}
-          <div style={{
-            // b.363 — NELL'ANGOLO, quello vero: a 74 pixel dall'alto
-            // finiva dentro il campo di ricerca e si sovrapponeva.
-            // Ora sta sulla riga del titolo, in cima a destra.
-            position: 'fixed', right: 10,
-            top: 'max(16px, calc(env(safe-area-inset-top) + 10px))', zIndex: 75,
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-          }}>
+          {/* b.363 — primo posto della COLONNA DI DESTRA (vedi lib/righello.js):
+              la pila e il comando del cielo stavano su due assi diversi, uno a
+              dieci e uno a quattordici dal bordo, e si vedeva che non erano
+              allineati. Ora prendono il posto dallo stesso righello. */}
+          <div style={{ ...postoADestra(0), zIndex: 75 }}>
             <BatteryPillSlot verticale />
           </div>
           <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} />

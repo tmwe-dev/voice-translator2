@@ -49,7 +49,8 @@ export default function useInitializeApp({
       if (saved) {
         let p; try { p = JSON.parse(saved); } catch { p = null; }
         if (p) {
-          if (!p.avatar || !p.avatar.startsWith('/avatars/') || !p.avatar.endsWith('.png')) p.avatar = AVATARS[0];
+          // b.363 — png (i vecchi) e webp (i nuovi) sono entrambi buoni
+          if (!p.avatar || !p.avatar.startsWith('/avatars/') || !/\.(png|webp)$/.test(p.avatar)) p.avatar = AVATARS[0];
           // b.136 — chi era gia qui prima di questa versione ha salvato
           // solo `lang`. Se gli si lasciasse `uiLang` vuoto l'interfaccia
           // cadrebbe sull'inglese al primo caricamento e lui avrebbe

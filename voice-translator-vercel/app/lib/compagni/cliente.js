@@ -253,6 +253,15 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  */
 export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce }, onAudio) {
   const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
+  // b.363 — CHI INTERROMPE DEVE FAR TACERE ANCHE IL PEZZO DOPO. Una frase con
+  // parti in lingua straniera non si dice in un fiato: si dice in due, tre,
+  // quattro turni di voce. Chi usciva dalla lezione (o premeva Interrompi)
+  // zittiva soltanto il turno in corso, e un istante dopo partiva il
+  // successivo: la voce continuava a parlare addosso a chi se n'era gia
+  // andato, e il fornitore veniva pagato per una frase che nessuno voleva
+  // piu sentire. Il segno lasciato da chi ha interrotto davvero (non da chi
+  // ha messo in pausa) ora ferma anche questo giro.
+  let ultimo = null;
   for (const p of pezzi) {
     const suaLingua = p.lingua === linguaStudiata;
     await parlaTurno({
@@ -270,7 +279,8 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
       // Una citazione in lingua straniera si legge piana: è un modello di
       // pronuncia, non un'interpretazione.
       modoVoce: suaLingua ? 'neutro' : modoVoce,
-    }, onAudio);
+    }, (a) => { ultimo = a; if (onAudio) onAudio(a); });
+    if (fermatoDavvero(ultimo)) break;
   }
 }
 

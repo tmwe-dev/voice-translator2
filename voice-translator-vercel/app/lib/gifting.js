@@ -107,7 +107,7 @@ export async function getGiftInfo(inviteCode, getUser) {
   const sender = await getUser(invite.from);
   return {
     senderName: sender?.name || invite.fromName || '',
-    senderAvatar: sender?.avatar || '/avatars/1.png',
+    senderAvatar: sender?.avatar || '/avatars/1.webp',
     giftAmount: invite.giftAmount,
     expiresAt: invite.expires
   };

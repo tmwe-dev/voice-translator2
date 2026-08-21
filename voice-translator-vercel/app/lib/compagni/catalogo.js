@@ -63,7 +63,7 @@ const MODELLO_DEFAULT = { provider: 'openai', modello: 'gpt-4o-mini' };
 export const COMPAGNI_PREDEFINITI = [
   {
     id: 'archimede', nome: 'Archimede', ruolo: 'Filosofo e stratega',
-    emoji: '🏛️', colore: '#a855f7', avatar: '/avatars/1.png', voce: VOCI.Marcus,
+    emoji: '🏛️', colore: '#a855f7', avatar: '/avatars/1.webp', voce: VOCI.Marcus,
     // b.237 — il "filosofo dai principi primi" col cervello mini era una
     // promessa a vuoto: Archimede è la vetrina del prodotto e ragiona col
     // modello pieno. Gli altri restano sul default gratuito; l'utente può
@@ -76,7 +76,7 @@ Sei autorevole senza essere autoritario. Distingui sempre ciò che è ragionamen
   },
   {
     id: 'dott-elena', nome: 'Dott.ssa Elena', ruolo: 'Esperta medica',
-    emoji: '🩺', colore: '#ef4444', avatar: '/avatars/2.png', voce: VOCI.Elena,
+    emoji: '🩺', colore: '#ef4444', avatar: '/avatars/2.webp', voce: VOCI.Elena,
     ...MODELLO_DEFAULT, liberta: 'strict', predefinito: true,
     personalita:
 `Sei la Dott.ssa Elena, medico. Usi terminologia clinica precisa e non approssimi mai i termini medici; spieghi in modo comprensibile ma rigoroso.
@@ -85,7 +85,7 @@ NON dai diagnosi né prescrizioni personali: fornisci informazione e inviti semp
   },
   {
     id: 'avv-marco', nome: 'Avv. Marco', ruolo: 'Esperto legale',
-    emoji: '⚖️', colore: '#3b82f6', avatar: '/avatars/6.png', voce: VOCI.Thomas,
+    emoji: '⚖️', colore: '#3b82f6', avatar: '/avatars/6.webp', voce: VOCI.Thomas,
     ...MODELLO_DEFAULT, liberta: 'strict', predefinito: true,
     personalita:
 `Sei l'Avvocato Marco. Ragioni per norme, contratti e responsabilità, con linguaggio preciso, e distingui sempre il principio generale dal caso concreto.
@@ -94,7 +94,7 @@ Ricordi che non sostituisci una consulenza legale reale. Non inventi articoli o 
   },
   {
     id: 'prof-margaret', nome: 'Prof.ssa Margaret', ruolo: 'Insegnante',
-    emoji: '🎓', colore: '#f59e0b', avatar: '/avatars/8.png', voce: VOCI.Margaret,
+    emoji: '🎓', colore: '#f59e0b', avatar: '/avatars/8.webp', voce: VOCI.Margaret,
     ...MODELLO_DEFAULT, liberta: 'balanced', predefinito: true,
     personalita:
 `Sei la Professoressa Margaret. Insegni col metodo socratico: fai domande, guidi passo passo, verifichi la comprensione prima di procedere, usi esempi concreti e riassumi spesso.
@@ -103,7 +103,7 @@ Sei incoraggiante ma esigente sull'accuratezza. Il tuo successo è rendere progr
   },
   {
     id: 'analista', nome: 'Alex', ruolo: 'Analista dati e logica',
-    emoji: '📊', colore: '#06b6d4', avatar: '/avatars/5.png', voce: VOCI.Alex,
+    emoji: '📊', colore: '#06b6d4', avatar: '/avatars/5.webp', voce: VOCI.Alex,
     ...MODELLO_DEFAULT, liberta: 'strict', predefinito: true,
     personalita:
 `Sei Alex, analista. Scomponi i problemi in parti misurabili, cerchi numeri, ipotesi verificabili e contro-esempi. Sei conciso e diretto.
@@ -112,7 +112,7 @@ Segnali quando un'affermazione non è supportata dai dati e proponi come la si p
   },
   {
     id: 'ricercatore', nome: 'Omar', ruolo: 'Ricercatore e fonti',
-    emoji: '🔎', colore: '#22c55e', avatar: '/avatars/3.png', voce: VOCI.Omar,
+    emoji: '🔎', colore: '#22c55e', avatar: '/avatars/3.webp', voce: VOCI.Omar,
     ...MODELLO_DEFAULT, liberta: 'balanced', predefinito: true,
     personalita:
 `Sei Omar, ricercatore. Ragioni per fonti: quando te ne vengono fornite (dal Dossier o da un corso) le confronti e le citi, segnalando dove non concordano.
@@ -121,7 +121,7 @@ QUANDO non hai fonti a disposizione NON inventi citazioni né riferimenti: ragio
   },
   {
     id: 'coach-aisha', nome: 'Aisha', ruolo: 'Coach personale',
-    emoji: '🌱', colore: '#ec4899', avatar: '/avatars/4.png', voce: VOCI.Aisha,
+    emoji: '🌱', colore: '#ec4899', avatar: '/avatars/4.webp', voce: VOCI.Aisha,
     ...MODELLO_DEFAULT, liberta: 'creative', predefinito: true,
     personalita:
 `Sei Aisha, coach. Ascolti, fai domande aperte e aiuti la persona a trovare i propri passi concreti. Tono caldo e incoraggiante, mai giudicante.
@@ -130,7 +130,7 @@ Non dai consigli medici o psicologici clinici: per quelli inviti a un profession
   },
   {
     id: 'verificatore', nome: 'Yuki', ruolo: 'Fact-checker',
-    emoji: '✅', colore: '#8b5cf6', avatar: '/avatars/7.png', voce: VOCI.Yuki,
+    emoji: '✅', colore: '#8b5cf6', avatar: '/avatars/7.webp', voce: VOCI.Yuki,
     ...MODELLO_DEFAULT, liberta: 'strict', predefinito: true,
     personalita:
 `Sei Yuki, verificatrice di fatti. In una chat a due intervieni solo quando c'è un'affermazione verificabile. In un dibattito o in un podcast valuti le affermazioni degli altri come "vera / parzialmente vera / falsa / non verificabile" e spieghi perché: con fonti se ti sono state fornite, altrimenti dichiarando che è una valutazione basata sulle tue conoscenze.
@@ -149,7 +149,7 @@ export function getCompagnoPredefinito(id) {
 export function compagnoVuoto() {
   return {
     id: '', nome: '', ruolo: '', emoji: '✨', colore: '#26D9B0',
-    avatar: '/avatars/9.png', voce: VOCI.Marcus,
+    avatar: '/avatars/9.webp', voce: VOCI.Marcus,
     ...MODELLO_DEFAULT, liberta: 'balanced', personalita: '', predefinito: false,
   };
 }
@@ -166,15 +166,15 @@ export function voceDaGenere(genere) {
   return VOCI.Marcus;                            // Adam (maschile, default)
 }
 
-// b.220 — anche l'AVATAR seguiva il default (maschile, /avatars/9.png) per
+// b.220 — anche l'AVATAR seguiva il default (maschile, /avatars/9.webp) per
 // tutti: una "Marilyn Monroe" restava con la faccia di un uomo. Ora la donna
 // riceve un avatar femminile. Resta modificabile: l'utente sceglie il suo.
 // Riferimento AVATAR_NAMES (constants): 2 Elena, 4 Aisha, 7 Yuki, 8 Margaret
 // sono femminili; 1 Marcus, 3 Omar, 5 Alex, 6 Thomas, 9 Leo maschili.
 export function avatarDaGenere(genere) {
-  if (genere === 'female') return '/avatars/8.png';   // Margaret (femminile)
-  if (genere === 'neutral') return '/avatars/9.png';  // default neutro
-  return '/avatars/1.png';                            // Marcus (maschile)
+  if (genere === 'female') return '/avatars/8.webp';   // Margaret (femminile)
+  if (genere === 'neutral') return '/avatars/9.webp';  // default neutro
+  return '/avatars/1.webp';                            // Marcus (maschile)
 }
 
 // ── Liste per il form "Crea il tuo Compagno" ──

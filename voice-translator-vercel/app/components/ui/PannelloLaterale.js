@@ -1,6 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
+import { formaLinguetta, LINGUETTA } from '../../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
 // IL PANNELLO LATERALE — dove vivono filtri e impostazioni di una
@@ -99,21 +100,18 @@ export default function PannelloLaterale({ aperto, onChiudi, titolo, C, children
 export function LinguettaPannello({ onApri, C, etichetta }) {
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.10)'}`;
   return (
+    // b.363 — misure dal righello comune: questa linguetta e quella della
+    // lingua erano larghe una trenta e l'altra cinquanta, una attaccata al
+    // bordo e una staccata di dieci, con due forme diverse. Ora sono
+    // gemelle: stessa larghezza, stessa forma, stesso bordo.
     <button onClick={() => { vibrate(8); onApri?.(); }} aria-label={etichetta} title={etichetta}
       style={{
-        position: 'fixed', left: 0, zIndex: 62,
-        top: 'max(132px, calc(env(safe-area-inset-top) + 124px))',
-        width: 30, height: 60, cursor: 'pointer',
-        background: C.card || 'rgba(14,18,32,0.85)', border: bordo, borderLeft: 'none',
-        borderRadius: '0 14px 14px 0',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
-        boxShadow: '3px 3px 14px rgba(0,0,0,0.4)',
-        WebkitTapHighlightColor: 'transparent', padding: 0,
+        ...formaLinguetta(C, { top: 'max(132px, calc(env(safe-area-inset-top) + 124px))' }),
+        zIndex: 62,
       }}>
       {/* tre righine: il segno universale di "qui ci sono i comandi" */}
-      <svg width={16} height={16} viewBox="0 0 24 24" fill="none"
-        stroke={C.textSecondary || 'rgba(240,244,255,0.75)'} strokeWidth={1.8} strokeLinecap="round">
+      <svg width={LINGUETTA.icona} height={LINGUETTA.icona} viewBox="0 0 24 24" fill="none"
+        stroke={C.textSecondary || 'rgba(240,244,255,0.75)'} strokeWidth={1.4} strokeLinecap="round">
         <line x1="4" y1="7" x2="20" y2="7" />
         <line x1="4" y1="12" x2="20" y2="12" />
         <line x1="4" y1="17" x2="14" y2="17" />
