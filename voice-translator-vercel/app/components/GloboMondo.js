@@ -142,7 +142,13 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
       <div style={contenitore}>
         <iframe
           ref={ref}
-          src="/mondo-globo.html"
+          // b.369 — "solo" = solo il pianeta. Dentro quel file c'e
+          // un'applicazione INTERA (testata Community, schede
+          // Stanze/News, ricerca, menu in basso, e un foglio dei paesi
+          // con stanze FINTE scritte a mano dentro il file). Come
+          // sfondo la disegnavamo sotto la nostra: due interfacce una
+          // sull'altra, ed e per quello che niente sembrava allineato.
+          src={sfondo ? "/mondo-globo.html?solo=1" : "/mondo-globo.html"}
           title={titolo}
           allow="accelerometer; gyroscope"
           style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
