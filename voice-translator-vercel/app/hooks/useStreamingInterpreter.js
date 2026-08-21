@@ -134,6 +134,11 @@ export default function useStreamingInterpreter({
       });
       if (!res.ok) return '';
       const data = await res.json();
+      // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": traduzione respinta dalla
+      // validazione = 200 con il testo ORIGINALE. Restituirlo qui faceva
+      // comparire nei sottotitoli in tempo reale la frase non tradotta,
+      // indistinguibile da una traduzione riuscita.
+      if (data.validationFailed) return '';
       return data.translated || '';
     } catch {
       return '';

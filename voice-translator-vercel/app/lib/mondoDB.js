@@ -182,6 +182,19 @@ export async function segui(followerEmail, followedPublicId) {
   if (error && !/duplicate|unique/i.test(error.message)) throw new Error('segui: ' + error.message);
 }
 
+// b.363 — CHI SEGUO, FRA QUESTI. Serve a ricostruire lo stato dopo un
+// ricarico: prima l'elenco dei seguiti ripartiva vuoto a ogni apertura e le
+// etichette "Segui / Seguito" dicevano il falso finche non si toccava.
+export async function mieiSeguiti({ email, publicIds = [] }) {
+  const follower = idPubblico(email);
+  if (!follower || !publicIds.length) return [];
+  const { data, error } = await db().from('mondo_follows')
+    .select('followed_user_id').eq('follower_user_id', follower)
+    .in('followed_user_id', publicIds.slice(0, 300));
+  if (error) { log.warn('mieiSeguiti:', error.message); return []; }
+  return (data || []).map((r) => r.followed_user_id);
+}
+
 export async function smettiSeguire(followerEmail, followedPublicId) {
   const follower = idPubblico(followerEmail);
   if (!follower) return;

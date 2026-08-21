@@ -39,6 +39,16 @@ export function AppProvider({ children, value }) {
   // Qui si chiede il pacchetto e ci si sveglia quando entra in memoria.
   const [versioneLingua, setVersioneLingua] = useState(0);
   useEffect(() => { preloadLang(linguaInterfaccia); }, [linguaInterfaccia]);
+
+  // b.363 — LA PAGINA DICEVA A TUTTI DI ESSERE IN ITALIANO. `<html lang="it">`
+  // e scritto fisso nel guscio (layout.js), che gira sul server e non puo
+  // sapere la lingua scelta. Risultato: a un giapponese il lettore di schermo
+  // leggeva la sua interfaccia con la pronuncia italiana, e il traduttore
+  // automatico del browser si offriva di tradurre dall'italiano una pagina
+  // che italiana non era. Qui, dove la lingua si sa, si corregge.
+  useEffect(() => {
+    try { document.documentElement.lang = linguaInterfaccia; } catch { /* fuori dal browser non c'e un documento da correggere */ }
+  }, [linguaInterfaccia]);
   useEffect(() => ascoltaLingueCaricate((codice) => {
     // Ci si ridisegna solo per la lingua che si sta mostrando: il
     // precaricamento di un'altra non deve far ridisegnare mezza app.

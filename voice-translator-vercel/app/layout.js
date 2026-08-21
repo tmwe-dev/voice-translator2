@@ -99,6 +99,9 @@ const DATI_STRUTTURATI = {
   ],
 };
 
+// b.363 — "it" qui sotto e solo il valore di PARTENZA del guscio: questo file
+// gira sul server e non conosce la lingua scelta dalla persona. Appena l'app
+// parte, il contesto lo corregge con quella vera (AppContext.js).
 export default function RootLayout({ children }) {
   return (
     <html lang="it">

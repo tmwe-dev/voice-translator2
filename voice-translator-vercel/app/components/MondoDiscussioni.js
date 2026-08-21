@@ -35,6 +35,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
   // b.187 — chi seguo, per id pubblico (stato ottimistico di sessione)
   const [seguiti, setSeguiti] = useState(() => new Set());
   const [segnalati, setSegnalati] = useState(() => new Set());
+  const [discSegnalata, setDiscSegnalata] = useState(false);
   const [likeMessi, setLikeMessi] = useState(() => new Set()); // b.232 — evita il doppio conteggio del like
   const scrollRef = useRef(null);
 
@@ -45,9 +46,28 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       const d = await r.json();
       setDisc(d.discussione || null);
       setCommenti(d.commenti || []);
+      // b.363 — e poi COSA HO GIA FATTO io qui: quali cuori ho messo, chi
+      // seguo. Prima se lo ricordava solo il telefono, e bastava ricaricare
+      // perche tutte le etichette ripartissero a zero dicendo il falso.
+      // In POST: il gettone non deve viaggiare dentro un indirizzo.
+      if (userToken) {
+        const lista = d.commenti || [];
+        fetch('/api/mondo/discussioni', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            azione: 'miei', userToken,
+            commentIds: lista.map((c) => c.id).filter(Boolean),
+            authorIds: [...new Set(lista.map((c) => c.author_user_id).filter(Boolean))],
+          }),
+        }).then((rr) => rr.ok ? rr.json() : null).then((dd) => {
+          if (!dd) return;
+          if (dd.cuori?.length) setLikeMessi(new Set(dd.cuori));
+          if (dd.seguiti?.length) setSeguiti(new Set(dd.seguiti));
+        }).catch(() => { /* senza questo elenco si riparte a zero, come prima: non e un guasto */ });
+      }
     } catch { setErrore(L('loadingError')); }
     setCaricando(false);
-  }, [discussionId, L]);
+  }, [discussionId, userToken, L]);
 
   useEffect(() => { carica(); }, [carica]);
 
@@ -153,6 +173,20 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
             </div>
           )}
         </div>
+        {/* b.363 — si segnalava solo il singolo commento: una discussione
+            intera fuori posto non aveva alcun modo di essere segnalata,
+            benche il server la accettasse gia (tipo 'discussione'). */}
+        {disc && (
+          <button onClick={segnalaDiscussione} disabled={discSegnalata}
+            aria-label={L('reportWord')} title={L('reportWord')}
+            style={{
+              flexShrink: 0, background: 'none', border: 'none', padding: 6,
+              cursor: discSegnalata ? 'default' : 'pointer', color: muto,
+              fontSize: 11, fontWeight: 700, fontFamily: FONT, opacity: discSegnalata ? 0.45 : 1,
+            }}>
+            {discSegnalata ? L('reportCopied') : L('reportWord')}
+          </button>
+        )}
       </header>
 
       {/* Corpo: media + commenti */}
@@ -228,6 +262,22 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       </div>
     </div>
   );
+
+  // b.363 — segnala l'intera discussione: stessa regola del commento.
+  async function segnalaDiscussione() {
+    if (!userToken) { setErrore(L('accessToCreate')); return; }
+    if (discSegnalata || !discussionId) return;
+    vibrate(8);
+    setDiscSegnalata(true);
+    try {
+      const r = await fetch('/api/mondo/discussioni', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ azione: 'segnala', userToken, tipo: 'discussione', contenuto: discussionId }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.nascosto) onClose?.();
+    } catch { /* la segnalazione non e critica: resta presa in carico sullo schermo */ }
+  }
 
   // b.363 — segnala un commento: una volta sola per persona, e alla
   // soglia il contenuto si nasconde da solo (regola gia sul server).

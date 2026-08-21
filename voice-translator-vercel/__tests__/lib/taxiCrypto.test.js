@@ -7,6 +7,7 @@
  * - Key is base64url-safe (suitable for URL fragments)
  */
 import { describe, it, expect } from 'vitest';
+import { encryptDestination, decryptDestination } from '../../app/lib/taxiCrypto.js';
 
 // In Node.js test environment, Web Crypto API is at globalThis.crypto
 // but we need to test the logic, so let's test the pure crypto functions
@@ -31,48 +32,22 @@ describe('taxiCrypto', () => {
     expiresAt: '2025-01-01T04:00:00.000Z',
   };
 
-  // base64url helpers (same as in taxiCrypto.js)
-  function toBase64url(buffer) {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  }
-
-  function fromBase64url(str) {
-    let s = str.replace(/-/g, '+').replace(/_/g, '/');
-    while (s.length % 4) s += '=';
-    const binary = atob(s);
+  // b.363 — gli aiutanti base64url e le due funzioni di cifratura erano
+  // RISCRITTI qui dentro: nove casi verdi che non toccavano mai
+  // app/lib/taxiCrypto.js. Se quel file cambiasse la lunghezza dell'IV o
+  // smettesse di cifrare, questi casi resterebbero verdi lo stesso. Ora si
+  // chiamano le funzioni VERE del programma.
+  const fromBase64url = (str) => {
+    let x = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (x.length % 4) x += '=';
+    const binary = atob(x);
     const bytes = new Uint8Array(binary.length);
     for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
     return bytes.buffer;
-  }
+  };
 
-  async function encrypt(destination) {
-    const plaintext = new TextEncoder().encode(JSON.stringify(destination));
-    const cryptoKey = await crypto.subtle.generateKey(
-      { name: 'AES-GCM', length: 256 }, true, ['encrypt']
-    );
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, plaintext);
-    const combined = new Uint8Array(iv.length + encrypted.byteLength);
-    combined.set(iv, 0);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    const rawKey = await crypto.subtle.exportKey('raw', cryptoKey);
-    return { ciphertext: toBase64url(combined.buffer), key: toBase64url(rawKey) };
-  }
-
-  async function decrypt(ciphertextB64, keyB64) {
-    const combined = new Uint8Array(fromBase64url(ciphertextB64));
-    const rawKey = fromBase64url(keyB64);
-    const iv = combined.slice(0, 12);
-    const encrypted = combined.slice(12);
-    const cryptoKey = await crypto.subtle.importKey(
-      'raw', rawKey, { name: 'AES-GCM' }, false, ['decrypt']
-    );
-    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, cryptoKey, encrypted);
-    return JSON.parse(new TextDecoder().decode(plaintext));
-  }
+  const encrypt = (destination) => encryptDestination(destination);
+  const decrypt = (ciphertextB64, keyB64) => decryptDestination(ciphertextB64, keyB64);
 
   it('encrypts and decrypts a destination roundtrip', async () => {
     const { ciphertext, key } = await encrypt(SAMPLE_DESTINATION);

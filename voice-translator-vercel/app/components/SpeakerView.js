@@ -246,6 +246,15 @@ function SpeakerView({ userToken }) {
         return '';
       }
       const data = await res.json();
+      // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": quando la validazione
+      // respinge la traduzione, la rotta risponde comunque 200 ma con il
+      // testo ORIGINALE e validationFailed:true. Senza questo controllo il
+      // pubblico si vedeva leggere la frase NELLA LINGUA DI PARTENZA come
+      // se fosse una traduzione riuscita.
+      if (data.validationFailed) {
+        setErroreUltimo(L('translationRetryLater'));
+        return '';
+      }
       if (data.ripiego) setErroreUltimo(L('fallbackTranslation'));
       return data.translated || '';
     } catch {

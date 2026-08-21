@@ -331,7 +331,7 @@ const MessageList = memo(function MessageList({
                 {isMine && (
                   <span
                     title={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['inviato'] || ETICHETTA_STATO['in-coda'])}
-                    aria-label={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda'])}
+                    aria-label={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['inviato'] || ETICHETTA_STATO['in-coda'])}
                     style={{
                       color: m._status === 'fallito' ? (PALETTE.red || '#EF4444')
                         : m._status === 'letto' ? PALETTE.green

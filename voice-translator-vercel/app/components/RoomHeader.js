@@ -61,7 +61,6 @@ const RoomHeader = memo(function RoomHeader({
   stanzaSoloTesto,
   showVideoCall, setShowVideoCall, videoFullscreen, setVideoFullscreen,
   setShowVoiceCall,
-  showCaptions, setShowCaptions,
   exportConversation,
   messages, setShowChatActions,
   duckingLevel, setDuckingLevel,

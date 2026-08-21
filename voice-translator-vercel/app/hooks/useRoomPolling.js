@@ -79,6 +79,20 @@ export default function useRoomPolling({
   }, []);
   const [partnerTyping, setPartnerTyping] = useState(false);
 
+  // b.363 (secondo giro) — la scadenza qui sopra si calcola solo QUANDO ARRIVA
+  // un evento: se il partner smette di scrivere e non arriva piu niente —
+  // rete caduta, scheda chiusa — nessuno rifa il conto e "sta scrivendo"
+  // resta acceso comunque. Serve un battito che lo rivaluti da solo.
+  useEffect(() => {
+    if (!partnerTyping) return;
+    const t = setInterval(() => {
+      const tutti = Object.values(statoPartecipantiRef.current);
+      const ancora = tutti.some((x) => x.typing && Date.now() - (x.quando || 0) < TYPING_TIMEOUT);
+      if (!ancora) setPartnerTyping(false);
+    }, 1000);
+    return () => clearInterval(t);
+  }, [partnerTyping]);
+
   const pollRef = useRef(null);
   const pollFnRef = useRef(null);  // store pollFn so interval changes can reuse it
   const lastMsgRef = useRef(0);

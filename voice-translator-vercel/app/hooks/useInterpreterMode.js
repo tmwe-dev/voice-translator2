@@ -240,7 +240,14 @@ export default function useInterpreterMode({
       );
 
       if (!translateRes.ok) { return; }
-      const { translated } = await translateRes.json();
+      const risposta = await translateRes.json();
+      // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": traduzione respinta dal
+      // controllo qualita = 200 col testo ORIGINALE. Qui il testo va sia nel
+      // sottotitolo dell'interlocutore sia in bocca alla voce sintetica: si
+      // sarebbe sentito parlare nella lingua di partenza credendo di
+      // ascoltare una traduzione. Meglio niente che una bugia.
+      if (risposta?.validationFailed) { return; }
+      const { translated } = risposta;
       if (!translated) { return; }
 
       // b.277 — P1: IL TESTO NON ASPETTA LA VOCE.

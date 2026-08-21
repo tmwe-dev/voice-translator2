@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FONT, LANGS } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import PageHeader from './ui/PageHeader.js';
+import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 
@@ -381,13 +382,20 @@ export default function ContactsView({
 
                 {/* Actions */}
                 <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                  <button onClick={() => handleStartChat && handleStartChat(contact)} style={{
+                  {/* b.363 — questo tasto era un quadrato VUOTO di 38 pixel:
+                      nessuna icona, nessun testo, nessuna etichetta. Si vedeva
+                      solo il riquadro colorato, e un lettore di schermo lo
+                      annunciava come "pulsante" e basta. */}
+                  <button onClick={() => handleStartChat && handleStartChat(contact)}
+                    aria-label={L('chatWord')} title={L('chatWord')} style={{
                     width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
                     background: contact.online ? `${C.green}15` : `${C.accent}10`,
                     border: `1px solid ${contact.online ? `${C.green}25` : `${C.accent}18`}`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                     WebkitTapHighlightColor: 'transparent',
-                  }}></button>
+                  }}>
+                    <Icon name="chat" size={17} color={contact.online ? C.green : C.accent} />
+                  </button>
                   {confirmRemove === contact.email ? (
                     <button onClick={async () => { await removeContact(contact.email); setConfirmRemove(null); }} style={{
                       width: 38, height: 38, borderRadius: 12, cursor: 'pointer',

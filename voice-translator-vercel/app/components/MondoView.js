@@ -235,7 +235,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           dietro». Qui si nasconde soltanto. */}
       {tab === 'stanze' && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0, visibility: cercando ? 'hidden' : 'visible' }}>
-          <GloboMondo sfondo />
+          <GloboMondo sfondo titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
         </div>
       )}
 
@@ -514,7 +514,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         {/* Filtered empty */}
         {!loading && rooms.length > 0 && filteredRooms.length === 0 && (
           <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-            <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.5 }}></div>
+            {/* b.363 — qui c'era un riquadro alto 36 pixel con dentro NIENTE:
+                il posto di un'icona tolta, che spingeva in basso il testo
+                senza mostrare nulla. */}
+            <Icon name="search" size={28} color={C.textMuted} />
             <div style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>
               {L('noRoomsFilters')}
             </div>

@@ -47,7 +47,7 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora' }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta' }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
 
@@ -55,14 +55,20 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora' }) 
     // b.363 — l'icona avanzava PRIMA di sapere se il comando era arrivato: se
     // il pianeta non era ancora pronto, mostrava il sole mentre il cielo
     // restava notte. Ora avanza solo a comando dato davvero.
-    const prossimo = (stato + 1) % STATI.length;
     try {
       const doc = ref.current?.contentWindow?.document;
       const bottoni = doc?.querySelectorAll('.terra-sw button, .terra-sw [role="button"]');
-      if (bottoni && bottoni[prossimo]) {
-        bottoni[prossimo].click();
-        setStato(prossimo);
-      }
+      if (!bottoni || !bottoni.length) return;
+      // b.363 (secondo giro) — non si conta piu per conto proprio: il file
+      // dichiara da se quale cielo e acceso (il tasto porta la classe 'on').
+      // Cosi l'icona resta fedele anche se il cielo cambia dentro il file,
+      // o se un giorno i tasti saranno tre in un altro ordine.
+      let acceso = -1;
+      for (let i = 0; i < bottoni.length; i++) if (bottoni[i].classList?.contains('on')) { acceso = i; break; }
+      const partenza = acceso >= 0 ? acceso : stato;
+      const prossimo = (partenza + 1) % bottoni.length;
+      bottoni[prossimo].click();
+      setStato(prossimo % STATI.length);
     } catch { /* il file non e ancora pronto: l'icona non mente, resta com'e */ }
   };
 
@@ -86,7 +92,10 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora' }) 
           sotto la linguetta a sinistra). FUORI dal contenitore del globo,
           altrimenti resta intrappolata nel suo livello e non e cliccabile
           (collaudo di Luca). Qui e un fratello, sopra tutto. */}
-      <button onClick={cambiaCielo} aria-label="Cielo del pianeta"
+      {/* b.363 — l'etichetta era in italiano fisso: chi usa un lettore di
+          schermo in un'altra lingua sentiva una parola italiana in mezzo a
+          un'interfaccia tradotta. */}
+      <button onClick={cambiaCielo} aria-label={etichettaCielo}
         style={{
           position: 'fixed', left: 22,
           top: 'max(238px, calc(env(safe-area-inset-top) + 214px))', zIndex: 70,

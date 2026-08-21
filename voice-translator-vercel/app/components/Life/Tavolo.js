@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { suona as registraAudio } from '../../lib/audioLife.js';
+import { suona as registraAudio, suInterruzione } from '../../lib/audioLife.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
@@ -24,6 +24,9 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [messaggi, setMessaggi] = useState([]); // {ruolo:'persona'|nome, testo, emoji, colore}
   const [testo, setTesto] = useState('');
   const [attende, setAttende] = useState(false);
+  // b.363 — il segnale di Interrompi che arriva dal telecomando di Life
+  const fermatoRef = useRef(false);
+  useEffect(() => suInterruzione(() => { fermatoRef.current = true; }), []);
   const [errore, setErrore] = useState('');
   const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
   // b.302 — la Tavola rotonda assorbe il Dossier: puo partire da FONTI
@@ -45,6 +48,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const invia = useCallback(async () => {
     const t = testo.trim();
     if (!t || attende) return;
+    fermatoRef.current = false;
     setErrore('');
     const storia = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(storia); setTesto(''); setAttende(true);
@@ -60,7 +64,11 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);
       }
       // voci in sequenza
+      // b.363 — lo Stop del telecomando fermava la voce in corso ma non
+      // questo giro: la voce successiva ripartiva da sola. Ora il giro
+      // guarda il segnale e si ferma.
       for (const r of (d.risposte || [])) {
+        if (fermatoRef.current) break;
         // b.363 — la voce del tavolo entra nel telecomando di Life:
         // prima Pausa e Stop non avevano alcuna presa su di lei.
         if (r.voceId) await parlaTurno({ voceId: r.voceId, testo: r.testo, lingua, userToken },

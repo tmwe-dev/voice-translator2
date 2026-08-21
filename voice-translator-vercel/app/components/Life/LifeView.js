@@ -18,7 +18,7 @@ const IDEE_CORSO = [
   { ic: '💻', et: 'Computer', q: 'Usare il computer e internet senza paura, passo dopo passo' },
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
-import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, generaIconaCorso, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
+import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
@@ -737,7 +737,11 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         salvaCorsoMio({ argomento: argomento.trim(), titolo: argomento.trim(), categoria, livello, lingua: linguaCorso, lezioni: d.lezioni, docenteId: docenteId || undefined, userToken })
           .then(() => ricaricaMieiCorsi()).catch(() => {});
       }
+      // b.363 — creando un corso NUOVO restava appeso il ripasso del corso
+      // precedente: sul corso appena nato compariva "lezioni da riprendere"
+      // che riguardavano un altro corso.
       setEsitiLezioni({});
+      setRipassoDa(0);
     } catch (e) {
       // b.358 — l'errore diceva sempre la stessa cosa («Qualcosa e andato
       // storto») qualunque fosse la causa: sessione scaduta, credito finito o

@@ -176,6 +176,11 @@ function TaxiTalk({ userToken }) {
       });
       if (!res.ok) { setErroreTrad(res.status === 402 ? L('creditExhausted') : L('translationRetryLater')); setTraducendo(false); return ''; }
       const data = await res.json();
+      // b.363 — traduzione respinta = 200 col testo di partenza. Qui la frase
+      // viene MOSTRATA e poi LETTA ad alta voce al tassista: dirgli la frase
+      // nella lingua del passeggero, spacciata per tradotta, e peggio che
+      // dirgli che la traduzione non e riuscita.
+      if (data.validationFailed) { setErroreTrad(L('translationRetryLater')); setTraducendo(false); return ''; }
       const out = data.translated || '';
       setTradotto(out);
       // b.248 — si fissa la coppia (testo, lingua) a cui questa traduzione

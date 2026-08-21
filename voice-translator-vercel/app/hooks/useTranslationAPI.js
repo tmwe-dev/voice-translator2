@@ -525,6 +525,18 @@ export default function useTranslationAPI({
         throw new Error('Translation error');
       }
       result = await res.json();
+      // b.363 — LA TRAPPOLA DEL "200 CHE MENTE", sul percorso PRINCIPALE della
+      // chat: quando il controllo qualita respinge la traduzione, la rotta
+      // risponde 200 con il testo ORIGINALE e validationFailed:true. Senza
+      // questo passaggio il messaggio partiva NON TRADOTTO spacciato per
+      // tradotto, e (peggio) finiva nella memoria qui sotto, che lo avrebbe
+      // riservito identico per quindici minuti senza nemmeno riprovare.
+      // Qui si getta il risultato e si scende al ripiego gratuito.
+      if (result?.validationFailed) {
+        console.warn('[translateUniversal] Traduzione respinta dal controllo qualita: passo al ripiego');
+        fineTraduzione({ stato: res.status, fornitore: result?.provider || '?', esito: 'respinta' });
+        throw new Error('validazione-fallita');
+      }
       fineTraduzione({ stato: res.status, fornitore: result?.provider || result?.model || '?', esito: 'ok' });
       // Wallet: era l'ultimo messaggio col credito — avvisa la batteria
       if (result.creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
@@ -547,18 +559,24 @@ export default function useTranslationAPI({
         if (freeRes.ok) {
           result = await freeRes.json();
         } else {
-          // Both paid and free failed — return original text
+          // b.363 — quando ANCHE il ripiego cade, si restituisce il testo di
+          // partenza: giusto, ma prima usciva marchiato solo `fallback`, che
+          // significa "tradotto da un fornitore di riserva". Chi chiamava non
+          // aveva modo di distinguere una traduzione di riserva RIUSCITA da un
+          // guasto totale, e mostrava l'originale come se fosse tradotto.
           console.error('[translateUniversal] Free fallback also failed:', freeRes.status);
-          return { translated: text, fallback: true };
+          return { translated: text, fallback: true, traduzioneFallita: true };
         }
       } catch (freeErr) {
         console.error('[translateUniversal] Free fallback error:', freeErr);
-        return { translated: text, fallback: true };
+        return { translated: text, fallback: true, traduzioneFallita: true };
       }
     }
 
     // ── Cache the result ──
-    if (result.translated) {
+    // b.363 — non si mette in memoria una traduzione respinta o fallita:
+    // resterebbe li quindici minuti a riservire l'originale.
+    if (result.translated && !result.validationFailed && !result.traduzioneFallita) {
       const cache = translationCacheRef.current;
       cache.set(cacheKey, { translated: result.translated, ts: Date.now() });
       // LRU cap: keep max 500 entries (increased for longer conversations)

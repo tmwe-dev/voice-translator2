@@ -220,6 +220,10 @@ export function useTraduzioneInArrivo(miaLingua, { roomId, roomSessionToken, suT
       });
       if (!r.ok) return;
       const d = await r.json();
+      // b.363 — traduzione respinta = 200 col testo di partenza: finiva in
+      // memoria E in bocca alla voce come se fosse tradotta. Resta
+      // l'originale a schermo, che e la verita.
+      if (d.validationFailed) return;
       if (!d.translated) return;
       memoriaRef.current.set(chiave, d.translated);
       setBattute(prima => prima.map(b => (b.id === battuta.id ? { ...b, tradotto: d.translated } : b)));

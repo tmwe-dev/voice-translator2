@@ -386,6 +386,9 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       )}
 
       {/* ═══ Header ═══ */}
+      {/* b.363 — showCaptions/setShowCaptions non si passano piu alla
+          testata: li entravano e morivano, nessuno li leggeva (residuo del
+          menu smontato in b.353). I sottotitoli restano governati qui. */}
       <RoomHeader
         L={L} S={S} myLang={myLang} myL={myL} otherL={otherL}
         otherMembers={otherMembers} partner={partner}
@@ -397,7 +400,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         showVideoCall={showVideoCall} setShowVideoCall={setShowVideoCall}
         videoFullscreen={videoFullscreen} setVideoFullscreen={setVideoFullscreen}
         setShowVoiceCall={setShowVoiceCall}
-        showCaptions={showCaptions} setShowCaptions={setShowCaptions}
         exportConversation={exportConversation}
         messages={messages} setShowChatActions={setShowChatActions}
         duckingLevel={duckingLevel} setDuckingLevel={setDuckingLevel}

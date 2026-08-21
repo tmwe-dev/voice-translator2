@@ -46,7 +46,7 @@ function mediaSicuro(grezzo) {
 }
 
 import {
-  elencoDiscussioni, getDiscussione, contaVista, commenti,
+  elencoDiscussioni, getDiscussione, contaVista, commenti, mieiMiPiace, mieiSeguiti,
   creaDiscussione, commenta, mettiMiPiace, segui, smettiSeguire, archiviaInattive,
   profiloPersona, idPubblico,
 } from '../../../lib/mondoDB.js';
@@ -142,6 +142,21 @@ async function handlePost(req) {
           text: body.text || '', lang: body.lang || null, parentId: body.parentId || null,
         });
         return NextResponse.json({ id });
+      }
+      // b.363 — COSA HO GIA FATTO QUI: quali cuori ho messo, chi seguo.
+      // Prima se lo ricordava solo il telefono: bastava ricaricare la pagina
+      // e tutte le etichette ripartivano a zero dicendo il falso (e
+      // ritoccando il cuore si contava uno che il database non registrava).
+      // Va in POST, non in GET, perche il gettone di sessione non deve MAI
+      // finire in un indirizzo: gli indirizzi si scrivono nei registri.
+      case 'miei': {
+        const idCommenti = Array.isArray(body.commentIds) ? body.commentIds.filter((x) => typeof x === 'string').slice(0, 300) : [];
+        const idAutori = Array.isArray(body.authorIds) ? body.authorIds.filter((x) => typeof x === 'string').slice(0, 300) : [];
+        const [cuori, seguiti] = await Promise.all([
+          mieiMiPiace({ email: authorEmail, commentIds: idCommenti }),
+          mieiSeguiti({ email: authorEmail, publicIds: idAutori }),
+        ]);
+        return NextResponse.json({ ok: true, cuori, seguiti });
       }
       case 'like': {
         if (!body.commentId) return NextResponse.json({ error: 'commentId mancante' }, { status: 400 });

@@ -94,31 +94,49 @@ async function handlePost(req) {
         return NextResponse.json({ contacts: [] });
       }
 
+      // b.363 — LA RUBRICA ANDAVA IN FILA INDIANA. Per ogni contatto si
+      // facevano DUE andate e ritorni al deposito, uno dopo l'altro, senza
+      // alcun tetto: con duecento contatti erano quattrocento viaggi in
+      // sequenza, e la rubrica ci metteva l'eternita ad aprirsi (o scadeva).
+      // Ora i contatti si chiedono a mazzi, in parallelo dentro il mazzo, e
+      // c'e un tetto dichiarato invece di uno silenzioso.
+      const TETTO_CONTATTI = 500;
+      const MAZZO = 25;
+      const elenco = contactEmails.slice(0, TETTO_CONTATTI);
+      if (contactEmails.length > TETTO_CONTATTI) {
+        log.warn('rubrica troncata', { totale: contactEmails.length, mostrati: TETTO_CONTATTI });
+      }
+
       const contacts = [];
-      for (const ce of contactEmails) {
-        const user = await getUser(ce);
-        if (!user) continue;
+      for (let i = 0; i < elenco.length; i += MAZZO) {
+        const mazzo = elenco.slice(i, i + MAZZO);
+        const risultati = await Promise.all(mazzo.map(async (ce) => {
+          const [user, presenceData] = await Promise.all([
+            getUser(ce),
+            redis('GET', `presence:${ce}`),
+          ]);
+          if (!user) return null;
 
-        // Check presence
-        const presenceData = await redis('GET', `presence:${ce}`);
-        let online = false;
-        let lastSeen = 0;
-        if (presenceData) {
-          try {
-            const p = JSON.parse(presenceData);
-            online = p.online || false;
-            lastSeen = p.lastSeen || 0;
-          } catch (e) { log.warn('JSON parse error:', e?.message); }
-        }
+          let online = false;
+          let lastSeen = 0;
+          if (presenceData) {
+            try {
+              const p = JSON.parse(presenceData);
+              online = p.online || false;
+              lastSeen = p.lastSeen || 0;
+            } catch (e) { log.warn('JSON parse error:', e?.message); }
+          }
 
-        contacts.push({
-          email: user.email,
-          name: user.name || '',
-          avatar: user.avatar || '/avatars/1.png',
-          lang: user.lang || 'it',
-          online,
-          lastSeen,
-        });
+          return {
+            email: user.email,
+            name: user.name || '',
+            avatar: user.avatar || '/avatars/1.png',
+            lang: user.lang || 'it',
+            online,
+            lastSeen,
+          };
+        }));
+        for (const r of risultati) if (r) contacts.push(r);
       }
 
       // Sort: online first, then by name
