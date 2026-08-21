@@ -46,13 +46,22 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
           position: 'fixed', left: 10, top: 'max(160px, calc(env(safe-area-inset-top) + 136px))', zIndex: 60,
         }}>
           {batteria && (
+            // b.361 — NIENTE transform qui: un antenato con `transform`
+            // rende il popup del credito (position fixed) relativo a se
+            // invece che allo schermo, e i suoi campi finivano sparsi a
+            // tutto schermo invece che nel pannello centrato (collaudo di
+            // Luca). Si centra con left/right, senza transform.
             <div style={{
-              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 8,
-              display: 'flex', justifyContent: 'center', padding: '6px 6px 4px',
-              background: card, border: bordo, borderRadius: 16,
-              boxShadow: '2px 2px 14px rgba(0,0,0,0.35)',
+              position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 8,
+              display: 'flex', justifyContent: 'center',
             }}>
-              {batteria}
+              <div style={{
+                display: 'flex', justifyContent: 'center', padding: '6px 6px 4px',
+                background: card, border: bordo, borderRadius: 16,
+                boxShadow: '2px 2px 14px rgba(0,0,0,0.35)',
+              }}>
+                {batteria}
+              </div>
             </div>
           )}
           <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
