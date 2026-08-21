@@ -100,7 +100,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // la gerarchia resta Mondo → argomento → persone → conversazione.
   // b.335 — HOME MONDO NUOVA: si atterra su "Per te" — cosa e caldo ADESSO
   // (discussioni piu vive, stanze piu piene), a colpo d'occhio.
-  const [tab, setTab] = useState('perte');
+  const [tab, setTab] = useState('stanze');
   const [feedCaldo, setFeedCaldo] = useState(null);
   useEffect(() => {
     let vivo = true;
@@ -199,7 +199,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           pagina Mondo (Luca: «invece di integrarlo»). La testata, le schede e
           la ricerca qui sotto gli fluttuano sopra: una sola chrome, quella di
           BarTalk. Sta nella scheda "Per te"; nelle altre le liste lo coprono. */}
-      {tab === 'perte' && !cercando && <GloboMondo sfondo />}
+      {tab === 'stanze' && !cercando && <GloboMondo sfondo />}
 
       {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
           con la freccia a sinistra e a destra che scorrono le schede. Sopra
@@ -209,8 +209,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
         {(() => {
+          // b.361 — via la scheda "Per te" (Luca: «elimina la terza pagina
+          // non serve»): restano STANZE (col globo) e NEWS.
           const schede = [
-            { id: 'perte', labelKey: 'tabForYou', img: '/sezioni/sez-mondo.webp' },
             { id: 'stanze', labelKey: 'tabRooms', img: '/sezioni/sez-mondo.webp' },
             { id: 'news', labelKey: 'tabNews', img: '/sezioni/sez-news.webp' },
           ];
