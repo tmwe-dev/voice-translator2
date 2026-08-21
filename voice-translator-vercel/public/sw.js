@@ -1,5 +1,5 @@
 // Service Worker for BarTalk — Offline + Push + Badge + Background Sync
-const CACHE_VERSION = 15; // b.363 — butta i pezzi misti rimasti sui client dopo i rilasci di oggi
+const CACHE_VERSION = 16; // b.365 — anteprime coperte e icona nuova: i pezzi vecchi vanno buttati
 const CACHE_NAME = `vt-cache-v${CACHE_VERSION}`;
 const TTS_CACHE_NAME = `vt-tts-v${CACHE_VERSION}`;
 const TRANSLATE_CACHE_NAME = `vt-translate-v${CACHE_VERSION}`;

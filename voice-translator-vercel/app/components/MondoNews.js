@@ -23,6 +23,7 @@ import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import SchedaArgomento from './SchedaArgomento.js';
 import MondoDiscussioni from './MondoDiscussioni.js';
 import MondoPersona from './MondoPersona.js';
@@ -595,7 +596,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                       un video, il triangolo dice "questo si guarda". */}
                   {d.media?.thumb ? (
                     <span style={{ position: 'relative', flexShrink: 0 }}>
-                      <img src={d.media.thumb} alt="" style={{ width: 62, height: 62, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+                      <AnteprimaCoperta src={d.media.thumb} contenuto={d.media} L={L}
+                        stile={{ width: 62, height: 62, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
                       {tipo === 'video' && (
                         <span style={{
                           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -638,9 +640,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               {/* eslint-disable-next-line @next/next/no-img-element -- immagine
                   esterna di dominio ignoto: next/image richiederebbe la lista
                   dei domini, che per le news non esiste */}
-              <img src={t.immagine} alt="" loading="lazy" referrerPolicy="no-referrer"
+              <AnteprimaCoperta src={t.immagine} L={L}
+                contenuto={{ url: t.url, source: t.fonti?.[0]?.dominio || t.fonti?.[0]?.fonte }}
                 onError={e => { e.currentTarget.style.display = 'none'; }}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                stile={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
               <div style={{
                 position: 'absolute', inset: 0, pointerEvents: 'none',
                 background: 'linear-gradient(180deg, transparent 55%, rgba(5,7,15,0.85))',

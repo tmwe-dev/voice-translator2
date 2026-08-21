@@ -534,7 +534,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
       {/* ═══ LANGUAGE PILLS ═══ */}
       {/* ═══ ROOM LIST ═══ */}
-      {tab === 'stanze' && (
+      {/* b.364 — SOVRAPPOSIZIONE (segnalata da Luca con lo schermo):
+          la scheda News si nascondeva durante la ricerca, l'elenco delle
+          stanze NO. Cosi cercando restavano disegnati tutti e due: la
+          popup dei risultati sopra, le stanze sotto, mescolate. */}
+      {tab === 'stanze' && !cercando && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i

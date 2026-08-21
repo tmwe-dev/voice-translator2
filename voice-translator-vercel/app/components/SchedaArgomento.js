@@ -25,6 +25,7 @@ import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
+import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 
 function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
   const { L, prefs, userToken } = useApp();
@@ -154,9 +155,10 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
           <div style={{ padding: '10px 14px 0' }}>
             <div style={{ position: 'relative', aspectRatio: '16/9', borderRadius: 14, overflow: 'hidden', background: `linear-gradient(135deg, ${C.accent}14, ${C.purple}18)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- dominio esterno ignoto */}
-              <img src={dati.immagine} alt="" referrerPolicy="no-referrer"
+              <AnteprimaCoperta src={dati.immagine} L={L}
+                contenuto={{ url: dati.url, source: dati.fonte || dati.dominio }}
                 onError={e => { e.currentTarget.style.display = 'none'; }}
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                stile={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
           </div>
         )}

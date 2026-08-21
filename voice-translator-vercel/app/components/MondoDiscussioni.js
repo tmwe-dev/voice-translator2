@@ -2,6 +2,7 @@
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
+import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 
 // ═══════════════════════════════════════════════════════════════
 // MondoDiscussioni — il THREAD di una discussione pubblica (Fase 1)
@@ -232,7 +233,8 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           <a href={media.url} target="_blank" rel="noreferrer" style={{
             display: 'block', textDecoration: 'none', marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: bordo, background: card,
           }}>
-            {media.thumb && <img src={media.thumb} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', display: 'block' }} />}
+            {media.thumb && <AnteprimaCoperta src={media.thumb} contenuto={media} L={L}
+              stile={{ width: '100%', maxHeight: 180, height: 180, objectFit: 'cover', display: 'block' }} />}
             <div style={{ padding: '10px 12px', fontSize: 12, color: accent, wordBreak: 'break-all' }}>{media.source || media.url}</div>
           </a>
         )}

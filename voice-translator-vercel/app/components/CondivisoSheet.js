@@ -2,6 +2,7 @@
 import { memo, useEffect, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
+import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
 import { conRipiego } from '../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -55,7 +56,8 @@ function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
           </button>
         </div>
 
-        {immagine && <img src={immagine} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'cover', borderRadius: 12, marginBottom: 10, display: 'block' }} />}
+        {immagine && <AnteprimaCoperta src={immagine} contenuto={{ url: condiviso.url, source: fonte }} L={tt ? (k) => tt(k, 'Tocca per vedere') : null}
+          stile={{ width: '100%', maxHeight: 180, height: 180, objectFit: 'cover', borderRadius: 12, marginBottom: 10, display: 'block' }} />}
         <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', lineHeight: 1.35 }}>{titolo}</div>
         {sintesi && <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.6)', marginTop: 5, lineHeight: 1.45 }}>{sintesi}</div>}
 

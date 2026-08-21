@@ -427,6 +427,77 @@ tre lingue capiscono tutto, la prova e fatta in una settimana.
 nell'AUDIO, dove vive la traduzione. Una radio multilingue non esiste
 gia, costa un decimo, e il video si aggiunge dopo.
 
+### Contenuti, filtri e canali — decisioni (21/08/2026)
+
+**IL CANALE, NON IL CORSO** (correzione di Luca a una mia raccomandazione
+sbagliata). Avevo consigliato di investire nei corsi invece che nelle
+dirette, perche il corso resta e il talk si consuma. Sbagliato due
+volte: (1) il bene che dura non e il corso, e LA PERSONA — un corso e un
+bene, un canale e un RAPPORTO, e il rapporto continua a produrre beni;
+(2) un corso lo puo fare solo chi ha gia autorita, e il canale e
+esattamente cio che quell'autorita la costruisce. Nel mio ordine i corsi
+non sarebbero mai nati.
+E la cosa che mi ero perso: LA DIRETTA E' COME SI FABBRICA UN CORSO
+QUASI GRATIS. Una masterclass fatta dal vivo, quando finisce, e gia un
+corso registrato E GIA IN TRENTA LINGUE, perche le tracce tradotte sono
+state prodotte mentre parlava. Un lavoro, due prodotti.
+Il posizionamento, parole di Luca: qui non si posta la foto delle
+vacanze; un podcast parla di te, di un evento, di una masterclass. "Le
+persone non curiosano sulla vita: imparano, prendono ad esempio,
+conoscono il pensiero di chi le interessa." Conseguenza di prodotto:
+L'UNITA' NON E' IL POST, E' L'APPUNTAMENTO. Un canale non e un profilo
+con cose sopra: e qualcuno che ha detto quando parla.
+
+**IL FILTRO: decide la persona, non la piattaforma.** Preferenze scritte
+a parole nel profilo, modificabili in qualsiasi momento. Chi non vuole
+vedere contenuti LGBT e chi non vuole vedere chi disapprova gli
+omosessuali stanno sullo stesso piano: due persone che scelgono cosa
+guardare. Una regola che protegge un lato solo non e una regola, e una
+posizione. E in un contesto mondiale non si puo chiedere a un russo di
+ragionare come un californiano: sarebbe arrogante e commercialmente
+suicida per un'app che esiste per far parlare chi la pensa diverso.
+LA RIGA DI CONFINE (l'unica): puoi decidere cosa entra nei TUOI occhi,
+non cosa entra in quelli di un altro. Sopra quella riga la simmetria
+vale sempre. Sotto, un contenuto che va addosso a qualcuno non e un
+filtro ma un colpo, e chi lo riceve non l'ha scelto.
+Le tre cose che non sono gusti, per motivi pratici: il consenso e l'eta
+di CHI E' DENTRO l'immagine; le regole di Apple e Google (guardano cosa
+vede il recensore DENTRO l'app, dove sta il file non entra nella
+conversazione); e cio che e reato ovunque.
+
+**Posizione di Luca sull'ospitare**: non distribuiamo pornografia
+direttamente, i contenuti sono link trovati altrove, la responsabilita e
+di chi ospita, "io non distribuisco a nessuno cio che non sceglie di
+osservare". Un canale adulti separato resta possibile, con la
+responsabilita su chi lo apre. Sull'eta: anche i siti porno stanno
+sull'autodichiarazione, e noi quei contenuti non li trattiamo — la data
+di nascita NON e urgente.
+
+**L'ANTEPRIMA COPERTA** (ordine di Luca, fatta in b.365): e la sua stessa
+frase resa un gesto. L'immagine c'e, sfocata, e si scopre con un tocco.
+Non e censura — e che il dito lo mette la persona. E risolve il punto dei
+negozi: finche e coperta, l'app non MOSTRA niente.
+COSA VA COPERTO SI DECIDE IN UN POSTO SOLO (app/lib/sensibile.js), e NON
+si guardano le parole. Sullo schermo di Luca la prima notizia era una
+sentenza della Cassazione sul revenge porn, su Wired: qualunque filtro a
+parole la copre, e copre anche il medico che spiega l'anatomia, mentre
+l'insulto elegante passa. Si guardano solo prove: il dominio della fonte,
+e cosa dichiara chi ci ha dato il contenuto. Il giudizio sul contenuto e
+lavoro da AI e quando ci sara si attacca li dentro senza toccare
+nessuna schermata.
+
+**Ancora da fare, se Luca vuole**: bloccare una persona (non esiste;
+esiste solo segnalare discussioni e commenti).
+
+### TRE COPIE DI BARTALK GIRANO SUL MAC DI LUCA — attenzione ai collaudi
+- porta 3005 = /Users/teameurope/Downloads/voice-translator2  ← LA NOSTRA
+- porta 3000 = /Users/teameurope/bartalk-live  ← ferma a b.305 (19/08),
+  centodieci push indietro. Se Luca collauda qui, vede roba di due
+  giorni fa e sembrano errori nostri.
+- /Users/teameurope/Downloads/voice-translator-vercel = terza copia
+Prima di indagare su un errore visto in uno screenshot: CHIEDERE O
+VERIFICARE SU QUALE PORTA sta guardando.
+
 ### Restano SOLO le prove che richiedono due telefoni fisici
 
 1. Videochiamata: chiude uno, la telecamera dell'altro non si riaccende
