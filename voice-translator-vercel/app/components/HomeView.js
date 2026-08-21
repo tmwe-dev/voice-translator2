@@ -1,7 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
 import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
-import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
 // scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella

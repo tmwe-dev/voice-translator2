@@ -15,7 +15,10 @@ import { FONT, LANGS, vibrate } from '../lib/constants.js';
 
 // Le lingue rapide prima (le piu usate), poi tutte le altre in ordine
 // alfabetico — identico al criterio del selettore Wueform.
-const RAPIDE = ['it', 'en-US', 'es', 'fr', 'de', 'pt-BR', 'zh', 'ja', 'ar', 'ru', 'en-GB', 'hi'];
+// b.363 — CODICI VERI: 'en-US' e 'pt-BR' non esistono in LANGS (sono codici
+// di VOCE). Con quelli, inglese e portoghese — le due lingue piu usate —
+// sparivano dalle bandiere rapide e finivano in fondo, in ordine alfabetico.
+const RAPIDE = ['it', 'en', 'es', 'fr', 'de', 'pt', 'zh', 'ja', 'ar', 'ru', 'en-GB', 'hi'];
 
 function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
   const lingue = useMemo(() => {

@@ -1448,7 +1448,8 @@ function HomeInner() {
         roomDescription={roomDescription} setRoomDescription={setRoomDescription}
         handleCreateRoom={handleCreateRoom}
         contacts={contactsHook.contacts} fetchContacts={contactsHook.fetchContacts}
-        rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact} />
+        rejoinRoom={rejoinRoom} startChatWithContact={startChatWithContact}
+            unlockAudio={audio.unlockAudio} />
       {showTutorial && (
         <TutorialOverlay tutorialStep={tutorialStep}
           setTutorialStep={setTutorialStep} setShowTutorial={setShowTutorial} />

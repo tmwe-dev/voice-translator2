@@ -100,7 +100,7 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
               {/* VOCE — timbro + scegli voce */}
               <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.55)', marginBottom: 8 }}>{tt('voiceTimbre', 'Voce')}</div>
               <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                {[{ id: 'female', et: `♀ ${tt('female', 'Femminile')}` }, { id: 'male', et: `♂ ${tt('male', 'Maschile')}` }].map((o) => {
+                {[{ id: 'female', et: `♀ ${tt('femaleWord', 'Femminile')}` }, { id: 'male', et: `♂ ${tt('maleWord', 'Maschile')}` }].map((o) => {
                   const on = timbro === o.id;
                   return (
                     <button key={o.id} onClick={() => cambiaTimbro(o.id)} aria-pressed={on}

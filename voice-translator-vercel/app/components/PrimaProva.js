@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useApp } from '../contexts/AppContext.js';
-import { memGet, memDel, memSet } from '../lib/memoria.js';
+import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 
@@ -23,23 +23,24 @@ import Icon from './Icon.js';
 
 const FATTA = 'vt-prima-prova-fatta';
 
-export function primaProvaGiaFatta() {
-  try { return memGet(FATTA) === '1'; } catch { return true; }
-}
-
 export function riapriPrimaProva() {
   try { memDel(FATTA); } catch { /* niente memoria: pazienza */ }
 }
 
 // Le mete rapide in cima; tutte le altre scorrono nella stessa fila.
-const RAPIDE = ['en-US', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt-BR'];
+// b.363 — CODICI VERI, non fantasmi: 'en-US' e 'pt-BR' NON esistono in LANGS
+// (li' l'inglese e 'en' e il portoghese 'pt'; 'en-US'/'pt-BR' sono i codici
+// della VOCE, non della lingua). Con quelli, la meta iniziale diventava un
+// codice inesistente: getLang ripiegava sull'italiano e il traduttore
+// rispondeva IN ITALIANO con voce italiana, in silenzio.
+const RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
 
 export default function PrimaProva({ onChiudi }) {
   const { L, S, prefs } = useApp();
   const C = S?.colors || {};
 
   const miaLingua = prefs?.lang || 'it';
-  const [meta, setMeta] = useState(() => (RAPIDE.find((m) => m.split('-')[0] !== (prefs?.lang || 'it').split('-')[0]) || 'en-US'));
+  const [meta, setMeta] = useState(() => (RAPIDE.find((m) => m.split('-')[0] !== (prefs?.lang || 'it').split('-')[0]) || 'en'));
   const [testo, setTesto] = useState('');
   // b.356 — i messaggi SI SUSSEGUONO, non scompaiono (collaudo di Luca):
   // ogni frase tradotta resta nel registro, la nuova si accoda sotto.
@@ -140,6 +141,12 @@ export default function PrimaProva({ onChiudi }) {
       if (staAllungando) return;
       // in ordine di partenza, anche se le risposte arrivano scomposte
       setStoria((prima) => [...prima, { n: mio, detto: t, resa: d.translated }].sort((a, b) => a.n - b.n));
+      // b.363 — la firma anti-doppione si azzera a risposta ACQUISITA: senza
+      // questo, ripetere la stessa frase ("si", "ok", "grazie") non produceva
+      // piu nulla — ne riga ne voce — e nessun segnale. Il doppione di b.357
+      // resta comunque bloccato: timer e fine-dettatura scattano PRIMA che la
+      // risposta arrivi, quindi trovano la firma ancora armata.
+      giaChiestaRef.current = '';
       if (attuale === t) setTesto('');
       if (mio === numeroRef.current) setStato('quieto');
       try { memSet(FATTA, '1'); } catch { /* niente memoria: pazienza */ }
@@ -221,12 +228,12 @@ export default function PrimaProva({ onChiudi }) {
     <div key="scrivi" style={{ flexShrink: 0 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
         <textarea value={testo} onChange={(e) => setTesto(e.target.value)} rows={capovolto ? 2 : 3}
-          placeholder={detto ? 'Ti ascolto: parla…' : 'Scrivi o detta qui: la traduzione parte da sola'}
+          placeholder={detto ? L('speakNowListening') : L('speakNowPlaceholder')}
           style={{ flex: 1, padding: 13, borderRadius: 14, border: detto ? '2px solid #ff5470' : bordo,
             background: 'rgba(255,255,255,0.05)', color: C.textPrimary, fontSize: 16,
             fontFamily: FONT, resize: 'none', outline: 'none', boxSizing: 'border-box' }} />
         {micDisponibile && (
-          <button onClick={detta} aria-pressed={detto} aria-label="Detta"
+          <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')}
             style={{ width: 52, borderRadius: 14, cursor: 'pointer', flexShrink: 0,
               border: detto ? '2px solid #ff5470' : bordo,
               background: detto ? 'rgba(255,84,112,0.15)' : 'rgba(255,255,255,0.05)',
@@ -275,7 +282,7 @@ export default function PrimaProva({ onChiudi }) {
       {storia.length === 0 && stato !== 'traduco' && (
         <span style={{ color: C.textMuted, fontWeight: 500, fontFamily: FONT,
           fontSize: capovolto ? 22 : 14, textAlign: capovolto ? 'center' : 'left' }}>
-          {capovolto ? 'La traduzione comparira qui, girata verso chi hai davanti.' : 'Qui la traduzione, testo e voce.'}
+          {capovolto ? L('speakNowEmptyFlipped') : L('speakNowEmpty')}
         </span>
       )}
       {storia.map((riga, i) => (
@@ -297,7 +304,7 @@ export default function PrimaProva({ onChiudi }) {
         <div style={{ fontSize: capovolto ? 28 : 18, color: C.textMuted, fontFamily: FONT,
           textAlign: capovolto ? 'center' : 'left' }}>…</div>
       )}
-      {stato === 'errore' && <div style={{ color: '#ff5470', fontSize: 12, fontFamily: FONT }}>La traduzione non e arrivata: riprova.</div>}
+      {stato === 'errore' && <div style={{ color: '#ff5470', fontSize: 12, fontFamily: FONT }}>{L('speakNowError')}</div>}
     </div>
   );
 
@@ -333,7 +340,7 @@ export default function PrimaProva({ onChiudi }) {
             border: capovolto ? `1.5px solid ${C.accent || '#5b8cff'}` : bordo,
             color: capovolto ? (C.accent || '#5b8cff') : C.textSecondary }}>
           <Icon name="swap" size={14} color={capovolto ? (C.accent || '#5b8cff') : C.textSecondary} />
-          Faccia a faccia
+          {L('faceToFaceWord')}
         </button>
         <button onClick={() => { try { memSet(FATTA, '1'); } catch { /* la memoria locale non e disponibile: si chiude lo stesso */ } onChiudi?.(); }}
           aria-label={L('close')}
