@@ -279,6 +279,67 @@ laterali: **tutti verdi**. Dettaglio in COLLAUDO-STRESS.md.
    pensa il mondo" (che NON serve AI: sono conteggi sui dati che
    abbiamo), la colonna a due schede.
 
+### BarTalk TV — decisioni prese col ragionamento (21/08/2026)
+
+Non e ancora costruito niente: qui sta il ragionamento, per non
+rifarlo da capo.
+
+**Cosa e.** Programmazione con eventi in agenda: talk show e podcast dal
+vivo, piu contenuti registrati portati da altri. Noi diamo il luogo, il
+palcoscenico e — la cosa che nessun altro ha — la TRADUZIONE
+SIMULTANEA. Chi porta il programma porta gli sponsor.
+
+**Il registrato e facile, il dal vivo e difficile** (all'inizio si era
+pensato il contrario). Sul registrato l'ostacolo non e tecnico: sono i
+DIRITTI. Chi porta il contenuto porta anche il diritto di tradurlo.
+
+**Si traduce una volta per LINGUA, mai per spettatore.** Il costo
+dipende da quante lingue si accendono, non da quanta gente guarda.
+Duemila spettatori costano come venti. Tradurre per spettatore vuol dire
+morire al primo show riuscito.
+
+**Il prezzo si divide fra TUTTI, non per lingua** (decisione di Luca, ed
+e migliore della prima proposta). Dividendo per lingua si creava un
+incentivo storto: conveniva guardare in inglese anche capendolo male,
+perche costava meno — cioe il sistema spingeva ad abbandonare la propria
+lingua, su un'app che esiste per il contrario. Dividendo fra tutti, il
+prezzo non dipende ne da chi sei ne da che lingua parli, e si puo
+scrivere sul programma prima: "questo talk costa due centesimi".
+
+**La soglia per aprire una lingua cambia di segno.** Non "lo swahili si
+accende se lo chiedono in tre" (che punisce chi e solo), ma "una lingua
+si accende quando il pubblico e abbastanza grande da non accorgersene":
+la folla porta chi e solo. Sotto soglia, la copre lo sponsor o la
+piattaforma — costa poco proprio quando il pubblico e piccolo.
+
+**Conteggio temporaneo, aggiustato alla fine** (Luca). All'ingresso si
+BLOCCA una stima (un tetto dichiarato), durante non si tocca il
+portafoglio, alla fine si addebita il costo VERO e si libera il resto.
+E' esattamente riserva -> commit -> release, che nel portafoglio esiste
+gia. Tre motivi: sessantamila scritture diventano mille; non si possono
+addebitare frazioni di centesimo (arrotondando ogni minuto l'errore
+supera la cifra); e soprattutto il DIVISORE vero si conosce solo a fine
+evento. Chi esce a meta si chiude comunque alla fine, con gli stessi
+numeri di tutti. Chi sparisce senza chiudere lo sblocca il cron delle
+riserve scadute, che esiste gia.
+
+**Ritardo accettabile**: 2-4 secondi stimati (mai misurati in diretta).
+Si trasmette con ~10 secondi di ritardo per tutti, come la TV vera: cosi
+la traduzione arriva allineata e nessuno se ne accorge.
+
+**Anche la SALA va tradotta**, non solo lo show: e il pubblico che si
+parla attraverso le lingue la cosa che non esiste altrove.
+
+**Da dove si parte**: NON dal canale. Da UN solo programma — una
+discussione, data e ora, un ospite, tre lingue, trenta persone — con
+quello che c'e gia in casa (stanze, alza-la-mano, dai-la-parola, ruoli,
+interprete in streaming). Zero tecnologia nuova. Se trenta persone in
+tre lingue capiscono tutto, la prova e fatta in una settimana.
+
+**Non inseguire il video ad alta qualita all'inizio**: il vantaggio e
+nell'AUDIO, dove vive la traduzione. Una radio multilingue non esiste
+gia, costa un decimo, e il video si aggiunge dopo.
+
 ### Restano SOLO le prove che richiedono due telefoni fisici
 
 1. Videochiamata: chiude uno, la telecamera dell'altro non si riaccende
