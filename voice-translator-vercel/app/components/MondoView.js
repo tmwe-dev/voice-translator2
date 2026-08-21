@@ -1,6 +1,7 @@
 'use client';
 import Icon from './Icon.js';
 import { ombraAcciaio } from '../lib/acciaio.js';
+import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -252,6 +253,14 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         </div>
       )}
 
+      {/* b.363 — LA LINGUETTA DEL PANNELLO, sul bordo sinistro: si vede
+          sempre, dice da che parte si apre, e non copre il mondo. Dentro
+          ci sono la ricerca e i filtri di questa sezione. */}
+      {!cercando && !strumenti && (
+        <LinguettaPannello onApri={() => setStrumenti(true)} C={C}
+          etichetta={tab === 'news' ? L('tabNews') : L('searchRooms')} />
+      )}
+
       {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
           con la freccia a sinistra e a destra che scorrono le schede. Sopra
           l'area di ricerca. Le icone sono quelle in acciaio. ═══ */}
@@ -276,33 +285,26 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' };
           return (
             <>
-              {/* il logo nell'angolo a sinistra, allineato al testo "Stanze",
-                  con piu aria attorno (Luca: «aumenta i padding della porta e
-                  allina a stanze»). */}
-              {/* b.363 — le icone in acciaio dei menu vanno al DOPPIO
-                  (ordine di Luca): il riquadro da 52 passa a 104, il
-                  respiro interno da 8 a 16 perche resti in proporzione.
-                  E la porta si STACCA dal bordo in alto: centrata sulla
-                  riga del titolo toccava il bordo dello schermo, perche
-                  alta il doppio della riga che la ospita. Ora e ancorata
-                  sotto il bordo, con la sua aria. */}
-              <button onClick={() => { vibrate(8); setStrumenti((v) => !v); }}
-                aria-label={L('searchRooms')} aria-expanded={strumenti}
-                style={{
-                position: 'absolute', left: 12, top: 14,
-                width: 104, height: 104, padding: 16, boxSizing: 'border-box',
-                background: 'none', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                WebkitTapHighlightColor: 'transparent',
-                opacity: strumenti ? 1 : 0.85, transition: 'opacity .2s',
+              {/* b.363 — SCAMBIO (ordine di Luca): il NOME della sezione va
+                  nell'angolo in alto a sinistra, e l'ICONA sale al centro
+                  fra le due frecce. Prima era il contrario, e l'icona —
+                  alta il doppio della riga che la ospita — sbordava e si
+                  prendeva l'angolo che serviva al nome. */}
+              <span style={{
+                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5,
+                whiteSpace: 'nowrap',
               }}>
-                <img src={cur.img} alt="" aria-hidden width={104} height={104}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain',
-                    filter: ombraAcciaio(1.6) }} />
-              </button>
-              <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
-              <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
                 {L(cur.labelKey)}
+              </span>
+              <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
+              <span style={{
+                width: 62, height: 62, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <img src={cur.img} alt="" aria-hidden width={62} height={62}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain',
+                    filter: ombraAcciaio(1.1) }} />
               </span>
               <button onClick={() => vai(1)} aria-label={L('nextWord')} style={freccia}>›</button>
             </>
@@ -320,8 +322,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           Scende anche di 18 pixel: attaccata al titolo sembrava parte
           della testata, staccata si legge come una cosa appoggiata sopra
           il pianeta. */}
-      {strumenti && (
-      <div style={{ padding: '18px 16px 8px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+      {/* in News il pannello lo riempie MondoNews coi suoi strumenti */}
+      <PannelloLaterale aperto={strumenti && tab === 'stanze'} onChiudi={() => setStrumenti(false)}
+        titolo={L('tabRooms')} C={C}>
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: '100%', maxWidth: 420,
           display: 'flex', alignItems: 'center', gap: 10,
@@ -344,7 +348,66 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       </div>
+      {/* b.363 — anche le pillole dei filtri stanno dietro la maniglia:
+          sopra il pianeta restavano accese sempre, anche senza usarle. */}
+      {tab === 'stanze' && strumenti && !cercando && (
+      <div style={{
+        display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
+        maxWidth: 460, margin: '0 auto', width: '100%', justifyContent: 'flex-start',
+      }}>
+        {/* b.363 — cercando una lingua fuori dalle 12 pillole (es. il russo)
+            il filtro si applicava ma NESSUNA pillola risultava attiva: la
+            lista sembrava vuota senza motivo e non si poteva togliere il
+            filtro. Qui la lingua scelta compare comunque. */}
+        {(LANG_FILTERS.some(l => l.code === langFilter) ? LANG_FILTERS
+          : [...LANG_FILTERS, { code: langFilter, flag: getLangFlag(langFilter), name: (getLangName(langFilter) || langFilter).slice(0, 12) }]
+        ).map(lf => {
+          const active = langFilter === lf.code;
+          return (
+            <button key={lf.code} onClick={() => setLangFilter(lf.code)} style={{
+              padding: '5px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
+              background: active ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
+              border: active ? 'none' : `1px solid ${C.cardBorder}`,
+              color: active ? '#fff' : C.textSecondary,
+              fontSize: 11, fontWeight: 600, fontFamily: FONT,
+              display: 'flex', alignItems: 'center', gap: 4,
+              WebkitTapHighlightColor: 'transparent',
+              boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
+            }}>
+              <span>{lf.flag}</span>
+              <span>{lf.nameKey ? L(lf.nameKey) : lf.name}</span>
+            </button>
+          );
+        })}
+      </div>
       )}
+
+      {/* ═══ MODE PILLS ═══ */}
+      {tab === 'stanze' && strumenti && availableModes.length > 2 && (
+        <div style={{
+          display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
+        }}>
+          {availableModes.map(mode => {
+            const active = modeFilter === mode;
+            const info = MODE_LABELS[mode];
+            return (
+              <button key={mode} onClick={() => setModeFilter(mode)} style={{
+                padding: '4px 10px', borderRadius: 12, cursor: 'pointer', flexShrink: 0,
+                background: active ? `${info?.color || C.accent}18` : 'transparent',
+                border: active ? `1px solid ${info?.color || C.accent}35` : '1px solid transparent',
+                color: active ? (info?.color || C.accent) : C.textMuted,
+                fontSize: 10, fontWeight: 600, fontFamily: FONT,
+                WebkitTapHighlightColor: 'transparent',
+              }}>
+                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${nomeModalita(info, L) || mode}`}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo
           (collaudo di Luca: «deve essere una popup in primo piano senza
@@ -421,71 +484,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ maxWidth: 440, margin: '0 auto' }}>
-            <MondoNews strumenti={strumenti} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}
 
       {/* ═══ LANGUAGE PILLS ═══ */}
-      {/* b.363 — anche le pillole dei filtri stanno dietro la maniglia:
-          sopra il pianeta restavano accese sempre, anche senza usarle. */}
-      {tab === 'stanze' && strumenti && !cercando && (
-      <div style={{
-        display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
-        WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
-        maxWidth: 460, margin: '0 auto', width: '100%', justifyContent: 'flex-start',
-      }}>
-        {/* b.363 — cercando una lingua fuori dalle 12 pillole (es. il russo)
-            il filtro si applicava ma NESSUNA pillola risultava attiva: la
-            lista sembrava vuota senza motivo e non si poteva togliere il
-            filtro. Qui la lingua scelta compare comunque. */}
-        {(LANG_FILTERS.some(l => l.code === langFilter) ? LANG_FILTERS
-          : [...LANG_FILTERS, { code: langFilter, flag: getLangFlag(langFilter), name: (getLangName(langFilter) || langFilter).slice(0, 12) }]
-        ).map(lf => {
-          const active = langFilter === lf.code;
-          return (
-            <button key={lf.code} onClick={() => setLangFilter(lf.code)} style={{
-              padding: '5px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
-              background: active ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
-              border: active ? 'none' : `1px solid ${C.cardBorder}`,
-              color: active ? '#fff' : C.textSecondary,
-              fontSize: 11, fontWeight: 600, fontFamily: FONT,
-              display: 'flex', alignItems: 'center', gap: 4,
-              WebkitTapHighlightColor: 'transparent',
-              boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
-            }}>
-              <span>{lf.flag}</span>
-              <span>{lf.nameKey ? L(lf.nameKey) : lf.name}</span>
-            </button>
-          );
-        })}
-      </div>
-      )}
-
-      {/* ═══ MODE PILLS ═══ */}
-      {tab === 'stanze' && strumenti && availableModes.length > 2 && (
-        <div style={{
-          display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
-        }}>
-          {availableModes.map(mode => {
-            const active = modeFilter === mode;
-            const info = MODE_LABELS[mode];
-            return (
-              <button key={mode} onClick={() => setModeFilter(mode)} style={{
-                padding: '4px 10px', borderRadius: 12, cursor: 'pointer', flexShrink: 0,
-                background: active ? `${info?.color || C.accent}18` : 'transparent',
-                border: active ? `1px solid ${info?.color || C.accent}35` : '1px solid transparent',
-                color: active ? (info?.color || C.accent) : C.textMuted,
-                fontSize: 10, fontWeight: 600, fontFamily: FONT,
-                WebkitTapHighlightColor: 'transparent',
-              }}>
-                {mode === 'all' ? L('filterAllVoices') : `${info?.icon || ''} ${nomeModalita(info, L) || mode}`}
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* ═══ ROOM LIST ═══ */}
       {tab === 'stanze' && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)

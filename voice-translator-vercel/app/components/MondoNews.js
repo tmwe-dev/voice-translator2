@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
+import PannelloLaterale from './ui/PannelloLaterale.js';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import SchedaArgomento from './SchedaArgomento.js';
@@ -48,7 +49,7 @@ const QUERY_RAPIDE = {
   arte:       { it: 'arte cultura', en: 'art culture', es: 'arte cultura', fr: 'art culture', de: 'kunst kultur' },
 };
 
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = true }) {
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti }) {
   const { L, prefs, userToken } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -283,7 +284,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           modi, la fila delle categorie — che coprivano meta mondo anche
           quando nessuno li stava usando. Ora si aprono toccando l'icona
           del giornale in alto a sinistra, e si richiudono. */}
-      {strumenti && (<>
+      <PannelloLaterale aperto={strumenti} onChiudi={suChiudiStrumenti} titolo={L('tabNews')} C={C}>
       {/* ─── Cerca + Aggiorna ─── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
@@ -368,7 +369,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           </button>
         ))}
       </div>
-      </>)}
+      </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}
       {(cercando || (processo.length > 0 && argomenti === null)) && (

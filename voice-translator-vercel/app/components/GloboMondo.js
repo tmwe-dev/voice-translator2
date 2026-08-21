@@ -100,8 +100,8 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
           // b.363 — spostata IN ALTO A DESTRA, sotto la pila: prima stava a
           // sinistra sotto la linguetta, che nel frattempo e scesa in fondo,
           // e restava li da sola in mezzo al pianeta.
-          position: 'fixed', right: 18,
-          top: 'max(152px, calc(env(safe-area-inset-top) + 144px))', zIndex: 70,
+          position: 'fixed', right: 14,
+          top: 'max(84px, calc(env(safe-area-inset-top) + 78px))', zIndex: 70,
           background: 'none', border: 'none', padding: 6, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           WebkitTapHighlightColor: 'transparent',

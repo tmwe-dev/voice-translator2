@@ -1304,8 +1304,11 @@ function HomeInner() {
               nell'angolo in ALTO A DESTRA, piu piccola (terza volta che
               Luca lo chiede). Sotto di lei ci sta il comando del cielo. */}
           <div style={{
-            position: 'fixed', right: 12,
-            top: 'max(74px, calc(env(safe-area-inset-top) + 66px))', zIndex: 60,
+            // b.363 — NELL'ANGOLO, quello vero: a 74 pixel dall'alto
+            // finiva dentro il campo di ricerca e si sovrapponeva.
+            // Ora sta sulla riga del titolo, in cima a destra.
+            position: 'fixed', right: 10,
+            top: 'max(16px, calc(env(safe-area-inset-top) + 10px))', zIndex: 75,
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
           }}>
             <BatteryPillSlot verticale />
