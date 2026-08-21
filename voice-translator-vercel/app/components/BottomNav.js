@@ -10,7 +10,12 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 // b.361 — le immagini in acciaio di Luca al posto delle icone del menu, dove
 // le ho: la casa per Home, il globo per Community.
-const IMG_MENU = { home: '/sezioni/menu-home.webp', community: '/sezioni/sez-mondo.webp' };
+const IMG_MENU = {
+  home: '/sezioni/menu-home.webp',
+  conversations: '/sezioni/menu-chat.webp',   // il fumetto in acciaio per Chat
+  community: '/sezioni/sez-mondo.webp',        // il globo in acciaio
+  profile: '/sezioni/menu-profilo.webp',       // la porta in acciaio per Profilo
+};
 
 const NavIcon = ({ id, color, size = 22 }) => {
   if (IMG_MENU[id]) {
