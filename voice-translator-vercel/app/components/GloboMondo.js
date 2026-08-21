@@ -97,8 +97,11 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
           un'interfaccia tradotta. */}
       <button onClick={cambiaCielo} aria-label={etichettaCielo}
         style={{
-          position: 'fixed', left: 22,
-          top: 'max(238px, calc(env(safe-area-inset-top) + 214px))', zIndex: 70,
+          // b.363 — spostata IN ALTO A DESTRA, sotto la pila: prima stava a
+          // sinistra sotto la linguetta, che nel frattempo e scesa in fondo,
+          // e restava li da sola in mezzo al pianeta.
+          position: 'fixed', right: 18,
+          top: 'max(152px, calc(env(safe-area-inset-top) + 144px))', zIndex: 70,
           background: 'none', border: 'none', padding: 6, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           WebkitTapHighlightColor: 'transparent',

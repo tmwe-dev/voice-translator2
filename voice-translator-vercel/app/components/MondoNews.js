@@ -48,7 +48,7 @@ const QUERY_RAPIDE = {
   arte:       { it: 'arte cultura', en: 'art culture', es: 'arte cultura', fr: 'art culture', de: 'kunst kultur' },
 };
 
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione }) {
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = true }) {
   const { L, prefs, userToken } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -278,6 +278,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // come la Home.
     <div style={{ padding: '0 16px 96px', fontFamily: FONT, maxWidth: 680, margin: '0 auto' }}>
 
+      {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
+          restavano accesi tre blocchi — il campo "cosa vuoi seguire", i due
+          modi, la fila delle categorie — che coprivano meta mondo anche
+          quando nessuno li stava usando. Ora si aprono toccando l'icona
+          del giornale in alto a sinistra, e si richiudono. */}
+      {strumenti && (<>
       {/* ─── Cerca + Aggiorna ─── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
@@ -362,6 +368,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           </button>
         ))}
       </div>
+      </>)}
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}
       {(cercando || (processo.length > 0 && argomenti === null)) && (

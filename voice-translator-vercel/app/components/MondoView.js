@@ -10,7 +10,7 @@ import { ombraAcciaio } from '../lib/acciaio.js';
 // ═══════════════════════════════════════════════
 
 import { memo, useState, useEffect, useCallback, useMemo } from 'react';
-import { FONT, LANGS } from '../lib/constants.js';
+import { FONT, LANGS, vibrate } from '../lib/constants.js';
 import GloboMondo from './GloboMondo.js'; // b.359 — il pianeta dal file di Luca
 import getStyles from '../lib/styles.js';
 import { PALETTE } from '../lib/palette.js';
@@ -151,6 +151,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // b.363 — dai risultati di ricerca la discussione va APERTA, non solo la
   // scheda News: prima l'id veniva buttato e si atterrava sul generico.
   const [apriDiscussione, setApriDiscussione] = useState(null);
+  // b.363 — la maniglia degli strumenti: chiusa il pianeta e libero.
+  const [strumenti, setStrumenti] = useState(false);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -279,16 +281,25 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                   allina a stanze»). */}
               {/* b.363 — le icone in acciaio dei menu vanno al DOPPIO
                   (ordine di Luca): il riquadro da 52 passa a 104, il
-                  respiro interno da 8 a 16 perche resti in proporzione. */}
-              <span style={{
-                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                  respiro interno da 8 a 16 perche resti in proporzione.
+                  E la porta si STACCA dal bordo in alto: centrata sulla
+                  riga del titolo toccava il bordo dello schermo, perche
+                  alta il doppio della riga che la ospita. Ora e ancorata
+                  sotto il bordo, con la sua aria. */}
+              <button onClick={() => { vibrate(8); setStrumenti((v) => !v); }}
+                aria-label={L('searchRooms')} aria-expanded={strumenti}
+                style={{
+                position: 'absolute', left: 12, top: 14,
                 width: 104, height: 104, padding: 16, boxSizing: 'border-box',
+                background: 'none', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent',
+                opacity: strumenti ? 1 : 0.85, transition: 'opacity .2s',
               }}>
                 <img src={cur.img} alt="" aria-hidden width={104} height={104}
                   style={{ width: '100%', height: '100%', objectFit: 'contain',
                     filter: ombraAcciaio(1.6) }} />
-              </span>
+              </button>
               <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
               <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
                 {L(cur.labelKey)}
@@ -300,8 +311,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       </header>
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
-          b.361 — CENTRATA e non a tutta larghezza (regola di Luca). */}
-      <div style={{ padding: '0 16px 8px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
+          b.361 — CENTRATA e non a tutta larghezza (regola di Luca).
+          b.363 — E ORA STA DIETRO L'ICONA IN ALTO A SINISTRA. Sopra il
+          pianeta galleggiavano un campo di ricerca, una fila di modi, una
+          fila di categorie: strumenti sempre accesi che coprivano meta
+          mondo anche quando nessuno li stava usando. Ora si aprono
+          toccando la porta (o il giornale, in News) e si richiudono.
+          Scende anche di 18 pixel: attaccata al titolo sembrava parte
+          della testata, staccata si legge come una cosa appoggiata sopra
+          il pianeta. */}
+      {strumenti && (
+      <div style={{ padding: '18px 16px 8px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: '100%', maxWidth: 420,
           display: 'flex', alignItems: 'center', gap: 10,
@@ -324,6 +344,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       </div>
+      )}
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo
           (collaudo di Luca: «deve essere una popup in primo piano senza
@@ -400,13 +421,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ maxWidth: 440, margin: '0 auto' }}>
-            <MondoNews apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+            <MondoNews strumenti={strumenti} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}
 
       {/* ═══ LANGUAGE PILLS ═══ */}
-      {tab === 'stanze' && !cercando && (
+      {/* b.363 — anche le pillole dei filtri stanno dietro la maniglia:
+          sopra il pianeta restavano accese sempre, anche senza usarle. */}
+      {tab === 'stanze' && strumenti && !cercando && (
       <div style={{
         display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
         WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
@@ -440,7 +463,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       )}
 
       {/* ═══ MODE PILLS ═══ */}
-      {tab === 'stanze' && availableModes.length > 2 && (
+      {tab === 'stanze' && strumenti && availableModes.length > 2 && (
         <div style={{
           display: 'flex', gap: 6, padding: '0 16px 8px', overflowX: 'auto', scrollbarWidth: 'none', flexShrink: 0,
         }}>

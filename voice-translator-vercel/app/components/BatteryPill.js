@@ -230,24 +230,27 @@ export default function BatteryPill({ utente, verticale = false }) {
   // verticale sopra la linguetta a sinistra»): la stessa pila, ruotata in
   // piedi col polo in su e la percentuale sotto. Il riempimento sale dal
   // basso, come una batteria vera.
+  // b.363 — la pila si e rimpicciolita di un terzo e vive nell'angolo in
+  // ALTO A DESTRA (terza volta che Luca lo chiede): non e piu appoggiata
+  // sopra la linguetta, che nel frattempo e scesa in fondo.
   if (verticale) {
     return (
       <>
         <button onClick={() => setAperto(true)} aria-label={`${L('creditRow')}: ${dati.testo}`} style={{
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer',
-          background: 'none', border: 'none', padding: 2, fontFamily: 'inherit',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, cursor: 'pointer',
+          background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
           WebkitTapHighlightColor: 'transparent',
         }}>
           {/* il polo, in alto */}
-          <span style={{ width: 8, height: 3, borderRadius: 1, background: colore }} />
+          <span style={{ width: 5, height: 2, borderRadius: 1, background: colore }} />
           {/* corpo pila, in piedi: il credito riempie dal basso */}
-          <span style={{ position: 'relative', width: 18, height: 30, borderRadius: 4,
-            border: `2px solid ${colore}`, display: 'block' }}>
-            <span style={{ position: 'absolute', left: 1.5, right: 1.5, bottom: 1.5,
-              height: `calc(${Math.max(8, dati.percento)}% - 3px)`, maxHeight: 'calc(100% - 3px)',
-              background: colore, borderRadius: 2 }} />
+          <span style={{ position: 'relative', width: 12, height: 20, borderRadius: 3,
+            border: `1.5px solid ${colore}`, display: 'block' }}>
+            <span style={{ position: 'absolute', left: 1, right: 1, bottom: 1,
+              height: `calc(${Math.max(8, dati.percento)}% - 2px)`, maxHeight: 'calc(100% - 2px)',
+              background: colore, borderRadius: 1.5 }} />
           </span>
-          <span style={{ fontSize: 9.5, fontWeight: 800, color: colore, lineHeight: 1 }}>{dati.testo}</span>
+          <span style={{ fontSize: 8, fontWeight: 800, color: colore, lineHeight: 1.05, textAlign: 'center' }}>{dati.testo}</span>
         </button>
         {aperto && popup}
       </>

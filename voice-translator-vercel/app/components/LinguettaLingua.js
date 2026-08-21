@@ -13,7 +13,7 @@ import { conRipiego } from '../lib/ripiego.js';
 // Semplice e con icone grandi (regola anziani/bambini).
 // ═══════════════════════════════════════════════════════════════
 
-function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0', batteria = null }) {
+function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0' }) {
   const [aperto, setAperto] = useState(false);
   const [cerca, setCerca] = useState('');
 
@@ -42,29 +42,15 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
           Luca): la bandiera e ancorata all'altezza del tondo del microfono; la
           pila del credito galleggia SOPRA di essa, senza spostarla. Staccata
           dal bordo, piu grande del 50%, senza freccia. */}
+      {/* b.363 — LA LINGUETTA E' SCESA IN FONDO: sta 20 pixel sopra
+          l'icona Home del menu (che e alto 94), non piu a meta altezza
+          sul bordo sinistro. E la pila non le sta piu sopra: se n'e
+          andata nell'angolo in alto a destra, per conto suo. */}
       {!aperto && (
         <div style={{
-          position: 'fixed', left: 10, top: 'max(160px, calc(env(safe-area-inset-top) + 136px))', zIndex: 60,
+          position: 'fixed', left: 10, zIndex: 60,
+          bottom: 'calc(94px + 20px + env(safe-area-inset-bottom))',
         }}>
-          {batteria && (
-            // b.361 — NIENTE transform qui: un antenato con `transform`
-            // rende il popup del credito (position fixed) relativo a se
-            // invece che allo schermo, e i suoi campi finivano sparsi a
-            // tutto schermo invece che nel pannello centrato (collaudo di
-            // Luca). Si centra con left/right, senza transform.
-            <div style={{
-              position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: 8,
-              display: 'flex', justifyContent: 'center',
-            }}>
-              <div style={{
-                display: 'flex', justifyContent: 'center', padding: '6px 6px 4px',
-                background: card, border: bordo, borderRadius: 16,
-                boxShadow: '2px 2px 14px rgba(0,0,0,0.35)',
-              }}>
-                {batteria}
-              </div>
-            </div>
-          )}
           <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
             style={{
               display: 'flex', alignItems: 'center', justifyContent: 'center',

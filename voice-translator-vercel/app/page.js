@@ -1298,7 +1298,20 @@ function HomeInner() {
           (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
           (voicetest). Da qui si cambia lingua e voce al volo. */}
       {!['loading', 'paese', 'welcome', 'room', 'speaker', 'taxi-chat', 'taxi', 'lobby', 'summary', 'join', 'voicetest'].includes(view) && (
-        <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} batteria={<BatteryPillSlot verticale />} />
+        <>
+          {/* b.363 — LA PILA SE NE VA DALLA LINGUETTA. Stava appoggiata
+              sopra la bandiera, a sinistra; ora vive per conto suo
+              nell'angolo in ALTO A DESTRA, piu piccola (terza volta che
+              Luca lo chiede). Sotto di lei ci sta il comando del cielo. */}
+          <div style={{
+            position: 'fixed', right: 12,
+            top: 'max(74px, calc(env(safe-area-inset-top) + 66px))', zIndex: 60,
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          }}>
+            <BatteryPillSlot verticale />
+          </div>
+          <LinguettaLingua prefs={prefs} savePrefs={savePrefs} L={L} onScegliVoce={() => setView('voicetest')} />
+        </>
       )}
     </AppProvider>
   );
