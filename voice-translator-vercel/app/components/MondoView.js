@@ -225,9 +225,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' };
           return (
             <>
-              {/* il logo nell'angolo a sinistra */}
-              <img src={cur.img} alt="" aria-hidden width={72} height={72}
-                style={{ position: 'absolute', left: 16, top: 10, width: 40, height: 40, objectFit: 'contain' }} />
+              {/* il logo nell'angolo a sinistra, allineato al testo "Stanze",
+                  con piu aria attorno (Luca: «aumenta i padding della porta e
+                  allina a stanze»). */}
+              <span style={{
+                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                width: 52, height: 52, padding: 8, boxSizing: 'border-box',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <img src={cur.img} alt="" aria-hidden width={72} height={72}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              </span>
               <button onClick={() => vai(-1)} aria-label="precedente" style={freccia}>‹</button>
               <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
                 {L(cur.labelKey)}
