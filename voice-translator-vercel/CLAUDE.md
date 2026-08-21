@@ -214,14 +214,20 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.362** (push #622) — refactoring dall'audit totale: agenti
-  senza ordini di riempimento e col canale passo/domanda ACCESO (Tavolo e
-  Podcast leggono [esito:...]), syllabus con veste neutra e temperatura
-  bassa, dati Mondo normalizzati, tt/leggiEsitoRicerca deduplicate,
-  debounce sul profilo studente, codice morto rimosso (ramo podcast
-  intero, segnala/modera, refreshAnim). Globo dimagrito 4,9→2 MB (texture
-  a meta risoluzione, schermate demo rimosse dal file).
-  L'audit a 8 aree e in corso: i reperti verificati vanno riparati TUTTI.
+- Versione: **b.363** (push #628) — AUDIT TOTALE CHIUSO. I 69 reperti
+  verificati sono stati riparati in sei ondate: home (#623), chat (#624),
+  mondo (#625), life (#626), agenti (#627), coda (#628). I piu grossi:
+  il cuore di Mondo contava male dopo un ricarico; la segnalazione
+  esisteva solo sul server; una discussione nascosta restava commentabile;
+  in Life la PAUSA veniva scambiata per un'interruzione (turno saltato e
+  audio buttato) e lo Stop non fermava la fabbrica dei turni (spesa che
+  continuava); al tavolo il cancello anti-consenso zittiva TUTTI in blocco
+  riducendo quattro voci a una; con chiave propria il ripiego generava a
+  spese della piattaforma; tre 502 muti ora lasciano una riga nel registro.
+  UNICO reperto NON riparato: l'OCR a pagamento dei Compiti
+  (CompitiView.js, `scattaOcr`) e codice non raggiungibile, ma e parcheggiato
+  di proposito con nota scritta (b.344) in attesa che i dati dello Scanner
+  confluiscano da soli: si e scelto di non cancellarlo.
 - Test: **2164 verdi su 144 file** · 0 errori di lint (avvisi tollerati)
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.
