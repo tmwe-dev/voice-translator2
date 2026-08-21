@@ -141,7 +141,7 @@ export default function InstallaApp({ pwa, theme }) {
         // b.134-ter — PROVATO NEL BROWSER: COPRIVA LA NAVIGAZIONE.
         //
         // Con `bottom: 0` e zIndex 900 questo pannello si sedeva sopra la
-        // BottomNav (fissa, alta 104px dal b.363, zIndex 50). Home, Chat, Community
+        // BottomNav (fissa, alta 94px dal b.363, zIndex 50). Home, Chat, Community
         // e Profilo diventavano tutti inarrivabili: il banner non era un
         // fastidio, era un muro. Non me ne ero accorto perche l'avevo
         // provato leggendo il codice, non premendo i pulsanti.
@@ -150,7 +150,7 @@ export default function InstallaApp({ pwa, theme }) {
         // l'altezza dichiarata in BottomNav.js:98 — se cambia li, va
         // cambiata anche qui, e il commento serve a ricordarlo.
         position: 'fixed', left: 0, right: 0, zIndex: 900,
-        bottom: 'calc(104px + env(safe-area-inset-bottom))', // b.363 — la barra si e alzata a 104
+        bottom: 'calc(94px + env(safe-area-inset-bottom))', // b.363 — la barra sta a 94
         padding: '16px',
         background: C.card, borderTop: `1px solid ${C.bordo}`,
         backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',

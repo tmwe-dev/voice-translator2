@@ -216,24 +216,36 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
           il nome nudo, piccolo, sotto le bandiere: informa e basta. La
           scelta la fa gia la rotazione (auto-selezione) o il tocco sulla
           bandiera centrale. */}
-      <div aria-live="polite" style={{ marginTop: 6, fontFamily: FONT, fontSize: 13, fontWeight: 700,
-        color: alCentro.code === selezionata ? C.accent : C.textSecondary,
-        display: 'flex', alignItems: 'center', gap: 6 }}>
-        {alCentro.name}
-        {alCentro.code === selezionata && <span style={{ color: C.accent, fontSize: 12 }}>✓</span>}
+      {/* b.363 — UN SOLO POSTO, SEMPRE ALTO UGUALE. Il tasto di conferma non
+          si AGGIUNGE sotto il nome: lo SOSTITUISCE. Aggiungendolo, tutto
+          quello che sta sotto — microfono, QR, sezioni — scendeva di
+          trenta pixel a ogni bandiera che passava, e chi stava guardando
+          si ritrovava il contenuto che scappava sotto le dita.
+          Regola generale di Luca: cio che apre una funzione non deve MAI
+          spingere in basso il resto della pagina.
+          L'altezza e fissata qui: che ci sia il nome o il tasto, il posto
+          occupato e lo stesso. */}
+      <div aria-live="polite" style={{
+        marginTop: 6, height: 30, display: 'flex',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {alCentro.code === selezionata ? (
+          <span style={{ fontFamily: FONT, fontSize: 13, fontWeight: 700, color: C.accent,
+            display: 'flex', alignItems: 'center', gap: 6 }}>
+            {alCentro.name}
+            <span style={{ color: C.accent, fontSize: 12 }}>✓</span>
+          </span>
+        ) : (
+          <button onClick={() => scegli(alCentro)}
+            style={{ padding: '5px 16px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${C.accent}55`, background: 'transparent', color: C.accent,
+              fontFamily: FONT, fontSize: 12.5, fontWeight: 800, lineHeight: 1.4,
+              whiteSpace: 'nowrap', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis',
+              WebkitTapHighlightColor: 'transparent' }}>
+            {L('useWord')} {alCentro.name}
+          </button>
+        )}
       </div>
-
-      {/* b.363 — il tasto compare SOLO se la bandiera al centro non e quella
-          gia in uso: e l'unico modo di cambiare lingua scorrendo. */}
-      {alCentro.code !== selezionata && (
-        <button onClick={() => scegli(alCentro)}
-          style={{ marginTop: 8, padding: '7px 18px', borderRadius: 999, cursor: 'pointer',
-            border: `1px solid ${C.accent}55`, background: 'transparent', color: C.accent,
-            fontFamily: FONT, fontSize: 12.5, fontWeight: 800,
-            WebkitTapHighlightColor: 'transparent' }}>
-          {L('useWord')} {alCentro.name}
-        </button>
-      )}
 
       <style>{`
         @keyframes vtScivolaD { from { transform: translateX(52px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

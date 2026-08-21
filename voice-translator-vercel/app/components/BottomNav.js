@@ -23,7 +23,8 @@ const NavIcon = ({ id, color, size = 22 }) => {
     // b.363 — le icone in acciaio del menu in basso vanno al DOPPIO
     // (ordine di Luca). Le altre voci, che sono disegni al tratto,
     // restano come sono: qui raddoppia solo l'acciaio.
-    const acciaio = (size + 8) * 2;
+    // b.363 — il doppio era troppo: si scende del 20% (da 60 a 48).
+    const acciaio = Math.round((size + 8) * 2 * 0.8);
     // b.363 — il faro e l'ombra dell'acciaio (vedi lib/acciaio.js): l'alone
     // caldo sta dietro, appoggiato in basso a sinistra; l'ombra segue la
     // sagoma dell'icona e cade dalla stessa parte, sfumando.
@@ -123,10 +124,10 @@ const BottomNav = ({ currentView, onNewConversation }) => {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, height: '104px',
-      // b.363 — la barra si alza da 76 a 104: con l'acciaio raddoppiato
-      // (60 invece di 30) l'icona sarebbe uscita dalla barra e avrebbe
-      // mangiato l'etichetta sotto.
+      position: 'fixed', bottom: 0, left: 0, right: 0, height: '94px',
+      // b.363 — la barra segue la misura dell'acciaio: con l'icona a 48
+      // (raddoppiata e poi ridotta del 20%) l'altezza sta a 94. Con i 76
+      // di prima l'icona usciva dalla barra e si mangiava l'etichetta.
       // ── INIZIO b.90 — la barra segue il TEMA ──
       // Prima era nera fissa: nel tema chiaro restava scura e le voci
       // Home, Chat e Community sparivano, nero su nero. Tre pulsanti su

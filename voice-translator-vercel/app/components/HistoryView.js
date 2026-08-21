@@ -464,7 +464,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           flex: 1,
           overflowY: 'auto',
           // b.206 — bottom alzato: le ultime conversazioni finivano sotto la BottomNav
-          padding: '8px 16px calc(116px + env(safe-area-inset-bottom))',
+          padding: '8px 16px calc(106px + env(safe-area-inset-bottom))',
           scrollbarWidth: 'none',
         }}
       >
