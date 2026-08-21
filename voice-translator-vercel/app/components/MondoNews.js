@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { ordinaPerInteresse, segnaApertura } from '../lib/interessi.js';
 import Scelta from './ui/Scelta.js';
 import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
@@ -53,7 +54,7 @@ const QUERY_RAPIDE = {
 };
 
 function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti }) {
-  const { L, prefs, userToken } = useApp();
+  const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
   // persistente aperta da una card (id) e il flag di creazione in corso.
@@ -107,6 +108,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
 
   // b.363 — l'argomento scelto fra quelli VERI delle discussioni aperte
   const [argomentoFiltro, setArgomentoFiltro] = useState(null);
+  // b.363 — il paese scelto con un tocco sulla bandiera di una scheda
+  const [paeseFiltro, setPaeseFiltro] = useState(null);
   const [riprova, setRiprova] = useState(0);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -304,10 +307,15 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     return [...conto.entries()].sort((a, b) => b[1] - a[1]);
   }, [feed]);
 
-  const feedMostrato = useMemo(
-    () => (argomentoFiltro ? (feed || []).filter((d) => d.topic === argomentoFiltro) : (feed || [])),
-    [feed, argomentoFiltro],
-  );
+  // b.363 — prima si toglie cio che non e stato chiesto (argomento,
+  // paese), poi si ORDINA per interesse: cio che non interessa scende,
+  // non sparisce. Vedi lib/interessi.js per il perche.
+  const feedMostrato = useMemo(() => {
+    let v = feed || [];
+    if (argomentoFiltro) v = v.filter((d) => d.topic === argomentoFiltro);
+    if (paeseFiltro) v = v.filter((d) => d.country === paeseFiltro);
+    return ordinaPerInteresse(v, prefs);
+  }, [feed, argomentoFiltro, paeseFiltro, prefs]);
 
   const bordo = `1px solid ${C.cardBorder}`;
 
@@ -520,7 +528,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               const vita = viva(d.comment_count);
               const eti = stileEtichetta(C);
               return (
-                <button key={d.id} onClick={() => { vibrate(8); setDiscAperta(d.id); }}
+                <button key={d.id} onClick={() => {
+                    vibrate(8);
+                    setDiscAperta(d.id);
+                    // b.363 — quello che uno APRE vale piu di quello che
+                    // dichiara: si tiene il conto, e ordina il prossimo giro.
+                    if (d.topic && savePrefs) savePrefs(segnaApertura(prefs, d.topic));
+                  }}
                   style={{
                     width: '100%', textAlign: 'left', display: 'flex', gap: 12, alignItems: 'flex-start',
                     padding: 12, marginBottom: 8, borderRadius: 14,
@@ -530,7 +544,24 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                   <span style={{ flex: 1, minWidth: 0 }}>
                     {/* 1. DA DOVE, DI COSA, QUANDO */}
                     <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
-                      {bandiera && <span style={{ fontSize: 13, lineHeight: 1 }}>{bandiera}</span>}
+                      {/* b.363 — IL PAESE A UN TOCCO (ordine di Luca): la
+                          bandiera non e una decorazione, e un comando. Si
+                          tocca e l'elenco resta solo su quel paese; si
+                          ritocca e torna il mondo intero. Non e un
+                          bottone dentro un bottone (che il browser
+                          rifiuta): e la bandiera stessa che intercetta il
+                          tocco e non lo lascia passare alla scheda. */}
+                      {bandiera && (
+                        <span role="button" tabIndex={0}
+                          aria-label={d.country}
+                          onClick={(e) => { e.stopPropagation(); vibrate(6); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); } }}
+                          style={{
+                            fontSize: 13, lineHeight: 1, cursor: 'pointer', borderRadius: 4,
+                            padding: '1px 2px',
+                            outline: paeseFiltro === d.country ? `1px solid ${C.accent}` : 'none',
+                          }}>{bandiera}</span>
+                      )}
                       {d.topic && <span style={eti}>{d.topic}</span>}
                       {d.topic && eta && <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>}
                       {eta && <span style={eti}>{eta}</span>}

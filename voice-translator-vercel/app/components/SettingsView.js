@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
+import InteressiProfilo from './ui/InteressiProfilo.js';
 import { LANGS, THEME_LIST, FONT, getLang, APP_VERSION } from '../lib/constants.js';
 import { getPaese } from '../lib/paesi.js';
 import { LINGUE_INTERFACCIA, mapLang } from '../lib/i18n.js';
@@ -105,6 +106,7 @@ const Scelta = ({ c, attiva, titolo, sotto, onClick }) => (
 
 
 const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, logout, clonedVoiceId }) {
+  const [apertoInteressi, setApertoInteressi] = useState(false);
   // b.255 — `setPrefs` non si prende piu da qui: era l'unica via per cui
   // una preferenza poteva restare in memoria senza mai finire su disco.
   // In questa schermata si scrive SOLO con savePrefs.
@@ -167,6 +169,21 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
             sotto={L('countryLabelDesc')}
             valore={paese ? `${paese.bandiera} ${paese.nome}` : '—'}
             onClick={() => setView('paese')} />
+
+          {/* b.363 — GLI INTERESSI, nel profilo (ordine di Luca). Si
+              scelgono e si cambiano quando si vuole: non si deducono da
+              chi sei. Vedi lib/interessi.js per il perche la differenza
+              conta. */}
+          <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('interestsTitle')}
+            sotto={L('interestsShort')}
+            valore={(prefs?.interessi?.length || 0) > 0 ? String(prefs.interessi.length) : '—'}
+            aperto={apertoInteressi}
+            onClick={() => { setApertoInteressi(!apertoInteressi); setApertoInterfaccia(false); setApertoLingua(false); setApertoVoce(false); }} />
+          {apertoInteressi && (
+            <div style={{ borderBottom: `1px solid ${c.cardBorder}` }}>
+              <InteressiProfilo C={c} />
+            </div>
+          )}
 
           <Riga c={c} icona={<IconGlobe size={17} />} titolo={L('uiLanguage')}
             sotto={L('uiLanguageDesc')}
