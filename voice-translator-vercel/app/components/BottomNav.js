@@ -1,6 +1,7 @@
 'use client';
 
 import { memo } from 'react';
+import { ombraAcciaio, faroAcciaio } from '../lib/acciaio.js';
 import { vibrate } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -23,8 +24,19 @@ const NavIcon = ({ id, color, size = 22 }) => {
     // (ordine di Luca). Le altre voci, che sono disegni al tratto,
     // restano come sono: qui raddoppia solo l'acciaio.
     const acciaio = (size + 8) * 2;
-    return <img src={IMG_MENU[id]} alt="" aria-hidden width={acciaio} height={acciaio}
-      style={{ width: acciaio, height: acciaio, objectFit: 'contain', display: 'block' }} />;
+    // b.363 — il faro e l'ombra dell'acciaio (vedi lib/acciaio.js): l'alone
+    // caldo sta dietro, appoggiato in basso a sinistra; l'ombra segue la
+    // sagoma dell'icona e cade dalla stessa parte, sfumando.
+    return (
+      <span style={{
+        width: acciaio, height: acciaio, display: 'block',
+        background: faroAcciaio(1), borderRadius: '50%',
+      }}>
+        <img src={IMG_MENU[id]} alt="" aria-hidden width={acciaio} height={acciaio}
+          style={{ width: acciaio, height: acciaio, objectFit: 'contain', display: 'block',
+            filter: ombraAcciaio(1.4) }} />
+      </span>
+    );
   }
   const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   switch (id) {

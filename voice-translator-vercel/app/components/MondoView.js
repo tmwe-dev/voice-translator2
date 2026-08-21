@@ -1,5 +1,6 @@
 'use client';
 import Icon from './Icon.js';
+import { ombraAcciaio, faroAcciaio } from '../lib/acciaio.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -283,9 +284,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                 position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
                 width: 104, height: 104, padding: 16, boxSizing: 'border-box',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: faroAcciaio(1), borderRadius: '50%',
               }}>
-                <img src={cur.img} alt="" aria-hidden width={72} height={72}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                <img src={cur.img} alt="" aria-hidden width={104} height={104}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain',
+                    filter: ombraAcciaio(1.6) }} />
               </span>
               <button onClick={() => vai(-1)} aria-label={L('previousWord')} style={freccia}>‹</button>
               <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
