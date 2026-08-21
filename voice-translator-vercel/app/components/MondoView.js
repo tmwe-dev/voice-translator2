@@ -131,7 +131,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const [riprovaCaldo, setRiprovaCaldo] = useState(0);
   useEffect(() => {
     let vivo = true;
-    fetch('/api/mondo/discussioni')
+    fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => {
         if (!vivo) return;
@@ -154,8 +154,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const fetchRooms = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/mondo');
-      if (res.ok) { const data = await res.json(); setRooms((data.rooms || []).map(normalizzaStanza)); setError(null); }
+      const res = await fetch('/api/mondo', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
+      // b.363 — prima la lettura non era protetta: una risposta rotta faceva
+      // sparire l'elenco stanze senza mostrare il messaggio d'errore previsto.
+      if (res.ok) { const data = await res.json().catch(() => null); if (data) { setRooms((data.rooms || []).map(normalizzaStanza)); setError(null); } else setError(L('loadRoomsFailed')); }
       else setError(L('loadRoomsFailed')); // b.232 — prima !res.ok (500/429) era silenzioso
     } catch { setError(L('loadRoomsFailed')); }
     finally { setLoading(false); }
@@ -458,18 +460,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ maxWidth: 440, margin: '0 auto', pointerEvents: 'auto' }}>
 
-        {/* Loading skeleton */}
-        {loading && rooms.length === 0 && (
-          <div>
-            {[0, 1, 2, 3].map(i => (
-              <div key={i} style={{
-                background: `linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.02) 75%)`,
-                backgroundSize: '200% 100%', animation: 'vtShimmer 1.5s infinite',
-                borderRadius: 18, height: 80, marginBottom: 10, opacity: 1 - i * 0.2,
-              }} />
-            ))}
-          </div>
-        )}
+        {/* b.363 — ECCO LE CARD FANTASMA CHE LUCA VEDEVA A OGNI APERTURA DI
+            MONDO. Erano quattro rettangoli finti alti 80 pixel, con il velo
+            bianco luccicante: uno scheletro di caricamento nato quando la
+            pagina ERA la lista delle stanze. Da quando la pagina e il PIANETA,
+            quei quattro riquadri si disegnano SOPRA il globo — mezzo mondo
+            coperto da schede vuote a ogni ricarico, per tutto il tempo del
+            caricamento. Non e uno sfondo che traspare: sono loro.
+            Sul pianeta non si mette nessuno scheletro: le stanze arrivano
+            nella tendina in basso, e finche non ci sono non si mostra niente. */}
 
         {/* Error */}
         {error && (
@@ -661,7 +660,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
       {/* CSS */}
       <style>{`
-        @keyframes vtShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        /* b.363 — l'animazione del luccichio se n'e andata con lo scheletro
+           che copriva il pianeta: qui non la usa piu nessuno. */
         @keyframes vtSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       `}</style>
     </div>

@@ -575,7 +575,7 @@ function HomeInner() {
             // Trigger queue flush from chatStorage
             import('./lib/chatStorage.js').then(mod => {
               if (mod.flushOfflineQueue) mod.flushOfflineQueue(async (msg) => {
-                await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(msg) });
+                await fetch('/api/messages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify(msg) });
               });
             }).catch(() => {});
           }
@@ -621,6 +621,7 @@ function HomeInner() {
     const token = (() => { try { return memGet('vt-token') || ''; } catch { return ''; } })();
     if (token && newPrefs.name) {
       fetch('/api/user', {
+        signal: AbortSignal.timeout(15000),
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action: 'update', name: newPrefs.name, lang: newPrefs.lang, avatar: newPrefs.avatar }),
       }).catch(() => { /* il nome locale resta valido: si riallinea al prossimo salvataggio */ });
@@ -764,9 +765,14 @@ function HomeInner() {
       const token = auth.userTokenRef?.current || null;
       if (!token) { setConvHistory([]); setArchivioSoloLocale(true); return; }
       setArchivioSoloLocale(false);
+      // b.363 — se il server risponde con una pagina d'errore invece che con
+      // dati (il guardiano risponde in HTML), leggere esplodeva e l'archivio
+      // restava com'era senza dire niente. E senza scadenza la richiesta
+      // poteva restare appesa per sempre.
       const res = await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({ action:'list', userToken: token }) });
-      if (res.ok) { const { conversations } = await res.json(); setConvHistory(conversations || []); }
+      if (res.ok) { const d = await res.json().catch(() => ({})); setConvHistory(d.conversations || []); }
     } catch (e) { console.error('History error:', e); }
   }
 
@@ -781,6 +787,7 @@ function HomeInner() {
         roomSessionToken: roomPolling.roomSessionTokenRef?.current || null };
       if (!roomPolling.roomSessionTokenRef?.current) endBody.userName = prefs.name;
       await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify(endBody) });
     } catch (e) { console.error('End chat error:', e); }
     roomPolling.leaveRoom();
@@ -922,17 +929,18 @@ function HomeInner() {
       const convHeaders = { 'Content-Type': 'application/json' };
       if (auth.userTokenRef?.current) convHeaders['Authorization'] = `Bearer ${auth.userTokenRef.current}`;
       if (roomPolling.roomSessionTokenRef?.current) convHeaders['X-Room-Session'] = roomPolling.roomSessionTokenRef.current;
-      const res = await fetch(`/api/conversation?id=${convId}`, { headers: convHeaders });
+      const res = await fetch(`/api/conversation?id=${convId}`, { headers: convHeaders, signal: AbortSignal.timeout(15000) });
       if (res.ok) {
-        const { conversation } = await res.json();
+        const { conversation } = await res.json().catch(() => ({}));
         if (conversation) {
           const verifiedName = roomPolling.verifiedNameRef?.current || prefs.name;
           if (conversation.host === verifiedName && !conversation.summary) {
             setSummaryLoading(true);
             try {
               const sumRes = await fetch('/api/summary', { method:'POST', headers:{'Content-Type':'application/json'},
+                signal: AbortSignal.timeout(45000),
                 body: JSON.stringify({ convId, userToken: auth.userTokenRef?.current || null }) });
-              if (sumRes.ok) { const { summary } = await sumRes.json(); conversation.summary = summary; }
+              if (sumRes.ok) { const d = await sumRes.json().catch(() => ({})); conversation.summary = d.summary; }
             } catch (e) { console.warn('[Page] Summary fetch failed:', e?.message); }
             setSummaryLoading(false);
           }
@@ -967,6 +975,7 @@ function HomeInner() {
         body.name = prefs.name;
       }
       await fetch('/api/room', { method:'POST', headers:{'Content-Type':'application/json'},
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify(body) });
       setShowModeSelector(false);
     } catch (e) { console.error('Mode change error:', e); }
@@ -1231,6 +1240,7 @@ function HomeInner() {
             if (codice && vaInVetrina(roomConfig.roomType)) {
               try {
                 await fetch('/api/mondo', {
+                  signal: AbortSignal.timeout(15000),
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     roomId: codice,
@@ -1745,6 +1755,7 @@ function HomeInner() {
             if (!detailConversation?.id) return;
             if (!confirm(L('deleteConvConfirm'))) return;
             fetch('/api/conversation', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              signal: AbortSignal.timeout(15000),
               body: JSON.stringify({ action: 'delete', convId: detailConversation.id, userToken: auth.userTokenRef?.current || null })
             })
               .then(async (res) => {

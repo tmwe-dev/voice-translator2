@@ -15,6 +15,9 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { createLogger } from '../lib/logger.js';
+
+const log = createLogger('wallet-voucher');
 
 function db() {
   return createClient(
@@ -37,7 +40,13 @@ export async function riscattaVoucher(utenteId, codice) {
   // scrive il movimento nel ledger — stessa transazione (migration 008).
   const { data, error } = await db()
     .rpc('wallet_riscatta_voucher', { p_user_id: utenteId, p_codice: pulito });
-  if (error) return { ok: false, motivo: 'Errore: ' + error.message };
+  // b.363 — il messaggio d'errore del database tornava DRITTO al client:
+  // racconta a chi guarda la struttura interna (nomi di funzioni, di colonne,
+  // vincoli). Il dettaglio va nel registro, all'utente va una frase.
+  if (error) {
+    log.error('riscatto voucher fallito', { motivo: error.message });
+    return { ok: false, motivo: 'Codice non valido' };
+  }
   if (!data || data.length === 0 || !data[0].ok) {
     return { ok: false, motivo: data?.[0]?.motivo || 'Codice non valido' };
   }
