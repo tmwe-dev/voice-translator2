@@ -92,7 +92,10 @@ async function handlePost(req) {
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
-      return NextResponse.json({ error: 'Nessuna risposta' }, { status: 502 });
+      // b.363 — il motivo del guasto esiste: buttarlo lasciava senza una
+      // riga da leggere quando l'Amico smette di rispondere in produzione.
+      log.warn('amico senza risposta', { motivo: r.motivo });
+      return NextResponse.json({ error: 'Nessuna risposta', motivo: r.motivo }, { status: 502 });
     }
 
     // b.238 — il Compagno ha dichiarato in coda COME vuole dirlo: si stacca

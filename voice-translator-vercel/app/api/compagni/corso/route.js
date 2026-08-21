@@ -83,7 +83,11 @@ async function handlePost(req) {
       if (sessione?.email && r.osservazioni?.length) {
         after(() => aggiungiOsservazioni(sessione.email, r.osservazioni).catch(() => {}));
       }
-      return NextResponse.json({ ok: true, contenuto: r.contenuto, fonti: r.fonti });
+      // b.363 — la lezione dice anche se le fonti NON si sono trovate: era
+      // gia scritto nel generatore ma la rotta lo buttava via, e una lezione
+      // di materia certificata senza un solo documento arrivava a schermo
+      // identica a una fondata sulle fonti.
+      return NextResponse.json({ ok: true, contenuto: r.contenuto, fonti: r.fonti, fontiNonTrovate: !!r.fontiNonTrovate });
     }
 
     // b.313 — "alzo la mano e chiedo": lo studente interrompe la lezione,

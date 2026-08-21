@@ -80,7 +80,9 @@ export async function preparaBriefing({ argomento, lingua = 'it', userToken = nu
   const { system, prompt } = promptBriefing({ argomento, fonti, lingua, ricercaGuasta: !esito.ok });
   // b.308 — 800 era stretto: articolo + punti + domande in JSON si troncavano
   // prima dei 4000 char del taglio finale. Ora c'e respiro.
-  const r = await generaTesto({ system, prompt, userToken, maxTokens: 1500 });
+  // b.363 — qui si pretende JSON valido: a temperatura alta usciva storto
+  // e il ripiego consegnava il JSON grezzo come se fosse l'articolo.
+  const r = await generaTesto({ system, prompt, userToken, maxTokens: 1500, temperature: 0.3 });
   if (!r.ok) return { ok: false, motivo: r.motivo, status: r.status };
   const d = estraiJSON(r.testo) || {};
   return {

@@ -135,7 +135,10 @@ export async function estraiRicordi(messaggi, { userToken } = {}) {
   const r = await generaTesto({
     system: PROMPT_ESTRAZIONE,
     prompt: `Analizza questa conversazione ed estrai le informazioni significative:\n\n${testo}`,
-    userToken, maxTokens: 700,
+    // b.363 — estrarre non e inventare: a temperatura alta il JSON usciva
+    // storto (e il catch tornava a mani vuote in silenzio) e i ricordi
+    // erano piu romanzati che estratti.
+    userToken, maxTokens: 700, temperature: 0.2,
   });
   if (!r.ok) return [];
   try {

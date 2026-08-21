@@ -48,7 +48,7 @@ function componiMessaggi(system, prompt) {
 /**
  * Genera testo con la personalità di un Compagno, passando dal wallet.
  *
- * @returns {Promise<{ok:true, testo:string, caratteri:number, provider:string}
+ * @returns {Promise<{ok:true, testo:string, caratteri:number, provider:string, modello:string, ripiego:boolean}
  *   | {ok:false, motivo:string, status?:number}>}
  */
 export async function generaTesto({
@@ -95,16 +95,26 @@ export async function generaTesto({
 
   // 3. Generazione, con catena di ripiego sui provider di piattaforma.
   try {
+    // b.363 — chi usa una chiave PROPRIA non paga il contatore, quindi non
+    // gli si puo far scrivere il testo dalle chiavi di piattaforma: se la
+    // sua chiave cade, il ripiego generava in silenzio a spese nostre e con
+    // un fornitore che lui non aveva scelto. Con chiave propria si fallisce
+    // e lo si dice.
     const fallbacks = [];
-    if (provider !== 'openai' && process.env.OPENAI_API_KEY) {
-      fallbacks.push({ provider: 'openai', model: 'gpt-4o-mini', apiKey: process.env.OPENAI_API_KEY });
-    }
-    if (provider !== 'anthropic' && process.env.ANTHROPIC_API_KEY) {
-      fallbacks.push({ provider: 'anthropic', model: 'claude-3-haiku-20240307', apiKey: process.env.ANTHROPIC_API_KEY });
+    if (!isOwnKey) {
+      if (provider !== 'openai' && process.env.OPENAI_API_KEY) {
+        fallbacks.push({ provider: 'openai', model: 'gpt-4o-mini', apiKey: process.env.OPENAI_API_KEY });
+      }
+      if (provider !== 'anthropic' && process.env.ANTHROPIC_API_KEY) {
+        fallbacks.push({ provider: 'anthropic', model: 'claude-3-haiku-20240307', apiKey: process.env.ANTHROPIC_API_KEY });
+      }
     }
 
     const messaggi = componiMessaggi(system, prompt);
-    const { translated } = await callLLMWithFallback(
+    // b.363 — si legge anche CHI ha risposto davvero: prima si dichiarava
+    // sempre il fornitore richiesto, e un testo scritto dal ripiego veniva
+    // attribuito a un modello che non l'aveva mai visto.
+    const { translated, provider: fornitoreVero, model: modelloVero, wasFallback } = await callLLMWithFallback(
       { provider, model: modello, apiKey, messages: messaggi, systemPrompt: system, text: prompt, maxTokens, temperature },
       fallbacks,
       timeoutMs, // b.205 — tetto ampio per i contenuti lunghi di Life
@@ -120,7 +130,7 @@ export async function generaTesto({
     if (riservaId) {
       await commit(riservaId, preventivoTesto(testo.length), { tipo: 'compagno', caratteri: testo.length });
     }
-    return { ok: true, testo, caratteri: testo.length, provider };
+    return { ok: true, testo, caratteri: testo.length, provider: fornitoreVero || provider, modello: modelloVero || modello, ripiego: !!wasFallback };
   } catch (e) {
     if (riservaId) await release(riservaId, 'errore-generazione').catch(() => {});
     return { ok: false, motivo: 'errore-generazione: ' + (e?.message || 'ignoto') };

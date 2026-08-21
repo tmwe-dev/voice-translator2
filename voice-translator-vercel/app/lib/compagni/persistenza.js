@@ -53,6 +53,24 @@ export async function elencaCompagni(email) {
   return (data || []).map(daRiga);
 }
 
+// b.363 — L'AVATAR ERA L'UNICO CAMPO SENZA MISURA. Quando il deposito
+// immagini non riesce, la rotta avatar restituisce il PNG intero come
+// dataUrl: megabyte di base64 che finivano dritti in una riga di
+// database, ricaricati a ogni elenco dei Compagni. Qui si accetta un
+// percorso interno, un indirizzo web corto, o un'immagine incorporata
+// solo se sta sotto una soglia ragionevole.
+const TETTO_DATAURL = 300 * 1024; // ~300 KB di base64
+const AVATAR_PREDEFINITO = '/avatars/9.png';
+
+export function avatarSicuro(v) {
+  const s = typeof v === 'string' ? v.trim() : '';
+  if (!s) return AVATAR_PREDEFINITO;
+  if (s.startsWith('/')) return s.slice(0, 200);
+  if (/^https?:\/\//i.test(s)) return s.length <= 500 ? s : AVATAR_PREDEFINITO;
+  if (s.startsWith('data:image/')) return s.length <= TETTO_DATAURL ? s : AVATAR_PREDEFINITO;
+  return AVATAR_PREDEFINITO;
+}
+
 /** Crea/aggiorna un Compagno dell'utente. Ritorna il Compagno salvato o null. */
 export async function salvaCompagno(email, c) {
   const owner = idUtente(email);
@@ -66,9 +84,9 @@ export async function salvaCompagno(email, c) {
     ruolo: (c.ruolo || '').slice(0, 60),
     emoji: (c.emoji || '✨').slice(0, 8),
     colore: (c.colore || '#26D9B0').slice(0, 16),
-    avatar: c.avatar || '/avatars/9.png',
-    voce_id: c.voce?.id || null,
-    voce_nome: c.voce?.nome || null,
+    avatar: avatarSicuro(c.avatar),
+    voce_id: c.voce?.id ? String(c.voce.id).slice(0, 64) : null,
+    voce_nome: c.voce?.nome ? String(c.voce.nome).slice(0, 80) : null,
     provider: c.provider || 'openai',
     modello: c.modello || 'gpt-4o-mini',
     liberta: c.liberta || 'balanced',

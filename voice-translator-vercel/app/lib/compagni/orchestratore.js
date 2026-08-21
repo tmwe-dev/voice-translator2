@@ -78,35 +78,13 @@ export function istruzioneConvergenza(stato, lingua = 'it') {
   return (m && m[stato]) || '';
 }
 
-// ── 2. CHI PARLA: scelta intelligente del prossimo (da buildPlan) ──
-// 'smart' = 70% sequenziale, 30% a caso (mai due volte di fila lo stesso).
-export function prossimoAParlare(agenti, turno, strategia = 'smart') {
-  if (!agenti || agenti.length === 0) return null;
-  if (agenti.length === 1) return agenti[0];
-  if (strategia === 'random') return agenti[Math.floor(Math.random() * agenti.length)];
-  if (strategia === 'smart' && Math.random() < 0.3) {
-    const ultimo = turno > 0 ? (turno - 1) % agenti.length : -1;
-    const liberi = agenti.filter((_, i) => i !== ultimo);
-    return liberi[Math.floor(Math.random() * liberi.length)];
-  }
-  return agenti[turno % agenti.length]; // round-robin
-}
+// b.363 — qui vivevano due funzioni che non governavano piu niente:
+// la scelta 70/30 di chi parla (mai collegata a nessun turno) e il
+// cancello anti-consenso, che decideva per tutti in una volta sola e
+// riduceva un tavolo di quattro a una voce. Chi tace ora lo dice da se,
+// col canale esito di b.362.
 
-// ── 3. SALTA CHI NON HA NIENTE DA AGGIUNGERE (da shouldSkipAgent) ──
-const PAROLE_SKIP = ['concordo','sono d\'accordo','esattamente','hai ragione','agree','exactly','right','absolutely'];
-export function puoSaltare(interventi, messaggioUmano = '', turno = 0) {
-  if (turno < 4) return false;
-  if (String(messaggioUmano).includes('?')) return false;
-  const recenti = (interventi || []).slice(-3);
-  if (recenti.length < 3) return false;
-  const inAccordo = recenti.filter(m => {
-    const t = String(m.testo || m.content || '').toLowerCase();
-    return PAROLE_SKIP.some(k => t.includes(k));
-  }).length;
-  return inAccordo >= 2;
-}
-
-// ── 4. LE REGOLE DEL DIBATTITO (da DEBATE_FRAMEWORK) ──
+// ── 2. LE REGOLE DEL DIBATTITO (da DEBATE_FRAMEWORK) ──
 const REGOLE_DIBATTITO = {
   it: 'Sei in una conversazione a più voci, in tempo reale, come persone vere. REGOLE:\n• Ascolta gli altri PRIMA di rispondere, e rivolgiti a loro per NOME.\n• Aggiungi VALORE NUOVO — mai ripetere ciò che è già stato detto.\n• Se concordi, approfondisci o estendi il punto dell\'altro.\n• Se dissenti, dillo con chiarezza e argomenti concreti.\n• Parla BREVE e naturale, come al bar, non come in un\'aula.\n• L\'obiettivo è CONVERGERE verso la risposta migliore, insieme.',
   en: 'You are in a multi-voice, real-time conversation, like real people. RULES:\n• Listen to others BEFORE replying, and address them by NAME.\n• Add NEW VALUE — never repeat what was already said.\n• If you agree, deepen or extend the other\'s point.\n• If you disagree, say so clearly with concrete arguments.\n• Speak SHORT and natural, like at a bar, not in a classroom.\n• The goal is to CONVERGE toward the best answer, together.',

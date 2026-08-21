@@ -762,7 +762,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // b.348 — il tag [SCENA:] si stacca PRIMA di mostrare: e un'istruzione
       // per la tavola, non prosa da leggere ad alta voce.
       const { testo: contenutoPulito, scena } = staccaScena(d.contenuto || '');
-      setAperta({ lezione, contenuto: contenutoPulito, fonti: d.fonti || [], domande: null });
+      setAperta({ lezione, contenuto: contenutoPulito, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
       // b.299 — l'arricchimento segue il flag scelto alla creazione:
       // 'disegni' -> illustrazione del Maestro; 'foto'/'link'/'video' ->
       // dalla community (Cobra). 'nessuno' -> niente. Non blocca la
@@ -853,7 +853,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     try {
       const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: `Ripasso — ${argomento.trim()}` }, docenteId: docenteId || undefined, lingua: linguaCorso, userToken, ripasso: true });
       setRisposte({});
-      setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], domande: null });
+      setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
       setRipassoDa(0);
     } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
     finally { setLavoro(false); }
@@ -1323,6 +1323,13 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         })()}
         {/* b.315 — il tasto Ascolta e' salito in ALTO (barra dei controlli);
             qui in fondo non serve piu. */}
+        {/* b.363 — se le fonti non si sono trovate lo si DICE: prima una
+            lezione senza un solo documento era identica a una fondata. */}
+        {aperta.fontiNonTrovate && aperta.fonti.length === 0 && (
+          <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
+            {L('lifeNoSourcesFound')}
+          </div>
+        )}
         {aperta.fonti.length > 0 && (
           <div style={{ marginTop: 14, fontSize: 12, color: muto }}>
             <b>{L('lifeSources')}:</b> {aperta.fonti.map((f, i) => <span key={i}>{f.titolo}{i < aperta.fonti.length - 1 ? ' · ' : ''}</span>)}

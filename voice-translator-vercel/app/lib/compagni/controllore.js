@@ -22,7 +22,7 @@
 /** @typedef {'domanda'|'sfogo'|'racconto'|'riflessione'|'decisione'|'richiesta'|'saluto'|'conferma'} Situazione */
 
 const SPIA = {
-  sfogo: /\b(stanc[oa]|sfinit[oa]|non ne posso più|che palle|arrabbiat[oa]|frustrat[oa]|triste|deluso|deluesa|ansia|preoccupat[oa]|tired|exhausted|frustrated|angry|upset|worried|stressed)\b/i,
+  sfogo: /\b(stanc[oa]|sfinit[oa]|non ne posso più|che palle|arrabbiat[oa]|frustrat[oa]|triste|deluso|delusa|ansia|preoccupat[oa]|tired|exhausted|frustrated|angry|upset|worried|stressed)\b/i,
   decisione: /\b(devo decidere|non so se|meglio .+ o |conviene|should i|can't decide|dovrei|scelgo|scegliere|choose between)\b/i,
   richiesta: /\b(aiutami|organizzami|preparami|fammi|scrivimi|trovami|calcola|help me|make me|find me|plan)\b/i,
   saluto: /^\s*(ciao|ehi|hey|buongiorno|buonasera|salve|hello|hi|good morning|good evening)[\s!,.]*$/i,

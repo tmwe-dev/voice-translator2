@@ -4,7 +4,7 @@ import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { promptTavolo, promptSintesi, TAVOLO_MAX } from '../../../lib/compagni/tavolo.js';
-import { analizzaConvergenza, istruzioneConvergenza, puoSaltare } from '../../../lib/compagni/orchestratore.js';
+import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
@@ -47,7 +47,10 @@ async function handlePost(req) {
       const r = await generaTesto({ system, prompt, userToken, maxTokens: maxTokensSintesi });
       if (!r.ok) {
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
-        return NextResponse.json({ error: 'Sintesi non riuscita' }, { status: 502 });
+        // b.363 — il motivo esiste: buttarlo lasciava senza traccia i
+        // guasti in produzione (stesso buco tappato in corso/route.js).
+        log.warn('sintesi non riuscita', { motivo: r.motivo });
+        return NextResponse.json({ error: 'Sintesi non riuscita', motivo: r.motivo }, { status: 502 });
       }
       return NextResponse.json({ ok: true, sintesi: r.testo });
     }
@@ -60,19 +63,27 @@ async function handlePost(req) {
     const soloAgenti = messaggi.filter(m => m.ruolo !== 'persona');
     const stato = analizzaConvergenza(soloAgenti, lingua);
     const convergenza = istruzioneConvergenza(stato, lingua);
-    const giro = messaggi.filter(m => m.ruolo === 'persona').length - 1;
 
     const risposte = [];
     const altriQuestoGiro = [];
+    let ultimoMotivo = '';
     for (const c of compagni) {
       // b.303 — SKIP ANTI-CONSENSO: chi non ha niente di nuovo da
       // aggiungere tace, come al bar. Ma non lascia mai il giro vuoto.
-      if (risposte.length > 0 && puoSaltare(soloAgenti, ultimoUmano, giro)) continue;
+      //
+      // b.363 — il cancello era calcolato UNA volta sola, prima del ciclo,
+      // sugli stessi tre valori per tutti: se scattava, dopo il primo che
+      // rispondeva venivano zittiti in blocco TUTTI gli altri, e un tavolo
+      // di quattro si riduceva sempre a una voce sola. Ora chi tace lo
+      // decide da se, col canale esito di b.362 ("passo"), che guarda quel
+      // singolo compagno e quel singolo turno.
       const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua });
       const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260, temperature: temperaturaLiberta(c.liberta) });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+        ultimoMotivo = r.motivo || ultimoMotivo;
+        log.warn('compagno muto al tavolo', { compagno: c.nome, motivo: r.motivo });
         continue; // un Compagno muto non ferma il tavolo
       }
       // b.362 — L'ESITO TIPIZZATO letto davvero: chi marca "passo" tace
@@ -85,7 +96,10 @@ async function handlePost(req) {
       altriQuestoGiro.push({ nome: c.nome, testo });
     }
 
-    if (risposte.length === 0) return NextResponse.json({ error: 'Nessuna risposta' }, { status: 502 });
+    if (risposte.length === 0) {
+      log.warn('tavolo senza risposte', { motivo: ultimoMotivo });
+      return NextResponse.json({ error: 'Nessuna risposta', motivo: ultimoMotivo }, { status: 502 });
+    }
     return NextResponse.json({ ok: true, risposte });
   } catch (e) {
     log.error('Errore:', e);
