@@ -214,21 +214,25 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.363** (push #628) — AUDIT TOTALE CHIUSO. I 69 reperti
-  verificati sono stati riparati in sei ondate: home (#623), chat (#624),
-  mondo (#625), life (#626), agenti (#627), coda (#628). I piu grossi:
-  il cuore di Mondo contava male dopo un ricarico; la segnalazione
-  esisteva solo sul server; una discussione nascosta restava commentabile;
-  in Life la PAUSA veniva scambiata per un'interruzione (turno saltato e
-  audio buttato) e lo Stop non fermava la fabbrica dei turni (spesa che
-  continuava); al tavolo il cancello anti-consenso zittiva TUTTI in blocco
-  riducendo quattro voci a una; con chiave propria il ripiego generava a
-  spese della piattaforma; tre 502 muti ora lasciano una riga nel registro.
-  UNICO reperto NON riparato: l'OCR a pagamento dei Compiti
-  (CompitiView.js, `scattaOcr`) e codice non raggiungibile, ma e parcheggiato
-  di proposito con nota scritta (b.344) in attesa che i dati dello Scanner
-  confluiscano da soli: si e scelto di non cancellarlo.
-- Test: **2164 verdi su 144 file** · 0 errori di lint (avvisi tollerati)
+- Versione: **b.363** (push #648) — dopo l'audit totale (69 reperti, tutti
+  chiusi tranne l'OCR dei Compiti, parcheggiato di proposito) e arrivata
+  una lunga giornata di collaudo dal vivo con Luca su Mondo e sulla home.
+  Fatto: il pianeta liberato dagli attrezzi che lo coprivano (ricerca e
+  filtri sono in un pannello laterale che si apre da una linguetta sul
+  bordo), le schede di News e Stanze riscritte con la STESSA grammatica
+  (da dove · di cosa · quando · chi · cos'e · quanta vita), il selettore
+  argomenti costruito sui dati veri, un righello unico per tutto cio che
+  galleggia, il canale fra app e pianeta (scegliendo un paese parte lo
+  zoom che il globo sa gia fare), le linee fisse e i pianeti decorativi
+  spenti, l'acciaio tolto dal menu in basso a favore di icone sottili.
+  E il consumo del deposito veloce tagliato dell'80% sul percorso piu
+  battuto: si chiedevano venti volte al minuto notizie che arrivavano
+  gia da sole.
+- Test: **2206 verdi su 149 file** · 0 errori di lint (avvisi tollerati)
+  ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
+  rosse senza che me ne accorgessi, perche controllavo solo le quattro
+  guardie invece della suite intera. Prima di dichiarare finito un giro
+  di lavoro si lancia la suite INTERA, una volta.
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.
   Questo blocco va aggiornato A OGNI push, o depista chiunque legga.
@@ -256,6 +260,24 @@ NON copre: WebRTC fra reti diverse, microfono e telecamera veri, iOS.
 
 S1 fondamenta · S2 rotture volute · S3 limiti · S4 porte · S5 catene
 laterali: **tutti verdi**. Dettaglio in COLLAUDO-STRESS.md.
+
+### Fermi su Luca (21/08/2026)
+
+1. **Il deposito veloce e al tetto**: 500.000 richieste su 500.000. Le
+   stanze non si creano e non si elencano. Va alzato il piano su Upstash
+   o aspettato il ripristino. Il consumo e gia stato tagliato dell'80%.
+2. **HTTPS sul server suo** (38.242.207.31): Redis e il ponte che parla
+   la lingua di Upstash sono gia installati e vivi li, ma il ponte
+   risponde in chiaro. Serve root UNA volta per il certificato: lo
+   script e pronto in /home/tmwe-admin3/accendi-https.sh. L'utente
+   tmwe-admin3 NON e amministratore (gruppo sudo vuoto) e root non
+   accetta password: si passa dalla console Contabo.
+3. **Il paese sulle stanze**: le stanze portano la lingua, non il luogo.
+   Finche non c'e, "stanze del Giappone" non si puo fare — si puo fare
+   solo "stanze in giapponese", che e un'altra cosa.
+4. **Decisioni di prodotto in sospeso**: la Home del Paese, "cosa ne
+   pensa il mondo" (che NON serve AI: sono conteggi sui dati che
+   abbiamo), la colonna a due schede.
 
 ### Restano SOLO le prove che richiedono due telefoni fisici
 
