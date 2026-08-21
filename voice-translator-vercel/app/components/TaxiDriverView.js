@@ -69,6 +69,9 @@ function TaxiDriverView({ destId, decryptionKey }) {
   const [translatedAddress, setTranslatedAddress] = useState('');
   const [translatedNotes, setTranslatedNotes] = useState('');
   const [translating, setTranslating] = useState(false);
+  // b.363 — la traduzione e stata respinta: quello che si legge e la lingua
+  // di partenza, e il tassista ha diritto di saperlo.
+  const [traduzioneRespinta, setTraduzioneRespinta] = useState(false);
   const [routeInfo, setRouteInfo] = useState(null);
   const [userPos, setUserPos] = useState(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -120,6 +123,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
 
     async function translate() {
       setTranslating(true);
+      setTraduzioneRespinta(false);
       try {
         // Translate address
         const addrRes = await fetch('/api/translate', {
@@ -132,8 +136,13 @@ function TaxiDriverView({ destId, decryptionKey }) {
           }),
         });
         if (addrRes.ok && !cancelled) {
-          const { translated } = await addrRes.json();
-          setTranslatedAddress(translated || destination.normalizedAddress);
+          // b.363 — traduzione respinta = risposta buona col testo di
+          // PARTENZA. Qui il ripiego era gia l'originale, quindi lo schermo
+          // non cambiava: ma il tassista non aveva modo di sapere che stava
+          // leggendo un indirizzo NON tradotto. Ora si distingue.
+          const d = await addrRes.json();
+          setTranslatedAddress(d.validationFailed ? destination.normalizedAddress : (d.translated || destination.normalizedAddress));
+          if (d.validationFailed) setTraduzioneRespinta(true);
         }
 
         // Translate notes if present
@@ -148,8 +157,9 @@ function TaxiDriverView({ destId, decryptionKey }) {
             }),
           });
           if (notesRes.ok && !cancelled) {
-            const { translated } = await notesRes.json();
-            setTranslatedNotes(translated || destination.notes);
+            const dn = await notesRes.json();
+            setTranslatedNotes(dn.validationFailed ? destination.notes : (dn.translated || destination.notes));
+            if (dn.validationFailed) setTraduzioneRespinta(true);
           }
         }
       } catch (e) {
@@ -338,6 +348,14 @@ function TaxiDriverView({ destId, decryptionKey }) {
               }}>
                 {translatedAddress || destination.normalizedAddress}
               </div>
+
+              {/* b.363 — se la traduzione e stata respinta, quello che si
+                  legge sopra e nella lingua del passeggero: si dice. */}
+              {traduzioneRespinta && (
+                <div style={{ fontSize: 12, color: C.textMuted, marginBottom: 8 }}>
+                  {L('translationRetryLater')}
+                </div>
+              )}
 
               {/* Structured details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
