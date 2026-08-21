@@ -8,7 +8,7 @@ export const APP_VERSION = 'b.363';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 641;
+export const PUSH = 642;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -74,7 +74,11 @@ export const AI_MODELS = [
   { id:'gemini-flash', name:'Gemini 2.0 Flash', desc:'Ultra veloce, Google', cost:'~0.05¢/msg', provider:'gemini', ownKeyOnly:true },
   { id:'gemini-pro', name:'Gemini 2.5 Pro', desc:'Alta qualità, Google', cost:'~0.3¢/msg', provider:'gemini', ownKeyOnly:true },
 ];
-export const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.png`);
+// b.363 — gli avatar passano a webp: stessi disegni, 92 KB invece di 374
+// (il 76% in meno da scaricare). Chi ha gia un avatar salvato lo ha in
+// .png: i controlli piu sotto accettano tutte e due le estensioni, se no
+// a ogni avvio l'avatar di tutti tornerebbe al primo della fila.
+export const AVATARS = Array.from({length:9}, (_,i) => `/avatars/${i+1}.webp`);
 export const AVATAR_NAMES = ['Marcus','Elena','Omar','Aisha','Alex','Thomas','Yuki','Margaret','Leo'];
 
 export const MODES = [

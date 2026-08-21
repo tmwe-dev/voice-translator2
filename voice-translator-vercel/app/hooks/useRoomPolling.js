@@ -15,7 +15,15 @@ const dbg = createLogger('polling');
 // Reduced to 6s for faster recovery if both P2P and Realtime fail silently.
 // Without Realtime, we fall back to 2s polling (still better than 1s).
 // ═══════════════════════════════════════════════════════════════
-const REALTIME_FALLBACK_POLL = 3000;   // 3s when WebSocket is active (was 6s)
+// b.363 — SI CHIEDEVA VENTI VOLTE AL MINUTO UNA COSA CHE ARRIVAVA DA SOLA.
+// Quando il canale in tempo reale e acceso le novita vengono SPINTE dal
+// server: interrogare ogni tre secondi non serviva a niente se non a
+// bruciare il deposito, che ha un tetto di richieste ed e stato raggiunto
+// (500.000, con l'app quasi ferma). Qui l'interrogazione torna a essere
+// quello che deve essere in quel caso: una rete di sicurezza, non un
+// battito. Se il canale cade, `realtimeConnected` diventa falso e si
+// riprende subito il ritmo veloce di prima: nessuno perde niente.
+const REALTIME_FALLBACK_POLL = 15000;  // 15s: rete di sicurezza mentre il canale spinge
 const LEGACY_POLL_INTERVAL = 1500;     // 1.5s fallback when no WebSocket (was 2s)
 
 // ── b.111 · a schermo spento si rallenta, non si smette ──
@@ -37,7 +45,10 @@ const paginaNascosta = () =>
 
 const intervalloOra = (realtimeConnected) => {
   const base = realtimeConnected ? REALTIME_FALLBACK_POLL : LEGACY_POLL_INTERVAL;
-  return paginaNascosta() ? base * FRENO_A_SCHERMO_SPENTO : base;
+  // b.363 — il freno a schermo spento moltiplicava per sei SENZA tetto: sui
+  // quindici secondi della rete di sicurezza sarebbero diventati novanta,
+  // e al ritorno in primo piano si sarebbe aspettato troppo. Massimo trenta.
+  return paginaNascosta() ? Math.min(base * FRENO_A_SCHERMO_SPENTO, 30000) : base;
 };
 
 export default function useRoomPolling({

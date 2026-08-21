@@ -60,13 +60,19 @@ async function sql(percorso, opzioni = {}) {
 }
 
 async function redis(...comando) {
-  if (!REDIS_URL || !REDIS_TOK) return null;
+  if (!REDIS_URL || !REDIS_TOK) throw new Error('Mancano le credenziali del deposito stanze');
   const r = await fetch(REDIS_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${REDIS_TOK}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(comando),
   });
   const d = await r.json().catch(() => ({}));
+  // b.363 — QUESTO AIUTANTE MENTIVA. Restituiva null su qualunque guasto,
+  // e chi lo chiamava non aveva modo di distinguere "fatto" da "fallito":
+  // il seminatore ha dichiarato quattordici stanze mentre il deposito ne
+  // aveva zero. Ora un guasto si ferma e si fa vedere.
+  if (d?.error) throw new Error(`${comando[0]}: ${d.error}`);
+  if (!r.ok) throw new Error(`${comando[0]}: HTTP ${r.status}`);
   return d?.result ?? null;
 }
 
