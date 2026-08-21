@@ -132,7 +132,6 @@ export default function GloboMondo({ altezza = '58vh', sfondo = false }) {
           <IconaCielo tipo={STATI[stato].icona} size={26} />
         </button>
       )}
-
     </div>
   );
 }
