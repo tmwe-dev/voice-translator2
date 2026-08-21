@@ -2,6 +2,7 @@
 import Icon from './Icon.js';
 import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, bandieraPaese } from '../lib/schedaMondo.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
+import { COLONNA } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import Scelta from './ui/Scelta.js';
 // ═══════════════════════════════════════════════
@@ -341,14 +342,24 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           in fondo, dove arriva il pollice (vedi la tendina sotto). */}
       <header style={{
         display: 'flex', alignItems: 'center', gap: 10,
-        padding: '12px 22px 6px', flexShrink: 0, position: 'relative', zIndex: 5,
+        padding: '10px 16px 4px', flexShrink: 0, position: 'relative', zIndex: 6,
       }}>
-        <span style={{
-          fontSize: 21, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5,
-          whiteSpace: 'nowrap',
-        }}>
-          {L(tab === 'news' ? 'tabNews' : 'tabRooms')}
-        </span>
+        {/* b.370 — IL SELETTORE TORNA IN ALTO. L'avevo messo in fondo
+            perche Luca aveva chiesto «tendina sotto»: ma li sotto
+            finisce contro la barra di sistema e sotto il menu, e una
+            tendina che si apre meta coperta non e una tendina. Qui in
+            testata occupa la riga che c'era gia — nessuna altezza in
+            piu rubata agli elenchi, che era il motivo per cui l'avevo
+            spostata. */}
+        <div style={{ minWidth: 168 }}>
+          <Scelta C={C}
+            valore={tab}
+            opzioni={[
+              { valore: 'stanze', etichetta: L('tabRooms'), conto: rooms?.length || null },
+              { valore: 'news', etichetta: L('tabNews') },
+            ]}
+            onCambia={(v) => { vibrate(6); setTab(v); }} />
+        </div>
       </header>
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
@@ -504,7 +515,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           {/* b.324 — audit Mondo D8: su schermo largo il contenuto andava a
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
-          <div style={{ maxWidth: 440, margin: '0 auto', width: '100%', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ ...COLONNA, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
             <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
@@ -521,9 +532,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i
       // pulsanti veri li riprendono.
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(154px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
-        <div style={{ maxWidth: 440, margin: '0 auto', pointerEvents: 'auto' }}>
+        <div style={{ ...COLONNA, pointerEvents: 'auto' }}>
 
         {/* b.363 — ECCO LE CARD FANTASMA CHE LUCA VEDEVA A OGNI APERTURA DI
             MONDO. Erano quattro rettangoli finti alti 80 pixel, con il velo
@@ -700,31 +711,6 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         })}
         </div>
       </div>
-      )}
-
-      {/* ═══ b.367 — LA TENDINA IN FONDO (ordine di Luca: «vai sopra il
-          globo a tutta pagina con gli elenchi e tendina sotto»).
-          La scelta della sezione stava in cima, dentro una testata alta
-          novanta pixel che rubava spazio agli elenchi. Qui in fondo non
-          ruba niente — galleggia — e soprattutto sta dove arriva il
-          pollice senza cambiare presa al telefono, che e l'unico posto
-          giusto per un comando che si usa di continuo. ═══ */}
-      {!cercando && (
-        <div style={{
-          position: 'absolute', left: 0, right: 0, zIndex: 20,
-          bottom: 'calc(84px + env(safe-area-inset-bottom))',
-          display: 'flex', justifyContent: 'center', pointerEvents: 'none',
-        }}>
-          <div style={{ pointerEvents: 'auto', minWidth: 172 }}>
-            <Scelta C={C} versoAlto
-              valore={tab}
-              opzioni={[
-                { valore: 'stanze', etichetta: L('tabRooms'), conto: rooms?.length || null },
-                { valore: 'news', etichetta: L('tabNews') },
-              ]}
-              onCambia={(v) => { vibrate(6); setTab(v); }} />
-          </div>
-        </div>
       )}
 
       {/* CSS */}

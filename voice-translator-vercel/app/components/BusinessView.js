@@ -3,6 +3,7 @@ import { memo, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import Icon from './Icon.js';
+import { COLONNA } from '../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
 // b.346 — SEZIONE BUSINESS (Luca): parallela e INDIPENDENTE dalle
@@ -52,7 +53,7 @@ function BusinessView({ onBack }) {
       </div>
 
       {!aperto && (
-        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
+        <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto', ...COLONNA }}>
           {STRUMENTI.map((s) => (
             <button key={s.id} onClick={() => setAperto(s)}
               style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16, borderRadius: 14, cursor: 'pointer', textAlign: 'left',

@@ -32,26 +32,63 @@ export const LINGUETTA = {
 };
 
 /**
- * LA COLONNA DI DESTRA: pila del credito e comando del cielo stanno
- * incolonnati, stesso centro, stessa distanza dal bordo. Prima erano a
- * dieci e a quattordici, e si vedeva.
+ * b.370 — LA COLONNA DEI CONTENUTI. Una misura sola per TUTTE le liste
+ * del sistema (ordine di Luca: «tutte le card devono rimanere piu
+ * strette, per non coprire mai la linguetta a sinistra, centrata.
+ * applica a tutto il sistema»).
+ *
+ * IL CONTO NON E' A OCCHIO. La linguetta sta appoggiata al bordo
+ * sinistro ed e larga LINGUETTA.larghezza; il MARGINE e il respiro che
+ * le serve intorno. Una card che arrivi anche solo un pixel piu a
+ * sinistra di quel punto le finisce sopra — e quando ci finisce sopra
+ * non e piu una maniglia, e un pezzo di sporco.
+ *
+ * E dev'essere CENTRATA, non spostata a destra: una colonna spinta di
+ * lato per far posto a qualcosa si vede che e stata spinta. Una
+ * colonna stretta e in mezzo sembra una scelta.
+ *
+ * Il conto: al massimo LARGA pixel, ma mai piu di quanto ci sta
+ * lasciando SPAZIO_LINGUETTA libero DA TUTTI E DUE i lati — che e
+ * esattamente cio che tiene la colonna in mezzo.
+ */
+export const SPAZIO_LINGUETTA = LINGUETTA.larghezza + MARGINE + 6;   // 66
+export const LARGA = 440;
+
+export const COLONNA = {
+  width: '100%',
+  maxWidth: `min(${LARGA}px, calc(100vw - ${SPAZIO_LINGUETTA * 2}px))`,
+  marginLeft: 'auto',
+  marginRight: 'auto',
+};
+
+/**
+ * b.370 — LA FILA IN ALTO A DESTRA: pila del credito e comando del
+ * cielo stanno UNO ACCANTO ALL'ALTRO, non uno sotto l'altro.
+ *
+ * Ordine di Luca, ripetuto: «la luna deve stare di fianco a sinistra
+ * della pila, non sotto». Era gia stato chiesto e non l'avevo fatto:
+ * erano incolonnati, e una luna appesa sotto la batteria sembra caduta
+ * li, non messa.
+ *
+ * Stesso bordo alto per tutti, e ognuno si sposta A SINISTRA del
+ * precedente di un passo. L'indice 0 e il piu a destra.
  */
 export const COLONNA_DESTRA = {
   bordo: MARGINE,
-  larghezza: 44,          // la colonna: tutto dentro si centra qui
+  larghezza: 44,          // la casella: tutto dentro si centra qui
   primo: 'max(14px, calc(env(safe-area-inset-top) + 8px))',
-  passo: 62,              // quanto scende ogni elemento sotto il precedente
+  passo: 52,              // quanto si sposta a SINISTRA ogni elemento
 };
 
-/** Il posto di un elemento nella colonna di destra (0 = il piu in alto). */
+/** Il posto di un elemento nella fila in alto a destra (0 = il piu a destra). */
 export function postoADestra(indice = 0) {
   return {
     position: 'fixed',
-    right: COLONNA_DESTRA.bordo,
-    top: `calc(${COLONNA_DESTRA.primo} + ${indice * COLONNA_DESTRA.passo}px)`,
+    right: `calc(${COLONNA_DESTRA.bordo}px + ${indice * COLONNA_DESTRA.passo}px)`,
+    top: COLONNA_DESTRA.primo,
     width: COLONNA_DESTRA.larghezza,
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
   };
 }

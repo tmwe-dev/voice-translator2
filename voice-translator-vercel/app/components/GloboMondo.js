@@ -112,25 +112,26 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     return () => window.removeEventListener('message', suPronto);
   }, [traffico]);
 
+  // b.370 — IL CIELO SI CAMBIA CON UN MESSAGGIO, non entrando in casa
+  // d'altri. Prima questo comando apriva il documento dentro l'iframe e
+  // PREMEVA i bottoni nascosti del file (.terra-sw). Ha funzionato
+  // finche quei bottoni esistevano: appena il globo ha smesso di
+  // disegnare la sua interfaccia (b.369) il comando e morto in silenzio,
+  // ed e cosi che Luca l'ha trovato.
+  //
+  // Non era solo fragile: era la regola rotta. Gli altri tre comandi
+  // (paese, rotte, traffico) parlano al globo con un messaggio, e il
+  // globo li ascolta perche dentro il file c'e scritto che li ascolta.
+  // Questo faceva di testa sua. Ora fa come gli altri.
+  const CIELI = ['navigator', 'wueform', 'ibrido'];
   const cambiaCielo = () => {
-    // b.363 — l'icona avanzava PRIMA di sapere se il comando era arrivato: se
-    // il pianeta non era ancora pronto, mostrava il sole mentre il cielo
-    // restava notte. Ora avanza solo a comando dato davvero.
-    try {
-      const doc = ref.current?.contentWindow?.document;
-      const bottoni = doc?.querySelectorAll('.terra-sw button, .terra-sw [role="button"]');
-      if (!bottoni || !bottoni.length) return;
-      // b.363 (secondo giro) — non si conta piu per conto proprio: il file
-      // dichiara da se quale cielo e acceso (il tasto porta la classe 'on').
-      // Cosi l'icona resta fedele anche se il cielo cambia dentro il file,
-      // o se un giorno i tasti saranno tre in un altro ordine.
-      let acceso = -1;
-      for (let i = 0; i < bottoni.length; i++) if (bottoni[i].classList?.contains('on')) { acceso = i; break; }
-      const partenza = acceso >= 0 ? acceso : stato;
-      const prossimo = (partenza + 1) % bottoni.length;
-      bottoni[prossimo].click();
-      setStato(prossimo % STATI.length);
-    } catch { /* il file non e ancora pronto: l'icona non mente, resta com'e */ }
+    const finestra = ref.current?.contentWindow;
+    if (!finestra) return;
+    const prossimo = (stato + 1) % STATI.length;
+    try { finestra.postMessage({ tipo: 'bartalk:cielo', variante: CIELI[prossimo] }, '*'); }
+    catch { return; }
+    // l'icona avanza solo a comando dato davvero (b.363).
+    setStato(prossimo);
   };
 
   const contenitore = sfondo

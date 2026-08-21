@@ -13,6 +13,7 @@ import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
+import { COLONNA } from '../lib/righello.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -230,7 +231,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         paddingBottom: 100,
         paddingLeft: 20, paddingRight: 20,
         /* Colonna unica allineata: su desktop niente card che dilagano */
-        width: '100%', maxWidth: 680, margin: '0 auto',
+        ...COLONNA,
       }}>
 
         {/* ═══ Header ═══
@@ -467,7 +468,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              width: '100%', maxWidth: 680, margin: '0 auto',
+              ...COLONNA,
               // b.358 — fondo PIENO: prima si vedeva la home attraverso la
               // tendina e le due scritte si sovrapponevano, illeggibili.
               background: S.colors.bg,
