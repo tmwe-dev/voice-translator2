@@ -8,7 +8,7 @@ export const APP_VERSION = 'b.361';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 606;
+export const PUSH = 607;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
@@ -111,7 +111,7 @@ export const CONTEXTS = [
 ];
 
 // Apple rounded in testa: su iOS/macOS usa SF Pro Rounded, altrove fallback morbidi
-export const FONT = "ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif";
+export const FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif";
 
 // b.230 — direzione grafica "Clay" (neumorfismo): superfici morbide in
 // RILIEVO, con doppia ombra (scura in basso-destra, luce in alto-sinistra).

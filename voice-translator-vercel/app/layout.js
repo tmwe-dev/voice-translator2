@@ -138,6 +138,13 @@ export default function RootLayout({ children }) {
         <style dangerouslySetInnerHTML={{ __html:
           `*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{width:0;height:0;display:none}`
         }} />
+        {/* b.361 — UN SOLO FONT in tutta l'app, quello di Apple (collaudo di
+            Luca: «stai usando un font vecchio che sembra un Times, usa solo un
+            font apple»). Forzato su tutto, cosi nessun elemento cade sul serif
+            di sistema. */}
+        <style dangerouslySetInnerHTML={{ __html:
+          `html,body,button,input,textarea,select,h1,h2,h3,h4,h5,h6,p,span,div,a,label{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif}`
+        }} />
       </head>
       <body style={{margin:0, padding:0, paddingTop:'env(safe-area-inset-top)', paddingBottom:'env(safe-area-inset-bottom)', overflow:'hidden', background:'transparent'}}>
         <SkipToContent />

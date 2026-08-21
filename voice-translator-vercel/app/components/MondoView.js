@@ -237,9 +237,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         })()}
       </header>
 
-      {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══ */}
-      <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
+      {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══
+          b.361 — CENTRATA e non a tutta larghezza (regola di Luca). */}
+      <div style={{ padding: '0 16px 8px', flexShrink: 0, display: 'flex', justifyContent: 'center' }}>
         <div style={{
+          width: '100%', maxWidth: 420,
           display: 'flex', alignItems: 'center', gap: 10,
           background: C.card, border: `1px solid ${C.cardBorder}`,
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',

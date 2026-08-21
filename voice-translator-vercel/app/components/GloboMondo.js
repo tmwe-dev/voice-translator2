@@ -66,27 +66,31 @@ export default function GloboMondo({ sfondo = false }) {
     : { width: '100%', height: '58vh', borderRadius: 18, overflow: 'hidden', position: 'relative', flexShrink: 0, background: '#05070f' };
 
   return (
-    <div style={contenitore}>
-      <iframe
-        ref={ref}
-        src="/mondo-globo.html"
-        title="Il mondo ora"
-        allow="accelerometer; gyroscope"
-        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-      />
+    <>
+      <div style={contenitore}>
+        <iframe
+          ref={ref}
+          src="/mondo-globo.html"
+          title="Il mondo ora"
+          allow="accelerometer; gyroscope"
+          style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+        />
+      </div>
 
       {/* icona del cielo (Luca: una sola icona luna/sole/mezzaluna, nuda,
-          sotto la linguetta a sinistra). */}
+          sotto la linguetta a sinistra). FUORI dal contenitore del globo,
+          altrimenti resta intrappolata nel suo livello e non e cliccabile
+          (collaudo di Luca). Qui e un fratello, sopra tutto. */}
       <button onClick={cambiaCielo} aria-label="Cielo del pianeta"
         style={{
           position: 'fixed', left: 22,
-          top: 'max(238px, calc(env(safe-area-inset-top) + 214px))', zIndex: 61,
+          top: 'max(238px, calc(env(safe-area-inset-top) + 214px))', zIndex: 70,
           background: 'none', border: 'none', padding: 6, cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           WebkitTapHighlightColor: 'transparent',
         }}>
         <IconaCielo tipo={STATI[stato].icona} size={26} />
       </button>
-    </div>
+    </>
   );
 }

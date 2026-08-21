@@ -128,20 +128,21 @@ const BottomNav = ({ currentView, onNewConversation }) => {
           style={{
             position: 'absolute', top: '-28px', width: '52px', height: '52px',
             borderRadius: '50%',
-            // b.360 — il pulsante "+" da azzurro ad ARGENTO come le icone
-            // metalliche (Luca): un metallo spazzolato, non piu il gradiente
-            // blu. Il segno "+" diventa scuro per staccare sul chiaro.
-            background: 'linear-gradient(145deg, #f2f4f8 0%, #b9c0cc 42%, #7d8492 78%, #aeb6c4 100%)',
+            // b.361 — GLASS semitrasparente, zero sfumature, segno nero
+            // (collaudo di Luca: «il tasto grigio sfumato fa cagare, voglio
+            // zero sfumature e sfondo glass semitrasparente, carattere nero»).
+            background: 'rgba(255,255,255,0.55)',
+            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#2a2f3a', border: `3px solid ${C.headerBg || 'rgba(9,9,11,0.95)'}`,
-            boxShadow: '0 4px 18px rgba(0,0,0,0.45), inset 0 1px 1px rgba(255,255,255,0.7), inset 0 -2px 4px rgba(0,0,0,0.25)',
+            color: '#000', border: `1px solid rgba(255,255,255,0.5)`,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
             cursor: 'pointer', transition: 'transform 0.15s', zIndex: 51,
           }}
           onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           aria-label={L('newConversation')}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2a2f3a" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>
