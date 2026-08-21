@@ -155,6 +155,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const [apriDiscussione, setApriDiscussione] = useState(null);
   // b.363 — la maniglia degli strumenti: chiusa il pianeta e libero.
   const [strumenti, setStrumenti] = useState(false);
+  // b.363 — IL PAESE SCELTO e uno stato di MONDO, non un filtro di una
+  // pagina: scegliendolo in Stanze resta scelto passando a News, come
+  // deve essere se il globo e una porta e non un setaccio.
+  const [paeseScelto, setPaeseScelto] = useState(null);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -260,7 +264,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           mondo e non ce l'ha»). */}
       {(tab === 'stanze' || tab === 'news') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <GloboMondo sfondo titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
+          <GloboMondo sfondo paese={paeseScelto} titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
         </div>
       )}
 
@@ -301,8 +305,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
                   fra le due frecce. Prima era il contrario, e l'icona —
                   alta il doppio della riga che la ospita — sbordava e si
                   prendeva l'angolo che serviva al nome. */}
+              {/* b.363 — il nome della sezione era incollato al bordo: a
+                  quattordici punti da un lato dello schermo sembra caduto
+                  li, non messo. Ventidue, come il respiro che hanno le
+                  altre schermate. */}
               <span style={{
-                position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
+                position: 'absolute', left: 22, top: '50%', transform: 'translateY(-50%)',
                 fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5,
                 whiteSpace: 'nowrap',
               }}>
@@ -376,7 +384,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         ).map(lf => {
           const active = langFilter === lf.code;
           return (
-            <button key={lf.code} onClick={() => setLangFilter(lf.code)} style={{
+            <button key={lf.code} onClick={() => { setLangFilter(lf.code); setPaeseScelto(lf.code === 'all' ? null : lf.code.toUpperCase()); }} style={{
               padding: '5px 12px', borderRadius: 20, cursor: 'pointer', flexShrink: 0,
               background: active ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
               border: active ? 'none' : `1px solid ${C.cardBorder}`,
@@ -434,8 +442,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
             {risultati.paesi.length > 0 && (<>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{L('searchCountriesLangs')}</div>
+              {/* b.363 — scegliendo di qui, il PIANETA ci va sopra: il codice
+                  viaggia al globo e parte lo zoom che sa gia fare da se */}
               {risultati.paesi.map((l) => (
-                <button key={l.code} onClick={() => { setLangFilter(l.code); setSearch(''); setTab('stanze'); }}
+                <button key={l.code} onClick={() => { setLangFilter(l.code); setPaeseScelto(l.paese || l.code.toUpperCase()); setSearch(''); setTab('stanze'); }}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 22 }}>{l.flag}</span>
                   <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>{l.name}</span>
@@ -609,7 +619,6 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             che vanno visti PRIMA di entrare: si bussa, e si litiga. */}
         {filteredRooms.map((room, idx) => {
           const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '', color: PALETTE.teal };
-          const lingua = room.hostLang || room.lang;
           const eta = quando(room.createdAt, L);
           const dentro = viva(room.membri ?? room.memberCount, 4);
           const eti = stileEtichetta(C);
@@ -626,7 +635,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* 1. DA DOVE, DI CHE TIPO, QUANDO */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, lineHeight: 1 }}>{getLangFlag(lingua)}</span>
+                  {/* b.363 — LA LINGUA, col suo nome. Ridisegnando la scheda
+                      avevo lasciato la sola bandiera: ma una bandiera non e
+                      una lingua (in Brasile e in Portogallo si parla la
+                      stessa, in Svizzera quattro diverse), e su un'app di
+                      traduzione la lingua che si parla dentro e cio che
+                      decide se puoi parlarci. */}
+                  <span style={{ fontSize: 13, lineHeight: 1 }}>{getLangFlag(room.hostLang || room.lang)}</span>
+                  <span style={eti}>{getLangName(room.hostLang || room.lang)}</span>
+                  <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>
                   <span style={{ ...eti, color: modeInfo.color }}>{nomeModalita(modeInfo, L)}</span>
                   {eta && <><span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span><span style={eti}>{eta}</span></>}
                   {/* si bussa e l'host apre: dirlo PRIMA che uno tocchi,

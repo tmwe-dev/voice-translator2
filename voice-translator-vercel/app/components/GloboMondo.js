@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { postoADestra } from '../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -48,9 +48,32 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta' }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
+
+  // b.363 — IL PAESE SCELTO DA FUORI ARRIVA AL PIANETA. Finora il globo e
+  // l'app non si parlavano: toccando un paese sulla mappa lo sapeva solo
+  // il globo, e scegliendolo dall'elenco l'app non aveva modo di dirglielo.
+  // Cosi il pianeta restava fermo dove stava, mentre l'utente aveva appena
+  // detto dove voleva andare.
+  // Qui il paese viaggia dentro il file, che lo seleziona: e con la
+  // selezione parte lo ZOOM che il pianeta sa gia fare per conto suo —
+  // nessuna animazione nuova, quella che c'e gia (ordine di Luca).
+  useEffect(() => {
+    const finestra = ref.current?.contentWindow;
+    if (!finestra) return;
+    const manda = () => {
+      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || null }, '*'); }
+      catch { /* il pianeta non e ancora pronto: si riprova quando lo dice lui */ }
+    };
+    manda();
+    // se il pianeta si e appena acceso, glielo si ridice: al primo giro
+    // puo non essere ancora in ascolto.
+    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    window.addEventListener('message', suPronto);
+    return () => window.removeEventListener('message', suPronto);
+  }, [paese]);
 
   const cambiaCielo = () => {
     // b.363 — l'icona avanzava PRIMA di sapere se il comando era arrivato: se

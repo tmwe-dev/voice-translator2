@@ -39,53 +39,109 @@
 // la sua origine sarebbe passata. Ora si esige anche lo slug del team,
 // che non e registrabile da altri.
 // ═══════════════════════════════════════════════════════════════
-import { describe, it, expect } from 'vitest';
+// ── b.363 · QUESTA PROVA NON PROVAVA IL PROGRAMMA ──
+//
+// Fin qui il file dichiarava di provare la regola sulle origini, ma la
+// RICOPIAVA qui dentro riga per riga e poi provava la copia. Se domani
+// qualcuno cambiava la regola vera nel middleware — o la cancellava —
+// questa copia restava com'era e il test continuava a passare, verde e
+// muto. Sorvegliava se stessa, non l'applicazione.
+//
+// Ora si bussa davvero alla porta: si chiama il middleware vero con una
+// richiesta vera e si guarda cosa risponde. Chi e consentito riceve il
+// permesso di origine nell'intestazione, chi non lo e viene respinto
+// con un 403 parlante.
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
 const RADICE = path.join(__dirname, '..');
 const sorgente = fs.readFileSync(path.join(RADICE, 'middleware.js'), 'utf8');
 
-// Si ricostruisce la regola come la scrive il middleware, per provarla
-// davvero invece di leggerla.
-const NOME = 'voice-translator2';
-const TEAM = 'tmweapps-projects';
-const anteprima = new RegExp(`^https://${NOME}-[a-z0-9]+-${TEAM}\\.vercel\\.app$`);
-const consentita = (o) =>
-  o === `https://${NOME}.vercel.app` || anteprima.test(o);
+// Il middleware fissa la lista delle origini consentite nel momento in
+// cui viene caricato: per provarlo con un ambiente pulito va ricaricato
+// da zero ogni volta.
+const ambienteOriginale = { ...process.env };
+
+async function caricaMiddleware() {
+  vi.resetModules();
+  // Queste due variabili allargano la lista delle origini consentite. Se
+  // la macchina di chi esegue le prove ne ha una, il risultato
+  // cambierebbe senza che nessuno se ne accorga.
+  delete process.env.NEXT_PUBLIC_APP_URL;
+  delete process.env.ALLOWED_ORIGIN;
+  return (await import('../middleware.js')).middleware;
+}
+
+// Una richiesta come la vede il middleware: percorso, metodo, origine.
+const richiesta = (origine, percorso = '/api/room', metodo = 'GET') => ({
+  method: metodo,
+  nextUrl: { pathname: percorso },
+  headers: { get: (n) => (n.toLowerCase() === 'origin' ? origine : null) },
+});
+
+// La domanda vera: il middleware ha dato il permesso a questa origine?
+async function permesso(origine) {
+  const mw = await caricaMiddleware();
+  return mw(richiesta(origine)).headers.get('Access-Control-Allow-Origin');
+}
+
+// E questa: quanto vale il rifiuto?
+async function rifiuto(origine) {
+  const mw = await caricaMiddleware();
+  return mw(richiesta(origine));
+}
+
+beforeEach(() => { process.env = { ...ambienteOriginale }; });
+afterEach(() => { process.env = { ...ambienteOriginale }; });
 
 describe('le nostre anteprime passano', () => {
-  it('l\'indirizzo di deploy vero e accettato', () => {
+  it('l\'indirizzo di deploy vero e accettato', async () => {
     // E l'indirizzo reale che ha fatto emergere il difetto.
-    expect(consentita('https://voice-translator2-n6q9te9sj-tmweapps-projects.vercel.app')).toBe(true);
+    const o = 'https://voice-translator2-n6q9te9sj-tmweapps-projects.vercel.app';
+    expect(await permesso(o)).toBe(o);
   });
 
-  it('e anche il dominio del progetto senza suffissi', () => {
-    expect(consentita('https://voice-translator2.vercel.app')).toBe(true);
+  it('e anche il dominio del progetto senza suffissi', async () => {
+    const o = 'https://voice-translator2.vercel.app';
+    expect(await permesso(o)).toBe(o);
   });
 });
 
 describe('e nessun altro', () => {
-  it('un progetto altrui col nostro nome davanti NON passa', () => {
+  it('un progetto altrui col nostro nome davanti NON passa', async () => {
     // Era il buco della vecchia regola: bastava chiamare il proprio
     // progetto `voice-translator2-qualcosa`.
-    expect(consentita('https://voice-translator2-evil.vercel.app')).toBe(false);
-    expect(consentita('https://voice-translator2-evil-altrui-projects.vercel.app')).toBe(false);
+    expect((await rifiuto('https://voice-translator2-evil.vercel.app')).status).toBe(403);
+    expect((await rifiuto('https://voice-translator2-evil-altrui-projects.vercel.app')).status).toBe(403);
   });
 
-  it('un dominio esterno non passa', () => {
+  it('un dominio esterno non passa', async () => {
     for (const o of [
       'https://attacker.com',
       'https://voice-translator2.vercel.app.attacker.com',
       'https://evil.vercel.app',
       'http://voice-translator2.vercel.app',
     ]) {
-      expect(consentita(o), `${o} non deve passare`).toBe(false);
+      const res = await rifiuto(o);
+      expect(res.status, `${o} non deve passare`).toBe(403);
     }
   });
 
-  it('e lo slug del team e obbligatorio nelle anteprime', () => {
-    expect(consentita('https://voice-translator2-abc123.vercel.app')).toBe(false);
+  it('e lo slug del team e obbligatorio nelle anteprime', async () => {
+    expect((await rifiuto('https://voice-translator2-abc123.vercel.app')).status).toBe(403);
+  });
+
+  it('il rifiuto dice chi e stato respinto, non e muto', async () => {
+    // E il secondo difetto di b.130: un 403 senza corpo non si
+    // distingue da un guasto di rete. Prima questa prova si accontentava
+    // di CERCARE la parola giusta nel sorgente; ora legge la risposta.
+    const res = await rifiuto('https://attacker.com');
+    expect(res.headers.get('Content-Type')).toContain('application/json');
+    expect(await res.json()).toEqual({
+      error: 'Origine non consentita',
+      origine: 'https://attacker.com',
+    });
   });
 });
 

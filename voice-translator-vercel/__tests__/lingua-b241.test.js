@@ -21,6 +21,8 @@ import {
   testoVisibile, segmentiPerVoce,
 } from '../app/lib/compagni/corsi/lingua.js';
 import { promptLezione } from '../app/lib/compagni/corsi/generatore.js';
+import { parlaBilingue } from '../app/lib/compagni/cliente.js';
+import { fermaElemento, fermatoDavvero } from '../app/lib/audioLife.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -172,7 +174,72 @@ describe('il tag L2 arriva alla voce, e non arriva mai agli occhi', () => {
     expect(s).toMatch(/linguaStudiata: \(l2 && l2 !== linguaCorso\) \? l2 : linguaCorso/);
   });
 
-  it('uscendo dalla lezione la voce si ferma', () => {
-    expect(ui()).toMatch(/audioLezioneRef\.current\?\.pause\(\)/);
+  // ═══════════════════════════════════════════════════════════════
+  // b.363 — USCIRE NON E METTERE IN PAUSA.
+  //
+  // Il telecomando dell'audio ha smesso di confondere le due cose: chi
+  // metteva in pausa si vedeva saltare il turno, perche la pausa chiudeva
+  // il pezzo e buttava via il file. Uscire dalla lezione, invece, e
+  // un'INTERRUZIONE: passa da `fermaElemento`, che zittisce la voce E lascia
+  // il segno che chiude il turno.
+  //
+  // Questa prova cercava la vecchia riga letterale `?.pause()` e per questo
+  // e diventata rossa: ma cio che deve valere non e come e scritta la riga,
+  // e che dopo l'uscita non si senta piu niente. Riscritta sulla CATENA
+  // VIVA, dal tasto fino al silenzio — ed e cosi che e saltato fuori il
+  // guasto vero riparato in `parlaBilingue`.
+  // ═══════════════════════════════════════════════════════════════
+  it('uscendo dalla lezione si zittisce la voce e si ferma il giro di lettura', () => {
+    const s = ui();
+    // il tasto che riporta all'elenco delle lezioni
+    expect(s).toMatch(/stopLetturaRef\.current = true; fermaElemento\(audioLezioneRef\.current\);/);
+    // e lo Stop della lettura, che deve fare lo stesso
+    expect(s).toMatch(/const fermaLettura = useCallback\([\s\S]{0,400}?fermaElemento\(audioLezioneRef\.current\)/);
+  });
+
+  it('e fermare non e mettere in pausa: solo chi ferma lascia il segno', () => {
+    let zittito = 0;
+    const voce = { dataset: {}, pause() { zittito++; } };
+    fermaElemento(voce);
+    expect(zittito).toBe(1);
+    expect(fermatoDavvero(voce)).toBe(true);
+    // una pausa vera non lascia il segno: il turno non va chiuso, si riprende
+    const inPausa = { dataset: {}, pause() {} };
+    inPausa.pause();
+    expect(fermatoDavvero(inPausa)).toBe(false);
+  });
+
+  it('e la voce non riparte col pezzo dopo: interrotto uno, il duetto tace', async () => {
+    // Una frase con un pezzo in lingua straniera si dice in PIU turni. Chi
+    // esce a meta zittiva solo il turno in corso e un istante dopo partiva
+    // il successivo: la voce parlava addosso a chi era gia uscito.
+    const detti = [];
+    const origFetch = global.fetch;
+    const origAudio = global.Audio;
+    const origCrea = URL.createObjectURL;
+    const origLibera = URL.revokeObjectURL;
+    global.fetch = async (_u, o) => {
+      detti.push(JSON.parse(o.body).text);
+      return { ok: true, headers: { get: () => null }, blob: async () => ({}) };
+    };
+    URL.createObjectURL = () => 'blob:finta';
+    URL.revokeObjectURL = () => {};
+    // appena la voce parte, l'utente esce dalla lezione
+    global.Audio = class {
+      constructor() { this.dataset = {}; this.ended = false; }
+      play() { setTimeout(() => fermaElemento(this), 0); return Promise.resolve(); }
+      pause() { if (this.onpause) this.onpause(); }
+    };
+    try {
+      await parlaBilingue(
+        { testo: 'Ripeti [L2: I am ready] e poi andiamo avanti', linguaParlata: 'it', linguaStudiata: 'en' },
+        () => {},
+      );
+    } finally {
+      global.fetch = origFetch; global.Audio = origAudio;
+      URL.createObjectURL = origCrea; URL.revokeObjectURL = origLibera;
+    }
+    // tre pezzi da dire, ma dopo l'interruzione se ne dice UNO SOLO
+    expect(detti).toEqual(['Ripeti']);
   });
 });

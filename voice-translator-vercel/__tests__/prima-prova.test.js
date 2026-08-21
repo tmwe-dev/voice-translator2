@@ -61,8 +61,33 @@ describe('il traduttore subito', () => {
   });
 
   it('dice cosa sta facendo e cosa è andato storto', () => {
+    // b.363 — la frase d'errore non sta più scritta a mano dentro il
+    // componente: e passata ai pacchetti lingua, perche chi parla turco non
+    // deve leggersi un avviso in italiano. La pretesa non cambia — il guasto
+    // si VEDE e non resta muto — cambia solo il posto dove si verifica.
     expect(src, 'lo stato di lavoro esiste').toMatch(/'traduco'/);
-    expect(src, 'l\'errore si vede, non resta muto').toContain('La traduzione non e arrivata');
+    expect(src, 'l\'errore si vede, non resta muto')
+      .toMatch(/stato === 'errore' &&[\s\S]{0,200}L\('speakNowError'\)/);
+    // E la frase esiste davvero, tradotta, in TUTTI i pacchetti: una chiave
+    // mancante lascerebbe l'avviso vuoto proprio nel momento del guasto.
+    const cartella = path.join(APP, 'lib', 'locales');
+    const pacchetti = fs.readdirSync(cartella).filter((f) => f.endsWith('.js') && f !== 'index.js');
+    expect(pacchetti.length, 'i pacchetti lingua ci sono tutti').toBeGreaterThanOrEqual(38);
+    const senza = pacchetti.filter((f) => !/"speakNowError":\s*"[^"]+"/.test(leggi(path.join('lib', 'locales', f))));
+    expect(senza, 'nessun pacchetto senza la frase d\'errore').toEqual([]);
+  });
+
+  it('una traduzione respinta dal controllo qualità non passa per buona', () => {
+    // b.357/b.363 — quando il controllo del server respinge la resa, la
+    // risposta torna col testo ORIGINALE dentro: finiva nel registro sotto la
+    // bandiera sbagliata (frasi italiane date per tedesche) e la voce le
+    // leggeva pure. Deve diventare un errore visibile, e la stessa frase si
+    // deve poter richiedere di nuovo.
+    const i = src.indexOf('d.validationFailed');
+    expect(i, 'la respinta si riconosce').toBeGreaterThan(-1);
+    const blocco = src.slice(i, i + 300);
+    expect(blocco, 'diventa un errore visibile').toMatch(/setStato\('errore'\)/);
+    expect(blocco, 'e la stessa frase si puo riprovare').toMatch(/giaChiestaRef\.current = ''/);
   });
 
   it('i messaggi si susseguono, e restano in ordine', () => {

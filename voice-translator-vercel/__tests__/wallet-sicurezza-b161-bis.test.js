@@ -153,7 +153,10 @@ describe('/api/wallet/admin: rimborso manuale Stripe (b.162, punto 3)', () => {
 describe('Cron rilascio riserve scadute: la funzione SQL di migrazione 010 non restava orfana (b.162-bis, lacuna del proprio audit)', () => {
   it("la rotta cron esiste, richiede ADMIN_PASS o CRON_SECRET (timing-safe), chiama wallet_rilascia_riserve_scadute", () => {
     const src = leggi('app/api/wallet/cron-rilascia-riserve/route.js');
-    expect(src).toContain("import { safeCompare } from '../../../lib/apiGuard.js';");
+    // b.363 — l'import ha guadagnato withApiGuard (il tetto ai tentativi
+    // messo sulla rotta oggi): qui conta che safeCompare arrivi ancora da
+    // apiGuard.js, non l'elenco letterale di cosa altro viaggia con lei.
+    expect(src).toMatch(/import \{[^}]*\bsafeCompare\b[^}]*\} from '\.\.\/\.\.\/\.\.\/lib\/apiGuard\.js';/);
     expect(src).toContain('safeCompare(pass, process.env.ADMIN_PASS)');
     expect(src).toContain('safeCompare(pass, process.env.CRON_SECRET)');
     expect(src).toContain("db().rpc('wallet_rilascia_riserve_scadute')");

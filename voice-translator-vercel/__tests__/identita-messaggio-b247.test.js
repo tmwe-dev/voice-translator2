@@ -299,7 +299,13 @@ describe('5 · l\'identificativo nasce dove nasce il testo', () => {
 
   it('e lo stesso identificativo copre fase 1 e fase 2', () => {
     const s = orch();
-    expect(s).toMatch(/sendMessage\(text, null, myL\.code, primaryTargetLang, null, \{ idCattura \}\)/);
+    // b.363 — la prova pretendeva che le opzioni della fase 1 contenessero
+    // SOLO l'identificativo. Da oggi accanto viaggia anche il messaggio
+    // citato (la risposta con citazione), che non c'entra nulla con
+    // l'identita: pretendere la parentesi vuota faceva fallire una cosa
+    // giusta. Resta invariato cio che questa prova difende: e' lo STESSO
+    // identificativo a coprire fase 1 e fase 2, mai ricostruito dal testo.
+    expect(s).toMatch(/sendMessage\(text, null, myL\.code, primaryTargetLang, null, \{ idCattura[,\s}][^}]*\}\)/);
     expect(s).toMatch(/sendTranslationUpdate\(text, primaryTranslated, myL\.code, finalTargetLang, translations, \{ clientId: idCattura \}\)/);
   });
 

@@ -18,36 +18,50 @@ import { useApp } from '../contexts/AppContext.js';
 const MISURA_MENU = 48;
 
 const NavIcon = ({ id, color, size = MISURA_MENU }) => {
-  const s = { stroke: color, strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
+  // b.363 — ICONE SOTTILI E MODERNE (ordine di Luca: «mettine di belle e
+  // moderne con linee sottili, NO BOLD»). Quelle di prima erano disegni
+  // pesanti, con tratti spessi e dettagli che a questa misura diventavano
+  // macchie: il tetto della casa a spiovente ripido, il fumetto squadrato
+  // con dentro due righe di finto testo, il mappamondo con meridiani e
+  // paralleli che si impastavano. Ora sono quattro segni essenziali,
+  // tratto sottile e uniforme, angoli arrotondati, niente riempimenti.
+  const s = {
+    stroke: color, strokeWidth: 1.25,
+    strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none',
+    vectorEffect: 'non-scaling-stroke',
+  };
   switch (id) {
+    // la casa: un tetto appena accennato e un corpo semplice, senza porta
     case 'home': return (
       <svg width={size} height={size} viewBox="0 0 24 24" {...s}>
-        <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V10.5z"/>
-        <path d="M9 21V14h6v7"/>
+        <path d="M4 10.2 12 4l8 6.2V19a1.2 1.2 0 0 1-1.2 1.2H5.2A1.2 1.2 0 0 1 4 19z" />
       </svg>
     );
+    // la chat: un fumetto tondo, con la codina. Niente righe finte dentro
     case 'conversations': return (
       <svg width={size} height={size} viewBox="0 0 24 24" {...s}>
-        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-        <path d="M8 9h8M8 13h5" opacity="0.6"/>
+        <path d="M20.5 12.2c0 4-3.8 7.2-8.5 7.2a9.8 9.8 0 0 1-2.7-.37L4.5 20.5l1.2-3.5A6.9 6.9 0 0 1 3.5 12.2C3.5 8.2 7.3 5 12 5s8.5 3.2 8.5 7.2z" />
       </svg>
     );
+    // il mondo: un cerchio, l'equatore, e un solo meridiano che lo curva
     case 'community': return (
       <svg width={size} height={size} viewBox="0 0 24 24" {...s}>
-        <circle cx="12" cy="12" r="9"/>
-        <path d="M3.5 9h17M3.5 15h17" opacity="0.6"/>
-        <ellipse cx="12" cy="12" rx="4.5" ry="9"/>
+        <circle cx="12" cy="12" r="8.2" />
+        <path d="M3.8 12h16.4" />
+        <path d="M12 3.8c2.1 2.3 3.2 5.1 3.2 8.2s-1.1 5.9-3.2 8.2c-2.1-2.3-3.2-5.1-3.2-8.2s1.1-5.9 3.2-8.2z" />
       </svg>
     );
+    // la persona: una testa e le spalle, nient'altro
     case 'profile': return (
       <svg width={size} height={size} viewBox="0 0 24 24" {...s}>
-        <circle cx="12" cy="8" r="4"/>
-        <path d="M4 21v-1a8 8 0 0116 0v1"/>
+        <circle cx="12" cy="8.4" r="3.6" />
+        <path d="M5.2 20a6.8 6.8 0 0 1 13.6 0" />
       </svg>
     );
     default: return null;
   }
 };
+
 
 // ═══════════════════════════════════════════════════════════════
 // BottomNav — 5 tabs + central FAB

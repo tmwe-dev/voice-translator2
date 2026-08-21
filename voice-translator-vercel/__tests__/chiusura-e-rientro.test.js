@@ -150,7 +150,21 @@ describe('una stanza si toglie solo se il server lo dice', () => {
   it('un controllo fallito NON cancella la stanza', () => {
     const s = h();
     expect(s, 'una risposta non riuscita conserva').toMatch(/if \(!res\.ok\) \{ rimaste\.push\(room\); continue; \}/);
-    expect(s, 'e anche un errore di rete conserva').toMatch(/catch \{\s*rimaste\.push\(room\);/);
+    // b.363 — questa prova pretendeva che la conservazione fosse la PRIMA
+    // riga del ramo d'errore. Da oggi quel ramo annota anche il motivo del
+    // guasto nel registro, e la forma esatta non combacia piu: ma cio che
+    // conta non e l'ordine delle righe, e che la stanza non venga persa.
+    // Si guarda quindi il ramo intero, e si pretende che finisca per
+    // rimetterla nell'elenco e che non la scarti in nessun modo.
+    const ciclo = s.slice(
+      s.indexOf('for (const room of saved)'),
+      s.indexOf("memSet('vt-active-rooms'")
+    );
+    expect(ciclo, 'il ciclo di controllo deve esistere').toContain('} catch');
+    const ramoErrore = ciclo.slice(ciclo.lastIndexOf('} catch'));
+    expect(ramoErrore, 'e anche un errore di rete conserva').toMatch(/rimaste\.push\(room\)/);
+    expect(ramoErrore, 'nel dubbio non si toglie e non si riscrive l\'elenco')
+      .not.toMatch(/rimaste\s*=|\.filter\(|\.splice\(/);
   });
 
   it('si toglie solo su una risposta ESPLICITA', () => {

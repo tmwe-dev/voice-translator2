@@ -50,7 +50,10 @@ describe('Fuga di credenziali: le apiKeys non tornano piu in chiaro al login', (
 
   it('test-login usa safeCompare, non piu un confronto diretto (!==)', () => {
     const src = leggi('app/api/test-login/route.js');
-    expect(src).toContain("import { safeCompare } from '../../lib/apiGuard.js';");
+    // b.363 — l'import ha guadagnato withApiGuard (il tetto ai tentativi
+    // messo sulla rotta oggi): qui conta che safeCompare arrivi ancora da
+    // apiGuard.js, non l'elenco letterale di cosa altro viaggia con lei.
+    expect(src).toMatch(/import \{[^}]*\bsafeCompare\b[^}]*\} from '\.\.\/\.\.\/lib\/apiGuard\.js';/);
     expect(src).toContain('if (!safeCompare(body.adminPass, adminPass))');
     expect(src).not.toContain('body.adminPass !== adminPass');
   });

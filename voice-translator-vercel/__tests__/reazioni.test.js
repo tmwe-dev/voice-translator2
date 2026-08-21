@@ -125,8 +125,19 @@ describe('la barra sotto ogni messaggio', () => {
 
   it('si puo rispondere a un messaggio', () => {
     expect(barra).toMatch(/onRispondi/);
-    expect(leggi('components/RoomView.js'), 'la citazione va sopra il campo di scrittura')
-      .toMatch(/Rispondi a \{rispostaA\.nome\}/);
+    const vista = leggi('components/RoomView.js');
+    // b.363 — la scritta della citazione era in italiano fisso dentro una
+    // stanza per il resto tutta tradotta: chi parla un'altra lingua leggeva
+    // "Rispondi a" e basta. Ora passa dal vocabolario, quindi la vecchia
+    // pretesa sulla parola italiana non poteva piu combaciare. La promessa
+    // difesa qui e' la stessa, e anzi piu completa: la citazione compare
+    // sopra il campo di scrittura, e poi PARTE davvero col messaggio.
+    expect(vista, 'la citazione va sopra il campo di scrittura')
+      .toMatch(/\{L\('replyToWord'\)\}\s*\{rispostaA\.nome\}/);
+    expect(vista, 'il nome citato arriva dal messaggio scelto')
+      .toMatch(/setRispostaA\(\{ id: msgId, nome:/);
+    expect(vista, 'e la citazione viaggia col messaggio, non resta a schermo')
+      .toMatch(/sendTextMessage\(citato[\s\S]{0,80}setRispostaA\(null\)/);
   });
 });
 

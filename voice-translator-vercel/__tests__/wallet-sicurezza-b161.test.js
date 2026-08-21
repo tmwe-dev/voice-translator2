@@ -362,7 +362,10 @@ describe('Cron rimborso regali: esiste ora, chiama la RPC gia blindata (b.161, p
 
   it('la rotta cron esiste, richiede ADMIN_PASS o CRON_SECRET (timing-safe)', () => {
     const src = leggi('app/api/wallet/cron-rimborso-regali/route.js');
-    expect(src).toContain("import { safeCompare } from '../../../lib/apiGuard.js';");
+    // b.363 — l'import ha guadagnato withApiGuard (il tetto ai tentativi
+    // messo sulla rotta oggi): qui conta che safeCompare arrivi ancora da
+    // apiGuard.js, non l'elenco letterale di cosa altro viaggia con lei.
+    expect(src).toMatch(/import \{[^}]*\bsafeCompare\b[^}]*\} from '\.\.\/\.\.\/\.\.\/lib\/apiGuard\.js';/);
     expect(src).toContain('safeCompare(pass, process.env.ADMIN_PASS)');
     expect(src).toContain('safeCompare(pass, process.env.CRON_SECRET)');
     expect(src).toContain('rimborsaRegaliScaduti()');

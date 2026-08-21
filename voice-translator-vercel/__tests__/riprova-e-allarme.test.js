@@ -202,8 +202,16 @@ describe('le voci premium non si arrendono piu', () => {
     // suRinuncia avvisa gia: se anche il catch finale avvisasse,
     // l'utente vedrebbe due messaggi per un solo guasto.
     const grezzo = leggi('app/hooks/useElevenLabsSync.js');
-    const i = grezzo.indexOf('.catch(');
-    expect(grezzo.slice(i, i + 200), 'il catch finale deve tacere, e dire perche')
+    // b.363 — questo controllo cercava «il primo .catch del file» dando per
+    // scontato che ce ne fosse uno solo. Da quando la lettura del corpo ha la
+    // sua rete di sicurezza (una pagina d'errore in HTML mandava in pezzi
+    // r.json()) il primo .catch e quello interno, e il controllo finiva per
+    // leggere il pezzo sbagliato. Il catch che deve tacere e l'ULTIMO.
+    const i = grezzo.lastIndexOf('.catch(');
+    const finale = grezzo.slice(i, i + 200);
+    expect(finale, 'il catch finale deve dire perche tace')
       .toMatch(/gia detto all'utente/);
+    expect(finale, 'e deve tacere davvero: niente secondo avviso')
+      .not.toMatch(/toast\.|log\.|console\./);
   });
 });

@@ -14,8 +14,15 @@
 // difesa: un italiano che parla con un americano mette "en" per avere le
 // TRADUZIONI in inglese, e non vuole ritrovarsi l'applicazione in
 // inglese. Per questo la lingua dei menu segue quella parlata SOLO
-// finche non e stata scelta a mano: appena la scegli tu (in Impostazioni,
-// o annullando dall'avviso) diventa tua e nessuno te la tocca piu.
+// finche non e stata scelta a mano: appena la scegli tu in Impostazioni
+// diventa tua e nessuno te la tocca piu.
+//
+// b.363 — L'AVVISO CON IL TASTO "ANNULLA" NON ESISTE PIU (ordine di Luca:
+// «elimina il toast di alert che avvisa, non serve»). Al suo posto la
+// difesa contro il cambio non voluto e diventata PREVENTIVA: il carosello
+// delle bandiere chiede CONFERMA prima di cambiare, invece di scusarsi
+// dopo. Le prove che qui sotto guardavano l'avviso e il suo "annulla"
+// guardano ora la conferma: e quello, oggi, il percorso vivo.
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
@@ -25,6 +32,7 @@ import { mapLang } from '../app/lib/i18n.js';
 const RADICE = path.join(__dirname, '..');
 const leggi = (p) => fs.readFileSync(path.join(RADICE, p), 'utf8');
 const home = () => leggi('app/components/HomeView.js');
+const carosello = () => leggi('app/components/CarouselLingue.js');
 
 describe('la lingua dei menu segue quella che dichiari di parlare', () => {
   it('scegliendo una lingua dalla home si scrive ANCHE uiLang', () => {
@@ -49,39 +57,63 @@ describe('la lingua dei menu segue quella che dichiari di parlare', () => {
   });
 });
 
-describe('chi non voleva il cambio se lo riprende in un tocco', () => {
-  it('l\'avviso arriva solo quando la lingua dei menu cambia davvero', () => {
-    const s = home();
-    expect(s).toMatch(/if \(!prefs\.uiLangScelta && dopo !== prima\)/);
+describe('il cambio non arriva addosso a nessuno: prima si conferma', () => {
+  it('scorrere le bandiere NON cambia la lingua', () => {
+    // Prima la bandiera che si fermava al centro diventava la lingua da
+    // sola: cercando un paese e passandone cinque, la lingua cambiava
+    // cinque volte e mezza interfaccia si ricaricava sotto le dita.
+    const s = carosello();
+    const scorri = s.match(/const scorri = useCallback[\s\S]*?\}, \[totale\]\);/)[0];
+    expect(scorri).toBeTruthy();
+    expect(scorri).not.toMatch(/scegli|onScegli/);
+    // e non c'e nemmeno un ritardo che sceglie da solo dopo un attimo di quiete
+    expect(s).not.toMatch(/setTimeout\([\s\S]{0,200}?(scegli|onScegli)\(/);
   });
 
-  it('ed e scritto nella lingua NUOVA, non in quella che si sta lasciando', () => {
-    // Un avviso che annuncia il cambio nella lingua vecchia e inutile
-    // proprio a chi il cambio lo ha appena chiesto.
-    expect(home()).toMatch(/t\(dopo, 'uiLanguage'\)/);
-    expect(home()).toMatch(/t\(dopo, 'cancelWord'\)/);
+  it('la lingua la cambia il tasto di conferma, che dice quale lingua sara', () => {
+    // "Usa Dansk": si legge PRIMA di premere che cosa si sta per ottenere.
+    const s = carosello();
+    expect(s).toMatch(/onClick=\{\(\) => scegli\(alCentro\)\}/);
+    expect(s).toMatch(/\{L\('useWord'\)\} \{alCentro\.name\}/);
   });
 
-  it('annullando si torna indietro E la scelta diventa esplicita', () => {
-    // Senza `uiLangScelta: true` l'avviso ricomparirebbe al cambio dopo:
-    // aver detto "no" una volta deve valere per sempre.
-    expect(home()).toMatch(/uiLang: prima, uiLangScelta: true/);
+  it('e il tasto SOSTITUISCE il nome: sotto non si sposta niente', () => {
+    // Se il tasto si aggiungesse, microfono, QR e sezioni scenderebbero di
+    // trenta pixel a ogni bandiera che passa, e il contenuto scapperebbe
+    // sotto le dita di chi sta guardando.
+    const posto = carosello().match(/<div aria-live="polite"[\s\S]*?<\/div>/)[0];
+    expect(posto).toMatch(/height: 30/);                        // il posto e fissato
+    expect(posto).toMatch(/alCentro\.code === selezionata \?/); // o il nome O il tasto
+    expect(posto).toMatch(/scegli\(alCentro\)/);
   });
 
-  it('scegliendola dalle Impostazioni vale lo stesso: e tua e resta tua', () => {
+  it('ma dall\'elenco completo la scelta e immediata: li si sceglie davvero', () => {
+    expect(carosello()).toMatch(/onClick=\{\(\) => \{ setAperto\(false\); scegli\(l\); \}\}/);
+  });
+
+  it('e appena si conferma, il pacchetto della lingua nuova parte subito', () => {
+    // Senza precaricarlo i menu resterebbero in inglese per qualche istante
+    // proprio nel momento in cui si e chiesto di cambiarli.
+    expect(home()).toMatch(/if \(!prefs\.uiLangScelta && dopo !== prima\) preloadLang\(dopo\);/);
+  });
+
+  it('scegliendola dalle Impostazioni e tua e resta tua', () => {
     expect(leggi('app/components/SettingsView.js')).toMatch(/uiLang: codice, uiLangScelta: true/);
   });
 });
 
 describe('le due chiavi usate esistono in tutte le lingue dell\'interfaccia', () => {
-  // Un avviso che ripiega in inglese proprio mentre annuncia il cambio di
-  // lingua sarebbe la dimostrazione del contrario di cio che dice.
+  // Un tasto che ripiega in inglese proprio mentre offre di cambiare lingua
+  // sarebbe la dimostrazione del contrario di cio che dice.
+  // b.363 — `cancelWord` era la parola dell'avviso annullabile: con l'avviso
+  // e sparito anche il suo unico uso. La chiave viva ora e `useWord`, quella
+  // del tasto di conferma del carosello.
   const LINGUE = ['it','en','es','fr','de','pt','zh','ja','ko','th','ar','hi','ru','tr','vi'];
   for (const l of LINGUE) {
-    it(`${l}: uiLanguage e cancelWord`, () => {
+    it(`${l}: uiLanguage e useWord`, () => {
       const dizionario = leggi(`app/lib/locales/${l}.js`);
       expect(dizionario).toContain('"uiLanguage"');
-      expect(dizionario).toContain('"cancelWord"');
+      expect(dizionario).toContain('"useWord"');
     });
   }
 });

@@ -63,6 +63,61 @@ function isOriginAllowed(origin) {
   return false;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// b.363 · DUE POLITICHE DIVERSE, E NESSUNO SAPEVA QUALE VALESSE
+//
+// Questo elenco esisteva in DUE copie che non coincidevano: una qui e
+// una in next.config.mjs (o, se stai leggendo l'altro file, viceversa).
+// Non erano varianti dello stesso testo: si contraddicevano.
+//
+//   · qui c'era      accounts.google.com e appleid.cdn-apple.com fra gli
+//                    script, tiles.openfreemap.org fra le connessioni,
+//                    i caratteri di Google
+//   · nell'altro     cdnjs.cloudflare.com fra gli script, *.google.com e
+//                    *.googleapis.com (interi!) fra le connessioni,
+//                    hooks.stripe.com fra i riquadri
+//
+// Il browser riceve tutte e due le intestazioni e applica la SOMMA dei
+// divieti — cioe il risultato vero non era ne l'una ne l'altra, ma un
+// terzo elenco che nessuno aveva mai scritto ne letto. Con l'aggravante
+// che bastava toccare un file solo per credere di aver cambiato qualcosa
+// e non aver cambiato niente.
+//
+// Ora e' UN elenco solo, copiato identico nei due file. Per ogni voce si
+// e' presa la versione piu stretta delle due, e si e' buttato tutto cio
+// che non risulta usato da nessuna parte nel programma:
+//   cdnjs.cloudflare.com, *.google.com, *.googleapis.com,
+//   hooks.stripe.com, fonts.googleapis.com, fonts.gstatic.com.
+// Sono rimasti solo gli indirizzi che una pagina carica per davvero
+// (accesso Google e Apple, mappe, Stripe, ElevenLabs...): un elenco che
+// vieta cio che serve non e' piu severo, e' solo rotto.
+//
+// ATTENZIONE: se cambi qualcosa qui, cambialo anche nell'altro file.
+// Non si possono mettere in comune: uno gira nel motore Edge, l'altro
+// viene letto quando si costruisce il programma.
+//
+// L'unica differenza ammessa e' `unsafe-eval` in sviluppo: Next carica i
+// suoi pezzi con `eval` e senza quel permesso la pagina locale resta
+// sulla rotellina per sempre. In produzione non c'e'.
+// ═══════════════════════════════════════════════════════════════
+function politicaContenuti() {
+  const inSviluppo = process.env.NODE_ENV === 'development';
+  return [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'" + (inSviluppo ? " 'unsafe-eval'" : '') + " blob: https://cdn.jsdelivr.net https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com https://plausible.io https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://accounts.google.com https://unpkg.com",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' data: https://unpkg.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://0.peerjs.com wss://0.peerjs.com https://*.supabase.co wss://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io https://api.stripe.com https://*.upstash.io https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://tiles.openfreemap.org",
+    "media-src 'self' blob: data: https://*.elevenlabs.io",
+    "frame-src 'self' https://js.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com",
+    "worker-src 'self' blob:",
+    "base-uri 'self'",
+    "form-action 'self'",
+    'upgrade-insecure-requests',
+  ].join('; ');
+}
+
 // Security headers applied to all responses
 const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -82,22 +137,15 @@ const SECURITY_HEADERS = {
   // l'utente, con la finestra del browser.
   'Permissions-Policy': 'camera=self, microphone=self, geolocation=self',
   'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-  // b.316 — aggiunti per il Compagno dal vivo (widget conversazionale ElevenLabs):
-  // script da unpkg.com e connessioni https/wss verso *.elevenlabs.io.
-  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net https://accounts.google.com https://appleid.cdn-apple.com https://js.stripe.com https://plausible.io https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' data: https://unpkg.com https://cdn.jsdelivr.net https://tessdata.projectnaptha.com https://0.peerjs.com wss://0.peerjs.com https://*.supabase.co https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com https://api.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io https://api.stripe.com https://*.upstash.io https://plausible.io https://*.sentry.io https://api.deepgram.com wss://api.deepgram.com wss://*.supabase.co https://nominatim.openstreetmap.org https://router.project-osrm.org https://api.qrserver.com https://tiles.openfreemap.org; frame-src 'self' https://js.stripe.com https://accounts.google.com https://www.openstreetmap.org https://www.youtube-nocookie.com; media-src 'self' blob: data: https://*.elevenlabs.io; worker-src 'self' blob:; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
+  'Content-Security-Policy': politicaContenuti(),
   // ── Cross-Origin isolation (allow SharedArrayBuffer for audio worklets) ──
   'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
   // ── DNS prefetch control ──
   'X-DNS-Prefetch-Control': 'on',
 };
 
-// b.356 — SOLO in sviluppo: Next carica i pezzi con `eval`, che la
-// nostra politica vieta. Senza questo permesso locale la pagina resta
-// sulla rotellina per sempre. In produzione non cambia nulla.
-if (process.env.NODE_ENV === 'development') {
-  SECURITY_HEADERS['Content-Security-Policy'] = SECURITY_HEADERS['Content-Security-Policy']
-    .replace("'wasm-unsafe-eval'", "'wasm-unsafe-eval' 'unsafe-eval'");
-}
+// b.363 — la toppa che aggiungeva `unsafe-eval` a politica gia scritta
+// non serve piu: la concessione di sviluppo e dentro politicaContenuti().
 
 // ── Pagine di collaudo: utili in sviluppo, invisibili al pubblico ──
 // /testcenter, /debug e /startrek sono 2.168 righe di strumenti interni.
