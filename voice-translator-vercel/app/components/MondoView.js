@@ -195,12 +195,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       background: C.bg, fontFamily: FONT, position: 'relative', overflow: 'hidden',
     }}>
 
-      {/* Ambient orb */}
-      <div style={{
-        position: 'absolute', top: '-15%', left: '-20%', width: '60vw', height: '60vw',
-        borderRadius: '50%', background: `radial-gradient(circle, ${C.purple}0A 0%, transparent 70%)`,
-        pointerEvents: 'none', animation: 'vtOrbBreathe 8s ease-in-out infinite',
-      }} />
+      {/* b.361 — IL PIANETA INTEGRATO: e lo SFONDO a tutto schermo della
+          pagina Mondo (Luca: «invece di integrarlo»). La testata, le schede e
+          la ricerca qui sotto gli fluttuano sopra: una sola chrome, quella di
+          BarTalk. Sta nella scheda "Per te"; nelle altre le liste lo coprono. */}
+      {tab === 'perte' && !cercando && <GloboMondo sfondo />}
 
       {/* ═══ HEADER ═══ */}
       <header style={{
@@ -355,12 +354,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* ═══ TAB PER TE (b.335) — la home: caldo adesso ═══ */}
       {tab === 'perte' && !cercando && (
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
+          {/* b.361 — il pianeta e lo SFONDO (vedi sopra): qui lascio uno
+              spazio perche il globo resti protagonista, e le liste salgono
+              sopra di lui scorrendo, come nel mockup. */}
+          <div style={{ height: '58vh', flexShrink: 0 }} />
           <div style={{ maxWidth: 680, margin: '0 auto' }}>
-
-            {/* b.359 — IL PIANETA (il file di Luca, copia esatta) in cima */}
-            <div style={{ margin: '2px 0 16px' }}>
-              <GloboMondo altezza="66vh" />
-            </div>
 
             {/* TREND: le discussioni piu vive (commenti, poi recenza) */}
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
