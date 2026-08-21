@@ -75,6 +75,26 @@ const LANG_FILTERS = [
   { code: 'th', flag: '🇹🇭', name: 'TH' },
 ];
 
+// b.362 — I DATI IN UNA FORMA SOLA. Stanze e discussioni arrivavano in due
+// vesti (nome/name, members/partecipanti, title/titolo, commentCount/
+// commenti) e ogni punto del file doveva ricordarsi entrambe: una classe
+// intera di bug futuri. Qui si normalizza UNA volta, all'ingresso.
+function normalizzaStanza(r) {
+  if (!r) return r;
+  return { ...r,
+    roomId: r.roomId || r.id,
+    nome: r.nome || r.name || r.roomId || r.id || '',
+    membri: (r.memberCount ?? r.members ?? r.partecipanti ?? 0),
+  };
+}
+function normalizzaDiscussione(d) {
+  if (!d) return d;
+  return { ...d,
+    titolo: d.titolo || d.title || '',
+    commenti: (d.commentCount ?? d.commenti ?? 0),
+  };
+}
+
 function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const { L, setView, theme } = useApp(); // b.232 — rimossi S/prefs inutilizzati
   const _S = getStyles(theme);
@@ -106,7 +126,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     let vivo = true;
     fetch('/api/mondo/discussioni')
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (vivo && d) setFeedCaldo(d.discussioni || []); })
+      .then((d) => { if (vivo && d) setFeedCaldo((d.discussioni || []).map(normalizzaDiscussione)); })
       .catch(() => { if (vivo) setFeedCaldo([]); });
     return () => { vivo = false; };
   }, []);
@@ -116,13 +136,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const [search, setSearch] = useState('');
   const [langFilter, setLangFilter] = useState('all');
   const [modeFilter, setModeFilter] = useState('all');
-  const [refreshAnim, setRefreshAnim] = useState(false);
 
   const fetchRooms = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch('/api/mondo');
-      if (res.ok) { const data = await res.json(); setRooms(data.rooms || []); setError(null); }
+      if (res.ok) { const data = await res.json(); setRooms((data.rooms || []).map(normalizzaStanza)); setError(null); }
       else setError(L('loadRoomsFailed')); // b.232 — prima !res.ok (500/429) era silenzioso
     } catch { setError(L('loadRoomsFailed')); }
     finally { setLoading(false); }
@@ -132,10 +151,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     return subscribeTick(30000, fetchRooms, { immediate: true });
   }, [fetchRooms]);
 
-  const handleRefresh = useCallback(() => {
-    setRefreshAnim(true);
-    fetchRooms().finally(() => setTimeout(() => setRefreshAnim(false), 600));
-  }, [fetchRooms]);
+  const handleRefresh = useCallback(() => { fetchRooms(); }, [fetchRooms]);
 
   const getLangFlag = (code) => LANGS.find(l => l.code === code)?.flag || '';
   const getLangName = (code) => LANGS.find(l => l.code === code)?.name || '';
@@ -175,11 +191,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       .slice(0, 6)
       .map((l) => ({ ...l, vive: stanzePerLingua[l.code] || 0 }));
     const stanze = rooms.filter((r) =>
-      r.nome?.toLowerCase().includes(q) || r.name?.toLowerCase().includes(q)
+      r.nome?.toLowerCase().includes(q)
       || r.host?.toLowerCase().includes(q) || r.description?.toLowerCase().includes(q)
     ).slice(0, 6);
     const discussioni = (feedCaldo || []).filter((d) =>
-      (d.title || d.titolo || '').toLowerCase().includes(q) || (d.topic || '').toLowerCase().includes(q)
+      (d.titolo || '').toLowerCase().includes(q) || (d.topic || '').toLowerCase().includes(q)
     ).slice(0, 6);
     return { paesi, stanze, discussioni };
   }, [search, rooms, feedCaldo]);
@@ -301,10 +317,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             {risultati.stanze.length > 0 && (<>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('liveRoomsNow') !== 'liveRoomsNow' ? L('liveRoomsNow') : 'STANZE VIVE ADESSO')}</div>
               {risultati.stanze.map((r) => (
-                <button key={r.roomId || r.id} onClick={() => onJoinRoom?.(r.roomId || r.id)}
+                <button key={r.roomId} onClick={() => onJoinRoom?.(r.roomId)}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || r.nome || r.roomId}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{(r.members ?? r.partecipanti ?? 0)} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.nome}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{r.membri} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${getLangFlag(r.lang)} ${getLangName(r.lang)}` : ''}</div>
                 </button>
               ))}
             </>)}
@@ -314,8 +330,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               {risultati.discussioni.map((d, i) => (
                 <button key={d.id || i} onClick={() => { setSearch(''); setTab('news'); }}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || d.titolo}</div>
-                  <div style={{ fontSize: 11, color: C.textMuted }}>{(d.commentCount || d.commenti || 0)} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.titolo}</div>
+                  <div style={{ fontSize: 11, color: C.textMuted }}>{d.commenti} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
                 </button>
               ))}
             </>)}
@@ -605,9 +621,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* CSS */}
       <style>{`
         @keyframes vtShimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-        @keyframes vtSpin { to { transform: rotate(360deg); } }
         @keyframes vtSlideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes vtOrbBreathe { 0%,100% { opacity: 0.4; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.05); } }
       `}</style>
     </div>
   );

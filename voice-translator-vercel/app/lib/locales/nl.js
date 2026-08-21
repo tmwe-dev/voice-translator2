@@ -1,5 +1,5 @@
 // Pacchetto lingua olandese — generato da en.js (b.260)
-const locale_nl = {"homeAllWaysDesc":"Toon je QR, nodig iemand uit of praat in de taxi",
+const locale_nl = {"trendEmpty":"Nothing hot yet: open the first discussion from the News tab.","commentsWord":"comments","inRoomWord":"inside","trendNow":"WHAT PEOPLE TALK ABOUT","liveRoomsNow":"LIVE ROOMS NOW","homeAllWaysDesc":"Toon je QR, nodig iemand uit of praat in de taxi",
   "appName": "BarTalk",
   "appSubtitle": "Realtime spraakvertaler",
   "configProfile": "Stel je profiel in",
