@@ -111,8 +111,28 @@ async function rimetti() {
   console.log(`Rimetto ${roba.length} chiavi nel banco che trovo ora nell'ambiente…\n`);
   console.log(`  banco di destinazione: ${URL_BANCO.replace('https://', '').slice(0, 26)}…\n`);
 
+  // b.363 — NON SI SOVRASCRIVE MAI. Il banco di destinazione puo gia
+  // avere dei dati suoi, piu recenti di quelli salvati: rimettendoli
+  // sopra si riporterebbero indietro account e sessioni vive. Si porta
+  // solo cio che MANCA, e cio che c'e gia si lascia dov'e, dicendolo.
+  let esistenti = new Set();
+  let cursore = '0';
+  do {
+    const [prossimo, lotto] = await banco(['SCAN', cursore, 'COUNT', '400']);
+    for (const k of lotto) esistenti.add(k);
+    cursore = prossimo;
+  } while (cursore !== '0');
+
+  const saltate = roba.filter((r) => esistenti.has(r.chiave)).map((r) => r.chiave);
+  if (saltate.length) {
+    console.log(`  ${saltate.length} lasciate dov'erano (esistono gia sul banco nuovo):`);
+    for (const k of saltate) console.log(`    ${k}`);
+    console.log();
+  }
+
   let fatte = 0;
   for (const r of roba) {
+    if (esistenti.has(r.chiave)) continue;
     if (r.tipo === 'string') await banco(['SET', r.chiave, r.valore]);
     else if (r.tipo === 'list') { if (r.valore.length) await banco(['RPUSH', r.chiave, ...r.valore]); }
     else if (r.tipo === 'set') { if (r.valore.length) await banco(['SADD', r.chiave, ...r.valore]); }
@@ -125,7 +145,7 @@ async function rimetti() {
     // la scadenza si riporta solo se ce n'era una vera
     if (typeof r.scadenza === 'number' && r.scadenza > 0) await banco(['EXPIRE', r.chiave, String(r.scadenza)]);
     fatte++;
-    process.stdout.write(`\r  rimesse ${fatte}/${roba.length}`);
+    process.stdout.write(`\r  rimesse ${fatte}/${roba.length - saltate.length}`);
   }
   console.log('\n\nFatto: il banco nuovo ha tutto quello che aveva il vecchio.');
 }

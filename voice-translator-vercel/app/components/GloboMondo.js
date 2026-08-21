@@ -48,7 +48,7 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
 
@@ -74,6 +74,43 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     window.addEventListener('message', suPronto);
     return () => window.removeEventListener('message', suPronto);
   }, [paese]);
+
+  // b.363 — LE ROTTE VERE. Gli aeroplanini facevano la spola su otto
+  // tratte inventate, sempre le stesse. Ora ricevono anche quelle dove ci
+  // sono stanze aperte davvero: il pianeta diventa un indicatore di dove
+  // si sta parlando. Si AGGIUNGONO a quelle di scena (ordine di Luca):
+  // senza stanze aperte il cielo resterebbe vuoto, e un cielo vuoto non
+  // dice "non c'e nessuno", dice "e rotto".
+  useEffect(() => {
+    const finestra = ref.current?.contentWindow;
+    if (!finestra || !rotte?.length) return;
+    const manda = () => {
+      try { finestra.postMessage({ tipo: 'bartalk:rotte', coppie: rotte }, '*'); }
+      catch { /* il pianeta non e ancora acceso: si riprova quando lo dice lui */ }
+    };
+    manda();
+    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    window.addEventListener('message', suPronto);
+    return () => window.removeEventListener('message', suPronto);
+  }, [rotte]);
+
+  // b.363 — I PUNTINI SI ACCENDONO DOVE C'E PIU GENTE (ordine di Luca).
+  // Prima ogni paese aveva uno di tre stati soli — scelto, attivo,
+  // spento — quindi un paese con una stanza e uno con venti si vedevano
+  // identici. Ora il colore si scalda in proporzione, e la mappa dice a
+  // colpo d'occhio DOVE si sta parlando, non solo dove si potrebbe.
+  useEffect(() => {
+    const finestra = ref.current?.contentWindow;
+    if (!finestra || !traffico) return;
+    const manda = () => {
+      try { finestra.postMessage({ tipo: 'bartalk:traffico', perPaese: traffico }, '*'); }
+      catch { /* il pianeta non e ancora acceso: si riprova quando lo dice lui */ }
+    };
+    manda();
+    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    window.addEventListener('message', suPronto);
+    return () => window.removeEventListener('message', suPronto);
+  }, [traffico]);
 
   const cambiaCielo = () => {
     // b.363 — l'icona avanzava PRIMA di sapere se il comando era arrivato: se

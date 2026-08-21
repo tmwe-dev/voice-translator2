@@ -102,3 +102,28 @@ export function stileEtichetta(C) {
 
 /** Il punto separatore fra le etichette: uno solo, sempre uguale. */
 export const PUNTO = '·';
+
+/**
+ * IL PAESE DA UNA LINGUA — un ripiego, non una verita.
+ *
+ * b.363. Le stanze portano la LINGUA di chi ospita, non il LUOGO: sono
+ * due cose diverse (un giapponese a San Paolo parla giapponese e sta in
+ * Brasile). Finche le stanze non porteranno il paese, per disegnare i
+ * voli sul pianeta serve un paese qualsiasi, e il piu probabile e quello
+ * dove quella lingua e di casa. Vale per i puntini e per le rotte: mai
+ * per dire a qualcuno "sei in questo paese".
+ */
+const PAESE_DI_CASA = {
+  it: 'IT', en: 'US', 'en-GB': 'GB', es: 'ES', fr: 'FR', de: 'DE', pt: 'BR',
+  ru: 'RU', ja: 'JP', zh: 'CN', ko: 'KR', ar: 'AE', hi: 'IN', tr: 'TR',
+  pl: 'PL', nl: 'NL', sv: 'SE', vi: 'VN', th: 'TH', id: 'ID', el: 'GR',
+  he: 'IL', uk: 'UA', cs: 'CZ', ro: 'RO', hu: 'HU', da: 'DK', nb: 'NO',
+  fi: 'FI', sk: 'SK', bg: 'BG', hr: 'HR', ca: 'ES', ms: 'MY', fil: 'PH',
+  sw: 'KE', bn: 'BD', ta: 'IN', af: 'ZA',
+};
+
+export function paeseDaLingua(lingua) {
+  if (!lingua) return null;
+  const l = String(lingua);
+  return PAESE_DI_CASA[l] || PAESE_DI_CASA[l.split('-')[0]] || null;
+}

@@ -18,6 +18,7 @@
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
+import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import SchedaArgomento from './SchedaArgomento.js';
@@ -428,6 +429,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           </button>
         ))}
       </div>
+      <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}

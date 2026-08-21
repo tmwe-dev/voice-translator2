@@ -78,6 +78,20 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
 
   useEffect(() => { carica(); }, [carica]);
 
+  // b.363 — LA PREFERENZA "TITOLI IN ALTRE LINGUE". Chi l'ha accesa non
+  // deve toccare "Traduci" ogni volta: aprendo una discussione scritta in
+  // un'altra lingua, il titolo si traduce da solo. Se e gia nella sua
+  // lingua non si fa niente — tradurre dall'italiano all'italiano e solo
+  // una chiamata pagata per niente.
+  useEffect(() => {
+    if ((prefs?.mondoTitoli || 'originali') !== 'tradotti') return;
+    if (!disc?.title || tradotti.title) return;
+    const mia = (prefs?.uiLang || prefs?.lang || 'it').split('-')[0];
+    if ((disc.title_lang || '').split('-')[0] === mia) return;
+    traduci('title', disc.title, disc.title_lang);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disc?.id, prefs?.mondoTitoli]);
+
   // Traduzione a richiesta di un testo nella lingua dell'utente.
   const traduci = useCallback(async (chiave, testoOrig, linguaOrig) => {
     if (tradotti[chiave]) { // toggle: seconda pressione nasconde

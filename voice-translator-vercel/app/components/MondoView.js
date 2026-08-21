@@ -1,8 +1,9 @@
 'use client';
 import Icon from './Icon.js';
-import { quando, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
+import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import { ombraAcciaio } from '../lib/acciaio.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
+import PreferenzeMondo from './ui/PreferenzeMondo.js';
 // ═══════════════════════════════════════════════
 // MondoView — Public room discovery
 //
@@ -99,7 +100,7 @@ function normalizzaDiscussione(d) {
 }
 
 function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
-  const { L, setView, theme } = useApp(); // b.232 — rimossi S/prefs inutilizzati
+  const { L, setView, theme, prefs } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
   const C = {
@@ -230,6 +231,50 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     return { paesi, stanze, discussioni };
   }, [search, rooms, feedCaldo]);
 
+  // b.363 — LA PREFERENZA "DA DOVE PARTO", che fa una cosa vera: aprendo
+  // Mondo il pianeta puo portarti subito sul tuo paese. Vale una volta
+  // sola, all'ingresso: dopo comandi tu, e non ti si sposta il mondo
+  // sotto le dita mentre stai guardando.
+  useEffect(() => {
+    if ((prefs?.mondoPosizione || 'ingresso') !== 'ingresso') return;
+    const mio = paeseDaLingua(prefs?.lang);
+    if (mio) setPaeseScelto(mio);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // b.363 — IL TRAFFICO PER PAESE, da zero a uno. Si conta quante stanze
+  // e quante discussioni ci sono per paese e si rapporta al piu vivo di
+  // tutti: cosi il paese piu animato e acceso pieno e gli altri in
+  // proporzione. Un numero assoluto non servirebbe — tre stanze sono
+  // tante se nessun altro ne ha, poche se altrove ce ne sono trenta.
+  const trafficoPaesi = useMemo(() => {
+    const conto = {};
+    for (const r of rooms) {
+      const p = paeseDaLingua(r.hostLang || r.lang);
+      if (p) conto[p] = (conto[p] || 0) + 1 + (Number(r.membri) || 0) * 0.2;
+    }
+    for (const d of feedCaldo || []) {
+      if (d.country) conto[d.country] = (conto[d.country] || 0) + 0.6;
+    }
+    const massimo = Math.max(1, ...Object.values(conto));
+    const scala = {};
+    for (const [p, n] of Object.entries(conto)) scala[p] = Math.min(1, n / massimo);
+    return scala;
+  }, [rooms, feedCaldo]);
+
+  // b.363 — LE ROTTE VERE PER I VOLI: le coppie di paesi fra cui c'e
+  // davvero qualcuno che parla. Si costruiscono dalle stanze aperte, a
+  // due a due, e il pianeta le AGGIUNGE a quelle di scena. Il paese lo
+  // ricava dalla lingua finche le stanze non porteranno il luogo.
+  const rotteVere = useMemo(() => {
+    const paesi = [...new Set(rooms.map((r) => paeseDaLingua(r.hostLang || r.lang)).filter(Boolean))];
+    const coppie = [];
+    for (let i = 0; i < paesi.length && coppie.length < 10; i++) {
+      for (let j = i + 1; j < paesi.length && coppie.length < 10; j++) coppie.push([paesi[i], paesi[j]]);
+    }
+    return coppie;
+  }, [rooms]);
+
   // b.363 — QUANTE STANZE PER LINGUA, per dirlo sulle pillole del filtro.
   // Una pillola senza numero e una scommessa: si tocca per scoprire se
   // dietro c'e qualcosa. Col numero si sceglie prima di toccare, che e
@@ -264,7 +309,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           mondo e non ce l'ha»). */}
       {(tab === 'stanze' || tab === 'news') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <GloboMondo sfondo paese={paeseScelto} titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
+          <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi} titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
         </div>
       )}
 
@@ -430,6 +475,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         </div>
       )}
 
+        <PreferenzeMondo C={C} />
       </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo
