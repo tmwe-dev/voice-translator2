@@ -323,6 +323,74 @@ evento. Chi esce a meta si chiude comunque alla fine, con gli stessi
 numeri di tutti. Chi sparisce senza chiudere lo sblocca il cron delle
 riserve scadute, che esiste gia.
 
+**TOLLERANZA SUL CREDITO** (Luca): si puo sforare, non siamo rigidi.
+Regola in una riga: la tolleranza serve a FINIRE quello che hai
+cominciato, non a COMINCIARE cose nuove. Il talk/chiamata/stanza in
+corso non si ferma mai nemmeno sotto zero; la volta dopo, se sei in
+rosso, prima ricarichi. Conseguenza sulla riserva: NON si sbarra
+l'ingresso, si aggiusta all'uscita — la stima all'entrata dice quanto
+costera, non fa da cancello. Due paletti: (1) e un tetto, non
+l'infinito; (2) il tetto cresce con la storia di ricariche della
+persona — chi si e iscritto adesso ha poco, ma ha il credito di
+benvenuto che fa lo stesso lavoro, ed e l'unica difesa contro gli
+account usa-e-getta. Si dice con calma ("li abbiamo coperti noi,
+ricarichi quando ti va"), non con un allarme rosso: se lo racconti come
+un'infrazione hai sprecato il gesto. Vale per tutto, non solo la TV.
+DA DECIDERE con Luca: quanto si puo sforare, e se il tetto cresce.
+
+**CORREZIONE a "2000 spettatori costano come 20"**: vero per la
+TRADUZIONE (costo fisso per lingua), FALSO per la CONSEGNA (banda, che
+cresce in linea retta col pubblico). Con un milione di ascoltatori la
+banda audio e qualche centinaio di euro l'ora = quattro centesimi di
+millesimo a testa. Quindi il costo per persona non va a zero: scende
+fino al PAVIMENTO della banda, che resta enormemente sotto qualunque
+cifra addebitabile.
+
+**IL MINIMO ADDEBITABILE — credito a pacchetti, margine dichiarato.**
+Luca ha ragione sull'aritmetica: se il minimo e 1 e il costo e 0,1, il
+grosso del ricavo viene da li. Il problema non e aritmetico ma di
+coerenza: nelle stanze c'e gia scritto "ognuno paga il suo", e un
+arrotondamento a 10x rende falsa quella frase. Stesso soldo senza niente
+da difendere: il credito si vende a PACCHETTI (5 euro), dentro il conto
+e ESATTO con tutti i decimali, e si arrotonda solo quando entrano soldi
+veri — dove l'unita e cinque euro e il problema sparisce. Il margine si
+DICHIARA come percentuale. E comunque i soldi veri della TV stanno negli
+SPONSOR, non nel margine sul minuto: un milione di persone in trenta
+lingue non lo vende nessun altro.
+
+**COME REGGE UN MILIONE — non e peer to peer, e non lo e nemmeno
+Facebook.** Domanda di Luca, ed e la piu importante fatta sulla TV.
+Oggi: stanze max 50, diretta uno-a-uno, collegamenti diretti fra
+telefoni. Con 50 sono gia 2400 collegamenti; con un milione ognuno
+dovrebbe spedire la voce un milione di volte — impossibile, non
+difficile. Una live di Facebook non collega nessuno a nessuno: la voce
+sale una volta, un server la taglia in file da pochi secondi, quei file
+vengono copiati sui server sparsi per il mondo, e il pubblico SCARICA
+file. Per questo regge, e per questo ha 10-20 secondi di ritardo — che
+NOI VOLEVAMO GIA per allineare la traduzione.
+
+Struttura: DUE STANZE, non una.
+  IL PALCO — 2-10 persone, collegamenti diretti, dal vivo. E' quello che
+  abbiamo gia.
+  LA SALA — tutti gli altri, file scaricati, 10 secondi dietro, regge
+  milioni.
+In mezzo la traduzione: la voce sale, esce in N piste audio invece di
+una. La distribuzione ne porta N: e l'UNICA differenza da Facebook Live.
+Il secondo ascoltatore di una lingua non costa quasi niente perche quel
+file e gia sul server vicino a lui — ecco perche dividere fra tutti
+funziona.
+Due momenti da costruire: chi viene chiamato sul palco SALTA dalla sala
+al palco (da 10 secondi dietro a dal vivo — e il telefono che entra in
+radio); e la chat della sala non e voce, sono messaggi, pesano mille
+volte meno e vanno su una strada che gia abbiamo.
+Cosa costruire: NON il distributore, NON i server nel mondo — si
+affittano, esistono fatti e costano poco. Si costruisce solo la
+TRADUZIONE IN MEZZO, che e l'unico pezzo che non ha nessun altro.
+E per il PRIMO talk show non serve niente di tutto questo: 30 persone in
+3 lingue ci stanno gia dentro le stanze (tetto 50). La distribuzione
+serve sopra i 50. Costruire la macchina da un milione prima di avere
+cento persone e il modo classico di morire prima.
+
 **Ritardo accettabile**: 2-4 secondi stimati (mai misurati in diretta).
 Si trasmette con ~10 secondi di ritardo per tutti, come la TV vera: cosi
 la traduzione arriva allineata e nessuno se ne accorge.
