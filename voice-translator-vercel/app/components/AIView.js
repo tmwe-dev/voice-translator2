@@ -159,7 +159,7 @@ const AIView = memo(function AIView({
             <button onClick={addGlossaryTerm}
               style={{
                 padding: '8px 14px', borderRadius: 10, border: 'none', cursor: 'pointer',
-                background: S.colors.btnGradient, color: '#fff', fontSize: 16, fontWeight: 700,
+                background: S.colors.btnGradient, color: '#000', fontSize: 16, fontWeight: 700,
               }}>
               +
             </button>

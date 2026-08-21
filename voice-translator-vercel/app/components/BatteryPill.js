@@ -179,7 +179,7 @@ export default function BatteryPill({ utente, verticale = false }) {
                   background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
               <button onClick={usaVoucher} disabled={!codice} style={{
                 padding: '10px 16px', borderRadius: 12, border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: 13, fontWeight: 800, color: '#fff',
+                fontSize: 13, fontWeight: 800, color: '#000',
                 background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
               }}>{L('useWord')}</button>
             </div>

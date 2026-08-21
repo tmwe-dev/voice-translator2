@@ -637,7 +637,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             aria-label={L('speakNow')}
             style={{ pointerEvents: 'auto', width: 72, height: 72, borderRadius: 36,
               border: 'none', cursor: 'pointer',
-              background: S.colors.btnGradient, color: '#fff', fontSize: 30,
+              background: S.colors.btnGradient, color: '#000', fontSize: 30,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 8px 28px rgba(91,140,255,0.45)',
               WebkitTapHighlightColor: 'transparent' }}>

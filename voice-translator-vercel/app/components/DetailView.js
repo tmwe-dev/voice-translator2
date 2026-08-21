@@ -87,7 +87,7 @@ const DetailView = memo(function DetailView({
             <button onClick={onResume}
               style={{
                 padding: '8px 14px', borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: S.colors.btnGradient, color: '#fff', fontSize: 12, fontWeight: 700,
+                background: S.colors.btnGradient, color: '#000', fontSize: 12, fontWeight: 700,
                 boxShadow: S.colors.btnGlow,
               }}>
               ▶ Riprendi

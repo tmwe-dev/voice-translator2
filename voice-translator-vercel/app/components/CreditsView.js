@@ -201,7 +201,7 @@ export default function CreditsView({ userAccount }) {
                 background: tc.inputBg, border: `1px solid ${tc.inputBorder}`, color: tc.textPrimary }} />
             <button onClick={usaCodice} disabled={!codice} style={{
               padding: '12px 18px', borderRadius: 13, border: 'none', cursor: 'pointer', fontFamily: FONT,
-              fontSize: 14, fontWeight: 800, color: '#fff',
+              fontSize: 14, fontWeight: 800, color: '#000',
               background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
             }}>{L('useWord')}</button>
           </div>
@@ -242,7 +242,7 @@ export default function CreditsView({ userAccount }) {
                   <div style={{ display: 'flex', gap: 8 }}>
                     <button onClick={condividiRegalo} style={{
                       flex: 1, padding: '12px 16px', borderRadius: 13, border: 'none', cursor: 'pointer',
-                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#fff',
+                      fontFamily: FONT, fontSize: 14, fontWeight: 800, color: '#000',
                       background: tc.btnGradient || 'linear-gradient(90deg,#5b8cff,#38e1ff)',
                     }}>{L('sendGift')}</button>
                     <button onClick={() => { setRegaloFatto(null); setEsitoRegalo(''); }} style={{
