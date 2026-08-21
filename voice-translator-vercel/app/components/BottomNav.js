@@ -78,13 +78,6 @@ const BottomNav = ({ currentView, onNewConversation }) => {
   const handleFabClick = () => { vibrate(20); onNewConversation ? onNewConversation() : setView('home'); };
 
   const accentColor = C.accent1 || PALETTE.purple;
-  const hexToRgb = (hex) => {
-    if (!hex || hex[0] !== '#') return '139,92,246';
-    const r = parseInt(hex.slice(1,3), 16);
-    const g = parseInt(hex.slice(3,5), 16);
-    const b = parseInt(hex.slice(5,7), 16);
-    return `${r},${g},${b}`;
-  };
 
   const renderTab = (item) => {
     const isActive = item.views.includes(currentView);
@@ -96,7 +89,10 @@ const BottomNav = ({ currentView, onNewConversation }) => {
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           justifyContent: 'center', gap: '4px', padding: '6px 14px',
-          backgroundColor: isActive ? `rgba(${hexToRgb(accentColor)}, 0.10)` : 'transparent',
+          // b.361 — VIA la sfumatura azzurra dietro la voce attiva (collaudo
+          // di Luca: «sembra rimasta appesa la sfumatura e basta»): niente
+          // sfondo, l'attiva si distingue solo dal colore del testo.
+          backgroundColor: 'transparent',
           border: 'none', borderRadius: '12px', cursor: 'pointer',
           transition: 'all 0.2s cubic-bezier(0.4,0,0.2,1)', minWidth: '56px',
         }}
