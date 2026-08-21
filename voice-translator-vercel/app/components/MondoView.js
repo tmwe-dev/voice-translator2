@@ -122,14 +122,25 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // (discussioni piu vive, stanze piu piene), a colpo d'occhio.
   const [tab, setTab] = useState('stanze');
   const [feedCaldo, setFeedCaldo] = useState(null);
+  // b.363 — un elenco CADUTO non e un elenco VUOTO: prima, se la chiamata
+  // non riusciva, la corsia "di cosa si parla" restava muta e sembrava che
+  // non ci fosse nulla di cui parlare; con una risposta non valida restava
+  // in attesa per sempre, senza un secondo tentativo. Ora il guasto si
+  // dichiara e si riprova aprendo la ricerca.
+  const [feedCaldoGuasto, setFeedCaldoGuasto] = useState(false);
+  const [riprovaCaldo, setRiprovaCaldo] = useState(0);
   useEffect(() => {
     let vivo = true;
     fetch('/api/mondo/discussioni')
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (vivo && d) setFeedCaldo((d.discussioni || []).map(normalizzaDiscussione)); })
-      .catch(() => { if (vivo) setFeedCaldo([]); });
+      .then((d) => {
+        if (!vivo) return;
+        if (d) { setFeedCaldo((d.discussioni || []).map(normalizzaDiscussione)); setFeedCaldoGuasto(false); }
+        else { setFeedCaldo([]); setFeedCaldoGuasto(true); }
+      })
+      .catch(() => { if (vivo) { setFeedCaldo([]); setFeedCaldoGuasto(true); } });
     return () => { vivo = false; };
-  }, []);
+  }, [riprovaCaldo]);
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -347,9 +358,19 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               ))}
             </>)}
 
+            {/* b.363 — se l'elenco delle discussioni e caduto lo si dice qui,
+                invece di far passare il guasto per un mondo silenzioso. */}
+            {feedCaldoGuasto && (
+              <button onClick={() => { setFeedCaldoGuasto(false); setRiprovaCaldo((n) => n + 1); }}
+                style={{ width: '100%', margin: '10px 0', padding: '10px 12px', borderRadius: 12, background: 'none',
+                  border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 12, fontWeight: 700, fontFamily: FONT, cursor: 'pointer' }}>
+                {L('newsError')} · {L('retryWord')}
+              </button>
+            )}
+
             {risultati.paesi.length === 0 && risultati.stanze.length === 0 && risultati.discussioni.length === 0 && (
               <div style={{ fontSize: 13, color: C.textMuted, textAlign: 'center', padding: '30px 0', lineHeight: 1.6 }}>
-                Niente con questo nome, per ora.<br />{L('searchOpenFirst')}: il Mondo si accende cosi.
+                {L('searchNothing')}<br />{L('searchOpenFirst')}
               </div>
             )}
           </div>

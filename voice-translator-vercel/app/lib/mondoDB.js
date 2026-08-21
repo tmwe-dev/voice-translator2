@@ -127,6 +127,11 @@ export async function commenta({ discussionId, authorEmail, authorName = '', tex
   const author = idPubblico(authorEmail);
   if (!author) throw new Error('autore mancante');
   if (!text || !text.trim()) throw new Error('testo vuoto');
+  // b.363 — sotto una discussione NASCOSTA o ARCHIVIATA non si commenta:
+  // l'elenco la toglieva, ma chi aveva il link continuava a scriverci.
+  const { data: disc } = await db().from('mondo_discussions')
+    .select('hidden, archived').eq('id', discussionId).maybeSingle();
+  if (!disc || disc.hidden || disc.archived) throw new Error('discussione non aperta ai commenti');
   const { data, error } = await db().from('mondo_comments').insert({
     discussion_id: discussionId, author_user_id: author, author_name: authorName || '',
     text: text.trim().slice(0, 4000), lang, parent_id: parentId,

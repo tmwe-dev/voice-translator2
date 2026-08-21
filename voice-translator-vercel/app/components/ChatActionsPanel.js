@@ -160,7 +160,8 @@ function ChatActionsPanel({
                   borderRadius: 10, fontSize: 14, cursor: 'pointer',
                 }}
               >
-                {'\u2190'} Back
+                {/* b.363 — l'ultimo inglese fisso in un pannello tradotto */}
+                {'\u2190'} {t('backWord')}
               </button>
               <button
                 onClick={shareResult}
@@ -171,7 +172,7 @@ function ChatActionsPanel({
                   borderRadius: 10, fontSize: 14, cursor: 'pointer',
                 }}
               >
-                {copied ? '\u2713 Copied' : '\u{1F4E4} Share'}
+                {copied ? `\u2713 ${t('copiedWord')}` : `\u{1F4E4} ${t('shareWord')}`}
               </button>
             </div>
           </div>

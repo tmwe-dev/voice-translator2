@@ -261,8 +261,9 @@ const RoomHeader = memo(function RoomHeader({
                       <div style={{height:'100%', borderRadius:2, width:`${remaining}%`, background:battColor, transition:'width 0.5s ease'}} />
                     </div>
                     <div style={{fontSize:9, color:S.colors.textMuted, marginTop:4}}>
-                      {Math.round(freeCharsUsed/1000)}K / {FREE_DAILY_LIMIT/1000}K caratteri
-                      {freeResetTime && ` • Reset: ${freeResetTime}`}
+                      {/* b.363 — italiano fisso dentro un menu tradotto */}
+                      {Math.round(freeCharsUsed/1000)}K / {FREE_DAILY_LIMIT/1000}K {L('charactersWord')}
+                      {freeResetTime && ` • ${L('resetWord')}: ${freeResetTime}`}
                     </div>
                   </div>
                 );

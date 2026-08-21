@@ -159,7 +159,13 @@ const MessageList = memo(function MessageList({
 
   // Ref callback for partner message elements
   const observeMsg = useCallback((el) => {
-    if (el && observerRef.current) observerRef.current.observe(el);
+    if (!el) return;
+    // b.363 — i riferimenti agli elementi girano PRIMA che l'osservatore
+    // esista: rientrando in una stanza con storia, i messaggi gia a
+    // schermo non venivano mai osservati e non risultavano mai letti.
+    // Qui si mettono in attesa; l'osservatore, appena nasce, li riprende.
+    if (observerRef.current) observerRef.current.observe(el);
+    else inAttesaRef.current.add(el);
   }, []);
 
   return (

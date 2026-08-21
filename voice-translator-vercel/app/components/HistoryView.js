@@ -382,7 +382,8 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               }
             }}
           >
-            Tutte
+            {/* b.363 — italiano fisso in un archivio per il resto tradotto */}
+            {L('allWord')}
           </button>
 
           {/* Language filters */}

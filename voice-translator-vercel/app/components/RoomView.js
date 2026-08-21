@@ -707,7 +707,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
             display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
-                Rispondi a {rispostaA.nome}
+                {/* b.363 — italiano fisso in una stanza per il resto tradotta */}
+                {L('replyToWord')} {rispostaA.nome}
               </div>
               <div style={{ fontSize: 12, color: S.colors.textMuted,
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>

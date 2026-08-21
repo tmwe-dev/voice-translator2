@@ -110,8 +110,12 @@ export default function BatteryPill({ utente, verticale = false }) {
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ pacchetto: pacchettoId }),
     });
-    const { url } = await r.json();
+    // b.363 — se il server risponde con una pagina d'errore (il 429 del
+    // guardiano e in HTML), leggere JSON esplodeva e il tasto restava muto
+    // per sempre: nessun link, nessun messaggio, nessuna spiegazione.
+    const { url } = await r.json().catch(() => ({}));
     if (url) window.location.href = url;
+    else { setEsito(L('networkError')); setEsitoOk(false); }
   }
 
   // Voucher: manda il codice, mostra l'esito
@@ -121,8 +125,8 @@ export default function BatteryPill({ utente, verticale = false }) {
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ codice }),
     });
-    const d = await r.json();
-    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
+    const d = await r.json().catch(() => ({}));
+    setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || (r.ok ? L('invalidCode') : L('networkError'))));
     setEsitoOk(!!d.ok);
     if (d.ok) { setCodice(''); carica(); }
   }
