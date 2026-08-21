@@ -65,8 +65,11 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
 
   const ricarica = useCallback(() => {
     if (!userToken) { setJobs([]); return; }
-    chiama('elenca', {}, userToken).then((d) => setJobs(d.jobs || [])).catch((e) => {
-      setJobs([]); setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi per usare i Compiti') : '');
+    // b.363 — un'agenda CADUTA non e un'agenda VUOTA: fuori dal 401
+    // l'errore veniva azzerato e restava scritto "ancora nessun compito",
+    // cioe il contrario di quello che era successo.
+    chiama('elenca', {}, userToken).then((d) => { setJobs(d.jobs || []); setErrore(''); }).catch((e) => {
+      setJobs([]); setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi per usare i Compiti') : tt('lifeError', 'Qualcosa è andato storto'));
     });
   }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { ricarica(); }, [ricarica]);
@@ -98,8 +101,10 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
   // ── b.333 · MATERIALI ──
   const ricaricaMateriali = useCallback(() => {
     if (!userToken) return;
-    chiama('materiali', {}, userToken).then((d) => setMateriali(d.materiali || [])).catch(() => setMateriali([]));
-  }, [userToken]);
+    chiama('materiali', {}, userToken).then((d) => setMateriali(d.materiali || [])).catch(() => {
+      setMateriali([]); setErrore(tt('lifeError', 'Qualcosa è andato storto'));
+    });
+  }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (vista === 'materiali' && materiali === null) ricaricaMateriali(); }, [vista, materiali, ricaricaMateriali]);
 
   // Rimpicciolisce la foto prima dell'AI: meno token, meno costo.

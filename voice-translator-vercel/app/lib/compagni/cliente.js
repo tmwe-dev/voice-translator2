@@ -8,6 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { segmentiPerVoce } from './corsi/lingua.js';
+import { fermatoDavvero } from '../audioLife.js';
 
 async function postJSON(url, corpo) {
   const r = await fetch(url, {
@@ -291,14 +292,19 @@ export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, o
     await new Promise((risolvi) => {
       const audio = new Audio(url);
       if (onAudio) onAudio(audio);
-      // b.232 — anche la PAUSA (Stop del podcast) risolve la promise: prima
-      // audio.pause() non emetteva onended/onerror e il ciclo di `vai` restava
+      // b.232 — anche l'INTERRUZIONE (Stop del podcast) risolve la promise:
+      // audio.pause() non emette onended/onerror e il ciclo di `vai` restava
       // appeso su questo await. `fatto` evita la doppia risoluzione.
+      //
+      // b.363 — ma una PAUSA non e un'interruzione. Prima ogni pausa chiudeva
+      // il turno E liberava il file audio: chi metteva in pausa dal telecomando
+      // di Life si ritrovava il turno saltato e il tasto Riprendi su un audio
+      // che non esisteva piu. Ora si chiude solo su interruzione vera.
       let fatto = false;
       const chiudi = () => { if (fatto) return; fatto = true; URL.revokeObjectURL(url); risolvi(); };
       audio.onended = chiudi;
       audio.onerror = chiudi;
-      audio.onpause = chiudi;
+      audio.onpause = () => { if (fermatoDavvero(audio) || audio.ended) chiudi(); };
       audio.play().catch(() => chiudi());
     });
   } catch { /* la voce è un di più: se fallisce, si prosegue in silenzio */ }

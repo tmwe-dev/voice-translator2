@@ -1,5 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
+import { suona as registraAudio } from '../../lib/audioLife.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
@@ -11,6 +12,11 @@ import { conRipiego } from '../../lib/ripiego.js';
 // risponde a te e agli altri, tradotto, con la propria voce. Superficie
 // autonoma: NON è una stanza WebRTC. (Luca)
 // ═══════════════════════════════════════════════════════════════
+
+// b.363 — le righe di servizio del tavolo (briefing, sintesi, documento
+// finale) non sono turni di parola: non vanno mai spedite come tali.
+const RIGHE_SERVIZIO = new Set(['__briefing', '__sintesi', '__documento']);
+const soloVoci = (m) => !RIGHE_SERVIZIO.has(m.ruolo);
 
 function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, obiettivoIniziale = '' }) {
   const [scelti, setScelti] = useState([]);
@@ -43,7 +49,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     const storia = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(storia); setTesto(''); setAttende(true);
     // messaggi per il server: {ruolo, testo} (persona o nome del Compagno)
-    const perServer = storia.map(m => ({ ruolo: m.ruolo, testo: m.testo }));
+    // b.363 — fuori le righe di servizio: briefing, sintesi e documento
+    // non sono qualcuno che ha parlato. Partivano al modello come turni
+    // di un tale chiamato "__briefing", e sporcavano la conversazione.
+    const perServer = storia.filter(soloVoci).map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
       const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo });
       for (const r of (d.risposte || [])) {
@@ -52,7 +61,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       }
       // voci in sequenza
       for (const r of (d.risposte || [])) {
-        if (r.voceId) await parlaTurno({ voceId: r.voceId, testo: r.testo, lingua, userToken });
+        // b.363 — la voce del tavolo entra nel telecomando di Life:
+        // prima Pausa e Stop non avevano alcuna presa su di lei.
+        if (r.voceId) await parlaTurno({ voceId: r.voceId, testo: r.testo, lingua, userToken },
+          (a) => registraAudio(a, r.nome || 'Tavolo'));
       }
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
@@ -93,7 +105,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setGenDoc(true); setErrore('');
     try {
       const discussione = messaggi
-        .filter(m => m.ruolo !== '__briefing' && m.ruolo !== '__sintesi' && m.ruolo !== '__documento')
+        .filter(soloVoci)
         .map(m => `${m.ruolo === 'persona' ? 'Persona' : m.ruolo}: ${m.testo}`).join('\n');
       const r = await reportFinale({ argomento: (obiettivo || '').trim() || tt('lifeTableTopic', 'la tavola rotonda'), briefing, discussione, lingua, userToken });
       if (r?.report) setDocumento(r.report);
@@ -106,13 +118,13 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (attende || messaggi.length < 2) return;
     setErrore(''); setAttende(true);
     try {
-      const perServer = messaggi.map(m => ({ ruolo: m.ruolo, nome: m.ruolo === 'persona' ? undefined : m.ruolo, testo: m.testo }));
+      const perServer = messaggi.filter(soloVoci).map(m => ({ ruolo: m.ruolo, nome: m.ruolo === 'persona' ? undefined : m.ruolo, testo: m.testo }));
       const s = await sintesiTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivo });
       if (s) setMessaggi((m) => [...m, { ruolo: '__sintesi', testo: s }]);
     } catch (e) {
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { setAttende(false); }
-  }, [attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [attende, messaggi, scelti, lingua, userToken, obiettivo, L]);
 
   // ── Scelta dei partecipanti ──
   if (!avviato) {

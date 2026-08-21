@@ -4,7 +4,7 @@ import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
-import { CATEGORIE, LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
+import { LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
 
 // b.300 — idee per riempire il campo: un tocco mette una frase gia
 // dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
@@ -19,7 +19,7 @@ const IDEE_CORSO = [
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, generaIconaCorso, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
-import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio } from '../../lib/audioLife.js';
+import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import CompagnoLive from './CompagnoLive.js';
@@ -80,7 +80,9 @@ function LifeView({ onApriStanza }) {
     return spegni;
   }, []);
   const [miei, setMiei] = useState([]);
-  const [debateObiettivo, setDebateObiettivo] = useState(''); // b.227 — Dossier→Debate
+  // b.227 — Dossier→Debate. b.363: il valore non viene mai cambiato, la
+  // scatola di stato prometteva un collegamento che non esiste.
+  const debateObiettivo = '';
 
   const caricaMiei = useCallback(async () => {
     if (!userToken) { setMiei([]); return; }
@@ -191,6 +193,10 @@ function LifeView({ onApriStanza }) {
             background: accent, color: '#04121c', fontSize: 18, fontWeight: 900 }}>
           {audioStato.inPausa ? '\u25B6' : '\u23F8'}
         </button>
+        {/* b.363 — Stop fermava solo la voce in corso: il ciclo che genera
+            i turni proseguiva a spese di Luca e la voce ripartiva da sola
+            col turno successivo. Ora i cicli si iscrivono a `suInterruzione`
+            e questo tasto li ferma tutti. */}
         <button onClick={() => fermaAudio()} aria-label="Interrompi"
           style={{ width: 42, height: 42, borderRadius: 21, cursor: 'pointer',
             background: 'transparent', border: `1px solid ${testoP}44`, color: testoP, fontSize: 15 }}>
@@ -237,6 +243,8 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
   const [attuale, setAttuale] = useState(-1);
   const [errore, setErrore] = useState('');
   const fermatoRef = useRef(false);
+  // b.363 — lo Stop del telecomando ferma anche questa fabbrica di turni
+  useEffect(() => suInterruzione(() => { fermatoRef.current = true; }), []);
   const audioRef = useRef(null);
 
   const toggle = (id) => {
@@ -372,6 +380,11 @@ function assegnaImmagini(paragrafi, items, illustrazione) {
       if (usatiUrl.has(it.immagine)) continue;
       const iw = paroleChiave(`${it.titolo || ''} ${it.sintesi || ''}`);
       let overlap = 0; for (const w of iw) if (pw.has(w)) overlap++;
+      // b.363 — il bonus "fonte nuova" e uno SPAREGGIO, non un lasciapassare:
+      // da solo faceva superare la soglia anche a immagini che col paragrafo
+      // non avevano nemmeno una parola in comune, e sulla lavagna finivano
+      // foto scollegate da quello che si stava leggendo.
+      if (overlap === 0) continue;
       const dom = dominioDi(it.url);
       // preferenza alle FONTI NUOVE: un dominio gia usato pesa meno.
       const score = overlap + (dom && !usatiDomini.has(dom) ? 1.2 : 0);
@@ -458,6 +471,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // `sezioneAttiva` e il paragrafo in lettura; `stopLetturaRef` ferma il giro.
   const [sezioneAttiva, setSezioneAttiva] = useState(-1);
   const stopLetturaRef = useRef(false);
+  // b.363 — lo Stop del telecomando ferma anche la lettura della lezione
+  useEffect(() => suInterruzione(() => { stopLetturaRef.current = true; }), []);
   // b.313 — ALZO LA MANO: interrompo il Maestro, chiedo, lui risponde e poi
   // riprende. La mano alzata NON taglia: il Maestro FINISCE il paragrafo, poi
   // si gira verso di te. `interruzionePendenteRef` = mano alzata in attesa che
@@ -672,6 +687,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setLivello(corso.livello || 'base');
     setLinguaCorso(corso.lingua || linguaCorso);
     setLezioni(corso.lezioni || []);
+    // b.363 — aprendo il corso di un altro restavano appesi i MIEI voti,
+    // il MIO ripasso e il MIO docente: sul corso nuovo comparivano
+    // punteggi mai presi e "lezioni da riprendere" che non erano sue.
+    setEsitiLezioni({});
+    setRipassoDa(0);
+    setDocenteId(corso.docenteId || '');
   }, [linguaCorso]);
 
   // b.327 — apri un MIO corso salvato: syllabus stabile, esiti, segnalibro.
@@ -888,7 +909,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     stopLetturaRef.current = true;
     inDomandaRef.current = false;
     interruzionePendenteRef.current = false;
-    try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ }
+    fermaElemento(audioLezioneRef.current);
     setSezioneAttiva(-1);
     setAscoltando(false);
     setManoAlzata(false); setMaestroStaFinendo(false);
@@ -1051,7 +1072,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   if (aperta) {
     return (
       <div>
-        <button onClick={() => { stopLetturaRef.current = true; try { audioLezioneRef.current?.pause(); } catch { /* audio gia fermo */ } setSezioneAttiva(-1); setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
+        <button onClick={() => { stopLetturaRef.current = true; fermaElemento(audioLezioneRef.current); setSezioneAttiva(-1); setAperta(null); }} style={{ background: card, border: bordo, borderRadius: 10, padding: '8px 12px', cursor: 'pointer', color: testoP, fontFamily: FONT, marginBottom: 12 }}>
           <Icon name="back" size={14} color={testoP} /> {L('lifeLessons')}
         </button>
         {/* b.229 — tutor "compagno di viaggio" accanto al titolo.
