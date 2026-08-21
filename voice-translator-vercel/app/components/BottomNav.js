@@ -8,7 +8,15 @@ import { useApp } from '../contexts/AppContext.js';
 // ═══════════════════════════════════════════════════════════════
 // SVG Nav Icons — clean, modern, 2px stroke
 // ═══════════════════════════════════════════════════════════════
+// b.361 — le immagini in acciaio di Luca al posto delle icone del menu, dove
+// le ho: la casa per Home, il globo per Community.
+const IMG_MENU = { home: '/sezioni/menu-home.webp', community: '/sezioni/sez-mondo.webp' };
+
 const NavIcon = ({ id, color, size = 22 }) => {
+  if (IMG_MENU[id]) {
+    return <img src={IMG_MENU[id]} alt="" aria-hidden width={size + 8} height={size + 8}
+      style={{ width: size + 8, height: size + 8, objectFit: 'contain', display: 'block' }} />;
+  }
   const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   switch (id) {
     case 'home': return (

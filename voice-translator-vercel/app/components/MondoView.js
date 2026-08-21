@@ -201,77 +201,41 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           BarTalk. Sta nella scheda "Per te"; nelle altre le liste lo coprono. */}
       {tab === 'perte' && !cercando && <GloboMondo sfondo />}
 
-      {/* ═══ HEADER ═══ */}
+      {/* ═══ TESTATA (Luca): solo il testo e l'icona della scheda al centro,
+          con la freccia a sinistra e a destra che scorrono le schede. Sopra
+          l'area di ricerca. Le icone sono quelle in acciaio. ═══ */}
       <header style={{
-        display: 'flex', alignItems: 'center', gap: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
-        <button onClick={() => setView('home')} aria-label={L('goBack')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-          background: C.card, border: `1px solid ${C.cardBorder}`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: C.textMuted, fontSize: 18, WebkitTapHighlightColor: 'transparent',
-        }}>
-          {'‹'}
-        </button>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-            Community
-          </div>
-          <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-            {rooms.length} {rooms.length === 1 ? L('roomActiveOne') : L('roomActiveMany')}
-          </div>
-        </div>
-        <button onClick={handleRefresh} aria-label={L('refreshRooms')} style={{
-          width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-          background: `${C.accent}12`, border: `1px solid ${C.accent}20`,
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          color: C.accent, fontSize: 18,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          animation: refreshAnim ? 'vtSpin 0.6s linear' : 'none',
-          WebkitTapHighlightColor: 'transparent',
-        }}>
-          {'↻'}
-        </button>
-        {onCreateRoom && (
-          <button onClick={onCreateRoom} aria-label={L('createBarTalk')} style={{
-            width: 38, height: 38, borderRadius: 12, cursor: 'pointer',
-            background: `linear-gradient(135deg, ${C.accent}, ${C.purple})`,
-            border: 'none',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, color: '#fff',
-            WebkitTapHighlightColor: 'transparent',
-            boxShadow: `0 2px 12px ${C.accent}30`,
-          }}>
-            +
-          </button>
-        )}
-      </header>
-
-      {/* ═══ TAB: STANZE | NEWS ═══ */}
-      <div style={{ display: 'flex', gap: 6, padding: '0 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5 }}>
-        {[
-          { id: 'perte', labelKey: 'tabForYou' },
-          { id: 'stanze', labelKey: 'tabRooms' },
-          { id: 'news', labelKey: 'tabNews' },
-        ].map(t => {
-          const attivo = tab === t.id;
+        {(() => {
+          const schede = [
+            { id: 'perte', labelKey: 'tabForYou', img: '/sezioni/sez-mondo.webp' },
+            { id: 'stanze', labelKey: 'tabRooms', img: '/sezioni/sez-mondo.webp' },
+            { id: 'news', labelKey: 'tabNews', img: '/sezioni/sez-news.webp' },
+          ];
+          const idx = Math.max(0, schede.findIndex(s => s.id === tab));
+          const cur = schede[idx];
+          const vai = (d) => setTab(schede[(idx + d + schede.length) % schede.length].id);
+          const freccia = { fontSize: 30, lineHeight: 1, cursor: 'pointer', padding: 4,
+            background: 'none', border: 'none', WebkitTapHighlightColor: 'transparent',
+            backgroundImage: 'linear-gradient(145deg, #f2f4f8, #b9c0cc 45%, #7d8492 80%, #aeb6c4)',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' };
           return (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              flex: 1, padding: '9px 0', borderRadius: 12, cursor: 'pointer',
-              background: attivo ? `linear-gradient(135deg, ${C.accent}, ${C.purple})` : C.card,
-              border: attivo ? 'none' : `1px solid ${C.cardBorder}`,
-              color: attivo ? '#fff' : C.textSecondary,
-              fontSize: 13, fontWeight: 700, fontFamily: FONT,
-              WebkitTapHighlightColor: 'transparent',
-              boxShadow: attivo ? `0 2px 12px ${C.accent}30` : 'none',
-            }}>
-              {L(t.labelKey)}
-            </button>
+            <>
+              <button onClick={() => vai(-1)} aria-label="precedente" style={freccia}>‹</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <img src={cur.img} alt="" aria-hidden width={64} height={64}
+                  style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }} />
+                <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
+                  {L(cur.labelKey)}
+                </span>
+              </div>
+              <button onClick={() => vai(1)} aria-label="successiva" style={freccia}>›</button>
+            </>
           );
-        })}
-      </div>
+        })()}
+      </header>
 
       {/* ═══ b.355 — LA RICERCA, una sola, per tutto il Mondo ═══ */}
       <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
