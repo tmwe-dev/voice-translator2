@@ -37,16 +37,17 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
 
   return (
     <>
-      {/* b.359 — la linguetta STACCATA dal bordo, PIU GRANDE del 50%, con la
-          pila del credito VERTICALE impilata sopra, a sinistra (collaudo di
-          Luca). Un solo blocco fisso: la pila in cima, la linguetta sotto. */}
+      {/* b.360 — la linguetta ALLINEATA AL MICROFONO "Parla ora" (collaudo di
+          Luca): la bandiera e ancorata all'altezza del tondo del microfono; la
+          pila del credito galleggia SOPRA di essa, senza spostarla. Staccata
+          dal bordo, piu grande del 50%, senza freccia. */}
       {!aperto && (
         <div style={{
-          position: 'fixed', left: 10, top: 'max(96px, calc(env(safe-area-inset-top) + 72px))', zIndex: 60,
-          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          position: 'fixed', left: 10, top: 'max(160px, calc(env(safe-area-inset-top) + 136px))', zIndex: 60,
         }}>
           {batteria && (
             <div style={{
+              position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 8,
               display: 'flex', justifyContent: 'center', padding: '6px 6px 4px',
               background: card, border: bordo, borderRadius: 16,
               boxShadow: '2px 2px 14px rgba(0,0,0,0.35)',
@@ -56,13 +57,13 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
           )}
           <button onClick={() => setAperto(true)} aria-label={tt('linguettaOpen', 'Lingua e voce')}
             style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
-              padding: '15px 14px', border: bordo, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '14px 14px', border: bordo, cursor: 'pointer',
               background: card, borderRadius: 18, fontFamily: FONT,
               boxShadow: '2px 2px 14px rgba(0,0,0,0.35)', WebkitTapHighlightColor: 'transparent',
             }}>
+            {/* b.360 — via la freccia verde (Luca): resta la sola bandiera */}
             <span style={{ fontSize: 33, lineHeight: 1 }}>{linguaAttuale?.flag || <Icon name="globe" size={30} color={accent} />}</span>
-            <span style={{ fontSize: 16, color: accent, lineHeight: 1 }}>›</span>
           </button>
         </div>
       )}

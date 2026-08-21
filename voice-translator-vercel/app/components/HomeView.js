@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { FONT, getLang, LANGS, vibrate, PUSH } from '../lib/constants.js';
+import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
@@ -217,7 +217,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         // Tolto il minHeight. E il `padding:'0 20px'` shorthand cancellava il
         // fondo (88px per la BottomNav): ora solo left/right, il fondo resta.
         boxSizing: 'border-box',
-        paddingTop: 'max(24px, env(safe-area-inset-top))',
+        // b.360 — «elimina il titolo e porta tutto piu in alto» (Luca): via
+        // il margine morto in cima, il contenuto parte subito sotto la
+        // sicurezza dello schermo.
+        paddingTop: 'max(8px, env(safe-area-inset-top))',
         paddingBottom: 100,
         paddingLeft: 20, paddingRight: 20,
         /* Colonna unica allineata: su desktop niente card che dilagano */
@@ -225,12 +228,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
       }}>
 
         {/* ═══ Header ═══
-            b.356 — collaudo di Luca: «sposta nell'angolo in alto il numero
-            versione, la batteria nell'angolo a destra e fai che non spinga
-            in basso nessun elemento, elimina padding inutili». I due
-            distintivi ora GALLEGGIANO agli angoli: non occupano una riga,
-            il titolo sale, la descrizione gli sta subito sotto. */}
-        <div style={{ marginBottom: 10, position: 'relative', width: '100%', flexShrink: 0 }}>
+            b.360 — «elimina il titolo e porta tutto piu in alto» (Luca): il
+            titolo "Con chi vuoi parlare?" e stato tolto. Resta il numero di
+            rilascio nell'angolo, e la striscia dei fatti sale in cima. */}
+        <div style={{ marginBottom: 8, position: 'relative', width: '100%', flexShrink: 0 }}>
           {/* b.265 — numero di rilascio, nell'angolo in alto a sinistra */}
           <span
             aria-label={`rilascio numero ${PUSH}`}
@@ -243,36 +244,10 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               userSelect: 'text',
             }}
           >#{PUSH}</span>
-          {/* b.359 — la batteria NON sta piu qui nell'angolo: e passata
-              verticale, sopra la linguetta della lingua, a sinistra (Luca). */}
-
-          {/* Title */}
-          <h1 style={{
-            fontSize: 28, fontWeight: 800, letterSpacing: -0.5,
-            color: C.textPrimary, fontFamily: FONT,
-            margin: 0, lineHeight: 1.2, textAlign: 'center',
-            /* l'angolo sinistro ha il numero di rilascio: il titolo lo scavalca */
-            padding: '0 56px',
-          }}>
-            {L('homeTitle')}
-          </h1>
-
-          {/* Striscia dei fatti: arricchisce senza appesantire */}
-          <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-            {/* Il numero si conta, non si scrive: diceva 32 quando erano 44.
-                b.138 — le tre etichette erano in italiano fisso: chi aveva
-                l'interfaccia in inglese leggeva "44 lingue · Crittografia
-                E2E · Voce naturale" sotto un titolo tradotto. */}
-            {[`${LANGS.length} ${L('landingStatLangs')}`, L('e2eTitle'), L('homeFactVoice')].map(f => (
-              <span key={f} style={{
-                fontSize: 11, fontWeight: 650, color: C.textMuted, fontFamily: FONT,
-                display: 'inline-flex', alignItems: 'center', gap: 5,
-              }}>
-                <span style={{ width: 4, height: 4, borderRadius: 2, background: C.accent2, display: 'inline-block' }} />
-                {f}
-              </span>
-            ))}
-          </div>
+          {/* b.360 — la batteria e passata verticale sopra la linguetta a
+              sinistra; il titolo e la striscia dei fatti («44 lingue ·
+              Crittografia E2E · Voce naturale») sono stati tolti su richiesta
+              di Luca: la home parte subito dal carosello delle lingue. */}
         </div>
 
         {/* ── b.356 — "PARLA ORA" A PAGINA PIENA ──

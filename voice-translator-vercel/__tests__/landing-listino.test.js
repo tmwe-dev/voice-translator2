@@ -83,9 +83,11 @@ describe('dentro l\'app', () => {
   });
 
   it('il numero di lingue non è scritto a mano nella Home', () => {
+    // b.360 — la striscia dei fatti ("44 lingue · Crittografia E2E · Voce
+    // naturale") e stata tolta dalla Home su richiesta di Luca: qui resta
+    // solo la guardia che nessun numero di lingue sia scritto a mano.
     const home = fs.readFileSync(path.join(RADICE, 'app/components/HomeView.js'), 'utf8');
-    expect(home, 'usa LANGS.length, non un numero fisso').not.toMatch(/'\d+ lingue'/);
-    expect(home).toMatch(/LANGS\.length.*landingStatLangs/);
+    expect(home, 'nessun numero di lingue fisso').not.toMatch(/'\d+ lingue'/);
   });
 });
 
