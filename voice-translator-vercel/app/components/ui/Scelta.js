@@ -1,6 +1,13 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
+import Icon from '../Icon.js';
+
+// b.363 — I DUE COLORI, gli stessi delle preferenze: il titolo dice DI
+// COSA si tratta, il valore dice COM'E' adesso. E niente grigi cupi: sul
+// fondo di quest'app (quasi nero) sparirebbero.
+const COLORE_TITOLO = 'rgba(186,203,230,0.92)';
+const COLORE_VALORE = 'rgba(236,243,255,0.96)';
 
 // ═══════════════════════════════════════════════════════════════
 // LA SCELTA SINGOLA — un menu a tendina, non una fila di pillole.
@@ -20,7 +27,7 @@ import { FONT, vibrate } from '../../lib/constants.js';
 // colonna si leggono a colpo d'occhio; quaranta pillole no.
 // ═══════════════════════════════════════════════════════════════
 
-export default function Scelta({ etichetta, valore, opzioni, onCambia, C }) {
+export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona = null }) {
   const [aperta, setAperta] = useState(false);
   const mio = useRef(null);
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.10)'}`;
@@ -39,9 +46,11 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C }) {
   return (
     <div ref={mio} style={{ position: 'relative', marginBottom: 12 }}>
       <div style={{
-        fontSize: 11, fontWeight: 700, color: C.textMuted, fontFamily: FONT,
-        marginBottom: 5, letterSpacing: 0.2,
+        display: 'flex', alignItems: 'center', gap: 7,
+        fontSize: 12, fontWeight: 700, color: COLORE_TITOLO, fontFamily: FONT,
+        marginBottom: 6, letterSpacing: 0.2,
       }}>
+        {icona && <Icon name={icona} size={13} color={COLORE_TITOLO} />}
         {etichetta}
       </div>
 
@@ -50,20 +59,22 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C }) {
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 8,
           padding: '10px 12px', borderRadius: 12, cursor: 'pointer',
-          background: C.card, border: bordo, fontFamily: FONT,
-          textAlign: 'left', WebkitTapHighlightColor: 'transparent',
+          background: 'rgba(255,255,255,0.045)',
+          border: `1px solid ${aperta ? `${C.accent}55` : 'rgba(255,255,255,0.09)'}`,
+          fontFamily: FONT, textAlign: 'left', WebkitTapHighlightColor: 'transparent',
         }}>
+        {scelta?.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{scelta.bandiera}</span>}
         <span style={{
-          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 600, color: C.textPrimary,
+          flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, color: COLORE_VALORE,
           overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {scelta?.etichetta}
           {scelta?.conto != null && (
-            <span style={{ color: C.textMuted, fontWeight: 600 }}> {scelta.conto}</span>
+            <span style={{ color: C.accent, fontWeight: 800 }}> {scelta.conto}</span>
           )}
         </span>
         <span style={{
-          color: C.textMuted, fontSize: 11, flexShrink: 0,
+          color: COLORE_TITOLO, fontSize: 11, flexShrink: 0,
           transform: aperta ? 'rotate(180deg)' : 'none', transition: 'transform .18s',
         }}>▾</span>
       </button>
@@ -87,13 +98,14 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C }) {
                   border: 'none', borderBottom: bordo, fontFamily: FONT,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
+                {o.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{o.bandiera}</span>}
                 <span style={{
                   flex: 1, minWidth: 0, fontSize: 13, fontWeight: scelto ? 800 : 600,
-                  color: scelto ? C.accent : C.textSecondary,
+                  color: scelto ? C.accent : 'rgba(214,226,245,0.88)',
                   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>
                   {o.etichetta}
-                  {o.conto != null && <span style={{ opacity: 0.6, fontWeight: 600 }}> {o.conto}</span>}
+                  {o.conto != null && <span style={{ color: scelto ? C.accent : 'rgba(150,168,196,0.85)', fontWeight: 700 }}> {o.conto}</span>}
                 </span>
                 {scelto && <span style={{ color: C.accent, fontSize: 12, flexShrink: 0 }}>✓</span>}
               </button>

@@ -1,6 +1,6 @@
 'use client';
 import Icon from './Icon.js';
-import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
+import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, bandieraPaese } from '../lib/schedaMondo.js';
 import { ombraAcciaio } from '../lib/acciaio.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -237,8 +237,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // sola, all'ingresso: dopo comandi tu, e non ti si sposta il mondo
   // sotto le dita mentre stai guardando.
   useEffect(() => {
-    if ((prefs?.mondoPosizione || 'ingresso') !== 'ingresso') return;
-    const mio = paeseDaLingua(prefs?.lang);
+    const scelto = prefs?.mondoPaese || 'auto';
+    if (scelto === 'nessuno') return;
+    const mio = scelto === 'auto' ? paeseDaLingua(prefs?.lang) : scelto;
     if (mio) setPaeseScelto(mio);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -390,11 +391,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* in News il pannello lo riempie MondoNews coi suoi strumenti */}
       <PannelloLaterale aperto={strumenti && tab === 'stanze'} onChiudi={() => setStrumenti(false)}
         titolo={L('tabRooms')} C={C}>
-      {/* b.363 — LE PREFERENZE PER PRIME (ordine di Luca): sono le
-          decisioni che valgono sempre, e chi apre il pannello deve
-          vederle subito invece di scoprirle in fondo. */}
-      <PreferenzeMondo C={C} />
-
+      {/* b.363 — LA RICERCA IN ALTO (ordine di Luca): e la cosa che si usa
+          piu spesso e quella per cui si apre il pannello. Le preferenze,
+          che si sistemano una volta sola, scendono sotto i filtri. */}
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <div style={{
           width: '100%', maxWidth: 420,
@@ -446,6 +445,9 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           }))}
           onCambia={setModeFilter} />
       )}
+
+      <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
+      <PreferenzeMondo C={C} bandieraMia={bandieraPaese(paeseDaLingua(prefs?.lang))} />
       </PannelloLaterale>
 
       {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo

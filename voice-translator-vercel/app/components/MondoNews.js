@@ -17,7 +17,7 @@
 
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import Scelta from './ui/Scelta.js';
-import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
+import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import { FONT, vibrate } from '../lib/constants.js';
@@ -329,8 +329,6 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           si toccano piu. Metterle in cima vuol dire che chi apre il
           pannello la prima volta le vede, invece di scoprirle in fondo
           dopo tre file di bottoni. */}
-      <PreferenzeMondo C={C} />
-
       {/* ─── Cerca + Aggiorna ─── */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
         <input
@@ -411,6 +409,9 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           if (c) cercaChip(c);
         }} />
 
+
+      <div style={{ height: 1, background: C.cardBorder, margin: '6px 0 16px' }} />
+      <PreferenzeMondo C={C} bandieraMia={bandieraPaese(paeseDaLingua(prefs?.lang))} />
       </PannelloLaterale>
 
       {/* ─── Il pannello COBRA: il lavoro si vede ─── */}
