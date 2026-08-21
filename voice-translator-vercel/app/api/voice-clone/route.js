@@ -38,7 +38,18 @@ async function handlePost(req) {
   // rilasciare la riserva per QUALUNQUE errore imprevisto.
   let riservaId = null;
   try {
-    const formData = await req.formData();
+    // b.363 — UNA RICHIESTA MALFORMATA NON E' UN GUASTO NOSTRO. Se il
+    // corpo non e un modulo (richiesta vuota, sonda, chiamata sbagliata),
+    // leggere il modulo esplode e finiva nel catch generale, che rispondeva
+    // "errore interno" con un 500: cioe l'app dichiarava rotta se stessa
+    // per colpa di chi aveva chiamato male. Trovato collaudando il
+    // campionamento voce con Luca (21/08). Ora si rifiuta pulito.
+    let formData;
+    try {
+      formData = await req.formData();
+    } catch {
+      return NextResponse.json({ error: 'Serve un modulo con la registrazione' }, { status: 400 });
+    }
 
     // ── b.363 · IL MODULO ARRIVAVA E SI USAVA COM'ERA ──
     //
