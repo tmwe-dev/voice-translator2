@@ -209,10 +209,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         padding: '14px 16px 10px', flexShrink: 0, position: 'relative', zIndex: 5,
       }}>
         {(() => {
-          // b.361 — via la scheda "Per te" (Luca: «elimina la terza pagina
-          // non serve»): restano STANZE (col globo) e NEWS.
+          // b.361 — due schede: STANZE (icona porta, Luca: «cambia in porta le
+          // stanze») e NEWS. Il logo/icona sta nell'angolo a SINISTRA; al
+          // centro il testo con le frecce che scorrono le schede.
           const schede = [
-            { id: 'stanze', labelKey: 'tabRooms', img: '/sezioni/sez-mondo.webp' },
+            { id: 'stanze', labelKey: 'tabRooms', img: '/sezioni/menu-profilo.webp' },
             { id: 'news', labelKey: 'tabNews', img: '/sezioni/sez-news.webp' },
           ];
           const idx = Math.max(0, schede.findIndex(s => s.id === tab));
@@ -224,14 +225,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' };
           return (
             <>
+              {/* il logo nell'angolo a sinistra */}
+              <img src={cur.img} alt="" aria-hidden width={72} height={72}
+                style={{ position: 'absolute', left: 16, top: 10, width: 40, height: 40, objectFit: 'contain' }} />
               <button onClick={() => vai(-1)} aria-label="precedente" style={freccia}>‹</button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <img src={cur.img} alt="" aria-hidden width={64} height={64}
-                  style={{ width: 32, height: 32, objectFit: 'contain', display: 'block' }} />
-                <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
-                  {L(cur.labelKey)}
-                </span>
-              </div>
+              <span style={{ fontSize: 19, fontWeight: 800, color: C.textPrimary, letterSpacing: -0.5 }}>
+                {L(cur.labelKey)}
+              </span>
               <button onClick={() => vai(1)} aria-label="successiva" style={freccia}>›</button>
             </>
           );
@@ -444,9 +444,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       {/* ═══ ROOM LIST ═══ */}
       {tab === 'stanze' && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none' }}>
+      // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
+      // colonna non ruba i tocchi (pointerEvents none), solo le card e i
+      // pulsanti veri li riprendono.
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
-        <div style={{ maxWidth: 680, margin: '0 auto' }}>
+        <div style={{ maxWidth: 680, margin: '0 auto', pointerEvents: 'auto' }}>
 
         {/* Loading skeleton */}
         {loading && rooms.length === 0 && (

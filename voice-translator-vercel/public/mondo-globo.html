@@ -305,7 +305,10 @@ textarea.campo{min-height:96px;resize:vertical}
    che porta gia la sua testata, la sua ricerca e il suo menu. Qui si toglie
    la chrome del file (testata, schede, ricerca, dock) e i tre pulsanti
    Notte/Giorno (sostituiti dall'icona unica di BarTalk): resta il pianeta. */
-header.testa, .pagina .tabs, .cerca-fluttua, .dock, #dockapp, .terra-sw { display:none !important; }
+header.testa, .pagina .tabs, .cerca-fluttua, .dock, #dockapp { display:none !important; }
+/* i tre pulsanti Notte/Giorno/Ibrido: fuori vista ma RENDERIZZATI, cosi
+   l'icona unica di BarTalk puo cliccarli per cambiare il cielo. */
+.terra-sw { opacity:0 !important; pointer-events:none !important; position:absolute !important; left:-9999px !important; top:0 !important; }
 </style>
 </head>
 <body>
