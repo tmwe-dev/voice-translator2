@@ -319,12 +319,14 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
       {/* ═══ TAB PER TE (b.335) — la home: caldo adesso ═══ */}
       {tab === 'perte' && !cercando && (
-        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
-          {/* b.361 — il pianeta e lo SFONDO (vedi sopra): qui lascio uno
-              spazio perche il globo resti protagonista, e le liste salgono
-              sopra di lui scorrendo, come nel mockup. */}
+        // b.361 — IL GLOBO RESTA TRASCINABILE (collaudo di Luca): questa
+        // colonna che scorre NON deve rubargli i tocchi. `pointerEvents:none`
+        // lascia passare il dito al pianeta sotto; solo le liste vere (piu giu)
+        // riprendono il tocco.
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))', pointerEvents: 'none' }}>
+          {/* lo spazio in cui il globo e protagonista: qui il tocco va al pianeta */}
           <div style={{ height: '58vh', flexShrink: 0 }} />
-          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <div style={{ maxWidth: 680, margin: '0 auto', pointerEvents: 'auto' }}>
 
             {/* TREND: le discussioni piu vive (commenti, poi recenza) */}
             <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
