@@ -167,7 +167,11 @@ export default function CreditsView({ userAccount }) {
           {/* Saldo */}
           {dati && (
             <div style={{ ...card, marginBottom: 14 }}>
-              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>{L('creditMinutesAvailable')}</div>
+              {/* b.364 — come nella pila: stessa riga, parola diversa quando si e
+                  sotto zero. Non una riga in piu che spinge giu il resto. */}
+              <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.5, color: tc.textMuted, fontFamily: FONT, textTransform: 'uppercase' }}>
+                {dati.inRosso ? L('creditCovered') : L('creditMinutesAvailable')}
+              </div>
               <div style={{ fontSize: 34, fontWeight: 850, color: colore, fontFamily: FONT }}>{dati.testo}</div>
               <div style={{ display: 'flex', gap: 14, marginTop: 4, fontSize: 12, color: tc.textSecondary, fontFamily: FONT }}>
                 <span>{L('todayWord')}: <b>{dati.oggi}</b></span>

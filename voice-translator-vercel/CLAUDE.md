@@ -346,17 +346,36 @@ millesimo a testa. Quindi il costo per persona non va a zero: scende
 fino al PAVIMENTO della banda, che resta enormemente sotto qualunque
 cifra addebitabile.
 
-**IL MINIMO ADDEBITABILE — credito a pacchetti, margine dichiarato.**
-Luca ha ragione sull'aritmetica: se il minimo e 1 e il costo e 0,1, il
-grosso del ricavo viene da li. Il problema non e aritmetico ma di
-coerenza: nelle stanze c'e gia scritto "ognuno paga il suo", e un
-arrotondamento a 10x rende falsa quella frase. Stesso soldo senza niente
-da difendere: il credito si vende a PACCHETTI (5 euro), dentro il conto
-e ESATTO con tutti i decimali, e si arrotonda solo quando entrano soldi
-veri — dove l'unita e cinque euro e il problema sparisce. Il margine si
-DICHIARA come percentuale. E comunque i soldi veri della TV stanno negli
-SPONSOR, non nel margine sul minuto: un milione di persone in trenta
-lingue non lo vende nessun altro.
+**IL PREZZO E' UN PREZZO, non un rimborso spese** (Luca, e aveva
+ragione — io mi ero sbagliato). Avevo obiettato che un minimo
+addebitabile sopra il costo avrebbe reso falsa la scritta "ognuno paga
+il suo" delle stanze. VERIFICATO NEL CODICE: quella scritta e un
+interruttore fra "paga chi ha aperto" e "paga ognuno il suo" — dice CHI
+paga, non quanto ci guadagniamo. Non ha mai promesso di vendere al
+costo. L'obiezione era costruita su una lettura sbagliata di una nostra
+funzione, e la parola "difendere" era fuori posto: un margine non si
+giustifica.
+
+E la struttura giusta l'app ce l'ha GIA: quello che incassiamo sta in
+tariffe.js (pacchetti: tre ore a 4,99), quello che ci costa sta in
+provider-costi.js. Separati da sempre. Vendiamo ore di credito a un
+prezzo nostro; i costi dei fornitori sono un numero interno. Non c'era
+niente da cambiare.
+
+Le parole di Luca: distribuire cultura a costo quasi zero grazie alla
+tecnologia; Prada e Armani vendono al 2000% per il marchio; noi non
+siamo una non-profit, come non lo sono le universita private.
+
+**DUE IDEE DI LUCA CHE CAMBIANO IL PIANO:**
+  I GOVERNI CHE COMPRANO TOKEN E LI REGALANO agli utenti che studiano
+  sulla piattaforma. Non e solo un canale di vendita: risolve da solo il
+  problema della lingua con pochi ascoltatori — un ministero che
+  finanzia la propria lingua la tiene accesa senza soglia e senza folla.
+  I CORSI CONDIVISI, "una scuola infinita gia disponibile". Sono
+  l'unica cosa che continua a rendere DOPO essere stata fatta una volta:
+  un talk dal vivo si consuma e finisce, un corso resta e si vende
+  all'infinito in tutte le lingue senza rifarlo. Se c'e un posto dove
+  investire il tempo e quello, non la diretta.
 
 **COME REGGE UN MILIONE — non e peer to peer, e non lo e nemmeno
 Facebook.** Domanda di Luca, ed e la piu importante fatta sulla TV.

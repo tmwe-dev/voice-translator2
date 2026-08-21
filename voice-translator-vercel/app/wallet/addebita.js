@@ -14,7 +14,7 @@
 // scriviamo nei log). Meglio un uso non fatturato che un servizio rotto.
 // ═══════════════════════════════════════════════════════════════
 
-import { saldo, scalaSeDisponibile } from './contabilita.js';
+import { spendibile, scalaSeDisponibile } from './contabilita.js';
 import { costoConversazione, costoElevenLabsCaratteri, costoMessaggioTesto, costoRiassunto, costoAzioneChat } from './consumo.js';
 import { costoProviderCent, CARATTERI_PER_SECONDO } from './provider-costi.js';
 import { COSTO_CLONAZIONE_SECONDI } from './tariffe.js';
@@ -37,7 +37,8 @@ import { COSTO_CLONAZIONE_SECONDI } from './tariffe.js';
 export async function creditoFinito(utente, opzioni = {}) {
   if (!utente) return false;
   try {
-    return (await saldo(utente)) <= 0;
+    // b.364 — il pavimento non e piu zero: e meno la tolleranza.
+    return (await spendibile(utente)) <= 0;
   } catch (e) {
     console.error('[wallet] saldo non leggibile:', e.message);
     return !!opzioni.failClosed;
@@ -70,7 +71,8 @@ export async function creditoInsufficiente(utente, costoPrevisto, opzioni = {}) 
   if (!utente) return false;
   if (!Number.isFinite(costoPrevisto) || costoPrevisto <= 0) return false;
   try {
-    return (await saldo(utente)) < costoPrevisto;
+    // b.364 — vedi creditoFinito.
+    return (await spendibile(utente)) < costoPrevisto;
   } catch (e) {
     console.error('[wallet] saldo non leggibile:', e.message);
     return !!opzioni.failClosed;

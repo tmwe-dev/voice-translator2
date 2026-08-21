@@ -42,11 +42,18 @@ export const BATTERIA = {
 
 /** Da secondi a testo leggibile: 9000 → "2h 30m" */
 export function formattaDurata(secondi) {
-  if (!secondi || secondi <= 0) return '0m';
-  const ore = Math.floor(secondi / 3600);
-  const minuti = Math.floor((secondi % 3600) / 60);
-  if (ore === 0) return `${minuti}m`;
-  return `${ore}h ${minuti}m`;
+  if (!Number.isFinite(secondi) || secondi === 0) return '0m';
+  // b.364 — da quando c'e la tolleranza il credito puo andare SOTTO
+  // ZERO, e un debito scritto "0m" e la trappola peggiore che possiamo
+  // tendere: la persona ricarica tre ore, ne vede due e quaranta, e
+  // pensa di essere stata derubata. Il meno si scrive.
+  const segno = secondi < 0 ? '-' : '';
+  const quanti = Math.abs(secondi);
+  const ore = Math.floor(quanti / 3600);
+  const minuti = Math.floor((quanti % 3600) / 60);
+  // e un debito sotto il minuto non e "-0m": se devi qualcosa, si vede.
+  if (ore === 0) return `${segno}${segno ? Math.max(1, minuti) : minuti}m`;
+  return `${segno}${ore}h ${minuti}m`;
 }
 
 /** Ore teoriche incluse in un pacchetto, per la scheda prezzo. */

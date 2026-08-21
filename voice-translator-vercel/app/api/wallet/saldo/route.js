@@ -36,7 +36,15 @@ async function handleGet(req) {
       secondi,
       testo: formattaDurata(secondi),
       colore: coloreBatteria(secondi),
-      percento: Math.min(100, Math.round((secondi / BATTERIA.riferimentoSecondi) * 100)),
+      // b.364 — sotto zero la pila e VUOTA, non "quasi vuota": senza
+      // questo tetto a zero il riempimento minimo la faceva sembrare
+      // uguale a chi ha ancora qualche minuto.
+      percento: Math.max(0, Math.min(100, Math.round((secondi / BATTERIA.riferimentoSecondi) * 100))),
+      // b.364 — chi e in rosso sta usando la tolleranza. Va DETTO, e va
+      // detto con calma: e un anticipo che gli abbiamo fatto noi, non
+      // un'infrazione. Se lo raccontiamo come una colpa, il gesto e
+      // sprecato.
+      inRosso: secondi < 0,
       oggi: formattaDurata(uso.oggi),
       mese: formattaDurata(uso.mese),
     });

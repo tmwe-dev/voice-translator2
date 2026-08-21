@@ -145,7 +145,13 @@ export default function BatteryPill({ utente, verticale = false }) {
             background: tc.popupBg || 'rgba(5,7,15,0.96)', border: `1px solid ${tc.cardBorder}`,
             color: tc.textPrimary, backdropFilter: 'blur(20px)',
           }}>
-            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 2 }}>{L('yourCreditTitle')}</div>
+            {/* b.364 — quando si e sotto zero questa riga cambia PAROLA,
+                restando la stessa riga: stesso posto, stessa altezza,
+                niente che scivola in basso. E la frase e quella giusta —
+                gliel'abbiamo anticipato noi, non ha sbagliato niente. */}
+            <div style={{ fontSize: 17, fontWeight: 800, marginBottom: 2 }}>
+              {dati.inRosso ? L('creditCovered') : L('yourCreditTitle')}
+            </div>
             <div style={{ fontSize: 30, fontWeight: 850, color: colore }}>{dati.testo}</div>
 
             <div style={{ display: 'flex', gap: 8, margin: '12px 0' }}>

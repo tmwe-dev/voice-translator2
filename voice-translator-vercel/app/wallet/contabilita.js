@@ -85,6 +85,57 @@ export async function saldo(utenteId) {
 }
 
 /**
+ * b.364 — QUANTO SI PUO' ANCORA SPENDERE: saldo PIU' la tolleranza.
+ *
+ * Da usare al posto di `saldo` ogni volta che si deve decidere "puo
+ * procedere?". `saldo` resta quello che si MOSTRA (ed e giusto che
+ * possa essere negativo: e il debito, e si vede); `spendibile` e
+ * quello che si CONTROLLA.
+ *
+ * Il numero della tolleranza non e scritto qui apposta: vive in una
+ * funzione sola del database (wallet_tolleranza, migrazione 012), che
+ * e la stessa che usano wallet_usa e wallet_riserva per rifiutare. Due
+ * copie dello stesso numero e il modo sicuro per ritrovarsi col
+ * portafoglio che dice una cosa e ne fa un'altra.
+ */
+export async function spendibile(utenteId) {
+  const { data, error } = await db()
+    .rpc('wallet_spendibile', { p_user_id: utenteId });
+  if (error) {
+    // b.364 — SE LA MIGRAZIONE 012 NON E' ANCORA APPLICATA questa
+    // funzione nel database non esiste. Senza questa rete l'errore
+    // salirebbe fino ai due cancelli di addebita.js, che per regola di
+    // sempre ("meglio un uso non fatturato che un servizio rotto")
+    // lasciano passare: cioe il controllo del credito smetterebbe di
+    // funzionare IN SILENZIO, e il servizio diventerebbe gratis per
+    // tutti finche qualcuno non se ne accorge.
+    //
+    // Quindi: se manca la funzione si torna al saldo secco, che e
+    // esattamente il comportamento di prima della tolleranza. Il
+    // portafoglio resta chiuso, la tolleranza semplicemente non c'e
+    // ancora. Ogni altro errore (database giu davvero) sale come prima.
+    if (/PGRST202|could not find|does not exist|schema cache/i.test(`${error.code} ${error.message}`)) {
+      console.warn('[wallet] migrazione 012 non applicata: tolleranza disattiva');
+      return await saldo(utenteId);
+    }
+    throw new Error('Spendibile: ' + error.message);
+  }
+  return data || 0;
+}
+
+/**
+ * Quanta tolleranza ha questa persona (0 se non ha mai ricaricato).
+ * Serve solo per DIRLO a chi guarda, non per decidere.
+ */
+export async function tolleranza(utenteId) {
+  const { data, error } = await db()
+    .rpc('wallet_tolleranza', { p_user_id: utenteId });
+  // b.364 — come sopra: se la migrazione non c'e, tolleranza zero.
+  if (error) return 0;
+  return data || 0;
+}
+
+/**
  * Uso di oggi e del mese corrente (solo movimenti negativi, in positivo).
  */
 export async function usoOggiEMese(utenteId) {
