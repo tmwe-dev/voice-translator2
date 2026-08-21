@@ -4,6 +4,7 @@ import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
+import { conRipiego } from '../../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
 // Tavolo — tu + 2-4 Compagni che conversano insieme. Scrivi, e ognuno
@@ -28,7 +29,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [conDocumento, setConDocumento] = useState(false);
   const [documento, setDocumento] = useState(null);
   const fondo = useRef(null);
-  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
 
   useEffect(() => { if (fondo.current) fondo.current.scrollIntoView({ behavior: 'smooth' }); }, [messaggi, attende]);
 

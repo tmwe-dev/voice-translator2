@@ -8,6 +8,7 @@ import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '.
 import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 import { compatibilitaVoceLingua } from '../../lib/vociLingue.js';
+import { conRipiego } from '../../lib/ripiego.js';
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
 const BARRE = [
@@ -48,7 +49,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
 
   // b.214 — L() restituisce la CHIAVE quando manca la traduzione, quindi
   // `L(k) || fallback` non ripiegava mai. tt() ripiega davvero.
-  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
 
   const nuovo = () => { setErrore(''); setBarre(BARRE_NEUTRE); setBozza(compagnoVuoto()); };
   // b.317 — audit D6: in modifica le barre ripartivano NEUTRE, e toccarne una

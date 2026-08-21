@@ -31,7 +31,7 @@ const log = createLogger('compagni-corsi');
 // Si tollera ancora l'ARRAY nudo del vecchio contratto (= ricerca riuscita),
 // così la migrazione non rompe chi/che cosa ritorna ancora una lista.
 // Una forma SCONOSCIUTA vale guasto: non si può giurare che sia andata bene.
-function leggiEsitoRicerca(x) {
+export function leggiEsitoRicerca(x) {
   if (Array.isArray(x)) return { ok: true, risultati: x };
   if (x && typeof x === 'object' && typeof x.ok === 'boolean') {
     return { ok: x.ok, risultati: Array.isArray(x.risultati) ? x.risultati : [], errore: x.errore };

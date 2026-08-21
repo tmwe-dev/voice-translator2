@@ -5,6 +5,7 @@ import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
 import { sesSet } from '../../lib/memoria.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
+import { conRipiego } from '../../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
 // COMPITI — l'agenda di studio (b.332, Ondata 1 di "Ripetizioni e
@@ -60,7 +61,7 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
   const [aggiungo, setAggiungo] = useState(false);
   const [bozza, setBozza] = useState({ titolo: '', materia: '', scadenza: '', note: '' });
   const [salvando, setSalvando] = useState(false);
-  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
 
   const ricarica = useCallback(() => {
     if (!userToken) { setJobs([]); return; }

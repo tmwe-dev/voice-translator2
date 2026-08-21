@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, clayCard, CLAY_OMBRA } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { mieiCorsiUtente } from '../../lib/compagni/cliente.js';
+import { conRipiego } from '../../lib/ripiego.js';
 import { elencoObiettivi, salvaObiettivo, rimuoviObiettivo,
   CATEGORIE_OBIETTIVO, STATI_OBIETTIVO, sincronizzaConCorsi } from '../../lib/compagni/obiettivi.js';
 
@@ -18,7 +19,7 @@ function GestioneObiettivi({ L, userToken, testoP, muto, accent, card, bordo }) 
 
   useEffect(() => { setLista(elencoObiettivi()); }, []);
 
-  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
   // b.334 — i corsi dell'utente: per collegare un obiettivo a un corso e per
   // muovere le barre DA SOLE (sincronizzaConCorsi) all'apertura della scheda.
   const [corsiMiei, setCorsiMiei] = useState([]);

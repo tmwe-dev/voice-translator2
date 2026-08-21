@@ -14,25 +14,12 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { generaTesto, cerca } from './ponte.js';
-import { estraiJSON } from './corsi/generatore.js';
+import { estraiJSON, leggiEsitoRicerca } from './corsi/generatore.js';
 import { createLogger } from '../logger.js';
 
 const log = createLogger('compagni-dossier-lib');
 
-// ── INIZIO b.247 — "nessuna fonte" e "ricerca guasta" vanno separati ──
-// `ponte.cerca` ritornava `[]` in tutti e due i casi: il briefing nasceva
-// senza fonti e con l'aria di averle cercate, e il modello colmava il vuoto
-// inventando. Ora l'esito è { ok, risultati, errore }; l'ARRAY nudo del
-// vecchio contratto resta accettato come ricerca riuscita (retrocompatibilità),
-// mentre una forma sconosciuta vale guasto, perché non si può giurare il contrario.
-function leggiEsitoRicerca(x) {
-  if (Array.isArray(x)) return { ok: true, risultati: x };
-  if (x && typeof x === 'object' && typeof x.ok === 'boolean') {
-    return { ok: x.ok, risultati: Array.isArray(x.risultati) ? x.risultati : [], errore: x.errore };
-  }
-  return { ok: false, risultati: [], errore: 'esito-ricerca-sconosciuto' };
-}
-// ── FINE b.247 ──
+// b.362 — una sola copia: la stessa funzione vive nel generatore dei corsi.
 
 // ── PROMPT: briefing (l'articolo da discutere) ──
 export function promptBriefing({ argomento, fonti = [], lingua = 'it', ricercaGuasta = false } = {}) {

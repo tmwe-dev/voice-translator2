@@ -34,6 +34,7 @@ import GestioneObiettivi from './GestioneObiettivi.js';
 import CompitiView from './CompitiView.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
+import { conRipiego } from '../../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
@@ -585,7 +586,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
 
   // b.300 — indice del livello per la barra
   const livelloIdx = Math.max(0, LIVELLI.findIndex((l) => l.id === livello));
-  const tt = (k, f) => { const v = L(k); return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
 
   // b.334 — PROFILO STUDENTE (chi sei, perche studi) + preferenze esperienza
   // (durata, stile, contenuti extra): si compilano QUI, una volta, e il
@@ -601,10 +602,18 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       if (d?.preferenze) setPref((x) => ({ ...x, ...d.preferenze }));
     }).catch(() => {});
   }, [userToken]);
+  // b.362 — DEBOUNCE: prima partiva un salvataggio A OGNI TASTO digitato
+  // nei campi del profilo (una chiamata per lettera). Ora si aspetta che la
+  // persona smetta di scrivere (800ms) e si salva una volta sola.
+  const salvaProfTimer = useRef(null);
   const salvaProf = useCallback((profNuovo, prefNuove) => {
     if (!userToken) return;
-    salvaProfiloStudente({ profilo: profNuovo, preferenze: prefNuove, userToken }).catch(() => {});
+    clearTimeout(salvaProfTimer.current);
+    salvaProfTimer.current = setTimeout(() => {
+      salvaProfiloStudente({ profilo: profNuovo, preferenze: prefNuove, userToken }).catch(() => { /* senza rete si risalvera al prossimo cambio */ });
+    }, 800);
   }, [userToken]);
+  useEffect(() => () => clearTimeout(salvaProfTimer.current), []);
 
   // b.334 — karaoke della frase + ripasso consigliato del corso aperto
   const [fraseK, setFraseK] = useState(-1);

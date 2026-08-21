@@ -2,6 +2,7 @@
 import { memo, useState } from 'react';
 import { FONT, LANGS, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { conRipiego } from '../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
 // b.311 — LINGUETTA LINGUA/VOCE (Luca: "linguetta a sinistra appoggiata
@@ -16,7 +17,7 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
   const [aperto, setAperto] = useState(false);
   const [cerca, setCerca] = useState('');
 
-  const tt = (k, f) => { const v = L ? L(k) : k; return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
   const linguaAttuale = getLang(prefs?.lang) || LANGS[0];
   const timbro = prefs?.voiceGender === 'male' ? 'male' : 'female';
 

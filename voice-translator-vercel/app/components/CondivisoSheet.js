@@ -2,6 +2,7 @@
 import { memo, useEffect, useState } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
+import { conRipiego } from '../lib/ripiego.js';
 
 // ═══════════════════════════════════════════════════════════════
 // b.329 — "CONDIVIDI → BARTALK" (piano di Luca): da Instagram, YouTube,
@@ -20,7 +21,7 @@ function dominioDi(url) { try { return new URL(url).hostname.replace(/^www\./, '
 
 function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
   const [meta, setMeta] = useState(null);
-  const tt = (k, f) => { const v = L ? L(k) : k; return v && v !== k ? v : f; };
+  const tt = conRipiego(L); // b.362 — unica definizione, in lib/ripiego.js
 
   useEffect(() => {
     if (!condiviso?.url) return;
