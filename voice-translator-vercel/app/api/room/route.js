@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { verifyRoomSession, getRoom, removeMember } from '../../lib/store.js';
-import { sanitizeRoomId, sanitizeName, getClientIP } from '../../lib/validate.js';
+import { sanitizeRoomId, sanitizeName } from '../../lib/validate.js';
 import {
   resolveIdentity,
   handleCreate, handleJoin, handleHeartbeat, handleSpeaking,
@@ -246,7 +246,10 @@ async function handlePostRoom(req) {
 async function handleGetRoom(req) {
   try {
     const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    // b.363 — l'UNICA entrata dell'area che non validava il codice stanza:
+    // la stringa grezza finiva dritta nella chiave del deposito.
+    const id = sanitizeRoomId(searchParams.get('id') || '');
+    if (!id) return NextResponse.json({ error: 'Room id required' }, { status: 400 });
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
     const room = await getRoom(id);
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 });

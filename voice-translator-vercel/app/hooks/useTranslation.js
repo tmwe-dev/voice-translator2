@@ -254,7 +254,7 @@ export default function useTranslation({
     // ── PHASE 1: Send original immediately (skip if caller already sent) ──
     if (!opts.skipPhase1) {
       getPerf().mark(PERF.PHASE1_SEND);
-      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura });
+      if (roomId) sendMessage(text, null, myL.code, primaryTargetLang, null, { idCattura, rispostaA: opts.rispostaA });
       getPerf().measure(PERF.PHASE1_SEND);
     }
     // b.247 — la cattura in corso risulta partita: un secondo invio dello
@@ -880,13 +880,16 @@ export default function useTranslation({
   // =============================================
   // Text Message — uses DRY translateAndSend
   // =============================================
-  async function sendTextMessage() {
+  // b.363 — la CITAZIONE viaggia col messaggio: chi risponde a una frase
+  // precedente ora la porta fino al server (prima il banner "Rispondi a X"
+  // si apriva e non partiva niente).
+  async function sendTextMessage(opzioni = {}) {
     if (!textInput.trim() || sendingText || !roomId) return;
     const trimText = textInput.trim();
     setTextInput(''); // Clear immediately — Phase 1 sends the original text right away
     setSendingText(true);
     try {
-      await translateAndSend(trimText);
+      await translateAndSend(trimText, opzioni.rispostaA ? { rispostaA: opzioni.rispostaA } : {});
     } catch (e) {
       console.error('[sendTextMessage] Error:', e);
     }

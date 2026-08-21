@@ -188,6 +188,7 @@ export default function useTranslationAPI({
       sourceLang,
       targetLang,
       translations: translations || null,
+      ...(opzioni.rispostaA && { rispostaA: opzioni.rispostaA }),
       timestamp: Date.now(),
       // ── b.120 · "in coda" non e "consegnato" ──
       // Fino a ieri qui c'era `_status: 'sent'`, messo PRIMA che
@@ -283,6 +284,7 @@ export default function useTranslationAPI({
         sourceLang,
         targetLang,
         translations: translations || null,
+        ...(opzioni.rispostaA && { rispostaA: opzioni.rispostaA }),
         clientId: tempId, // per il dedup lato ricevente (stesso messaggio, canali diversi)
       })
     }).then(res => {

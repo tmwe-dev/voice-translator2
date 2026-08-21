@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { addMessage, getMessages, updateMessage, getRoom, resolveRoomIdentity } from '../../lib/store.js';
-import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations, getClientIP } from '../../lib/validate.js';
+import { sanitizeRoomId, sanitizeName, sanitizeText, sanitizeTranslations } from '../../lib/validate.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
 import { createLogger } from '../../lib/logger.js';
 import { assertCloudProcessingAllowed, DirectModeError } from '../../lib/sessionGuard.js';
@@ -62,6 +62,10 @@ async function handlePost(req) {
     // (il confronto sul testo fallisce quando la sanitizzazione lo modifica → doppioni).
     const clientId = (typeof body.clientId === 'string' && /^tmp_[\w-]{1,60}$/.test(body.clientId))
       ? body.clientId : null;
+    // b.363 — la CITAZIONE: l'id del messaggio a cui si risponde. Validato
+    // come identificativo breve, mai testo libero.
+    const rispostaA = (typeof body.rispostaA === 'string' && /^[\w-]{1,64}$/.test(body.rispostaA))
+      ? body.rispostaA : null;
 
     // ── b.111 · il confine, anche qui ──
     // Lo stesso controllo c'e gia sul telefono, prima dell'invio: quello
@@ -124,6 +128,7 @@ async function handlePost(req) {
       targetLang,
       translations,
       ...(clientId && { clientId }),
+      ...(rispostaA && { rispostaA }),
     });
     if (!msg) return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     return NextResponse.json({ message: msg });

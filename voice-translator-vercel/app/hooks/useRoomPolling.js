@@ -71,7 +71,11 @@ export default function useRoomPolling({
     const cheParla = tutti.find(x => x.speaking);
     setPartnerSpeaking(!!cheParla);
     setPartnerLiveText(cheParla?.liveText || '');
-    setPartnerTyping(tutti.some(x => x.typing));
+    // b.363 — IL "STA SCRIVENDO" CHE NON FINIVA MAI: sul canale in tempo
+    // reale il flag non aveva scadenza (il polling invece ce l'ha). Se il
+    // "ho smesso" non arrivava — rete caduta, scheda chiusa — il partner
+    // vedeva "sta scrivendo" per sempre. Qui la stessa scadenza del polling.
+    setPartnerTyping(tutti.some(x => x.typing && Date.now() - (x.quando || 0) < TYPING_TIMEOUT));
   }, []);
   const [partnerTyping, setPartnerTyping] = useState(false);
 

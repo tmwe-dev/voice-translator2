@@ -101,10 +101,15 @@ const MessageList = memo(function MessageList({
     try {
       const r = await fetch('/api/translate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: m.original, sourceLang: m.senderLang || m.lang || 'auto', targetLang: myLang, userToken: userToken || '', roomId: roomId || undefined }),
+        body: JSON.stringify({ text: m.original, sourceLang: m.sourceLang || 'auto', targetLang: myLang, userToken: userToken || '', roomId: roomId || undefined }),
       });
       const d = await r.json();
-      const tradotto = d.translated || d.translation || '';
+      // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": quando il controllo di
+      // qualita respinge la traduzione, /api/translate risponde 200 con
+      // dentro il TESTO ORIGINALE e validationFailed:true. Senza guardare
+      // quel campo, il lettore premeva "Traduci" e riceveva l'originale
+      // straniero spacciato per la propria lingua.
+      const tradotto = (!r.ok || d.validationFailed) ? '' : (d.translated || d.translation || '');
       setTradLocali(t => ({ ...t, [chiave]: tradotto || null }));
       if (!tradotto) setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; });
     } catch { setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); }
@@ -115,6 +120,21 @@ const MessageList = memo(function MessageList({
   // ── Read receipt: IntersectionObserver to detect when partner messages are on screen ──
   const observerRef = useRef(null);
   const readMsgIdsRef = useRef(new Set());
+  const inAttesaRef = useRef(new Set()); // b.363 — elementi arrivati prima dell'osservatore
+  // b.363 — la finestra dei messaggi disegnati: cresce quando si sale
+  const [finestra, setFinestra] = useState(VIRTUAL_THRESHOLD);
+  const spiaSuRef = useRef(null);
+  useEffect(() => {
+    const el = spiaSuRef.current;
+    if (!el || messages.length <= finestra) return;
+    const occhio = new IntersectionObserver((voci) => {
+      if (voci.some((v) => v.isIntersecting)) {
+        setFinestra((f) => Math.min(messages.length, f + VISIBLE_WINDOW));
+      }
+    }, { threshold: 0.1 });
+    occhio.observe(el);
+    return () => occhio.disconnect();
+  }, [messages.length, finestra]);
 
   useEffect(() => {
     if (!onMessageRead) return;
@@ -131,6 +151,9 @@ const MessageList = memo(function MessageList({
         }
       }
     }, { threshold: 0.5 }); // 50% visible = read
+    // b.363 — recupera gli elementi montati prima che l'osservatore esistesse
+    for (const el of inAttesaRef.current) observerRef.current.observe(el);
+    inAttesaRef.current.clear();
     return () => { observerRef.current?.disconnect(); };
   }, [onMessageRead]);
 
@@ -151,12 +174,16 @@ const MessageList = memo(function MessageList({
               : L('conversationDesc')}
         </div>
       )}
-      {/* Virtual scroll: for 50+ messages, only render last 30 + spacer */}
-      {messages.length > VIRTUAL_THRESHOLD && (
-        <div style={{ height: (messages.length - VISIBLE_WINDOW) * 80, flexShrink: 0 }}
+      {/* b.363 — I MESSAGGI VECCHI NON SONO PIU IRRAGGIUNGIBILI. Sopra i 50
+          si disegnavano solo gli ultimi 30 con un distanziatore vuoto, e
+          NESSUNO allargava mai la finestra: scorrendo in su si vedeva solo
+          vuoto. Ora, quando il distanziatore entra in vista, la finestra
+          cresce di 30 alla volta. */}
+      {messages.length > finestra && (
+        <div ref={spiaSuRef} style={{ height: (messages.length - finestra) * 80, flexShrink: 0 }}
           aria-hidden="true" />
       )}
-      {(messages.length > VIRTUAL_THRESHOLD ? messages.slice(-VISIBLE_WINDOW) : messages).map((m, i) => {
+      {(messages.length > finestra ? messages.slice(-finestra) : messages).map((m, i) => {
         const isMine = m.sender === myName;
         const translationForMe = getTranslationForMe(m);
         const hasTranslation = !!(m.translated || (m.translations && Object.keys(m.translations).length > 0));
@@ -188,8 +215,12 @@ const MessageList = memo(function MessageList({
                       io — cosi ognuno controlla la propria frase. */}
                   <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary, display:'flex', alignItems:'baseline', gap:6}}>
                     <span style={{flex:1, minWidth:0}}>
+                      {/* b.363 — la regola b.353 non era mai stata realizzata:
+                          i due rami erano IDENTICI, e per i propri messaggi
+                          translationForMe ricade sull'originale. Ora la mia
+                          bolla mostra davvero la lingua dell'altro. */}
                       {isMine
-                        ? (hasTranslation ? translationForMe : m.original)
+                        ? (m.translated || m.translations?.[partner?.lang] || m.original)
                         : (hasTranslation ? translationForMe : m.original)}
                     </span>
                     {isMine && hasTranslation && (
@@ -223,7 +254,7 @@ const MessageList = memo(function MessageList({
                   ) : (
                     <div style={{fontSize:12, color:S.colors.textSecondary, marginTop:4, lineHeight:1.4}}>
                       {/* b.353 — per me: sotto c'e il MIO originale; per lui: l'originale dell'altro */}
-                      {isMine ? m.original : m.original}
+                      {m.original}
                     </div>
                   )}
                 </ForseVelato>
@@ -293,7 +324,7 @@ const MessageList = memo(function MessageList({
                     differenza fra "aspetta" e "e andata". */}
                 {isMine && (
                   <span
-                    title={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda'])}
+                    title={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['inviato'] || ETICHETTA_STATO['in-coda'])}
                     aria-label={L(ETICHETTA_STATO[m._status] || ETICHETTA_STATO['in-coda'])}
                     style={{
                       color: m._status === 'fallito' ? (PALETTE.red || '#EF4444')
@@ -343,7 +374,7 @@ const MessageList = memo(function MessageList({
       })}
       {/* Streaming live bubble — includes Whisper "listening" indicator for Asian languages */}
       {streamingMsg && (streamingMsg.original || streamingMsg._whisperListening || streamingMsg._whisperProcessing) &&
-        !(streamingMsg.original && messages.length > 0 && messages[messages.length - 1].sender === prefs.name && messages[messages.length - 1].original === streamingMsg.original.trim()) && (
+        !(streamingMsg.original && messages.length > 0 && messages[messages.length - 1].sender === myName && messages[messages.length - 1].original === streamingMsg.original.trim()) && (
         <div style={{display:'flex', gap:8, flexDirection:'row-reverse', marginBottom:12, alignItems:'flex-end'}}>
           <AvatarImg src={prefs.avatar} size={56} style={{marginBottom:2}} />
           <div style={{maxWidth:'75%', display:'flex', flexDirection:'column', alignItems:'flex-end'}}>

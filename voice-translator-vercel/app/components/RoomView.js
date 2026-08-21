@@ -6,14 +6,14 @@ import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
 import VoiceCallOverlay from './VoiceCallOverlay.js';
 import MessageList from './MessageList.js';
-import { IconCamera, IconSend } from './Icons.js';
+import { IconCamera } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
 import RoomHeader from './RoomHeader.js';
 import NumeroSicurezza from './NumeroSicurezza.js';
 import VoiceEngineBar from './VoiceEngineBar.js';
 import TalkControls from './TalkControls.js';
-import TaxiMode, { TaxiButton } from './TaxiMode.js';
+import TaxiMode from './TaxiMode.js';
 import ContenutiChat from './ContenutiChat.js';
 import SchedaArgomento from './SchedaArgomento.js';
 import { PALETTE } from '../lib/palette.js';
@@ -66,12 +66,29 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     if (!roomId || !roomSessionToken) return;
     for (const m of messages || []) {
       if (!m?.id || giaConservati.current.has(m.id)) continue;
+      // b.363 — SOLO I MIEI messaggi. Prima si conservavano anche quelli del
+      // partner, ma il server registra come autore CHI CHIAMA: nelle stanze
+      // di gruppo ogni messaggio finiva nello storico una volta per membro,
+      // e le copie salvate dagli altri risultavano firmate dalla persona
+      // sbagliata. E la lingua: il campo vero e `sourceLang` (`m.lang` non
+      // esiste), quindi si registrava sempre la lingua del lettore.
+      if (m.sender !== myName) continue;
       const testo = m.original || m.text || '';
       if (!testo) continue;
       giaConservati.current.add(m.id);
-      reazioni.conserva(m.id, testo, m.lang || myLang, m.rispostaA || null);
+      reazioni.conserva(m.id, testo, m.sourceLang || myLang, m.rispostaA || null);
     }
-  }, [messages, roomId, roomSessionToken, reazioni, myLang]);
+  }, [messages, roomId, roomSessionToken, reazioni, myLang, myName]);
+
+  // b.363 — LA RISPOSTA CITATA PARTIVA A VUOTO: il banner "Rispondi a X"
+  // si apriva, ma ne il tasto ne l'Invio passavano la citazione, e il banner
+  // restava appeso anche dopo l'invio. Ora la citazione viaggia col
+  // messaggio e il banner si chiude da solo.
+  const inviaConCitazione = useCallback(() => {
+    const citato = rispostaA?.id || null;
+    sendTextMessage(citato ? { rispostaA: citato } : undefined);
+    setRispostaA(null);
+  }, [rispostaA, sendTextMessage]);
 
   const [showLangPicker, setShowLangPicker] = useState(false);
   const [showCaptions, setShowCaptions] = useState(true);
@@ -595,7 +612,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           <div style={{display:'flex', alignItems:'center', gap:6, marginBottom:4}}>
             <AvatarImg src={partner ? getSenderAvatar(partner.name) : null} size={20} />
             <span style={{fontSize:10, color:S.colors.accent3, fontWeight:600}}>
-              {partner?.name} {partnerSpeaking ? 'parla' : 'scrive'}
+              {partner?.name} {partnerSpeaking ? L('speakingWord') : L('typingWord')}
             </span>
             <span style={{display:'inline-block', width:5, height:5, borderRadius:'50%',
               background:S.colors.accent3, animation:'vtPulse 1.2s infinite ease-in-out'}} />
@@ -721,11 +738,11 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
               }
             }
           }}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); sendTextMessage(); }}}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); inviaConCitazione(); }}}
           onBlur={() => sendTypingState(false)}
           disabled={sendingText}
         />
-        <button onClick={() => { vibrate(); sendTypingState(false); sendTextMessage(); }}
+        <button onClick={() => { vibrate(); sendTypingState(false); inviaConCitazione(); }}
           aria-label={L('send')}
           style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
             background: textInput.trim() ? S.colors.btnGradient : S.colors.overlayBg,

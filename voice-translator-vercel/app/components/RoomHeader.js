@@ -3,7 +3,7 @@ import { memo, useState } from 'react';
 import { LANGS, FONT, getLang, FREE_DAILY_LIMIT } from '../lib/constants.js';
 import ConnectionQuality from './ConnectionQuality.js';
 import { IconBack, IconCamera, IconVolume, IconVolumeOff, IconCheck,
-  IconClipboard, IconMusic, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
+  IconClipboard, IconArchive, IconBattery, IconSwap, IconBrainAI } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { ultimoRapportoTesto } from '../lib/diagnosticaChiamata.js';
 import { rapportoMonitorTesto } from '../lib/monitorSviluppo.js';
@@ -73,17 +73,6 @@ const RoomHeader = memo(function RoomHeader({
 
   // b.173 — attivazione Taxi: identica a prima (era dentro TaxiButton),
   // ora invocata da una voce di menu. Nessun cambiamento di logica.
-  const attivaTaxi = () => {
-    const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
-    if (lastMsg) {
-      const original = lastMsg.original || '';
-      const translated = lastMsg.translated || '';
-      const fromLang = lastMsg.sourceLang || myLang;
-      const toLang = lastMsg.targetLang || 'en';
-      if (setTaxiData) setTaxiData({ original, translated, fromLang, toLang });
-    }
-    setTaxiVisible(true);
-  };
 
   const flagsPartner = otherMembers.length > 0
     ? [...new Set(otherMembers.map(m => getLang(m.lang).flag))]
