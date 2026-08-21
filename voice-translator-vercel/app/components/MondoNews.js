@@ -16,7 +16,8 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { ordinaPerInteresse, segnaApertura } from '../lib/interessi.js';
+import { segnaApertura } from '../lib/interessi.js';
+import { ordinaFeed } from '../lib/ordineFeed.js';
 import Scelta from './ui/Scelta.js';
 import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
@@ -320,7 +321,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     let v = feed || [];
     if (argomentoFiltro) v = v.filter((d) => d.topic === argomentoFiltro);
     if (paeseFiltro) v = v.filter((d) => d.country === paeseFiltro);
-    return ordinaPerInteresse(v, prefs);
+    return ordinaFeed(v, prefs);
   }, [feed, argomentoFiltro, paeseFiltro, prefs]);
 
   const bordo = `1px solid ${C.cardBorder}`;

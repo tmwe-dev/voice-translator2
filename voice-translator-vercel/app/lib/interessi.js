@@ -64,23 +64,9 @@ export function punteggioArgomento(prefs, argomento) {
   return dichiarato + osservato;
 }
 
-/**
- * Ordina un elenco mettendo davanti cio che interessa — SENZA togliere
- * niente. A parita di interesse resta l'ordine di prima (il piu fresco,
- * il piu vivo), che e gia un buon ordine.
- *
- * `quale` dice dove trovare l'argomento dentro ogni voce.
- */
-export function ordinaPerInteresse(elenco, prefs, quale = (x) => x.topic) {
-  if (!Array.isArray(elenco) || elenco.length < 2) return elenco || [];
-  const dichiarati = prefs?.interessi || [];
-  const visti = prefs?.argomentiVisti || {};
-  // se non sappiamo niente di questa persona, non si finge di sapere:
-  // si lascia l'ordine naturale.
-  if (!dichiarati.length && !Object.keys(visti).length) return elenco;
-
-  return elenco
-    .map((x, i) => ({ x, i, p: punteggioArgomento(prefs, quale(x)) }))
-    .sort((a, b) => (b.p - a.p) || (a.i - b.i))
-    .map((v) => v.x);
-}
+// b.366 — QUI C'ERA `ordinaPerInteresse`, ed e stata tolta perche non la
+// chiamava piu nessuno: l'ordine di Mondo adesso vive tutto in
+// lib/ordineFeed.js, che compone tre regole (interesse, freschezza,
+// completezza) invece di una sola. Lasciarla qui sarebbe stato peggio
+// che inutile: il suo commento raccontava un ordine che l'app non usa
+// piu, e il prossimo che legge questo file ci crederebbe.
