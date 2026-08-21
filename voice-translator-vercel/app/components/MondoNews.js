@@ -15,7 +15,8 @@
 // Niente aggiornamento automatico: ogni ricerca nasce da un gesto.
 // ═══════════════════════════════════════════════════════════════
 
-import { memo, useState, useRef, useCallback, useEffect } from 'react';
+import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import { FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
@@ -88,6 +89,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [numFonti, setNumFonti] = useState(6);
   const abortRef = useRef(null);
   const [feedGuasto, setFeedGuasto] = useState(false);
+  // b.363 — l'argomento scelto fra quelli VERI delle discussioni aperte
+  const [argomentoFiltro, setArgomentoFiltro] = useState(null);
   const [riprova, setRiprova] = useState(0);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -270,6 +273,26 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     return `${Math.floor(min / 1440)}g`;
   };
 
+  // b.363 — GLI ARGOMENTI VERI, CONTATI. Nella sidebar c'erano solo le
+  // categorie della ricerca esterna (Top headlines, World, Sports…), che
+  // sono i reparti di un motore di ricerca, non le cose di cui si parla
+  // QUI DENTRO. Questo elenco nasce dalle discussioni aperte: compaiono
+  // solo gli argomenti che esistono davvero, col loro numero. Niente
+  // reparti vuoti da toccare per scoprire che dentro non c'e niente.
+  const argomentiVeri = useMemo(() => {
+    const conto = new Map();
+    for (const d of feed || []) {
+      if (!d.topic) continue;
+      conto.set(d.topic, (conto.get(d.topic) || 0) + 1);
+    }
+    return [...conto.entries()].sort((a, b) => b[1] - a[1]);
+  }, [feed]);
+
+  const feedMostrato = useMemo(
+    () => (argomentoFiltro ? (feed || []).filter((d) => d.topic === argomentoFiltro) : (feed || [])),
+    [feed, argomentoFiltro],
+  );
+
   const bordo = `1px solid ${C.cardBorder}`;
 
   return (
@@ -352,6 +375,42 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           </div>
         )}
       </div>
+
+      {/* b.363 — IL SELETTORE ARGOMENTI: quelli di cui si parla qui dentro */}
+      {argomentiVeri.length > 0 && (
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
+            {L('topicsWord')}
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+            <button onClick={() => { vibrate(6); setArgomentoFiltro(null); }}
+              style={{
+                padding: '6px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                fontSize: 12, fontWeight: argomentoFiltro === null ? 800 : 600,
+                background: argomentoFiltro === null ? `${C.accent}18` : C.card,
+                border: argomentoFiltro === null ? `1px solid ${C.accent}40` : bordo,
+                color: argomentoFiltro === null ? C.accent : C.textSecondary,
+                WebkitTapHighlightColor: 'transparent',
+              }}>{L('allTopicsWord')}</button>
+            {argomentiVeri.map(([arg, n]) => {
+              const attivo = argomentoFiltro === arg;
+              return (
+                <button key={arg} onClick={() => { vibrate(6); setArgomentoFiltro(attivo ? null : arg); }}
+                  style={{
+                    padding: '6px 12px', borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                    fontSize: 12, fontWeight: attivo ? 800 : 600,
+                    background: attivo ? `${C.accent}18` : C.card,
+                    border: attivo ? `1px solid ${C.accent}40` : bordo,
+                    color: attivo ? C.accent : C.textSecondary,
+                    WebkitTapHighlightColor: 'transparent',
+                  }}>
+                  {arg} <span style={{ opacity: 0.6, fontWeight: 600 }}>{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ─── Scorciatoie ─── */}
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 10 }}>
@@ -456,40 +515,85 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       )}
 
       {/* ─── b.187 · Feed delle discussioni pubbliche persistenti ─── */}
-      {feed && feed.length > 0 && (
+      {feedMostrato.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.textMuted, textTransform: 'uppercase', marginBottom: 8 }}>
             {L('worldNowTitle')}
           </div>
-          {feed.slice(0, 12).map(d => (
-            // b.363 — LE SCHEDE ERANO ILLEGGIBILI. Il fondo era quello
-            // translucido delle card, ma dietro non c'e piu una pagina
-            // scura: c'e il PIANETA, che e chiaro e brillante. Il titolo
-            // bianco finiva sopra l'alone azzurro e non si leggeva. Ora la
-            // scheda copre. E il titolo non si taglia piu a meta parola
-            // dopo una riga: ne ha due, che bastano per capire di cosa si
-            // parla senza aprire.
-            <button key={d.id} onClick={() => { vibrate(8); setDiscAperta(d.id); }}
-              style={{
-                width: '100%', textAlign: 'left', display: 'flex', gap: 11, alignItems: 'center',
-                padding: '12px 13px', marginBottom: 8, borderRadius: 14,
-                background: 'rgba(11,15,28,0.94)', border: bordo,
-                cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
-              }}>
-              {d.media?.thumb && <img src={d.media.thumb} alt="" style={{ width: 44, height: 44, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />}
-              <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{
-                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden', fontSize: 13.5, fontWeight: 600, lineHeight: 1.35,
-                  color: C.textPrimary,
-                }}>{d.title || '—'}</span>
-                <span style={{ display: 'block', fontSize: 11, color: C.textMuted, marginTop: 3 }}>
-                  {d.author_name || ''}
-                  {d.comment_count > 0 && ` · ${d.comment_count} ${L('commentsWord')}`}
-                </span>
-              </span>
-              <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0 }}>›</span>
-            </button>
+          {feedMostrato.slice(0, 12).map(d => (
+            // b.363 — LA SCHEDA DICE TUTTO PRIMA CHE LA TOCCHI (vedi
+            // lib/schedaMondo.js). Prima diceva quattro cose — titolo,
+            // nome, un numero nudo, una freccia — e per sapere se valeva
+            // la pena aprirla bisognava APRIRLA. Ora si legge in tre
+            // secondi: da dove viene, di cosa parla, quanto e fresca,
+            // chi l'ha scritta, se e un video o un articolo, e se
+            // dentro c'e una conversazione viva o un deserto.
+            (() => {
+              const tipo = tipoContenuto(d.media);
+              const fonte = fonteDi(d.media);
+              const bandiera = bandieraPaese(d.country);
+              const eta = quando(d.last_activity_at || d.created_at, L);
+              const vita = viva(d.comment_count);
+              const eti = stileEtichetta(C);
+              return (
+                <button key={d.id} onClick={() => { vibrate(8); setDiscAperta(d.id); }}
+                  style={{
+                    width: '100%', textAlign: 'left', display: 'flex', gap: 12, alignItems: 'flex-start',
+                    padding: 12, marginBottom: 8, borderRadius: 14,
+                    background: 'rgba(11,15,28,0.94)', border: bordo,
+                    cursor: 'pointer', fontFamily: FONT, WebkitTapHighlightColor: 'transparent',
+                  }}>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {/* 1. DA DOVE, DI COSA, QUANDO */}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
+                      {bandiera && <span style={{ fontSize: 13, lineHeight: 1 }}>{bandiera}</span>}
+                      {d.topic && <span style={eti}>{d.topic}</span>}
+                      {d.topic && eta && <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>}
+                      {eta && <span style={eti}>{eta}</span>}
+                    </span>
+
+                    {/* 2. IL TITOLO: due righe piene, il pezzo piu grosso */}
+                    <span style={{
+                      display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden', fontSize: 14, fontWeight: 600, lineHeight: 1.35,
+                      color: C.textPrimary,
+                    }}>{d.title || '—'}</span>
+
+                    {/* 3. CHI, COS'E', E QUANTA VITA C'E' DENTRO */}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                      {fonte && <span style={eti}>{fonte}</span>}
+                      {tipo && tipo !== 'articolo' && (
+                        <span style={{
+                          ...eti, color: C.accent, background: `${C.accent}18`,
+                          borderRadius: 5, padding: '1px 6px',
+                        }}>{L(tipo === 'video' ? 'videoWord' : 'postWord')}</span>
+                      )}
+                      {vita.n > 0 && (
+                        <span style={{ ...eti, color: vita.accesa ? C.accent : C.textMuted, fontWeight: vita.accesa ? 800 : 700 }}>
+                          {vita.n} {L('commentsWord')}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+
+                  {/* 4. LA FACCIA: e la prima cosa che l'occhio prende. Se e
+                      un video, il triangolo dice "questo si guarda". */}
+                  {d.media?.thumb ? (
+                    <span style={{ position: 'relative', flexShrink: 0 }}>
+                      <img src={d.media.thumb} alt="" style={{ width: 62, height: 62, borderRadius: 10, objectFit: 'cover', display: 'block' }} />
+                      {tipo === 'video' && (
+                        <span style={{
+                          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: 'rgba(0,0,0,0.35)', borderRadius: 10, color: '#fff', fontSize: 17,
+                        }}>▶</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span style={{ color: C.textMuted, fontSize: 14, flexShrink: 0, alignSelf: 'center' }}>›</span>
+                  )}
+                </button>
+              );
+            })()
           ))}
         </div>
       )}

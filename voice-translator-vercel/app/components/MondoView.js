@@ -1,5 +1,6 @@
 'use client';
 import Icon from './Icon.js';
+import { quando, viva, stileEtichetta, PUNTO } from '../lib/schedaMondo.js';
 import { ombraAcciaio } from '../lib/acciaio.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 // ═══════════════════════════════════════════════
@@ -225,6 +226,16 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
     return { paesi, stanze, discussioni };
   }, [search, rooms, feedCaldo]);
 
+  // b.363 — QUANTE STANZE PER LINGUA, per dirlo sulle pillole del filtro.
+  // Una pillola senza numero e una scommessa: si tocca per scoprire se
+  // dietro c'e qualcosa. Col numero si sceglie prima di toccare, che e
+  // lo stesso metodo delle schede.
+  const perLingua = useMemo(() => {
+    const c = {};
+    for (const r of rooms) { const l = r.lang; if (l) c[l] = (c[l] || 0) + 1; }
+    return c;
+  }, [rooms]);
+
   const availableModes = useMemo(() => {
     const modes = new Set(rooms.map(r => r.mode));
     return ['all', ...modes];
@@ -376,6 +387,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               boxShadow: active ? `0 2px 10px ${C.accent}30` : 'none',
             }}>
               <span>{lf.flag}</span>
+              {/* b.363 — il numero: quante stanze ci sono davvero dietro */}
+              {lf.code !== 'all' && perLingua[lf.code] > 0 && (
+                <span style={{ opacity: 0.65, fontWeight: 700 }}>{perLingua[lf.code]}</span>
+              )}
               <span>{lf.nameKey ? L(lf.nameKey) : lf.name}</span>
             </button>
           );
@@ -571,120 +586,92 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         )}
 
         {/* Room cards */}
+        {/* b.363 — L'AVVISO SULLA RISERVATEZZA, UNA VOLTA SOLA. Stava
+            ripetuto identico dentro OGNI scheda: una cosa vera, detta
+            trenta volte di fila, smette di essere letta e diventa rumore
+            che allontana lo sguardo da cio che serve per scegliere.
+            Qui vale per tutte le stanze dell'elenco. */}
+        {filteredRooms.length > 0 && (
+          <div style={{ fontSize: 10.5, color: C.textMuted, opacity: 0.85, padding: '0 4px 8px', lineHeight: 1.5 }}>
+            {L('openRoomNotice')}
+          </div>
+        )}
+
+        {/* b.363 — LA STESSA GRAMMATICA DI NEWS (vedi lib/schedaMondo.js).
+            Prima questa scheda aveva cinque righe impilate — nome, cinque
+            distintivi, chi ospita, l'avviso sulla riservatezza, la
+            descrizione, i conteggi — e l'avviso era ripetuto identico su
+            OGNI stanza, che e rumore: una cosa vera detta trenta volte
+            smette di essere letta. Ora l'avviso sta una volta in cima
+            all'elenco, e la scheda dice quello che serve per decidere:
+            da dove si parla, di che tipo e, quanto e fresca, chi ospita,
+            e quanta gente c'e dentro. Restano in evidenza i due avvisi
+            che vanno visti PRIMA di entrare: si bussa, e si litiga. */}
         {filteredRooms.map((room, idx) => {
           const modeInfo = MODE_LABELS[room.mode] || { label: room.mode, icon: '', color: PALETTE.teal };
+          const lingua = room.hostLang || room.lang;
+          const eta = quando(room.createdAt, L);
+          const dentro = viva(room.membri ?? room.memberCount, 4);
+          const eti = stileEtichetta(C);
           return (
             <button key={room.roomId} onClick={() => onJoinRoom(room.roomId)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-                padding: '14px 16px', marginBottom: 8,
-                background: C.card, border: `1px solid ${C.cardBorder}`,
-                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                borderRadius: 18, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
+                display: 'flex', alignItems: 'flex-start', gap: 12, width: '100%',
+                padding: 12, marginBottom: 8,
+                background: 'rgba(11,15,28,0.94)', border: `1px solid ${C.cardBorder}`,
+                borderRadius: 14, cursor: 'pointer', textAlign: 'left', fontFamily: FONT,
                 WebkitTapHighlightColor: 'transparent',
                 animation: `vtSlideUp 0.3s ease-out ${idx * 0.05}s both`,
               }}>
-              {/* Bandiera dell'host: da quale lingua e paese si parla */}
-              <div style={{
-                fontSize: 26, width: 50, height: 50, borderRadius: 16, flexShrink: 0,
-                background: `${modeInfo.color}12`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: `1px solid ${modeInfo.color}20`,
-              }}>
-                {getLangFlag(room.hostLang || room.lang)}
-              </div>
-
-              {/* Info — in cima il NOME della stanza: e cio che si sceglie.
-                  L'host viene dopo, con la sua bandiera e la sua lingua. */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-                  <span style={{
-                    fontWeight: 700, fontSize: 14, color: C.textPrimary,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%',
-                  }}>
-                    {room.nome || room.host}
-                  </span>
-                  {/* Room type icon */}
-                  {ROOM_TYPE_ICONS[room.roomType] && (
-                    <span style={{ display: 'inline-flex' }} title={room.roomType}>
-                      <Icon name={ROOM_TYPE_ICONS[room.roomType]} size={12} color={C.textMuted} />
-                    </span>
-                  )}
-                  {/* Si bussa e l'host apre: dirlo PRIMA che uno tocchi,
-                      altrimenti sembra una stanza che non risponde. */}
+                {/* 1. DA DOVE, DI CHE TIPO, QUANDO */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 13, lineHeight: 1 }}>{getLangFlag(lingua)}</span>
+                  <span style={{ ...eti, color: modeInfo.color }}>{nomeModalita(modeInfo, L)}</span>
+                  {eta && <><span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span><span style={eti}>{eta}</span></>}
+                  {/* si bussa e l'host apre: dirlo PRIMA che uno tocchi,
+                      altrimenti sembra una stanza che non risponde */}
                   {room.suApprovazione && (
-                    <span style={{
-                      padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
-                      background: `${PALETTE.amber || '#F59E0B'}18`, color: PALETTE.amber || '#F59E0B',
-                    }}>
+                    <span style={{ ...eti, color: PALETTE.amber || '#F59E0B', background: `${PALETTE.amber || '#F59E0B'}18`, borderRadius: 5, padding: '1px 6px' }}>
                       {L('onApproval')}
                     </span>
                   )}
-                  {/* b.111 — litigio libero. Va detto PRIMA di entrare:
-                      e la ragione per cui uno sceglie questa stanza, o
-                      per cui gira alla larga. Scoprirlo dentro sarebbe
-                      un'imboscata. */}
+                  {/* b.111 — litigio libero: e la ragione per cui uno sceglie
+                      questa stanza, o per cui gira alla larga. Scoprirlo
+                      dentro sarebbe un'imboscata. */}
                   {room.hot && (
-                    <span style={{
-                      padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
-                      background: 'rgba(255,90,60,0.12)', color: '#FF7A5C',
-                    }} title={L('freeFightTip')}>
+                    <span style={{ ...eti, color: '#FF7A5C', background: 'rgba(255,90,60,0.12)', borderRadius: 5, padding: '1px 6px' }} title={L('freeFightTip')}>
                       {L('freeFight')}
                     </span>
                   )}
-                  {/* Host role badge */}
+                </div>
+
+                {/* 2. IL NOME: e cio che si sceglie */}
+                <div style={{
+                  display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden', fontSize: 14, fontWeight: 600, lineHeight: 1.35, color: C.textPrimary,
+                }}>
+                  {room.nome || room.host}
+                </div>
+
+                {/* 3. CHI OSPITA, E QUANTA GENTE C'E' DENTRO */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                  <span style={eti}>{room.host}</span>
+                  <span style={{ ...eti, opacity: 0.5 }}>{PUNTO}</span>
+                  <span style={{ ...eti, color: dentro.accesa ? C.accent : C.textMuted, fontWeight: dentro.accesa ? 800 : 700 }}>
+                    {dentro.n}{room.maxPartecipanti ? `/${room.maxPartecipanti}` : ''} {L('insideWord')}
+                  </span>
                   {room.myRole && ROLE_BADGES[room.myRole] && (
-                    <span style={{
-                      padding: '1px 6px', borderRadius: 4, fontSize: 8, fontWeight: 700,
-                      background: ROLE_BADGES[room.myRole].bg,
-                      color: ROLE_BADGES[room.myRole].color,
-                    }}>
+                    <span style={{ ...eti, background: ROLE_BADGES[room.myRole].bg, color: ROLE_BADGES[room.myRole].color, borderRadius: 5, padding: '1px 6px' }}>
                       {ROLE_BADGES[room.myRole].labelKey ? L(ROLE_BADGES[room.myRole].labelKey) : ROLE_BADGES[room.myRole].label}
                     </span>
-                  )}
-                  <span style={{
-                    padding: '2px 7px', borderRadius: 6, fontSize: 9, fontWeight: 700,
-                    background: `${modeInfo.color}18`, color: modeInfo.color,
-                  }}>
-                    {modeInfo.icon} {nomeModalita(modeInfo, L)}
-                  </span>
-                </div>
-
-                {/* Chi ospita, e da dove */}
-                <div style={{ fontSize: 11, color: C.textMuted, marginTop: 1 }}>
-                  {getLangFlag(room.hostLang || room.lang)} {getLangName(room.hostLang || room.lang)}
-                  {' · '}{room.host}
-                </div>
-
-                {/* b.99 — la verita sulla riservatezza, scritta prima di
-                    entrare e non nascosta nelle condizioni d'uso. Qui i
-                    messaggi restano sul server: e il prezzo per far vedere
-                    a chi arriva di cosa si sta parlando. Le chat private
-                    restano cifrate, e sono un'altra cosa. */}
-                <div style={{ fontSize: 10.5, color: C.textMuted, marginTop: 3, opacity: 0.85 }}>
-                  {L('openRoomNotice')}
-                </div>
-
-                {room.description && (
-                  <div style={{
-                    fontSize: 12, color: C.textSecondary, marginTop: 2,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    {room.description}
-                  </div>
-                )}
-                <div style={{ display: 'flex', gap: 10, marginTop: 5, fontSize: 10, color: C.textMuted }}>
-                  <span>{room.memberCount}{room.maxPartecipanti ? `/${room.maxPartecipanti}` : ''}</span>
-                  <span>{timeAgo(room.createdAt)}</span>
-                  {room.targetLangs?.length > 0 && (
-                    <span>{room.targetLangs.map(l => getLangFlag(l)).join(' ')}</span>
                   )}
                 </div>
               </div>
 
-              {/* Join arrow */}
+              {/* il pallino acceso quando la stanza e viva: si vede da lontano */}
               <div style={{
-                width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                width: 34, height: 34, borderRadius: 10, flexShrink: 0, alignSelf: 'center',
                 background: `${modeInfo.color}12`, border: `1px solid ${modeInfo.color}20`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: modeInfo.color, fontSize: 14, fontWeight: 700,
