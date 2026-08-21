@@ -70,11 +70,14 @@ const ACTIONS = [
 // una sola card (Luca: «allargali come prima per differenziarli dai
 // pulsanti della barra»). Le PORTE per parlare stanno invece dietro il
 // barcode grande, tutte insieme.
+// b.360 — le immagini metalliche di Luca al posto delle icone (globo per il
+// Mondo, trofeo per Life, carta per Business, pacco per Regala). Hanno lo
+// sfondo trasparente, quindi vivono sul tema scuro senza riquadro.
 const SEZIONI = [
-  { id: 'mondo', vista: 'mondo', icon: 'globe', titleKey: 'worldNowTitle', descKey: 'worldNowDesc' },
-  { id: 'life', vista: 'life', icon: 'star', titleKey: 'lifeEntry', descKey: 'lifeEntryDesc' },
-  { id: 'business', vista: 'business', icon: 'credit', titleKey: 'businessEntry', descKey: 'businessEntryDesc' },
-  { id: 'regala', icon: 'gift', titleKey: 'actGiftTitle', descKey: 'actGiftDesc' },
+  { id: 'mondo', vista: 'mondo', img: '/sezioni/sez-mondo.webp', titleKey: 'worldNowTitle', descKey: 'worldNowDesc' },
+  { id: 'life', vista: 'life', img: '/sezioni/sez-life.webp', titleKey: 'lifeEntry', descKey: 'lifeEntryDesc' },
+  { id: 'business', vista: 'business', img: '/sezioni/sez-business.webp', titleKey: 'businessEntry', descKey: 'businessEntryDesc' },
+  { id: 'regala', img: '/sezioni/sez-regala.webp', titleKey: 'actGiftTitle', descKey: 'actGiftDesc' },
 ];
 
 
@@ -363,13 +366,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 borderBottom: idx < SEZIONI.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
               }}
             >
-              {/* b.358 — «togli i bordi da intorno alle icone»: l'icona sta
-                  nuda, senza riquadro e senza fondo. */}
+              {/* b.360 — le immagini metalliche di Luca al posto delle icone;
+                  sfondo trasparente, nessun riquadro. Ridotte al 70% (Luca). */}
               <span style={{
-                width: 46, height: 46, flexShrink: 0,
+                width: 40, height: 40, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
               }}>
-                <Icon name={voce.icon} size={25} color={C.accent} />
+                {voce.img
+                  ? <img src={voce.img} alt="" aria-hidden width={72} height={72}
+                      style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+                  : <Icon name={voce.icon} size={25} color={C.accent} />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.textPrimary, fontFamily: FONT }}>
