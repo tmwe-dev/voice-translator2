@@ -272,10 +272,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         </div>
       </div>
 
-      {/* ═══ b.355 — I RISULTATI A TRE CORSIE: paesi, stanze, discussioni ═══ */}
+      {/* ═══ b.361 — I RISULTATI DELLA RICERCA come POPUP centrata sul globo
+          (collaudo di Luca: «deve essere una popup in primo piano senza
+          eliminare lo sfondo»): un pannello stretto, in mezzo, col pianeta
+          che resta dietro. Larghezze rispettate. ═══ */}
       {cercando && risultati && (
-        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))' }}>
-          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', justifyContent: 'center', alignItems: 'flex-start', padding: '4px 16px', pointerEvents: 'none' }}>
+          <div style={{ width: '100%', maxWidth: 420, maxHeight: '68vh', overflowY: 'auto', scrollbarWidth: 'none', pointerEvents: 'auto', background: C.card, backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)', border: `1px solid ${C.cardBorder}`, borderRadius: 18, padding: 14, boxShadow: '0 24px 60px -14px rgba(0,0,0,0.65)' }}>
 
             {risultati.paesi.length > 0 && (<>
               <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>PAESI E LINGUE</div>
@@ -326,65 +329,6 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         </div>
       )}
 
-      {/* ═══ TAB PER TE (b.335) — la home: caldo adesso ═══ */}
-      {tab === 'perte' && !cercando && (
-        // b.361 — IL GLOBO RESTA TRASCINABILE (collaudo di Luca): questa
-        // colonna che scorre NON deve rubargli i tocchi. `pointerEvents:none`
-        // lascia passare il dito al pianeta sotto; solo le liste vere (piu giu)
-        // riprendono il tocco.
-        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none', position: 'relative', zIndex: 5, padding: '0 16px calc(88px + env(safe-area-inset-bottom))', pointerEvents: 'none' }}>
-          {/* lo spazio in cui il globo e protagonista: qui il tocco va al pianeta */}
-          <div style={{ height: '58vh', flexShrink: 0 }} />
-          <div style={{ maxWidth: 680, margin: '0 auto', pointerEvents: 'auto' }}>
-
-            {/* TREND: le discussioni piu vive (commenti, poi recenza) */}
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>{(L('trendNow') !== 'trendNow' ? L('trendNow') : 'DI COSA SI PARLA')}</div>
-            {feedCaldo === null && <div style={{ fontSize: 12, color: C.textMuted, padding: '8px 0' }}>…</div>}
-            {Array.isArray(feedCaldo) && feedCaldo.length === 0 && (
-              <div style={{ fontSize: 12, color: C.textMuted, padding: '8px 0 14px' }}>{(L('trendEmpty') !== 'trendEmpty' ? L('trendEmpty') : 'Ancora niente di caldo: apri tu la prima discussione dalla scheda News.')}</div>
-            )}
-            {(feedCaldo || [])
-              .slice()
-              .sort((a, b) => ((b.commentCount || b.commenti || 0) - (a.commentCount || a.commenti || 0)) || ((b.createdAt || 0) - (a.createdAt || 0)))
-              .slice(0, 6)
-              .map((d, i) => (
-                <button key={d.id || i} onClick={() => setTab('news')}
-                  style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: C.accent, width: 20 }}>{i + 1}</span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.title || d.titolo}</div>
-                      <div style={{ fontSize: 11, color: C.textMuted }}>{(d.commentCount || d.commenti || 0)} {(L('commentsWord') !== 'commentsWord' ? L('commentsWord') : 'commenti')}{d.topic ? ` · ${d.topic}` : ''}</div>
-                    </div>
-                    <span style={{ color: C.textMuted }}>›</span>
-                  </div>
-                </button>
-              ))}
-
-            {/* STANZE VIVE: dove si sta parlando adesso */}
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('liveRoomsNow') !== 'liveRoomsNow' ? L('liveRoomsNow') : 'STANZE VIVE ADESSO')}</div>
-            {rooms.length === 0 && <div style={{ fontSize: 12, color: C.textMuted, padding: '4px 0 12px' }}>{(L('noLiveRooms') !== 'noLiveRooms' ? L('noLiveRooms') : 'Nessuna stanza aperta al momento.')}</div>}
-            {rooms.slice(0, 4).map((r) => (
-              <button key={r.roomId || r.id} onClick={() => onJoinRoom?.(r.roomId || r.id)}
-                style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: C.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name || r.nome || r.roomId}</div>
-                <div style={{ fontSize: 11, color: C.textMuted }}>{(r.members ?? r.partecipanti ?? 0)} {(L('inRoomWord') !== 'inRoomWord' ? L('inRoomWord') : 'dentro')}{r.lang ? ` · ${r.lang}` : ''}</div>
-              </button>
-            ))}
-
-            {/* SCORCIATOIE: cerca per interesse */}
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '14px 0 8px' }}>{(L('exploreWord') !== 'exploreWord' ? L('exploreWord') : 'ESPLORA')}</div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingBottom: 10 }}>
-              {['stanze', 'news'].map((dest) => (
-                <button key={dest} onClick={() => setTab(dest)}
-                  style={{ padding: '9px 14px', borderRadius: 999, background: 'transparent', border: `1px solid ${C.accent}55`, color: C.accent, fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>
-                  {dest === 'stanze' ? L('tabRooms') : L('tabNews')} →
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ═══ TAB NEWS ═══ */}
       {tab === 'news' && !cercando && (
@@ -392,17 +336,18 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           {/* b.324 — audit Mondo D8: su schermo largo il contenuto andava a
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
-          <div style={{ maxWidth: 680, margin: '0 auto' }}>
+          <div style={{ maxWidth: 440, margin: '0 auto' }}>
             <MondoNews C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}
 
       {/* ═══ LANGUAGE PILLS ═══ */}
-      {tab === 'stanze' && (
+      {tab === 'stanze' && !cercando && (
       <div style={{
         display: 'flex', gap: 6, padding: '0 16px 6px', overflowX: 'auto',
         WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', flexShrink: 0,
+        maxWidth: 460, margin: '0 auto', width: '100%', justifyContent: 'flex-start',
       }}>
         {LANG_FILTERS.map(lf => {
           const active = langFilter === lf.code;
@@ -457,7 +402,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // pulsanti veri li riprendono.
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
-        <div style={{ maxWidth: 680, margin: '0 auto', pointerEvents: 'auto' }}>
+        <div style={{ maxWidth: 440, margin: '0 auto', pointerEvents: 'auto' }}>
 
         {/* Loading skeleton */}
         {loading && rooms.length === 0 && (
