@@ -91,7 +91,9 @@ export function motoriAmmessi(uso) {
  * @param {string} uso — una delle costanti USO
  * @returns {boolean}
  */
-export function motoreAmmesso(motore, uso) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function motoreAmmesso(motore, uso) {
   return motoriAmmessi(uso).includes(motore);
 }
 

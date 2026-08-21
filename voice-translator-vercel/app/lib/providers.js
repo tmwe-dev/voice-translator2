@@ -51,8 +51,10 @@ export const PROVIDERS = {
 // Google (senza chiave) funziona: verificato dal vivo, traduce bene.
 // Microsoft resta in coda come ultima possibilita, non come primo.
 // ── FINE b.91 ──
-// Microsoft scored 10/10 across ALL tested languages — it's the best provider
-const MICROSOFT_BEST = new Set(['ar', 'hi', 'ru', 'tr', 'ko', 'th', 'zh', 'ja', 'en', 'es', 'fr', 'de', 'it', 'pt']);
+// b.363 — qui c'era MICROSOFT_BEST, l'elenco delle lingue in cui Microsoft
+// aveva ottenuto il punteggio pieno. Lo leggeva solo getAvailableProviders,
+// tolta poco sopra perche non la chiamava nessuno: rimasto senza lettori,
+// se ne va con lei. L'ordine dei traduttori lo decidono le catene qui sotto.
 
 // ── Default provider chains per language target ──
 // Based on Test Center results: Microsoft is primary for ALL languages
@@ -113,18 +115,9 @@ export function getProviderChain(targetLang, userOverrides) {
   return result;
 }
 
-/**
- * Get available providers for a target language (for Settings UI)
- */
-export function getAvailableProviders(targetLang) {
-  const chain = PROVIDER_CHAINS[targetLang] || PROVIDER_CHAINS['*'];
-  return chain.map(id => ({
-    id,
-    ...PROVIDERS[id],
-    recommended: chain.indexOf(id) === 0,
-    specializedFor: MICROSOFT_BEST.has(targetLang) && id === 'microsoft',
-  }));
-}
+// b.363 — qui c'era getAvailableProviders, anch'essa dichiarata "per la
+// schermata Impostazioni": l'elenco dei traduttori disponibili per una
+// lingua, con quello consigliato in cima. Nessuna schermata la chiamava.
 
 // ═══════════════════════════════════════════════
 // Translation validation

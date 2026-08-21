@@ -1,7 +1,7 @@
 'use client';
 import Icon from './Icon.js';
-import { memo, useState, useEffect, useCallback, useRef } from 'react';
-import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
+import { memo, useState, useEffect, useCallback } from 'react';
+import { FONT, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import { decryptDestination } from '../lib/taxiCrypto.js';
 import { PALETTE } from '../lib/palette.js';
@@ -88,13 +88,18 @@ function TaxiDriverView({ destId, decryptionKey }) {
           return;
         }
 
-        const res = await fetch(`/api/taxi/destination?id=${destId}`);
+        const res = await fetch(`/api/taxi/destination?id=${destId}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
         if (!res.ok) {
           if (res.status === 404) setError(L('taxiDestExpired'));
           else setError(L('loadingError'));
           setLoading(false); return;
         }
-        const { ciphertext } = await res.json();
+        // b.363 — prima la busta cifrata si leggeva senza protezione: una
+        // risposta rotta finiva nel ramo "non riesco a decifrare", e al
+        // tassista si dichiarava un guasto completamente diverso da quello vero.
+        const busta = await res.json().catch(() => null);
+        if (!busta?.ciphertext) { setError(L('loadingError')); setLoading(false); return; }
+        const { ciphertext } = busta;
 
         // Decrypt client-side — the server never saw the cleartext
         const dest = await decryptDestination(ciphertext, decryptionKey);
@@ -105,6 +110,10 @@ function TaxiDriverView({ destId, decryptionKey }) {
         const matched = DRIVER_LANGS.find(l => l.code === browserLang);
         if (matched) setDriverLang(matched.code);
       } catch (e) {
+        // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+        // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+        // scaduta, credito finito, server rotto) restava irrecuperabile.
+        if (e?.name !== 'AbortError') console.warn('[b.363] /api/taxi/destination:', e?.message || e);
         if (e?.message?.includes('decrypt') || e?.name === 'OperationError') {
           setError(L('cannotDecryptDest'));
         } else {
@@ -126,7 +135,7 @@ function TaxiDriverView({ destId, decryptionKey }) {
       setTraduzioneRespinta(false);
       try {
         // Translate address
-        const addrRes = await fetch('/api/translate', {
+        const addrRes = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -140,14 +149,16 @@ function TaxiDriverView({ destId, decryptionKey }) {
           // PARTENZA. Qui il ripiego era gia l'originale, quindi lo schermo
           // non cambiava: ma il tassista non aveva modo di sapere che stava
           // leggendo un indirizzo NON tradotto. Ora si distingue.
-          const d = await addrRes.json();
-          setTranslatedAddress(d.validationFailed ? destination.normalizedAddress : (d.translated || destination.normalizedAddress));
-          if (d.validationFailed) setTraduzioneRespinta(true);
+          // b.363 — prima la lettura non era protetta: con una risposta rotta
+          // l'indirizzo restava "in traduzione" senza mai arrivare a un esito.
+          const d = await addrRes.json().catch(() => null);
+          setTranslatedAddress(d?.validationFailed || !d ? destination.normalizedAddress : (d.translated || destination.normalizedAddress));
+          if (!d || d.validationFailed) setTraduzioneRespinta(true);
         }
 
         // Translate notes if present
         if (destination.notes) {
-          const notesRes = await fetch('/api/translate', {
+          const notesRes = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -157,9 +168,11 @@ function TaxiDriverView({ destId, decryptionKey }) {
             }),
           });
           if (notesRes.ok && !cancelled) {
-            const dn = await notesRes.json();
-            setTranslatedNotes(dn.validationFailed ? destination.notes : (dn.translated || destination.notes));
-            if (dn.validationFailed) setTraduzioneRespinta(true);
+            // b.363 — stessa cosa per le note: risposta rotta significa che si
+            // tiene l'originale e lo si DICHIARA, invece di tacere.
+            const dn = await notesRes.json().catch(() => null);
+            setTranslatedNotes(dn?.validationFailed || !dn ? destination.notes : (dn.translated || destination.notes));
+            if (!dn || dn.validationFailed) setTraduzioneRespinta(true);
           }
         }
       } catch (e) {
@@ -184,10 +197,13 @@ function TaxiDriverView({ destId, decryptionKey }) {
 
         try {
           const url = `https://router.project-osrm.org/route/v1/driving/${pos.lon},${pos.lat};${destination.lng},${destination.lat}?overview=full&steps=true`;
-          const res = await fetch(url);
+          const res = await fetch(url, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
           if (res.ok) {
-            const data = await res.json();
-            if (data.routes?.[0]) {
+            // b.363 — prima la lettura non era protetta e il percorso spariva
+            // in silenzio: il tassista restava senza indicazioni e senza motivo.
+            const data = await res.json().catch(() => null);
+            if (!data) console.warn('[b.363] percorso OSRM: risposta illeggibile');
+            if (data?.routes?.[0]) {
               const route = data.routes[0];
               setRouteInfo({
                 distKm: (route.distance / 1000).toFixed(1),

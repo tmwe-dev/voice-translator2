@@ -75,6 +75,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           (a) => registraAudio(a, r.nome || 'Tavolo'));
       }
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] perServer:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { setAttende(false); }
   }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps

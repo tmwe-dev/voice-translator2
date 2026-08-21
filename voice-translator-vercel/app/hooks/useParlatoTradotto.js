@@ -76,9 +76,14 @@ export default function useParlatoTradotto({
         if (t) fd.append('userToken', t);
       } catch { /* navigazione privata o memoria piena: si prosegue senza salvare */ }
 
-      const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
+      // b.363 — nessuna scadenza: se la trascrizione restava appesa il
+      // pulsante restava "sto scrivendo" per sempre.
+      const r = await fetch('/api/transcribe', { method: 'POST', body: fd, signal: AbortSignal.timeout(30000) });
       if (!r.ok) { setErrore(tFuori('transcribeFailed')); return; }
-      const d = await r.json();
+      // b.363 — corpo non-JSON (pagina d'errore del guardiano): la
+      // lettura esplodeva e si finiva nel catch generico "Connessione
+      // assente", che e un motivo sbagliato.
+      const d = await r.json().catch(() => ({}));
       const testo = (d.original || '').trim();
       if (!testo) return;
 
@@ -90,7 +95,11 @@ export default function useParlatoTradotto({
       if (d.creditoEsaurito) {
         window.dispatchEvent(new CustomEvent('wallet:esaurito'));
       }
-    } catch {
+    } catch (e) {
+      // b.363 — questo ripiego mostra un messaggio all'utente ma non
+      // registrava nulla: in produzione non si sapeva se fosse rete,
+      // scadenza o corpo illeggibile.
+      console.warn('[parlato-tradotto] trascrizione non riuscita:', e?.message || e);
       setErrore('Connessione assente');
     } finally {
       setStaScrivendo(false);
@@ -217,9 +226,14 @@ export function useTraduzioneInArrivo(miaLingua, { roomId, roomSessionToken, suT
           roomSessionToken: roomSessionToken || undefined,
           userToken: (() => { try { return memGet('vt-token') || ''; } catch { return ''; } })(),
         }),
+        // b.363 — traduzione senza scadenza: restava appesa e la battuta
+        // non veniva mai tradotta ne segnalata.
+        signal: AbortSignal.timeout(30000),
       });
       if (!r.ok) return;
-      const d = await r.json();
+      // b.363 — corpo non-JSON: la lettura esplodeva e si finiva nel
+      // catch, perdendo anche il segnale di credito esaurito.
+      const d = await r.json().catch(() => ({}));
       // b.363 — traduzione respinta = 200 col testo di partenza: finiva in
       // memoria E in bocca alla voce come se fosse tradotta. Resta
       // l'originale a schermo, che e la verita.

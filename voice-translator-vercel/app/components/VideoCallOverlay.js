@@ -2,7 +2,7 @@
 import { memo, useRef, useEffect, useState } from 'react';
 import AvatarImg from './AvatarImg.js';
 import { IconMic, IconKeyboard, IconVolume, IconVolumeOff, IconVolumeLow, IconCamera, IconCameraOff,
-  IconFlipCamera, IconMinimize, IconPhoneOff, IconExpand, IconRecord, IconGlobe } from './Icons.js';
+  IconFlipCamera, IconPhoneOff, IconExpand, IconGlobe } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import { traccia } from '../lib/monitorSviluppo.js';
 import { toast } from '../lib/avvisi.js';

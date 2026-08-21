@@ -81,4 +81,6 @@ export function rendiVoce(stream) {
 }
 
 /** Per il monitor: quante copie sono in giro adesso. */
-export function copieInGiro() { return inPrestito; }
+// b.363 — qui c'era copieInGiro, che diceva quante copie del microfono
+// erano in prestito. Serviva a guardare dentro, ma non la guardava
+// nessuno: ne il programma ne i collaudi.

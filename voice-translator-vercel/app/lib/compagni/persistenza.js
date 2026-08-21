@@ -62,7 +62,9 @@ export async function elencaCompagni(email) {
 const TETTO_DATAURL = 300 * 1024; // ~300 KB di base64
 const AVATAR_PREDEFINITO = '/avatars/9.png';
 
-export function avatarSicuro(v) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function avatarSicuro(v) {
   const s = typeof v === 'string' ? v.trim() : '';
   if (!s) return AVATAR_PREDEFINITO;
   if (s.startsWith('/')) return s.slice(0, 200);

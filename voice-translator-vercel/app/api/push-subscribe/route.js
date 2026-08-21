@@ -41,6 +41,39 @@ const log = createLogger('push-subscribe');
 // non tornano piu; chi usa l'applicazione la rinnova a ogni avvio.
 const TTL_ISCRIZIONE = 60 * 60 * 24 * 30;
 
+// ── b.363 · L'INDIRIZZO DELLE NOTIFICHE ARRIVAVA DAL CLIENT ──
+//
+// L'endpoint dell'iscrizione veniva salvato esattamente come arrivava, e
+// piu tardi e' il NOSTRO server a chiamarlo per consegnare la notifica.
+// Cioe: chiunque avesse una sessione poteva far chiamare al nostro server
+// un indirizzo qualsiasi — la rete interna, un indirizzo `http://`, una
+// pagina sotto il suo controllo — e il traffico partiva da noi, con la
+// nostra faccia. E non c'era nemmeno un tetto alla lunghezza: una stringa
+// da un milione di caratteri finiva in archivio senza discussioni.
+//
+// Le notifiche web passano per pochissimi servizi, e sono questi. Fuori
+// da qui non esiste una consegna legittima da accettare.
+const SERVIZI_NOTIFICHE = [
+  'push.services.mozilla.com',   // Firefox
+  'fcm.googleapis.com',          // Chrome / Android
+  'android.googleapis.com',      // Chrome (indirizzo storico)
+  'notify.windows.com',          // Edge / Windows
+  'push.apple.com',              // Safari
+];
+const MAX_ENDPOINT = 512;
+const MAX_CHIAVE = 256;
+
+function endpointAmmesso(endpoint) {
+  if (typeof endpoint !== 'string' || !endpoint || endpoint.length > MAX_ENDPOINT) return false;
+  let u;
+  try { u = new URL(endpoint); } catch { return false; }
+  // Solo https: un indirizzo in chiaro esporrebbe la notifica, e `http://`
+  // e' anche il modo piu semplice per puntare a una macchina interna.
+  if (u.protocol !== 'https:') return false;
+  const host = u.hostname.toLowerCase();
+  return SERVIZI_NOTIFICHE.some((d) => host === d || host.endsWith('.' + d));
+}
+
 export function chiaveIscrizioni(email) {
   return `push:${String(email).toLowerCase()}`;
 }
@@ -68,6 +101,19 @@ async function handlePost(request) {
     return NextResponse.json({ error: 'Iscrizione incompleta' }, { status: 400 });
   }
 
+  // b.363 — vedi la nota in cima: l'indirizzo di consegna e' un indirizzo
+  // che poi CHIAMEREMO NOI, quindi va guardato adesso, non dopo.
+  if (!endpointAmmesso(subscription.endpoint)) {
+    log.warn('iscrizione rifiutata: indirizzo di consegna non riconosciuto');
+    return NextResponse.json({ error: 'Indirizzo di consegna non ammesso' }, { status: 400 });
+  }
+  // Le due chiavi sono base64 corte: se non lo sono, non sono chiavi.
+  const { p256dh, auth } = subscription.keys;
+  if (typeof p256dh !== 'string' || typeof auth !== 'string' ||
+      p256dh.length > MAX_CHIAVE || auth.length > MAX_CHIAVE) {
+    return NextResponse.json({ error: 'Iscrizione incompleta' }, { status: 400 });
+  }
+
   const email = await identifica(request, corpo);
   if (!email) {
     return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
@@ -87,9 +133,12 @@ async function handlePost(request) {
       } catch { /* voce illeggibile: la si lascia, scadra da sola col TTL */ }
     }
 
+    // b.363 — si salvano SOLO i tre campi che servono: prima si scriveva
+    // `subscription.keys` per intero, cioe qualunque cosa il client avesse
+    // infilato dentro quell'oggetto.
     await redis('SADD', chiave, JSON.stringify({
       endpoint: subscription.endpoint,
-      keys: subscription.keys,
+      keys: { p256dh, auth },
       creata: Date.now(),
     }));
     await redis('EXPIRE', chiave, TTL_ISCRIZIONE);
@@ -117,7 +166,10 @@ async function handleDelete(request) {
   }
 
   const endpoint = corpo?.endpoint || corpo?.subscription?.endpoint;
-  if (!endpoint) {
+  // b.363 — anche in cancellazione l'indirizzo veniva confrontato senza
+  // guardarne il tipo: un oggetto qui faceva scorrere l'intero insieme
+  // delle iscrizioni per niente.
+  if (!endpoint || typeof endpoint !== 'string' || endpoint.length > MAX_ENDPOINT) {
     return NextResponse.json({ error: 'Manca l\'indirizzo del dispositivo' }, { status: 400 });
   }
 
@@ -148,6 +200,9 @@ async function handleGet() {
     // il browser accetta l'iscrizione e poi nessuna notifica arriva mai,
     // e non si capisce da dove viene il silenzio. Era esattamente il
     // caso di prima.
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Nessuno poteva iscriversi e non risultava da nessuna parte.
+    log.warn('Iscrizione notifiche: VAPID_PUBLIC_KEY non impostata');
     return NextResponse.json(
       { error: 'Notifiche non configurate', motivo: 'VAPID_PUBLIC_KEY non impostata' },
       { status: 503 },

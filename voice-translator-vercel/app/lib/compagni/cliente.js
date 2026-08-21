@@ -67,10 +67,10 @@ export async function generaTavola({ titolo, argomento, livello, ambienteId, ele
   return d.url || d.dataUrl;
 }
 
-export async function generaIconaCorso({ argomento, livello, userToken }) {
-  const d = await postJSON('/api/compagni/avatar', { tipo: 'icona', nome: argomento, descrizione: argomento, livello, userToken });
-  return d.url || d.dataUrl;
-}
+// b.363 — qui c'era generaIconaCorso, che chiedeva al server un'icona
+// disegnata per il corso. Nessuna schermata la chiamava: l'icona del
+// corso arriva gia dal catalogo. Era una spesa (una chiamata al
+// generatore di immagini) che nessuno faceva partire.
 
 // b.299 — l'arricchimento della lezione dalla COMMUNITY (il seminatore,
 // "Cobra"): link di approfondimento, video, o foto reali. Non e un

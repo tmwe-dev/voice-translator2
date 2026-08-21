@@ -101,6 +101,9 @@ async function handlePost(req) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
       if (r.motivo === 'rifiutata') return NextResponse.json({ error: 'Immagine rifiutata dal modello', motivo: 'rifiutata' }, { status: 422 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Il motivo del rifiuto del fornitore andava perso.
+      log.warn('Avatar compagno: il modello non ha prodotto immagine');
       return NextResponse.json({ error: 'Generazione non riuscita', motivo: r.motivo }, { status: 502 });
     }
 

@@ -100,11 +100,19 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       // mostravano la stessa pagina bianca e sembrava che nel mondo non
       // parlasse nessuno. Ora il guasto si dichiara e si puo riprovare.
       try {
-        const r = await fetch(`/api/mondo/discussioni${chipAttiva ? `?topic=${encodeURIComponent(chipAttiva)}` : ''}`);
+        const r = await fetch(`/api/mondo/discussioni${chipAttiva ? `?topic=${encodeURIComponent(chipAttiva)}` : ''}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
         if (!vivo) return;
-        if (r.ok) { const d = await r.json(); setFeed(d.discussioni || []); setFeedGuasto(false); }
+        // b.363 — prima la lettura non era protetta: una risposta rotta
+        // lasciava il feed vuoto SENZA dichiarare il guasto, e tornava a
+        // sembrare che nel mondo non parlasse nessuno.
+        if (r.ok) { const d = await r.json().catch(() => null); if (d) { setFeed(d.discussioni || []); setFeedGuasto(false); } else setFeedGuasto(true); }
         else setFeedGuasto(true);
-      } catch { if (vivo) setFeedGuasto(true); }
+      } catch (e) {
+        // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+        // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+        // scaduta, credito finito, server rotto) restava irrecuperabile.
+        if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+        if (vivo) setFeedGuasto(true); }
     })();
     return () => { vivo = false; };
   }, [chipAttiva, discAperta, riprova]);
@@ -138,9 +146,12 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const cercaVideoPer = useCallback(async (q) => {
     setVideo(null);
     try {
-      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`);
+      const r = await fetch(`/api/topics/video?q=${encodeURIComponent(q)}&lang=${lingua}`, { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
       if (!r.ok) return;
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta e la ricerca video moriva
+      // in silenzio, lasciando la griglia vuota senza un motivo.
+      const d = await r.json().catch(() => null);
+      if (!d) { console.warn('[b.363] topics/video: risposta illeggibile'); return; }
       setVideoAttivi(!!d.disponibile);
       // b.324 — audit Mondo D6: la griglia mostrava lo stesso video due
       // volte (fonti diverse, stesso id). Dedup per id/url prima di mostrare.
@@ -195,6 +206,10 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
         }
       }
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/search:', e?.message || e);
       if (e.name !== 'AbortError') setErrore('guasto');
     } finally {
       setCercando(false);
@@ -221,7 +236,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     setCreando(true); vibrate(12);
     try {
       const media = t.url ? { url: t.url, thumb: t.immagine || '', source: (t.fonti?.[0]?.dominio) || '' } : {};
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           azione: 'crea', userToken, nick: prefs?.mondoNick || '',
@@ -229,10 +244,17 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
           topic: chipAttiva || null, media,
         }),
       });
-      const d = await r.json();
-      if (r.ok && d.id) setDiscAperta(d.id);
+      // b.363 — prima la lettura non era protetta: con una risposta rotta il
+      // tasto "crea" restava senza esito e la discussione non si apriva.
+      const d = await r.json().catch(() => null);
+      if (r.ok && d?.id) setDiscAperta(d.id);
       else setErrore('guasto');
-    } catch { setErrore('guasto'); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      setErrore('guasto'); }
     setCreando(false);
     // b.232 — `prefs` nelle deps: il body usa prefs.mondoNick, che prima
     // poteva essere quello vecchio (stale closure).

@@ -100,7 +100,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // (se dici male "sheep" scrive "ship", e noi lo vediamo).
       fd.append('libera', '1');
       if (userToken) fd.append('userToken', userToken);
-      const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
+      const r = await fetch('/api/transcribe', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', body: fd });
       const d = await r.json().catch(() => null);
       // b.317 — GESTIONE VERA degli errori (audit 6.10): un 402 di credito non
       // e un guasto del microfono, e va detto per quello che e.
@@ -121,7 +121,11 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       Promise.resolve(onEsito?.({ punteggio: e.punteggio, daRivedere: paroleDaRivedere(e), detto }))
         .then((r) => { if (r?.ricorrenti?.[0]) allena(r.ricorrenti[0]); })
         .catch(() => { /* l'esito e un di piu */ });
-    } catch {
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/transcribe:', e?.message || e);
       setErrore('Non sono riuscito a sentirti. Riprova.');
       setStato('pronto');
     }
@@ -141,7 +145,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
         // b.322 — mentre la voce dice la frase, si CATTURA il riferimento e
         // se ne calcola l'analisi: e la "fascia attesa" del grafico.
         try {
-          const b = await fetch(audio.src).then((r) => r.blob());
+          const b = await fetch(audio.src, { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ }).then((r) => r.blob());
           rifBlobRef.current = b; // b.323 — tenuto per la ripetizione LENTA
           const { campioni, sr } = await decodifica(b);
           rifRef.current = analizza(campioni, sr);

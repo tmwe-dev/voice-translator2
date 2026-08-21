@@ -22,7 +22,9 @@ const BLOCKED_HOSTNAMES = new Set([
 const BLOCKED_SUFFIXES = ['.localhost', '.local', '.internal', '.localdomain'];
 
 /** Espande le notazioni alternative di un IPv4 in quattro ottetti. */
-export function parseIPv4(host) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function parseIPv4(host) {
   const dotted = host.split('.');
   if (dotted.length === 4 && dotted.every(p => /^\d+$/.test(p))) {
     const n = dotted.map(Number);
@@ -48,7 +50,9 @@ export function parseIPv4(host) {
 }
 
 /** Vero se l'IPv4 appartiene a una rete non instradabile. */
-export function isPrivateIPv4(o) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function isPrivateIPv4(o) {
   if (!o) return false;
   const [a, b] = o;
   if (a === 0) return true;
@@ -65,7 +69,9 @@ export function isPrivateIPv4(o) {
 }
 
 /** Vero se l'IPv6 e loopback, link-local, unique-local o mappa un IPv4 privato. */
-export function isPrivateIPv6(host) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function isPrivateIPv6(host) {
   const h = host.toLowerCase().replace(/^\[|\]$/g, '');
   if (h === '::' || h === '::1') return true;
   if (/^fe[89ab][0-9a-f]:/.test(h)) return true;
@@ -85,7 +91,9 @@ export function isPrivateIPv6(host) {
   return false;
 }
 
-export function isPrivateAddress(addr) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function isPrivateAddress(addr) {
   if (!addr) return true;
   if (addr.includes(':')) return isPrivateIPv6(addr);
   return isPrivateIPv4(parseIPv4(addr));

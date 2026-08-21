@@ -34,7 +34,12 @@ async function handlePost(req) {
     if (!mioIndirizzo) return NextResponse.json({ error: 'email non derivabile' }, { status: 400 });
 
     const sb = getSupabaseAdmin();
-    if (!sb) return NextResponse.json({ error: 'archivio non disponibile' }, { status: 503 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Il servizio era spento e sembrava acceso.
+    if (!sb) {
+      log.warn('Peepoff: archivio non configurato');
+      return NextResponse.json({ error: 'archivio non disponibile' }, { status: 503 });
+    }
 
     // ── DISPOSITIVO: pubblica le chiavi pubbliche del MIO dispositivo ──
     if (azione === 'dispositivo') {
@@ -53,7 +58,12 @@ async function handlePost(req) {
         impronta,
         presenza_scade: new Date(Date.now() + PRESENZA_TTL_MS).toISOString(),
       }, { onConflict: 'address,device_id' });
-      if (error) return NextResponse.json({ error: 'registrazione fallita' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. L errore dell archivio non usciva da nessuna parte.
+      if (error) {
+        log.error('Peepoff: registrazione fallita');
+        return NextResponse.json({ error: 'registrazione fallita' }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, indirizzo: mioIndirizzo });
     }
 
@@ -86,7 +96,12 @@ async function handlePost(req) {
       const { error } = await sb.from('peepoff_dispositivi')
         .update({ presenza_scade: spegni ? null : new Date(Date.now() + PRESENZA_TTL_MS).toISOString() })
         .eq('address', mioIndirizzo).eq('device_id', deviceId);
-      if (error) return NextResponse.json({ error: 'battito fallito' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. L errore dell archivio non usciva da nessuna parte.
+      if (error) {
+        log.error('Peepoff: battito non registrato');
+        return NextResponse.json({ error: 'battito fallito' }, { status: 500 });
+      }
       return NextResponse.json({ ok: true });
     }
 
@@ -107,7 +122,12 @@ async function handlePost(req) {
       const { error } = await sb.from('peepoff_segnali').insert({
         a_device: aDevice, da_address: mioIndirizzo, da_device: daDevice, tipo, payload,
       });
-      if (error) return NextResponse.json({ error: 'segnale non recapitato' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. L errore dell archivio non usciva da nessuna parte.
+      if (error) {
+        log.error('Peepoff: segnale non recapitato');
+        return NextResponse.json({ error: 'segnale non recapitato' }, { status: 500 });
+      }
       return NextResponse.json({ ok: true });
     }
 

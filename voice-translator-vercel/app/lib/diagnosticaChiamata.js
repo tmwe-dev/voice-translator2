@@ -90,7 +90,9 @@ export function salvaRapporto(r) {
   try { if (typeof window !== 'undefined') window.__bartalkChiamate = leggiRapporti(); } catch { /* fuori dal browser (o finestra non disponibile): la copia comoda in window salta, il rapporto resta comunque in memoria */ }
 }
 
-export function leggiRapporti() {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function leggiRapporti() {
   try { const v = JSON.parse(memGet(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
   catch { return []; }
 }

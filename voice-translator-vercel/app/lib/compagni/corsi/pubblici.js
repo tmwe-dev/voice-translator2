@@ -70,12 +70,6 @@ export async function elencaCorsiPubblici({ soloBambini = false, lingua = null, 
   return (data || []).map(daRiga);
 }
 
-/** Un singolo corso pubblico. */
-export async function getCorsoPubblico(id) {
-  if (!id) return null;
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb.from('corsi_pubblici').select('*').eq('id', id).eq('hidden', false).single();
-  if (error || !data) return null;
-  return daRiga(data);
-}
+// b.363 — qui c'era getCorsoPubblico, che leggeva un singolo corso della
+// vetrina pubblica. Nessuna rotta la chiamava: la vetrina si apre solo
+// con l'elenco, un corso alla volta non lo chiede nessuno.

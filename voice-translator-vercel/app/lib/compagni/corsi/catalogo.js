@@ -40,32 +40,25 @@ export const CATEGORIE = [
 ];
 
 /** Come piegare un corso su misura (passato al generatore). */
-export const DIREZIONI = [
-  { id: 'ampio',    etichetta: 'Più ampio',    icona: '🔭', nota: 'Panoramica, più argomenti' },
-  { id: 'specifico', etichetta: 'Più specifico', icona: '🔬', nota: 'Un aspetto in profondità' },
-  { id: 'pratico',  etichetta: 'Più pratico',  icona: '🛠️', nota: 'Esempi, esercizi, applicazioni' },
-  { id: 'teorico',  etichetta: 'Più teorico',  icona: '📖', nota: 'Fondamenti e teoria' },
-];
+// b.363 — qui c'erano DIREZIONI (le quattro direzioni in cui piegare un
+// corso: piu ampio, piu specifico, piu pratico, piu teorico) e
+// CORSI_TEMPLATE (sei corsi di partenza come scorciatoia). Due elenchi
+// pensati per l'interfaccia che l'interfaccia non ha mai letto: nessuna
+// schermata mostrava quelle scelte, e nessun collaudo le toccava.
+// Restavano promesse scritte in un file, e chi le leggeva credeva che
+// quelle funzioni esistessero gia.
 
-/** Template di partenza (scorciatoie). L'utente può ignorarli e scrivere il proprio. */
-export const CORSI_TEMPLATE = [
-  { id: 'inglese',   titolo: 'Inglese',              icona: '🇬🇧', categoria: 'lingue',      livello: 'intermedio', colore: '#1a237e' },
-  { id: 'python',    titolo: 'Python per principianti', icona: '💻', categoria: 'informatica', livello: 'base',       colore: '#2b6cb0' },
-  { id: 'filosofia', titolo: 'Storia della filosofia', icona: '🏛️', categoria: 'filosofia',   livello: 'intermedio', colore: '#6b46c1' },
-  { id: 'quantistica', titolo: 'Meccanica quantistica', icona: '⚛️', categoria: 'scienze',    livello: 'avanzato',   colore: '#0f766e' },
-  { id: 'anatomia',  titolo: 'Anatomia umana',       icona: '🫀', categoria: 'medicina',     livello: 'universitario', colore: '#b91c1c' },
-  { id: 'economia',  titolo: 'Economia comportamentale', icona: '📈', categoria: 'economia',  livello: 'avanzato',   colore: '#b45309' },
-];
-
-export function getLivello(id) { return LIVELLI.find(l => l.id === id) || null; }
-export function getCategoria(id) { return CATEGORIE.find(c => c.id === id) || null; }
+// b.363 — getLivello e getCategoria non sono piu esportate: le usa solo
+// questo file, poche righe piu sotto.
+function getLivello(id) { return LIVELLI.find(l => l.id === id) || null; }
+function getCategoria(id) { return CATEGORIE.find(c => c.id === id) || null; }
 export function categoriaCertificata(id) { return !!getCategoria(id)?.fontiCertificate; }
 
-/** Quante lezioni per un livello (il minimo del range, per non gonfiare). */
-export function lezioniPerLivello(id) {
-  const l = getLivello(id);
-  return l ? l.lezioni[0] : 5;
-}
+// b.363 — qui c'era lezioniPerLivello, che dava il minimo di lezioni per
+// livello. E stata sostituita da lezioniProfonde (b.301), che ai livelli
+// alti prende la coda della forbice invece del minimo; da allora nessuno
+// chiamava piu la vecchia, ma restava li accanto alla nuova, pronta a
+// essere ripresa per sbaglio.
 
 // b.301 — PUNTO 5: piu moduli a livello alto. La coda della forbice
 // (universitario 8-12, ricercatore 10-14) invece del minimo.

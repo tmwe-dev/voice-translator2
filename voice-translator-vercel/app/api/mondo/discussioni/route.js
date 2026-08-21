@@ -169,7 +169,12 @@ async function handlePost(req) {
         const tipo = body.tipo;
         if (!tipoValido(tipo) || !body.contenuto) return NextResponse.json({ error: 'segnalazione non valida' }, { status: 400 });
         const r = await segnala({ tipo, contenuto: body.contenuto, segnalante: idPubblico(authorEmail), motivo: body.motivo || '' });
-        if (!r.ok) return NextResponse.json({ error: 'segnalazione non riuscita' }, { status: 500 });
+        // b.363 — uscita di guasto muta: dal registro sembrava che non
+        // fosse successo niente. Una segnalazione di abuso perduta e proprio cio che non ci si puo permettere di non sapere.
+        if (!r.ok) {
+          log.error('Segnalazione non registrata');
+          return NextResponse.json({ error: 'segnalazione non riuscita' }, { status: 500 });
+        }
         return NextResponse.json({ ok: true, segnalazioni: r.segnalazioni, nascosto: r.nascosto, soglia: SOGLIA_NASCONDI });
       }
 

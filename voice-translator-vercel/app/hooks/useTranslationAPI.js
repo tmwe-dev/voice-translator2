@@ -286,14 +286,21 @@ export default function useTranslationAPI({
         translations: translations || null,
         ...(opzioni.rispostaA && { rispostaA: opzioni.rispostaA }),
         clientId: tempId, // per il dedup lato ricevente (stesso messaggio, canali diversi)
-      })
+      }),
+      // b.363 — il salvataggio del messaggio non aveva scadenza: se la
+      // richiesta restava appesa la spunta non diventava ne "inviato" ne
+      // "fallito", e la fase 2 la aspettava per sempre.
+      signal: AbortSignal.timeout(10000)
     }).then(res => {
       if (res.ok) {
         // b.120 — il server lo ha preso in carico: da qui in poi non e
         // piu "in coda". Non e ancora "consegnato": quello lo dira
         // l'altro telefono con la sua conferma.
         segnaStato('inviato');
-        return res.json().then(data => {
+        // b.363 — corpo non-JSON (il 429 del guardiano risponde in
+        // HTML): la lettura esplodeva e finiva nel catch qui sotto, che
+        // marcava "fallito" un messaggio che il server aveva accettato.
+        return res.json().catch(() => ({})).then(data => {
           if (data.message?.id && sentByMeRef) {
             sentByMeRef.current.add(data.message.id);
           }
@@ -404,7 +411,11 @@ export default function useTranslationAPI({
             translated,
             targetLang,
             translations,
-          })
+          }),
+          // b.363 — la consegna della traduzione non aveva scadenza: se
+          // restava appesa il messaggio restava per sempre non tradotto
+          // sullo schermo dell'altro, senza nessun errore.
+          signal: AbortSignal.timeout(10000)
         });
         if (!res.ok && res.status === 404 && retryCount < 2) {
           // Phase 1 POST not yet persisted — retry after delay to give it time to persist
@@ -456,10 +467,16 @@ export default function useTranslationAPI({
             // (il caso normale qui, e' il percorso "prova gratis") resta
             // semplicemente assente, come sempre.
             userToken: getEffectiveToken(),
-          })
+          }),
+          // b.363 — traduzione garantita (tre fornitori in parallelo):
+          // senza scadenza restava appesa e il messaggio non partiva.
+          signal: AbortSignal.timeout(30000)
         });
         if (!res.ok) return { translated: text };
-        const data = await res.json();
+        // b.363 — corpo non-JSON: la lettura esplodeva invece di
+        // ripiegare sul testo di partenza.
+        const data = await res.json().catch(() => ({}));
+        if (!data.translated) return { translated: text, fallback: true, traduzioneFallita: true };
         if (data.charsUsed > 0) { trackFreeChars(data.charsUsed); tracciaConsumo(roomId, data.charsUsed); }
         return data;
       }
@@ -479,10 +496,14 @@ export default function useTranslationAPI({
           roomSessionToken: roomSessionTokenRef?.current || undefined,
           // b.168 — vedi la nota sopra sulla chiamata a translate-consensus.
           userToken: getEffectiveToken(),
-        })
+        }),
+        // b.363 — traduzione gratuita: nessuna scadenza, restava appesa.
+        signal: AbortSignal.timeout(30000)
       });
       if (!res.ok) return { translated: text };
-      const data = await res.json();
+      // b.363 — vedi sopra: corpo non-JSON non deve far esplodere.
+      const data = await res.json().catch(() => ({}));
+      if (!data.translated) return { translated: text, fallback: true, traduzioneFallita: true };
       if (data.charsUsed > 0) { trackFreeChars(data.charsUsed); tracciaConsumo(roomId, data.charsUsed); }
       return data;
     }
@@ -512,7 +533,11 @@ export default function useTranslationAPI({
           ...options,
           userToken: getEffectiveToken(),
           glossario: glossarioPerTesto(text) // b.95 — i termini dell'utente
-        })
+        }),
+        // b.363 — la traduzione a pagamento non aveva scadenza: appesa,
+        // il messaggio restava in attesa senza mai cadere sul ripiego
+        // gratuito che esiste apposta.
+        signal: AbortSignal.timeout(30000)
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -524,7 +549,9 @@ export default function useTranslationAPI({
         fineTraduzione({ stato: res.status, esito: 'errore' });
         throw new Error('Translation error');
       }
-      result = await res.json();
+      // b.363 — corpo non-JSON su una risposta 200: la lettura
+      // esplodeva e si finiva nel ripiego con un motivo sbagliato.
+      result = await res.json().catch(() => ({}));
       // b.363 — LA TRAPPOLA DEL "200 CHE MENTE", sul percorso PRINCIPALE della
       // chat: quando il controllo qualita respinge la traduzione, la rotta
       // risponde 200 con il testo ORIGINALE e validationFailed:true. Senza
@@ -554,10 +581,20 @@ export default function useTranslationAPI({
             text, sourceLang, targetLang,
             roomId,
             roomSessionToken: roomSessionTokenRef?.current || undefined,
-          })
+          }),
+          // b.363 — anche il ripiego gratuito era senza scadenza: era
+          // l'ultima rete, e poteva restare appesa lasciando il
+          // messaggio senza traduzione e senza errore.
+          signal: AbortSignal.timeout(30000)
         });
         if (freeRes.ok) {
-          result = await freeRes.json();
+          // b.363 — corpo non-JSON anche qui: si tratta come un ripiego
+          // fallito invece di far esplodere tutta la catena.
+          result = await freeRes.json().catch(() => null);
+          if (!result?.translated) {
+            console.error('[translateUniversal] Free fallback: risposta non leggibile');
+            return { translated: text, fallback: true, traduzioneFallita: true };
+          }
         } else {
           // b.363 — quando ANCHE il ripiego cade, si restituisce il testo di
           // partenza: giusto, ma prima usciva marchiato solo `fallback`, che

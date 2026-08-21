@@ -185,9 +185,14 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     if (!url) return null;
     if (url.startsWith('data:')) return url;
     try {
-      const blob = await fetch(url).then((r) => r.blob());
+      const blob = await fetch(url, { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ }).then((r) => r.blob());
       return await new Promise((res) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
-    } catch { return null; }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] urlToDataUrl:', e?.message || e);
+      return null; }
   }, []);
 
   // b.221/b.223 — core di generazione immagine (gpt-image-1). Prende i campi

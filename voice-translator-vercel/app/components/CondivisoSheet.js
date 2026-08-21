@@ -26,7 +26,7 @@ function CondivisoSheet({ condiviso, onParlane, onLife, onChiudi, L }) {
   useEffect(() => {
     if (!condiviso?.url) return;
     let vivo = true;
-    fetch(`/api/topics/link?url=${encodeURIComponent(condiviso.url)}`)
+    fetch(`/api/topics/link?url=${encodeURIComponent(condiviso.url)}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (vivo && d) setMeta(d); })
       .catch(() => { /* i metadati sono un di piu: titolo e testo bastano */ });

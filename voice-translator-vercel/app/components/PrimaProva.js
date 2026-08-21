@@ -75,13 +75,18 @@ export default function PrimaProva({ onChiudi }) {
       // meglio una voce che nessuna voce.
       let v = null;
       try {
-        v = await fetch('/api/tts-elevenlabs', {
+        v = await fetch('/api/tts-elevenlabs', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: t, langCode: lingua }),
         });
-      } catch { v = null; /* ElevenLabs irraggiungibile: si prova la voce di sistema */ }
+      } catch (e) {
+        // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+        // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+        // scaduta, credito finito, server rotto) restava irrecuperabile.
+        if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
+        v = null; /* ElevenLabs irraggiungibile: si prova la voce di sistema */ }
       if (!v || !v.ok) {
-        v = await fetch('/api/tts-edge', {
+        v = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: t, langCode: lingua }),
         });
@@ -94,7 +99,12 @@ export default function PrimaProva({ onChiudi }) {
       audio.onended = () => { URL.revokeObjectURL(url); setStato('quieto'); };
       audio.onerror = () => setStato('quieto');
       audio.play().catch(() => setStato('quieto'));
-    } catch { setStato('quieto'); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
+      setStato('quieto'); }
   }, [meta]);
 
   // ── LA TRADUZIONE: la frase finita entra nel registro, con la voce ──
@@ -112,7 +122,7 @@ export default function PrimaProva({ onChiudi }) {
     const mio = ++numeroRef.current;
     setStato('traduco');
     try {
-      const r = await fetch('/api/translate', {
+      const r = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: t, sourceLang: miaLingua, targetLang: meta,
@@ -153,7 +163,12 @@ export default function PrimaProva({ onChiudi }) {
       // La voce parte da sola — ma NON mentre il microfono e aperto,
       // altrimenti il telefono detta a se stesso la propria traduzione.
       if (!dettoRef.current) parla(d.translated);
-    } catch { if (mio === numeroRef.current) setStato('errore'); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      if (mio === numeroRef.current) setStato('errore'); }
   }, [miaLingua, meta, parla]);
 
   useEffect(() => { testoRef.current = testo; }, [testo]);

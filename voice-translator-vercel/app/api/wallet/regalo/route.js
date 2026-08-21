@@ -3,6 +3,11 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { getSession } from '../../../lib/users.js';
 import { inviaRegalo, riscattaRegalo } from '../../../wallet/regali.js';
 import { formattaDurata } from '../../../wallet/tariffe.js';
+// b.363 — questo file non aveva alcun registro: ogni suo guasto usciva
+// dalla porta senza lasciare una riga da nessuna parte.
+import { createLogger } from '../../../lib/logger.js';
+
+const log = createLogger('walletRegalo');
 
 // ═══════════════════════════════════════════════════════════════
 // REGALO MINUTI — il ponte che mancava.
@@ -66,6 +71,9 @@ async function handlePost(req) {
 
     return NextResponse.json({ error: 'azione sconosciuta' }, { status: 400 });
   } catch (e) {
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Un trasferimento di credito fallito spariva senza lasciare niente.
+    log.error('Regalo minuti: errore imprevisto', { err: e?.message });
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

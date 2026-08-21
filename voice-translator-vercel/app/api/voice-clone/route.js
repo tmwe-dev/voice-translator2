@@ -39,10 +39,24 @@ async function handlePost(req) {
   let riservaId = null;
   try {
     const formData = await req.formData();
-    const userToken = formData.get('userToken');
-    const voiceName = formData.get('voiceName') || 'My Voice';
+
+    // ── b.363 · IL MODULO ARRIVAVA E SI USAVA COM'ERA ──
+    //
+    // `formData.get()` restituisce una stringa OPPURE un file: nessuno
+    // guardava quale delle due. `userToken` finiva nella ricerca della
+    // sessione anche se era un file; `voiceName` veniva spedito a
+    // ElevenLabs e poi salvato sul profilo con qualunque lunghezza; e
+    // `audio` era accettato senza controllarne ne il tipo ne il peso —
+    // cioe si poteva caricare qualsiasi cosa e mandarla a un servizio a
+    // pagamento a nostro nome. Il limite generale della guardia comune
+    // (256KB) non copre i moduli, che possono essere molto piu grandi.
+    const MAX_AUDIO = 10 * 1024 * 1024; // dieci megabyte: un campione voce e' molto meno
+    const testo = (v, max) => (typeof v === 'string' && v.length <= max ? v : null);
+
+    const userToken = testo(formData.get('userToken'), 200);
+    const voiceName = testo(formData.get('voiceName'), 60) || 'My Voice';
     const audioFile = formData.get('audio');
-    const action = formData.get('action');
+    const action = testo(formData.get('action'), 20);
 
     // Delete action (sent as FormData for consistency)
     if (action === 'delete') {
@@ -51,6 +65,13 @@ async function handlePost(req) {
 
     if (!userToken || !audioFile) {
       return NextResponse.json({ error: 'userToken and audio required' }, { status: 400 });
+    }
+    if (typeof audioFile === 'string' || typeof audioFile.arrayBuffer !== 'function') {
+      return NextResponse.json({ error: 'audio deve essere un file' }, { status: 400 });
+    }
+    if (typeof audioFile.size === 'number' && audioFile.size > MAX_AUDIO) {
+      log.warn('campione voce rifiutato: troppo grande', { byte: audioFile.size });
+      return NextResponse.json({ error: 'Campione audio troppo grande (max 10MB)' }, { status: 413 });
     }
 
     // Auth check
@@ -148,6 +169,9 @@ async function handlePost(req) {
     if (!voiceId) {
       // b.164 — stesso discorso: nessun voice_id, nessun addebito.
       if (riservaId) { await release(riservaId, 'elevenlabs_no_voice_id'); riservaId = null; }
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Una clonazione a pagamento andata a vuoto spariva dal registro.
+      log.error('Clonazione voce: ElevenLabs non ha restituito voice_id');
       return NextResponse.json({ error: 'No voice_id returned from ElevenLabs' }, { status: 500 });
     }
 
@@ -224,6 +248,10 @@ async function handleGet(req) {
     });
 
   } catch (e) {
+    // b.363 — uscita di guasto muta: dal registro sembrava che non fosse
+    // successo niente. Il client riceveva 'Internal error' e anche noi,
+    // dopo, avevamo esattamente la stessa informazione: nessuna.
+    log.error('Stato voce clonata: errore imprevisto', { err: e?.message });
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
@@ -273,6 +301,9 @@ async function handleDelete(userToken) {
 
     return NextResponse.json({ ok: true });
   } catch (e) {
+    // b.363 — stessa uscita muta: una cancellazione di voce fallita non
+    // lasciava niente nel registro.
+    log.error('Cancellazione voce clonata: errore imprevisto', { err: e?.message });
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }

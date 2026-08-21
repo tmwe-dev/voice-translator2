@@ -83,17 +83,25 @@ function TaxiDestinationPanel({ onDestinationReady, onClose, targetLang, S }) {
         : '';
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${encoded}${bias}&format=json&limit=5&addressdetails=1`,
-        { headers: { 'Accept-Language': targetLang || 'en' } }
+        { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: { 'Accept-Language': targetLang || 'en' } }
       );
       if (!res.ok) throw new Error('Geocoding failed');
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: la ricerca dell'indirizzo
+      // usciva senza esito e l'elenco restava quello di prima.
+      const data = await res.json().catch(() => null);
+      if (!data) { setSearchError(L('searchError')); setSearching(false); return; }
       if (data.length === 0) setSearchError(L('noResultFound'));
       setSearchResults(data.map(p => ({
         lat: parseFloat(p.lat), lon: parseFloat(p.lon),
         displayName: p.display_name, type: p.type || '',
         address: p.address || {},
       })));
-    } catch { setSearchError(L('searchError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      setSearchError(L('searchError')); }
     setSearching(false);
   }, [targetLang, L, userPos]);
 

@@ -47,8 +47,14 @@ async function handlePost(req) {
     if (azione === 'elenca') return NextResponse.json({ ok: true, jobs: await elencaJobs(email) });
     if (azione === 'salva') {
       const salvato = await salvaJob(email, body.job || {});
-      return salvato ? NextResponse.json({ ok: true, job: salvato })
-        : NextResponse.json({ error: 'Salvataggio non riuscito' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non fosse
+      // successo niente. Il compito dell'utente non veniva salvato e
+      // l'unico a saperlo era lui, dallo schermo.
+      if (!salvato) {
+        log.error('Compiti: job non salvato');
+        return NextResponse.json({ error: 'Salvataggio non riuscito' }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, job: salvato });
     }
     if (azione === 'stato') {
       const ok = await cambiaStatoJob(email, String(body.id || ''), String(body.stato || ''));
@@ -61,8 +67,13 @@ async function handlePost(req) {
     if (azione === 'materiali') return NextResponse.json({ ok: true, materiali: await elencaMateriali(email) });
     if (azione === 'salvaMateriale') {
       const salvato = await salvaMateriale(email, body.materiale || {});
-      return salvato ? NextResponse.json({ ok: true, materiale: salvato })
-        : NextResponse.json({ error: 'Materiale non salvato' }, { status: 500 });
+      // b.363 — stessa uscita muta della riga sopra: il materiale caricato
+      // spariva e nel registro non restava niente.
+      if (!salvato) {
+        log.error('Compiti: materiale non salvato');
+        return NextResponse.json({ error: 'Materiale non salvato' }, { status: 500 });
+      }
+      return NextResponse.json({ ok: true, materiale: salvato });
     }
     // b.333 — OCR con l'AI (il gradino a pagamento della cascata): la foto
     // degli appunti diventa testo fedele + una tabella strutturata. Costa
@@ -79,6 +90,9 @@ async function handlePost(req) {
       });
       if (!r.ok) {
         if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+        // b.363 — uscita di guasto muta: dal registro sembrava che non
+        // fosse successo niente. Una chiamata a pagamento fallita spariva dal registro.
+        log.warn('Compiti: lettura OCR a pagamento non riuscita');
         return NextResponse.json({ error: 'Lettura non riuscita', motivo: r.motivo }, { status: 502 });
       }
       const { estraiJSON } = await import('../../lib/compagni/corsi/generatore.js');

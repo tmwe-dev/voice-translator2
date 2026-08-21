@@ -43,10 +43,36 @@ async function handlePost(request) {
   let riservaId = null;
   try {
     const body = await request.json();
-    const { action, messages, members, mode, domain, userToken, lendingCode, roomId, roomSessionToken } = body;
 
-    if (!action || !messages?.length) {
+    // ── b.363 · L'INTERO CORPO ANDAVA AL MODELLO SENZA UN CONTROLLO ──
+    //
+    // `messages` veniva passato dritto a chi costruisce la trascrizione,
+    // che fa `messages.length` e poi `.map(...)`: se non era una lista, la
+    // rotta esplodeva con un 500 nostro; se era una lista di centomila
+    // messaggi da un megabyte l'uno, diventava una chiamata a pagamento
+    // enorme, addebitata a noi. `action` sceglieva le istruzioni da
+    // mandare, e `mode`/`domain` finivano DENTRO quelle istruzioni: tre
+    // valori scritti dal client dentro il messaggio di sistema del modello.
+    // Le azioni possibili sono cinque e si sanno.
+    const AZIONI = ['summary', 'report', 'analysis', 'advice', 'vocabulary'];
+    const MAX_MESSAGGI = 2000;
+    const parola = (v, max) => (typeof v === 'string' && v.length <= max ? v : undefined);
+
+    const action = parola(body?.action, 20);
+    const messages = body?.messages;
+    const members = Array.isArray(body?.members) ? body.members.slice(0, 50) : undefined;
+    const mode = parola(body?.mode, 40);
+    const domain = parola(body?.domain, 60);
+    const userToken = parola(body?.userToken, 200);
+    const lendingCode = parola(body?.lendingCode, 60);
+    const roomId = parola(body?.roomId, 64);
+    const roomSessionToken = parola(body?.roomSessionToken, 200);
+
+    if (!action || !AZIONI.includes(action) || !Array.isArray(messages) || !messages.length) {
       return NextResponse.json({ error: 'action and messages required' }, { status: 400 });
+    }
+    if (messages.length > MAX_MESSAGGI) {
+      return NextResponse.json({ error: 'Troppi messaggi' }, { status: 413 });
     }
 
     // ── Direct mode guard ──

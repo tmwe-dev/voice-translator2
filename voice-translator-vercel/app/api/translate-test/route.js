@@ -27,7 +27,18 @@ async function handlePost(req) {
     if (!safeCompare(pass, adminPass)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const { text, sourceLang, targetLang, userEmail } = await req.json();
+    // b.363 — il testo veniva mandato a TUTTI i fornitori in parallelo
+    // senza che nessuno ne guardasse la lunghezza: un corpo da qualche
+    // centinaio di migliaia di caratteri diventava altrettante chiamate a
+    // pagamento, moltiplicate per il numero di fornitori. E le due lingue
+    // finivano dentro le istruzioni mandate al modello senza controllo di
+    // forma. Ottomila caratteri sono gia molto piu di una prova.
+    const corpo = await req.json();
+    const parola = (v, max) => (typeof v === 'string' && v.length <= max ? v : undefined);
+    const text = parola(corpo?.text, 8000);
+    const sourceLang = parola(corpo?.sourceLang, 12);
+    const targetLang = parola(corpo?.targetLang, 12);
+    const userEmail = parola(corpo?.userEmail, 254);
     if (!text?.trim()) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
     }

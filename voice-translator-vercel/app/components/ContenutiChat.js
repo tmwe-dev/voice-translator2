@@ -53,10 +53,17 @@ function ContenutiChat({ messages, S, L, onApri }) {
       setSchede(s => ({ ...s, [url]: 'carico' }));
       (async () => {
         try {
-          const r = await fetch(`/api/topics/link?url=${encodeURIComponent(url)}`);
-          const d = await r.json();
-          setSchede(s => ({ ...s, [url]: d.ok ? { tipo: d.tipo, dati: d.dati } : 'errore' }));
-        } catch { setSchede(s => ({ ...s, [url]: 'errore' })); }
+          const r = await fetch(`/api/topics/link?url=${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
+          // b.363 — prima la lettura non era protetta e la scheda restava
+          // per sempre in stato "carico": chi guardava non vedeva mai un esito.
+          const d = await r.json().catch(() => null);
+          setSchede(s => ({ ...s, [url]: d?.ok ? { tipo: d.tipo, dati: d.dati } : 'errore' }));
+        } catch (e) {
+          // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+          // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+          // scaduta, credito finito, server rotto) restava irrecuperabile.
+          if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/link:', e?.message || e);
+          setSchede(s => ({ ...s, [url]: 'errore' })); }
       })();
     }
   }, [link]);

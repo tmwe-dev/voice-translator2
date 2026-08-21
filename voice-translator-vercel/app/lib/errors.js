@@ -123,9 +123,7 @@ function defaultMessage(code) {
   return messages[code] || 'An error occurred';
 }
 
-/**
- * Get HTTP status for an error code
- */
-export function getErrorStatus(code) {
-  return STATUS_MAP[code] || 500;
-}
+// b.363 — qui c'era getErrorStatus, che traduceva un codice d'errore nel
+// numero di stato HTTP. Nessuno la chiamava: la stessa traduzione la fa
+// gia la funzione che costruisce la risposta d'errore, poche righe sopra.
+// Erano due strade per lo stesso lavoro, e una era senza traffico.

@@ -95,6 +95,10 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce },
         (a) => registraAudio(a, scelto?.nome || 'Amico'));
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] nuovi:', e?.message || e);
       if (sceltoRef.current?.id !== idAtt) return;
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
     } finally { if (sceltoRef.current?.id === idAtt) setAttende(false); }

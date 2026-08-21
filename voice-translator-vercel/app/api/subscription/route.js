@@ -66,7 +66,17 @@ const PLANS = {
 
 async function handlePost(req) {
   try {
-    const { action, token } = await req.json();
+    // b.363 — `action` decideva quale ramo eseguire e `token` andava
+    // dritto nella ricerca della sessione, entrambi senza un controllo:
+    // un valore che non e una parola arrivava fino al database sotto forma
+    // di chiave malformata. Le azioni ammesse sono cinque e si sanno.
+    const corpo = await req.json();
+    const AZIONI = ['plans', 'subscribe', 'portal', 'status', 'cancel'];
+    const action = typeof corpo?.action === 'string' ? corpo.action : null;
+    if (!action || !AZIONI.includes(action)) {
+      return NextResponse.json({ error: 'action non valida' }, { status: 400 });
+    }
+    const token = typeof corpo?.token === 'string' && corpo.token.length <= 200 ? corpo.token : undefined;
 
     if (!action) return NextResponse.json({ error: 'No action' }, { status: 400 });
 

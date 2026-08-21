@@ -1,7 +1,6 @@
 'use client';
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
-import Icon from './Icon.js';
 import { useApp } from '../contexts/AppContext.js';
 
 // ═══════════════════════════════════════════════════════════════
@@ -41,9 +40,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
 
   const carica = useCallback(async () => {
     try {
-      const r = await fetch(`/api/mondo/discussioni?disc=${encodeURIComponent(discussionId)}`);
+      const r = await fetch(`/api/mondo/discussioni?disc=${encodeURIComponent(discussionId)}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
       if (!r.ok) throw new Error('load');
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta: la discussione restava
+      // vuota senza che il guasto venisse mai dichiarato.
+      const d = await r.json().catch(() => null);
+      if (!d) throw new Error('risposta illeggibile');
       setDisc(d.discussione || null);
       setCommenti(d.commenti || []);
       // b.363 — e poi COSA HO GIA FATTO io qui: quali cuori ho messo, chi
@@ -52,7 +54,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // In POST: il gettone non deve viaggiare dentro un indirizzo.
       if (userToken) {
         const lista = d.commenti || [];
-        fetch('/api/mondo/discussioni', {
+        fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             azione: 'miei', userToken,
@@ -65,7 +67,12 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           if (dd.seguiti?.length) setSeguiti(new Set(dd.seguiti));
         }).catch(() => { /* senza questo elenco si riparte a zero, come prima: non e un guasto */ });
       }
-    } catch { setErrore(L('loadingError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      setErrore(L('loadingError')); }
     setCaricando(false);
   }, [discussionId, userToken, L]);
 
@@ -79,7 +86,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     }
     setTradotti(t => ({ ...t, [chiave]: '…' }));
     try {
-      const r = await fetch('/api/translate', {
+      const r = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: testoOrig, sourceLang: linguaOrig || 'auto', targetLang: mia,
@@ -87,14 +94,21 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           userToken: userToken || '',
         }),
       });
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta: con una risposta rotta la
+      // traduzione restava sui puntini per sempre.
+      const d = await r.json().catch(() => null);
+      if (!d) { setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; }); return; }
       // b.363 — non si spaccia l'ORIGINALE per traduzione: se la risposta non
       // e valida (errore, credito finito, o traduzione respinta dal controllo
       // qualita) si toglie la voce invece di salvare il testo di partenza.
       const buona = r.ok && !d.validationFailed && (d.translated || d.translation);
       if (!buona) { setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; }); return; }
       setTradotti(t => ({ ...t, [chiave]: buona }));
-    } catch {
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
       setTradotti(t => { const n = { ...t }; delete n[chiave]; return n; });
     }
   }, [tradotti, mia, userToken]);
@@ -106,14 +120,19 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     setInviando(true); setErrore('');
     vibrate(10);
     try {
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'commenta', userToken, discussionId, text: t, lang: mia, nick: nick.trim() }),
       });
       if (r.status === 401) { setErrore(L('accessToCreate')); }
       else if (!r.ok) { setErrore(L('loadingError')); }
       else { setTesto(''); await carica(); requestAnimationFrame(() => scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight)); }
-    } catch { setErrore(L('networkError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      setErrore(L('networkError')); }
     setInviando(false);
   }, [testo, inviando, userToken, discussionId, mia, nick, L, carica]);
 
@@ -128,12 +147,16 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       // b.255 — anche una risposta di rifiuto (403, 429, 500) va trattata
       // come un fallimento: prima si guardava solo l'eccezione di rete, e
       // un "no" del server lasciava il pulsante acceso per sempre.
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
       });
       if (!r.ok) throw new Error('rifiutato');
-    } catch {
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
       setSeguiti(s => { const n = new Set(s); if (gia) n.add(publicId); else n.delete(publicId); return n; });
       // b.255 — il pulsante tornava indietro DA SOLO, in silenzio: sembrava
       // che l'applicazione ci ripensasse. Ora si dice che non e riuscito.
@@ -270,7 +293,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     vibrate(8);
     setDiscSegnalata(true);
     try {
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'segnala', userToken, tipo: 'discussione', contenuto: discussionId }),
       });
@@ -287,7 +310,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     vibrate(8);
     setSegnalati((v) => new Set(v).add(commentId));
     try {
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'segnala', userToken, tipo: 'commento', contenuto: commentId }),
       });
@@ -305,7 +328,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
     if (likeMessi.has(commentId)) return;
     vibrate(8);
     try {
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: 'like', userToken, commentId }),
       });

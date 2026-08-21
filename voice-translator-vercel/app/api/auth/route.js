@@ -11,7 +11,31 @@ const log = createLogger('auth');
 // POST /api/auth - Handle auth actions
 async function handler(req) {
   try {
-    const { action, email, code, name, lang, avatar, token, referralCode } = await req.json();
+    const corpo = await req.json();
+
+    // b.363 — TUTTO quello che segue arrivava dal client e veniva usato
+    // cosi com'era: `email` finiva in una chiave del database e nel
+    // destinatario di una vera email, `name` e `avatar` venivano scritti
+    // sul profilo, `token` nella ricerca della sessione. Nessuno guardava
+    // se fossero stringhe: mandando un oggetto o una lista al posto di una
+    // parola si scriveva spazzatura in archivio, e con una stringa da un
+    // milione di caratteri si riempiva il database. Qui non cambia nulla
+    // per chi manda dati normali: si rifiuta solo cio che non e una
+    // parola, o che e assurdamente lungo.
+    const parola = (v, max) => (typeof v === 'string' && v.length <= max ? v : undefined);
+    const AZIONI = ['send-code', 'verify', 'me', 'logout'];
+
+    const action = parola(corpo?.action, 20);
+    if (!action || !AZIONI.includes(action)) {
+      return NextResponse.json({ error: 'action non valida' }, { status: 400 });
+    }
+    const email = parola(corpo?.email, 254);
+    const code = parola(corpo?.code, 12);
+    const name = parola(corpo?.name, 80);
+    const lang = parola(corpo?.lang, 12);
+    const avatar = parola(corpo?.avatar, 300);
+    const token = parola(corpo?.token, 200);
+    const referralCode = parola(corpo?.referralCode, 40);
 
     // Rate limit OTP (prefix DEDICATO: prima usava 'auth' — lo stesso del
     // guard esterno — così ogni chiamata contava DOPPIO e il limite reale

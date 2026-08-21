@@ -23,7 +23,9 @@
 // ── ELEVENLABS DEFAULT VOICES PER LANGUAGE ──
 // Format: { female: 'voice_id', male: 'voice_id' }
 // Set to null to use ElevenLabs' own default
-export const EL_VOICES_BY_LANG = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const EL_VOICES_BY_LANG = {
   // European languages
   'en': { female: null, male: null },       // ElevenLabs default — already optimized for English
   'it': { female: null, male: null },       // Use ElevenLabs default
@@ -61,7 +63,9 @@ export const EL_VOICES_BY_LANG = {
 // ── OPENAI TTS DEFAULT VOICE PER LANGUAGE ──
 // Available voices: 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer'
 // Set to null to use the global default (nova)
-export const OPENAI_VOICES_BY_LANG = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const OPENAI_VOICES_BY_LANG = {
   'th': 'shimmer',   // Shimmer: clearer tone separation for tonal languages
   'zh': 'shimmer',
   'ja': 'nova',      // Nova: natural pitch accent
@@ -78,7 +82,9 @@ export const OPENAI_VOICES_BY_LANG = {
 // ── EDGE TTS SPEED PER LANGUAGE ──
 // Asian tonal languages need slower delivery for clarity
 // Format: rate string for Edge TTS ('+0%' = normal)
-export const EDGE_RATE_BY_LANG = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const EDGE_RATE_BY_LANG = {
   'th': '-12%',
   'zh': '-8%',
   'ja': '-8%',
@@ -91,7 +97,9 @@ export const EDGE_RATE_BY_LANG = {
 
 // ── OPENAI TTS SPEED PER LANGUAGE ──
 // 1.0 = normal, 0.9 = 10% slower
-export const OPENAI_SPEED_BY_LANG = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const OPENAI_SPEED_BY_LANG = {
   'th': 0.9,
   'zh': 0.92,
   'ja': 0.92,
@@ -102,7 +110,9 @@ export const OPENAI_SPEED_BY_LANG = {
 
 // ── ELEVENLABS MODEL PER LANGUAGE ──
 // flash_v2_5 = fastest (75ms), multilingual_v2 = broadest, v3 = newest
-export const EL_MODEL_BY_LANG = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const EL_MODEL_BY_LANG = {
   'th': 'eleven_v3',
   'vi': 'eleven_v3',
   'hu': 'eleven_v3',

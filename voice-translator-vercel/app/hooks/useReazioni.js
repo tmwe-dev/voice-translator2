@@ -25,9 +25,24 @@ export default function useReazioni({ roomId, roomSessionToken, msgIds = [] }) {
       const r = await fetch('/api/reazioni', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ roomId, roomSessionToken, ...corpo }),
+        // b.363 — le reazioni non avevano scadenza: una rete appesa
+        // lasciava il pollice a meta, gia contato sullo schermo ma mai
+        // consegnato, e il ripristino di b.126 non partiva mai.
+        signal: AbortSignal.timeout(10000),
       });
-      return await r.json();
-    } catch { return null; }
+      // b.363 — quando il guardiano risponde 429 il corpo e HTML: la
+      // lettura esplodeva dentro il try e la reazione tornava indietro
+      // senza che restasse traccia del motivo.
+      const d = await r.json().catch(() => null);
+      if (!d) console.warn('[reazioni] risposta non leggibile, stato', r.status);
+      return d;
+    } catch (e) {
+      // b.363 — questo ripiego cambia cio che l'utente vede (la reazione
+      // torna indietro) ma non registrava nulla: in produzione era un
+      // guasto invisibile.
+      console.warn('[reazioni] chiamata non riuscita:', e?.message || e);
+      return null;
+    }
   }, [roomId, roomSessionToken]);
 
   // ── Carica i conteggi dei messaggi visibili, in blocco ──

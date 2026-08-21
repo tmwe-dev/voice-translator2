@@ -40,7 +40,12 @@ async function handlePost(req) {
     }
 
     const sb = getSupabaseAdmin();
-    if (!sb) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Il cruscotto restava vuoto e nessuno sapeva perche.
+    if (!sb) {
+      log.warn('Cruscotto amministrazione: Supabase non configurato');
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
 
     const numDays = days || 30;
     const numLimit = Math.min(limit || 50, 200);
@@ -84,13 +89,33 @@ async function handlePost(req) {
         .order('created_at', { ascending: false })
         .range(numPage * numLimit, (numPage + 1) * numLimit - 1);
 
-      if (search) {
-        const sanitized = search.replace(/[%_\\]/g, '\\$&').substring(0, 100);
-        query = query.or(`email.ilike.%${sanitized}%,name.ilike.%${sanitized}%`);
+      // b.363 — il testo di ricerca entrava nella stringa del filtro dopo
+      // aver neutralizzato SOLO i caratteri jolly. Ma quella stringa e' un
+      // elenco separato da virgole, con punti e parentesi che hanno un
+      // significato per chi la interpreta: una virgola o una parentesi nel
+      // testo cercato cambiava la forma del filtro, non solo il suo
+      // contenuto. E il taglio a cento caratteri arrivava DOPO, quindi non
+      // proteggeva da un valore che non fosse nemmeno una parola.
+      // Ora: dev'essere una parola, si taglia prima, e restano solo i
+      // caratteri che hanno senso in un nome o in un indirizzo email.
+      if (typeof search === 'string' && search.trim()) {
+        const ripulito = search
+          .substring(0, 60)
+          .replace(/[^\p{L}\p{N}@._+ -]/gu, '')
+          .trim();
+        if (ripulito) {
+          const sanitized = ripulito.replace(/[%_\\]/g, '\\$&');
+          query = query.or(`email.ilike.%${sanitized}%,name.ilike.%${sanitized}%`);
+        }
       }
 
       const { data, error, count } = await query;
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Era una query fallita, e il motivo si perdeva.
+      if (error) {
+        log.error('Elenco utenti: query fallita');
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
       return NextResponse.json({ users: data || [], total: count });
     }
 

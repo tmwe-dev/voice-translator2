@@ -4,25 +4,26 @@
 //
 // All functions use the admin client (bypasses RLS)
 // For use in API routes only
+//
+// b.363 — QUESTO FILE ERA PER DUE TERZI UN MAGAZZINO CHIUSO: su
+// ventinove funzioni ne chiamavano solo otto (le tre rotte di traduzione,
+// utente e pagamenti Stripe). Le altre ventuno — cassaforte delle chiavi,
+// conversazioni, glossari, statistiche, cancellazione totale del profilo,
+// listino abbonamenti — non erano raggiunte da nessuna riga viva del
+// programma, ma parlavano lo stesso con tabelle vere: chi leggeva il file
+// credeva che quelle strade fossero in uso e che quelle tabelle fossero
+// alimentate, e ogni ritocco allo schema del database costava lavoro su
+// codice che nessuno eseguiva. Sono state tolte. Il vecchio testo resta
+// nella storia del progetto, se un giorno servissero davvero.
 // ═══════════════════════════════════════════════
 
-import { getSupabaseAdmin, isSupabaseEnabled } from './supabase.js';
+// b.363 — isSupabaseEnabled era importato e mai usato: portato dentro
+// insieme al resto quando il file fu adattato, non lo chiamava nessuno.
+import { getSupabaseAdmin } from './supabase.js';
 import { createLogger } from './logger.js';
 const log = createLogger('supabaseAPI');
 
 // ── Profile ──
-
-export async function getProfile(userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
-  if (error) { log.error('getProfile error:', error.message); return null; }
-  return data;
-}
 
 export async function getProfileByEmail(email) {
   const sb = getSupabaseAdmin();
@@ -33,19 +34,6 @@ export async function getProfileByEmail(email) {
     .eq('email', email.toLowerCase())
     .single();
   if (error) return null;
-  return data;
-}
-
-export async function updateProfile(userId, updates) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('profiles')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', userId)
-    .select()
-    .single();
-  if (error) { log.error('updateProfile error:', error.message); return null; }
   return data;
 }
 
@@ -75,61 +63,6 @@ export async function saveUserSettings(userId, settings) {
   return data;
 }
 
-// ── API Keys Vault ──
-
-export async function getVaultKeys(userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('api_keys_vault')
-    .select('provider, model, created_at')
-    .eq('user_id', userId);
-  if (error) return [];
-  return data;
-}
-
-export async function saveVaultKey(userId, provider, encryptedKey, model) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('api_keys_vault')
-    .upsert({
-      user_id: userId,
-      provider,
-      encrypted_key: encryptedKey,
-      model,
-      updated_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
-  if (error) { log.error('saveVaultKey error:', error.message); return null; }
-  return data;
-}
-
-export async function getVaultKey(userId, provider) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('api_keys_vault')
-    .select('encrypted_key, model')
-    .eq('user_id', userId)
-    .eq('provider', provider)
-    .single();
-  if (error) return null;
-  return data;
-}
-
-export async function deleteVaultKey(userId, provider) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return false;
-  const { error } = await sb
-    .from('api_keys_vault')
-    .delete()
-    .eq('user_id', userId)
-    .eq('provider', provider);
-  return !error;
-}
-
 // ── Translations ──
 
 export async function saveTranslation(translation) {
@@ -144,107 +77,6 @@ export async function saveTranslation(translation) {
   return data;
 }
 
-export async function getUserTranslations(userId, limit = 50, offset = 0) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('translations')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
-  if (error) return [];
-  return data;
-}
-
-// ── Conversations ──
-
-export async function saveConversation(conversation) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('conversations')
-    .insert(conversation)
-    .select()
-    .single();
-  if (error) { log.error('saveConversation error:', error.message); return null; }
-  return data;
-}
-
-export async function getUserConversations(userId, limit = 50) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('conversations')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false })
-    .limit(limit);
-  if (error) return [];
-  return data;
-}
-
-export async function getConversation(conversationId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('conversations')
-    .select('*')
-    .eq('id', conversationId)
-    .single();
-  if (error) return null;
-  return data;
-}
-
-// ── Glossaries ──
-
-export async function getUserGlossaries(userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('glossaries')
-    .select('*')
-    .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
-  if (error) return [];
-  return data;
-}
-
-export async function saveGlossary(glossary) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('glossaries')
-    .upsert({ ...glossary, updated_at: new Date().toISOString() })
-    .select()
-    .single();
-  if (error) { log.error('saveGlossary error:', error.message); return null; }
-  return data;
-}
-
-export async function getGlossary(glossaryId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('glossaries')
-    .select('*')
-    .eq('id', glossaryId)
-    .single();
-  if (error) return null;
-  return data;
-}
-
-export async function deleteGlossary(glossaryId, userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return false;
-  const { error } = await sb
-    .from('glossaries')
-    .delete()
-    .eq('id', glossaryId)
-    .eq('user_id', userId);
-  return !error;
-}
-
 // ── Payments ──
 
 export async function savePayment(payment) {
@@ -256,19 +88,6 @@ export async function savePayment(payment) {
     .select()
     .single();
   if (error) { log.error('savePayment error:', error.message); return null; }
-  return data;
-}
-
-export async function getUserPayments(userId, limit = 50) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('payments')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
-  if (error) return [];
   return data;
 }
 
@@ -291,42 +110,7 @@ export async function trackUsage(userId, stats) {
   }
 }
 
-export async function getUserAnalytics(userId, days = 30) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb.rpc('get_user_analytics', {
-    p_user_id: userId,
-    p_days: days,
-  });
-  if (error) return null;
-  return data?.[0] || null;
-}
-
-export async function getDailyUsage(userId, days = 30) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('usage_daily')
-    .select('*')
-    .eq('user_id', userId)
-    .gte('date', new Date(Date.now() - days * 86400000).toISOString().split('T')[0])
-    .order('date', { ascending: true });
-  if (error) return [];
-  return data;
-}
-
 // ── Credits (atomic operations via RPC) ──
-
-export async function deductCreditsDB(userId, amount) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return -1;
-  const { data, error } = await sb.rpc('deduct_credits', {
-    p_user_id: userId,
-    p_amount: amount,
-  });
-  if (error) { log.error('deductCredits error:', error.message); return -1; }
-  return data;
-}
 
 export async function addCreditsDB(userId, amount) {
   const sb = getSupabaseAdmin();
@@ -354,72 +138,5 @@ export async function logAudit(userId, action, resource, details, ipAddress) {
     });
   } catch (e) {
     log.error('logAudit error:', e.message);
-  }
-}
-
-// ── GDPR: Delete all user data ──
-
-export async function deleteAllUserData(userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return { deleted: [] };
-  const deleted = [];
-  try {
-    // Order matters: children first
-    await sb.from('audit_logs').delete().eq('user_id', userId); deleted.push('audit_logs');
-    await sb.from('translations').delete().eq('user_id', userId); deleted.push('translations');
-    await sb.from('conversations').delete().eq('user_id', userId); deleted.push('conversations');
-    await sb.from('glossaries').delete().eq('user_id', userId); deleted.push('glossaries');
-    await sb.from('payments').delete().eq('user_id', userId); deleted.push('payments');
-    await sb.from('contacts').delete().eq('user_id', userId); deleted.push('contacts');
-    await sb.from('api_keys_vault').delete().eq('user_id', userId); deleted.push('api_keys');
-    await sb.from('user_settings').delete().eq('user_id', userId); deleted.push('settings');
-    await sb.from('usage_daily').delete().eq('user_id', userId); deleted.push('usage');
-    await sb.from('profiles').delete().eq('id', userId); deleted.push('profile');
-    // Finally delete from auth
-    await sb.auth.admin.deleteUser(userId); deleted.push('auth');
-  } catch (e) {
-    log.error('deleteAllUserData error:', e.message);
-  }
-  return { deleted };
-}
-
-// ── Subscription Plans ──
-
-export async function getSubscriptionPlans() {
-  const sb = getSupabaseAdmin();
-  if (!sb) return [];
-  const { data, error } = await sb
-    .from('subscription_plans')
-    .select('*')
-    .eq('is_active', true)
-    .order('price_eur_monthly', { ascending: true });
-  if (error) return [];
-  return data;
-}
-
-// ── Admin: Platform stats ──
-
-export async function getPlatformStats() {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  try {
-    const [users, todayUsage, todayPayments, activeRooms] = await Promise.all([
-      sb.from('profiles').select('id', { count: 'exact', head: true }),
-      sb.from('usage_daily').select('translations, cost_eur_cents, tokens_used').eq('date', new Date().toISOString().split('T')[0]),
-      sb.from('payments').select('amount_eur_cents').eq('status', 'completed').gte('created_at', new Date().toISOString().split('T')[0]),
-      sb.from('rooms').select('id', { count: 'exact', head: true }).eq('is_active', true),
-    ]);
-
-    return {
-      totalUsers: users.count || 0,
-      activeRooms: activeRooms.count || 0,
-      todayTranslations: todayUsage.data?.reduce((s, r) => s + (r.translations || 0), 0) || 0,
-      todayCostCents: todayUsage.data?.reduce((s, r) => s + (r.cost_eur_cents || 0), 0) || 0,
-      todayTokens: todayUsage.data?.reduce((s, r) => s + (r.tokens_used || 0), 0) || 0,
-      todayRevenueCents: todayPayments.data?.reduce((s, r) => s + (r.amount_eur_cents || 0), 0) || 0,
-    };
-  } catch (e) {
-    log.error('getPlatformStats error:', e.message);
-    return null;
   }
 }

@@ -32,11 +32,17 @@ async function handlePost(req) {
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Il motivo tornava al client ma non restava da nessuna parte.
+      log.warn('Generazione compagno: chiamata al modello non riuscita');
       return NextResponse.json({ error: 'Generazione non riuscita', motivo: r.motivo }, { status: 502 });
     }
 
     const agente = estraiAgente(r.testo);
     if (!agente || !agente.personalita) {
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Il modello rispondeva male e non lo sapeva nessuno.
+      log.warn('Generazione compagno: risposta del modello illeggibile');
       return NextResponse.json({ error: 'Profilo illeggibile', motivo: 'json-illeggibile' }, { status: 502 });
     }
     return NextResponse.json({ ok: true, agente });

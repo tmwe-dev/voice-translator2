@@ -4,6 +4,7 @@
 
 import { redis } from './redis.js';
 import { addCredits } from './credits.js';
+import { REFERRAL_BONUS_NEW, REFERRAL_BONUS_REFERRER } from './constants.js';
 import { randomBytes } from 'crypto';
 
 function generateRandomCode() {
@@ -51,8 +52,14 @@ export async function applyReferral(newUserEmail, referralCode) {
     return { success: false, error: 'You have already used a referral code' };
   }
 
-  await addCredits(lowerEmail, 50);
-  await addCredits(referrerEmail, 100);
+  // b.363 — I DUE BONUS ERANO SCRITTI A MANO QUI: 50 e 100 comparivano
+  // come numeri nudi, mentre l'elenco ufficiale dei valori (constants.js)
+  // teneva gli stessi due importi senza che nessuno li leggesse. Chi
+  // avesse cambiato il valore nell'elenco, credendo di aver cambiato il
+  // bonus, non avrebbe cambiato niente: l'invito avrebbe continuato a
+  // regalare i vecchi crediti. Ora c'e una sola fonte.
+  await addCredits(lowerEmail, REFERRAL_BONUS_NEW);
+  await addCredits(referrerEmail, REFERRAL_BONUS_REFERRER);
   await redis('INCR', `ref:stats:${referrerEmail}`);
 
   return { success: true, referrerEmail };

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createUser, getUser, createSession, saveApiKeys, maskApiKeys } from '../../lib/users.js';
 import { isTestBlocked } from '../../lib/config.js';
-import { safeCompare } from '../../lib/apiGuard.js';
+import { safeCompare, withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('testLogin');
@@ -10,7 +10,7 @@ const TEST_EMAIL = 'test@bartalk.dev';
 
 // POST /api/test-login — Creates or restores a test account with full access
 // SECURITY: requires BOTH TESTING_MODE=true AND correct ADMIN_PASS
-export async function POST(req) {
+async function handlePost(req) {
   const blocked = isTestBlocked();
   if (blocked) return blocked;
 
@@ -73,3 +73,12 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
+
+// b.363 — qui si confronta la password di amministrazione, e non c'era
+// NESSUN tetto al numero di tentativi: il confronto era a tempo costante
+// (safeCompare) ma niente impediva di provare una password al secondo,
+// all'infinito, finche non si indovina. Il gate isTestBlocked() copre la
+// produzione, ma sui deploy di anteprima con TESTING_MODE acceso la porta
+// era spalancata. Cinque tentativi al minuto per indirizzo: chi conosce la
+// password non se ne accorge, chi la cerca a tentoni si ferma subito.
+export const POST = withApiGuard(handlePost, { maxRequests: 5, prefix: 'test-login' });

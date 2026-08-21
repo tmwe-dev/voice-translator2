@@ -384,7 +384,7 @@ export default function getStyles(theme = 'deep') {
     // difetto e di chiunque usi questa cornice, non di quella pagina.
     scrollCenter: { display:'flex', flexDirection:'column', alignItems:'center',
       height:'100%', boxSizing:'border-box',
-      padding:'12px 16px calc(88px + env(safe-area-inset-bottom))',
+      padding:'12px 16px calc(116px + env(safe-area-inset-bottom))',
       overflowY:'auto', WebkitOverflowScrolling:'touch' },
 
     // === TYPOGRAPHY ===

@@ -117,6 +117,9 @@ async function handler(req) {
 
   const deepgramKey = process.env.DEEPGRAM_API_KEY;
   if (!deepgramKey) {
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. La trascrizione dal vivo era spenta per tutti, in silenzio.
+    log.warn('Trascrizione dal vivo: DEEPGRAM_API_KEY assente');
     return NextResponse.json(
       { error: 'Streaming STT not configured. Set DEEPGRAM_API_KEY.' },
       { status: 503 }
@@ -149,6 +152,9 @@ async function handler(req) {
 
     const data = await res.json();
     if (!data.key) {
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Un guasto del fornitore passava inosservato.
+      log.error('Trascrizione dal vivo: Deepgram non ha restituito la chiave temporanea');
       return NextResponse.json(
         { error: 'No temporary key returned from Deepgram.' },
         { status: 503 }

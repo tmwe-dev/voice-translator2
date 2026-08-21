@@ -60,14 +60,18 @@ export default function AccountView({ authStep, authEmail, setAuthEmail, authCod
     // SECURITY: Fetch CSRF state token before opening OAuth popup
     let state;
     try {
-      const stateRes = await fetch('/api/auth/oauth-state');
-      const stateData = await stateRes.json();
-      state = stateData.state;
+      const stateRes = await fetch('/api/auth/oauth-state', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
+      // b.363 — prima la risposta si leggeva senza rete di sicurezza: se al
+      // posto del JSON arrivava una pagina d'errore o un avviso del proxy,
+      // l'eccezione usciva grezza e l'accesso con Google si fermava li',
+      // senza una riga a schermo ne' nel registro.
+      const stateData = await stateRes.json().catch(() => null);
+      state = stateData?.state;
     } catch (e) {
       console.error('Failed to get OAuth state:', e);
       return false;
     }
-    if (!state) return false;
+    if (!state) { console.error('[b.363] oauth-state illeggibile: accesso Google non avviato'); return false; }
     const redirectUri = `${window.location.origin}/api/auth/google-callback`;
     const scope = 'email profile openid';
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(clientId)}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&prompt=select_account&state=${encodeURIComponent(state)}`;

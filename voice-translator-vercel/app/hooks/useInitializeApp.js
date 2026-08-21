@@ -283,8 +283,15 @@ export default function useInitializeApp({
       // 8. TESTING_MODE auto-login
       if (typeof window !== 'undefined' && window.__VT_TESTING_MODE && !savedToken) {
         dbg.debug('[TESTING_MODE] Auto-login with test account...');
-        fetch('/api/test-login', { method: 'POST' })
-          .then(r => r.json())
+        fetch('/api/test-login', {
+          method: 'POST',
+          // b.363 — nessuna scadenza: in collaudo una rete appesa
+          // bloccava l'accesso automatico senza mai fallire.
+          signal: AbortSignal.timeout(10000),
+        })
+          // b.363 — se la risposta non e JSON (pagina d'errore) la
+          // lettura esplodeva: ora si prosegue con l'oggetto vuoto.
+          .then(r => r.json().catch(() => ({})))
           .then(data => {
             if (data.ok && data.token) {
               auth.setUserToken(data.token);
@@ -319,8 +326,14 @@ export default function useInitializeApp({
         setView(pickView(!!saved));
         fetch('/api/auth', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'me', token: savedToken })
-        }).then(r => r.json()).then(data => {
+          body: JSON.stringify({ action: 'me', token: savedToken }),
+          // b.363 — il riconoscimento del token non aveva scadenza: se
+          // la rete restava appesa la sessione non veniva ne confermata
+          // ne scartata, e il saldo restava fermo a zero.
+          signal: AbortSignal.timeout(10000)
+          // b.363 — con una pagina d'errore al posto del JSON la lettura
+          // esplodeva e il token salvato veniva buttato via per sbaglio.
+        }).then(r => r.json().catch(() => ({}))).then(data => {
           if (data.user) {
             auth.setUserAccount(data.user);
             auth.setCreditBalance(data.user.credits || 0);

@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { VOICES, FONT, getLang } from '../lib/constants.js';
+import { FONT, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { bandieraVoce } from '../lib/bandiereVoci.js';
@@ -96,10 +96,13 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
   const loadELVoices = useCallback(async () => {
     setLoadingEL(true);
     try {
-      const res = await fetch('/api/tts-elevenlabs?action=voices', { headers: { 'Authorization': `Bearer ${userTokenRef?.current || ''}` } });
+      const res = await fetch('/api/tts-elevenlabs?action=voices', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: { 'Authorization': `Bearer ${userTokenRef?.current || ''}` } });
       if (res.ok) {
-        const data = await res.json();
-        setElevenLabsVoices(data.voices || []);
+        // b.363 — prima la lettura non era protetta: l'elenco voci si
+        // svuotava senza che nulla, a schermo o nel registro, lo dicesse.
+        const data = await res.json().catch(() => null);
+        if (data) setElevenLabsVoices(data.voices || []);
+        else console.warn('[b.363] tts-elevenlabs voci: risposta illeggibile');
       }
     } catch(e) { console.error(e); }
     setLoadingEL(false);
@@ -136,7 +139,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
         return;
       }
       const start = Date.now();
-      const res = await fetch('/api/tts-elevenlabs', {
+      const res = await fetch('/api/tts-elevenlabs', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: sampleText, voiceId: voice.id, langCode: prefs.lang, userToken: userTokenRef?.current })
@@ -156,6 +159,10 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
         setPlayingVoice(null);
       }
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
       setTestResults(prev => ({ ...prev, [key]: 'error' }));
       setPlayingVoice(null);
     }
@@ -353,7 +360,7 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                         zh: '你好，这是 BarTalk 的标准语音。',
                         ja: 'こんにちは。これはBarTalkの標準音声です。',
                       }[codice];
-                      const r = await fetch('/api/tts-edge', {
+                      const r = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ text: frase, langCode: l?.speech || codice, gender: 'female' }),
                       });
@@ -364,7 +371,12 @@ const VoiceTestView = memo(function VoiceTestView({ isTrial, isTopPro,
                       audio.onended = () => { URL.revokeObjectURL(url); setPlayingVoice(null); };
                       audio.onerror = () => setPlayingVoice(null);
                       audio.play().catch(() => setPlayingVoice(null));
-                    } catch { setPlayingVoice(null); }
+                    } catch (e) {
+                      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+                      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+                      // scaduta, credito finito, server rotto) restava irrecuperabile.
+                      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-edge:', e?.message || e);
+                      setPlayingVoice(null); }
                   }}
                   style={{
                     padding: '9px 13px', borderRadius: 12, cursor: inCorso ? 'default' : 'pointer',

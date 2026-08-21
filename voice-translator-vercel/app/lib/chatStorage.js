@@ -257,10 +257,13 @@ export async function getStorageUsage() {
   };
 }
 
+// b.363 — saveSetting e getSetting non sono piu esportate: fuori da
+// questo file non le chiamava nessuno, le usa solo la coda dei messaggi
+// scritti fuori linea, qui sotto.
 /**
  * Save a user setting
  */
-export async function saveSetting(key, value) {
+async function saveSetting(key, value) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_SETTINGS, 'readwrite');
@@ -273,7 +276,7 @@ export async function saveSetting(key, value) {
 /**
  * Get a user setting
  */
-export async function getSetting(key) {
+async function getSetting(key) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_SETTINGS, 'readonly');
@@ -305,18 +308,17 @@ export async function queueOfflineMessage(message) {
 /**
  * Get all queued offline messages
  */
-export async function getOfflineQueue() {
+// b.363 — non piu esportata: la legge solo flushOfflineQueue, qui sotto.
+async function getOfflineQueue() {
   const raw = await getSetting(OFFLINE_QUEUE_KEY);
   let queue; try { queue = JSON.parse(raw || '[]'); } catch { queue = []; }
   return queue;
 }
 
-/**
- * Clear the offline queue (after successful flush)
- */
-export async function clearOfflineQueue() {
-  await saveSetting(OFFLINE_QUEUE_KEY, '[]');
-}
+// b.363 — qui c'era clearOfflineQueue, che azzerava la coda dei messaggi
+// scritti fuori linea. Non la chiamava nessuno, ed era anche inutile:
+// flushOfflineQueue riscrive gia la coda da sola alla fine dello
+// svuotamento, tenendo dentro solo quelli che non sono partiti.
 
 /**
  * Flush offline queue — sends all queued messages via provided function

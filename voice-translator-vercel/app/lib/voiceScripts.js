@@ -1,7 +1,9 @@
 // Voice sampling scripts — short versions for quick recording (~60s each)
 // Full scripts ported from audio-craft-deck
 
-export const VOICE_SCRIPTS = {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const VOICE_SCRIPTS = {
   it: {
     title: 'Tecnologia e Comunicazione',
     paragraphs: [

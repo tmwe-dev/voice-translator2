@@ -21,7 +21,11 @@ export default function useContacts({ userTokenRef }) {
         await fetch('/api/contacts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'heartbeat', token })
+          body: JSON.stringify({ action: 'heartbeat', token }),
+          // b.363 — prima questa chiamata non aveva scadenza: se la rete
+          // restava appesa il battito non tornava piu e la presenza si
+          // bloccava senza che nessuno se ne accorgesse.
+          signal: AbortSignal.timeout(10000)
         });
       } catch { /* la rete puo mancare: chi chiama decide cosa fare del vuoto */ }
     }
@@ -56,10 +60,17 @@ export default function useContacts({ userTokenRef }) {
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'list', token })
+        body: JSON.stringify({ action: 'list', token }),
+        // b.363 — senza scadenza una rete appesa lasciava la rubrica in
+        // caricamento per sempre.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — prima si leggeva il corpo come JSON senza rete di
+      // sicurezza: quando il guardiano risponde 429 con una pagina HTML,
+      // la lettura esplodeva e l'elenco restava vuoto senza spiegazione.
+      const data = await res.json().catch(() => ({}));
       if (data.contacts) setContacts(data.contacts);
+      else if (!res.ok) console.warn('[contatti] elenco non leggibile, stato', res.status);
     } catch (e) {
       console.error('Fetch contacts error:', e);
     } finally {
@@ -81,14 +92,19 @@ export default function useContacts({ userTokenRef }) {
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', token, contactEmail })
+        body: JSON.stringify({ action: 'add', token, contactEmail }),
+        // b.363 — aggiunta contatto: chiamata breve, 10s bastano.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — la risposta poteva non essere JSON (pagina d'errore del
+      // guardiano): prima esplodeva e l'utente vedeva solo il messaggio
+      // tecnico dell'eccezione. Ora si ripiega su un errore di rete.
+      const data = await res.json().catch(() => ({}));
       if (data.ok) {
         await fetchContacts();
         return { ok: true, contact: data.contact };
       }
-      return { ok: false, error: data.error, notRegistered: data.notRegistered };
+      return { ok: false, error: data.error || 'networkError', notRegistered: data.notRegistered };
     } catch (e) {
       return { ok: false, error: e.message };
     }
@@ -102,9 +118,13 @@ export default function useContacts({ userTokenRef }) {
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'remove', token, contactEmail })
+        body: JSON.stringify({ action: 'remove', token, contactEmail }),
+        // b.363 — rimozione contatto: chiamata breve, 10s bastano.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — vedi sopra: risposta non-JSON non deve far esplodere la
+      // rimozione, che deve solo restituire "non fatto".
+      const data = await res.json().catch(() => ({}));
       if (data.ok) {
         setContacts(prev => prev.filter(c => c.email !== contactEmail));
         return true;
@@ -123,10 +143,15 @@ export default function useContacts({ userTokenRef }) {
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        // b.363 — creazione invito: chiamata breve, 10s bastano.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — se il corpo non era JSON la creazione dell'invito
+      // esplodeva e l'utente non riceveva ne link ne motivo.
+      const data = await res.json().catch(() => ({}));
       if (data.error) return { ok: false, error: data.error };
+      if (!res.ok) return { ok: false, error: 'networkError' };
       if (data.inviteCode) {
         setInviteCode(data.inviteCode);
         return { ok: true, inviteCode: data.inviteCode, giftApplied: data.giftApplied, newBalance: data.newBalance };
@@ -145,9 +170,13 @@ export default function useContacts({ userTokenRef }) {
       const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'accept-invite', token, inviteCode: code })
+        body: JSON.stringify({ action: 'accept-invite', token, inviteCode: code }),
+        // b.363 — accettazione invito: chiamata breve, 10s bastano.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — con una pagina d'errore al posto del JSON l'invito
+      // risultava "accettato male": nessun esito, nessun motivo.
+      const data = await res.json().catch(() => ({}));
       if (data.ok) {
         await fetchContacts();
         return {
@@ -157,7 +186,7 @@ export default function useContacts({ userTokenRef }) {
           giftFromName: data.giftFromName || ''
         };
       }
-      return { ok: false, error: data.error };
+      return { ok: false, error: data.error || 'networkError' };
     } catch (e) {
       return { ok: false, error: e.message };
     }

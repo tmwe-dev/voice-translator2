@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { redis } from '../../lib/redis.js';
-import { safeCompare } from '../../lib/apiGuard.js';
+import { safeCompare, withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('startrek');
@@ -11,10 +11,13 @@ if (!ADMIN_PASS) {
   log.warn('ADMIN_PASS not set — admin endpoints will be disabled');
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     // Admin endpoint disabled if ADMIN_PASS not configured
     if (!ADMIN_PASS) {
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Chi provava a entrare non capiva se fosse spenta o rotta.
+      log.warn('Rotta amministrativa disattivata: ADMIN_PASS non impostata');
       return NextResponse.json({ error: 'Admin endpoint not configured. Set ADMIN_PASS env var.' }, { status: 503 });
     }
 
@@ -351,3 +354,9 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }
 }
+
+// b.363 — rotta di amministrazione senza la guardia comune: aveva il suo
+// conteggio interno ma nessun controllo sulla DIMENSIONE del corpo, cosi
+// chiunque poteva farle ingoiare megabyte prima ancora che la password
+// venisse guardata. La chiave interna ('startrek') resta distinta.
+export const POST = withApiGuard(handlePost, { maxRequests: 20, prefix: 'startrek-guard' });

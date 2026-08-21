@@ -25,6 +25,9 @@ async function handlePost(req) {
     const esito = (r) => {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Il motivo tornava al client ma non restava da nessuna parte.
+      log.warn('Dossier compagno: chiamata al modello non riuscita');
       return NextResponse.json({ error: 'Non riuscito', motivo: r.motivo }, { status: 502 });
     };
 

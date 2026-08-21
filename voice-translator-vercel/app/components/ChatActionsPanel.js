@@ -60,7 +60,7 @@ function ChatActionsPanel({
     setResult(null);
 
     try {
-      const res = await fetch('/api/chat-action', {
+      const res = await fetch('/api/chat-action', { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -83,9 +83,17 @@ function ChatActionsPanel({
         throw new Error(data.error || `Error ${res.status}`);
       }
 
-      const data = await res.json();
+      // b.363 — prima la risposta si leggeva senza protezione: se non era
+      // JSON valido l'utente riceveva un errore tecnico incomprensibile
+      // invece di sapere che la risposta era arrivata rotta.
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error(`Risposta illeggibile (${res.status})`);
       setResult({ action: actionId, text: data.result, provider: data.provider });
     } catch (err) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (err?.name !== 'AbortError') console.warn('[b.363] /api/chat-action:', err?.message || err);
       setError(err.message);
     } finally {
       setLoading(null);

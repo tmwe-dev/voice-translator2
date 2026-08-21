@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSession, getUser } from '../../../lib/users.js';
 import { getSupabaseAdmin } from '../../../lib/supabase.js';
 import { createLogger } from '../../../lib/logger.js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 
 const log = createLogger('userExport');
 
@@ -12,7 +13,7 @@ const log = createLogger('userExport');
  * Returns all user data in a machine-readable JSON format.
  * Requires authentication via Bearer token.
  */
-export async function GET(req) {
+async function handleGet(req) {
   try {
     // Extract and validate Bearer token
     const authHeader = req.headers.get('authorization');
@@ -214,11 +215,18 @@ export async function GET(req) {
  * POST /api/user/export
  * Alternative endpoint for browsers that can't send GET with Authorization header
  */
-export async function POST(req) {
+async function handlePost(req) {
   try {
-    const { token } = await req.json();
+    // b.363 — il gettone arrivava dal corpo e veniva passato cosi com'era
+    // alla ricerca della sessione: bastava mandare `token` come oggetto o
+    // come lista di centomila caratteri per farlo finire dentro una chiave
+    // del database. Qui si esporta TUTTO cio che sappiamo di una persona,
+    // quindi la porta va guardata prima di aprirla: dev'essere una stringa,
+    // e un gettone di sessione non supera i duecento caratteri.
+    const corpo = await req.json();
+    const token = corpo?.token;
 
-    if (!token) {
+    if (!token || typeof token !== 'string' || token.length > 200) {
       return NextResponse.json(
         { error: 'Token required in request body' },
         { status: 400 }
@@ -336,3 +344,11 @@ export async function POST(req) {
     );
   }
 }
+
+// b.363 — questa rotta consegna l'intero fascicolo di una persona (profilo,
+// pagamenti, cronologia) e non aveva NESSUN tetto di frequenza ne limite
+// alla dimensione del corpo: era l'unica strada, in tutto il repo, per
+// provare gettoni di sessione a raffica senza che nessuno contasse. Sei
+// esportazioni al minuto sono piu che sufficienti a una persona vera.
+export const GET = withApiGuard(handleGet, { maxRequests: 6, prefix: 'user-export', skipBodyCheck: true });
+export const POST = withApiGuard(handlePost, { maxRequests: 6, prefix: 'user-export' });

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
 import { getSession } from '../../lib/users.js';
 
@@ -76,7 +77,7 @@ async function chiedeUnAmministratore(req) {
   }
 }
 
-export async function GET(req) {
+async function handleGet(req) {
   const dettaglio = await chiedeUnAmministratore(req);
 
   const servizi = {};
@@ -163,3 +164,12 @@ export async function GET(req) {
     headers: { 'Cache-Control': 'no-cache, no-store' },
   });
 }
+
+// b.363 — chiunque, senza credenziali, poteva chiamare questa rotta quante
+// volte voleva, e OGNI chiamata faceva un PING vero verso il database
+// esterno (con timeout di 5 secondi). Bastava tenerla premuta per far
+// pagare a noi il traffico verso Upstash e per rallentare tutto il resto.
+// Un sorvegliante serio interroga lo stato una volta al minuto, non mille:
+// venti al minuto per indirizzo lasciano respiro a lui e chiudono la porta
+// a chi la usa come rubinetto.
+export const GET = withApiGuard(handleGet, { maxRequests: 20, prefix: 'health', skipBodyCheck: true });

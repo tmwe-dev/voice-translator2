@@ -1,6 +1,6 @@
 'use client';
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
+import { FONT, getLang, vibrate } from '../lib/constants.js';
 import getStyles from '../lib/styles.js';
 import Icon from './Icon.js';
 import { toast } from '../lib/avvisi.js';
@@ -146,7 +146,7 @@ function SpeakerView({ userToken }) {
   // il ramo Deepgram non si attivava mai, si ripiegava sempre e solo
   // sulla registrazione a blocchi senza che nessuno se ne accorgesse.
   useEffect(() => {
-    fetch('/api/stt-token', {
+    fetch('/api/stt-token', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userToken: userToken || '' }),
@@ -226,7 +226,7 @@ function SpeakerView({ userToken }) {
     try {
       const src = getLang(sourceLang);
       const tgt = getLang(targetLang);
-      const res = await fetch('/api/translate', {
+      const res = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -245,7 +245,11 @@ function SpeakerView({ userToken }) {
           : L('translationRetryLater'));
         return '';
       }
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: una risposta rotta finiva
+      // nel catch generico e al pubblico si diceva "sei senza connessione"
+      // anche quando la connessione c'era eccome.
+      const data = await res.json().catch(() => null);
+      if (!data) { setErroreUltimo(L('translationRetryLater')); return ''; }
       // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": quando la validazione
       // respinge la traduzione, la rotta risponde comunque 200 ma con il
       // testo ORIGINALE e validationFailed:true. Senza questo controllo il
@@ -257,7 +261,11 @@ function SpeakerView({ userToken }) {
       }
       if (data.ripiego) setErroreUltimo(L('fallbackTranslation'));
       return data.translated || '';
-    } catch {
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
       setErroreUltimo(L('youHaveNoConnection'));
       return '';
     }
@@ -283,7 +291,7 @@ function SpeakerView({ userToken }) {
   const procura = useCallback(async (text, lang) => {
     const langCode = getLang(lang)?.speech || lang || 'en';
     try {
-      const edgeRes = await fetch('/api/tts-edge', {
+      const edgeRes = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, langCode, gender: 'female' }),
@@ -294,14 +302,19 @@ function SpeakerView({ userToken }) {
       }
     } catch (e) { console.warn('[SpeakerView] Edge TTS non disponibile:', e?.message); }
     try {
-      const res = await fetch('/api/tts', {
+      const res = await fetch('/api/tts', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' }),
       });
       if (!res.ok) return null;
       return await res.blob();
-    } catch { return null; }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts:', e?.message || e);
+      return null; }
   }, [prefs?.voice, userToken]);
 
   const suona = useCallback((blob) => new Promise((finito) => {
@@ -346,10 +359,13 @@ function SpeakerView({ userToken }) {
         : '';
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${q}${bias}&format=json&limit=5&addressdetails=1`,
-        { headers: { 'Accept-Language': targetLang || 'en' } }
+        { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: { 'Accept-Language': targetLang || 'en' } }
       );
       if (!res.ok) throw new Error('Geocoding failed');
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: la ricerca del luogo
+      // usciva senza dire nulla e la casella restava com'era.
+      const data = await res.json().catch(() => null);
+      if (!data) { setDestError(L('searchError')); setDestCoords(null); setDestLoading(false); return; }
       if (data.length === 0) {
         setDestError(L('placeNotFound'));
         setDestCoords(null);
@@ -363,7 +379,12 @@ function SpeakerView({ userToken }) {
           displayName: p.display_name, type: p.type || '',
         })));
       }
-    } catch { setDestError(L('searchError')); setDestCoords(null); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      setDestError(L('searchError')); setDestCoords(null); }
     setDestLoading(false);
   }, [targetLang, L, userPos]);
 
@@ -381,9 +402,12 @@ function SpeakerView({ userToken }) {
     setRouteLoading(true);
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=true`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
       if (!res.ok) throw new Error();
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: con una risposta rotta il
+      // percorso spariva in silenzio, senza nemmeno una riga nel registro.
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error('percorso illeggibile');
       if (data.routes?.[0]) {
         const route = data.routes[0];
         const distKm = (route.distance / 1000).toFixed(1);
@@ -477,12 +501,14 @@ function SpeakerView({ userToken }) {
     vibrate();
     if (!dgKeyRef.current) {
       try {
-        const res = await fetch('/api/stt-token', {
+        const res = await fetch('/api/stt-token', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userToken: userToken || '' }),
         });
-        if (res.ok) { const d = await res.json(); if (d?.key) dgKeyRef.current = d.key; }
+        // b.363 — prima la lettura non era protetta: la chiave restava vuota
+        // e si scivolava in registrazione a blocchi senza sapere perche'.
+        if (res.ok) { const d = await res.json().catch(() => null); if (d?.key) dgKeyRef.current = d.key; else console.warn('[b.363] stt-token: risposta illeggibile'); }
       } catch (e) { console.warn('[SpeakerView] STT retry failed:', e.message); }
     }
     if (!dgKeyRef.current) { setMode('batch'); startBatchRecord(); return; }

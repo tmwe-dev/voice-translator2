@@ -102,7 +102,11 @@ export default function useStreamingInterpreter({
     if (!deepgramAmmesso(USO.INTERPRETE)) return;
     // b.161 — roomSessionToken obbligatorio per il percorso roomId (vedi
     // stt-token/route.js, punto 2 quarto audit).
-    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) }).then(r => r.ok ? r.json() : null)
+    // b.363 — chiamata senza scadenza: se restava appesa la chiave
+    // Deepgram non arrivava mai e l'interprete non partiva, in silenzio.
+    // La lettura del corpo ora e protetta: una pagina d'errore al posto
+    // del JSON faceva esplodere la catena invece di ripiegare su null.
+    fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }), signal: AbortSignal.timeout(10000) }).then(r => r.ok ? r.json().catch(() => null) : null)
       .then(d => { if (d?.key) deepgramKeyRef.current = d.key; })
       .catch(e => console.warn('[Interpreter] STT token failed:', e.message));
   }, [userToken, roomId, roomSessionTokenRef]);
@@ -131,9 +135,14 @@ export default function useStreamingInterpreter({
           // Hint per il modello: frammento parziale vs frase completa
           fragmentHint: isFinal ? undefined : 'partial',
         }),
+        // b.363 — traduzione senza scadenza: un frammento appeso teneva
+        // fermi i sottotitoli in tempo reale senza mai fallire.
+        signal: AbortSignal.timeout(30000),
       });
       if (!res.ok) return '';
-      const data = await res.json();
+      // b.363 — corpo non-JSON (il 429 del guardiano risponde in HTML):
+      // la lettura esplodeva e il frammento spariva nel catch generico.
+      const data = await res.json().catch(() => ({}));
       // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": traduzione respinta dalla
       // validazione = 200 con il testo ORIGINALE. Restituirlo qui faceva
       // comparire nei sottotitoli in tempo reale la frase non tradotta,
@@ -189,6 +198,10 @@ export default function useStreamingInterpreter({
           const r = await fetch(rotta, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(base),
+            // b.363 — la voce dell'interprete non aveva scadenza: una
+            // richiesta appesa bloccava il giro dei due motori e chi
+            // ascoltava non sentiva niente ne capiva perche.
+            signal: AbortSignal.timeout(30000),
           });
           if (r.ok) return await r.blob();
           // credito esaurito sulla premium: inutile riprovarla, si passa oltre
@@ -450,9 +463,12 @@ export default function useStreamingInterpreter({
     if (!deepgramKeyRef.current) {
       // Try to get key
       try {
-        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }) });
+        // b.363 — secondo tentativo per la chiave: era anch'esso senza
+        // scadenza, e l'avvio dell'interprete lo aspettava.
+        const res = await fetch('/api/stt-token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userToken, roomId, roomSessionToken: roomSessionTokenRef?.current || undefined }), signal: AbortSignal.timeout(10000) });
         if (res.ok) {
-          const d = await res.json();
+          // b.363 — vedi sopra: corpo non-JSON non deve far esplodere.
+          const d = await res.json().catch(() => null);
           if (d?.key) deepgramKeyRef.current = d.key;
         }
       } catch (e) { console.warn('[Interpreter] STT key retry failed:', e.message); }

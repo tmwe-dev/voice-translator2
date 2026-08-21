@@ -3,6 +3,7 @@ import { createUser, getUser, createSession, getReferralCode, maskApiKeys } from
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { redis } from '../../../lib/redis.js';
 import { createLogger } from '../../../lib/logger.js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 import crypto from 'crypto';
 
 const log = createLogger('authGoogleCallback');
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 
 // Google OAuth callback — exchanges authorization code for user info
 // Used as fallback when Google One Tap SDK doesn't load
-export async function GET(req) {
+async function handleGet(req) {
   try {
     // Rate limit: 20/min per IP
     const rl = await checkRateLimit(getRateLimitKey(req, 'auth-google-cb'), 20);
@@ -202,3 +203,10 @@ function escapeHtml(text) {
   };
   return text.replace(/[&<>"']/g, m => map[m]);
 }
+
+// b.363 — questa rotta non passava dalla guardia comune: aveva solo il
+// suo conteggio interno, e quindi si perdeva per strada tutte le
+// protezioni aggiunte a tutte le altre (limite per utente oltre che per
+// indirizzo, e le regole future). La chiave del conteggio interno resta
+// distinta ('auth-google-cb'), cosi le due reti non si contano a vicenda.
+export const GET = withApiGuard(handleGet, { maxRequests: 40, prefix: 'auth-google-callback', skipBodyCheck: true });

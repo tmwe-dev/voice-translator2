@@ -18,7 +18,21 @@ function getEncryptionKey() {
   if (_derivedKey) return _derivedKey;
 
   if (process.env.ENCRYPTION_KEY) {
-    _derivedKey = Buffer.from(process.env.ENCRYPTION_KEY, 'hex');
+    // b.363 — LA CHIAVE ENTRAVA SENZA CONTROLLI: si prendeva il valore
+    // dell'ambiente e lo si convertiva da esadecimale cosi com'era. Se il
+    // valore era corto, o conteneva caratteri che esadecimali non sono,
+    // Buffer.from non protestava: buttava via il pezzo sbagliato e
+    // restituiva una chiave piu corta di 32 byte. Il guasto arrivava solo
+    // molto piu tardi, al momento di cifrare, con un messaggio che non
+    // diceva la vera causa; nel caso peggiore si cifrava con una chiave
+    // piu debole di quella creduta. L'altro deposito di chiavi del
+    // progetto (keyVault.js) questo controllo lo faceva gia: ora lo fanno
+    // tutti e due, e l'errore lo si vede subito e con il nome giusto.
+    const grezza = process.env.ENCRYPTION_KEY;
+    if (grezza.length !== 64 || !/^[0-9a-fA-F]{64}$/.test(grezza)) {
+      throw new Error('ENCRYPTION_KEY must be a 64-character hex string');
+    }
+    _derivedKey = Buffer.from(grezza, 'hex');
     return _derivedKey;
   }
   if (process.env.UPSTASH_REDIS_REST_TOKEN) {

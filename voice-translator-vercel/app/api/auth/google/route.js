@@ -13,7 +13,18 @@ async function handler(req) {
     // dimezzava il tetto senza volerlo. Trattandosi di autenticazione, sul
     // guard e rimasto il tetto piu STRETTO dei due (10), non il piu largo.
 
-    const { credential, code, referralCode } = await req.json();
+    // b.363 — `credential` (il gettone firmato da Google) e `code` (il
+    // codice di autorizzazione) partivano dritti verso Google dentro
+    // l'indirizzo o il corpo della chiamata, senza che nessuno guardasse
+    // se fossero stringhe o quanto fossero lunghi. Un valore che non e una
+    // parola faceva esplodere la costruzione della richiesta; uno enorme
+    // ce la faceva spedire per intero a spese nostre. Le misure sono
+    // larghe apposta: un gettone Google vero sta sotto i duemila caratteri.
+    const corpo = await req.json();
+    const parola = (v, max) => (typeof v === 'string' && v.length <= max ? v : undefined);
+    const credential = parola(corpo?.credential, 4000);
+    const code = parola(corpo?.code, 2000);
+    const referralCode = parola(corpo?.referralCode, 40);
 
     if (!credential && !code) {
       return NextResponse.json({ error: 'Missing Google credential or code' }, { status: 400 });
@@ -26,6 +37,9 @@ async function handler(req) {
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
       if (!clientId || !clientSecret) {
+        // b.363 — uscita di guasto muta: dal registro sembrava che non
+        // fosse successo niente. L'accesso con Google smetteva di funzionare per tutti e nel registro non compariva nulla.
+        log.error('Accesso Google: manca client_id o client_secret');
         return NextResponse.json({ error: 'Google OAuth not configured' }, { status: 500 });
       }
 

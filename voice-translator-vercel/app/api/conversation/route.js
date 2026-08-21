@@ -46,7 +46,12 @@ async function handlePost(req) {
       }
 
       const conv = await saveConversation(rid);
-      if (!conv) return NextResponse.json({ error: 'Failed to save conversation' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Un'intera conversazione andava persa in silenzio.
+      if (!conv) {
+        log.error('Chiusura stanza: conversazione non salvata');
+        return NextResponse.json({ error: 'Failed to save conversation' }, { status: 500 });
+      }
       return NextResponse.json({ conversation: conv });
     }
 

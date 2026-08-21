@@ -144,7 +144,12 @@ async function handlePost(req) {
       if (!r.ok) return rispostaEsito(r);
       const d = estraiJSON(r.testo);
       const coppie = Array.isArray(d?.coppie) ? d.coppie.filter((c) => c?.a && c?.b).slice(0, 3).map((c) => ({ a: String(c.a).slice(0, 40), b: String(c.b).slice(0, 40) })) : [];
-      if (!coppie.length) return NextResponse.json({ error: 'Drill non riuscito' }, { status: 502 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Non si distingueva un modello muto da un guasto vero.
+      if (!coppie.length) {
+        log.warn('Corso: il modello non ha prodotto nessuna coppia utilizzabile');
+        return NextResponse.json({ error: 'Drill non riuscito' }, { status: 502 });
+      }
       return NextResponse.json({ ok: true, suono: String(d?.suono || '').slice(0, 160), coppie });
     }
 
@@ -250,7 +255,12 @@ async function handlePost(req) {
         lezioni: Array.isArray(body.lezioni) ? body.lezioni : [],
         docente: docente ? { nome: docente.nome, ruolo: docente.ruolo, avatar: docente.avatar } : null,
       });
-      if (!salvato) return NextResponse.json({ error: 'Pubblicazione non riuscita' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Un corso generato (e pagato) andava perso senza traccia.
+      if (!salvato) {
+        log.error('Corso: pubblicazione non salvata');
+        return NextResponse.json({ error: 'Pubblicazione non riuscita' }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, corso: salvato });
     }
 

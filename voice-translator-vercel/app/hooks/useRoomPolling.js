@@ -556,9 +556,15 @@ export default function useRoomPolling({
         const pollHeaders = {};
         if (roomSessionTokenRef.current) pollHeaders['x-room-session'] = roomSessionTokenRef.current;
         const primoCarico = lastMsgRef.current === 0; // b.326 — D1: primo giro = storia intera
-        const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}`, { headers: pollHeaders });
+        // b.363 — il giro dei messaggi non aveva scadenza: una richiesta
+        // appesa fermava tutto il giro successivo e la chat smetteva di
+        // aggiornarsi senza nessun segnale.
+        const mRes = await fetch(`/api/messages?room=${rid}${nameParam}&after=${lastMsgRef.current}`, { headers: pollHeaders, signal: AbortSignal.timeout(10000) });
         if (mRes.ok) {
-          const { messages: newMsgs } = await mRes.json();
+          // b.363 — corpo non-JSON (il 429 del guardiano risponde in
+          // HTML): la lettura esplodeva e saltava anche il battito che
+          // viene subito dopo, facendo cadere la presenza nella stanza.
+          const { messages: newMsgs } = await mRes.json().catch(() => ({}));
           if (newMsgs && newMsgs.length > 0) {
             // Track which messages got new translations in this poll cycle
             const msgsWithNewTranslations = [];
@@ -673,7 +679,11 @@ export default function useRoomPolling({
         const rRes = await fetch('/api/room', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(heartbeatBody)
+          body: JSON.stringify(heartbeatBody),
+          // b.363 — il battito non aveva scadenza: se restava appeso il
+          // server smetteva di vederci vivi e la stanza ci potava, senza
+          // che il telefono se ne accorgesse.
+          signal: AbortSignal.timeout(10000)
         });
         // b.250 — il 401 non e piu muto. Prima di questa versione il
         // telefono di Luca ha battuto per MEZZ'ORA ogni 18 secondi
@@ -695,21 +705,39 @@ export default function useRoomPolling({
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'join', roomId: rid, name: prefsRef.current.name,
                   lang: prefsRef.current.lang || 'en', avatar: prefsRef.current.avatar || null, hostSecret }),
+                // b.363 — anche il rientro d'emergenza era senza scadenza:
+                // proprio il tentativo che deve rimettere in linea poteva
+                // restare appeso per sempre.
+                signal: AbortSignal.timeout(10000),
               });
               if (ri.ok) {
-                const dati = await ri.json();
+                // b.363 — corpo non-JSON: la lettura esplodeva e il
+                // rientro finiva nel catch qui sotto senza motivo.
+                const dati = await ri.json().catch(() => ({}));
                 if (dati.roomSessionToken) roomSessionTokenRef.current = dati.roomSessionToken;
+                else setPollError(true);
                 auth401CountRef.current = 0;
               } else {
+                console.warn('[stanza] rientro rifiutato, stato', ri.status);
                 setPollError(true);
               }
-            } catch { setPollError(true); }
+            } catch (e) {
+              // b.363 — questo ripiego accende l'avviso di linea che
+              // l'utente vede, ma non registrava niente: era il guasto
+              // piu difficile da capire di tutta la stanza.
+              console.warn('[stanza] rientro non riuscito:', e?.message || e);
+              setPollError(true);
+            }
           }
         } else if (auth401CountRef.current > 0 && rRes.ok) {
           auth401CountRef.current = 0;
         }
         if (rRes.ok) {
-          const { room, verifiedName, isHost: hostFlag } = await rRes.json();
+          // b.363 — corpo non-JSON su una risposta buona: la lettura
+          // esplodeva e il giro saltava, lasciando l'elenco dei presenti
+          // fermo all'ultima versione buona.
+          const { room, verifiedName, isHost: hostFlag } = await rRes.json().catch(() => ({}));
+          if (!room) console.warn('[stanza] battito: risposta senza stanza');
           if (verifiedName) verifiedNameRef.current = verifiedName;
           if (hostFlag !== undefined) isHostRef.current = hostFlag;
           roomInfoRef.current = room;
@@ -824,7 +852,11 @@ export default function useRoomPolling({
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        // b.363 — "sta parlando" senza scadenza: un avviso appeso
+        // teneva occupata una connessione per un segnale che vale
+        // qualche secondo.
+        signal: AbortSignal.timeout(10000)
       });
     } catch { /* la rete puo mancare: chi chiama decide cosa fare del vuoto */ }
   }
@@ -876,7 +908,10 @@ export default function useRoomPolling({
       await fetch('/api/room', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        // b.363 — il cambio di lingua non aveva scadenza: restava appeso
+        // e gli altri continuavano a ricevere nella lingua vecchia.
+        signal: AbortSignal.timeout(10000)
       });
     } catch (e) {
       console.error('[SyncLang] Error:', e);
@@ -903,7 +938,10 @@ export default function useRoomPolling({
     fetch('/api/room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      // b.363 — "sta scrivendo" senza scadenza: stesso motivo di
+      // "sta parlando" qui sopra.
+      signal: AbortSignal.timeout(10000)
     }).catch(() => {});
   }
 
@@ -942,13 +980,19 @@ export default function useRoomPolling({
           diretta: !!diretta,
           maxPartecipanti,
           userToken: getEffectiveToken?.() || null
-        })
+        }),
+        // b.363 — la creazione della stanza non aveva scadenza: restava
+        // appesa col pulsante che girava e nessun errore da mostrare.
+        signal: AbortSignal.timeout(10000)
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || `${tFuori('serverErrorWord')} (${res.status})`);
       }
-      const data = await res.json();
+      // b.363 — corpo non-JSON su una risposta 200: la lettura
+      // esplodeva con un messaggio tecnico invece dell'errore leggibile.
+      const data = await res.json().catch(() => ({}));
+      if (!data.room) throw new Error(`${tFuori('serverErrorWord')} (${res.status})`);
       const { room, roomSessionToken: token, hostSecret } = data;
       if (token) roomSessionTokenRef.current = token;
       // b.169 — l'unica occasione in cui il server manda questo segreto:
@@ -997,7 +1041,10 @@ export default function useRoomPolling({
           action: 'join',
           roomId: rid,
           name, lang, avatar, hostSecret
-        })
+        }),
+        // b.363 — l'ingresso in stanza non aveva scadenza: chi bussava
+        // restava in attesa per sempre senza ne entrare ne un errore.
+        signal: AbortSignal.timeout(10000)
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -1028,7 +1075,10 @@ export default function useRoomPolling({
         if (res.status === 409 && err.piena) throw new Error(tFuori('roomIsFull'));
         throw new Error(tFuori('roomNotFound'));
       }
-      const data = await res.json();
+      // b.363 — vedi la creazione: corpo non-JSON non deve far
+      // esplodere l'ingresso con un messaggio tecnico.
+      const data = await res.json().catch(() => ({}));
+      if (!data.room) throw new Error(tFuori('roomNotFound'));
       const { room, roomSessionToken: token } = data;
       if (token) roomSessionTokenRef.current = token;
       setRoomId(room.id);
@@ -1106,6 +1156,8 @@ export default function useRoomPolling({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'leave', roomId: stanza, roomSessionToken: gettone }),
         keepalive: true,
+        // b.363 — anche l'avviso di uscita era senza scadenza.
+        signal: AbortSignal.timeout(10000),
       }).catch(() => { /* l'uscita non si blocca mai per la rete */ });
     } catch { /* nemmeno per un fetch che non parte proprio */ }
   }

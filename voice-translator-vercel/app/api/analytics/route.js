@@ -27,9 +27,23 @@ async function handlePost(req) {
     if (!session?.email) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
 
     const sb = getSupabaseAdmin();
-    if (!sb) return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Le statistiche sparivano in silenzio.
+    if (!sb) {
+      log.warn('Statistiche: Supabase non configurato');
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
 
-    const numDays = days || 30;
+    // b.363 — il numero di giorni arrivava dal client e finiva dritto in
+    // `Date.now() - giorni * 86400000`. Con un numero enorme (o negativo,
+    // o una stringa) la data che ne usciva era fuori scala: la conversione
+    // in testo esplodeva con "Invalid time value" e la rotta rispondeva
+    // 500 — un guasto nostro provocato a comando da chiunque. E con un
+    // valore appena grande la query scorreva l'intero archivio.
+    // Un giorno come minimo, un anno come massimo: e' quello che i grafici
+    // dell'applicazione chiedono davvero.
+    const richiesti = Number(days);
+    const numDays = Number.isFinite(richiesti) ? Math.min(Math.max(Math.trunc(richiesti), 1), 365) : 30;
     const dateFrom = new Date(Date.now() - numDays * 86400000).toISOString().split('T')[0];
 
     // Get user ID from email

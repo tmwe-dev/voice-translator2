@@ -35,7 +35,12 @@ async function handlePost(req) {
       const c = body.compagno;
       if (!c || !c.nome || !String(c.nome).trim()) return NextResponse.json({ error: 'Serve un nome' }, { status: 400 });
       const salvato = await salvaCompagno(email, c);
-      if (!salvato) return NextResponse.json({ error: 'Salvataggio non riuscito' }, { status: 500 });
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Il compagno spariva e l'utente lo scopriva da solo.
+      if (!salvato) {
+        log.error('Compagno non salvato');
+        return NextResponse.json({ error: 'Salvataggio non riuscito' }, { status: 500 });
+      }
       return NextResponse.json({ ok: true, compagno: salvato });
     }
 

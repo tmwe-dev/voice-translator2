@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FONT } from '../lib/constants.js';
 import { getVoiceScript } from '../lib/voiceScripts.js';
 import useVoiceRecorder from '../hooks/useVoiceRecorder.js';
@@ -79,8 +79,12 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
       formData.append('voiceName', prefs.name || 'My Voice');
       formData.append('audio', blob, 'voice-sample.webm');
 
-      const res = await fetch('/api/voice-clone', { method: 'POST', body: formData });
-      const data = await res.json();
+      const res = await fetch('/api/voice-clone', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', body: formData });
+      // b.363 — prima la lettura non era protetta: con una risposta rotta si
+      // mostrava un errore tecnico invece del motivo per cui la voce non e'
+      // stata clonata.
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error(`Risposta illeggibile (${res.status})`);
 
       if (!res.ok || !data.ok) {
         throw new Error(data.error || `Clone failed (${res.status})`);
@@ -89,6 +93,10 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
       setCloneSuccess(true);
       if (onVoiceCloned) onVoiceCloned(data.voiceId, data.name);
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/voice-clone:', e?.message || e);
       setCloneError(e.message);
     } finally {
       setCloning(false);

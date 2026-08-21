@@ -113,9 +113,16 @@ export default function useAuth() {
       const res = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'send-code', email: authEmail.trim() })
+        body: JSON.stringify({ action: 'send-code', email: authEmail.trim() }),
+        // b.363 — invio del codice: chiamata breve, prima poteva restare
+        // appesa all'infinito lasciando il pulsante in caricamento.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — quando il guardiano risponde 429 il corpo e HTML, non
+      // JSON: prima la lettura esplodeva e l'utente non capiva perche
+      // il codice non arrivava.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) console.warn('[useAuth] send-code rifiutato, stato', res.status);
       if (data.ok) {
         setAuthStep('code');
         return true;
@@ -141,9 +148,14 @@ export default function useAuth() {
           email: authEmail.trim(),
           code: authCode.trim(),
           referralCode: pendingRef
-        })
+        }),
+        // b.363 — verifica del codice: chiamata breve con scadenza.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — vedi sopra: corpo non-JSON non deve far esplodere la
+      // verifica, deve solo risultare "non riuscita".
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) console.warn('[useAuth] verify rifiutato, stato', res.status);
       if (data.ok && data.token) {
         setUserToken(data.token);
         userTokenRef.current = data.token;
@@ -176,9 +188,13 @@ export default function useAuth() {
       const res = await fetch('/api/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'credits', token })
+        body: JSON.stringify({ action: 'credits', token }),
+        // b.363 — lettura del saldo: chiamata breve con scadenza.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — il saldo non deve mai far esplodere la schermata: se il
+      // corpo non e JSON si tiene il valore precedente.
+      const data = await res.json().catch(() => ({}));
       if (data.credits !== undefined) {
         setCreditBalance(data.credits);
         setUseOwnKeys(data.useOwnKeys || false);
@@ -196,9 +212,15 @@ export default function useAuth() {
       const res = await fetch('/api/stripe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'checkout', packageId, token })
+        body: JSON.stringify({ action: 'checkout', packageId, token }),
+        // b.363 — apertura della cassa: 30s, perche dall'altra parte c'e
+        // Stripe e non solo il nostro server.
+        signal: AbortSignal.timeout(30000)
       });
-      const data = await res.json();
+      // b.363 — qui si spendono soldi: se la risposta non e JSON prima
+      // esplodeva in silenzio, ora resta scritto perche.
+      const data = await res.json().catch(() => ({}));
+      if (!data.url) console.warn('[useAuth] cassa non aperta, stato', res.status);
       if (data.url) {
         window.location.href = data.url;
         return true;
@@ -225,9 +247,13 @@ export default function useAuth() {
           token,
           apiKeys: apiKeyInputs,
           useOwnKeys: true
-        })
+        }),
+        // b.363 — salvataggio chiavi: chiamata breve con scadenza.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — senza rete di sicurezza una pagina d'errore faceva
+      // esplodere il salvataggio e l'utente vedeva un messaggio tecnico.
+      const data = await res.json().catch(() => ({}));
       if (data.ok) {
         setUseOwnKeys(true);
         if (apiKeyInputs.elevenlabs?.trim()) setIsTopPro(true);
@@ -281,9 +307,15 @@ export default function useAuth() {
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential, referralCode: pendingRef })
+        body: JSON.stringify({ credential, referralCode: pendingRef }),
+        // b.363 — accesso con Google: 10s, poi si rinuncia invece di
+        // lasciare il pulsante che gira per sempre.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — corpo non-JSON: prima esplodeva e l'accesso spariva
+      // senza spiegazione.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) console.warn('[useAuth] accesso Google rifiutato, stato', res.status);
       return handleOAuthLogin(data, 'google');
     } catch (e) {
       console.warn('[useAuth] loginWithGoogle failed:', e?.message || e);
@@ -314,9 +346,13 @@ export default function useAuth() {
           id_token: authResponse.authorization?.id_token,
           user: authResponse.user,
           referralCode: pendingRef
-        })
+        }),
+        // b.363 — accesso con Apple: stessa scadenza di Google.
+        signal: AbortSignal.timeout(10000)
       });
-      const data = await res.json();
+      // b.363 — vedi Google: corpo non-JSON non deve far esplodere.
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) console.warn('[useAuth] accesso Apple rifiutato, stato', res.status);
       return handleOAuthLogin(data, 'apple');
     } catch (e) {
       console.warn('[useAuth] loginWithApple failed:', e?.message || e);
@@ -339,6 +375,9 @@ export default function useAuth() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'logout', token: tokenUscente }),
+        // b.363 — anche l'uscita aveva una chiamata senza scadenza: era
+        // l'unica ancora capace di restare appesa dopo il logout.
+        signal: AbortSignal.timeout(10000),
       }).catch(() => {});
     }
     memDel('vt-token');

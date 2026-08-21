@@ -69,15 +69,20 @@ async function handlePost(req) {
       });
       audioBuffer = tts.toBuffer();
     } catch (synthErr) {
+      // b.363 — qui si rispediva al client `stack`: le prime cinque righe
+      // della traccia dell'errore, cioe i PERCORSI DEI FILE SUL SERVER e i
+      // nomi delle librerie interne. E' la pianta della casa, regalata a
+      // chiunque sappia far fallire una sintesi vocale — che e' facile.
+      // Il dettaglio serve a noi e resta nel registro; a chi chiama va
+      // detto solo che non e' riuscita.
       log.error('Synthesize FULL error:', synthErr.message, '| Stack:', synthErr.stack);
-      return NextResponse.json({
-        error: 'Edge TTS synthesis failed',
-        detail: synthErr.message,
-        stack: synthErr.stack?.split('\n').slice(0, 5).join('\n')
-      }, { status: 503 });
+      return NextResponse.json({ error: 'Edge TTS synthesis failed' }, { status: 503 });
     }
 
     if (!audioBuffer || audioBuffer.length === 0) {
+      // b.363 — uscita di guasto muta: dal registro sembrava che non
+      // fosse successo niente. Un audio vuoto e un guasto silenzioso: nessuno se ne accorge.
+      log.error('Edge TTS: sintesi riuscita ma audio vuoto');
       return NextResponse.json({ error: 'Failed to generate audio' }, { status: 503 });
     }
 
@@ -89,8 +94,11 @@ async function handlePost(req) {
       }
     });
   } catch (e) {
+    // b.363 — stessa fuga della riga sopra, e qui era anche peggio: usciva
+    // per QUALUNQUE errore imprevisto, insieme al messaggio grezzo (che di
+    // solito contiene indirizzi e nomi di variabili d'ambiente).
     log.error('Top-level error:', e.message, e.stack);
-    return NextResponse.json({ error: e.message, stack: e.stack?.split('\n').slice(0, 5).join('\n') }, { status: 500 });
+    return NextResponse.json({ error: 'Sintesi vocale non riuscita' }, { status: 500 });
   }
 }
 
@@ -122,15 +130,17 @@ export async function GET(req) {
         checks.synthOk = true;
         checks.audioBytes = buf?.length || 0;
       } catch (synthErr) {
+        // b.363 — anche questa rotta diagnostica, che e' pubblica,
+        // rimandava la traccia dello stack. Il dettaglio va nel registro.
         checks.synthOk = false;
-        checks.synthError = synthErr.message;
-        checks.synthStack = synthErr.stack?.split('\n').slice(0, 5);
+        log.error('Diagnostica: sintesi fallita:', synthErr.message, '| Stack:', synthErr.stack);
       }
     }
   } catch (importErr) {
+    // b.363 — idem: nomi di moduli e percorsi del server fuori dalla
+    // risposta pubblica, dentro il registro.
     checks.importOk = false;
-    checks.importError = importErr.message;
-    checks.importStack = importErr.stack?.split('\n').slice(0, 5);
+    log.error('Diagnostica: import fallito:', importErr.message, '| Stack:', importErr.stack);
   }
 
   return NextResponse.json(checks, { status: checks.synthOk ? 200 : 503 });

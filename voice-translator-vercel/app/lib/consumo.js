@@ -67,7 +67,6 @@ export function leggiConsumo() {
 }
 
 /** Il consumo di una singola chat. */
-export function consumoChat(roomId) {
-  if (!roomId) return 0;
-  return leggiGrezzo().perChat[roomId] || 0;
-}
+// b.363 — qui c'era consumoChat, che rispondeva quanto era costata una
+// singola stanza. Non lo chiedeva nessuno: le schermate del consumo
+// mostrano solo il totale.

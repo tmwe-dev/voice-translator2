@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createRoom, getRoom, joinRoom, updateHeartbeat, setSpeaking, updateRoomMode, changeMemberLang, createRoomSession, resolveRoomIdentity, setHandRaised, grantSpeaking, creaSegretoHost, verificaSegretoHost, potaMembriAssenti, riammettiConGettone } from './store.js';
-import { redis } from './redis.js';
-import { sanitizeRoomId, sanitizeName, sanitize } from './validate.js';
+// b.363 — TRE IMPORTAZIONI FANTASMA: redis, sanitizeRoomId e sanitizeName
+// erano dichiarati in cima ma non li chiamava nessuna riga del file. Chi
+// leggeva credeva che le azioni sulla stanza parlassero direttamente con
+// Redis e ripulissero da sole nome e codice stanza, mentre di quel lavoro
+// si occupa gia store.js; e ogni ricerca di "chi tocca Redis" tirava
+// dentro un file che non lo tocca. Restano solo i nomi davvero usati.
+import { sanitize } from './validate.js';
 import { createLogger } from './logger.js';
 import { puoModerare, eMembro, ruoloDi } from './decisioni.js';
 import { MODES } from './constants.js';

@@ -53,9 +53,22 @@ export default function useStanzaVideo({ roomId, roomSessionToken, mioNome, atti
       const r = await fetch('/api/stanza-video', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione, roomId, roomSessionToken, ...extra }),
+        // b.363 — la cassetta dei segnali video girava senza scadenza:
+        // una chiamata appesa fermava lo scambio di offerte e la stanza
+        // restava a "collego" per sempre.
+        signal: AbortSignal.timeout(10000),
       });
-      return await r.json();
-    } catch { return null; }
+      // b.363 — corpo non-JSON (pagina d'errore del guardiano): la
+      // lettura esplodeva e si perdeva il motivo del blocco.
+      const d = await r.json().catch(() => null);
+      if (!d) console.warn('[stanza-video] risposta non leggibile, stato', r.status, 'azione', azione);
+      return d;
+    } catch (e) {
+      // b.363 — ripiego silenzioso su un percorso che l'utente vede
+      // (nessun video): ora il motivo resta scritto.
+      console.warn('[stanza-video] azione', azione, 'non riuscita:', e?.message || e);
+      return null;
+    }
   }, [roomId, roomSessionToken]);
 
   // ── Il riquadro di una persona ──

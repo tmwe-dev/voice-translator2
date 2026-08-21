@@ -27,7 +27,7 @@ export default function PannelloModerazione({ roomId, roomSessionToken, membri =
   const [avviso, setAvviso] = useState('');
 
   const chiama = useCallback(async (azione, nome) => {
-    const r = await fetch('/api/moderazione', {
+    const r = await fetch('/api/moderazione', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ azione, roomId, nome, roomSessionToken }),
     });

@@ -49,13 +49,18 @@ export default function useTTSEngine({
     fetch('/api/tts-edge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: '.', langCode: 'en', gender: 'female' })
+      body: JSON.stringify({ text: '.', langCode: 'en', gender: 'female' }),
+      // b.363 — questo riscaldamento non aveva scadenza: restava appeso
+      // in sottofondo tenendo occupata una connessione per niente.
+      signal: AbortSignal.timeout(10000)
     }).catch(() => {});
     if (!isTrialRef.current) {
       fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: '.', voice: 'nova', langCode: 'en', userToken: getEffectiveToken() })
+        body: JSON.stringify({ text: '.', voice: 'nova', langCode: 'en', userToken: getEffectiveToken() }),
+        // b.363 — stesso motivo del riscaldamento qui sopra.
+        signal: AbortSignal.timeout(10000)
       }).catch(() => {});
     }
   }, [audioReady]);
@@ -279,7 +284,11 @@ export default function useTTSEngine({
       try {
         const alt = (prefsRef.current?.edgeTtsVoiceGender || 'female') === 'female' ? 'male' : 'female';
         blob = await fetchEdgeTTSBlob(text, langCode, alt);
-      } catch {
+      } catch (e) {
+        // b.363 — qui l'utente sente la voce meccanica del browser al
+        // posto di quella neurale: era il ripiego piu visibile di tutti
+        // e non lasciava nessuna traccia del motivo.
+        console.warn('[TTS-Edge] entrambe le voci fallite, voce del browser:', e?.message || e);
         await browserSpeak(text, langCode);
         return;
       }
@@ -305,7 +314,11 @@ export default function useTTSEngine({
             // b.161 — senza questo, resolveAuth rifiuta con 401 il
             // percorso roomId (vedi apiAuth.js, punto 2 quarto audit).
             roomSessionToken: roomSessionTokenRef?.current || undefined,
-          })
+          }),
+          // b.363 — la voce OpenAI non aveva scadenza: una richiesta
+          // appesa bloccava la coda audio e il messaggio restava muto
+          // senza mai ripiegare sulla voce del browser.
+          signal: AbortSignal.timeout(30000)
         });
         if (!res.ok) { if (attempt < retries) continue; throw new Error(`TTS ${res.status}`); }
         return await res.blob();
@@ -348,11 +361,18 @@ export default function useTTSEngine({
           userToken: getEffectiveToken(),
           roomId: roomIdRef.current || undefined,
           roomSessionToken: roomSessionTokenRef?.current || undefined,
-        })
+        }),
+        // b.363 — voce premium senza scadenza: restava appesa e il
+        // messaggio non parlava ne con ElevenLabs ne col ripiego.
+        signal: AbortSignal.timeout(30000)
       });
       if (!res.ok) throw new Error(`ElevenLabs ${res.status}`);
       blob = await res.blob();
-    } catch {
+    } catch (e) {
+      // b.363 — questo ripiego cambia la voce che l'utente sente (e
+      // sposta la spesa su un altro fornitore) ma non registrava nulla:
+      // in produzione la voce premium spariva senza spiegazione.
+      console.warn('[TTS-ElevenLabs] non disponibile, ripiego su OpenAI:', e?.message || e);
       return playTTS(text, langCode); // Fallback to OpenAI
     }
     await playBlobWithFallback(blob, text, langCode);
@@ -401,6 +421,8 @@ export default function useTTSEngine({
             roomId: roomIdRef.current || undefined,
             roomSessionToken: roomSessionTokenRef?.current || undefined,
           }),
+          // b.363 — anche la voce premium della coda era senza scadenza.
+          signal: AbortSignal.timeout(30000),
         });
         if (res.ok) return await res.blob();
         // 402 = credito insufficiente: si ripiega sulla voce gratuita,
@@ -427,7 +449,11 @@ export default function useTTSEngine({
       try {
         const alt = (prefsRef.current?.edgeTtsVoiceGender || 'female') === 'female' ? 'male' : 'female';
         return await fetchEdgeTTSBlob(text, langCode, alt);
-      } catch {
+      } catch (e) {
+        // b.363 — stesso ripiego visibile del caso qui sopra, dentro la
+        // coda della conversazione dal vivo: senza registro non si
+        // capiva perche mezza conversazione suonasse meccanica.
+        console.warn('[TTS-Edge] coda: entrambe le voci fallite, voce del browser:', e?.message || e);
         return null;   // niente blob: chi suona ripieghera sulla voce del browser
       }
     }

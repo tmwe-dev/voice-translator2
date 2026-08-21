@@ -4,7 +4,8 @@
 // ═══════════════════════════════════════════════
 
 import { DASHSCOPE_BASE_URL, DASHSCOPE_API_KEY, COSYVOICE_VOICES } from './asiaConstants.js';
-import { getEdgeVoice } from './edgeVoices.js';
+// b.363 — l'importazione di getEdgeVoice e stata tolta insieme a
+// getAsiaTTSInfo, l'unica che la usava.
 
 /**
  * Synthesize speech using CosyVoice v2
@@ -59,16 +60,8 @@ export function isCosyVoiceAvailable(langCode) {
   return !!COSYVOICE_VOICES[lang2];
 }
 
-/**
- * Get the best TTS provider info for a CJK language
- * Returns provider name and voice details
- */
-export function getAsiaTTSInfo(langCode, gender = 'female') {
-  const lang2 = langCode?.replace(/-.*/, '');
-  if (isCosyVoiceAvailable(langCode)) {
-    const voiceMap = COSYVOICE_VOICES[lang2];
-    return { provider: 'cosyvoice', voice: voiceMap?.[gender] || voiceMap?.female, available: true };
-  }
-  // Fallback to Edge TTS (always available, free)
-  return { provider: 'edge', voice: getEdgeVoice(langCode, gender), available: true };
-}
+// b.363 — qui c'era getAsiaTTSInfo, che diceva quale voce e quale
+// fornitore sarebbero stati scelti per una lingua asiatica. Nessuno lo
+// chiedeva: la scelta vera la fa e la usa ttsRouter.js. Era una seconda
+// versione della stessa decisione, libera di divergere senza che nessuno
+// se ne accorgesse.

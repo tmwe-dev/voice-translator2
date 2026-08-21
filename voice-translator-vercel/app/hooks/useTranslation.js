@@ -426,7 +426,10 @@ export default function useTranslation({
     // b.275 — il passaggio piu costoso della catena: quanto ci mette
     // l'audio ad andare e a tornare come testo.
     const fineInvio = cronometro('voce-inviata');
-    const res = await fetch('/api/transcribe', { method: 'POST', body: form });
+    // b.363 — la trascrizione non aveva scadenza: se la richiesta
+    // restava appesa il messaggio non partiva e non compariva nessun
+    // errore, la registrazione spariva e basta.
+    const res = await fetch('/api/transcribe', { method: 'POST', body: form, signal: AbortSignal.timeout(30000) });
     fineInvio({ stato: res.status });
     if (res.status === 402) {
       // Credito esaurito: fermiamo la sessione e mostriamo l'avviso batteria
@@ -437,7 +440,9 @@ export default function useTranslation({
       console.error('[processAndSendAudio] Transcribe API error:', res.status);
       throw new Error(`Transcribe error ${res.status}`);
     }
-    const { original, creditoEsaurito } = await res.json();
+    // b.363 — corpo non-JSON (pagina d'errore del guardiano): la lettura
+    // esplodeva con un messaggio tecnico invece di un errore leggibile.
+    const { original, creditoEsaurito } = await res.json().catch(() => ({}));
     if (creditoEsaurito) window.dispatchEvent(new CustomEvent('wallet:esaurito'));
     getPerf().measure(PERF.STT_LATENCY);
     dbg.debug('[processAndSendAudio] STT result:', original?.substring(0, 50));

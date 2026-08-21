@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useEffect } from 'react';
-import { FONT, MODES, CONTEXTS, AI_MODELS, VOICES } from '../lib/constants.js';
+import { FONT, MODES, AI_MODELS, VOICES } from '../lib/constants.js';
 import { IconCheck, IconChevronDown } from './Icons.js';
 import { bandieraVoce, ordinaVociPerPaese } from '../lib/bandiereVoci.js';
 
@@ -22,7 +22,7 @@ const VoiceEngineBar = memo(function VoiceEngineBar({
   const [vociCurate, setVociCurate] = useState(null);
   useEffect(() => {
     if (!showVoicePicker || vociCurate !== null) return;
-    fetch(`/api/voci?lang=${encodeURIComponent(myLang || 'en')}`)
+    fetch(`/api/voci?lang=${encodeURIComponent(myLang || 'en')}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ })
       .then(r => r.ok ? r.json() : { curate: [] })
       .then(d => setVociCurate(Array.isArray(d.curate) ? d.curate : []))
       .catch(() => setVociCurate([]));

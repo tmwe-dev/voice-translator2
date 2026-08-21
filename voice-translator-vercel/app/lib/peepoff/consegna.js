@@ -25,8 +25,12 @@ async function chiama(azione, corpo, userToken) {
 export const registraDispositivo = (c, t) => chiama('dispositivo', c, t);
 export const risolvi = (indirizzo, t) => chiama('risolvi', { indirizzo }, t);
 export const battito = (deviceId, t, spegni = false) => chiama('battito', { deviceId, spegni }, t);
-export const mandaSegnale = (c, t) => chiama('segnale', c, t);
-export const prelevaSegnali = (deviceId, t) => chiama('segnali', { deviceId }, t);
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const mandaSegnale = (c, t) => chiama('segnale', c, t);
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const prelevaSegnali = (deviceId, t) => chiama('segnali', { deviceId }, t);
 
 async function serventiIce() {
   try {

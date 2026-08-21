@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { NextResponse } from 'next/server';
 import { getEdgeVoice } from '../../lib/edgeVoices.js';
-import { safeCompare } from '../../lib/apiGuard.js';
+import { safeCompare, withApiGuard } from '../../lib/apiGuard.js';
 import { isTestBlocked } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 
@@ -66,7 +66,7 @@ const TTS_INSTRUCTIONS = {
   'vi': 'Speak in fluent Vietnamese with correct six-tone pronunciation.',
 };
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const blocked = isTestBlocked();
     if (blocked) return blocked;
@@ -158,6 +158,9 @@ export async function POST(req) {
         const mod = await import('@andresaya/edge-tts');
         EdgeTTS = mod.EdgeTTS || mod.default?.EdgeTTS || mod.default;
       } catch (e) {
+        // b.363 — uscita di guasto muta: dal registro sembrava che non
+        // fosse successo niente. Il motore vocale gratuito era spento e non risultava da nessuna parte.
+        log.warn('Prova voce: modulo Edge TTS non caricabile');
         return NextResponse.json({ error: 'Edge TTS not available' }, { status: 503 });
       }
 
@@ -167,6 +170,9 @@ export async function POST(req) {
       const audioBuffer = tts.toBuffer();
 
       if (!audioBuffer || audioBuffer.length === 0) {
+        // b.363 — uscita di guasto muta: dal registro sembrava che non
+        // fosse successo niente. Un audio vuoto e un guasto che non fa rumore.
+        log.error('Prova voce: audio vuoto');
         return NextResponse.json({ error: 'Failed to generate audio' }, { status: 500 });
       }
 
@@ -181,3 +187,10 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+// b.363 — la rotta non passava dalla guardia comune: il suo conteggio era
+// una mappa in memoria di processo, e su Vercel ogni invocazione puo
+// essere un processo nuovo — cioe il limite si azzerava da solo. Manca
+// anche il controllo sulla dimensione del corpo. La guardia usa Redis,
+// che e condiviso fra tutte le invocazioni, e la sua chiave e distinta.
+export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'tts-test' });

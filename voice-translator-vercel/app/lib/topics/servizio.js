@@ -43,7 +43,9 @@ function chiaveCache(query, lingua) {
 }
 
 /** LIVELLO 0 — le stanze Mondo attive che gia parlano dell'argomento. */
-export async function stanzeCheNeParlano(query) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+async function stanzeCheNeParlano(query) {
   try {
     const grezze = await redis('LRANGE', 'mondo:rooms', 0, 29);
     const q = normalizzaQuery(query);

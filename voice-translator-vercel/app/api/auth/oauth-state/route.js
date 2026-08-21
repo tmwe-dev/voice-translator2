@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
 import { redis } from '../../../lib/redis.js';
+import { withApiGuard } from '../../../lib/apiGuard.js';
 import crypto from 'crypto';
 
 /**
@@ -9,7 +10,7 @@ import crypto from 'crypto';
  * HttpOnly cookie. The callback validates: cookie hash + callback param + Redis.
  * This binds the state to the specific browser that initiated the flow.
  */
-export async function GET(req) {
+async function handleGet(req) {
   const rl = await checkRateLimit(getRateLimitKey(req, 'oauth-state'), 20);
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Rate limit' }, { status: 429 });
@@ -32,3 +33,10 @@ export async function GET(req) {
   });
   return res;
 }
+
+// b.363 — ogni chiamata scrive una chiave nuova su Redis (con dieci minuti
+// di vita) e non passava dalla guardia comune: solo il suo conteggio
+// interno. Chi la chiamava in continuazione riempiva il database di
+// gettoni mai usati. La chiave interna ('oauth-state') resta distinta da
+// quella della guardia, per non contare due volte la stessa richiesta.
+export const GET = withApiGuard(handleGet, { maxRequests: 40, prefix: 'oauth-state-guard', skipBodyCheck: true });

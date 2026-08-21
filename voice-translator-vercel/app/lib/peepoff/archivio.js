@@ -74,7 +74,9 @@ export const elencaCoda = () => operazione('coda', 'readonly', (st) => st.getAll
 export const togliVoce = (id) => operazione('coda', 'readwrite', (st) => st.delete(id));
 
 // ── CONTATTI: l'impronta delle chiavi, e l'allarme se cambia ──
-export const leggiContatto = (indirizzo) => operazione('contatti', 'readonly', (st) => st.get(indirizzo));
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const leggiContatto = (indirizzo) => operazione('contatti', 'readonly', (st) => st.get(indirizzo));
 export const elencaContatti = () => operazione('contatti', 'readonly', (st) => st.getAll());
 
 /** Registra l'impronta vista; se DIVERSA dalla nota, accende l'allarme. */

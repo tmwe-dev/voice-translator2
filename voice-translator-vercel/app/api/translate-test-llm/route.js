@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { validateOutput, MODEL_MAP } from '../../lib/translateValidation.js';
 import { buildSystemPrompt } from '../../lib/translatePrompt.js';
 import { callLLM } from '../../lib/llmCaller.js';
-import { safeCompare } from '../../lib/apiGuard.js';
+import { safeCompare, withApiGuard } from '../../lib/apiGuard.js';
 import { isTestBlocked } from '../../lib/config.js';
 import { createLogger } from '../../lib/logger.js';
 
@@ -127,7 +127,7 @@ async function testModel(modelId, text, sourceLang, targetLang, systemPrompt, me
   }
 }
 
-export async function POST(req) {
+async function handlePost(req) {
   try {
     const blocked = isTestBlocked();
     if (blocked) return blocked;
@@ -200,3 +200,10 @@ export async function POST(req) {
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
+
+// b.363 — la rotta non passava dalla guardia comune: il suo conteggio era
+// una mappa in memoria di processo, e su Vercel ogni invocazione puo
+// essere un processo nuovo — cioe il limite si azzerava da solo. Manca
+// anche il controllo sulla dimensione del corpo. La guardia usa Redis,
+// che e condiviso fra tutte le invocazioni, e la sua chiave e distinta.
+export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'translate-test-llm' });

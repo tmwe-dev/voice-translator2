@@ -212,11 +212,16 @@ export default function useInterpreterMode({
       if (roomId && roomSessionTokenRef?.current) formData.append('roomSessionToken', roomSessionTokenRef.current);
 
       const sttRes = await apiCircuitBreaker.execute('interpreter-stt', () =>
-        fetch('/api/transcribe', { method: 'POST', body: formData })
+        // b.363 — nessuna scadenza: un pezzo di audio appeso teneva
+        // occupata la coda dell'interprete e la voce non ripartiva piu.
+        fetch('/api/transcribe', { method: 'POST', body: formData, signal: AbortSignal.timeout(30000) })
       );
 
       if (!sttRes.ok) { return; }
-      const { original: transcript } = await sttRes.json();
+      // b.363 — corpo non-JSON (il 429 del guardiano risponde in HTML):
+      // la lettura esplodeva dentro il try e il pezzo di conversazione
+      // spariva senza lasciare traccia.
+      const { original: transcript } = await sttRes.json().catch(() => ({}));
       if (!transcript || transcript.trim().length < 2) { return; }
 
       // Add to my subtitles
@@ -236,11 +241,16 @@ export default function useInterpreterMode({
             roomId,
             roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
           }),
+          // b.363 — traduzione senza scadenza: restava appesa e la
+          // conversazione si fermava a meta frase.
+          signal: AbortSignal.timeout(30000),
         })
       );
 
       if (!translateRes.ok) { return; }
-      const risposta = await translateRes.json();
+      // b.363 — vedi la trascrizione: corpo non-JSON non deve far
+      // esplodere il giro, deve solo saltare il pezzo.
+      const risposta = await translateRes.json().catch(() => ({}));
       // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": traduzione respinta dal
       // controllo qualita = 200 col testo ORIGINALE. Qui il testo va sia nel
       // sottotitolo dell'interlocutore sia in bocca alla voce sintetica: si
@@ -279,6 +289,8 @@ export default function useInterpreterMode({
             roomId,
             roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
           }),
+          // b.363 — anche la sintesi vocale era senza scadenza.
+          signal: AbortSignal.timeout(30000),
         })
       );
 

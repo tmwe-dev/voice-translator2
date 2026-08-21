@@ -99,23 +99,8 @@ export function routeTTS(langCode, opts = {}) {
   };
 }
 
-/**
- * Get all available TTS engines for a language (for Settings UI)
- */
-export function getAvailableTTSEngines(langCode, opts = {}) {
-  const lang2 = baseLang(langCode);
-  const engines = [];
-
-  if (opts.hasElevenLabs) {
-    engines.push({ id: 'elevenlabs', name: 'ElevenLabs', quality: 'Premium', score: ELEVENLABS_SCORES[lang2] || 5 });
-  }
-  if (isCosyVoiceAvailable(langCode)) {
-    engines.push({ id: 'cosyvoice', name: 'CosyVoice', quality: 'CJK Specialist', score: COSYVOICE_SCORES[lang2] || 5 });
-  }
-  if (opts.hasOpenAI) {
-    engines.push({ id: 'openai', name: 'OpenAI', quality: 'High', score: OPENAI_SCORES[lang2] || 5 });
-  }
-  engines.push({ id: 'edge', name: 'Edge TTS', quality: 'Free', score: EDGE_BASE_SCORE });
-
-  return engines.sort((a, b) => b.score - a.score);
-}
+// b.363 — qui c'era getAvailableTTSEngines, dichiarata "per la schermata
+// Impostazioni": costruiva l'elenco dei motori di voce disponibili con i
+// loro punteggi. Quella schermata non l'ha mai chiamata, e nessun altro
+// l'ha fatto. Restava un secondo elenco di punteggi accanto a quello che
+// decide davvero, poche righe sopra.

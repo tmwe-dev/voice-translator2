@@ -159,7 +159,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // sparire l'elenco stanze senza mostrare il messaggio d'errore previsto.
       if (res.ok) { const data = await res.json().catch(() => null); if (data) { setRooms((data.rooms || []).map(normalizzaStanza)); setError(null); } else setError(L('loadRoomsFailed')); }
       else setError(L('loadRoomsFailed')); // b.232 — prima !res.ok (500/429) era silenzioso
-    } catch { setError(L('loadRoomsFailed')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo:', e?.message || e);
+      setError(L('loadRoomsFailed')); }
     finally { setLoading(false); }
   }, [L]);
 
@@ -231,12 +236,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           pagina Mondo (Luca: «invece di integrarlo»). La testata, le schede e
           la ricerca qui sotto gli fluttuano sopra: una sola chrome, quella di
           BarTalk. Sta nella scheda "Per te"; nelle altre le liste lo coprono. */}
-      {/* b.363 — il pianeta resta MONTATO anche mentre si cerca: prima al
-          primo carattere digitato l'iframe veniva smontato (e ricaricato da
-          zero all'uscita), mentre la popup prometteva «il pianeta resta
-          dietro». Qui si nasconde soltanto. */}
-      {tab === 'stanze' && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 0, visibility: cercando ? 'hidden' : 'visible' }}>
+      {/* b.363 — IL PIANETA NON SPARISCE PIU. Prima al primo carattere
+          digitato veniva smontato (e ricaricato da zero all'uscita); poi
+          veniva solo nascosto — ma sparire e sparire. Ora resta acceso
+          mentre si cerca: la ricerca gli galleggia sopra.
+          E c'e anche in News: era il pianeta di Mondo, non della sola
+          scheda Stanze (Luca: «la pagina news dovrebbe avere anche lei il
+          mondo e non ce l'ha»). */}
+      {(tab === 'stanze' || tab === 'news') && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
           <GloboMondo sfondo titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
         </div>
       )}
@@ -268,9 +276,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               {/* il logo nell'angolo a sinistra, allineato al testo "Stanze",
                   con piu aria attorno (Luca: «aumenta i padding della porta e
                   allina a stanze»). */}
+              {/* b.363 — le icone in acciaio dei menu vanno al DOPPIO
+                  (ordine di Luca): il riquadro da 52 passa a 104, il
+                  respiro interno da 8 a 16 perche resti in proporzione. */}
               <span style={{
                 position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                width: 52, height: 52, padding: 8, boxSizing: 'border-box',
+                width: 104, height: 104, padding: 16, boxSizing: 'border-box',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <img src={cur.img} alt="" aria-hidden width={72} height={72}
@@ -456,7 +467,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i
       // pulsanti veri li riprendono.
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(88px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(116px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ maxWidth: 440, margin: '0 auto', pointerEvents: 'auto' }}>
 

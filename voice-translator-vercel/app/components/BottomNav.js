@@ -19,8 +19,12 @@ const IMG_MENU = {
 
 const NavIcon = ({ id, color, size = 22 }) => {
   if (IMG_MENU[id]) {
-    return <img src={IMG_MENU[id]} alt="" aria-hidden width={size + 8} height={size + 8}
-      style={{ width: size + 8, height: size + 8, objectFit: 'contain', display: 'block' }} />;
+    // b.363 — le icone in acciaio del menu in basso vanno al DOPPIO
+    // (ordine di Luca). Le altre voci, che sono disegni al tratto,
+    // restano come sono: qui raddoppia solo l'acciaio.
+    const acciaio = (size + 8) * 2;
+    return <img src={IMG_MENU[id]} alt="" aria-hidden width={acciaio} height={acciaio}
+      style={{ width: acciaio, height: acciaio, objectFit: 'contain', display: 'block' }} />;
   }
   const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round', fill: 'none' };
   switch (id) {
@@ -88,7 +92,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
         onClick={() => handleTabClick(item.views[0])}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', gap: '4px', padding: '6px 14px',
+          justifyContent: 'center', gap: '2px', padding: '4px 10px',
           // b.361 — VIA la sfumatura azzurra dietro la voce attiva (collaudo
           // di Luca: «sembra rimasta appesa la sfumatura e basta»): niente
           // sfondo, l'attiva si distingue solo dal colore del testo.
@@ -107,7 +111,10 @@ const BottomNav = ({ currentView, onNewConversation }) => {
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, height: '76px',
+      position: 'fixed', bottom: 0, left: 0, right: 0, height: '104px',
+      // b.363 — la barra si alza da 76 a 104: con l'acciaio raddoppiato
+      // (60 invece di 30) l'icona sarebbe uscita dalla barra e avrebbe
+      // mangiato l'etichetta sotto.
       // ── INIZIO b.90 — la barra segue il TEMA ──
       // Prima era nera fissa: nel tema chiaro restava scura e le voci
       // Home, Chat e Community sparivano, nero su nero. Tre pulsanti su

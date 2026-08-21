@@ -2,7 +2,7 @@
 import BarraLivelloMicrofono from './BarraLivelloMicrofono.js';
 import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
-import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend, IconWaveform } from './Icons.js';
+import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 
 const TalkControls = memo(function TalkControls({
@@ -170,7 +170,7 @@ const TalkControls = memo(function TalkControls({
                 name: myName,
               };
               try {
-                const res = await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const res = await fetch('/api/room', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 if (res.ok) {
                   vibrate(15);
                 } else {
@@ -219,7 +219,7 @@ const TalkControls = memo(function TalkControls({
                   name: myName,
                 };
                 try {
-                  const res = await fetch('/api/room', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                  const res = await fetch('/api/room', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                   if (res.ok) vibrate(15);
                   else console.warn('[TalkControls] grantSpeak server error:', res.status);
                 } catch (err) {

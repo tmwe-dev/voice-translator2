@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useCallback, useEffect } from 'react';
-import { FONT, LANGS, getLang, vibrate } from '../lib/constants.js';
+import { FONT, getLang, vibrate } from '../lib/constants.js';
 import useSheetA11y from '../hooks/useSheetA11y.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';

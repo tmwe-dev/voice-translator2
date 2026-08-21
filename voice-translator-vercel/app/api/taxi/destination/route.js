@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { redis } from '../../../lib/redis.js';
 import { createLogger } from '../../../lib/logger.js';
 import { checkRateLimit, getRateLimitKey } from '../../../lib/rateLimit.js';
-import { safeCompare } from '../../../lib/apiGuard.js';
+import { safeCompare, withApiGuard } from '../../../lib/apiGuard.js';
 import { randomUUID } from 'crypto';
 
 const log = createLogger('taxi-dest');
@@ -201,6 +201,12 @@ async function handleDelete(req) {
   }
 }
 
-export const POST = handlePost;
-export const GET = handleGet;
-export const DELETE = handleDelete;
+// b.363 — le tre porte erano esportate nude: il conteggio scritto a mano
+// dentro handlePost non copriva ne GET ne DELETE, e nessuna delle tre
+// aveva il limite alla dimensione del corpo o il rifiuto pulito di un
+// corpo malformato. Ora passano tutte dalla guardia comune, con una
+// chiave distinta ('taxi-dest') da quella interna ('taxi') per non
+// contare due volte la stessa richiesta.
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'taxi-dest' });
+export const GET = withApiGuard(handleGet, { maxRequests: 60, prefix: 'taxi-dest', skipBodyCheck: true });
+export const DELETE = withApiGuard(handleDelete, { maxRequests: 30, prefix: 'taxi-dest' });

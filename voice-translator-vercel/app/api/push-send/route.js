@@ -52,6 +52,9 @@ async function handlePost(request) {
   if (!notificheAttive()) {
     // 503 e non 500: non e un guasto, e una configurazione che manca.
     // Chi chiama puo distinguere e smettere di riprovare.
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Le notifiche non partivano per nessuno e non risultava da nessuna parte.
+    log.warn('Invio notifiche: chiavi VAPID assenti');
     return NextResponse.json(
       { error: 'Notifiche non configurate', motivo: 'chiavi VAPID assenti' },
       { status: 503 },

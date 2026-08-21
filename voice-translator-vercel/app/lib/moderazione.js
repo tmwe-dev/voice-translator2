@@ -197,8 +197,10 @@ export async function contaSegnalazioni(nome) {
   return Number(await redis('GET', chiave.segnalazioni(n))) || 0;
 }
 
-// Chi raccoglie troppe segnalazioni non sparisce: perde l'ingresso libero
-// nelle stanze pubbliche. Se qualcuno lo invita, entra lo stesso.
-export async function limitatoDaSegnalazioni(nome) {
-  return (await contaSegnalazioni(nome)) >= SOGLIA_SEGNALAZIONI;
-}
+// b.363 — qui c'era limitatoDaSegnalazioni: prometteva che chi raccoglie
+// troppe segnalazioni perde l'ingresso libero nelle stanze pubbliche.
+// La promessa non era mantenuta, perche la funzione non veniva chiamata
+// da nessuna parte: nessun ingresso la consultava. Toglierla non cambia
+// il comportamento di una virgola — cambia solo che ora il file non dice
+// piu una cosa falsa a chi lo legge. Se quel limite si vuole davvero, va
+// scritto dove si decide chi entra, non qui.

@@ -56,15 +56,6 @@ export async function elencoImmagini(limite = 12) {
   } catch { return []; }
 }
 
-/** Rimuove un'immagine dalla galleria locale. */
-export async function rimuoviImmagine(id) {
-  if (!id) return;
-  try {
-    const db = await apri();
-    await new Promise((res) => {
-      const tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).delete(id);
-      tx.oncomplete = res; tx.onerror = res;
-    });
-  } catch { /* la galleria è un di più: se IndexedDB non è disponibile, si rinuncia senza rompere */ }
-}
+// b.363 — qui c'era rimuoviImmagine, l'unico modo di cancellare una foto
+// dalla galleria locale. Nessuna schermata offriva quel comando, quindi
+// la funzione non veniva mai chiamata.

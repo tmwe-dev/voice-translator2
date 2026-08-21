@@ -157,13 +157,18 @@ export default function usePWAInstall() {
     if (iscrittaRef.current) return { ok: true, motivo: 'gia iscritta in questa sessione' };
 
     try {
-      const risp = await fetch('/api/push-subscribe');
+      // b.363 — chiamata senza scadenza: se restava appesa l'iscrizione
+      // alle notifiche non finiva mai, e l'avvio dell'app la aspettava.
+      const risp = await fetch('/api/push-subscribe', { signal: AbortSignal.timeout(10000) });
       if (!risp.ok) {
         // 503 = chiavi VAPID non impostate sul server. Non e un guasto
         // del telefono: non ha senso riprovare a ogni avvio in silenzio.
         return { ok: false, motivo: 'notifiche non configurate sul server' };
       }
-      const { publicKey } = await risp.json();
+      // b.363 — prima si leggeva il corpo come JSON senza rete di
+      // sicurezza: una pagina d'errore faceva saltare tutta l'iscrizione
+      // con un'eccezione invece del motivo leggibile qui sotto.
+      const { publicKey } = await risp.json().catch(() => ({}));
       if (!publicKey) return { ok: false, motivo: 'chiave pubblica assente' };
 
       const reg = await navigator.serviceWorker.ready;
@@ -181,6 +186,8 @@ export default function usePWAInstall() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, subscription: iscrizione.toJSON() }),
+        // b.363 — anche il salvataggio dell'iscrizione era senza scadenza.
+        signal: AbortSignal.timeout(10000),
       });
       if (!salvata.ok) return { ok: false, motivo: 'il server non ha salvato l\'iscrizione' };
 

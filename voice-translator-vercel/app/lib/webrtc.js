@@ -51,7 +51,9 @@ const ICE_SERVERS = [
 // ═══════════════════════════════════════════════
 
 /** Vero se stiamo usando il relay pubblico gratuito, cioe nessuno di nostro. */
-export let RELAY_PUBBLICO = true;
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+let RELAY_PUBBLICO = true;
 
 // ═══ b.282 — IL PONTE ARRIVA DALLA PORTA /api/turn, NON DAL PACCHETTO ═══
 // Le credenziali temporanee (HMAC, 4 ore) si chiedono al server appena
@@ -173,16 +175,10 @@ export function addMediaTracks(pc, stream) {
   return senders;
 }
 
-/**
- * Remove media tracks from peer connection
- * @param {RTCPeerConnection} pc
- * @param {RTCRtpSender[]} senders
- */
-export function removeMediaTracks(pc, senders) {
-  for (const sender of senders) {
-    try { pc.removeTrack(sender); } catch (e) { /* si sta smontando: se era gia chiuso non cambia nulla */ }
-  }
-}
+// b.363 — qui c'era removeMediaTracks, che staccava le tracce audio/video
+// dalla connessione. Non la chiamava nessuno: quando la videochiamata si
+// chiude si butta via l'intera connessione, e le tracce se ne vanno con
+// lei. Era un attrezzo per un lavoro che non si fa piu.
 
 /**
  * Get local camera + mic stream

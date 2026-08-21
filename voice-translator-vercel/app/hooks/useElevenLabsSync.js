@@ -41,9 +41,23 @@ export default function useElevenLabsSync(auth) {
           toast.error(tFuori('premiumVoicesFailed'));
         },
       })
-      .then((r) => r.json())
+      // b.363 — prima il corpo si leggeva come JSON senza rete di
+      // sicurezza: se il guardiano rispondeva con una pagina d'errore
+      // (429 in HTML) la lettura esplodeva e l'utente non riceveva
+      // nemmeno l'avviso di rinuncia, perche i tentativi erano andati a
+      // buon fine a livello di rete.
+      .then((r) => r.json().catch(() => ({})))
       .then((data) => {
-        if (annullato || !data.voices) return;
+        if (annullato || !data.voices) {
+          // b.363 — corpo illeggibile o senza voci: prima si usciva in
+          // silenzio e l'elenco restava vuoto senza motivo da nessuna
+          // parte. Ora almeno resta scritto, e l'utente lo vede.
+          if (!annullato) {
+            log.warn('voci premium: risposta senza elenco');
+            toast.error(tFuori('premiumVoicesFailed'));
+          }
+          return;
+        }
         auth.setElevenLabsVoices(data.voices);
       })
       .catch(() => { /* gia detto all'utente da suRinuncia: qui si tace per non dirlo due volte */ });

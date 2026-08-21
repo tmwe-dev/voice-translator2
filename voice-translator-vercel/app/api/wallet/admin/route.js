@@ -3,6 +3,11 @@ import { costiPerFornitore, fornitoriCiechi, listinoAttuale } from '../../../wal
 import { createClient } from '@supabase/supabase-js';
 import { withApiGuard, safeCompare } from '../../../lib/apiGuard.js';
 import { getUser } from '../../../lib/users.js';
+// b.363 — questo file non aveva alcun registro: ogni suo guasto usciva
+// dalla porta senza lasciare una riga da nessuna parte.
+import { createLogger } from '../../../lib/logger.js';
+
+const log = createLogger('walletAdmin');
 
 // ═══ MONITOR ADMIN — protetto da ADMIN_PASS ═══
 // GET  ?pass=... → economics (oggi/mese/totali) + config servizi
@@ -104,7 +109,12 @@ async function handlePost(req) {
       secondi: Math.round(minuti * 60),
       dettaglio: { nota: nota || 'omaggio admin', da: 'sesamo' },
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Un movimento di credito fallito non lasciava traccia, e il credito e denaro.
+    if (error) {
+      log.error('Amministrazione borsellino: scrittura non riuscita', { err: error?.message });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -142,7 +152,12 @@ async function handlePost(req) {
       secondi: -Math.round(minuti * 60),
       dettaglio: { nota: nota || 'rimborso Stripe (manuale)', da: 'sesamo' },
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Un movimento di credito fallito non lasciava traccia, e il credito e denaro.
+    if (error) {
+      log.error('Amministrazione borsellino: scrittura non riuscita', { err: error?.message });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ ok: true });
   }
 
@@ -164,14 +179,24 @@ async function handlePost(req) {
       scade_il: scade || null,
       campagna: 'admin',
     });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Un movimento di credito fallito non lasciava traccia, e il credito e denaro.
+    if (error) {
+      log.error('Amministrazione borsellino: scrittura non riuscita', { err: error?.message });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
     return NextResponse.json({ ok: true });
   }
 
   // ── Interruttore/valore di un servizio AI ──
   const { error } = await db().from('ai_config')
     .upsert({ chiave, valore, attivo: attivo !== false, updated_at: new Date().toISOString() });
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // b.363 — uscita di guasto muta: dal registro sembrava che non
+  // fosse successo niente. Un movimento di credito fallito non lasciava traccia, e il credito e denaro.
+  if (error) {
+    log.error('Amministrazione borsellino: scrittura non riuscita', { err: error?.message });
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }
 

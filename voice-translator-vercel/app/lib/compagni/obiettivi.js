@@ -41,7 +41,9 @@ function scrivi(lista) {
 }
 
 /** Normalizza un obiettivo (dal client o dal corpo di una richiesta). */
-export function normalizzaObiettivo(o = {}) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function normalizzaObiettivo(o = {}) {
   return {
     id: String(o.id || ('ob_' + Math.random().toString(36).slice(2))),
     titolo: String(o.titolo || '').slice(0, 120).trim(),

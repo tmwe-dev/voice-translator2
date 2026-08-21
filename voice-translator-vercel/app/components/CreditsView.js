@@ -44,8 +44,10 @@ export default function CreditsView({ userAccount }) {
 
   const carica = useCallback(async () => {
     try {
-      const r = await fetch('/api/wallet/saldo', { headers: conToken() });
-      if (r.ok) setDati(await r.json());
+      const r = await fetch('/api/wallet/saldo', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: conToken() });
+      // b.363 — prima la lettura non era protetta: una risposta non-JSON
+      // faceva saltare l'aggiornamento del credito senza lasciare traccia.
+      if (r.ok) { const d = await r.json().catch(() => null); if (d) setDati(d); }
     } catch { /* senza rete non si puo avvisare: si riprova al prossimo collegamento */ }
   }, [conToken]);
 
@@ -54,7 +56,7 @@ export default function CreditsView({ userAccount }) {
   async function compra(pacchettoId) {
     setCaricando(true); setEsito(''); setEsitoOk(false);
     try {
-      const r = await fetch('/api/wallet/ricarica', {
+      const r = await fetch('/api/wallet/ricarica', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ pacchetto: pacchettoId }),
       });
@@ -64,7 +66,12 @@ export default function CreditsView({ userAccount }) {
       // mostra un messaggio invece del click muto.
       if (!r.ok || !d.url) { setEsito(d.error || L('genericError')); setEsitoOk(false); return; }
       window.location.href = d.url;
-    } catch { setEsito(L('genericError')); setEsitoOk(false); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/ricarica:', e?.message || e);
+      setEsito(L('genericError')); setEsitoOk(false); }
     finally { setCaricando(false); }
   }
 
@@ -77,7 +84,7 @@ export default function CreditsView({ userAccount }) {
     // b.232 — prima senza try/catch: offline o errore di rete lasciava il
     // messaggio bloccato su "..." con una promise non gestita.
     try {
-      const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
+      const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pulito } : { codice: pulito }),
       });
@@ -85,7 +92,12 @@ export default function CreditsView({ userAccount }) {
       setEsito(d.ok ? `${L('doneExcl')} ${d.testo}` : (d.motivo || L('invalidCode')));
       setEsitoOk(!!d.ok);
       if (d.ok) { setCodice(''); carica(); }
-    } catch { setEsito(L('genericError')); setEsitoOk(false); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/regalo:', e?.message || e);
+      setEsito(L('genericError')); setEsitoOk(false); }
   }
 
   // ── Regalare minuti a qualcuno ──
@@ -94,16 +106,23 @@ export default function CreditsView({ userAccount }) {
     if (!minuti) return;
     setEsitoRegalo('...');
     try {
-      const r = await fetch('/api/wallet/regalo', {
+      const r = await fetch('/api/wallet/regalo', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ azione: 'invia', minuti }),
       });
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta: con una risposta rotta il
+      // regalo restava sui puntini di sospensione all'infinito.
+      const d = await r.json().catch(() => null);
+      if (!d) { setEsitoRegalo(L('genericError')); return; }
       if (!d.ok) { setEsitoRegalo(d.motivo || L('notSucceeded')); return; }
       setRegaloFatto(d);
       setEsitoRegalo('');
       carica();
-    } catch {
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/regalo:', e?.message || e);
       setEsitoRegalo(L('noConnection'));
     }
   }

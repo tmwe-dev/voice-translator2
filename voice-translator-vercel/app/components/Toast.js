@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { PALETTE } from '../lib/palette.js';
 import { ascoltaAvvisi, dismissToast } from '../lib/avvisi.js';
 import { t, preloadLang, linguaInterfacciaFuoriContesto } from '../lib/i18n.js';

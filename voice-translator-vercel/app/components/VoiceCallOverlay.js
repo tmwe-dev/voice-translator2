@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useEffect, useCallback } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { FONT } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';

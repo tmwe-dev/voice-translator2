@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { saveApiKeys, getKeyStatus, deleteApiKey } from '../../lib/keyVault.js';
 import { getSession } from '../../lib/users.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
+// b.363 — questo file non aveva alcun registro: ogni suo guasto usciva
+// dalla porta senza lasciare una riga da nessuna parte.
+import { createLogger } from '../../lib/logger.js';
+
+const log = createLogger('keys');
 
 // GET: Check which providers have saved keys (no values returned)
 async function handleGet(req) {
@@ -60,6 +65,9 @@ async function handlePost(req) {
 
   const ok = await saveApiKeys(session.email, keys);
   if (!ok) {
+    // b.363 — uscita di guasto muta: dal registro sembrava che non
+    // fosse successo niente. Le chiavi personali dell'utente non venivano salvate e non restava traccia di dove si fosse rotto.
+    log.error('Salvataggio chiavi utente non riuscito');
     return NextResponse.json({ error: 'Failed to save keys' }, { status: 500 });
   }
 

@@ -85,7 +85,9 @@ export const reportError = async (error, context = {}) => {
  * Report a performance metric
  * Stores in memory and optionally sends to analytics
  */
-export const reportMetric = async (name, value, tags = {}) => {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const reportMetric = async (name, value, tags = {}) => {
   const metric = {
     name,
     value,
@@ -108,7 +110,9 @@ export const reportMetric = async (name, value, tags = {}) => {
 /**
  * Get stored error log from IndexedDB
  */
-export const getErrorLog = async () => {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const getErrorLog = async () => {
   try {
     const db = await initIndexedDB();
     return new Promise((resolve, reject) => {
@@ -127,7 +131,9 @@ export const getErrorLog = async () => {
 /**
  * Get comprehensive health report
  */
-export const getHealthReport = async () => {
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const getHealthReport = async () => {
   const uptime = Date.now() - startTime;
 
   // Get average latency from stored metrics

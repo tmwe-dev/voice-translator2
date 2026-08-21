@@ -82,10 +82,7 @@ export function createNoiseGate(stream, { threshold = -50, smoothing = 0.85 } = 
 /**
  * Get current audio level from an AnalyserNode (0-1 normalized)
  */
-export function getAudioLevel(analyser) {
-  if (!analyser) return 0;
-  const data = new Float32Array(analyser.fftSize);
-  analyser.getFloatTimeDomainData(data);
-  const rms = Math.sqrt(data.reduce((sum, v) => sum + v * v, 0) / data.length);
-  return Math.min(1, rms * 5); // Amplify for UI display
-}
+// b.363 — qui c'era getAudioLevel, che misurava il volume del microfono
+// per mostrarlo a schermo. Non la chiamava nessuno: il livello che si
+// vede davvero lo calcola segnaleVoce.js. Erano due misuratori, uno solo
+// collegato al display.

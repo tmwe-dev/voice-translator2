@@ -51,13 +51,15 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch('/api/topics/riassunto', {
+        const r = await fetch('/api/topics/riassunto', { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ titolo: dati.titolo, lang: prefs.uiLang || 'en' }),
         });
         if (r.ok && vivo) {
-          const d = await r.json();
-          if (d.daCache && d.sintesi) setSintesiAI(d.sintesi);
+          // b.363 — prima la lettura non era protetta: una risposta rotta
+          // buttava fuori e la scheda restava muta senza spiegazioni.
+          const d = await r.json().catch(() => null);
+          if (d?.daCache && d.sintesi) setSintesiAI(d.sintesi);
         }
       } catch { /* la cache non risponde: si potra generare a mano */ }
     })();
@@ -69,7 +71,7 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
     setGenerando(true); setServeAccount(false);
     vibrate(10);
     try {
-      const r = await fetch('/api/topics/riassunto', {
+      const r = await fetch('/api/topics/riassunto', { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           titolo: dati.titolo, sintesi: dati.sintesi,
@@ -80,9 +82,17 @@ function SchedaArgomento({ aperta, tipo, dati, C, onClose, onParlane }) {
       if (r.status === 401) { setServeAccount(true); return; }
       // b.232 — prima 402 (credito) e 500 non mostravano nulla: click "morto".
       if (!r.ok) { setErrSintesi(true); return; }
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta: con una risposta rotta il
+      // tasto "genera" tornava a essere un click morto.
+      const d = await r.json().catch(() => null);
+      if (!d) { setErrSintesi(true); return; }
       if (d.sintesi) setSintesiAI(d.sintesi);
-    } catch { setErrSintesi(true); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/topics/riassunto:', e?.message || e);
+      setErrSintesi(true); }
     finally { setGenerando(false); }
   }, [dati, generando, prefs.uiLang, userToken]);
 

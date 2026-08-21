@@ -96,9 +96,7 @@ export async function translateAsia(text, sourceLang, targetLang, opts = {}) {
   };
 }
 
-/**
- * Check if Asia translation is available
- */
-export function isAsiaTranslateAvailable() {
-  return isDashScopeAvailable();
-}
+// b.363 — qui c'era isAsiaTranslateAvailable, che si limitava a girare la
+// domanda a isDashScopeAvailable. Un passacarte che nessuno interrogava:
+// chi vuole sapere se il fornitore asiatico e acceso lo chiede gia
+// direttamente.

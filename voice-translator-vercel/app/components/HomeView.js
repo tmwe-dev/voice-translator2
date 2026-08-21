@@ -371,12 +371,15 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               {/* b.360 — le immagini metalliche di Luca al posto delle icone;
                   sfondo trasparente, nessun riquadro. Ridotte al 70% (Luca). */}
               <span style={{
-                width: 40, height: 40, flexShrink: 0,
+                // b.363 — nella home le icone in acciaio crescono del 50%
+                // (ordine di Luca): il riquadro da 40 passa a 60, l'acciaio
+                // dentro da 36 a 54.
+                width: 60, height: 60, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
               }}>
                 {voce.img
-                  ? <img src={voce.img} alt="" aria-hidden width={72} height={72}
-                      style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+                  ? <img src={voce.img} alt="" aria-hidden width={108} height={108}
+                      style={{ width: 54, height: 54, objectFit: 'contain', display: 'block' }} />
                   : <Icon name={voce.icon} size={25} color={C.accent} />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>

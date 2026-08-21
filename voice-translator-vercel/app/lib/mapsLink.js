@@ -42,9 +42,7 @@ export function buildMapsUrl(dest, provider = 'google') {
   }
 }
 
-// Etichette per la scelta del provider nell'interfaccia
-export const MAPS_PROVIDERS = [
-  { id: 'google', label: 'Google Maps' },
-  { id: 'apple', label: 'Apple Maps' },
-  { id: 'geo', label: 'App predefinita' },
-];
+// b.363 — qui c'era MAPS_PROVIDERS, l'elenco delle tre mappe da mostrare
+// nell'interfaccia. Nessuna schermata lo leggeva: la scelta della mappa
+// non e mai stata offerta all'utente. Restava un elenco di etichette che
+// prometteva un menu inesistente.

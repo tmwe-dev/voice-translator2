@@ -23,7 +23,9 @@ import { createLogger } from './logger.js';
 
 const log = createLogger('mondoDB');
 
-export const GIORNI_ARCHIVIAZIONE = 15;   // silenzio oltre il quale si archivia
+// b.363 — non piu esportata: la legge solo questo file. Era offerta a
+// tutto il progetto senza che nessuno la chiedesse.
+const GIORNI_ARCHIVIAZIONE = 15;   // silenzio oltre il quale si archivia
 
 function db() {
   const c = getSupabaseAdmin();
@@ -59,9 +61,27 @@ export async function creaDiscussione({
 }) {
   const author = idPubblico(authorEmail);
   if (!author) throw new Error('autore mancante');
+  // b.363 — QUATTRO CAMPI ENTRAVANO GREZZI: titolo e nome dell'autore
+  // venivano tagliati e ripuliti da chi chiama (la rotta del Mondo), ma
+  // argomento, paese, lingua e lingua del titolo finivano nel database
+  // esattamente come arrivavano da fuori, senza limite di lunghezza e con
+  // gli spazi attaccati. Bastava una richiesta fatta a mano per riempire
+  // quelle colonne con testo lunghissimo, e per far comparire nei filtri
+  // della piazza voci fasulle che nessun menu avrebbe mai potuto scegliere.
+  // Ora i quattro campi sono tagliati qui dentro, dove nessun chiamante
+  // puo scavalcarli, con le stesse misure usate per gli altri.
+  const corto = (v, max) => {
+    if (v === null || v === undefined) return null;
+    const t = String(v).trim().slice(0, max);
+    return t || null;
+  };
   const { data, error } = await db().from('mondo_discussions').insert({
     author_user_id: author, author_name: authorName || '',
-    title, title_lang: titleLang, topic, country, lang,
+    title,
+    title_lang: corto(titleLang, 16),
+    topic: corto(topic, 40),
+    country: corto(country, 8),
+    lang: corto(lang, 16),
     media: media || {}, room_id: roomId,
   }).select('id').single();
   if (error) throw new Error('creaDiscussione: ' + error.message);
@@ -203,7 +223,9 @@ export async function smettiSeguire(followerEmail, followedPublicId) {
   if (error) throw new Error('smettiSeguire: ' + error.message);
 }
 
-export async function contaSeguaci(publicId) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+async function contaSeguaci(publicId) {
   const { count, error } = await db().from('mondo_follows')
     .select('*', { count: 'exact', head: true }).eq('followed_user_id', publicId);
   if (error) throw new Error('contaSeguaci: ' + error.message);
@@ -211,7 +233,9 @@ export async function contaSeguaci(publicId) {
 }
 
 // Il nome piu recente con cui una persona ha firmato (snapshot).
-export async function nomePersona(publicId) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+async function nomePersona(publicId) {
   const { data } = await db().from('mondo_comments').select('author_name')
     .eq('author_user_id', publicId).order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (data?.author_name) return data.author_name;
@@ -229,7 +253,9 @@ export async function profiloPersona(publicId) {
 }
 
 // La "persona": dove ha commentato / cosa ha aperto (profilo pubblico).
-export async function attivitaPersona(publicId, { limit = 30 } = {}) {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+async function attivitaPersona(publicId, { limit = 30 } = {}) {
   const [disc, com] = await Promise.all([
     db().from('mondo_discussions').select('id, title, topic, country, created_at')
       .eq('author_user_id', publicId).eq('archived', false)

@@ -285,6 +285,10 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
       }
       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] vai:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
       setStato('pronto');
     }
@@ -447,7 +451,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       if (!userToken) { setErrore(L('lifeLoginNeeded')); return; }
       setLavoro(true); setErrore(''); setArgomento(titolo);
       try {
-        const r = await fetch('/api/compiti', {
+        const r = await fetch('/api/compiti', { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ azione: 'salvaMateriale', userToken, materiale: { titolo, testo: t, origine: 'scanner' } }),
         });
@@ -457,6 +461,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         setRisposte({});
         setAperta({ lezione: { titolo }, contenuto: lez.contenuto, fonti: lez.fonti || [], domande: null });
       } catch (e) {
+        // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+        // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+        // scaduta, credito finito, server rotto) restava irrecuperabile.
+        if (e?.name !== 'AbortError') console.warn('[b.363] /api/compiti:', e?.message || e);
         setErrore(e?.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
       } finally { setLavoro(false); }
     });
@@ -545,7 +553,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           fd.append('audio', blob, 'domanda.webm');
           fd.append('sourceLang', linguaCorso || 'it');
           if (userToken) fd.append('userToken', userToken);
-          const r = await fetch('/api/transcribe', { method: 'POST', body: fd });
+          const r = await fetch('/api/transcribe', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', body: fd });
           const d = await r.json().catch(() => null);
           const t = d?.original || '';
           if (t) setDomanda((prev) => (prev ? prev + ' ' : '') + t);
@@ -555,7 +563,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       micRecRef.current = rec;
       rec.start();
       setMicDomanda('registro');
-    } catch { setMicDomanda(''); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/transcribe:', e?.message || e);
+      setMicDomanda(''); }
   }, [micDomanda, linguaCorso, userToken, domanda]);
   // b.315 — EVIDENZIA (leggi-e-segui): sfondo diverso al paragrafo che il
   // Maestro sta leggendo, cosi chi ascolta in un'altra lingua vede le parole.
@@ -799,6 +812,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           }).catch(() => {});
       }
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] apri:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
     } finally { setLavoro(false); }
     // b.217 — idem: `linguaCorso` nelle deps (la lezione va nella lingua scelta).
@@ -859,7 +876,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       setRisposte({});
       setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
       setRipassoDa(0);
-    } catch (e) { setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] faiRipasso:', e?.message || e);
+      setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError')); }
     finally { setLavoro(false); }
   }, [lavoro, argomento, categoria, livello, docenteId, linguaCorso, userToken, L]);
 

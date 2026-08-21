@@ -3,7 +3,6 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { getLang, AVATARS, AVATAR_NAMES, FONT, LANGS } from '../lib/constants.js';
 import { getPaese } from '../lib/paesi.js';
 import AvatarImg from './AvatarImg.js';
-import Icon from './Icon.js';
 import { PALETTE } from '../lib/palette.js';
 import { useApp } from '../contexts/AppContext.js';
 import Sciame from './Sciame.js';
@@ -137,12 +136,16 @@ export default function WelcomeView({ joinCode, userToken, setAuthStep,
         callback: async (response) => {
           if (response.code) {
             try {
-              const res = await fetch('/api/auth/google', {
+              const res = await fetch('/api/auth/google', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ code: response.code, referralCode: pendingReferralCode }),
               });
-              const data = await res.json();
+              // b.363 — prima la lettura non era protetta: con una risposta
+              // rotta l'accesso Google si fermava in silenzio e l'utente
+              // restava a fissare la schermata di benvenuto.
+              const data = await res.json().catch(() => null);
+              if (!data) { console.error('[b.363] auth/google: risposta illeggibile, accesso non completato'); return; }
               if (data.ok && loginWithGoogle) {
                 // Reuse the same post-login handler by simulating credential flow result
                 window.postMessage({ type: 'google-oauth-result', data }, '*');

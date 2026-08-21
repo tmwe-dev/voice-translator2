@@ -26,23 +26,16 @@ export const MODEL_REMAP = {
   'gemini-pro':     QWEN_MODELS.plus,
 };
 
-// ── Pricing (USD per 1M tokens) ──
-export const QWEN_PRICING = {
-  [QWEN_MODELS.flash]: { input: 0.30,  output: 0.60  },
-  [QWEN_MODELS.plus]:  { input: 0.80,  output: 2.00  },
-  [QWEN_MODELS.max]:   { input: 2.40,  output: 9.60  },
-};
-
-// ── Qwen-MT (Machine Translation) ──
-export const QWEN_MT_MODEL = 'qwen-mt-turbo';
-export const QWEN_MT_PRICING = 0.02; // USD per 1000 characters
-
-// ── Paraformer ASR (Speech-to-Text) ──
-export const PARAFORMER_MODEL = 'paraformer-v2';
-export const PARAFORMER_PRICING = 0.0036; // USD per minute
+// b.363 — SETTE LISTINI E NOMI DI MODELLO CHE NON LEGGEVA NESSUNO:
+// i prezzi Qwen, il modello e il prezzo della traduzione automatica, il
+// modello e il prezzo del riconoscimento vocale e il nome del modello di
+// sintesi vocale erano dichiarati qui ma non comparivano in nessun'altra
+// riga del programma. Il conto di quanto costa una traduzione lo fa
+// altrove chi chiama davvero i fornitori: questi numeri erano un secondo
+// listino, mai aggiornato e mai usato, che chiunque poteva scambiare per
+// quello vero. Tolti.
 
 // ── CosyVoice TTS ──
-export const COSYVOICE_MODEL = 'cosyvoice-v2';
 export const COSYVOICE_VOICES = {
   'zh':  { female: 'longxiaochun', male: 'longcheng' },
   'ja':  { female: 'longxiaochun', male: 'longcheng' },
@@ -54,14 +47,16 @@ export const COSYVOICE_VOICES = {
 // ── CJK Language Set ──
 export const CJK_LANGS = new Set(['zh', 'zh-TW', 'ja', 'ko']);
 export const SEA_LANGS = new Set(['th', 'vi', 'id', 'ms', 'fil']);
-export const SOUTH_ASIAN_LANGS = new Set(['hi', 'bn', 'ta']);
-export const MIDDLE_EAST_LANGS = new Set(['ar', 'ar-EG', 'he', 'tr']);
-export const EUROPEAN_LANGS = new Set([
-  'en', 'en-GB', 'es', 'es-MX', 'fr', 'fr-CA', 'de', 'it', 'pt', 'pt-PT',
-  'nl', 'pl', 'sv', 'el', 'cs', 'ro', 'hu', 'fi', 'ru', 'uk', 'da', 'nb',
-  'bg', 'hr', 'sk', 'ca', 'af',
-]);
-export const AFRICAN_LANGS = new Set(['sw', 'af']);
+// b.363 — questi tre insiemi li usa solo getLangFamily, qui sotto: erano
+// offerti a tutto il progetto senza che nessuno li chiedesse. Non sono
+// piu esportati, cosi si vede che vivono e muoiono dentro questo file.
+const SOUTH_ASIAN_LANGS = new Set(['hi', 'bn', 'ta']);
+const MIDDLE_EAST_LANGS = new Set(['ar', 'ar-EG', 'he', 'tr']);
+const AFRICAN_LANGS = new Set(['sw', 'af']);
+// b.363 — l'elenco delle lingue europee e stato tolto: getLangFamily non
+// lo consultava mai, perche 'EUROPEAN' e gia la risposta di ripiego
+// quando nessun'altra famiglia corrisponde. Chi lo leggeva credeva che
+// aggiungere una lingua li dentro cambiasse qualcosa: non cambiava nulla.
 
 /**
  * Get the base 2-letter language code

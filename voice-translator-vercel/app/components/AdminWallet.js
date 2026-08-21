@@ -53,19 +53,33 @@ export default function AdminWallet() {
   async function carica(passUsata = pass) {
     setCaricamento(true); setEsito('');
     try {
-      const r = await fetch('/api/wallet/admin', { headers: { 'x-admin-pass': passUsata } });
+      const r = await fetch('/api/wallet/admin', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: { 'x-admin-pass': passUsata } });
       if (r.status === 401) { setEsito('Password errata'); setDati(null); return; }
-      setDati(await r.json());
-    } catch { setEsito('Errore di rete'); }
+      // b.363 — prima la risposta si leggeva senza protezione: bastava un
+      // JSON malformato e si finiva nel catch generico, cosi' l'operatore
+      // leggeva "Errore di rete" anche quando la rete funzionava benissimo.
+      const d = await r.json().catch(() => null);
+      if (!d) { setEsito('Il server ha risposto in modo illeggibile'); return; }
+      setDati(d);
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/wallet/admin:', e?.message || e);
+      setEsito('Errore di rete'); }
     finally { setCaricamento(false); }
   }
 
   async function comanda(corpo) {
-    const r = await fetch('/api/wallet/admin', {
+    const r = await fetch('/api/wallet/admin', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pass, ...corpo }),
     });
-    const d = await r.json();
+    // b.363 — prima ne' la chiamata ne' la lettura erano protette: se la rete
+    // cadeva o la risposta non era JSON, l'errore restava appeso e il
+    // pulsante sembrava semplicemente non aver fatto nulla.
+    const d = await r.json().catch(() => null);
+    if (!d) { console.error('[b.363] wallet/admin: risposta illeggibile'); setEsito('Errore di rete'); return false; }
     if (d.ok) carica(); else setEsito(d.error || 'Errore');
     return d.ok;
   }

@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { memo, useState, useEffect, useCallback } from 'react';
 import { FONT, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { generaLezione, generaQuiz } from '../../lib/compagni/cliente.js';
@@ -17,7 +17,7 @@ import { conRipiego } from '../../lib/ripiego.js';
 // ═══════════════════════════════════════════════════════════════
 
 async function chiama(azione, corpo, userToken) {
-  const r = await fetch('/api/compiti', {
+  const r = await fetch('/api/compiti', { signal: AbortSignal.timeout(60000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ azione, userToken, ...corpo }),
   });
@@ -82,7 +82,12 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
       setBozza({ titolo: '', materia: '', scadenza: '', note: '' });
       setAggiungo(false);
       ricarica();
-    } catch (e) { setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] salva:', e?.message || e);
+      setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
     finally { setSalvando(false); }
   }, [bozza, salvando, userToken, ricarica]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -90,12 +95,22 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     const prossimo = j.stato === 'da_fare' ? 'in_corso' : j.stato === 'in_corso' ? 'fatto' : 'da_fare';
     vibrate(8);
     setJobs((prev) => prev.map((x) => x.id === j.id ? { ...x, stato: prossimo } : x));
-    try { await chiama('stato', { id: j.id, stato: prossimo }, userToken); } catch { ricarica(); }
+    try { await chiama('stato', { id: j.id, stato: prossimo }, userToken); } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] prossimo:', e?.message || e);
+      ricarica(); }
   }, [userToken, ricarica]);
 
   const elimina = useCallback(async (id) => {
     setJobs((prev) => prev.filter((x) => x.id !== id));
-    try { await chiama('elimina', { id }, userToken); } catch { ricarica(); }
+    try { await chiama('elimina', { id }, userToken); } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] elimina:', e?.message || e);
+      ricarica(); }
   }, [userToken, ricarica]);
 
   // ── b.333 · MATERIALI ──
@@ -139,6 +154,10 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
       const d = await chiama('ocr', { immagine: dataUrl }, userToken);
       setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), titolo: b?.titolo || d.titolo || '', testo: [(b?.testo || ''), d.testo].filter(Boolean).join('\n\n') }));
     } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] scattaOcr:', e?.message || e);
       setErrore(e.status === 402 ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto'));
     } finally { setOcrLavoro(false); }
   }, [ocrLavoro, fotoInTesto, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -169,7 +188,12 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
       const b64 = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
       const d = await chiama('pdf', { pdf: b64 }, userToken);
       setMatBozza((b) => ({ ...(b || { titolo: '', materia: '', testo: '' }), titolo: b?.titolo || file.name.replace(/\.pdf$/i, ''), testo: [(b?.testo || ''), d.testo].filter(Boolean).join('\n\n') }));
-    } catch { setErrore(tt('lifeMatPdfErr', 'PDF non leggibile (se è una scansione, usa la foto)')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] caricaPdf:', e?.message || e);
+      setErrore(tt('lifeMatPdfErr', 'PDF non leggibile (se è una scansione, usa la foto)')); }
     finally { setOcrLavoro(false); }
   }, [ocrLavoro, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -178,13 +202,23 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     try {
       await chiama('salvaMateriale', { materiale: { titolo: matBozza.titolo || 'Materiale', materia: matBozza.materia || '', origine: 'appunti', testo: matBozza.testo } }, userToken);
       setMatBozza(null); ricaricaMateriali();
-    } catch (e) { setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] salvaMat:', e?.message || e);
+      setErrore(e.status === 401 ? tt('lifeLoginNeeded', 'Accedi') : tt('lifeError', 'Qualcosa è andato storto')); }
   }, [matBozza, userToken, ricaricaMateriali]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const apriMat = useCallback(async (id) => {
     setLezioneMat(null); setQuizMat(null); setRisposteMat({});
     try { const d = await chiama('leggiMateriale', { id }, userToken); setMatAperto(d.materiale); }
-    catch { setErrore(tt('lifeError', 'Qualcosa è andato storto')); }
+    catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] apriMat:', e?.message || e);
+      setErrore(tt('lifeError', 'Qualcosa è andato storto')); }
   }, [userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const creaLezioneDaMat = useCallback(async () => {
@@ -193,7 +227,12 @@ function CompitiView({ L, userToken, lingua, cambiaScheda, testoP, muto, accent,
     try {
       const d = await generaLezione({ argomento: matAperto.titolo, categoria: 'altro', livello: 'base', lezione: { titolo: matAperto.titolo, obiettivi: [] }, lingua: lingua || 'it', userToken, materialeId: matAperto.id });
       setLezioneMat(d.contenuto || '');
-    } catch (e) { setErrore(e.creditoEsaurito ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] creaLezioneDaMat:', e?.message || e);
+      setErrore(e.creditoEsaurito ? tt('lifeNoCredit', 'Credito esaurito') : tt('lifeError', 'Qualcosa è andato storto')); }
     finally { setLavoroMat(''); }
   }, [matAperto, lavoroMat, lingua, userToken]); // eslint-disable-line react-hooks/exhaustive-deps
 

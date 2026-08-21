@@ -79,4 +79,8 @@ export const toast = {
   }),
 };
 
-export const COSTANTI_AVVISI = { DURATA, MASSIMO };
+// b.363 — qui c'era COSTANTI_AVVISI, una scatola che rimetteva in mostra
+// durata e numero massimo degli avvisi. Non la apriva nessuno: ne il
+// componente che disegna gli avvisi ne i collaudi. Era una porta aperta
+// su due numeri che questo file usa gia da solo, e faceva credere che
+// qualcuno da fuori potesse regolarli. Tolta.

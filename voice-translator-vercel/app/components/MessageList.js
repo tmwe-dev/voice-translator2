@@ -1,7 +1,7 @@
 'use client';
 import { memo, useState, useEffect, useRef, useCallback } from 'react';
 import AvatarImg from './AvatarImg.js';
-import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconWarning, IconLoader, IconMic, IconKeyboard, IconListening } from './Icons.js';
+import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconLoader, IconMic, IconKeyboard } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import BarraReazioni from './BarraReazioni.js';
 import Velo from './Velo.js';
@@ -99,11 +99,14 @@ const MessageList = memo(function MessageList({
     if (tradLocali[chiave]) return;
     setTradLocali(t => ({ ...t, [chiave]: '…' }));
     try {
-      const r = await fetch('/api/translate', {
+      const r = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: m.original, sourceLang: m.sourceLang || 'auto', targetLang: myLang, userToken: userToken || '', roomId: roomId || undefined }),
       });
-      const d = await r.json();
+      // b.363 — prima la lettura non era protetta: con una risposta rotta il
+      // messaggio restava sui puntini finche' non si usciva dalla stanza.
+      const d = await r.json().catch(() => null);
+      if (!d) { setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); return; }
       // b.363 — LA TRAPPOLA DEL "200 CHE MENTE": quando il controllo di
       // qualita respinge la traduzione, /api/translate risponde 200 con
       // dentro il TESTO ORIGINALE e validationFailed:true. Senza guardare
@@ -112,7 +115,12 @@ const MessageList = memo(function MessageList({
       const tradotto = (!r.ok || d.validationFailed) ? '' : (d.translated || d.translation || '');
       setTradLocali(t => ({ ...t, [chiave]: tradotto || null }));
       if (!tradotto) setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; });
-    } catch { setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      setTradLocali(t => { const nn = { ...t }; delete nn[chiave]; return nn; }); }
   }, [tradLocali, myLang, userToken, roomId]);
 
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState(null);

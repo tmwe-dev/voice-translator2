@@ -136,17 +136,25 @@ function TaxiTalk({ userToken }) {
         : '';
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?q=${enc}${bias}&format=json&limit=5&addressdetails=1`,
-        { headers: { 'Accept-Language': driverLang || 'en' } }
+        { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: { 'Accept-Language': driverLang || 'en' } }
       );
       if (!res.ok) throw new Error('geocoding');
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: la ricerca chiudeva senza
+      // esito e la destinazione restava quella vecchia.
+      const data = await res.json().catch(() => null);
+      if (!data) { setErroreDest(L('searchError')); setCercando(false); return; }
       if (data.length === 0) { setErroreDest(L('placeNotFound')); }
       else if (data.length === 1) {
         setDest({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), displayName: data[0].display_name });
       } else {
         setRisultati(data.map(p => ({ lat: parseFloat(p.lat), lon: parseFloat(p.lon), displayName: p.display_name })));
       }
-    } catch { setErroreDest(L('searchError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] https://nominatim.openstreetmap.org:', e?.message || e);
+      setErroreDest(L('searchError')); }
     setCercando(false);
   }, [userPos, driverLang, L]);
 
@@ -166,7 +174,7 @@ function TaxiTalk({ userToken }) {
     setTraducendo(true); setErroreTrad('');
     try {
       const src = getLang(myLang); const tgt = getLang(driverLang);
-      const res = await fetch('/api/translate', {
+      const res = await fetch('/api/translate', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text, sourceLang: myLang, targetLang: driverLang,
@@ -175,7 +183,11 @@ function TaxiTalk({ userToken }) {
         }),
       });
       if (!res.ok) { setErroreTrad(res.status === 402 ? L('creditExhausted') : L('translationRetryLater')); setTraducendo(false); return ''; }
-      const data = await res.json();
+      // b.363 — prima la lettura non era protetta: una risposta rotta finiva
+      // nel catch generico e si annunciava "sei senza connessione" anche con
+      // la rete perfettamente funzionante.
+      const data = await res.json().catch(() => null);
+      if (!data) { setErroreTrad(L('translationRetryLater')); setTraducendo(false); return ''; }
       // b.363 — traduzione respinta = 200 col testo di partenza. Qui la frase
       // viene MOSTRATA e poi LETTA ad alta voce al tassista: dirgli la frase
       // nella lingua del passeggero, spacciata per tradotta, e peggio che
@@ -188,27 +200,37 @@ function TaxiTalk({ userToken }) {
       setFonteTraduzione({ testo: text, lingua: driverLang });
       setTraducendo(false);
       return out;
-    } catch { setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      setErroreTrad(L('youHaveNoConnection')); setTraducendo(false); return ''; }
   }, [testo, myLang, driverLang, userToken, L]);
 
   // ── Voce (Edge → OpenAI, in coda: come SpeakerView) ──
   const procura = useCallback(async (text, lang) => {
     const langCode = getLang(lang)?.speech || lang || 'en';
     try {
-      const edge = await fetch('/api/tts-edge', {
+      const edge = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, langCode, gender: 'female' }),
       });
       if (edge.ok) { const b = await edge.blob(); if (b.size > 0) return b; }
     } catch { /* Edge non disponibile: si passa a OpenAI */ }
     try {
-      const res = await fetch('/api/tts', {
+      const res = await fetch('/api/tts', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text, voice: prefs?.voice || 'nova', lang, userToken: userToken || '' }),
       });
       if (!res.ok) return null;
       return await res.blob();
-    } catch { return null; }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts:', e?.message || e);
+      return null; }
   }, [prefs?.voice, userToken]);
 
   const suona = useCallback((blob) => new Promise((finito) => {

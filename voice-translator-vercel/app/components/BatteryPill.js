@@ -47,8 +47,10 @@ export default function BatteryPill({ utente, verticale = false }) {
   const carica = useCallback(async () => {
     if (!utente) return;
     try {
-      const r = await fetch('/api/wallet/saldo', { headers: conToken() });
-      if (r.ok) setDati(await r.json());
+      const r = await fetch('/api/wallet/saldo', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, headers: conToken() });
+      // b.363 — prima la lettura non era protetta: una risposta non-JSON
+      // faceva saltare l'aggiornamento del saldo senza lasciare traccia.
+      if (r.ok) { const d = await r.json().catch(() => null); if (d) setDati(d); }
     } catch { /* offline: teniamo l'ultimo dato */ }
   }, [utente, conToken]);
 
@@ -71,7 +73,7 @@ export default function BatteryPill({ utente, verticale = false }) {
         if (!memGet('vt-benvenuto-chiesto')) {
           const token = memGet('vt-token');
           if (token) {
-            const r = await fetch('/api/wallet/benvenuto', {
+            const r = await fetch('/api/wallet/benvenuto', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
               method: 'POST', headers: { Authorization: `Bearer ${token}` },
             });
             const d = await r.json().catch(() => ({}));
@@ -87,7 +89,7 @@ export default function BatteryPill({ utente, verticale = false }) {
         if (pendente) {
           memDel('vt-voucher-pendente');
           const eRegalo = pendente.startsWith('GIFT-');
-          const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', {
+          const r = await fetch(eRegalo ? '/api/wallet/regalo' : '/api/wallet/voucher', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
             method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
             body: JSON.stringify(eRegalo ? { azione: 'riscatta', codice: pendente } : { codice: pendente }),
           });
@@ -106,7 +108,7 @@ export default function BatteryPill({ utente, verticale = false }) {
 
   // Ricarica: chiedi il link a Stripe e vai
   async function ricarica(pacchettoId) {
-    const r = await fetch('/api/wallet/ricarica', {
+    const r = await fetch('/api/wallet/ricarica', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ pacchetto: pacchettoId }),
     });
@@ -121,7 +123,7 @@ export default function BatteryPill({ utente, verticale = false }) {
   // Voucher: manda il codice, mostra l'esito
   async function usaVoucher() {
     setEsito('...'); setEsitoOk(false);
-    const r = await fetch('/api/wallet/voucher', {
+    const r = await fetch('/api/wallet/voucher', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
       method: 'POST', headers: conToken({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ codice }),
     });

@@ -1,5 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
-import { memDel, memGet, memSet } from './memoria.js';
+// b.363 — memDel non serve piu: era usato solo dallo svuota-monitor, tolto
+// perche non lo chiamava nessuno.
+import { memGet, memSet } from './memoria.js';
 // b.275 — IL MONITOR: dove passa la voce, e quanto ci mette
 //
 // La scatola nera (diagnosticaChiamata.js) racconta la CHIAMATA. Questo
@@ -37,16 +39,16 @@ export function cronometro(fase, datiIniziali = {}) {
   return (dati = {}) => traccia(fase, { ms: Date.now() - inizio, ...datiIniziali, ...dati });
 }
 
-export function leggiMonitor() {
+// b.363 — non piu esportata: la usa solo questo file. Era offerta a tutto
+// il progetto senza che nessuno la chiedesse.
+function leggiMonitor() {
   if (righe.length) return righe;
   try { const v = JSON.parse(memGet(CHIAVE) || '[]'); return Array.isArray(v) ? v : []; }
   catch { return []; }
 }
 
-export function svuotaMonitor() {
-  righe.length = 0;
-  try { memDel(CHIAVE); } catch { /* niente memoria da svuotare: va bene cosi */ }
-}
+// b.363 — qui c'era svuotaMonitor, il pulsante per azzerare il registro
+// di sviluppo. Non lo premeva nessuno: ne una schermata ne un collaudo.
 
 /** Le righe in una forma leggibile, la piu recente in fondo. */
 export function rapportoMonitorTesto(quante = 25) {

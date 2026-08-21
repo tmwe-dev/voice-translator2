@@ -27,8 +27,10 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
     let vivo = true;
     (async () => {
       try {
-        const r = await fetch(`/api/mondo/discussioni?persona=${encodeURIComponent(publicId)}`);
-        if (r.ok && vivo) { const d = await r.json(); setP(d.profilo || null); }
+        const r = await fetch(`/api/mondo/discussioni?persona=${encodeURIComponent(publicId)}`, { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */ });
+        // b.363 — prima la lettura non era protetta: il profilo restava vuoto
+        // e nessuno, ne' l'utente ne' il registro, sapeva perche'.
+        if (r.ok && vivo) { const d = await r.json().catch(() => null); if (d) setP(d.profilo || null); else console.warn('[b.363] mondo/persona: risposta illeggibile'); }
       } catch { /* profilo non caricato: resta il minimo */ }
       if (vivo) setCaricando(false);
     })();
@@ -41,13 +43,18 @@ function MondoPersona({ publicId, onClose, onOpenDiscussione }) {
     setSeguito(!gia);
     vibrate(8);
     try {
-      const r = await fetch('/api/mondo/discussioni', {
+      const r = await fetch('/api/mondo/discussioni', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ azione: gia ? 'smetti' : 'segui', userToken, followedPublicId: publicId }),
       });
       if (!r.ok) throw new Error('rifiutato');
       setErroreSegui('');
-    } catch { setSeguito(gia); setErroreSegui(L('genericError')); }
+    } catch (e) {
+      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+      // scaduta, credito finito, server rotto) restava irrecuperabile.
+      if (e?.name !== 'AbortError') console.warn('[b.363] /api/mondo/discussioni:', e?.message || e);
+      setSeguito(gia); setErroreSegui(L('genericError')); }
   }, [userToken, seguito, publicId, L]);
 
   const bg = C.bg || '#0a0e1a';

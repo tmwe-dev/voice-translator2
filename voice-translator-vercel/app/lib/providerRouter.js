@@ -12,7 +12,9 @@
 // Mixed    → Global (80% confidence)
 // ═══════════════════════════════════════════════
 
-import { getLangFamily, baseLang } from './asiaConstants.js';
+// b.363 — baseLang era importato e mai chiamato: qui si usa solo la
+// famiglia della lingua, non la sua radice.
+import { getLangFamily } from './asiaConstants.js';
 import { isDashScopeAvailable } from './llmAsia.js';
 
 /**
