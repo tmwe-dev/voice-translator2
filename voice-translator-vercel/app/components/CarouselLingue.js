@@ -38,7 +38,6 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
   const [aperto, setAperto] = useState(false);  // l'elenco completo con la ricerca
   const [cerca, setCerca] = useState('');
   const toccoX = useRef(null);
-  const haGirato = useRef(false); // b.355 — l'autoselezione parte solo dopo un gesto vero
 
   // il centro segue la selezione esterna (senza animare al primo giro)
   useEffect(() => {
@@ -47,18 +46,14 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selezionata]);
 
-  // b.355 — «gira e basta»: no. La bandiera che si ferma AL CENTRO diventa
-  // la lingua, da sola, dopo un attimo di quiete — senza tocchi in piu.
-  useEffect(() => {
-    const l = lingue[centro];
-    if (!haGirato.current || !l || l.code === selezionata) return;
-    const timer = setTimeout(() => onScegli(l), 700);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [centro]);
+  // b.363 — SCORRERE NON E SCEGLIERE. Prima la bandiera che si fermava al
+  // centro diventava la lingua da sola dopo un attimo di quiete: cercando
+  // un paese e passandone cinque, la lingua cambiava CINQUE VOLTE, e ogni
+  // volta si ricaricava mezza interfaccia sotto le dita. Ora scorrere
+  // sposta soltanto lo sguardo; la lingua cambia quando si conferma.
+  // Dall'elenco completo, invece, resta immediata: li si sceglie davvero.
 
   const scorri = useCallback((dir) => {
-    haGirato.current = true;
     setVerso(dir);
     setSalto((s) => s + 1);
     setCentro((c) => (c + dir + totale) % totale);
@@ -227,6 +222,18 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
         {alCentro.name}
         {alCentro.code === selezionata && <span style={{ color: C.accent, fontSize: 12 }}>✓</span>}
       </div>
+
+      {/* b.363 — il tasto compare SOLO se la bandiera al centro non e quella
+          gia in uso: e l'unico modo di cambiare lingua scorrendo. */}
+      {alCentro.code !== selezionata && (
+        <button onClick={() => scegli(alCentro)}
+          style={{ marginTop: 8, padding: '7px 18px', borderRadius: 999, cursor: 'pointer',
+            border: `1px solid ${C.accent}55`, background: 'transparent', color: C.accent,
+            fontFamily: FONT, fontSize: 12.5, fontWeight: 800,
+            WebkitTapHighlightColor: 'transparent' }}>
+          {L('useWord')} {alCentro.name}
+        </button>
+      )}
 
       <style>{`
         @keyframes vtScivolaD { from { transform: translateX(52px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

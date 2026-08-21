@@ -4,9 +4,7 @@ import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.254 — `t` e `mapLang` servono all'avviso della lingua: il messaggio si
 // scrive nella lingua NUOVA, altrimenti annuncerebbe il cambio in quella
-// vecchia. `toast` e la coda avvisi (lib/avvisi.js), non il disegno.
 import { t, mapLang, preloadLang } from '../lib/i18n.js';
-import { toast } from '../lib/avvisi.js';
 import { IconQR, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
@@ -120,15 +118,23 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         const rimaste = [];
         for (const room of saved) {
           try {
-            const res = await fetch('/api/room', {
+            const res = await fetch('/api/room', { signal: AbortSignal.timeout(10000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'check', roomId: room.roomId })
             });
             if (!res.ok) { rimaste.push(room); continue; }   // non si sa: si tiene
-            const data = await res.json();
+            // b.363 — prima la lettura non era protetta: una sola risposta
+            // rotta buttava fuori dal ciclo e faceva sparire dall'elenco
+            // TUTTE le stanze rimanenti, non solo quella in esame.
+            const data = await res.json().catch(() => null);
+            if (!data) { rimaste.push(room); continue; }   // non si sa: si tiene
             const spenta = data && (data.exists === false || data.ended === true);
             if (!spenta) rimaste.push(room);
-          } catch {
+          } catch (e) {
+            // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
+            // registro non compariva nulla, e il motivo vero (rete caduta, attesa
+            // scaduta, credito finito, server rotto) restava irrecuperabile.
+            if (e?.name !== 'AbortError') console.warn('[b.363] /api/room:', e?.message || e);
             rimaste.push(room);   // rete incerta: si tiene
           }
         }
@@ -189,17 +195,12 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
       ? { ...prefs, lang: l.code }
       : { ...prefs, lang: l.code, uiLang: dopo };
     savePrefs(nuove);
-    if (!prefs.uiLangScelta && dopo !== prima) {
-      const nomePrima = getLang(prima)?.name || prima;
-      preloadLang(dopo).finally(() =>
-        toast.info(`${t(dopo, 'uiLanguage')}: ${getLang(dopo)?.name || dopo}`, {
-          duration: 8000,
-          action: {
-            label: `${t(dopo, 'cancelWord')} (${nomePrima})`,
-            onClick: () => savePrefs({ ...nuove, uiLang: prima, uiLangScelta: true }),
-          },
-        }));
-    }
+    // b.363 — via l'avviso che annunciava il cambio di lingua con il tasto
+    // per annullarlo: non serve a niente. Da quando il carosello chiede
+    // conferma, la lingua cambia solo quando la si e scelta apposta — e
+    // dire a qualcuno cosa ha appena scelto, coprendogli mezzo schermo per
+    // otto secondi, e solo un disturbo. Il pacchetto si carica lo stesso.
+    if (!prefs.uiLangScelta && dopo !== prima) preloadLang(dopo);
   };
 
   // b.356 — la "luce che segue il mouse" di b.354 e stata tolta insieme
