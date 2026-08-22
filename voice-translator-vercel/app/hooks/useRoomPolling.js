@@ -7,6 +7,7 @@ import { createLogger } from '../lib/logger.js';
 import { tFuori } from '../lib/i18n.js';
 import { ascoltaVociMute } from '../lib/segnaleVoce.js';
 import { memGet, memSet } from '../lib/memoria.js';
+import { membriDi, quantiDentro } from '../lib/membri.js';
 const dbg = createLogger('polling');
 
 // ═══════════════════════════════════════════════════════════════
@@ -443,14 +444,14 @@ export default function useRoomPolling({
     if (data.room) {
       roomInfoRef.current = data.room;
       setRoomInfo(data.room);
-      setPartnerConnected(data.room.members.length >= 2);
+      setPartnerConnected(quantiDentro(data.room) >= 2);
       return;
     }
 
     if (data.members) {
       if (roomInfoRef.current) roomInfoRef.current = { ...roomInfoRef.current, members: data.members };
       setRoomInfo(prev => prev ? { ...prev, members: data.members } : prev);
-      setPartnerConnected(data.members.length >= 2);
+      setPartnerConnected(quantiDentro(data) >= 2);
       return;
     }
 
@@ -458,7 +459,7 @@ export default function useRoomPolling({
     if (data.action === 'langChange' && data.name && data.lang) {
       // Update ref immediately so translation targets are correct RIGHT NOW
       if (roomInfoRef.current?.members) {
-        const updatedMembers = roomInfoRef.current.members.map(m =>
+        const updatedMembers = membriDi(roomInfoRef.current).map(m =>
           m.name === data.name ? { ...m, lang: data.lang } : m
         );
         roomInfoRef.current = { ...roomInfoRef.current, members: updatedMembers };
@@ -466,7 +467,7 @@ export default function useRoomPolling({
       // Also update React state for UI re-render
       setRoomInfo(prev => {
         if (!prev?.members) return prev;
-        const members = prev.members.map((m) =>
+        const members = membriDi(prev).map((m) =>
           m.name === data.name ? { ...m, lang: data.lang } : m
         );
         setPartnerConnected(members.length >= 2);
@@ -753,9 +754,9 @@ export default function useRoomPolling({
           if (hostFlag !== undefined) isHostRef.current = hostFlag;
           roomInfoRef.current = room;
           setRoomInfo(room);
-          setPartnerConnected(room.members.length >= 2);
+          setPartnerConnected(quantiDentro(room) >= 2);
           const myName = verifiedNameRef.current || prefsRef.current.name;
-          const others = room.members.filter(m => m.name !== myName);
+          const others = membriDi(room).filter(m => m.name !== myName);
           // Only update speaking/typing from polling if Realtime is NOT connected
           if (!realtimeConnectedRef.current) {
             // b.291 — anche dal giro lento: uno per uno, mai in blocco.
@@ -889,14 +890,14 @@ export default function useRoomPolling({
     // ── Immediately update local roomInfoRef so translation targets are correct ──
     // Don't wait for Realtime broadcast round-trip or next poll
     if (roomInfoRef.current?.members) {
-      const updatedMembers = roomInfoRef.current.members.map(m =>
+      const updatedMembers = membriDi(roomInfoRef.current).map(m =>
         m.name === myName ? { ...m, lang: newLang } : m
       );
       roomInfoRef.current = { ...roomInfoRef.current, members: updatedMembers };
       // Also update React state so UI re-renders
       setRoomInfo(prev => {
         if (!prev?.members) return prev;
-        return { ...prev, members: prev.members.map(m =>
+        return { ...prev, members: membriDi(prev).map(m =>
           m.name === myName ? { ...m, lang: newLang } : m
         )};
       });
@@ -1024,7 +1025,7 @@ export default function useRoomPolling({
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
-      setPartnerConnected(room.members.length >= 2);
+      setPartnerConnected(quantiDentro(room) >= 2);
       startPolling(room.id);
       return room;
     } catch (e) {
@@ -1095,7 +1096,7 @@ export default function useRoomPolling({
       setRoomId(room.id);
       setRoomInfo(room);
       setMessages([]);
-      setPartnerConnected(room.members.length >= 2);
+      setPartnerConnected(quantiDentro(room) >= 2);
       startPolling(room.id);
 
       // Broadcast member join via Realtime

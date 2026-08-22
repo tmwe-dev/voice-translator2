@@ -13,6 +13,7 @@ import { createLogger } from '../lib/logger.js';
 import { puoPartire } from '../lib/reati.js';
 import { toast } from '../lib/avvisi.js';
 import { cronometro } from '../lib/monitorSviluppo.js';
+import { membriDi, linguaDellAltro, lingueDegliAltri } from '../lib/membri.js';
 const dbg = createLogger('translation-api');
 
 // b.247 — lo stesso formato che accetta /api/messages (POST e PATCH).
@@ -637,11 +638,17 @@ export default function useTranslationAPI({
     const currentRoomInfo = roomInfoRef.current;
     const myName = verifiedNameRef?.current || prefsRef.current.name;
     const myL = getLang(currentMyLang);
-    let otherLangCode = null;
-    if (currentRoomInfo && currentRoomInfo.members) {
-      const other = currentRoomInfo.members.find(m => m.name !== myName);
-      if (other) otherLangCode = other.lang;
-    }
+    // b.387 — QUI SI DECIDE SE DUE PERSONE SI CAPISCONO.
+    //
+    // Prima si guardava SOLO l'elenco dei membri e, se mancava, si
+    // tirava a indovinare (italiano/inglese). Ma la lettura PUBBLICA di
+    // una stanza non manda i membri APPOSTA — manda `langs`. Quindi in
+    // una stanza pubblica chi scriveva non sapeva verso chi tradurre: il
+    // messaggio partiva grezzo, e l'altro riceveva una lingua che non
+    // parla con sotto un tasto "Traduci" che non poteva funzionare.
+    //
+    // Adesso `langs` e la seconda strada, e arriva sempre.
+    let otherLangCode = linguaDellAltro(currentRoomInfo, myName, currentMyLang);
     if (!otherLangCode) otherLangCode = currentMyLang === 'en' ? 'it' : 'en';
     return { myL, otherL: getLang(otherLangCode) };
   }, [myLangRef, roomInfoRef, prefsRef, verifiedNameRef]);
@@ -656,18 +663,15 @@ export default function useTranslationAPI({
     const myName = verifiedNameRef?.current || prefsRef.current.name;
     const myL = getLang(currentMyLang);
 
-    if (!currentRoomInfo?.members) {
-      // b.289 — niente membri = niente destinatari = NIENTE traduzione.
-      // Prima si traduceva comunque verso it/en "a caso": costo pagato
-      // per una lingua che nessuno nella stanza avrebbe letto.
+    // b.387 — «niente membri = niente traduzione» era una regola giusta
+    // con una premessa sbagliata: che l'unico modo di sapere chi c'e
+    // fossero i membri. La lettura pubblica di una stanza non li manda
+    // apposta, ma manda `langs` — e quelle bastano a sapere verso quali
+    // lingue tradurre, che e l'unica cosa che serve qui. Il principio
+    // resta intatto: se non si sa verso chi, non si traduce e non si paga.
+    const uniqueLangCodes = new Set(lingueDegliAltri(currentRoomInfo, myName, currentMyLang));
+    if (!membriDi(currentRoomInfo).length && !uniqueLangCodes.size) {
       return { myL, targetLangs: [] };
-    }
-
-    const uniqueLangCodes = new Set();
-    for (const m of currentRoomInfo.members) {
-      if (m.name !== myName && m.lang && m.lang !== currentMyLang) {
-        uniqueLangCodes.add(m.lang);
-      }
     }
 
     if (uniqueLangCodes.size === 0) {

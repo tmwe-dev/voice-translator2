@@ -4,6 +4,7 @@ import { memo, useState } from 'react';
 import { FONT, vibrate } from '../lib/constants.js';
 import { IconMic, IconRecord, IconLock, IconSparkles, IconHandRaise, IconSend } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
+import { membriDi, quantiDentro } from '../lib/membri.js';
 
 const TalkControls = memo(function TalkControls({
   L, S, roomMode, roomId, isHost, canTalk, modeInfo, isTrial,
@@ -207,7 +208,7 @@ const TalkControls = memo(function TalkControls({
           background: 'rgba(255,165,0,0.08)', borderRadius: 12, margin: '0 10px 6px',
         }}>
           <span style={{ fontSize: 12, color: '#FFA500', fontWeight: 600 }}>{'\u270B'} Mani alzate:</span>
-          {roomInfo.members.filter(m => m.handRaised).map(m => (
+          {membriDi(roomInfo).filter(m => m.handRaised).map(m => (
             <button key={m.name}
               disabled={grantingSpeak === m.name}
               onClick={async () => {

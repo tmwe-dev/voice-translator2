@@ -50,7 +50,7 @@ export default function useLocalChat({ roomId, myName, members, mode, context })
     const chatMeta = {
       id: chatId,
       roomId: chatId,
-      members: members.map(m => ({ name: m.name, lang: m.lang, role: m.role })),
+      members: (Array.isArray(members) ? members : []).map(m => ({ name: m.name, lang: m.lang, role: m.role })),
       mode: mode || 'conversation',
       context: context || 'general',
       createdAt: Date.now(),

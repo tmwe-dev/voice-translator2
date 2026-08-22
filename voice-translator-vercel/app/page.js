@@ -41,6 +41,7 @@ import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
 import ErrorBoundary from './components/ErrorBoundary.js';
 import ToastContainer, { toast } from './components/Toast.js';
+import AvvisoSessione from './components/AvvisoSessione.js';
 import NetworkStatus from './components/NetworkStatus.js';
 import TutorialOverlay from './components/TutorialOverlay.js';
 import { initMonitoring, reportError } from './lib/monitor.js';
@@ -104,6 +105,9 @@ export default function Home() {
       {/* Skip-to-content link lives in layout.js (<SkipToContent />) — do not duplicate here */}
       <NetworkStatus />
       <ToastContainer />
+      {/* b.387 — la sessione caduta si dice UNA volta, in alto, invece di
+          far comparire un errore diverso in ogni schermata. */}
+      <AvvisoSessione />
       {/* b.233 — niente più `id="main-content" role="main"` qui: era DUPLICATO
           del <main id="main-content"> del layout (id ripetuto + due landmark
           main annidati). Il salta-al-contenuto punta a quello del layout. */}

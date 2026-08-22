@@ -72,7 +72,9 @@ export function buildCompactTranscript(messages, maxMsgs = 100) {
  * @returns {string}
  */
 export function getActionPrompt(actionId, context = {}) {
-  const memberInfo = context.members?.length
+  // b.387 — `?.length` non basta: passa anche a un oggetto, e poi
+  // `.map` lancia. Qui si chiede la cosa vera: e un elenco?
+  const memberInfo = Array.isArray(context.members) && context.members.length
     ? `Participants: ${context.members.map(m => `${m.name} (${m.lang})`).join(', ')}.`
     : '';
   const modeInfo = context.mode ? `Conversation mode: ${context.mode}.` : '';

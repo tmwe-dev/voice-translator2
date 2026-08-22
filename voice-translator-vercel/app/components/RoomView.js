@@ -27,6 +27,10 @@ import { useApp } from '../contexts/AppContext.js';
 import { getAttenuazione, setVolumeTTS } from '../lib/audioPrefs.js';
 import useReazioni from '../hooks/useReazioni.js';
 import { eDiretta } from '../lib/decisioni.js';
+// b.387 — i membri si leggono da un posto solo, che non lancia mai:
+// la lettura pubblica di una stanza non li manda apposta, e due punti
+// del client davano per scontato un array e morivano.
+import { membriDi } from '../lib/membri.js';
 
 const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -889,7 +893,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           cablaggio mancante, e una funzione solo lato server. */}
       {showChatActions && (
         <ChatActionsPanel
-          theme={theme} messages={messages} members={roomInfo?.members || []}
+          theme={theme} messages={messages} members={membriDi(roomInfo)}
           mode={roomMode} domain={roomInfo?.context} userToken={userToken} lendingCode={null}
           roomId={roomId} roomSessionToken={roomSessionToken}
           onClose={() => setShowChatActions(false)} t={L}

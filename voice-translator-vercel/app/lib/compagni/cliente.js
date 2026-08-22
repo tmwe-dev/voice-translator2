@@ -9,6 +9,7 @@
 
 import { segmentiPerVoce } from './corsi/lingua.js';
 import { fermatoDavvero } from '../audioLife.js';
+import { segnalaSessioneCaduta } from '../sessioneCaduta.js';
 
 async function postJSON(url, corpo) {
   const r = await fetch(url, {
@@ -25,6 +26,12 @@ async function postJSON(url, corpo) {
     // b.358 — il MOTIVO tecnico arrivava dal server e veniva buttato qui:
     // in superficie restava solo "Qualcosa e andato storto". Ora viaggia.
     err.motivo = (dati && dati.motivo) || '';
+    // b.387 — un 401 non e un errore come gli altri: vuol dire che da
+    // adesso NIENTE funzionera piu, finche non si rientra. Si tira
+    // l'interruttore una volta sola, e chi disegna lo dice in un posto
+    // fisso invece di far comparire "Qualcosa e andato storto" in ogni
+    // angolo diverso dell'app.
+    if (r.status === 401) segnalaSessioneCaduta();
     throw err;
   }
   return dati;
