@@ -5,6 +5,7 @@ import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
 import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
+import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
 import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
 
 const log = createLogger('compagni-podcast');
@@ -58,9 +59,16 @@ async function handlePost(req) {
       const c = perId.get(t.compagnoId);
       if (!c) return NextResponse.json({ ok: true, saltato: true, indice: i, totale: tutti.length });
       const precedentiClient = Array.isArray(body.precedenti) ? body.precedenti.slice(-6) : [];
+      // b.380 — IL RILEVATORE DI STAGNAZIONE C'ERA GIA, E IL PODCAST NON
+      // LO USAVA. Il tavolo guarda il CONTENUTO degli interventi e capisce
+      // se stanno girando a vuoto o se si stanno solo dando ragione; poi
+      // spinge. Qui, dove il difetto si vedeva di piu — quattro turni di
+      // complimenti senza un numero — non veniva chiamato nessuno.
+      const stato = analizzaConvergenza(precedentiClient, lingua);
+      const convergenza = istruzioneConvergenza(stato, lingua);
       const { system, user } = promptTurno({
         compagno: c, argomento, round: t.round, totaleRound: totRound,
-        precedenti: precedentiClient, lingua,
+        precedenti: precedentiClient, lingua, convergenza,
       });
       const esito = await generaTesto({
         system, prompt: user, provider: c.provider, modello: c.modello,

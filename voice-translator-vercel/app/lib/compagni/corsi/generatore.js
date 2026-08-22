@@ -17,6 +17,7 @@ import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, RITMO_LINGUA, bloccoFormeD
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 import { istruzioniDaScheda } from './schede.js';
 import { istruzioniProfilo } from './catalogo.js';
+import { filtraFontiCertificate } from './fonti.js';
 import { istruzioneScena } from './scena.js';
 import { assistentePer } from './assistenti.js';
 
@@ -196,6 +197,18 @@ Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(ling
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
         fonti.slice(0, 5).map((f, i) => `${i + 1}. ${f.titolo || ''} — ${(f.sintesi || '').slice(0, 300)}`).join('\n')}`
+      // b.380 — DICHIARA I BUCHI. Collaudo di Luca: lezione sulle
+      // controindicazioni di un farmaco, con fonti che ne coprivano una
+      // parte minima — e mancava proprio quello che conta. La lezione non
+      // lo diceva: sotto c'era solo la riga "Fonti:", che per chi legge
+      // e una garanzia.
+      //
+      // Il filtro sui domini (fonti.js) butta via i siti inadatti, ma non
+      // puo sapere se un documento AUTOREVOLE parla della cosa giusta.
+      // Quel giudizio lo puo dare solo chi legge il documento — cioe qui.
+      // Quindi l'ordine e esplicito: si scrive solo cio che le fonti
+      // reggono, e cio che non coprono si DICE.
+      + `\n\nREGOLA SULLE FONTI: scrivi solo cio che queste fonti reggono davvero. Se coprono il tema solo in parte, DILLO in chiaro alla fine ("queste fonti non trattano X e Y: vanno verificati altrove"), invece di riempire i buchi a memoria. Un elenco di fonti sotto una lezione e una garanzia per chi legge: non darla dove non c'e.`
     : '';
   // b.247 — materia certificata per cui la ricerca è RIUSCITA ma non ha
   // trovato nulla: il silenzio non basta. Prima il blocco FONTI spariva e
@@ -366,6 +379,24 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
       fontiNonTrovate = true;
     } else {
       fonti = esito.risultati.slice(0, livelloAlto ? 6 : 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+      // b.380 — NON BASTA CHE ESISTANO. Qui si accettava qualunque cosa
+      // fosse tornata: su una lezione di farmacologia sono arrivati un
+      // sito di fitness per consumatori e il foglietto di un farmaco che
+      // c'entrava poco — e sotto c'era scritto "Fonti:", che per chi
+      // legge e una garanzia. Su medicina non e un difetto di qualita, e
+      // un rischio.
+      if (categoriaCertificata(categoria)) {
+        const { tenute, scartate, abbastanza } = filtraFontiCertificate(fonti);
+        if (scartate.length) {
+          log.warn('materia certificata: fonti scartate perche non fondanti', {
+            categoria, quante: scartate.length,
+            domini: scartate.map((f) => { try { return new URL(f.url).hostname; } catch { return '?'; } }).join(', '),
+          });
+        }
+        // se dopo il filtro non resta abbastanza, la lezione NON finge:
+        // parte senza fonti, e il Maestro ha gia l'ordine di non citare.
+        fonti = abbastanza ? tenute : [];
+      }
       fontiNonTrovate = fonti.length === 0;
     }
   }

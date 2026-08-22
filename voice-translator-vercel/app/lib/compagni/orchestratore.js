@@ -85,9 +85,24 @@ export function istruzioneConvergenza(stato, lingua = 'it') {
 // col canale esito di b.362.
 
 // ── 2. LE REGOLE DEL DIBATTITO (da DEBATE_FRAMEWORK) ──
+//
+// b.380 — RISCRITTE. Collaudo di Luca sul podcast: «tre turni su quattro
+// aprono con un complimento, e in quattro turni non esce un numero».
+// Non era il modello: era scritto qui. Le regole dicevano «se concordi,
+// approfondisci» e soprattutto «l'obiettivo e CONVERGERE» — cioe
+// chiedevano proprio di andare d'accordo. Un dibattito programmato per
+// convergere non e un dibattito: e un coro.
+//
+// E c'era la prova che i numeri esistevano: gli stessi Compagni, davanti
+// a "fai il documento", hanno tirato fuori cifre e stime. Il prompt del
+// dibattito glieli sopprimeva; quello del documento glieli liberava.
+//
+// Adesso: vietato aprire dando ragione, ogni turno porta un dato o
+// dichiara di non averlo, e restare in disaccordo alla fine e un esito
+// legittimo — non un fallimento da evitare per educazione.
 const REGOLE_DIBATTITO = {
-  it: 'Sei in una conversazione a più voci, in tempo reale, come persone vere. REGOLE:\n• Ascolta gli altri PRIMA di rispondere, e rivolgiti a loro per NOME.\n• Aggiungi VALORE NUOVO — mai ripetere ciò che è già stato detto.\n• Se concordi, approfondisci o estendi il punto dell\'altro.\n• Se dissenti, dillo con chiarezza e argomenti concreti.\n• Parla BREVE e naturale, come al bar, non come in un\'aula.\n• L\'obiettivo è CONVERGERE verso la risposta migliore, insieme.',
-  en: 'You are in a multi-voice, real-time conversation, like real people. RULES:\n• Listen to others BEFORE replying, and address them by NAME.\n• Add NEW VALUE — never repeat what was already said.\n• If you agree, deepen or extend the other\'s point.\n• If you disagree, say so clearly with concrete arguments.\n• Speak SHORT and natural, like at a bar, not in a classroom.\n• The goal is to CONVERGE toward the best answer, together.',
+  it: 'Sei in una conversazione a più voci, in tempo reale, come persone vere. REGOLE:\n• NON aprire mai dando ragione a qualcuno. Niente "hai colto un punto importante", niente complimenti di cortesia: si entra dal merito, prima parola.\n• Ogni intervento porta UNA COSA CONCRETA: un numero, una data, un caso, un esempio preciso. Se quel dato non ce l\'hai, dillo in una riga secca — "su questo non ho il numero" — e passa. Un giro senza un solo dato è un giro sprecato.\n• Rivolgiti agli altri per NOME, e aggancia UNA cosa che hanno detto davvero.\n• Se qualcosa non ti torna, DILLO. Un disaccordo argomentato vale più di tre accordi cortesi: è per quello che siete in più di uno.\n• Mai ripetere ciò che è già stato detto.\n• Parla BREVE e naturale, come al bar, non come in un\'aula.\n• Non si arriva d\'accordo per educazione. Se alla fine le posizioni restano diverse, va benissimo: si dice dove ci si divide e perché.',
+  en: 'You are in a multi-voice, real-time conversation, like real people. RULES:\n• NEVER open by agreeing. No "that is an important point", no polite compliments: start from the substance, first word.\n• Every turn brings ONE CONCRETE THING: a number, a date, a case, a precise example. If you do not have that figure, say so in one flat line — "I do not have the number on this" — and move on. A round without a single figure is a wasted round.\n• Address the others by NAME, and hook onto ONE thing they actually said.\n• If something does not add up, SAY SO. One argued disagreement is worth more than three polite agreements: that is why there is more than one of you.\n• Never repeat what was already said.\n• Speak SHORT and natural, like at a bar, not in a classroom.\n• You do not agree out of politeness. If positions stay apart at the end, that is fine: say where you split, and why.',
 };
 export function regoleDibattito(lingua = 'it') {
   return REGOLE_DIBATTITO[lingua] || REGOLE_DIBATTITO.en;

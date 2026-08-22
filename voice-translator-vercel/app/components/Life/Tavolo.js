@@ -96,9 +96,22 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       try {
         const d = await preparaBriefing({ argomento: tema, lingua, userToken });
         if (d?.articolo) {
+          // b.380 — LA RICERCA GUASTA SI DICE. Il server manda gia
+          // `fontiGuaste` e nel suo file c'e pure scritto «cosi chi legge
+          // il dossier sa» — ma qui nessuno la guardava. Risultato: si
+          // spuntava "parti da fonti reali", la ricerca falliva, e usciva
+          // un riquadro intitolato "Da cui partiamo (fonti)" con dentro
+          // zero fonti e un saggio inventato. Un titolo che promette una
+          // cosa che non c'e e peggio di nessun titolo: chi legge crede
+          // di avere davanti un testo fondato.
           setBriefing(d.articolo);
           setFonti(d.fonti || []);
-          setMessaggi([{ ruolo: '__briefing', testo: d.articolo, fonti: d.fonti || [] }]);
+          setMessaggi([{
+            ruolo: '__briefing', testo: d.articolo, fonti: d.fonti || [],
+            // guaste se il server lo dichiara, oppure se semplicemente non
+            // e arrivata nessuna fonte: per chi legge e la stessa cosa.
+            senzaFonti: !!d.fontiGuaste || !(d.fonti || []).length,
+          }]);
         }
       } catch (e) {
         setErrore(e?.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
@@ -204,7 +217,19 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           if (m.ruolo === '__briefing') {
             return (
               <div key={i} style={{ alignSelf: 'stretch', margin: '2px 0 8px', padding: '12px 14px', borderRadius: 14, background: card, border: bordo, color: testoP, fontSize: 13.5, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
-                <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>🔎 {tt('lifeTableBrief', 'Da cui partiamo (fonti)')}</div>
+                {/* b.380 — il titolo dice la verita su cosa c'e sotto. */}
+                {m.senzaFonti ? (
+                  <div style={{ fontWeight: 800, color: '#e08a5e', marginBottom: 6 }}>
+                    ⚠ {tt('lifeTableNoSources', 'Senza fonti: la ricerca non ha trovato niente')}
+                  </div>
+                ) : (
+                  <div style={{ fontWeight: 800, color: accent, marginBottom: 6 }}>🔎 {tt('lifeTableBrief', 'Da cui partiamo (fonti)')}</div>
+                )}
+                {m.senzaFonti && (
+                  <div style={{ fontSize: 12, color: muto, marginBottom: 8, lineHeight: 1.5, whiteSpace: 'normal' }}>
+                    {tt('lifeTableNoSourcesWhy', 'Quello che segue lo ha scritto il modello con quello che sa, non e tratto da documenti. Trattalo come un punto di partenza da verificare.')}
+                  </div>
+                )}
                 {m.testo}
                 {m.fonti?.length > 0 && (
                   <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
