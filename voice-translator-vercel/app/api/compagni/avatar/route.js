@@ -3,7 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { generaAvatar } from '../../../lib/compagni/ponte.js';
 import { promptAvatar, promptIllustrazione } from '../../../lib/compagni/genera.js';
-import { promptScena, promptIcona, AMBIENTI } from '../../../lib/compagni/corsi/scena.js';
+import { promptScena, promptIcona, AMBIENTI, ambientePer } from '../../../lib/compagni/corsi/scena.js';
 import { getSupabaseAdmin } from '../../../lib/supabase.js';
 import { createHash } from 'crypto';
 
@@ -87,8 +87,24 @@ async function handlePost(req) {
     // cassetto condiviso: prima si guarda, poi eventualmente si disegna e si
     // ripone. Gli AVATAR restano personali: mai in cassetto.
     const sb = tipo !== 'avatar' ? getSupabaseAdmin() : null;
+    // b.378 — IL CATALOGO DELLE TAVOLE (piano approvato da Luca).
+    //
+    // La chiave della scena conteneva il TITOLO e la DESCRIZIONE della
+    // lezione: due lezioni ambientate tutte e due al bar, allo stesso
+    // livello, producevano due disegni diversi — e ognuno costava. Il
+    // cassetto c'era, ma non ci entrava mai due volte la stessa cosa.
+    //
+    // Adesso la chiave e (ambiente + livello + oggetti nominati): tutte
+    // le lezioni che si svolgono al bar per un principiante ricevono LA
+    // STESSA tavola, in ogni corso e in ogni lingua. Le dodici situazioni
+    // diventano un catalogo che si riempie da solo e non si ridisegna
+    // piu — che era il senso della "preparazione preventiva".
+    //
+    // E c'e il pezzo che conta di piu: un disegno che esce male esce male
+    // UNA VOLTA, e si sostituisce nel cassetto. Prima usciva male ogni
+    // volta in modo diverso, e il primo a vederlo era sempre l'utente.
     const chiave = sb ? chiaveCassetto(tipo,
-      tipo === 'scena' ? [descrizione, nome, livelloReq, ambienteReq?.id || 'auto']
+      tipo === 'scena' ? [ambienteReq?.id || ambientePer(nome, descrizione).id, livelloReq, elementiReq.slice(0, 5).join('|')]
       : tipo === 'icona' ? [descrizione || nome, livelloReq]
       : [nome, descrizione, livelloReq]) : null;
     if (sb && chiave) {

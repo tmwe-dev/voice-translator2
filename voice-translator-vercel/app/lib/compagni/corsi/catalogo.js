@@ -21,6 +21,78 @@ export const LIVELLI = [
   { id: 'ricercatore',   etichetta: 'Ricercatore',   icona: '🔬', lezioni: [10, 14], nota: 'Frontiera della ricerca, metodologia' },
 ];
 
+// ═══════════════════════════════════════════════════════════════
+// b.378 — I PROFILI: chi sei, che e un'altra cosa da quanto sai.
+//
+// Piano approvato da Luca: «corsi di approfondimento specifico con
+// standard differenti quando le caratteristiche dell'utente lo
+// richiedono (bambino, anziano, ragazzo universitario, ricercatore,
+// professionista)».
+//
+// PERCHE' NON SI AGGIUNGONO ALLA SCALA DEI LIVELLI. La scala va da
+// bambino a ricercatore ed e una scala di PROFONDITA'. "Anziano" non e
+// piu difficile di "ragazzo", e "professionista" non sta fra avanzato e
+// universitario: sono la stessa lingua studiata da persone diverse, con
+// tempi e situazioni diverse. Infilarli nella scala vorrebbe dire dire
+// che un anziano sta a un livello — che oltre a essere sgradevole e
+// falso.
+//
+// Quindi due assi separati:
+//   LIVELLO  quanto si va a fondo   (c'era gia)
+//   PROFILO  chi studia, e quindi la FORMA della lezione: quanto dura,
+//            in quali situazioni si svolge, quanto si ripete
+//
+// Il profilo non cambia il tono — quello lo fa gia il livello. Cambia
+// la forma: e per questo che vive qui e non dentro una veste narrativa.
+export const PROFILI = [
+  {
+    id: 'chiunque', etichetta: 'Per tutti', icona: '\u{1F464}',
+    minuti: null, istruzione: '',
+  },
+  {
+    id: 'bambino', etichetta: 'Bambino', icona: '\u{1F9D2}',
+    minuti: 3,
+    istruzione: 'Blocchi da tre minuti. Al massimo SEI parole nuove per lezione, tutte cose che si possono toccare o indicare in un disegno. Nessuna regola scritta: la forma si impara ripetendola dentro il gioco. Situazioni: casa, scuola, giocare, mangiare. Mai una tabella.',
+  },
+  {
+    id: 'ragazzo', etichetta: 'Ragazzo', icona: '\u{1F3A7}',
+    minuti: 8,
+    istruzione: 'Blocchi da otto minuti. Situazioni della sua vita: scuola, musica, sport, viaggiare da soli, parlare con altri ragazzi online. Registro informale, quello vero, non quello dei manuali. La regola in due righe, dopo averla usata.',
+  },
+  {
+    id: 'professionista', etichetta: 'Professionista', icona: '\u{1F4BC}',
+    minuti: 10,
+    istruzione: 'Blocchi da dieci minuti, SOLO situazioni di lavoro: riunione, telefonata, email, trattativa, presentazione, colloquio. Registro formale e cortese. Nessuna situazione da turista. Ogni lezione deve lasciare frasi che si possono usare domani mattina.',
+  },
+  {
+    id: 'anziano', etichetta: 'Anziano', icona: '\u{1F9D3}',
+    minuti: 6,
+    istruzione: 'Blocchi da sei minuti, con calma. Si ripete: ogni lezione riprende meta delle parole della precedente prima di aggiungerne di nuove. Frasi corte, una cosa per volta. Situazioni: viaggiare, la famiglia lontana, il medico, fare la spesa. Mai fretta, mai vergogna: se qualcosa non torna si rifa senza farlo pesare.',
+  },
+  {
+    id: 'universitario', etichetta: 'Universitario', icona: '\u{1F393}',
+    minuti: 15,
+    istruzione: 'Blocchi da quindici minuti. Qui la regola puo arrivare PRIMA e per intero, con la sua terminologia: chi studia cosi e abituato a sistemare le cose in uno schema. Situazioni accademiche e sociali. Si possono confrontare due lingue.',
+  },
+  {
+    id: 'ricercatore', etichetta: 'Ricercatore', icona: '\u{1F52C}',
+    minuti: 20,
+    istruzione: 'Blocchi da venti minuti. Etimologia, varianti regionali, registri storici, e le fonti quando ci sono. Si dicono le eccezioni e i casi controversi invece di semplificarli.',
+  },
+];
+
+/** Il profilo, o quello neutro. */
+export function profiloPer(id) {
+  return PROFILI.find((p) => p.id === id) || PROFILI[0];
+}
+
+/** L'istruzione da mettere nel prompt. Vuota per il profilo neutro. */
+export function istruzioniProfilo(id) {
+  const p = profiloPer(id);
+  if (!p.istruzione) return '';
+  return `\n\n\u2500\u2500 CHI STUDIA: ${p.etichetta.toUpperCase()} \u2500\u2500\n${p.istruzione}`;
+}
+
 /** Le categorie. `fontiCertificate` = pretende fonti attendibili. */
 export const CATEGORIE = [
   { id: 'lingue',      etichetta: 'Lingue',            icona: '🌍', fontiCertificate: false },

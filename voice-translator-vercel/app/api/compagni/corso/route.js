@@ -47,10 +47,18 @@ async function handlePost(req) {
       return NextResponse.json({ error: 'Generazione non riuscita', motivo: r.motivo }, { status: 502 });
     };
 
+    // b.378 — LA LINGUA SCELTA E IL PROFILO arrivano dalla sezione Lingue.
+    // Si accettano solo valori puliti: finiscono dentro un prompt, e un
+    // prompt che accetta testo libero dall'esterno e una porta aperta.
+    const linguaStudiata = typeof body.linguaStudiata === 'string' && /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(body.linguaStudiata)
+      ? body.linguaStudiata : null;
+    const profilo = typeof body.profilo === 'string' && /^[a-z]{4,16}$/.test(body.profilo)
+      ? body.profilo : '';
+
     if (azione === 'syllabus') {
       if (!argomento) return NextResponse.json({ error: 'Serve un argomento' }, { status: 400 });
       const nLezioni = lezioniProfonde(livello);   // b.301 PUNTO 5
-      const r = await generaSyllabus({ argomento, categoria, livello, lingua, docente, nLezioni, direzione: body.direzione || '' }, { userToken });
+      const r = await generaSyllabus({ argomento, categoria, livello, lingua, docente, nLezioni, direzione: body.direzione || '', linguaStudiata, profilo }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       return NextResponse.json({ ok: true, argomento, categoria, livello, lezioni: r.lezioni });
     }
@@ -76,7 +84,7 @@ async function handlePost(req) {
         const m = await leggiMateriale(sessione.email, body.materialeId);
         materialeTesto = m?.testo || '';
       }
-      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata, materialeTesto, ripasso: body.ripasso === true }, { userToken });
+      const r = await generaLezione({ argomento, categoria, lezione, livello, lingua, docente, osservazioni, progresso, notaPersona, durata, materialeTesto, linguaStudiata, profilo, ripasso: body.ripasso === true }, { userToken });
       if (!r.ok) return rispostaEsito(r);
       // b.244 — quello che il Maestro ha notato di questa persona si salva
       // DOPO aver risposto: la lezione non deve aspettare.

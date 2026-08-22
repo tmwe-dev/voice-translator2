@@ -97,14 +97,14 @@ export async function arricchisciLezione({ modalita, titolo, argomento, lingua =
 }
 
 /** Genera l'elenco lezioni di un corso. */
-export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken }) {
-  return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, userToken });
+export function generaSyllabus({ argomento, categoria, livello, docenteId, direzione, lingua, userToken, linguaStudiata, profilo }) {
+  return postJSON('/api/compagni/corso', { azione: 'syllabus', argomento, categoria, livello, docenteId, direzione, lingua, linguaStudiata, profilo, userToken });
 }
 
 /** Genera il contenuto di una lezione. */
-export function generaLezione({ argomento, categoria, livello, lezione, docenteId, lingua, userToken, materialeId, ripasso }) {
+export function generaLezione({ argomento, categoria, livello, lezione, docenteId, lingua, userToken, materialeId, ripasso, linguaStudiata, profilo }) {
   // b.333 — con materialeId la lezione si fonda SOLO sul materiale dello studente (Compiti).
-  return postJSON('/api/compagni/corso', { azione: 'lezione', argomento, categoria, livello, lezione, docenteId, lingua, userToken, materialeId, ripasso });
+  return postJSON('/api/compagni/corso', { azione: 'lezione', argomento, categoria, livello, lezione, docenteId, lingua, linguaStudiata, profilo, userToken, materialeId, ripasso });
 }
 
 /** Genera il quiz di una lezione. b.231 — passa il contenuto reale. */

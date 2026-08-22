@@ -4,7 +4,7 @@ import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { useApp } from '../../contexts/AppContext.js';
 import { COMPAGNI_PREDEFINITI } from '../../lib/compagni/catalogo.js';
-import { LIVELLI } from '../../lib/compagni/corsi/catalogo.js';
+import { LIVELLI, PROFILI } from '../../lib/compagni/corsi/catalogo.js';
 
 // b.300 — idee per riempire il campo: un tocco mette una frase gia
 // dettagliata, cosi anche un anziano o un bambino non parte dal vuoto.
@@ -24,7 +24,7 @@ import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/co
 import PannelloLettura from './PannelloLettura.js';
 import TestoLingua from './TestoLingua.js';
 import CompagnoLive from './CompagnoLive.js';
-import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
+import { assistentePer, vocePrestata } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
 import { apriScanner, ascoltaScansioni } from '../../lib/scanPonte.js';
 import { sesSet } from '../../lib/memoria.js';
@@ -427,6 +427,9 @@ function assegnaImmagini(paragrafi, items, illustrazione) {
 // con una voce madrelingua decente da imitare. Aggiungerne una e una
 // riga; toglierla pure.
 const LINGUE_IMPARABILI = ['en', 'es', 'fr', 'de', 'it', 'pt', 'zh', 'ja', 'ko', 'ar', 'ru', 'nl', 'tr', 'hi'];
+// b.378 — coreano e russo restano nell'elenco: si possono studiare, e
+// accanto c'e scritto che la voce e approssimata. Toglierli sarebbe
+// piu comodo per noi e peggio per chi li vuole imparare.
 
 function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, argomentoIniziale = '' }) {
   const [argomento, setArgomento] = useState(argomentoIniziale || '');
@@ -449,6 +452,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // scelta vince sempre sul titolo.
   const [sezione, setSezione] = useState('materie');   // 'materie' | 'lingue'
   const [linguaStudiata, setLinguaStudiata] = useState('');
+  // b.378 — CHI STUDIA: un asse a parte dal livello. Un anziano non e
+  // "piu difficile" di un ragazzo: e la stessa lingua studiata da
+  // qualcun altro, con altri tempi e altre situazioni.
+  const [profilo, setProfilo] = useState('chiunque');
   // b.376 — DOVE VOGLIO ANDARE (collaudo di Luca: «non ho modo di
   // avanzare nella lezione a punti piu avanti nel testo»). Il ciclo di
   // lettura sapeva gia saltare avanti — lo fa quando il Maestro decide
@@ -504,7 +511,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         });
         const d = await r.json().catch(() => null);
         if (!d?.materiale?.id) throw new Error(d?.error || 'materiale non salvato');
-        const lez = await generaLezione({ argomento: titolo, categoria: 'altro', livello, lezione: { indice: 0, titolo }, lingua: linguaCorso, userToken, materialeId: d.materiale.id });
+        const lez = await generaLezione({ argomento: titolo, categoria: 'altro', livello, lezione: { indice: 0, titolo }, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken, materialeId: d.materiale.id });
         setRisposte({});
         setAperta({ lezione: { titolo }, contenuto: lez.contenuto, fonti: lez.fonti || [], domande: null });
       } catch (e) {
@@ -800,7 +807,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (!argomento.trim()) { setErrore(L('lifeNeedTopic')); return; }
     setLavoro(true);
     try {
-      const d = await generaSyllabus({ argomento: argomento.trim(), categoria, livello, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
+      const d = await generaSyllabus({ argomento: argomento.trim(), categoria, livello, docenteId: docenteId || undefined, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken });
       setLezioni(d.lezioni || []);
       // b.327 — il corso si SALVA da solo appena nasce: niente piu
       // rigenerazioni (e ripagamenti) alla prossima apertura.
@@ -832,7 +839,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // b.327 — segnalibro: si riprende da qui alla prossima apertura.
     if (userToken && lezione?.indice !== undefined) segnaLibroCorso({ argomento: argomento.trim(), indice: lezione.indice, userToken }).catch(() => {});
     try {
-      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, userToken });
+      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione, docenteId: docenteId || undefined, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken });
       setRisposte({});
       // b.348 — il tag [SCENA:] si stacca PRIMA di mostrare: e un'istruzione
       // per la tavola, non prosa da leggere ad alta voce.
@@ -930,7 +937,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (lavoro) return;
     setLavoro(true); setErrore(''); setIllustrazione(null); setArricchimento(null);
     try {
-      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: `Ripasso — ${argomento.trim()}` }, docenteId: docenteId || undefined, lingua: linguaCorso, userToken, ripasso: true });
+      const d = await generaLezione({ argomento: argomento.trim(), categoria, livello, lezione: { indice: 0, titolo: `Ripasso — ${argomento.trim()}` }, docenteId: docenteId || undefined, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, profilo, userToken, ripasso: true });
       setRisposte({});
       setAperta({ lezione: { titolo: `Ripasso — ${argomento.trim()}` }, contenuto: d.contenuto, fonti: d.fonti || [], fontiNonTrovate: !!d.fontiNonTrovate, domande: null });
       setRipassoDa(0);
@@ -1654,6 +1661,51 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                   }}>
                   <span style={{ fontSize: 15, lineHeight: 1 }}>{l.flag}</span>
                   {l.name}
+                  {/* b.378 — SI DICE. Per coreano e russo non abbiamo una
+                      voce davvero certificata: la sintesi esce
+                      comprensibile ma con l'accento di un'altra lingua.
+                      Su un corso di conversazione passerebbe; su un corso
+                      di PRONUNCIA no — staremmo insegnando a imitare un
+                      accento sbagliato. Chi sceglie deve saperlo prima,
+                      non scoprirlo dopo aver studiato un mese. */}
+                  {vocePrestata(code) && (
+                    <span title={tt('lifeBorrowedVoiceWhy', 'Per questa lingua non abbiamo ancora una voce madrelingua certificata: la pronuncia del modello e approssimata.')}
+                      style={{
+                        fontSize: 10, fontWeight: 800, letterSpacing: .4,
+                        padding: '1px 5px', borderRadius: 5,
+                        background: 'rgba(224,138,94,0.16)', color: '#e08a5e',
+                      }}>
+                      {tt('lifeBorrowedVoice', 'voce approssimata')}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* b.378 — CHI STUDIA. Non e il livello: e un asse a parte, e
+              cambia la FORMA della lezione (quanto dura, in quali
+              situazioni si svolge, quanto si ripete) — non il tono, che
+              lo decide gia il livello. */}
+          <div style={{ fontSize: 12, color: muto, margin: '16px 0 8px' }}>
+            {tt('lifeWhoStudies', 'Chi studia')}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {PROFILI.map((pr) => {
+              const on = profilo === pr.id;
+              return (
+                <button key={pr.id} onClick={() => { vibrate(6); setProfilo(pr.id); }}
+                  aria-pressed={on}
+                  title={pr.minuti ? `${pr.minuti} min` : ''}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                    borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                    fontSize: 13, fontWeight: on ? 800 : 600,
+                    background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
+                    color: on ? accent : testoP,
+                  }}>
+                  <span style={{ fontSize: 14, lineHeight: 1 }}>{pr.icona}</span>
+                  {pr.etichetta}
                 </button>
               );
             })}

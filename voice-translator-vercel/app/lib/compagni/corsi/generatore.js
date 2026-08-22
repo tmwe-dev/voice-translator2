@@ -15,6 +15,8 @@ import { categoriaCertificata } from './catalogo.js';
 import { promptProfilo, profiloEffettivo } from '../profili.js';
 import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, RITMO_LINGUA, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
+import { istruzioniDaScheda } from './schede.js';
+import { istruzioniProfilo } from './catalogo.js';
 import { istruzioneScena } from './scena.js';
 import { assistentePer } from './assistenti.js';
 
@@ -98,12 +100,40 @@ STAI INSEGNANDO A UN BAMBINO. Usa parole semplici e frasi brevi, tono caldo, inc
 }
 
 // ── PROMPT: syllabus (elenco lezioni) ──
-export function promptSyllabus({ argomento, livello = 'base', categoria = 'altro', direzione = '', nLezioni = 5, lingua = 'it', docente = null } = {}) {
+// b.378 — LA FORMA DEL BLOCCO (piano approvato da Luca).
+//
+// «Se apriamo un libro di inglese da 200 pagine, a sinistra l'immagine e
+//  il testo, a destra la spiegazione breve, mini quiz con tre risposte,
+//  campi da riempire e possibilita di ascolto; e dopo tre immagini un
+//  test di chiusura del blocco.»
+//
+// Tre scene e una verifica: e la misura giusta — abbastanza per imparare
+// qualcosa, abbastanza corta per finirla. E le tre scene di un blocco
+// CONDIVIDONO il vocabolario: la terza usa le parole delle prime due. E'
+// questo che fa crescere il lessico invece di azzerarlo a ogni lezione.
+//
+// Senza questa istruzione il modello produceva un elenco di argomenti
+// grammaticali — "l'alfabeto", "i verbi", "gli aggettivi" — cioe un
+// indice di grammatica, che e esattamente il libro che NON vogliamo.
+const BLOCCHI_LINGUA = `
+LA FORMA DEL PERCORSO — si studia PER SITUAZIONI, non per categorie grammaticali.
+Ogni lezione e UNA SITUAZIONE della vita vera (ordinare al bar, chiedere indicazioni, prenotare una camera), non un argomento di grammatica. La regola grammaticale arriva DENTRO la situazione che l'ha appena usata, mai come titolo di lezione.
+Le lezioni vanno a BLOCCHI DI QUATTRO: tre situazioni piu una VERIFICA che le rimette insieme.
+  · le tre situazioni di un blocco condividono il vocabolario: la terza riusa le parole delle prime due e ne aggiunge poche nuove;
+  · la quarta lezione del blocco si intitola "Verifica" seguita da cosa verifica, e non introduce NIENTE di nuovo.
+Il vocabolario CRESCE lungo tutto il corso: non si riparte mai da zero.
+VIETATI come titoli di lezione: "L'alfabeto", "I verbi", "Gli aggettivi", "I numeri", "La grammatica di base". Sono indici, non lezioni.`;
+
+export function promptSyllabus({ argomento, livello = 'base', categoria = 'altro', direzione = '', nLezioni = 5, lingua = 'it', docente = null, linguaStudiata = null, profilo = '' } = {}) {
   const system = `${vesteDocente(docente)}
 Progetti un percorso di studio strutturato e progressivo. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}`;
   const dir = direzione ? ` Taglio richiesto: ${direzione}.` : '';
+  const l2s = linguaStudiata || rilevaLinguaStudiata(argomento, '');
+  const blocchi = ((l2s && l2s !== lingua)
+    ? BLOCCHI_LINGUA + istruzioniDaScheda(l2s, lingua, true)
+    : '') + istruzioniProfilo(profilo);
   const prompt =
-`Progetta il syllabus di un corso su "${argomento}" (categoria: ${categoria}, livello: ${livello}).${dir}
+`Progetta il syllabus di un corso su "${argomento}" (categoria: ${categoria}, livello: ${livello}).${dir}${blocchi}
 Genera ESATTAMENTE ${nLezioni} lezioni, in ordine progressivo.
 PESO: non tutti i concetti valgono uguale. Segna "peso":"alto" per i concetti fondamentali (alta frequenza d'uso, prerequisito di altri), "medio" per quelli utili, "basso" per i dettagli marginali. I concetti ad alto peso meritano piu spazio, esempi e verifiche.
 Rispondi SOLO con JSON valido, un array di oggetti con questa forma:
@@ -122,17 +152,29 @@ const ISTRUZIONI_DURATA = {
   approfondita: '\nDURATA: sessione approfondita (10-15 minuti di ascolto): piu esempi, piu sfumature, piu collegamenti.',
 };
 
-export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '', materialeTesto = '', ripasso = false } = {}) {
+export function promptLezione({ argomento, lezione, livello = 'base', lingua = 'it', docente = null, fonti = [], osservazioni = [], progresso = [], fontiNonTrovate = false, notaPersona = '', durata = '', materialeTesto = '', ripasso = false, linguaStudiata = null, profilo = '' } = {}) {
   // b.241 — se si sta imparando una LINGUA, il Maestro cambia mestiere: marca
   // la lingua straniera con [L2:...] (voce madrelingua) e fa parlare la
   // persona invece di spiegarle la grammatica. Ripreso da RadioChat.
-  const l2 = rilevaLinguaStudiata(argomento, lezione?.titolo || '');
+  // b.378 — la lingua scelta nella sezione Lingue vince sull'indovinello
+  const l2 = linguaStudiata || rilevaLinguaStudiata(argomento, lezione?.titolo || '');
   // b.323 — nel duetto il Maestro presenta l'Assistente madrelingua per nome.
   const bloccoLingua = (l2 && l2 !== lingua)
     // b.348 — la lezione di lingua dichiara anche la sua TAVOLA (scena +
     // oggetti): e cosi che un libro di lingue accompagna il testo.
-    ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2, nomeAssistente: assistentePer(l2).nome }) + istruzioneScena(livello)
+    // b.378 — LA SCHEDA DELLA LINGUA. Senza, il Maestro tratta il
+    // giapponese come l'inglese: e da li che e uscita la prima lezione
+    // con ventisei righe di "A significa A". Non era il modello a essere
+    // scemo — non gli avevamo mai detto COME SI APRE un corso di lingua,
+    // ne che il verbo giapponese va in fondo, ne quali suoni ingannano
+    // chi arriva dall'italiano. Adesso glielo diciamo, e glielo diciamo
+    // da una scheda che puo correggere un madrelingua senza toccare il
+    // codice.
+    ? istruzioniLingua({ linguaParlata: lingua, linguaStudiata: l2, nomeAssistente: assistentePer(l2).nome })
+      + istruzioniDaScheda(l2, lingua, Number(lezione?.indice) === 0)
+      + istruzioneScena(livello)
     : '';
+  const bloccoProfilo = istruzioniProfilo(profilo);
   // b.301 — PUNTO 5: a livello universitario/ricercatore la lezione ha
   // un'altra stazza. Non piu 900 token di prosa: piu moduli, metodologia,
   // problemi, casi, e — se ci sono fonti — riferimenti espliciti.
@@ -149,7 +191,7 @@ export function promptLezione({ argomento, lezione, livello = 'base', lingua = '
     ? '\nQUESTA E UNA LEZIONE DI RIPASSO: riprendi SOLO le cose rimaste indietro elencate nel percorso della persona, spiegandole in un MODO NUOVO (altri esempi, altra angolazione). Breve, mirata, incoraggiante: si chiude quando i punti deboli sono stati ripresi tutti.'
     : '';
   const system = `${vesteDocente(docente)}
-Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoDurata}${bloccoRipasso}${notaPersona}${bloccoLingua}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
+Scrivi una lezione chiara e ben strutturata. Scrivi in lingua: ${nomeLingua(lingua)}.${registroBambini(livello, lingua)}${profondita}${bloccoDurata}${bloccoRipasso}${notaPersona}${bloccoLingua}${bloccoProfilo}${contestoStudente(osservazioni)}${riassuntoProgresso(progresso)}`;
   const obiettivi = Array.isArray(lezione?.obiettivi) ? lezione.obiettivi.join('; ') : '';
   const bloccoFonti = (fonti && fonti.length)
     ? `\n\nFONTI da cui attingere (fondaci sopra i fatti, e cita i titoli quando usi un dato):\n${
