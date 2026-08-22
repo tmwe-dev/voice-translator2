@@ -88,7 +88,15 @@ export const ISTRUZIONE_ESITO =
 • "risposta": in tutti gli altri casi.
 Il marcatore non viene letto ad alta voce: serve solo a chi gestisce il turno. Non usarlo per pigrizia: se sai, rispondi.`;
 
-const MARCATORE_ESITO = /\s*\[esito:\s*(risposta|domanda|passo)\s*\]\s*$/i;
+// b.390 — IL MODELLO SCRIVE LA FORMA CORTA. L'istruzione chiede
+// `[esito: passo]` e questo riconosceva solo quella; Luca ha trovato a
+// schermo, in fondo a tre interventi su tre, un `[passo]` nudo.
+//
+// E' la stessa famiglia del tag `[IT:]` di ieri: un modello che scrive
+// migliaia di turni ogni tanto abbrevia. Combatterlo solo nel prompt non
+// basta — qui si accettano tutte e due le forme, e il segno non arriva
+// piu a schermo in nessun caso.
+const MARCATORE_ESITO = /\s*\[\s*(?:esito\s*:\s*)?(risposta|domanda|passo)\s*\]\s*$/i;
 
 /** Stacca il marcatore d'esito. Se manca, l'esito è 'risposta': il testo non
  *  viene mai rovinato. */

@@ -296,14 +296,14 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     // poteva essere quello vecchio (stale closure).
   }, [creando, userToken, lingua, chipAttiva, prefs]);
 
-  const quando = (ts) => {
-    if (!ts) return '';
-    const min = Math.floor((Date.now() - ts) / 60000);
-    if (min < 1) return L('timeNow');
-    if (min < 60) return `${min}m`;
-    if (min < 1440) return `${Math.floor(min / 60)}h`;
-    return `${Math.floor(min / 1440)}g`;
-  };
+  // b.390 — QUI C'ERA UN SECONDO `quando`, e faceva ombra a quello buono
+  // importato in cima. Aspettava un NUMERO, ma il feed manda le date
+  // SCRITTE ("2026-08-22T…"): la sottrazione dava NaN e sotto ogni
+  // notizia compariva «El Pais · NaNg».
+  //
+  // Non e stato riscritto: e stato TOLTO. Quello importato le date scritte
+  // le sa leggere gia, e due funzioni con lo stesso nome nello stesso file
+  // sono la trappola perfetta — chi legge crede di usare quella giusta.
 
   // b.363 — GLI ARGOMENTI VERI, CONTATI. Nella sidebar c'erano solo le
   // categorie della ricerca esterna (Top headlines, World, Sports…), che
@@ -770,7 +770,7 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               </span>
               <span style={{ fontSize: 11, color: C.textMuted }}>
                 — {t.fonti.length} {t.fonti.length === 1 ? L('newsSourceOne') : L('newsSources')}
-                {t.pubblicato ? ` · ${quando(t.pubblicato)}` : ''}
+                {t.pubblicato ? ` · ${quando(t.pubblicato, L)}` : ''}
               </span>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 11 }}>

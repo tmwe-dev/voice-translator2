@@ -535,7 +535,30 @@ function HomeInner() {
   // b.250 — lo scroll segue anche il messaggio IN COMPOSIZIONE (dettatura
   // live / "sto traducendo"), non solo i messaggi arrivati: senza, il campo
   // di scrittura copriva l'ultima bolla mentre la si stava scrivendo.
-  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior:'smooth', block:'end' }); }, [roomPolling.messages, translation.streamingMsg]);
+  // b.390 — SCORREVA PRIMA CHE IL MESSAGGIO FOSSE DISEGNATO.
+  //
+  // Collaudo di Luca: «dopo l'invio il messaggio appena scritto resta
+  // sotto la piega». La lista ha gia il respiro per il campo di
+  // scrittura (scrollPaddingBottom, styles.js): il difetto era il
+  // MOMENTO. Questo effetto parte appena cambia l'elenco, cioe prima che
+  // il browser abbia misurato la bolla nuova: si scorreva fino al fondo
+  // di UN ISTANTE PRIMA, e la bolla restava mezza fuori.
+  //
+  // Adesso si aspetta il disegno, e si porta il contenitore in fondo
+  // davvero — senza fidarsi di una stima dell'altezza che nessuno ha.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => {
+      const fine = msgsEndRef.current;
+      if (!fine) return;
+      const cassetto = fine.parentElement;
+      if (cassetto && cassetto.scrollHeight > cassetto.clientHeight) {
+        cassetto.scrollTo({ top: cassetto.scrollHeight, behavior: 'smooth' });
+      } else {
+        fine.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    });
+    return () => cancelAnimationFrame(id);
+  }, [roomPolling.messages, translation.streamingMsg]);
 
   // b.324 — audit Mondo D5: da dove sei ENTRATO in stanza. Chi entra da
   // Mondo, uscendo torna a Mondo (con ricerca e posizione ancora vive),

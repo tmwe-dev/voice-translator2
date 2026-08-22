@@ -144,6 +144,17 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
     const citato = rispostaA?.id || null;
     sendTextMessage(citato ? { rispostaA: citato } : undefined);
     setRispostaA(null);
+    // b.390 — IL CAMPO NON PERDE PIU IL FUOCO. Era una riga: l'input si
+    // DISABILITAVA mentre il messaggio partiva, e un campo disabilitato
+    // il browser lo abbandona. Quando tornava attivo nessuno gli
+    // ridava il fuoco, e chi scriveva cinque messaggi di fila — come si
+    // fa in una chat — ne mandava uno: gli altri quattro finivano nel
+    // vuoto, senza che niente lo dicesse.
+    //
+    // Adesso il campo resta scrivibile mentre il messaggio vola (si puo
+    // gia scrivere il prossimo, come in qualunque chat) e il fuoco si
+    // rimette comunque, per il caso in cui a inviare sia stato il tasto.
+    try { campoTestoRef.current?.focus(); } catch { /* il campo non c'e piu: si e usciti dalla stanza */ }
   }, [rispostaA, sendTextMessage]);
 
   const [showLangPicker, setShowLangPicker] = useState(false);
@@ -832,7 +843,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           }}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); inviaConCitazione(); }}}
           onBlur={() => sendTypingState(false)}
-          disabled={sendingText}
         />
         <button onClick={() => { vibrate(); sendTypingState(false); inviaConCitazione(); }}
           aria-label={L('send')}
