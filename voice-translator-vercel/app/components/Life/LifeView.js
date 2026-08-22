@@ -403,11 +403,33 @@ function assegnaImmagini(paragrafi, items, illustrazione) {
   return scelte;
 }
 
+// b.374 — LE LINGUE CHE SI POSSONO STUDIARE. Non sono tutte le 44 che
+// l'app sa tradurre: sono quelle per cui ha senso un CORSO, cioe quelle
+// con una voce madrelingua decente da imitare. Aggiungerne una e una
+// riga; toglierla pure.
+const LINGUE_IMPARABILI = ['en', 'es', 'fr', 'de', 'it', 'pt', 'zh', 'ja', 'ko', 'ar', 'ru', 'nl', 'tr', 'hi'];
+
 function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bordo, argomentoIniziale = '' }) {
   const [argomento, setArgomento] = useState(argomentoIniziale || '');
   const [categoria, setCategoria] = useState('altro');
   const [livello, setLivello] = useState('base');
   const [linguaCorso, setLinguaCorso] = useState(lingua || 'it'); // b.213 — lingua del corso, scelta esplicita (conta per i bambini)
+  // ═══ b.374 — LA SEZIONE DEDICATA ALLE LINGUE (ordine di Luca) ═══
+  //
+  // «i corsi di lingue non vanno gestiti insieme agli altri: crea una
+  // sezione dedicata dentro Impara, cosi gia iniziando il sistema sara
+  // impostato correttamente».
+  //
+  // Il difetto che questo chiude: finora la lingua studiata si DEDUCEVA
+  // dal titolo. "Inglese per principianti" funzionava; "Present perfect"
+  // no — e in quel caso l'esercizio di pronuncia semplicemente non
+  // compariva, senza dire perche. Un corso di inglese perfettamente
+  // legittimo restava muto.
+  //
+  // Qui la lingua non si indovina: SI SCEGLIE, prima di cominciare. E la
+  // scelta vince sempre sul titolo.
+  const [sezione, setSezione] = useState('materie');   // 'materie' | 'lingue'
+  const [linguaStudiata, setLinguaStudiata] = useState('');
   // b.299 — COSA arricchisce la lezione: 'disegni' (illustrazioni fatte
   // dal Maestro), 'foto'/'link' (recuperati dalla community — Cobra),
   // 'video' (video collegati), 'nessuno'. Il default lo decide l'eta:
@@ -699,6 +721,10 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setCategoria(corso.categoria || 'altro');
     setLivello(corso.livello || 'base');
     setLinguaCorso(corso.lingua || linguaCorso);
+    // b.374 — riaprendo un corso di lingua si ritrova la lingua scelta:
+    // se no domani si tornerebbe a indovinarla dal titolo.
+    setLinguaStudiata(corso.linguaStudiata || '');
+    setSezione(corso.linguaStudiata ? 'lingue' : 'materie');
     setLezioni(corso.lezioni || []);
     // b.363 — aprendo il corso di un altro restavano appesi i MIEI voti,
     // il MIO ripasso e il MIO docente: sul corso nuovo comparivano
@@ -747,7 +773,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // b.327 — il corso si SALVA da solo appena nasce: niente piu
       // rigenerazioni (e ripagamenti) alla prossima apertura.
       if (userToken && d.lezioni?.length) {
-        salvaCorsoMio({ argomento: argomento.trim(), titolo: argomento.trim(), categoria, livello, lingua: linguaCorso, lezioni: d.lezioni, docenteId: docenteId || undefined, userToken })
+        salvaCorsoMio({ argomento: argomento.trim(), titolo: argomento.trim(), categoria, livello, lingua: linguaCorso, linguaStudiata: linguaStudiata || undefined, lezioni: d.lezioni, docenteId: docenteId || undefined, userToken })
           .then(() => ricaricaMieiCorsi()).catch(() => {});
       }
       // b.363 — creando un corso NUOVO restava appeso il ripasso del corso
@@ -1009,7 +1035,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     stopLetturaRef.current = false;
     inDomandaRef.current = false;
     interruzionePendenteRef.current = false;
-    const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+    const l2 = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
     // b.312 — si legge SEZIONE per SEZIONE (paragrafi): cosi la lavagna puo
     // mostrare l'immagine giusta mentre la voce parla di quel pezzo. I tag
     // [L2:]/[PRONUNCIA:] restano gestiti da parlaBilingue dentro ogni pezzo.
@@ -1108,7 +1134,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           {tutor?.avatar && <img src={tutor.avatar} alt="" width={34} height={34} style={{ borderRadius: 9, objectFit: 'cover', flexShrink: 0 }} />}
           <h3 style={{ color: testoP, margin: 0, flex: 1 }}>{aperta.lezione.titolo}</h3>
           {(() => {
-            const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+            const l2c = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
             if (!l2c || l2c === linguaCorso) return null;
             const assist = assistentePer(l2c);
             return (
@@ -1125,7 +1151,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* b.335 — la conversazione VOCALE col Madrelingua: role-play vero,
             in lingua originale, dentro la lezione. */}
         {parlaAssist && (() => {
-          const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          const l2c = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
           if (!l2c) return null;
           const assist = assistentePer(l2c);
           const finto = {
@@ -1305,7 +1331,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {(() => {
           const es = staccaEsercizio(testoVisibile(aperta.contenuto)).esercizio;
           if (!es) return null;
-          const l2 = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          const l2 = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
           // b.317 — audit 6.8: senza `key`, cambiando lezione React riusava il
           // pannello e si vedeva il punteggio della frase precedente sotto la
           // frase nuova. Con key={es} il pannello riparte pulito.
@@ -1333,7 +1359,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             frase per frase — l'Assistente la dice (anche lenta), poi la
             leggi tu, col confronto e il grafico della fonia. */}
         {frasiLettura.length > 0 && (() => {
-          const l2c = rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || '');
+          const l2c = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
           if (!l2c) return null;
           const assist = assistentePer(l2c);
           return <PannelloLettura frasi={frasiLettura} lingua={l2c}
@@ -1496,13 +1522,86 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       </div>}
 
       <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>{tt('lifeCreateOwn', 'Crea un corso')}</div>
+
+      {/* ═══ b.374 — DUE SEZIONI, NON UNA (ordine di Luca) ═══
+          Una materia e una lingua non si studiano allo stesso modo: la
+          materia si legge, la lingua si PARLA. Tenendole insieme, un
+          corso di lingua partiva con l'impostazione di una materia
+          qualunque, e l'esercizio a voce compariva solo se il titolo
+          conteneva per caso la parola giusta. Qui la sezione si sceglie
+          per prima, e da li tutto il resto si imposta di conseguenza. */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+        {[
+          { id: 'materie', et: tt('lifeSectionSubjects', 'Materie'), ic: 'doc' },
+          { id: 'lingue',  et: tt('lifeSectionLanguages', 'Lingue'),  ic: 'chat' },
+        ].map((sz) => {
+          const on = sezione === sz.id;
+          return (
+            <button key={sz.id} onClick={() => {
+                setSezione(sz.id);
+                // cambiando sezione si azzera cio che apparteneva all'altra:
+                // un titolo di storia in mezzo alle lingue non ha senso.
+                setLinguaStudiata(''); setArgomento(''); setLezioni([]); setAperta(null);
+              }}
+              aria-pressed={on}
+              style={{
+                flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+                padding: '10px 12px', borderRadius: 12, cursor: 'pointer', fontFamily: FONT,
+                fontSize: 13.5, fontWeight: on ? 800 : 600,
+                background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
+                color: on ? accent : testoP,
+              }}>
+              <Icon name={sz.ic} size={14} color={on ? accent : muto} />
+              {sz.et}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* LA SEZIONE LINGUE: si sceglie QUALE lingua, e da quel momento il
+          sistema sa che si studia una lingua — non lo deve dedurre. */}
+      {sezione === 'lingue' && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: muto, marginBottom: 8 }}>
+            {tt('lifeWhichLanguage', 'Quale lingua vuoi imparare?')}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {LINGUE_IMPARABILI.map((code) => {
+              const l = LANGS.find((x) => x.code === code);
+              if (!l) return null;
+              const on = linguaStudiata === code;
+              return (
+                <button key={code} onClick={() => {
+                    setLinguaStudiata(code);
+                    // il titolo si scrive da solo: e il nome della lingua.
+                    // Resta modificabile, ma non serve piu azzeccarlo.
+                    setArgomento(l.name);
+                  }}
+                  aria-pressed={on}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+                    borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                    fontSize: 13, fontWeight: on ? 800 : 600,
+                    background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
+                    color: on ? accent : testoP,
+                  }}>
+                  <span style={{ fontSize: 15, lineHeight: 1 }}>{l.flag}</span>
+                  {l.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* il titolo libero resta, ma nelle Lingue e gia compilato */}
       <input value={argomento} onChange={(e) => setArgomento(e.target.value)} placeholder={L('lifeLearnPh')}
         style={{ width: '100%', padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT, boxSizing: 'border-box', marginBottom: 12 }} />
 
       {/* b.300 — via il dropdown "categoria": basta il campo di ricerca.
           Sotto, BADGE di idee per riempirlo — toccandone uno si aggiunge
           un dettaglio al testo (es. Matematica -> "con equazioni"). */}
-      {!argomento.trim() && (
+      {sezione === 'materie' && !argomento.trim() && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
           {IDEE_CORSO.map((idea) => (
             <button key={idea.q} onClick={() => setArgomento(idea.q)}

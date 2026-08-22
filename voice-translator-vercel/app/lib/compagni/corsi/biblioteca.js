@@ -32,6 +32,11 @@ export async function salvaCorsoUtente(email, c = {}) {
     categoria: c.categoria || 'altro',
     livello: c.livello || 'base',
     lingua: (c.lingua || 'it').slice(0, 8),
+    // b.374 — la lingua CHE SI STUDIA (inglese, spagnolo...), diversa da
+    // `lingua` che e quella in cui il corso e SCRITTO. Prima si deduceva
+    // dal titolo a ogni apertura; adesso e una scelta, e le scelte si
+    // conservano.
+    lingua_studiata: c.linguaStudiata ? String(c.linguaStudiata).slice(0, 8) : null,
     docente_id: c.docenteId || null,
     lezioni: c.lezioni.slice(0, 20),
     obiettivo_id: c.obiettivoId || null,
@@ -62,7 +67,7 @@ export async function mieiCorsi(email) {
   const sb = owner && getSupabaseAdmin();
   if (!sb) return [];
   const { data: corsi, error } = await sb.from('corsi_utente')
-    .select('id, argomento, titolo, categoria, livello, lingua, docente_id, lezioni, obiettivo_id, ultima_lezione, aggiornato')
+    .select('id, argomento, titolo, categoria, livello, lingua, lingua_studiata, docente_id, lezioni, obiettivo_id, ultima_lezione, aggiornato')
     .eq('owner', owner).order('aggiornato', { ascending: false }).limit(20);
   if (error || !corsi?.length) return [];
   const { data: prog } = await sb.from('imparare_progresso')
@@ -82,6 +87,7 @@ export async function mieiCorsi(email) {
     return {
       id: c.id, argomento: c.argomento, titolo: c.titolo, categoria: c.categoria,
       livello: c.livello, lingua: c.lingua, docenteId: c.docente_id,
+      linguaStudiata: c.lingua_studiata || null,
       lezioni: c.lezioni, obiettivoId: c.obiettivo_id, ultimaLezione: c.ultima_lezione,
       totale, superate, viste, saltate,
       // % di completamento VERIFICATO: le lezioni saltate contano meta

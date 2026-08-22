@@ -140,8 +140,8 @@ export function registraEsito({ argomento, lezioneIndice, punteggio, daRivedere,
 
 // ── b.327 · Ondata A — LA BIBLIOTECA DEI MIEI CORSI ──
 /** Salva il corso appena generato (syllabus stabile). Fallisce in silenzio. */
-export function salvaCorsoMio({ argomento, titolo, categoria, livello, lingua, lezioni, docenteId, obiettivoId, userToken }) {
-  return postJSON('/api/compagni/corso', { azione: 'salvaCorsoMio', argomento, titolo, categoria, livello, lingua, lezioni, docenteId, obiettivoId, userToken });
+export function salvaCorsoMio({ argomento, titolo, categoria, livello, lingua, linguaStudiata, lezioni, docenteId, obiettivoId, userToken }) {
+  return postJSON('/api/compagni/corso', { azione: 'salvaCorsoMio', argomento, titolo, categoria, livello, lingua, linguaStudiata, lezioni, docenteId, obiettivoId, userToken });
 }
 /** I miei corsi, con progresso unito (superate/viste/saltate/percento/esiti). */
 export async function mieiCorsiUtente(userToken) {

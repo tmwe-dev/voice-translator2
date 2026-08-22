@@ -137,9 +137,64 @@ QUANDO SBAGLIA, non fermare la conversazione per una lezione di grammatica. Sceg
 
 const TAG_L2 = /\[L2:\s*([^\]]*?)\s*\]/gi;
 
+// b.375 — I TAG CHE IL MODELLO SI INVENTA.
+//
+// Luca ha aperto la prima lezione di inglese e ha trovato a schermo:
+//     "A significa [IT: A]."
+// ripetuto per ventisei lettere. Il tag [IT: ...] non esiste in nessuna
+// istruzione: se l'e inventato il modello per dare la traduzione, e
+// siccome qui si toglieva SOLO [L2: ...], quello finiva a video con le
+// parentesi quadre e tutto.
+//
+// Non e un caso isolato ed e inutile combatterlo solo nel prompt: un
+// modello che scrive migliaia di lezioni ogni tanto si inventa una
+// notazione. Quindi qui si difende la schermata: qualunque tag della
+// forma [XX: ...] con un codice lingua di due lettere viene riconosciuto
+// come una TRADUZIONE e mostrato come si deve — fra parentesi tonde,
+// non quadre — invece di sembrare un errore del programma.
+const TAG_TRADUZIONE = /\[([a-zA-Z]{2}):\s*([^\]]*?)\s*\]/g;
+
 /** Il testo da MOSTRARE: i tag spariscono, il contenuto resta. */
 export function testoVisibile(testo) {
-  return String(testo || '').replace(TAG_L2, '$1').trim();
+  return String(testo || '')
+    .replace(TAG_L2, '$1')
+    .replace(TAG_TRADUZIONE, (intero, codice, dentro) => {
+      // [L2:] l'ha gia preso la riga sopra; ogni altro codice di due
+      // lettere e una traduzione che il modello ha voluto dare.
+      if (!dentro) return '';
+      return `(${dentro})`;
+    })
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/**
+ * b.375 — Il testo SPEZZATO IN PEZZI, per poterlo rendere vivo: ogni
+ * pezzo dice se e nella lingua che si studia (e quindi si puo toccare
+ * per sentirlo da un madrelingua) oppure no.
+ *
+ * E' la differenza fra una lezione che si legge e una che si usa: prima
+ * i tag venivano tolti e il testo restava morto: la promessa era che
+ * l'assistente desse il suono, e a schermo non c'era modo di chiederglielo.
+ *
+ * @returns {Array<{testo:string, l2:boolean}>}
+ */
+export function pezziLezione(testo) {
+  const s = String(testo || '');
+  const fuori = [];
+  let ultimo = 0;
+  const re = new RegExp(TAG_L2.source, 'gi');
+  let m;
+  while ((m = re.exec(s)) !== null) {
+    if (m.index > ultimo) fuori.push({ testo: s.slice(ultimo, m.index), l2: false });
+    if (m[1]) fuori.push({ testo: m[1], l2: true });
+    ultimo = m.index + m[0].length;
+  }
+  if (ultimo < s.length) fuori.push({ testo: s.slice(ultimo), l2: false });
+  // i pezzi NON in lingua vanno ripuliti dai tag inventati, come sopra
+  return fuori
+    .map((p) => (p.l2 ? p : { ...p, testo: p.testo.replace(TAG_TRADUZIONE, (i, c, d) => (d ? `(${d})` : '')) }))
+    .filter((p) => p.testo.length > 0);
 }
 
 // ── b.331 — IL DRILL DELLE COPPIE MINIME (Teaching Policy) ──

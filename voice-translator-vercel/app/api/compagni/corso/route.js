@@ -185,6 +185,11 @@ async function handlePost(req) {
       if (!sessione?.email) return NextResponse.json({ error: 'Accedi per salvare i tuoi corsi' }, { status: 401 });
       const salvato = await salvaCorsoUtente(sessione.email, {
         argomento, titolo: body.titolo, categoria, livello, lingua,
+        // b.374 — la lingua CHE SI STUDIA arriva dalla sezione Lingue di
+        // Impara. Si accetta solo un codice breve e pulito: e un dato che
+        // finisce nel database, non una frase.
+        linguaStudiata: typeof body.linguaStudiata === 'string' && /^[a-z]{2}(-[A-Za-z]{2,4})?$/.test(body.linguaStudiata)
+          ? body.linguaStudiata : null,
         docenteId: body.docenteId, lezioni: Array.isArray(body.lezioni) ? body.lezioni : [],
         obiettivoId: typeof body.obiettivoId === 'string' ? body.obiettivoId.slice(0, 80) : null,
       });
