@@ -97,8 +97,14 @@ const nextConfig = {
 
 export default withSentryConfig(nextConfig, {
   // Sentry webpack plugin options
-  org: process.env.SENTRY_ORG || 'voicetranslate',
-  project: process.env.SENTRY_PROJECT || 'voicetranslate',
+  // b.403 — il ripiego puntava a 'voicetranslate', un nome che su Sentry
+  // non esiste: il conto di Luca e `bartalk`. Finche non c'e il gettone di
+  // caricamento non se ne accorge nessuno (non si carica niente), ma il
+  // giorno che lo si aggiunge il caricamento fallirebbe contro un progetto
+  // inesistente, e il guasto arriverebbe travestito da guasto di
+  // compilazione. Meglio scriverlo giusto adesso che c'e sotto gli occhi.
+  org: process.env.SENTRY_ORG || 'bartalk',
+  project: process.env.SENTRY_PROJECT || 'bartalk',
 
   // Silently skip source map upload in dev
   silent: !process.env.SENTRY_AUTH_TOKEN,
