@@ -143,7 +143,19 @@ export default function Posta() {
           continue;
         }
         const ris = await risolvi(voce.a, tokenRef.current).catch(() => null);
-        const disp = ris?.dispositivi?.find((d) => d.presente) || null;
+        // b.385 — LA BUSTA VA A TUTTI I DISPOSITIVI ACCESI, non al primo.
+        //
+        // Prima si prendeva `find((d) => d.presente)`: con iPhone e Mac
+        // accesi tutti e due, il messaggio arrivava su UNO SOLO — e quale
+        // dipendeva dall'ordine in cui erano registrati. Chi scriveva non
+        // poteva saperlo, e chi riceveva guardava il telefono sbagliato.
+        //
+        // Non si rompe la promessa: ogni busta e sigillata con la chiave
+        // DI QUEL dispositivo, e il server continua a portare solo
+        // l'aggancio. Semplicemente si spedisce piu di una volta, come si
+        // farebbe consegnando a mano a chi ha due case.
+        const accesi = (ris?.dispositivi || []).filter((d) => d.presente);
+        const disp = accesi[0] || null;
         if (!ris?.esiste || !disp) {
           await salvaVoce({ ...voce, stato: ris?.esiste === false ? 'spento' : 'spento', tentativi: voce.tentativi + (disp ? 0 : 0), prossimo: ora + attesaScalino(voce.tentativi) });
           continue;
@@ -152,11 +164,24 @@ export default function Posta() {
         await salvaVoce({ ...voce, stato: 'in_consegna' });
         setUscita(await elencaCoda());
         try {
-          const busta = voce.busta || await sigilla(
-            { oggetto: voce.oggetto, corpo: voce.corpo, da: indirizzo, a: voce.a, quando: voce.creato },
-            disp.chiaveScambio, identitaRef.current.firma.privateKey,
-          );
-          await spedisci({ busta, mioDeviceId: deviceIdRef.current, loroDeviceId: disp.deviceId, chiaveFirmaLoro: disp.chiaveFirma, userToken: tokenRef.current });
+          // una busta per dispositivo: la chiave di uno non apre quella
+          // dell'altro, quindi non si puo riusare la stessa.
+          let consegnate = 0;
+          let ultimoGuaio = null;
+          for (const d of accesi) {
+            try {
+              const busta = await sigilla(
+                { oggetto: voce.oggetto, corpo: voce.corpo, da: indirizzo, a: voce.a, quando: voce.creato },
+                d.chiaveScambio, identitaRef.current.firma.privateKey,
+              );
+              await spedisci({ busta, mioDeviceId: deviceIdRef.current, loroDeviceId: d.deviceId, chiaveFirmaLoro: d.chiaveFirma, userToken: tokenRef.current });
+              consegnate++;
+            } catch (e2) { ultimoGuaio = e2; }
+          }
+          // basta che sia arrivata a UNO: la persona l'ha ricevuta. Se non
+          // e arrivata a nessuno, si rilancia l'ultimo guaio e ci pensa il
+          // ramo di sotto a rimetterla in coda.
+          if (!consegnate) throw (ultimoGuaio || new Error('spento'));
           await salvaVoce({ ...voce, busta: null, stato: 'consegnato', consegnato: Date.now() });
           await salvaMessaggio({ id: voce.id, cartella: 'spediti', a: voce.a, oggetto: voce.oggetto, corpo: voce.corpo, quando: voce.creato, consegnato: Date.now() });
         } catch (e) {
