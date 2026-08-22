@@ -718,6 +718,22 @@ export default function useStreamingInterpreter({
   const audioPartsRef = useRef({});
 
   const playBase64Audio = useCallback((base64Data) => {
+    // b.404 — QUESTA FUNZIONE NASCEVA DENTRO IL TRY, e il rimedio
+    // d'emergenza in fondo (il `catch`) la chiamava da FUORI: li dentro
+    // non esiste. Quindi quando qualcosa andava storto, andava storto
+    // anche il rimedio — e l'avviso che dice alla stanza «la voce
+    // tradotta ha finito» non partiva mai, lasciando la voce vera del
+    // partner attenuata per sempre. Che e esattamente il difetto che
+    // b.381 credeva di aver chiuso.
+    //
+    // E c'e di peggio: e questa riga che da quattro ore faceva fallire
+    // OGNI pubblicazione. Il controllo che la trova gira su Vercel ma
+    // non nelle compilazioni che facevo io in locale, dove lo saltavo.
+    // Otto versioni fatte e nessuna arrivata a Luca.
+    const avvisa = (acceso) => {
+      try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
+      catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
+    };
     try {
       const audioBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
       const blob = new Blob([audioBytes], { type: 'audio/mpeg' });
@@ -741,10 +757,6 @@ export default function useStreamingInterpreter({
       // Entrambe" restava senza effetto durante l'interprete. La stanza
       // ascolta un avviso preciso per abbassare la voce vera: ora
       // l'interprete lo manda, come gia fa la voce normale.
-      const avvisa = (acceso) => {
-        try { window.dispatchEvent(new CustomEvent('bartalk:tts', { detail: { attivo: acceso } })); }
-        catch { /* fuori dal browser non c'e nessuno da avvisare: si prosegue */ }
-      };
       startDucking?.();
       avvisa(true);
       // b.381 — L'AVVISO SI SPEGNEVA MAI. Si accendeva quando partiva la
