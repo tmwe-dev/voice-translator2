@@ -141,7 +141,14 @@ describe('nessun nome viene letto prima di nascere', () => {
     expect(file.length).toBeGreaterThan(100);
   });
 
-  it('in tutta l app non c\'e un solo caso', () => {
+  // b.384 — un minuto, non cinque secondi. Questa prova legge col
+  // parser duecento file: da sola ci mette due secondi, ma quando la
+  // macchina compila in parallelo arriva a diciotto — e andava in
+  // TIMEOUT, cioe diventava rossa SENZA AVER TROVATO NIENTE. Una prova
+  // che diventa rossa a caso e peggio di nessuna prova: si impara a
+  // ignorarla, e il giorno che trova qualcosa di vero non le crede piu
+  // nessuno.
+  it('in tutta l app non c\'e un solo caso', { timeout: 60000 }, () => {
     const rotti = [];
     for (const f of file) {
       const guai = lettiTroppoPresto(fs.readFileSync(f, 'utf8'));

@@ -23,6 +23,8 @@ import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio,
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import TestoLingua from './TestoLingua.js';
+import CompagnoDiSventura from './CompagnoDiSventura.js';
+import AvatarImg from '../AvatarImg.js';
 import CompagnoLive from './CompagnoLive.js';
 import { assistentePer, vocePrestata } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
@@ -456,6 +458,22 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // "piu difficile" di un ragazzo: e la stessa lingua studiata da
   // qualcun altro, con altri tempi e altre situazioni.
   const [profilo, setProfilo] = useState('chiunque');
+  // b.384 — CHI MI STA ACCANTO. Non un elenco nuovo di personaggi: uno
+  // dei miei Compagni, che da qui in poi mi accompagna anche mentre
+  // studio. Si ricorda, perche non e una scelta da rifare ogni volta.
+  const [sventuraId, setSventuraId] = useState('');
+  useEffect(() => {
+    try { setSventuraId(localStorage.getItem('bartalk_compagno_sventura') || ''); }
+    catch { /* memoria del browser negata: si sceglie di nuovo, non e un guasto */ }
+  }, []);
+  const scegliSventura = useCallback((id) => {
+    vibrate(6);
+    const nuovo = sventuraId === id ? '' : id;
+    setSventuraId(nuovo);
+    try { localStorage.setItem('bartalk_compagno_sventura', nuovo); }
+    catch { /* non poter RICORDARE la scelta non e un guasto da dire a nessuno */ }
+  }, [sventuraId]);
+  const compagnoSventura = (compagni || []).find((c) => c.id === sventuraId) || null;
   // b.376 — DOVE VOGLIO ANDARE (collaudo di Luca: «non ho modo di
   // avanzare nella lezione a punti piu avanti nel testo»). Il ciclo di
   // lettura sapeva gia saltare avanti — lo fa quando il Maestro decide
@@ -1432,6 +1450,19 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* b.330 — LETTURA GUIDATA (duetto): il brano in lingua originale,
             frase per frase — l'Assistente la dice (anche lenta), poi la
             leggi tu, col confronto e il grafico della fonia. */}
+        {/* b.384 — la striscia di chi mi sta accanto. Sta in fondo alla
+            lezione, occupa sempre la stessa altezza, e parla solo quando
+            un pezzo e finito — cioe quando la voce del Maestro tace. */}
+        {compagnoSventura && (
+          <CompagnoDiSventura
+            compagno={compagnoSventura}
+            argomento={argomento}
+            pezzo={paragrafiLezione[Math.max(0, sezioneAttiva)] || ''}
+            indicePezzo={sezioneAttiva}
+            lingua={linguaCorso} userToken={userToken}
+            testoP={testoP} muto={muto} accent={accent} card={card} bordo={bordo} L={tt} />
+        )}
+
         {frasiLettura.length > 0 && (() => {
           const l2c = (linguaStudiata || rilevaLinguaStudiata(argomento.trim(), aperta.lezione?.titolo || ''));
           if (!l2c) return null;
@@ -1710,6 +1741,34 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
               );
             })}
           </div>
+
+          {/* b.384 — CHI MI STA ACCANTO. Non un elenco nuovo: uno dei
+              Compagni che ho gia. Da qui in poi quello stesso personaggio
+              mi accompagna anche mentre studio — e se domani lo voglio
+              anche come coach degli obiettivi, e sempre lui. */}
+          {compagni?.length > 0 && (<>
+            <div style={{ fontSize: 12, color: muto, margin: '16px 0 8px' }}>
+              {tt('sideCompanionWho', 'Chi mi sta accanto')}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {compagni.slice(0, 8).map((c) => {
+                const on = sventuraId === c.id;
+                return (
+                  <button key={c.id} onClick={() => scegliSventura(c.id)} aria-pressed={on}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6, padding: '6px 11px 6px 6px',
+                      borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                      fontSize: 13, fontWeight: on ? 800 : 600,
+                      background: on ? `${accent}1E` : card, border: on ? `1px solid ${accent}55` : bordo,
+                      color: on ? accent : testoP,
+                    }}>
+                    <AvatarImg src={c.avatar} alt={c.nome} size={22} />
+                    {c.nome}
+                  </button>
+                );
+              })}
+            </div>
+          </>)}
         </div>
       )}
 

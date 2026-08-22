@@ -58,6 +58,9 @@ export function profiloPerSuperficie(superficie) {
     case 'impara': case 'corso': return 'didattico';
     case 'tavolo': case 'podcast': return 'dibattimentale';
     case 'dossier': return 'operativo';
+    // b.384 — il compagno di sventura sta li mentre fai altro: parla
+    // come si parla accanto a qualcuno, non come si insegna.
+    case 'sventura': return 'conversazionale';
     default: return PROFILO_DEF;
   }
 }
@@ -66,7 +69,25 @@ export function profiloPerSuperficie(superficie) {
 export const PROFILI_ELENCO = Object.entries(PROFILI).map(([id, p]) => ({ id, etichetta: p.etichetta, obiettivo: p.obiettivo }));
 
 // Le superfici che ammettono un override nel Deep Setting del Compagno.
-export const SUPERFICI_PROFILO = ['amico', 'impara', 'tavolo', 'podcast'];
+// b.384 — LA QUINTA SUPERFICIE: 'sventura'.
+//
+// Ordine di Luca: «se creo il personaggio Smooth Dog voglio che sia in
+// una sezione compagni di sventura — compagni che insieme fanno le cose
+// ma ti intrattengono; questa figura puo anche essere associata al
+// compagno di vita, tutor, coach che abbiamo negli obiettivi».
+//
+// PERCHE' UNA SUPERFICIE E NON UNA QUARTA LISTA DI PERSONAGGI. Qui
+// esistono gia tre assi: la VOCAZIONE dice perche un Compagno esiste, il
+// PROFILO come si comporta, la SUPERFICIE dove appare. Un compagno di
+// sventura non e un tipo nuovo di personaggio — e lo STESSO personaggio
+// in un posto nuovo. Farne una lista separata avrebbe voluto dire che il
+// giorno che vuoi che ti accompagni anche in un corso si riscrive tutto.
+//
+// E il posto e particolare: il compagno di sventura non ha una schermata
+// sua. Il suo posto e ACCANTO A TE MENTRE FAI UN'ALTRA COSA. Dargli una
+// schermata lo trasformerebbe in una cosa che si apre e si chiude, cioe
+// esattamente quello che non e.
+export const SUPERFICI_PROFILO = ['amico', 'impara', 'tavolo', 'podcast', 'sventura'];
 
 /**
  * Pulisce l'oggetto `profili` in arrivo dal client PRIMA di salvarlo:
