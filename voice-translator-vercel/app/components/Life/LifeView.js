@@ -188,11 +188,18 @@ function LifeView({ onApriStanza }) {
         <span style={{ fontSize: 13, fontWeight: 700, color: testoP, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {'\u{1F509}'} {audioStato.etichetta || L('lifeAudio')}
         </span>
+        {/* b.376 — MENTRE SI PREPARA LA VOCE DOPO il telecomando resta,
+            ma non finge di poter mettere in pausa il silenzio: mostra
+            che sta lavorando. Prima in quel momento spariva del tutto,
+            ed e per questo che a Luca lampeggiava a ogni cambio voce. */}
         <button onClick={() => audioStato.inPausa ? riprendiAudio() : pausaAudio()}
-          aria-label={audioStato.inPausa ? 'Riprendi' : 'Pausa'}
-          style={{ width: 42, height: 42, borderRadius: 21, border: 'none', cursor: 'pointer',
-            background: accent, color: '#04121c', fontSize: 18, fontWeight: 900 }}>
-          {audioStato.inPausa ? '\u25B6' : '\u23F8'}
+          disabled={audioStato.preparando}
+          aria-label={audioStato.preparando ? L('lifePreparing') : (audioStato.inPausa ? L('lifeResumeWord') : L('lifePauseWord'))}
+          style={{ width: 42, height: 42, borderRadius: 21, border: 'none',
+            cursor: audioStato.preparando ? 'default' : 'pointer',
+            background: audioStato.preparando ? `${accent}44` : accent,
+            color: '#04121c', fontSize: 18, fontWeight: 900 }}>
+          {audioStato.preparando ? '\u2026' : audioStato.inPausa ? '\u25B6' : '\u23F8'}
         </button>
         {/* b.363 — Stop fermava solo la voce in corso: il ciclo che genera
             i turni proseguiva a spese di Luca e la voce ripartiva da sola
@@ -442,6 +449,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // scelta vince sempre sul titolo.
   const [sezione, setSezione] = useState('materie');   // 'materie' | 'lingue'
   const [linguaStudiata, setLinguaStudiata] = useState('');
+  // b.376 — DOVE VOGLIO ANDARE (collaudo di Luca: «non ho modo di
+  // avanzare nella lezione a punti piu avanti nel testo»). Il ciclo di
+  // lettura sapeva gia saltare avanti — lo fa quando il Maestro decide
+  // che una parte e gia stata coperta parlando. Mancava solo il modo di
+  // dirglielo dal dito.
+  const vaiARef = useRef(-1);
   // b.299 — COSA arricchisce la lezione: 'disegni' (illustrazioni fatte
   // dal Maestro), 'foto'/'link' (recuperati dalla community — Cobra),
   // 'video' (video collegati), 'nessuno'. Il default lo decide l'eta:
@@ -1062,9 +1075,14 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     const parti = testoTot.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
     const lista = parti.length > 1 ? parti : [testoTot];
     const aspettaDialogo = async () => { while (inDomandaRef.current && !stopLetturaRef.current) await attendi(150); };
+    let partenza = 0;
     try {
-      for (let i = 0; i < lista.length; i++) {
+      // se e stato chiesto un punto preciso, si comincia da li
+      if (vaiARef.current >= 0) { partenza = Math.min(vaiARef.current, lista.length - 1); vaiARef.current = -1; }
+      for (let i = partenza; i < lista.length; i++) {
         if (stopLetturaRef.current) break;
+        // b.376 — un dito su un paragrafo piu avanti: si va li.
+        if (vaiARef.current >= 0) { i = Math.min(vaiARef.current, lista.length - 1); vaiARef.current = -1; }
         setSezioneAttiva(i);
         await parlaBilingue({
           voceId: tutor?.voce?.id || voceMaestroRef.current,
@@ -1098,6 +1116,23 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
     finally { setAscoltando(false); setSezioneAttiva(-1); inDomandaRef.current = false; setManoAlzata(false); setMaestroStaFinendo(false); }
   }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni]);
+
+  // b.376 — VAI DA QUI. Un dito su un paragrafo e la voce ci si sposta.
+  // Se la lezione non sta suonando, parte da li; se sta suonando, si
+  // taglia la battuta in corso e si riprende dal punto chiesto.
+  //
+  // Perche col dito sul testo e non con due frecce: le frecce fanno
+  // AVANTI E INDIETRO UNO ALLA VOLTA, e per arrivare al sesto paragrafo
+  // sono sei tocchi al buio. Il testo e gia li sotto gli occhi — si
+  // legge dove si vuole andare e ci si va, in un tocco solo.
+  const vaiAlParagrafo = useCallback((n) => {
+    vibrate(8);
+    vaiARef.current = n;
+    if (!ascoltando) { ascoltaLezione(); return; }
+    // tagliare la voce in corso fa tornare l'attesa dentro il ciclo, che
+    // al giro dopo legge il segnaposto e salta.
+    fermaElemento(audioLezioneRef.current);
+  }, [ascoltando, ascoltaLezione]);
 
   // b.242 — rispondi a una domanda; all'ultima si tirano le somme e si manda
   // l'esito al Maestro. La registrazione e' un DI PIU': se fallisce (o se non
@@ -1258,7 +1293,12 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
             const evid = attivo && evidenzia;
             return (
               <div key={i} ref={attivo ? sezioneRef : null}
-                style={{ borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
+                // b.376 — il paragrafo si tocca e la voce ci va. Doppio
+                // tocco per non rubare la selezione del testo a chi
+                // vuole copiare una frase.
+                onDoubleClick={() => vaiAlParagrafo(i)}
+                title={tt('lifeJumpHere', 'Tocca due volte: la voce riprende da qui')}
+                style={{ cursor: 'pointer', borderRadius: 12, padding: evid ? '10px 12px' : 0, margin: evid ? '4px -12px 8px' : '0 0 2px',
                   background: evid ? `${accent}14` : 'transparent',
                   borderLeft: `3px solid ${attivo ? accent : 'transparent'}`,
                   transition: 'background 0.3s, border-color 0.3s',

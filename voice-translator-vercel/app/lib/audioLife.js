@@ -20,7 +20,8 @@ const interrompibili = new Set();
 /** Registra un ciclo da fermare quando si preme Interrompi. Restituisce come disiscriversi. */
 export function suInterruzione(fn) {
   interrompibili.add(fn);
-  return () => interrompibili.delete(fn);
+  avvisa();                       // b.376 — il telecomando si accende subito
+  return () => { interrompibili.delete(fn); avvisa(); };
 }
 
 // b.363 — un audio FERMATO va marchiato: chi lo sta suonando deve poter
@@ -50,7 +51,10 @@ export function suona(audioEl, nome = '') {
   const suEventi = () => avvisa();
   audioEl.addEventListener('play', suEventi);
   audioEl.addEventListener('pause', suEventi);
-  audioEl.addEventListener('ended', () => { if (corrente === audioEl) { corrente = null; etichetta = ''; } avvisa(); });
+  // b.376 — L'ETICHETTA NON SI CANCELLA QUANDO LA VOCE FINISCE. Serve a
+  // tenere scritto CHI ha parlato per ultimo mentre si prepara la voce
+  // dopo: se no il telecomando resterebbe li muto e anonimo.
+  audioEl.addEventListener('ended', () => { if (corrente === audioEl) corrente = null; avvisa(); });
   avvisa();
 }
 
@@ -64,9 +68,29 @@ export function ferma() {
 }
 
 export function stato() {
+  // b.376 — IL TELECOMANDO NON SPARISCE PIU FRA UNA VOCE E L'ALTRA.
+  //
+  // Collaudo di Luca: «il player appare e scompare continuamente quando
+  // si alternano le voci». Succedeva perche era acceso dall'AUDIO CHE
+  // SUONA, e in una lezione a due voci fra una battuta e l'altra c'e il
+  // tempo di GENERARE la successiva — secondi, non millisecondi. Quindi
+  // spariva e tornava a ogni turno.
+  //
+  // Luca ha proposto due telecomandi, uno per maestro. La risposta e no,
+  // e per un motivo che vale la pena scrivere: due comandi per la stessa
+  // cosa si contendono lo stesso posto, e quando parla il primo il
+  // secondo che fa? Il difetto non e che sono pochi, e che quello che
+  // c'e si SMONTA. Uno solo, che resta fermo e dice chi sta parlando.
+  //
+  // E non e una stima a occhio: chi genera i turni si iscrive gia qui
+  // (quello serviva allo Stop). Se c'e un ciclo iscritto, qualcosa STA
+  // per parlare — quindi il telecomando deve restare.
+  const cicloVivo = interrompibili.size > 0;
   return {
-    attivo: !!corrente,
+    attivo: !!corrente || cicloVivo,
     inPausa: !!corrente && corrente.paused,
+    // niente voce ma il ciclo c'e: si sta preparando la battuta dopo.
+    preparando: !corrente && cicloVivo,
     etichetta,
   };
 }
