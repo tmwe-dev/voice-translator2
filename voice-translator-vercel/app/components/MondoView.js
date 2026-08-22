@@ -419,6 +419,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           )}
         </div>
       </div>
+      {/* b.397 — DA QUI ARRIVAVA UNA LINGUA TRAVESTITA DA PAESE. Scegliendo
+          una lingua dal filtro si mandava in giro il suo codice in maiuscolo
+          come se fosse un Paese: «en» diventava «EN», che non e nessun posto
+          sulla Terra. Sei lingue su dodici sbagliate — inglese, cinese,
+          giapponese, portoghese, arabo, coreano — e le altre sei giuste solo
+          per combinazione, perche li il codice della lingua e quello del
+          Paese coincidono. Quel finto Paese andava al globo, che non sapeva
+          dove avvicinarsi, e alle News, che filtravano su un Paese che non
+          esiste e restavano vuote. La conversione vera esisteva gia. */}
       {/* b.363 — DUE TENDINE al posto di due file di pillole: la lingua e
           il tipo di stanza sono scelte SINGOLE, e una fila di bottoni che
           va a capo prometteva il contrario. Ognuna dice quante stanze ci
@@ -434,7 +443,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             conto: perLingua[l.code] || 0,
           })),
         ]}
-        onCambia={(v) => { setLangFilter(v); setPaeseScelto(v === 'all' ? null : v.toUpperCase()); }} />
+        onCambia={(v) => { setLangFilter(v); setPaeseScelto(v === 'all' ? null : paeseDaLingua(v)); }} />
 
       {availableModes.length > 2 && (
         <Scelta C={C}
@@ -465,7 +474,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               {/* b.363 — scegliendo di qui, il PIANETA ci va sopra: il codice
                   viaggia al globo e parte lo zoom che sa gia fare da se */}
               {risultati.paesi.map((l) => (
-                <button key={l.code} onClick={() => { setLangFilter(l.code); setPaeseScelto(l.paese || l.code.toUpperCase()); setSearch(''); setTab('stanze'); }}
+                <button key={l.code} onClick={() => { setLangFilter(l.code); setPaeseScelto(paeseDaLingua(l.code)); setSearch(''); setTab('stanze'); }}
                   style={{ width: '100%', textAlign: 'left', padding: 12, borderRadius: 14, background: C.card, border: `1px solid ${C.cardBorder}`, cursor: 'pointer', fontFamily: FONT, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 22 }}>{l.flag}</span>
                   <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: C.textPrimary }}>{l.name}</span>

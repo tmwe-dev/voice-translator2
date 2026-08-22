@@ -204,3 +204,29 @@ describe('TaxiTalk sul tema chiaro, la mappa vuota e la voce sbagliata accesa', 
     expect(comm, 'Community non c\'entra').not.toMatch(/'speaker'/);
   });
 });
+
+describe('la lingua non e un Paese', () => {
+  it('scegliendo una lingua si sceglie il Paese VERO, non il codice in maiuscolo', async () => {
+    const { paeseDaLingua } = await import('../app/lib/schedaMondo.js');
+    // le sei che erano sbagliate: il codice della lingua non c'entra col posto
+    expect(paeseDaLingua('en')).toBe('US');
+    expect(paeseDaLingua('zh')).toBe('CN');
+    expect(paeseDaLingua('ja')).toBe('JP');
+    expect(paeseDaLingua('pt')).toBe('BR');
+    expect(paeseDaLingua('ko')).toBe('KR');
+    expect(paeseDaLingua('ar')).toBe('AE');
+  });
+
+  it('e Mondo non manda piu in giro il codice della lingua al posto del Paese', () => {
+    const v = leggi('app/components/MondoView.js');
+    expect(v, 'la tendina della lingua').not.toMatch(/setPaeseScelto\(v === 'all' \? null : v\.toUpperCase\(\)\)/);
+    expect(v, 'e la ricerca dei paesi').not.toMatch(/setPaeseScelto\(l\.paese \|\| l\.code\.toUpperCase\(\)\)/);
+    expect(v).toMatch(/setPaeseScelto\(v === 'all' \? null : paeseDaLingua\(v\)\)/);
+    expect(v).toMatch(/setPaeseScelto\(paeseDaLingua\(l\.code\)\)/);
+  });
+
+  it("LANGS non ha nessun campo 'paese': il ripiego che ci contava era cieco", async () => {
+    const { LANGS } = await import('../app/lib/constants.js');
+    expect(LANGS.some((l) => 'paese' in l), 'nessuna lingua porta un paese').toBe(false);
+  });
+});
