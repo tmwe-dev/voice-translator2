@@ -276,25 +276,53 @@ export default function useInterpreterMode({
       }
 
       // 3. TTS — Generate audio of translation
-      // /api/tts-edge expects langCode (not lang)
-      const ttsRes = await apiCircuitBreaker.execute('interpreter-tts', () =>
-        fetch('/api/tts-edge', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: translated,
-            langCode: partnerLang,
-            // b.167 — vedi la POST verso /api/translate poco sopra: stesso
-            // motivo, stesso schema.
-            roomId,
-            roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
-          }),
-          // b.363 — anche la sintesi vocale era senza scadenza.
-          signal: AbortSignal.timeout(30000),
-        })
-      );
+      //
+      // b.381 — IL RIPIEGO TORNAVA ALLA VECCHIA ARCHITETTURA. Questo e il
+      // percorso in cui si finisce quando lo streaming non parte: cioe
+      // proprio il momento in cui le cose stanno gia andando male. E qui
+      // c'era UN SOLO motore vocale e un `return` muto: se Edge falliva,
+      // la traduzione arrivava scritta e la voce non partiva — nessun
+      // secondo motore, nessun avviso, niente. La catena a due motori
+      // costruita in b.352 viveva solo nello streaming.
+      //
+      // Adesso i due motori ci sono anche qui, nell'ordine che chiede
+      // chi ha aperto la stanza, e se cadono tutti e due lo si DICE
+      // invece di restare in silenzio.
+      const motori = preferisciEleven
+        ? [{ rotta: '/api/tts-elevenlabs', campo: 'lang' }, { rotta: '/api/tts-edge', campo: 'langCode' }]
+        : [{ rotta: '/api/tts-edge', campo: 'langCode' }, { rotta: '/api/tts-elevenlabs', campo: 'lang' }];
 
-      if (!ttsRes.ok) { return; }
+      let ttsRes = null;
+      for (const m of motori) {
+        try {
+          const r = await apiCircuitBreaker.execute(`interpreter-tts:${m.rotta}`, () =>
+            fetch(m.rotta, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                text: translated,
+                [m.campo]: partnerLang,
+                // b.167 — vedi la POST verso /api/translate poco sopra: stesso
+                // motivo, stesso schema.
+                roomId,
+                roomSessionToken: roomId ? (roomSessionTokenRef?.current || undefined) : undefined,
+              }),
+              // b.363 — anche la sintesi vocale era senza scadenza.
+              signal: AbortSignal.timeout(30000),
+            })
+          );
+          if (r?.ok) { ttsRes = r; break; }
+        } catch { /* questo motore non risponde: si prova l'altro */ }
+      }
+
+      if (!ttsRes) {
+        // b.381 — il silenzio era la cosa peggiore: chi parla continuava a
+        // parlare credendo che dall'altra parte si sentisse.
+        console.warn('[interprete] nessun motore vocale disponibile: la traduzione resta scritta');
+        try { window.dispatchEvent(new CustomEvent('bartalk:voce-non-disponibile')); }
+        catch { /* fuori dal browser non c'e nessuno da avvisare */ }
+        return;
+      }
       const ttsBlob = await ttsRes.blob();
       const ttsBuffer = await ttsBlob.arrayBuffer();
       // Convert to base64 in chunks to avoid "Maximum call stack size exceeded"
@@ -432,6 +460,32 @@ export default function useInterpreterMode({
     } catch (e) {
       console.error('[Interpreter] Failed to start:', e);
       setActive(false);
+      // b.381 — IL MICROFONO RESTAVA APERTO. Qui si prende il microfono
+      // per PRIMA cosa, e solo dopo si costruiscono il filtro del rumore
+      // e il registratore. Se qualcosa falliva DOPO la presa — e li ci
+      // sono due passaggi che possono fallire — questo catch si limitava
+      // a scrivere nel registro e a spegnere una spia: il microfono
+      // restava acceso, con la spia rossa del telefono accesa e nessuno
+      // schermo che dicesse perche.
+      //
+      // Si chiude tutto quello che potrebbe essere rimasto aperto, nello
+      // stesso ordine in cui lo chiude lo stop normale.
+      try {
+        if (recorderRef.current && recorderRef.current.state !== 'inactive') recorderRef.current.stop();
+      } catch { /* il registratore non era mai partito: niente da fermare */ }
+      recorderRef.current = null;
+      if (noiseGateRef.current) {
+        try { noiseGateRef.current.destroy(); } catch { /* era gia chiuso: chiudere due volte non e un guasto */ }
+        noiseGateRef.current = null;
+      }
+      if (daRendereRef.current) {
+        try { rendiVoce(daRendereRef.current); } catch { /* il microfono condiviso era gia stato reso */ }
+        daRendereRef.current = null;
+      } else if (streamRef.current) {
+        // microfono preso in proprio (non dal condiviso): si spegne qui
+        try { streamRef.current.getTracks().forEach((t) => t.stop()); } catch { /* tracce gia ferme */ }
+      }
+      streamRef.current = null;
     }
   }, []);
 
@@ -513,7 +567,16 @@ export default function useInterpreterMode({
     }
     // Fallback to legacy chunk-based pipeline
     dbg.debug('[Interpreter] Streaming unavailable, using legacy 3s chunks');
-    startInterpreter();
+    // b.381 — SI ASPETTA. Questa funzione e asincrona (chiede il
+    // microfono, apre il registratore) ma veniva lanciata e lasciata
+    // andare: il `finally` di chi chiama riapriva la porta subito, e
+    // dentro quella finestra un secondo avvio poteva entrare mentre il
+    // microfono del primo non era ancora pronto — due microfoni, due
+    // trascrizioni, doppio consumo.
+    //
+    // E' esattamente la corsa che il commento qui sopra dice di voler
+    // evitare: il lucchetto c'era, ma si apriva troppo presto.
+    await startInterpreter();
   }, [streaming.start, startInterpreter]);
 
   const startUnified = useCallback(async () => {

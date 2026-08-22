@@ -88,9 +88,22 @@ export default function Posta() {
         // il PORTIERE: accoglie gli agganci, apre le buste, firma le ricevute
         spegniPortiere = portiere({
           mioDeviceId: id.deviceId, identita: id, userToken: token,
-          suMessaggio: async (busta, daIndirizzo) => {
+          // b.381 — LA FIRMA SI VERIFICA CONTRO IL DISPOSITIVO CHE HA
+          // DAVVERO SPEDITO. Il portiere sa da quale dispositivo e
+          // arrivata la busta e lo passa da sempre — ma qui quel dato
+          // veniva ignorato, e si prendeva il PRIMO dispositivo
+          // dell'indirizzo.
+          //
+          // Con un dispositivo solo funziona. Con tre — iPhone, Mac, PC —
+          // se scrivi dal Mac e il primo in elenco e l'iPhone, si
+          // verificava una firma buona con la chiave sbagliata e usciva
+          // "firma non verificata" su un messaggio perfettamente
+          // autentico. Cioe il sospetto cadeva sul mittente onesto.
+          suMessaggio: async (busta, daIndirizzo, daDevice) => {
             const ris = await risolvi(daIndirizzo, token).catch(() => null);
-            const dispMittente = ris?.dispositivi?.[0];
+            const dispMittente =
+              (daDevice && ris?.dispositivi?.find((d) => d.deviceId === daDevice || d.device_id === daDevice))
+              || ris?.dispositivi?.[0];
             const esito = await apri(busta, id.scambio.privateKey, dispMittente?.chiaveFirma || {});
             const m = esito.messaggio || {};
             await salvaMessaggio({

@@ -291,7 +291,19 @@ export default function useStreamingInterpreter({
 
     // Traduzione finale della frase completa
     const translated = await translateChunk(trimmed, true);
-    if (!translated) return;
+    if (!translated) {
+      // b.381 — UN ERRORE DI TRADUZIONE ZITTIVA LA FRASE PER SEMPRE.
+      // Il segnaposto "questa la sto lavorando" veniva messo prima di
+      // tradurre e ripulito molto piu in basso, DOPO tutto il resto: se
+      // la traduzione falliva anche una volta sola, si usciva di qui
+      // lasciandolo su. Da quel momento chi ripeteva la stessa frase —
+      // ed e proprio quello che si fa quando non si e sentiti — veniva
+      // scartato dalla difesa contro i doppioni.
+      //
+      // Il guasto era temporaneo, il silenzio no.
+      fraseInLavorazioneRef.current = null;
+      return;
+    }
 
     // Update translation display
     currentTranslationRef.current = translated;
@@ -630,6 +642,22 @@ export default function useStreamingInterpreter({
     // la si spegne anche nei rami di fallimento senza doverselo ricordare.
     abortaStreaming();
 
+    // b.381 — LA CODA SI SVUOTA DAVVERO. Allo stop restavano dentro le
+    // frasi gia tradotte e non ancora dette: un attimo dopo aver chiuso
+    // l'interprete partiva ancora una voce, addosso a chi se n'era gia
+    // andato — e la si pagava. E la frase in lavorazione restava
+    // marcata, quindi ripartendo la stessa frase veniva scartata come
+    // doppione.
+    ttsQueueRef.current = [];
+    fraseInLavorazioneRef.current = null;
+    // e la voce che sta parlando ADESSO si ferma: era l'unica cosa che
+    // lo stop non toccava.
+    try {
+      const a = audioCorrenteRef.current;
+      if (a) { a.pause(); a.currentTime = 0; }
+      audioCorrenteRef.current = null;
+    } catch { /* l'audio era gia finito: nulla da fermare */ }
+
     // Reset state
     currentSentenceRef.current = '';
     interimTextRef.current = '';
@@ -719,10 +747,26 @@ export default function useStreamingInterpreter({
       };
       startDucking?.();
       avvisa(true);
-      audio.play().catch(() => {});
-      audio.onended = () => { URL.revokeObjectURL(url); stopDucking?.(); };
-      audio.onerror = () => { stopDucking?.(); };
-    } catch { stopDucking?.(); }
+      // b.381 — L'AVVISO SI SPEGNEVA MAI. Si accendeva quando partiva la
+      // voce tradotta e non veniva PIU rimesso a false: ne alla fine, ne
+      // in caso di errore. La stanza ascolta proprio questo per abbassare
+      // la voce vera del partner — quindi restava attenuata per sempre,
+      // fino al prossimo giro di voce tradotta.
+      //
+      // Si spegne in UN posto solo, chiamato da tutte e tre le uscite: se
+      // lo si scrivesse tre volte, la prossima uscita nuova se lo
+      // dimenticherebbe di nuovo. E' esattamente cosi che e nato questo
+      // difetto.
+      const finito = () => {
+        avvisa(false);
+        stopDucking?.();
+        try { URL.revokeObjectURL(url); } catch { /* gia liberato: nulla da fare */ }
+        if (audioCorrenteRef.current === audio) audioCorrenteRef.current = null;
+      };
+      audio.play().catch(() => { finito(); });
+      audio.onended = finito;
+      audio.onerror = finito;
+    } catch { avvisa(false); stopDucking?.(); }
   }, [startDucking, stopDucking]);
 
   const handleAudioPart = useCallback((msg) => {
@@ -744,7 +788,19 @@ export default function useStreamingInterpreter({
       const a = audioCorrenteRef.current;
       if (!a) return;
       const v = getVolumeTTS();
-      try { a.volume = v; if (v <= 0) a.pause(); } catch { /* l'audio era gia finito: nulla da regolare */ }
+      // b.381 — RIPORTARE IL VOLUME SU NON FACEVA RIPARTIRE NIENTE.
+      // Portandolo a zero si metteva in pausa, ma rialzandolo si
+      // rimetteva solo il numero: la frase restava ferma. Il cursore
+      // sembrava funzionare e non funzionava — la categoria di difetto
+      // che nessuna prova sulla presenza delle funzioni trova, perche
+      // tutte le funzioni ci sono.
+      try {
+        a.volume = v;
+        if (v <= 0) a.pause();
+        // si riprende solo se e stata la pausa del volume a fermarlo, e
+        // se la frase non era gia finita per conto suo.
+        else if (a.paused && !a.ended) a.play().catch(() => { /* il browser puo rifiutare: non e un guasto */ });
+      } catch { /* l'audio era gia finito: nulla da regolare */ }
     };
     window.addEventListener('bartalk:vol-tts', suVolume);
     return () => window.removeEventListener('bartalk:vol-tts', suVolume);

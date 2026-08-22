@@ -103,7 +103,27 @@ async function handlePost(req) {
 }
 
 // GET /api/tts-edge?test=1 — diagnostic endpoint
+//
+// b.381 — CHIUSO IN PRODUZIONE. Questa rotta importa la libreria,
+// elenca i suoi export e i suoi metodi, e SINTETIZZA DAVVERO una frase.
+// Era pubblica e senza il guard che protegge la POST: chiunque poteva
+// chiamarla a ripetizione e farci lavorare gratis, e leggere come siamo
+// fatti dentro.
+//
+// Serve, ma serve a NOI e quando qualcosa non va. Fuori da produzione
+// resta intera; in produzione risponde solo se sa la parola d'ordine
+// dell'amministratore — e altrimenti dice quel poco che puo dire un
+// controllo di salute, senza sintetizzare niente.
 export async function GET(req) {
+  const inProduzione = process.env.VERCEL_ENV === 'production';
+  if (inProduzione) {
+    const atteso = process.env.ADMIN_SECRET || process.env.SESAMO_SECRET || '';
+    const dato = req.headers.get('x-admin-secret') || '';
+    if (!atteso || dato !== atteso) {
+      // niente elenco di moduli, niente sintesi: solo "sono viva".
+      return NextResponse.json({ ok: true, servizio: 'tts-edge' });
+    }
+  }
   const checks = {
     timestamp: new Date().toISOString(),
     cryptoSubtle: typeof globalThis?.crypto?.subtle !== 'undefined',
