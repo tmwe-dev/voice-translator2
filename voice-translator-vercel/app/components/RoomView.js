@@ -48,6 +48,22 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   roomSessionToken, userToken }) {
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
 
+  // b.379 — CHI SONO IO, DICHIARATO SUBITO. Stava piu di cento righe piu
+  // in basso, e da b.372 due punti sopra lo leggevano gia: l'elenco di
+  // dipendenze di un effetto, e il calcolo dei messaggi per il carosello.
+  //
+  // In JavaScript un `const` letto PRIMA della sua riga non vale
+  // "non definito": e un errore che uccide il componente. Quindi la
+  // stanza non si apriva PIU DA NESSUN PERCORSO — non era una stanza
+  // rotta, era il componente che moriva a ogni montaggio, e i quattro
+  // percorsi diversi cadevano tutti nello stesso punto.
+  //
+  // L'ho introdotto io portando il carosello da RadioChat. Riparata la
+  // CAUSA e non i sintomi: il nome nasce dove nascono le sue due
+  // sorgenti, cosi nessuno puo tornare a leggerlo troppo presto
+  // spostando un pezzo di codice.
+  const myName = verifiedName || prefs.name;
+
   // ── b.99 · reazioni durevoli ──
   // Si chiedono i conteggi dei soli messaggi a schermo, in una chiamata
   // sola. Sessanta e il tetto che accetta la rotta.
@@ -144,7 +160,6 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const typingDebounceRef = useRef(null);
 
   // ── Compute derived values ──
-  const myName = verifiedName || prefs.name;
   const otherMembers = roomInfo?.members?.filter(m => m.name !== myName) || [];
   const partner = otherMembers[0];
   const myL = getLang(myLang);
