@@ -393,9 +393,12 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
             domini: scartate.map((f) => { try { return new URL(f.url).hostname; } catch { return '?'; } }).join(', '),
           });
         }
-        // se dopo il filtro non resta abbastanza, la lezione NON finge:
-        // parte senza fonti, e il Maestro ha gia l'ordine di non citare.
-        fonti = abbastanza ? tenute : [];
+        // b.382 — si tiene TUTTO quello che ha passato il filtro. Se non
+        // passa niente la lezione parte senza fonti, e il Maestro ha gia
+        // l'ordine di non citare; ma una sola fonte autorevole non si
+        // butta via, vale piu di zero.
+        if (!abbastanza) log.warn('materia certificata: nessuna fonte fondante rimasta', { categoria });
+        fonti = tenute;
       }
       fontiNonTrovate = fonti.length === 0;
     }

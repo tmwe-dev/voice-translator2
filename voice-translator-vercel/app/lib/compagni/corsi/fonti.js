@@ -87,9 +87,16 @@ export function fondante(url) {
  * scartate servono al registro: se una materia certificata riceve solo
  * blog, e un fatto che vogliamo vedere, non una cosa da nascondere.
  *
+ * b.382 — `abbastanza` DICE, non decide. Nella prima versione le fonti
+ * venivano buttate tutte se erano meno di due: cioe una lezione con UNA
+ * fonte autorevole finiva senza nessuna fonte. Sbagliato — una fonte
+ * autorevole vale piu di zero, e a raccontare quello che non copre ci
+ * pensa gia l'ordine dato al Maestro. L'ha trovato una prova che
+ * esisteva da prima.
+ *
  * @returns {{tenute: Array, scartate: Array, abbastanza: boolean}}
  */
-export function filtraFontiCertificate(fonti = [], { minimo = 2 } = {}) {
+export function filtraFontiCertificate(fonti = [], { minimo = 1 } = {}) {
   const tenute = [];
   const scartate = [];
   for (const f of fonti) {

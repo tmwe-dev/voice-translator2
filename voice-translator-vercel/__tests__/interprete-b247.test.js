@@ -482,8 +482,25 @@ describe('ciò che non deve essersi rotto', () => {
     const corpo = s.slice(i, s.indexOf('const elaboraCoda = useCallback('));
     expect(corpo).toContain("apiCircuitBreaker.execute('interpreter-stt'");
     expect(corpo).toContain("apiCircuitBreaker.execute('interpreter-translate'");
-    expect(corpo).toContain("apiCircuitBreaker.execute('interpreter-tts'");
+    // b.382 — questa riga cercava il nome ESATTO 'interpreter-tts'. Da
+    // b.381 il percorso di ripiego ha due motori vocali e il nome porta
+    // dietro quale, quindi la prova e diventata rossa su un cambiamento
+    // che era un MIGLIORAMENTO. Una prova che descrive COME e scritto il
+    // codice invece di COSA deve essere vero si mette di traverso ai
+    // lavori giusti: adesso chiede che la voce passi dal salvavita, non
+    // come lo si chiama.
+    expect(corpo).toMatch(/apiCircuitBreaker\.execute\(\s*[`'"]interpreter-tts/);
     expect(corpo, 'invio al partner').toContain('interpreter-subtitle');
+  });
+
+  it('e nel ripiego la voce ha DUE motori, non uno (b.381)', () => {
+    const s = modalita();
+    // il difetto: quando lo streaming non parte si cadeva qui, e qui
+    // c'era solo Edge con un `return` muto. Cioe il secondo motore
+    // mancava proprio nel momento in cui serviva.
+    expect(s, 'motore di ripiego').toContain('/api/tts-elevenlabs');
+    expect(s, 'motore primario').toContain('/api/tts-edge');
+    expect(s, 'e se cadono tutti e due lo si dice').toContain('voce-non-disponibile');
   });
 
   it("l'interprete in streaming continua a mandare sottotitoli e voce", () => {
