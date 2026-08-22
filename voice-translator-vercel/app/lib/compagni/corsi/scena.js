@@ -16,18 +16,18 @@
 
 /** Gli AMBIENTI del quotidiano: il repertorio di un manuale di lingua. */
 export const AMBIENTI = [
-  { id: 'bar', nome: 'al bar', scena: 'a cozy neighbourhood cafe counter with pastries, cups, a barista and a customer ordering', oggetti: ['coffee', 'cup', 'counter', 'menu', 'pastry', 'table', 'chair', 'napkin'] },
-  { id: 'stazione', nome: 'alla stazione', scena: 'a train station platform with a departure board, benches, a traveller with luggage asking an attendant', oggetti: ['train', 'platform', 'ticket', 'suitcase', 'clock', 'timetable', 'bench', 'sign'] },
-  { id: 'negozio', nome: 'in negozio', scena: 'a small clothing shop with shelves, a fitting room, a shop assistant and a customer holding a shirt', oggetti: ['shirt', 'price tag', 'shelf', 'fitting room', 'size', 'till', 'bag', 'mirror'] },
-  { id: 'casa', nome: 'a casa', scena: 'a bright family kitchen and living room, table set for breakfast, a family talking', oggetti: ['table', 'chair', 'fridge', 'window', 'plate', 'glass', 'sofa', 'lamp'] },
-  { id: 'scuola', nome: 'a scuola', scena: 'a friendly classroom with a blackboard, desks, backpacks, a teacher and pupils raising hands', oggetti: ['blackboard', 'desk', 'book', 'pen', 'backpack', 'notebook', 'ruler', 'clock'] },
-  { id: 'ufficio', nome: 'in ufficio', scena: 'a modern open-plan office with desks, laptops, a meeting starting around a small table', oggetti: ['laptop', 'desk', 'meeting', 'phone', 'folder', 'coffee mug', 'chair', 'calendar'] },
-  { id: 'strada', nome: 'per strada', scena: 'a lively city street corner with shop fronts, a map, a person asking a passer-by for directions', oggetti: ['street', 'map', 'traffic light', 'corner', 'shop', 'bus stop', 'crossing', 'sign'] },
-  { id: 'ristorante', nome: 'al ristorante', scena: 'a warm restaurant table with a waiter taking the order from two guests, dishes and menus', oggetti: ['menu', 'waiter', 'dish', 'fork', 'knife', 'bill', 'water', 'dessert'] },
-  { id: 'medico', nome: 'dal medico', scena: 'a calm doctor\'s office, doctor listening to a patient describing symptoms', oggetti: ['doctor', 'patient', 'stethoscope', 'appointment', 'medicine', 'desk', 'chair', 'poster'] },
-  { id: 'albergo', nome: 'in albergo', scena: 'a hotel reception desk with a receptionist handing a key card to a guest with luggage', oggetti: ['reception', 'key', 'room', 'luggage', 'lift', 'booking', 'lobby', 'sign'] },
-  { id: 'aeroporto', nome: 'in aeroporto', scena: 'an airport check-in area with boards, queues, a passenger showing a boarding pass', oggetti: ['boarding pass', 'gate', 'check-in', 'passport', 'suitcase', 'security', 'flight', 'board'] },
-  { id: 'mercato', nome: 'al mercato', scena: 'an outdoor market stall full of fruit and vegetables, a vendor weighing produce for a customer', oggetti: ['apple', 'tomato', 'scales', 'basket', 'stall', 'change', 'bag', 'price'] },
+  { id: 'bar', nome: 'al bar', scena: 'a cozy neighbourhood cafe: a counter with pastries and cups, one barista standing behind the counter, one customer standing in front of it, clearly separated by the counter', oggetti: ['coffee', 'cup', 'counter', 'menu', 'pastry', 'table', 'chair', 'napkin'] },
+  { id: 'stazione', nome: 'alla stazione', scena: 'a train station platform with a departure board and benches, one traveller standing beside a suitcase, one attendant standing a few steps away', oggetti: ['train', 'platform', 'ticket', 'suitcase', 'clock', 'timetable', 'bench', 'sign'] },
+  { id: 'negozio', nome: 'in negozio', scena: 'a small clothing shop with shelves and a fitting room, one customer looking at a shirt on a rail, one shop assistant standing apart near the till', oggetti: ['shirt', 'price tag', 'shelf', 'fitting room', 'size', 'till', 'bag', 'mirror'] },
+  { id: 'casa', nome: 'a casa', scena: 'a bright family kitchen and living room with a table set for breakfast, two people seated on opposite sides of the table', oggetti: ['table', 'chair', 'fridge', 'window', 'plate', 'glass', 'sofa', 'lamp'] },
+  { id: 'scuola', nome: 'a scuola', scena: 'a friendly classroom with a blackboard, desks and backpacks, one teacher standing beside the blackboard, two pupils seated at their own desks', oggetti: ['blackboard', 'desk', 'book', 'pen', 'backpack', 'notebook', 'ruler', 'clock'] },
+  { id: 'ufficio', nome: 'in ufficio', scena: 'a modern open-plan office with desks and laptops, two people seated at their own desks, each with space around them', oggetti: ['laptop', 'desk', 'meeting', 'phone', 'folder', 'coffee mug', 'chair', 'calendar'] },
+  { id: 'strada', nome: 'per strada', scena: 'a lively city street corner with shop fronts and a street sign, one person holding a folded map, one passer-by standing further along the pavement', oggetti: ['street', 'map', 'traffic light', 'corner', 'shop', 'bus stop', 'crossing', 'sign'] },
+  { id: 'ristorante', nome: 'al ristorante', scena: 'a warm restaurant table laid with dishes and menus, one guest seated at the table, one waiter standing upright a step away holding a notepad', oggetti: ['menu', 'waiter', 'dish', 'fork', 'knife', 'bill', 'water', 'dessert'] },
+  { id: 'medico', nome: 'dal medico', scena: 'a calm doctor\'s office with a desk between them: one doctor seated on one side, one patient seated on the other', oggetti: ['doctor', 'patient', 'stethoscope', 'appointment', 'medicine', 'desk', 'chair', 'poster'] },
+  { id: 'albergo', nome: 'in albergo', scena: 'a hotel reception desk with a key rack behind it: one receptionist behind the desk, one guest standing in front with a suitcase on the floor', oggetti: ['reception', 'key', 'room', 'luggage', 'lift', 'booking', 'lobby', 'sign'] },
+  { id: 'aeroporto', nome: 'in aeroporto', scena: 'an airport check-in area with departure boards and a counter, one passenger standing at the counter holding a boarding pass', oggetti: ['boarding pass', 'gate', 'check-in', 'passport', 'suitcase', 'security', 'flight', 'board'] },
+  { id: 'mercato', nome: 'al mercato', scena: 'an outdoor market stall full of fruit and vegetables with scales on the counter, one vendor behind the stall, one customer in front of it', oggetti: ['apple', 'tomato', 'scales', 'basket', 'stall', 'change', 'bag', 'price'] },
 ];
 
 /**
@@ -79,12 +79,26 @@ export function ambientePer(titolo = '', argomento = '') {
 export function promptScena({ titolo = '', argomento = '', livello = 'base', ambiente = null, elementi = [] } = {}) {
   const amb = ambiente || ambientePer(titolo, argomento);
   const stile = STILE_LIVELLO[livello] || STILE_LIVELLO.base;
-  const cose = (elementi.length ? elementi : amb.oggetti).slice(0, 8).join(', ');
+  // b.375 — DA OTTO A CINQUE. Otto oggetti stipati in una tavola sola
+  // sono la seconda meta del difetto ("elementi senza senso"): il
+  // modello, per farceli stare tutti, li deforma e li impila. Cinque
+  // stanno larghi e si riconoscono.
+  const cose = (elementi.length ? elementi : amb.oggetti).slice(0, 5).join(', ');
   return [
     stile,
     `SCENE: ${amb.scena}.`,
     `The scene must clearly show these everyday objects, each recognisable at a glance: ${cose}.`,
-    'Wide horizontal composition, single coherent scene, plenty of white space, no speech bubbles, NO TEXT, NO LETTERS, no numbers, no watermark, no logos.',
+    // b.375 — LE PERSONE NON SI TOCCANO. Luca ha ricevuto una tavola con
+    // "un mostro con un braccio fuso tra due persone". Non e sfortuna: e
+    // il punto esatto in cui questi modelli sbagliano sempre. Due figure
+    // vicine, con le braccia protese l'una verso l'altra, e la richiesta
+    // che produce arti fusi — e tutte le nostre scene la facevano
+    // ("un barista E un cliente che ordina", "un viaggiatore che chiede a
+    // un addetto"). Adesso le scene tengono le persone separate, e la
+    // regola e scritta a chiare lettere anche qui.
+    'PEOPLE: at most two people, standing clearly apart with visible empty space between them. They must NEVER touch, hold hands, shake hands, hug, or reach towards each other; no arm crosses in front of another person.',
+    'Each person has exactly one head, two arms and two hands, with normal human proportions. Hands stay simple and relaxed — resting on a surface, holding one single object, or down by the side. Never draw interlocking or overlapping fingers.',
+    'Wide horizontal composition, single coherent scene, uncluttered, plenty of white space, no speech bubbles, NO TEXT, NO LETTERS, no numbers, no watermark, no logos.',
     'Transparent or plain light background outside the scene.',
   ].join(' ');
 }

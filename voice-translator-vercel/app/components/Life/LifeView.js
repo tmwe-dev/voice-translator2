@@ -22,6 +22,7 @@ import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTur
 import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
+import TestoLingua from './TestoLingua.js';
 import CompagnoLive from './CompagnoLive.js';
 import { assistentePer } from '../../lib/compagni/corsi/assistenti.js';
 import { staccaScena } from '../../lib/compagni/corsi/scena.js';
@@ -400,6 +401,17 @@ function assegnaImmagini(paragrafi, items, illustrazione) {
   // se NESSUNA sezione ha trovato un'immagine ma c'e l'illustrazione AI,
   // la si usa come diapositiva d'apertura.
   if (illustrazione && scelte.every((x) => !x)) scelte[0] = illustrazione;
+  // b.375 — LO STESSO DISEGNO DUE VOLTE (collaudo di Luca: "il disegno e
+  // ripetuto"). L'illustrazione poteva finire in cima E ricomparire piu
+  // sotto se una sezione non trovava foto sue. Un disegno ripetuto nella
+  // stessa pagina non e una decorazione: sembra un guasto. Qui ogni
+  // immagine puo comparire UNA VOLTA SOLA.
+  const gia = new Set();
+  for (let i = 0; i < scelte.length; i++) {
+    if (!scelte[i]) continue;
+    if (gia.has(scelte[i])) { scelte[i] = null; continue; }
+    gia.add(scelte[i]);
+  }
   return scelte;
 }
 
@@ -672,15 +684,22 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.312 — paragrafi della lezione + immagine scelta per ciascuno. Calcolato
   // una volta sola (memo): serve sia alla narrazione (ritmo) sia al render
   // (lavagna/articolo), e deve coincidere fra i due.
-  const { paragrafiLezione, immaginiSezioni, frasiLettura } = useMemo(() => {
-    if (!aperta) return { paragrafiLezione: [], immaginiSezioni: [], frasiLettura: [] };
+  const { paragrafiLezione, paragrafiGrezzi, immaginiSezioni, frasiLettura } = useMemo(() => {
+    if (!aperta) return { paragrafiLezione: [], paragrafiGrezzi: null, immaginiSezioni: [], frasiLettura: [] };
     // b.330 — il brano di LETTURA si stacca dal testo: diventa il pannello
     // dedicato, non prosa da mostrare o leggere nella narrazione.
     const { testo: senzaLettura, frasi } = staccaLettura(staccaEsercizio(testoVisibile(aperta.contenuto)).testo);
     const parti = senzaLettura.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
     const paragrafi = parti.length > 1 ? parti : [senzaLettura];
+    // b.375 — LO STESSO TESTO, MA COI SEGNI ANCORA DENTRO. Serve per le
+    // lingue: i tag [L2: ...] sono l'unico modo di sapere QUALI pezzi
+    // sono nella lingua che si studia, e quindi quali si possono toccare
+    // per sentirli. Togliendoli si perde l'informazione per sempre.
+    const grezzo = staccaLettura(staccaEsercizio(String(aperta.contenuto || '')).testo).testo;
+    const partiG = grezzo.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean);
+    const paragrafiGrezzi = partiG.length === paragrafi.length ? partiG : null;
     const items = [...new Map((arricchimento?.link || []).filter((l) => l.immagine).map((l) => [l.immagine, l])).values()];
-    return { paragrafiLezione: paragrafi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione), frasiLettura: frasi };
+    return { paragrafiLezione: paragrafi, paragrafiGrezzi, immaginiSezioni: assegnaImmagini(paragrafi, items, illustrazione), frasiLettura: frasi };
   }, [aperta, arricchimento, illustrazione]);
 
   // b.336 — questo effetto DEVE stare dopo il memo qui sopra: elencando
@@ -1264,6 +1283,14 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
                         transition: 'opacity 0.25s, background 0.25s' }}>{f} </span>
                     ))}
                   </div>
+                ) : (linguaStudiata && paragrafiGrezzi?.[i]) ? (
+                  // b.375 — NELLE LINGUE IL TESTO SI TOCCA. Ogni parte in
+                  // lingua straniera la dice la voce madrelingua: e la
+                  // ragione per cui uno apre un corso di lingua invece di
+                  // un libro. Nelle materie resta il testo normale.
+                  <TestoLingua testo={paragrafiGrezzi[i]} lingua={linguaStudiata}
+                    voceAssistente={assistentePer(linguaStudiata).voceId} userToken={userToken}
+                    testoP={testoP} muto={muto} accent={accent} card={card} bordo={bordo} />
                 ) : (
                   <TestoRicco testo={p} testoP={testoP} muto={muto} />
                 )}
