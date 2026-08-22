@@ -111,6 +111,50 @@ export async function elencoDiscussioni({ topic = null, country = null, lang = n
   }).sort((a, b) => b._hot - a._hot);
 }
 
+/**
+ * COSA NE PENSA IL MONDO — chi sta parlando di questo tema, e dove.
+ *
+ * b.400, la funzione che il documento di Luca chiama distintiva: preso un
+ * tema, si confrontano le conversazioni fra Paesi.
+ *
+ * Il documento pone anche il limite, e va preso alla lettera: «le sintesi
+ * devono derivare da fonti reali, discussioni disponibili, campione
+ * dichiarato. Mai inventare percentuali o consenso.»
+ *
+ * Quindi qui NON si riassume cosa pensa un Paese, e non si calcola nessuna
+ * percentuale: si CONTA. Quante discussioni aperte su questo tema in ogni
+ * Paese, e quanti commenti dentro. Chi legge vede dove se ne parla e
+ * quanto, e ci puo entrare a leggere con i suoi occhi — che e diverso, e
+ * piu onesto, dal farsi dire da noi cosa pensa un Paese intero.
+ *
+ * Il campione si dichiara: si guardano le discussioni non archiviate e non
+ * nascoste, fino a un tetto, e il tetto viene restituito insieme ai conti.
+ */
+export async function paesiDelTema(topic, { tetto = 500 } = {}) {
+  if (!topic) return { paesi: [], discussioniViste: 0, tetto };
+  const { data, error } = await db().from('mondo_discussions')
+    .select('country, comment_count')
+    .eq('archived', false)
+    .eq('hidden', false)
+    .eq('topic', topic)
+    .order('last_activity_at', { ascending: false })
+    .limit(tetto);
+  if (error) throw new Error('paesiDelTema: ' + error.message);
+  const per = new Map();
+  for (const d of (data || [])) {
+    // Una discussione senza Paese non si assegna a caso: si conta nel
+    // totale visto, ma non finisce dentro nessuna bandiera.
+    if (!d.country) continue;
+    const v = per.get(d.country) || { paese: d.country, discussioni: 0, commenti: 0 };
+    v.discussioni += 1;
+    v.commenti += (d.comment_count || 0);
+    per.set(d.country, v);
+  }
+  const paesi = [...per.values()].sort((a, b) =>
+    (b.discussioni - a.discussioni) || (b.commenti - a.commenti));
+  return { paesi, discussioniViste: (data || []).length, tetto };
+}
+
 export async function getDiscussione(id) {
   const { data, error } = await db().from('mondo_discussions').select('*').eq('id', id).maybeSingle();
   if (error) throw new Error('getDiscussione: ' + error.message);

@@ -20,7 +20,7 @@ import { segnaApertura } from '../lib/interessi.js';
 import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
 import Scelta from './ui/Scelta.js';
-import { bandieraPaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
+import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import { FONT, vibrate } from '../lib/constants.js';
@@ -133,6 +133,34 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // b.398 — si sceglie in un posto solo, e lo sanno tutti: la copia qui
   // dentro serve a disegnare subito, e la stessa scelta risale a Mondo,
   // che la manda al pianeta e alle Stanze.
+  // b.400 — COSA NE PENSA IL MONDO. Il documento di Luca la chiama la
+  // funzione distintiva: preso un tema, si confrontano le conversazioni fra
+  // Paesi. Qui NON si riassume cosa pensa un Paese e non si calcola nessuna
+  // percentuale — il documento lo vieta nella stessa riga in cui chiede la
+  // funzione. Si CONTA dove se ne parla e quanto, e si entra a leggere.
+  const [temaMondo, setTemaMondo] = useState(null);      // il tema aperto
+  const [confronto, setConfronto] = useState(null);      // i conti, o null
+  const [confrontoGuasto, setConfrontoGuasto] = useState(false);
+  useEffect(() => {
+    if (!temaMondo) { setConfronto(null); setConfrontoGuasto(false); return; }
+    let vivo = true;
+    const taglio = new AbortController();
+    setConfronto(null); setConfrontoGuasto(false);
+    (async () => {
+      try {
+        const r = await fetch(`/api/mondo/tema?topic=${encodeURIComponent(temaMondo)}`, { signal: taglio.signal });
+        if (!r.ok) throw new Error(String(r.status));
+        const d = await r.json();
+        if (vivo) setConfronto(d);
+      } catch (e) {
+        // Un guasto non si traveste da «nessuno ne parla»: sono due cose
+        // diverse, e chi guarda deve poterle distinguere.
+        if (e?.name !== 'AbortError') { console.warn('[b.400] confronto non arrivato:', e?.message); if (vivo) setConfrontoGuasto(true); }
+      }
+    })();
+    return () => { vivo = false; taglio.abort(); };
+  }, [temaMondo]);
+
   const scegliPaese = useCallback((codice) => {
     setPaeseFiltro(codice);
     suPaeseScelto?.(codice);
@@ -659,10 +687,18 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                             }}>{bandiera}</span>
                         )}
                         {d.topic && (
-                          <span style={{
-                            ...eti, background: 'rgba(6,9,18,0.6)', borderRadius: 5, padding: '2px 6px',
-                            color: 'rgba(226,236,252,0.9)',
-                          }}>{d.topic}</span>
+                          // b.400 — il tema era una targhetta muta. Adesso e
+                          // la porta del confronto fra Paesi: e il posto
+                          // giusto, perche il confronto e SUL TEMA e il tema
+                          // e gia scritto qui.
+                          <span role="button" tabIndex={0}
+                            aria-label={`${L('whatWorldThinks')} \u2014 ${d.topic}`}
+                            onClick={(e) => { e.stopPropagation(); vibrate(6); setTemaMondo(d.topic); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setTemaMondo(d.topic); } }}
+                            style={{
+                              ...eti, background: 'rgba(6,9,18,0.6)', borderRadius: 5, padding: '2px 6px',
+                              color: 'rgba(226,236,252,0.9)', cursor: 'pointer',
+                            }}>{`\u{1F30D} ${d.topic}`}</span>
                         )}
                         {tipo && tipo !== 'articolo' && (
                           <span style={{
@@ -926,6 +962,93 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
       {personaAperta && (
         <MondoPersona publicId={personaAperta} onClose={() => setPersonaAperta(null)}
           onOpenDiscussione={(id) => { setPersonaAperta(null); setDiscAperta(id); }} />
+      )}
+
+      {/* b.400 — COSA NE PENSA IL MONDO. Sta SOPRA tutto come il profilo
+          qui accanto, e per lo stesso motivo: e una cosa che si guarda un
+          momento e si chiude, non una pagina in cui si entra. Toccando un
+          Paese ci si va davvero — il confronto e una porta, non una
+          classifica da guardare. */}
+      {temaMondo && (
+        <div onClick={() => setTemaMondo(null)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 120, display: 'flex',
+            alignItems: 'flex-end', justifyContent: 'center',
+            background: 'rgba(4,6,12,0.72)', backdropFilter: 'blur(6px)',
+          }}>
+          <div onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 560, maxHeight: '72dvh', overflowY: 'auto',
+              background: C.card, border: `1px solid ${C.cardBorder}`,
+              borderRadius: '20px 20px 0 0', fontFamily: FONT,
+              padding: `16px 16px calc(24px + env(safe-area-inset-bottom))`,
+            }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: C.textPrimary, flex: 1 }}>
+                {L('whatWorldThinks')}
+              </span>
+              <button onClick={() => setTemaMondo(null)} aria-label={L('closeWord')}
+                style={{ width: 32, height: 32, borderRadius: 999, cursor: 'pointer',
+                  background: 'transparent', border: `1px solid ${C.cardBorder}`, color: C.textMuted, fontSize: 15 }}>
+                {'\u2715'}
+              </button>
+            </div>
+            <div style={{ fontSize: 12.5, fontWeight: 700, color: C.accent, marginBottom: 12 }}>{temaMondo}</div>
+
+            {confrontoGuasto && (
+              <div style={{ fontSize: 13, color: C.textMuted, padding: '10px 0' }}>{L('loadError')}</div>
+            )}
+            {!confrontoGuasto && !confronto && (
+              <div style={{ fontSize: 13, color: C.textMuted, padding: '10px 0' }}>{'\u2026'}</div>
+            )}
+            {confronto && confronto.paesi?.length === 0 && (
+              <div style={{ fontSize: 13, color: C.textMuted, padding: '10px 0' }}>{L('quietHereNow')}</div>
+            )}
+            {/* b.400 — L'ETICHETTA UNA VOLTA SOLA, IN TESTA. Prima ogni riga
+                diceva «1 Discussioni», e con trentotto lingue il
+                singolare/plurale e una trappola senza fondo: ogni lingua ha
+                le sue regole, e alcune ne hanno tre o quattro. Mettendo le
+                parole in cima e lasciando alle righe i soli numeri, il
+                problema non esiste in nessuna lingua. */}
+            {confronto && confronto.paesi?.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 6px' }}>
+                <span style={{ flex: 1 }} />
+                <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.3, color: C.textMuted, whiteSpace: 'nowrap' }}>
+                  {`${L('discussionsLabel')} ${PUNTO} ${L('commentsWord')}`}
+                </span>
+              </div>
+            )}
+            {confronto && confronto.paesi?.map((p) => (
+              <button key={p.paese}
+                onClick={() => { vibrate(8); scegliPaese(p.paese); setTemaMondo(null); }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '11px 12px', marginBottom: 8, borderRadius: 14, cursor: 'pointer',
+                  background: 'rgba(6,9,18,0.45)', border: `1px solid ${C.cardBorder}`,
+                  fontFamily: FONT, textAlign: 'left',
+                }}>
+                <span style={{ fontSize: 19 }}>{bandieraPaese(p.paese)}</span>
+                <span style={{ flex: 1, fontSize: 13.5, fontWeight: 700, color: C.textPrimary,
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {nomePaese(p.paese)}
+                </span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, whiteSpace: 'nowrap' }}>
+                  {`${p.discussioni} ${PUNTO} ${p.commenti}`}
+                </span>
+              </button>
+            ))}
+
+            {/* IL CAMPIONE SI DICHIARA. Il documento lo chiede alla lettera
+                («campione dichiarato»): chi legge deve sapere su quante
+                discussioni sono stati fatti questi conti, invece di
+                credere che siano tutto quello che esiste al mondo. */}
+            {confronto && confronto.paesi?.length > 0 && (
+              <div style={{ fontSize: 11, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>
+                {`${L('countedAcross')} ${confronto.discussioniViste}`}
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </>
   );
