@@ -48,7 +48,7 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
   );
 }
 
-export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null }) {
+export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null, onPaeseScelto = null }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
 
@@ -124,6 +124,20 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
   // globo li ascolta perche dentro il file c'e scritto che li ascolta.
   // Questo faceva di testa sua. Ora fa come gli altri.
   const CIELI = ['navigator', 'wueform', 'ibrido'];
+  // b.383 — IL PIANETA ADESSO PARLA. Finora la conversazione era a senso
+  // unico: noi gli dicevamo dove guardare, e il paese toccato sul globo
+  // restava chiuso li dentro. Quindi si poteva zoomare sull'Italia e le
+  // liste sotto continuavano a mostrare il mondo intero.
+  useEffect(() => {
+    const suMessaggio = (ev) => {
+      const d = ev?.data;
+      if (!d || d.tipo !== 'bartalk:paese-scelto') return;
+      onPaeseScelto?.(d.code ? String(d.code).toUpperCase() : null);
+    };
+    window.addEventListener('message', suMessaggio);
+    return () => window.removeEventListener('message', suMessaggio);
+  }, [onPaeseScelto]);
+
   const cambiaCielo = () => {
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;

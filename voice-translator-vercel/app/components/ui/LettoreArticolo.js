@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 
@@ -38,13 +38,44 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
   const [caricata, setCaricata] = useState(false);
   const [rifiutata, setRifiutata] = useState(false);
   const orologio = useRef(null);
+  const telaio = useRef(null);
 
   useEffect(() => {
     setCaricata(false); setRifiutata(false);
     if (!url) return;
-    orologio.current = setTimeout(() => setRifiutata((r) => r || true), ATTESA_PRIMA_DI_ARRENDERSI);
+    orologio.current = setTimeout(() => setRifiutata(true), ATTESA_PRIMA_DI_ARRENDERSI);
     return () => clearTimeout(orologio.current);
   }, [url]);
+
+  // b.383 — IL RIQUADRO RESTAVA VUOTO, E NON LO DICEVA.
+  //
+  // Collaudo di Luca: «si ribalta correttamente ma non mostra alcun
+  // contenuto». La causa e sottile: quando un sito vieta di essere
+  // aperto dentro un'altra pagina, il browser non da errore — carica una
+  // pagina di errore SUA e fa scattare l'evento "caricata". Noi lo
+  // prendevamo per buono, spegnevamo l'avviso, e restava un rettangolo
+  // bianco per sempre.
+  //
+  // Il modo per distinguerli e al contrario di come sembra: se riusciamo
+  // a GUARDARE dentro il riquadro, vuol dire che NON c'e una pagina di
+  // un altro sito — le pagine vere di altri siti sono chiuse a chiave
+  // dal browser. Quindi: se si apre, e vuota; se non si apre, e piena.
+  const controllaSeVuota = useCallback(() => {
+    clearTimeout(orologio.current);
+    const f = telaio.current;
+    if (!f) return;
+    try {
+      const doc = f.contentDocument;
+      // ci siamo riusciti: e la pagina di errore del browser, non la loro
+      const vuota = !doc || !doc.body || doc.body.innerHTML.trim().length < 40;
+      if (vuota) { setRifiutata(true); setCaricata(false); return; }
+      setCaricata(true);
+    } catch {
+      // il browser ci ha sbarrato la strada: e proprio il segno che
+      // dentro c'e la pagina vera dell'altro sito.
+      setCaricata(true); setRifiutata(false);
+    }
+  }, []);
 
   const dominio = (() => {
     try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return fonte || ''; }
@@ -93,8 +124,9 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
       <div style={{ flex: 1, minHeight: 0, position: 'relative', background: '#fff' }}>
         {url && (
           <iframe
+            ref={telaio}
             src={url} title={titolo || dominio}
-            onLoad={() => { setCaricata(true); setRifiutata(false); clearTimeout(orologio.current); }}
+            onLoad={controllaSeVuota}
             referrerPolicy="no-referrer-when-downgrade"
             sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} />
@@ -102,7 +134,7 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
 
         {/* Se dopo qualche secondo non e successo niente, si dice invece di
             lasciare un rettangolo bianco che sembra un guasto nostro. */}
-        {!caricata && rifiutata && (
+        {rifiutata && (
           <div style={{
             position: 'absolute', inset: 0, background: C.bg,
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',

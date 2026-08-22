@@ -3,6 +3,7 @@ import { memo, useState, useEffect, useCallback, useRef } from 'react';
 import { FONT, vibrate, getLang } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 import AnteprimaCoperta from './ui/AnteprimaCoperta.js';
+import { eBloccato, cambiaBlocco, senzaBloccati } from '../lib/bloccati.js';
 
 // ═══════════════════════════════════════════════════════════════
 // MondoDiscussioni — il THREAD di una discussione pubblica (Fase 1)
@@ -245,7 +246,7 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
           <div style={{ textAlign: 'center', color: muto, padding: 24, fontSize: 13 }}>
             {L('beFirstToComment')}
           </div>
-        ) : commenti.map(c => (
+        ) : senzaBloccati(commenti, prefs).map(c => (
           <div key={c.id} style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 12, background: card, border: bordo }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <button onClick={() => onOpenPersona?.(c.author_user_id)} style={{
@@ -271,6 +272,17 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
               {/* b.363 — la segnalazione ESISTEVA solo sul server: nessuno
                   poteva usarla perche non c'era da nessuna parte un modo
                   per dirlo. Ecco il modo. */}
+              {/* b.383 — BLOCCA. Segnalare dice a NOI che qualcosa non va ed
+                  e un atto pubblico; bloccare riguarda solo i miei occhi.
+                  Erano due cose diverse e ce n'era una sola. */}
+              <button onClick={() => { vibrate(6); savePrefs(cambiaBlocco(prefs, c.author_user_id)); }}
+                aria-label={L('blockPerson')} title={L('blockPerson')}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
+                  fontSize: 10, fontWeight: 700, color: muto, fontFamily: FONT,
+                }}>
+                {L('blockPerson')}
+              </button>
               <button onClick={() => segnalaCommento(c.id)} disabled={segnalati.has(c.id)}
                 style={{ marginLeft: 'auto', background: 'none', border: 'none', color: muto, cursor: segnalati.has(c.id) ? 'default' : 'pointer', fontSize: 11, fontWeight: 700, padding: 0, opacity: segnalati.has(c.id) ? 0.45 : 1 }}>
                 {segnalati.has(c.id) ? L('reportCopied') : L('reportWord')}

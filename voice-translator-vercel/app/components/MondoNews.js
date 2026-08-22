@@ -540,7 +540,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
               const vita = viva(d.comment_count);
               const eti = stileEtichetta(C);
               const foto = d.media?.thumb;
-              const leggibile = !!d.media?.url;
+              // b.383 — IL VIDEO NON SI RIBALTA (ordine di Luca). Un video
+              // non si LEGGE: si guarda, e lo si guarda dove sta gia,
+              // dentro il lettore del suo editore. Il ribaltamento e per
+              // gli articoli — la seconda faccia serve a leggere, e un
+              // video li dentro sarebbe solo un giro in piu prima di
+              // finire comunque fuori.
+              const leggibile = !!d.media?.url && tipo !== 'video';
               // b.365 — L'IMMAGINE COMANDA (ordine di Luca). Misurate le
               // foto che Cobra porta a casa: 1400x933 e 1218x762. Erano
               // vere fotografie, e le stavamo spegnendo dentro un

@@ -311,7 +311,13 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           mondo e non ce l'ha»). */}
       {(tab === 'stanze' || tab === 'news') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-          <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi} titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')} />
+          <GloboMondo sfondo paese={paeseScelto} rotte={rotteVere} traffico={trafficoPaesi}
+            titolo={L('worldNowTitle')} etichettaCielo={L('skyOfPlanet')}
+            // b.383 — toccare un paese sul pianeta adesso FILTRA le liste.
+            // Prima lo zoom ci andava sopra e sotto restava il mondo
+            // intero: il gesto piu naturale che c'e su un mappamondo non
+            // faceva niente.
+            onPaeseScelto={(code) => { setPaeseScelto(code); setLangFilter(null); }} />
           {/* b.367 — «IL PROTAGONISTA NON E' IL GLOBO» (Luca). Era vero
               alla lettera: il pianeta prendeva mezza pagina in pieno
               contrasto e gli elenchi restavano schiacciati sotto. Un velo
