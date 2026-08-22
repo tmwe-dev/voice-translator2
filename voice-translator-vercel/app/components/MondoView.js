@@ -197,7 +197,18 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
 
   const filteredRooms = useMemo(() => {
     let list = [...rooms];
-    if (langFilter !== 'all') list = list.filter(r => r.lang === langFilter);
+    // b.397 — IL PAESE COMANDA, LA LINGUA E IL RIPIEGO. Da oggi una stanza
+    // puo portare il posto da cui e stata aperta. Quando ce l'ha, e quello
+    // che decide se appartiene al Paese scelto sul pianeta: cosi una stanza
+    // aperta in Messico resta in Messico e non finisce in Spagna solo
+    // perche ci si parla spagnolo.
+    // Le stanze nate prima di oggi il posto non ce l'hanno: per loro resta
+    // la vecchia regola — la lingua di casa di quel Paese — che e
+    // un'approssimazione, e come tale continua a stare scritta qui sopra.
+    if (paeseScelto) {
+      const linguaDiLa = linguaDelPaese(paeseScelto);
+      list = list.filter(r => (r.paese ? r.paese === paeseScelto : (linguaDiLa ? r.lang === linguaDiLa : true)));
+    } else if (langFilter !== 'all') list = list.filter(r => r.lang === langFilter);
     if (modeFilter !== 'all') list = list.filter(r => r.mode === modeFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -206,7 +217,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         || r.description?.toLowerCase().includes(q));
     }
     return list;
-  }, [rooms, langFilter, modeFilter, search]);
+  }, [rooms, langFilter, modeFilter, search, paeseScelto]);
 
   // b.355 — LA RICERCA A TRE CORSIE (il disegno approvato): mentre scrivi,
   // tre gruppi di risposte — PAESI/LINGUE (col conteggio delle stanze vive),
@@ -237,7 +248,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // sola, all'ingresso: dopo comandi tu, e non ti si sposta il mondo
   // sotto le dita mentre stai guardando.
   useEffect(() => {
-    const scelto = prefs?.mondoPaese || 'auto';
+    // b.397 — chi non ha mai scelto niente trova il mondo che gira, non
+    // il proprio paese gia inquadrato. Il valore di partenza sta scritto
+    // in una riga sola dentro le preferenze di Mondo: qui si ripete, e i
+    // due devono dire la stessa cosa (una prova lo controlla).
+    const scelto = prefs?.mondoPaese || 'nessuno';
     if (scelto === 'nessuno') return;
     const mio = scelto === 'auto' ? paeseDaLingua(prefs?.lang) : scelto;
     if (mio) setPaeseScelto(mio);

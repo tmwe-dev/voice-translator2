@@ -53,7 +53,45 @@ async function handleGet(req) {
     const now = Date.now();
     const active = rooms.filter(r => (now - r.createdAt) < MONDO_TTL * 1000);
 
-    return NextResponse.json({ rooms: active });
+    // b.397 — QUANTE PERSONE CI SONO DAVVERO, NON QUANTE CE N'ERANO ALLA
+    // NASCITA. Questa voce e una fotografia scattata quando la stanza e
+    // stata pubblicata, e il numero dentro nasceva sempre 1 — chi
+    // pubblica e solo, e nessuno lo ha mai riscritto dopo. Cosi ogni
+    // stanza diceva «1 dentro» per tutta la sua ora di vita, e sommando
+    // per Paese si otteneva il numero delle STANZE travestito da numero
+    // di persone. Il documento di Luca su questo e netto: mai mostrare un
+    // numero che non e vero.
+    //
+    // La verita e a due passi: la stanza vera vive in `room:{codice}` e
+    // porta l'elenco dei presenti, gia potato da chi non da segno di
+    // vita. Si legge in un colpo solo per tutte, e se la lettura non
+    // riesce si tiene la fotografia invece di far sparire il numero.
+    const chiavi = active.map(r => `room:${String(r.roomId || '').toUpperCase()}`).filter(k => k !== 'room:');
+    if (chiavi.length) {
+      try {
+        const vive = await redis('MGET', ...chiavi);
+        if (Array.isArray(vive)) {
+          for (let i = 0; i < active.length; i++) {
+            const grezzo = vive[i];
+            if (!grezzo) { active[i].chiusa = true; continue; }
+            try {
+              const stanza = JSON.parse(grezzo);
+              if (Array.isArray(stanza.members)) active[i].memberCount = stanza.members.length;
+            } catch { /* una voce illeggibile non deve rovinare le altre: resta la fotografia */ }
+          }
+        }
+      } catch (e) {
+        // La vetrina si vede lo stesso, coi numeri della nascita: e meglio
+        // di una piazza vuota. Ma si registra, perche un numero vecchio
+        // che sembra nuovo e proprio la cosa da non lasciar passare zitti.
+        log.warn('conteggio vivo non riuscito, restano i numeri della nascita', { errore: e?.message || 'ignoto' });
+      }
+    }
+    // Una stanza in vetrina la cui stanza vera non esiste piu e finita
+    // prima dell'ora: non si mostra come se fosse ancora aperta.
+    const daMostrare = active.filter(r => !r.chiusa);
+
+    return NextResponse.json({ rooms: daMostrare });
   } catch (e) {
     log.error('GET error:', e);
     // b.236 — prima un guasto Redis diventava 200 + rooms:[]: piazza vuota e
@@ -78,7 +116,7 @@ async function handlePost(req) {
     const {
       roomId, host, nome, description, mode, lang, members,
       roomType, categoria, maxPartecipanti, hostLang,
-      roomSessionToken, userToken, hot,
+      roomSessionToken, userToken, hot, paese,
     } = await req.json();
     if (!roomId || !host) return NextResponse.json({ error: 'roomId and host required' }, { status: 400 });
 
@@ -131,6 +169,11 @@ async function handlePost(req) {
       // La lingua dell'host regge la bandiera nell'elenco; se manca, quella
       // della stanza e comunque piu informativa di niente.
       hostLang: hostLang || lang || 'en',
+      // b.397 — IL LUOGO, quando chi apre la stanza ce l'ha. Due lettere,
+      // maiuscole, o niente: non si accetta altro e non si inventa nulla.
+      // Le stanze nate prima di oggi non ce l'hanno, ed e giusto cosi —
+      // chi legge sa distinguere «non lo so» da un posto sbagliato.
+      paese: /^[A-Za-z]{2}$/.test(String(paese || '')) ? String(paese).toUpperCase() : '',
       roomType: tipo,
       // 'protected' = si bussa e l'host apre. L'elenco lo deve dire prima
       // che uno tocchi, altrimenti sembra che la stanza non risponda.

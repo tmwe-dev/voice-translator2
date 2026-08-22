@@ -75,7 +75,14 @@ describe('mondo — un guasto non si traveste da piazza vuota', () => {
   });
 
   it('ma il percorso felice della vetrina resta un 200 con rooms', () => {
+    // b.397 — questa prova cercava una riga alla lettera («rooms: active»),
+    // e si e fatta rossa il giorno che l'elenco ha cambiato nome perche le
+    // stanze gia finite non si mostrano piu. La riga era giusta, il
+    // comportamento non era cambiato: quello che conta e che il percorso
+    // felice risponda con le stanze e senza stato d'errore.
     const s = senzaCommenti(leggi('app/api/mondo/route.js'));
-    expect(s).toMatch(/NextResponse\.json\(\{ rooms: active \}\)/);
+    const felice = s.match(/return NextResponse\.json\(\{ rooms:[^)]*\)/g) || [];
+    expect(felice.length, 'una sola uscita felice').toBe(1);
+    expect(felice[0], 'nessuno stato d\'errore attaccato').not.toMatch(/status/);
   });
 });

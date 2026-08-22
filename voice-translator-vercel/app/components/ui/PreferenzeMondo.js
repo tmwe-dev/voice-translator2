@@ -52,7 +52,16 @@ const PREFERENZE = [
   // il pianeta resta dove l'hai lasciato.
   {
     chiave: 'mondoPaese',
-    predefinito: 'auto',
+    // b.397 — IL MONDO GIRA, FINCHE NON DICI DOVE ANDARE (ordine di Luca:
+    // «all'ingresso lascia girare il mondo, a meno che il default sia su
+    // un paese o preferenze»). Prima il valore di partenza era «dove
+    // sono»: si entrava in Mondo e il pianeta scattava subito sull'Italia,
+    // cioe il globo faceva la sua unica mossa prima ancora che tu avessi
+    // deciso qualcosa. Ora parte dal mondo intero e gira; ci si va solo se
+    // lo chiedi tu, qui dentro o toccando il pianeta.
+    // Chi aveva gia scelto «dove sono» a mano se lo tiene: cambia solo
+    // cosa succede a chi non ha mai scelto niente.
+    predefinito: 'nessuno',
     tipo: 'paesi',
     icona: 'target',
     titoloKey: 'prefPositionTitle',

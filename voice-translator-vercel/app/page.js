@@ -1279,6 +1279,14 @@ function HomeInner() {
                     categoria: roomConfig.category,
                     lang: roomConfig.lang || myLang,
                     hostLang: prefs.lang || myLang,
+                    // b.397 — IL PAESE VIAGGIA CON LA STANZA. Finora una
+                    // stanza portava solo la LINGUA, e il posto veniva
+                    // indovinato da quella: tutte le stanze in spagnolo
+                    // finivano in Spagna, nessuna in Messico o Argentina.
+                    // Il Paese l'utente l'ha gia scelto all'ingresso e sta
+                    // qui sul telefono da sempre: non gli si chiede niente
+                    // di nuovo, si smette solo di buttarlo via.
+                    paese: prefs.country || '',
                     roomType: roomConfig.roomType,
                     maxPartecipanti: roomConfig.maxParticipants,
                     // b.111 — stanza a litigio libero: nessuna tendina
