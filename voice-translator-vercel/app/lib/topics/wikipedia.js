@@ -17,6 +17,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { pulisciTestoWeb } from './iniezione.js';
+import { immagineSicura } from './ricerca.js';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
@@ -67,7 +68,7 @@ export async function cercaWikipedia(query, lingua = 'en', { massimo = 5 } = {})
       return {
         titolo, url: link, dominio,
         fonte: 'Wikipedia',
-        immagine: p.thumbnail?.source || '',
+        immagine: immagineSicura(p.thumbnail?.source || ''),
         descrizione,
         pubblicato: null,           // una voce enciclopedica non ha "data del giorno"
         tipo: 'enciclopedia',       // per il riordino/corroborazione

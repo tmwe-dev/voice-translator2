@@ -42,6 +42,28 @@ function campo(item, tag) {
   return m ? decodificaEntita(m[1]) : '';
 }
 
+/**
+ * b.393 — LE FOTO CHE NON SI CARICAVANO NELLA LISTA.
+ *
+ * Collaudo di Luca: nella lista delle news le foto non arrivavano, ma
+ * dentro la discussione la stessa foto si vedeva. Non era un difetto
+ * della lista: il flusso RSS di Bing consegna le sue miniature in
+ * `http://www.bing.com/th?...`, e BarTalk gira in `https`. Il browser
+ * non le blocca per cattiveria — un'immagine in chiaro dentro una
+ * pagina sicura si puo sostituire per strada, quindi la rifiuta e non
+ * dice niente a nessuno. Dal server invece rispondevano benissimo, ed
+ * e per questo che il controllo "l'immagine e raggiungibile?" le dava
+ * per vive: quel controllo lo fa il server, e il server l'http lo puo
+ * caricare.
+ *
+ * Verificato uno per uno: le stesse identiche foto rispondono in https.
+ * Quindi non si scarta niente, si alza soltanto il protocollo.
+ */
+export function immagineSicura(url) {
+  const u = String(url || '');
+  return u.startsWith('http://') ? `https://${u.slice(7)}` : u;
+}
+
 /** Legge gli <item> di un RSS in oggetti piatti. Esportata per i test. */
 export function leggiRss(xml) {
   const items = [];
@@ -152,7 +174,7 @@ function normalizzaItem(grezzi) {
       url,
       dominio,
       fonte: it.fonte || dominio,
-      immagine: it.immagine ? ingrandisciMiniaturaBing(it.immagine) : '',
+      immagine: it.immagine ? immagineSicura(ingrandisciMiniaturaBing(it.immagine)) : '',
       descrizione,
       pubblicato: it.dataPub ? Date.parse(it.dataPub) || null : null,
     });

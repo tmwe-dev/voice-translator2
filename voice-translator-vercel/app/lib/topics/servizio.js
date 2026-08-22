@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { redis } from '../redis.js';
+import { immagineSicura } from './ricerca.js';
 import { cercaNotizie, risolviLinkGoogle } from './ricerca.js';
 import { cercaWikipedia } from './wikipedia.js';
 import { arricchisci } from './estrai.js';
@@ -131,7 +132,7 @@ export async function cercaArgomenti(query, lingua = 'en', {
     id: `w${i}`,
     titolo: v.titolo,
     sintesi: v.descrizione || '',
-    immagine: v.immagine || '',
+    immagine: immagineSicura(v.immagine || ''),
     url: v.url,
     fonti: [{ dominio: v.dominio, fonte: 'Wikipedia', url: v.url, titolo: v.titolo }],
     pubblicato: null,

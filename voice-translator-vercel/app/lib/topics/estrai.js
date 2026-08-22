@@ -14,7 +14,7 @@
 
 import { assertSSRFSafe } from './ssrf.js';
 import { pulisciTestoWeb } from './iniezione.js';
-import { eMiniaturaBing } from './ricerca.js';
+import { eMiniaturaBing, immagineSicura } from './ricerca.js';
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
@@ -85,7 +85,9 @@ export async function estraiScheda(url, { timeoutMs = 6000 } = {}) {
       || meta(html, 'og:image:url')
       || meta(html, 'twitter:image')
       || meta(html, 'twitter:image:src'));
-    immagine = assolutizza(immagine, risposta.url || url);
+    // b.393 — anche l'og:image puo essere dichiarato in http su una
+    // pagina https: stessa storia, stesso rimedio.
+    immagine = immagineSicura(assolutizza(immagine, risposta.url || url));
     if (!immagineDecente(immagine)) {
       // Ripiego: la prima <img> grande nel corpo, se dichiara le misure.
       const m = html.match(/<img[^>]+src=["']([^"']+)["'][^>]*(?:width=["'](\d+)["'])?/i);

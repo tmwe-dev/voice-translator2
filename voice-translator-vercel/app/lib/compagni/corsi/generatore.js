@@ -18,6 +18,7 @@ import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 import { istruzioniDaScheda } from './schede.js';
 import { istruzioniProfilo, categoriaDaArgomento } from './catalogo.js';
 import { filtraFontiCertificate } from './fonti.js';
+import { filtraFontiPertinenti } from '../pertinenza.js';
 import { istruzioneScena } from './scena.js';
 import { assistentePer } from './assistenti.js';
 
@@ -382,7 +383,20 @@ export async function generaLezione({ argomento, categoria: categoriaChiesta = '
       }
       fontiNonTrovate = true;
     } else {
-      fonti = esito.risultati.slice(0, livelloAlto ? 6 : 5).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+      // b.393 — PRIMA di chiedersi se una fonte vale, ci si chiede se
+      // parla del tema. Era il buco dichiarato apertamente in fonti.js:
+      // "una fonte autorevole ma SBAGLIATA (il foglietto del farmaco che
+      // non c'entra) passa il filtro". Il cancello guardava l'autorita,
+      // nessuno guardava l'argomento.
+      const trovate = esito.risultati.map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+      const vaglio = filtraFontiPertinenti(trovate, query);
+      if (vaglio.scartate.length) {
+        log.info('fonti fuori tema lasciate fuori', {
+          argomento: String(argomento || '').slice(0, 120),
+          fuori: vaglio.scartate.length, dentro: vaglio.tenute.length,
+        });
+      }
+      fonti = vaglio.tenute.slice(0, livelloAlto ? 6 : 5);
       // b.380 — NON BASTA CHE ESISTANO. Qui si accettava qualunque cosa
       // fosse tornata: su una lezione di farmacologia sono arrivati un
       // sito di fitness per consumatori e il foglietto di un farmaco che

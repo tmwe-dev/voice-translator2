@@ -129,7 +129,7 @@ export function promptLiberta(liberta) {
 /**
  * Blocco CAPACITÀ: dice all'agente cosa può DAVVERO fare in QUESTO momento.
  * @param ricerca  ha accesso a ricerca web in tempo reale?
- * @param fonti    gli sono state fornite fonti verificate (es. da Dossier/corso)?
+ * @param fonti    gli sono state fornite fonti verificate (es. dalla Tavola rotonda o da un corso)?
  * @param memoria  ha memoria di questa persona?
  */
 export function bloccoCapacita({ ricerca = false, fonti = false, memoria = false } = {}) {
@@ -139,7 +139,7 @@ export function bloccoCapacita({ ricerca = false, fonti = false, memoria = false
     `- memoria di questa persona: ${memoria ? 'sì' : 'no'}`,
   ].join('\n');
   const regola = (!ricerca && !fonti)
-    ? '\nNON hai accesso a fonti esterne: NON citare link, studi, articoli o riferimenti come se li avessi verificati. Ragiona sulle tue conoscenze e, quando serve una verifica reale, proponi di aprire il Dossier o la Ricerca.'
+    ? '\nNON hai accesso a fonti esterne: NON citare link, studi, articoli o riferimenti come se li avessi verificati. Ragiona sulle tue conoscenze e, quando serve una verifica reale, proponi di attivare «Parti da fonti reali» o di fare una ricerca.'
     : '';
   return `LE TUE CAPACITÀ ORA:\n${righe}${regola}`;
 }

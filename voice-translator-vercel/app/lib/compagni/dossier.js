@@ -15,6 +15,7 @@
 
 import { generaTesto, cerca } from './ponte.js';
 import { estraiJSON, leggiEsitoRicerca } from './corsi/generatore.js';
+import { filtraFontiPertinenti } from './pertinenza.js';
 import { createLogger } from '../logger.js';
 
 const log = createLogger('compagni-dossier-lib');
@@ -76,7 +77,18 @@ export async function preparaBriefing({ argomento, lingua = 'it', userToken = nu
       argomento: String(argomento).slice(0, 120), errore: esito.errore || 'ignoto',
     });
   }
-  const fonti = esito.risultati.slice(0, 6).map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+  // b.393 — prima qui c'era `slice(0, 6)` e basta: entravano le prime sei
+  // qualunque cosa fossero. Adesso si guarda se parlano del tema, e le
+  // migliori vanno per prime; le altre restano fuori e si registrano.
+  const trovate = esito.risultati.map(a => ({ titolo: a.titolo, sintesi: a.sintesi, url: a.url }));
+  const vaglio = filtraFontiPertinenti(trovate, argomento);
+  if (vaglio.scartate.length) {
+    log.info('briefing: fonti fuori tema lasciate fuori', {
+      argomento: String(argomento).slice(0, 120),
+      fuori: vaglio.scartate.length, dentro: vaglio.tenute.length,
+    });
+  }
+  const fonti = vaglio.tenute.slice(0, 6);
   const { system, prompt } = promptBriefing({ argomento, fonti, lingua, ricercaGuasta: !esito.ok });
   // b.308 — 800 era stretto: articolo + punti + domande in JSON si troncavano
   // prima dei 4000 char del taglio finale. Ora c'e respiro.
