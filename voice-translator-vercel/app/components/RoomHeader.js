@@ -196,7 +196,18 @@ const RoomHeader = memo(function RoomHeader({
           {showMoreMenu && (
             <div style={{position:'absolute', top:'100%', right:0, zIndex:100, marginTop:6,
               background:S.colors.headerBg, border:`1px solid ${S.colors.overlayBorder}`,
-              borderRadius:14, padding:6, minWidth:236, backdropFilter:'blur(24px) saturate(1.1)',
+              /* b.394 — IL MENU ERA ILLEGGIBILE, E LE SCRITTE SI ACCAVALLAVANO.
+                 La tendina e appoggiata dentro un contenitore largo quanto
+                 il tastino: 38 pixel. Senza una larghezza dichiarata, per
+                 le regole del CSS poteva contare solo su quei 38, quindi
+                 ripiegava sulla larghezza MINIMA possibile — quella in cui
+                 ogni frase si spezza a ogni spazio. minWidth alzava il
+                 pavimento ma non le dava mai lo spazio per scrivere in
+                 riga. Da qui le parole a capo in mezzo alla frase, e le
+                 due scritte «In attesa» spezzate in «In / attesa» che
+                 finivano una addosso all'altra. */
+              borderRadius:14, padding:6, boxSizing:'border-box',
+              width:'min(304px, calc(100vw - 20px))', backdropFilter:'blur(24px) saturate(1.1)',
               boxShadow:'0 12px 40px rgba(0,0,0,0.55)'}}>
 
               {/* Stato connessione + credito */}
@@ -206,11 +217,19 @@ const RoomHeader = memo(function RoomHeader({
                   webrtcState={webrtc?.webrtcState || 'idle'}
                   partnerConnected={partnerConnected}
                   realtimeConnected={realtimeConnected}
+                  style={{flexShrink:0}}
                 />
-                <span style={{fontSize:11, color: partnerConnected ? S.colors.statusOk : S.colors.textMuted, fontWeight:600}}>
-                  {partnerConnected ? (partner?.name || 'Partner') : L('waitingDots')}
+                {/* Lo stato «In attesa» lo dice gia l'indicatore di segnale
+                    qui accanto: dirlo due volte non aggiungeva niente e
+                    rubava lo spazio. Qui resta solo il NOME di chi c'e, e
+                    se e lungo si tronca invece di mandare la riga a capo.
+                    (via anche 'Partner', che era una parola fissa dentro un
+                    menu tradotto in trentotto lingue) */}
+                <span style={{fontSize:11, color:S.colors.statusOk, fontWeight:600,
+                  minWidth:0, flex:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>
+                  {partnerConnected ? (partner?.name || '') : ''}
                 </span>
-                {!showVideoCall && <span style={{marginLeft:'auto'}}><BatteryPillSlot /></span>}
+                {!showVideoCall && <span style={{marginLeft:'auto', flexShrink:0}}><BatteryPillSlot /></span>}
               </div>
 
               {/* b.353 — MENU RIPULITO (collaudo di Luca: «il menu in alto

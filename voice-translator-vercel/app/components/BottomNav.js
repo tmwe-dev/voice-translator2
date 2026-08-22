@@ -75,9 +75,14 @@ const BottomNav = ({ currentView, onNewConversation }) => {
     // b.139 — 'Profilo' era italiano fisso in una barra sempre a schermo:
     // la parola piu vista dell'applicazione, e l'unica mai tradotta.
     // 'Community' resta com'e: e il nome della sezione, non una parola comune.
-    { id: 'home', label: L('navHome'), views: ['home', 'quickinvite'] },
+    // b.394 — DENTRO TAXITALK SI ACCENDEVA «COMMUNITY». La schermata
+    // vive sotto il vecchio nome di vista 'speaker', rimasto da b.205, ed
+    // era rimasto anche nell'elenco di Community. Ma a TaxiTalk ci si
+    // arriva dalla Home, non da Community. E 'taxi-chat' non era in
+    // nessun elenco: li non si accendeva niente.
+    { id: 'home', label: L('navHome'), views: ['home', 'quickinvite', 'speaker', 'taxi-chat'] },
     { id: 'conversations', label: L('navChat'), views: ['history', 'summary', 'detail'] },
-    { id: 'community', label: 'Community', views: ['mondo', 'speaker'] },
+    { id: 'community', label: 'Community', views: ['mondo'] },
     { id: 'profile', label: L('navProfile'), views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help', 'ai', 'contacts'] },
   ];
 

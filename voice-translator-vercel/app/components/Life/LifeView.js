@@ -19,7 +19,7 @@ const IDEE_CORSO = [
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
-import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione } from '../../lib/audioLife.js';
+import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/audioLife.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import TestoLingua from './TestoLingua.js';
@@ -121,7 +121,11 @@ function LifeView({ onApriStanza }) {
         contenuto vive in una colonna centrata, larga al massimo 640, con
         aria ai lati. Se serve piu spazio si sfrutta l'altezza, non si
         allarga oltre. Vale per tutte le pagine di Life. */}
-    <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px 90px', boxSizing: 'border-box' }}>
+    {/* b.394 — la riserva in fondo era 90 a occhio; la pillola misura
+        60 (due tasti da 42, riempimento 8+8, bordo 1+1) piu lo stacco e
+        la zona del trattino di casa. Cosi a scorrimento finito l'ultima
+        riga resta sopra la pillola su qualunque telefono. */}
+    <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px calc(60px + max(16px, env(safe-area-inset-bottom)) + 12px)', boxSizing: 'border-box' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
         {/* b.206 — pulsante indietro uniforme (glifo ‹, 38×38, r12) come le altre pagine */}
@@ -207,7 +211,11 @@ function LifeView({ onApriStanza }) {
             i turni proseguiva a spese di Luca e la voce ripartiva da sola
             col turno successivo. Ora i cicli si iscrivono a `suInterruzione`
             e questo tasto li ferma tutti. */}
-        <button onClick={() => fermaAudio()} aria-label="Interrompi"
+        {/* b.394 — questa etichetta di lettura era l'unica parola scritta
+            a mano in italiano dentro un telecomando tradotto in trentotto
+            lingue: chi usa il lettore di schermo in coreano si sentiva
+            leggere «Interrompi». */}
+        <button onClick={() => fermaAudio()} aria-label={L('stopAudio')}
           style={{ width: 42, height: 42, borderRadius: 21, cursor: 'pointer',
             background: 'transparent', border: `1px solid ${testoP}44`, color: testoP, fontSize: 15 }}>
           {'\u23F9'}
@@ -272,6 +280,9 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
     if (!argomento.trim()) { setErrore(L('lifeNeedTopic')); return; }
     if (scelti.length < 2) { setErrore(L('lifeNeedCompanions')); return; }
     setStato('genero'); setCopioni([]); setAttuale(-1); fermatoRef.current = false;
+    // b.394 — da qui comincia un giro di voce vero: la pillola si accende
+    // adesso, non quando si e aperta la scheda.
+    const chiudiCiclo = apriCiclo();
     try {
       // ── b.244 · un turno per volta, e si ascolta mentre si genera ──
       // Prima si aspettava che TUTTI i turni fossero pronti (fino a 16
@@ -301,7 +312,7 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
       if (e?.name !== 'AbortError') console.warn('[b.363] vai:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : L('lifeError'));
       setStato('pronto');
-    }
+    } finally { chiudiCiclo(); }
   }, [argomento, scelti, round, lingua, userToken, L]);
 
   return (
@@ -1089,6 +1100,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     if (!aperta) return;
     if (ascoltando) { fermaLettura(); return; } // il tasto fa anche da STOP
     setAscoltando(true);
+    const chiudiCicloLezione = apriCiclo();   // b.394 — la pillola serve DA ORA
     stopLetturaRef.current = false;
     inDomandaRef.current = false;
     interruzionePendenteRef.current = false;
@@ -1139,7 +1151,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         if (!stopLetturaRef.current && i < lista.length - 1) await attendi(immaginiSezioni[i] ? 2200 : 800);
       }
     } catch { /* la voce e un di piu: la lezione resta leggibile */ }
-    finally { setAscoltando(false); setSezioneAttiva(-1); inDomandaRef.current = false; setManoAlzata(false); setMaestroStaFinendo(false); }
+    finally { chiudiCicloLezione(); setAscoltando(false); setSezioneAttiva(-1); inDomandaRef.current = false; setManoAlzata(false); setMaestroStaFinendo(false); }
   }, [aperta, ascoltando, argomento, linguaCorso, tutor, userToken, fermaLettura, immaginiSezioni]);
 
   // b.376 — VAI DA QUI. Un dito su un paragrafo e la voce ci si sposta.

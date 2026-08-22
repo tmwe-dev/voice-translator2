@@ -63,9 +63,14 @@ function TaxiTalk({ userToken }) {
   const C = {
     text: col.textPrimary || PALETTE.grayLight,
     muted: col.textMuted || 'rgba(238,242,255,0.58)',
-    faint: 'rgba(238,242,255,0.38)',
+    // b.394 — CONTRASTO SUL TEMA CHIARO. Queste due voci erano le sole
+    // della tavolozza a NON venire dal tema: restavano da tema scuro
+    // sempre. Con il tema chiaro il testo diventa nero e le carte
+    // bianche, quindi la didascalia sotto il microfono era bianca su
+    // bianco (spariva) e i tasti stampavano nero sopra un blu-notte.
+    faint: col.textTertiary || 'rgba(238,242,255,0.38)',
     card: col.glassCard || 'rgba(14,19,34,0.72)',
-    card2: 'rgba(20,26,44,0.7)',
+    card2: col.toggleOff || 'rgba(20,26,44,0.7)',
     border: col.cardBorder || 'rgba(255,255,255,0.08)',
     input: col.inputBg || 'rgba(9,13,26,0.7)',
     accent: col.accent1 || PALETTE.teal,
@@ -462,7 +467,7 @@ function TaxiTalk({ userToken }) {
 
       {/* OVERLAY RIBALTATO — girato verso il tassista */}
       {flip && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: `linear-gradient(180deg, ${C.bg}, #04070f)`, display: 'flex', flexDirection: 'column', animation: 'ttUp 0.28s ease-out' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: col.bgGradient || C.bg, display: 'flex', flexDirection: 'column', animation: 'ttUp 0.28s ease-out' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
             <div style={{ fontSize: 12, color: C.muted, fontWeight: 600 }}>{L('taxiTurnedToDriver')}</div>
             <button onClick={() => setFlip(false)} aria-label={L('close')} style={{ width: 36, height: 36, borderRadius: '50%', border: `1px solid ${C.border}`, background: 'transparent', color: C.muted, cursor: 'pointer', fontSize: 16 }}>✕</button>

@@ -17,7 +17,13 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
   // fisso in mezzo a etichette tecniche (P2P, Realtime, Polling) che
   // restano uguali in tutte le lingue. Il suggerimento diceva
   // "Connessione: In attesa" anche a chi leggeva l'app in coreano.
-  const { L } = useApp();
+  // b.394 — L'INDICATORE ERA INVISIBILE SUL TEMA CHIARO. Il pannellino,
+  // le barre spente e la scritta di stato erano disegnati con bianchi e
+  // un grigio fissi, decisi quando i temi erano tutti scuri: sul tema
+  // chiaro il pannellino faceva 1,06 contro 1 (cioe niente) e la scritta
+  // 3,34 contro 1, sotto il minimo leggibile. Ora seguono il tema come
+  // tutto il resto.
+  const { L, S } = useApp();
   // Determine quality level (0-4)
   let level = 0;
   let label = L('offlineWord');
@@ -26,7 +32,7 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
   if (!partnerConnected) {
     level = 0;
     label = L('connWaiting');
-    color = '#888';
+    color = S.colors.textTertiary;
   } else if (webrtcState === 'connected') {
     level = 4;
     label = 'P2P';
@@ -53,9 +59,9 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
     <div style={{
       display: 'inline-flex', alignItems: 'flex-end', gap,
       padding: '3px 8px', borderRadius: 8,
-      background: 'rgba(255,255,255,0.06)',
+      background: S.colors.overlayBg,
       backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255,255,255,0.08)',
+      border: `1px solid ${S.colors.overlayBorder}`,
       transition: 'all 0.3s cubic-bezier(0.4,0,0.2,1)',
       ...style,
     }}
@@ -71,7 +77,7 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
             borderRadius: 2,
             background: isActive
               ? `linear-gradient(to top, ${color}CC, ${color})`
-              : 'rgba(255,255,255,0.1)',
+              : S.colors.toggleOff,
             boxShadow: isActive ? `0 0 6px ${color}40` : 'none',
             transform: isActive ? 'scaleY(1)' : 'scaleY(0.85)',
             transformOrigin: 'bottom',
@@ -80,7 +86,10 @@ const ConnectionQuality = memo(function ConnectionQuality({ webrtcState, partner
         );
       })}
       <span style={{
-        fontSize: 8, fontWeight: 600, color,
+        // otto pixel erano troppo pochi perche la scritta stesse in
+        // riga dentro il menu: si spezzava in due e finiva addosso a
+        // quella accanto.
+        fontSize: 10, fontWeight: 600, color, whiteSpace: 'nowrap',
         marginLeft: 4, letterSpacing: 0.3,
         transition: 'color 0.3s ease',
         textShadow: level > 0 ? `0 0 8px ${color}40` : 'none',

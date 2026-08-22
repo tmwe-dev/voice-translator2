@@ -17,11 +17,45 @@ const ascoltatori = new Set();
 // voce ripartiva da sola col turno successivo.
 const interrompibili = new Set();
 
+// b.394 — DUE COSE DIVERSE CHE ERANO DIVENTATE UNA SOLA.
+//
+// Collaudo di Luca: «la pillola dell'audio copre i comandi di Vita». Ed
+// era vero, ma non per il motivo che sembrava. In b.376 il telecomando
+// aveva smesso di sparire fra una battuta e l'altra guardando CHI SI ERA
+// ISCRITTO allo Stop. Sensato — solo che le schede si iscrivono quando
+// si APRONO, non quando cominciano a parlare. Risultato: appena si
+// apriva Podcast, Tavola rotonda o Impara la pillola era gia li, con il
+// silenzio totale, e restava a coprire i comandi per tutto il tempo.
+//
+// Provato importando questo file e simulando la sola apertura di una
+// scheda: lo stato passava da spento ad acceso senza che suonasse nulla.
+//
+// Adesso sono due cose separate: l'iscrizione allo Stop (chi va fermato)
+// resta com'era, e accanto c'e il conto dei giri DAVVERO in corso (chi
+// sta parlando o sta preparando la battuta dopo). La pillola guarda il
+// secondo. In silenzio non c'e, e non copre niente per definizione.
+let cicliVivi = 0;
+
 /** Registra un ciclo da fermare quando si preme Interrompi. Restituisce come disiscriversi. */
 export function suInterruzione(fn) {
   interrompibili.add(fn);
-  avvisa();                       // b.376 — il telecomando si accende subito
-  return () => { interrompibili.delete(fn); avvisa(); };
+  return () => { interrompibili.delete(fn); };
+}
+
+/**
+ * Dichiara che un giro di voce COMINCIA ORA. Va chiuso sempre, anche
+ * quando finisce male: la chiusura si mette nel `finally` di chi lo apre.
+ */
+export function apriCiclo() {
+  cicliVivi += 1;
+  avvisa();
+  let chiuso = false;
+  return () => {
+    if (chiuso) return;           // chiudere due volte non deve contare due volte
+    chiuso = true;
+    cicliVivi = Math.max(0, cicliVivi - 1);
+    avvisa();
+  };
 }
 
 // b.363 — un audio FERMATO va marchiato: chi lo sta suonando deve poter
@@ -64,6 +98,10 @@ export function ferma() {
   for (const fn of interrompibili) { try { fn(); } catch { /* un ciclo rotto non impedisce di fermare gli altri */ } }
   try { if (corrente) { marcaFermato(corrente); corrente.pause(); corrente.currentTime = 0; } } catch { /* l'audio era gia in pausa o concluso: nulla da fare */ }
   corrente = null; etichetta = '';
+  // Interrompi chiude anche i giri: chi li ha aperti ha gia ricevuto il
+  // segnale qui sopra e uscira dal proprio ciclo, ma la pillola deve
+  // spegnersi subito, non al giro dopo.
+  cicliVivi = 0;
   avvisa();
 }
 
@@ -85,7 +123,8 @@ export function stato() {
   // E non e una stima a occhio: chi genera i turni si iscrive gia qui
   // (quello serviva allo Stop). Se c'e un ciclo iscritto, qualcosa STA
   // per parlare — quindi il telecomando deve restare.
-  const cicloVivo = interrompibili.size > 0;
+  // b.394 — si contano i giri in corso, non gli iscritti allo Stop.
+  const cicloVivo = cicliVivi > 0;
   return {
     attivo: !!corrente || cicloVivo,
     inPausa: !!corrente && corrente.paused,

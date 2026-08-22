@@ -321,7 +321,15 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#10131c',
       textSecondary: 'rgba(16,19,28,0.80)',
       textTertiary: 'rgba(16,19,28,0.62)',
-      textMuted: 'rgba(16,19,28,0.42)',
+      // b.394 — IL GRIGIO SECONDARIO NON SI LEGGEVA SUL TEMA CHIARO.
+      // Il 42% era stato copiato dai temi scuri, dove funziona: la un
+      // testo chiaro al 42% su fondo scuro resta un grigio medio. Qui e
+      // il contrario — testo scuro al 42% su fondo bianco diventa un
+      // grigio pallido: misurato, 2,74 contro il minimo di 4,5. E' il
+      // colore dei tasti «Cerca» e «Traduci» di TaxiTalk, delle voci
+      // spente della barra in basso e di meta delle didascalie
+      // dell'applicazione. Al 60% la stessa misura da 4,82.
+      textMuted: 'rgba(16,19,28,0.60)',
       cardBg: 'rgba(255,255,255,0.62)',
       cardBorder: 'rgba(16,19,28,0.09)',
       inputBg: 'rgba(255,255,255,0.72)',

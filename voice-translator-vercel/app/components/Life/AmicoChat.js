@@ -142,8 +142,12 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   }
 
   // ── Conversazione ──
+  // b.394 — vh non e dvh: su Safari iPhone vh conta lo schermo con le
+  // barre del browser NASCOSTE, quindi questa colonna sfondava il bordo
+  // visibile e la riga per scrivere finiva sotto. Il contenitore che la
+  // ospita e gia in dvh: stessa unita, stesso comportamento.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '70dvh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
         <button onClick={() => setScelto(null)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
           <Icon name="back" size={16} color={testoP} />

@@ -52,6 +52,19 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
     setPronta(false);
     import('maplibre-gl').then((mod) => {
       const maplibregl = mod.default ?? mod;
+      // b.394 — LA MAPPA ERA UN RIQUADRO VUOTO, IN TUTTA L'APPLICAZIONE.
+      // Non erano ne la rete, ne una chiave, ne il protocollo: le
+      // piastrelle rispondono. MapLibre 6 tiene il suo lavoratore in un
+      // file a parte e ne ricava l'indirizzo da import.meta.url. Il
+      // confezionatore pero sostituisce import.meta.url con un percorso
+      // del disco (file://...), il controllo "comincia per http?" fallisce
+      // e quel calcolo torna una stringa VUOTA. Con l'indirizzo vuoto il
+      // lavoratore viene aperto sulla PAGINA STESSA, che e HTML: non
+      // parte, e senza lavoratore nessuna piastrella viene mai decodificata.
+      // Verificato leggendo il pacchetto servito dal server.
+      // Glielo diciamo noi, dalla nostra stessa origine (la politica di
+      // sicurezza consente i lavoratori solo da qui).
+      maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
     // ── FINE b.179 ──
       // CSS di MapLibre (una volta sola)
       if (!document.getElementById('maplibre-css')) {

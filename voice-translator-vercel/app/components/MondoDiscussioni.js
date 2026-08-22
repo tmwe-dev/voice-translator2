@@ -293,7 +293,16 @@ function MondoDiscussioni({ discussionId, onClose, onOpenPersona }) {
       </div>
 
       {/* Composer */}
-      <div style={{ padding: '10px 16px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
+      {/* b.394 — IL CAMPO PER SCRIVERE FINIVA SOTTO LA BARRA IN BASSO.
+          La scheda dei commenti arriva fino al bordo dello schermo, e
+          li c'e la barra di navigazione: fissa, alta 94 pixel piu l'area
+          sicura. Gli ultimi 94 pixel della scheda stavano sotto di lei,
+          e li ci sta esattamente il campo del soprannome e quello del
+          commento. La faccia DAVANTI dello stesso ribaltamento lo spazio
+          se lo riservava gia; questa, dietro, no.
+          106 non e un numero inventato: e la stessa misura che tutto il
+          resto del progetto usa per lasciar posto alla barra. */}
+      <div style={{ padding: '10px 16px', paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', borderTop: bordo, flexShrink: 0 }}>
         {errore && <div style={{ fontSize: 11, color: C.red || '#ff6b6b', marginBottom: 6 }}>{errore}</div>}
         <input value={nick} onChange={e => setNick(e.target.value)} maxLength={40}
           onBlur={() => savePrefs?.({ ...prefs, mondoNick: nick.trim() })}

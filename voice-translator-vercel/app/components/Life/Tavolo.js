@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { suona as registraAudio, suInterruzione } from '../../lib/audioLife.js';
+import { suona as registraAudio, suInterruzione, apriCiclo } from '../../lib/audioLife.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
@@ -52,6 +52,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     setErrore('');
     const storia = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(storia); setTesto(''); setAttende(true);
+    const chiudiCiclo = apriCiclo();   // b.394 — un giro di voce comincia ora
     // messaggi per il server: {ruolo, testo} (persona o nome del Compagno)
     // b.363 — fuori le righe di servizio: briefing, sintesi e documento
     // non sono qualcuno che ha parlato. Partivano al modello come turni
@@ -80,7 +81,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       // scaduta, credito finito, server rotto) restava irrecuperabile.
       if (e?.name !== 'AbortError') console.warn('[b.363] perServer:', e?.message || e);
       setErrore(e.creditoEsaurito ? L('lifeNoCredit') : (e.status === 401 ? L('lifeLoginNeeded') : L('lifeError')));
-    } finally { setAttende(false); }
+    } finally { chiudiCiclo(); setAttende(false); }
   }, [testo, attende, messaggi, scelti, lingua, userToken, obiettivo, L]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // b.226 — Debate: chiude la tavola con la SINTESI (risultato condiviso).
@@ -199,8 +200,12 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   }
 
   // ── Il tavolo ──
+  // b.394 — vh non e dvh: su Safari iPhone vh conta lo schermo con le
+  // barre del browser NASCOSTE, quindi questa colonna sfondava il bordo
+  // visibile e la riga per scrivere finiva sotto. Il contenitore che la
+  // ospita e gia in dvh: stessa unita, stesso comportamento.
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '70vh' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '70dvh' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 10, borderBottom: bordo, marginBottom: 10 }}>
         <button onClick={() => setAvviato(false)} aria-label={L('lifeBack')} style={{ background: card, border: bordo, borderRadius: 10, padding: 7, cursor: 'pointer' }}>
           <Icon name="back" size={16} color={testoP} />

@@ -12,7 +12,10 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "lint": "eslint app/ middleware.js __tests__/ e2e/",
-    "lint:fix": "eslint app/ middleware.js __tests__/ e2e/ --fix"
+    "lint:fix": "eslint app/ middleware.js __tests__/ e2e/ --fix",
+    "copia-maplibre": "mkdir -p public/maplibre && cp node_modules/maplibre-gl/dist/maplibre-gl-worker.mjs node_modules/maplibre-gl/dist/maplibre-gl-shared.mjs public/maplibre/",
+    "prebuild": "npm run copia-maplibre",
+    "postinstall": "npm run copia-maplibre"
   },
   "dependencies": {
     "@andresaya/edge-tts": "^1.0.0",
