@@ -39,6 +39,22 @@ export function bandieraPaese(codice) {
 }
 
 /**
+ * IL NOME DI UN PAESE, nella lingua di chi guarda.
+ *
+ * b.398 — non si scrivono duecento nomi di paese per trentotto lingue:
+ * li sa gia il telefono, ed e l'unico modo perche un cinese legga
+ * «意大利» e un tedesco «Italien» senza che nessuno traduca niente.
+ * Se il telefono non sa farlo restano le due lettere, che sono brutte
+ * ma vere. Lo stesso trucco e gia usato nelle preferenze di Mondo.
+ */
+export function nomePaese(codice) {
+  const c = String(codice || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(c)) return '';
+  try { return new Intl.DisplayNames(undefined, { type: 'region' }).of(c) || c; }
+  catch { return c; }
+}
+
+/**
  * QUANDO, in poche lettere. Non "23/07/2026 14:12": quello si legge, non
  * si capisce. Serve la distanza da adesso, che e l'unica cosa che conta
  * per decidere se una notizia e ancora una notizia.

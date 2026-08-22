@@ -58,7 +58,14 @@ const QUERY_RAPIDE = {
   arte:       { it: 'arte cultura', en: 'art culture', es: 'arte cultura', fr: 'art culture', de: 'kunst kultur' },
 };
 
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null }) {
+// b.398 — `suPaeseScelto` chiude il giro. Il Paese scendeva dal globo
+// fino a qui, ma da qui non risaliva: toccando la bandiera su una scheda
+// cambiava solo la copia locale, e il pianeta e le Stanze non ne sapevano
+// niente. Nel documento di Luca il Paese e «stato globale della sezione
+// Mondo, non un filtro locale di una singola pagina»: se lo cambi da una
+// parte deve cambiare dappertutto, altrimenti passando da News a Stanze
+// ti ritrovi in un altro posto senza averlo chiesto.
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento }) {
   const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -123,6 +130,13 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // del mondo intero, il che faceva sembrare che il gesto non funzionasse
   // a meta.
   useEffect(() => { if (paeseDalGlobo !== undefined) setPaeseFiltro(paeseDalGlobo); }, [paeseDalGlobo]);
+  // b.398 — si sceglie in un posto solo, e lo sanno tutti: la copia qui
+  // dentro serve a disegnare subito, e la stessa scelta risale a Mondo,
+  // che la manda al pianeta e alle Stanze.
+  const scegliPaese = useCallback((codice) => {
+    setPaeseFiltro(codice);
+    suPaeseScelto?.(codice);
+  }, [suPaeseScelto]);
   const [riprova, setRiprova] = useState(0);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -340,7 +354,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     <>
     <Ribalta girato={!!(lettura || discAperta)}
       fronte={
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
+      // b.398 — anche qui il pianeta deve sapere quanto sei sceso: il
+      // documento dice che il globo perde importanza scorrendo, e le News
+      // sono meta della sezione Mondo. Prima l'ascolto c'era solo sulle
+      // Stanze, quindi scorrendo le notizie il globo restava identico.
+      <div onScroll={suScorrimento} style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none' }}>
       <div style={{ padding: '0 16px 106px', fontFamily: FONT, ...COLONNA }}>
 
       {/* b.363 — GLI STRUMENTI STANNO DIETRO IL GIORNALE. Sopra il pianeta
@@ -632,8 +650,8 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
                         {bandiera && (
                           <span role="button" tabIndex={0}
                             aria-label={d.country}
-                            onClick={(e) => { e.stopPropagation(); vibrate(6); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); }}
-                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setPaeseFiltro(paeseFiltro === d.country ? null : d.country); } }}
+                            onClick={(e) => { e.stopPropagation(); vibrate(6); scegliPaese(paeseFiltro === d.country ? null : d.country); }}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); scegliPaese(paeseFiltro === d.country ? null : d.country); } }}
                             style={{
                               fontSize: 14, lineHeight: 1, cursor: 'pointer', borderRadius: 5,
                               padding: '2px 4px', background: 'rgba(6,9,18,0.6)',

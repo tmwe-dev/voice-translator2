@@ -1,6 +1,6 @@
 'use client';
 import Icon from './Icon.js';
-import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, linguaDelPaese, bandieraPaese } from '../lib/schedaMondo.js';
+import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, linguaDelPaese, bandieraPaese, nomePaese } from '../lib/schedaMondo.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { COLONNA } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -161,6 +161,20 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // pagina: scegliendolo in Stanze resta scelto passando a News, come
   // deve essere se il globo e una porta e non un setaccio.
   const [paeseScelto, setPaeseScelto] = useState(null);
+  // b.398 — QUANTO SEI SCESO, da 0 a 1. Serve al pianeta: il documento di
+  // Luca dice che il globo «con lo scroll perde importanza» e «dopo il
+  // primo blocco contenuti puo scomparire». Finora non lo sapeva nessuno:
+  // in tutta la schermata non c'era un solo ascoltatore dello scorrimento,
+  // e il globo restava identico sotto i contenuti che gli passavano sopra.
+  const [discesa, setDiscesa] = useState(0);
+  const seguiScorrimento = useCallback((e) => {
+    const y = e?.currentTarget?.scrollTop || 0;
+    // 240 pixel: un primo blocco di contenuti. Oltre, il pianeta e sparito.
+    const q = Math.min(1, y / 240);
+    // si riscrive solo a scatti di un centesimo: ridisegnare a ogni pixel
+    // non si vede e costa.
+    setDiscesa((prima) => (Math.abs(prima - q) > 0.01 ? q : prima));
+  }, []);
 
   const fetchRooms = useCallback(async () => {
     try {
@@ -350,9 +364,17 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               contrasto e gli elenchi restavano schiacciati sotto. Un velo
               lo manda dietro — si vede ancora, gira ancora, ma smette di
               gridare. Non e stato tolto niente: e cambiato chi comanda. */}
+          {/* b.398 — IL VELO SI CHIUDE MENTRE SCENDI. Prima era fisso: il
+              pianeta restava uguale sotto i contenuti che gli passavano
+              sopra. Ora piu si scende piu il velo si fa fitto, finche il
+              globo non e piu li — «il globo e la porta; una volta scelto
+              il Paese i contenuti lo coprono e lo trasformano in
+              contesto». Nessuna animazione nuova sul globo: si muove solo
+              il velo che gli sta davanti. */}
           <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: 'linear-gradient(180deg, rgba(5,7,15,0.42) 0%, rgba(5,7,15,0.66) 42%, rgba(5,7,15,0.86) 100%)',
+            background: `linear-gradient(180deg, rgba(5,7,15,${0.42 + discesa * 0.5}) 0%, rgba(5,7,15,${0.66 + discesa * 0.32}) 42%, rgba(5,7,15,${0.86 + discesa * 0.14}) 100%)`,
+            transition: 'background 160ms linear',
           }} />
         </div>
       )}
@@ -392,6 +414,37 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               { valore: 'news', etichetta: L('tabNews') },
             ]}
             onCambia={(v) => { vibrate(6); setTab(v); }} />
+        </div>
+        {/* b.398 — DOVE SEI, E COME USCIRNE. Dal documento di Luca: quando
+            il globo non si vede piu «rimane un header sticky» col Paese e
+            un «Cambia» che riporta al pianeta. Finora, scelto un Paese,
+            non c'era piu nessun modo di dire «tutti»: bisognava ritoccare
+            lo stesso Paese sul globo, che e un interruttore, oppure
+            rimettere «Tutte» in una tendina dentro un pannello laterale.
+            Sta nella riga della testata che c'era gia: nessuna altezza in
+            piu tolta agli elenchi. E ad altezza fissa — quando il Paese
+            non c'e resta il vuoto, non si sposta niente. */}
+        <div style={{ marginLeft: 'auto', minHeight: 30, display: 'flex', alignItems: 'center' }}>
+          {paeseScelto ? (
+            <button onClick={() => { vibrate(8); setPaeseScelto(null); setLangFilter('all'); }}
+              aria-label={`${L('changeWord')} — ${nomePaese(paeseScelto)}`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+                borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                background: C.card, border: `1px solid ${C.cardBorder}`,
+                color: C.textPrimary, fontSize: 12.5, fontWeight: 700,
+                maxWidth: 190, whiteSpace: 'nowrap', overflow: 'hidden',
+              }}>
+              <span style={{ fontSize: 15 }}>{bandieraPaese(paeseScelto)}</span>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{nomePaese(paeseScelto)}</span>
+              <span style={{ color: C.textMuted, fontWeight: 600 }}>{L('changeWord')}</span>
+              <span style={{ color: C.textMuted }}>›</span>
+            </button>
+          ) : (
+            <span style={{ fontSize: 12.5, fontWeight: 700, color: C.textMuted, whiteSpace: 'nowrap' }}>
+              {`\u{1F30D} ${L('wholeWorld')}`}
+            </span>
+          )}
         </div>
       </header>
 
@@ -558,7 +611,12 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ ...COLONNA, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} paeseDalGlobo={paeseScelto} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} paeseDalGlobo={paeseScelto}
+              // b.398 — e il ritorno: la bandiera toccata dentro le News
+              // risale fin qui, e da qui va al pianeta e alle Stanze.
+              suPaeseScelto={(codice) => { setPaeseScelto(codice); setLangFilter(codice ? (linguaDelPaese(codice) || 'all') : 'all'); }}
+              suScorrimento={seguiScorrimento}
+              C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}
@@ -574,7 +632,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
       // colonna non ruba i tocchi (pointerEvents none), solo le card e i
       // pulsanti veri li riprendono.
-      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
+      <div onScroll={seguiScorrimento} style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ ...COLONNA, pointerEvents: 'auto' }}>
 

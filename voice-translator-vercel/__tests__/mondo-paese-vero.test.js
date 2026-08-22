@@ -102,3 +102,57 @@ describe('il mondo gira, finche non gli dici dove andare', () => {
     expect(v, "il ramo 'auto' esiste ancora").toMatch(/scelto === 'auto' \? paeseDaLingua/);
   });
 });
+
+describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
+  it('la testata dice sempre dove sei — un Paese, o il mondo intero', () => {
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/L\('changeWord'\)/);
+    expect(v).toMatch(/L\('wholeWorld'\)/);
+    expect(v, 'ad altezza fissa: comparire non deve spostare niente').toMatch(/minHeight: 30/);
+  });
+
+  it("«Cambia» riporta al mondo, che e l'unica uscita che prima non c'era", () => {
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/setPaeseScelto\(null\); setLangFilter\('all'\)/);
+  });
+
+  it('il pianeta sa quanto sei sceso, e si vela di conseguenza', () => {
+    const v = leggi('app/components/MondoView.js');
+    expect(v, 'lo stato della discesa').toMatch(/const \[discesa, setDiscesa\]/);
+    expect(v, 'il velo lo usa').toMatch(/0\.42 \+ discesa \* 0\.5/);
+    expect(v, "e l'elenco stanze lo racconta").toMatch(/onScroll=\{seguiScorrimento\}/);
+    const n = leggi('app/components/MondoNews.js');
+    expect(n, 'e anche le news, che sono meta di Mondo').toMatch(/onScroll=\{suScorrimento\}/);
+  });
+
+  it('il Paese torna indietro da News: si sceglie in un posto, lo sanno tutti', () => {
+    const n = leggi('app/components/MondoNews.js');
+    expect(n, 'la bandiera non cambia piu solo la copia locale').not.toMatch(/onClick=\{\(e\) => \{ e\.stopPropagation\(\); vibrate\(6\); setPaeseFiltro\(/);
+    expect(n).toMatch(/scegliPaese\(paeseFiltro === d\.country \? null : d\.country\)/);
+    expect(n, 'e risale a chi la ospita').toMatch(/suPaeseScelto\?\.\(codice\)/);
+    const v = leggi('app/components/MondoView.js');
+    expect(v, 'che la manda al pianeta e alle stanze').toMatch(/suPaeseScelto=\{\(codice\) => \{ setPaeseScelto\(codice\)/);
+  });
+
+  it('il nome del Paese lo dice il telefono, non un elenco scritto a mano', async () => {
+    const { nomePaese } = await import('../app/lib/schedaMondo.js');
+    expect(nomePaese('JP')).toBeTruthy();
+    expect(nomePaese('jp'), 'minuscolo o maiuscolo e lo stesso posto').toBe(nomePaese('JP'));
+    expect(nomePaese('ZZZ'), 'tre lettere non sono un paese').toBe('');
+    expect(nomePaese(''), 'e il vuoto resta vuoto').toBe('');
+  });
+
+  it('le due parole nuove ci sono in tutti e trentotto i pacchetti', async () => {
+    const { readdirSync } = await import('node:fs');
+    const file = readdirSync(join(process.cwd(), 'app/lib/locales')).filter((f) => f.endsWith('.js'));
+    expect(file.length).toBe(38);
+    for (const f of file) {
+      const pacco = await import(`../app/lib/locales/${f}`);
+      const o = pacco.default || Object.values(pacco)[0];
+      expect(typeof o.changeWord, `${f}: manca changeWord`).toBe('string');
+      expect(o.changeWord.length, `${f}: changeWord vuota`).toBeGreaterThan(0);
+      expect(typeof o.wholeWorld, `${f}: manca wholeWorld`).toBe('string');
+      expect(o.wholeWorld.length, `${f}: wholeWorld vuota`).toBeGreaterThan(0);
+    }
+  });
+});
