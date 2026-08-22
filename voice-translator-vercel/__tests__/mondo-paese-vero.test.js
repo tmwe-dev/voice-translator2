@@ -156,3 +156,63 @@ describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
     }
   });
 });
+
+describe('il riquadro del Paese dice solo numeri contati', () => {
+  it('la chiamata e una sola, o il riquadro comparirebbe a pezzi', () => {
+    const v = leggi('app/components/MondoView.js');
+    const chiamate = (v.match(/\/api\/mondo\/paese\?code=/g) || []).length;
+    expect(chiamate).toBe(1);
+  });
+
+  it('un numero che non sappiamo sparisce, non diventa zero', () => {
+    // zero e un'affermazione — «non c'e nessuno» — e dirla senza saperla
+    // e proprio cio che il documento di Luca vieta.
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/Number\.isFinite\(schedaPaese\.persone\) && schedaPaese\.persone > 0/);
+    expect(v, 'e se non c\'e niente lo si dice a parole').toMatch(/L\('quietHereNow'\)/);
+  });
+
+  it('il separatore sta FRA i pezzi, non davanti a ognuno', () => {
+    // visto dal vivo: con persone e stanze a zero restava un puntino
+    // orfano in testa alla riga.
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/pezzi\.join\(` \$\{PUNTO\} `\)/);
+  });
+
+  it('il riquadro sta SOPRA il pianeta: comparire non sposta niente', () => {
+    const v = leggi('app/components/MondoView.js');
+    const blocco = v.slice(v.indexOf('schedaPaese && discesa < 0.6'));
+    expect(blocco.slice(0, 400)).toMatch(/position: 'absolute'/);
+    expect(blocco.slice(0, 400), 'e non ruba i tocchi al globo').toMatch(/pointerEvents: 'none'/);
+  });
+
+  it('la rotta rifiuta un codice che non puo essere un Paese', () => {
+    const r = leggi('app/api/mondo/paese/route.js');
+    expect(r).toMatch(/\/\^\[A-Z\]\{2\}\$\/\.test\(c\)/);
+    expect(r).toMatch(/codice paese non valido/);
+  });
+
+  it('le persone sono quelle DENTRO le stanze vere, non la fotografia', () => {
+    const r = leggi('app/api/mondo/paese/route.js');
+    expect(r).toMatch(/redis\('MGET', \.\.\.chiavi\)/);
+    expect(r).toMatch(/Array\.isArray\(stanza\.members\) \? stanza\.members\.length : 0/);
+    expect(r, 'e senza lettura viva si dice che non si sa').toMatch(/dentro = null/);
+  });
+
+  it('dice anche quante stanze ha contato per approssimazione', () => {
+    // le stanze nate prima di b.397 il Paese non ce l'hanno: si arriva
+    // dalla lingua, ed e giusto che chi legge sappia quanto fidarsi.
+    const r = leggi('app/api/mondo/paese/route.js');
+    expect(r).toMatch(/approssimate: perApprossimazione/);
+  });
+
+  it("«quietHereNow» esiste in tutti e trentotto i pacchetti", async () => {
+    const { readdirSync } = await import('node:fs');
+    for (const f of readdirSync(join(process.cwd(), 'app/lib/locales')).filter((x) => x.endsWith('.js'))) {
+      const pacco = await import(`../app/lib/locales/${f}`);
+      const o = pacco.default || Object.values(pacco)[0];
+      expect(typeof o.quietHereNow, `${f}`).toBe('string');
+      expect(o.quietHereNow.length, `${f}: vuota`).toBeGreaterThan(0);
+    }
+  });
+});

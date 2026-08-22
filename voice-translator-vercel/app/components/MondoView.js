@@ -167,6 +167,33 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // in tutta la schermata non c'era un solo ascoltatore dello scorrimento,
   // e il globo restava identico sotto i contenuti che gli passavano sopra.
   const [discesa, setDiscesa] = useState(0);
+  // b.399 — IL RIQUADRO DEL PAESE. Dal documento di Luca: al termine
+  // dello zoom compaiono in sovrimpressione le persone attive, le stanze
+  // e i temi. Una chiamata sola, perche con due il riquadro comparirebbe
+  // a pezzi. E in SOVRIMPOSIZIONE sul pianeta, non in colonna: un
+  // elemento che appare non deve spingere giu quello che stai leggendo.
+  const [schedaPaese, setSchedaPaese] = useState(null);
+  useEffect(() => {
+    if (!paeseScelto) { setSchedaPaese(null); return; }
+    let vivo = true;
+    const taglio = new AbortController();
+    (async () => {
+      try {
+        const r = await fetch(`/api/mondo/paese?code=${encodeURIComponent(paeseScelto)}`, { signal: taglio.signal });
+        if (!r.ok) throw new Error(String(r.status));
+        const d = await r.json();
+        if (vivo) setSchedaPaese(d);
+      } catch (e) {
+        // Il riquadro e un di piu: se non arriva, non si mostra. Ma il
+        // guasto si registra — un riquadro che non compare mai e
+        // indistinguibile da uno che non esiste.
+        if (e?.name !== 'AbortError') console.warn('[b.399] scheda paese non arrivata:', e?.message);
+        if (vivo) setSchedaPaese(null);
+      }
+    })();
+    return () => { vivo = false; taglio.abort(); };
+  }, [paeseScelto]);
+
   const seguiScorrimento = useCallback((e) => {
     const y = e?.currentTarget?.scrollTop || 0;
     // 240 pixel: un primo blocco di contenuti. Oltre, il pianeta e sparito.
@@ -376,6 +403,45 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             background: `linear-gradient(180deg, rgba(5,7,15,${0.42 + discesa * 0.5}) 0%, rgba(5,7,15,${0.66 + discesa * 0.32}) 42%, rgba(5,7,15,${0.86 + discesa * 0.14}) 100%)`,
             transition: 'background 160ms linear',
           }} />
+          {/* b.399 — «136 persone attive · 8 stanze · 12 temi», nelle
+              parole del documento. Sta SOPRA il pianeta e non in colonna:
+              cosi comparire non sposta di un pixel quello che stai gia
+              leggendo. Sparisce da solo mentre scendi, insieme al globo:
+              e il cartello del posto in cui sei entrato, non un pezzo
+              della pagina.
+              Un numero che non sappiamo NON diventa zero: sparisce. Zero
+              e un'affermazione — «non c'e nessuno» — e dirla senza
+              saperla e proprio quello che il documento vieta. */}
+          {paeseScelto && schedaPaese && discesa < 0.6 && (
+            <div style={{
+              position: 'absolute', left: 0, right: 0, top: '52%', pointerEvents: 'none',
+              display: 'flex', justifyContent: 'center',
+              opacity: 1 - (discesa / 0.6), transition: 'opacity 160ms linear',
+            }}>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+                borderRadius: 999, background: 'rgba(6,9,18,0.62)',
+                border: `1px solid ${C.cardBorder}`, backdropFilter: 'blur(10px)',
+                fontFamily: FONT, fontSize: 12.5, fontWeight: 700, color: C.textSecondary,
+                maxWidth: '92%', flexWrap: 'wrap', justifyContent: 'center',
+              }}>
+                {/* Il separatore si mette FRA i pezzi che ci sono, non
+                    davanti a ognuno: con le persone e le stanze a zero,
+                    attaccarlo a ciascuno lasciava un puntino orfano in
+                    testa alla riga. Visto dal vivo. */}
+                {(() => {
+                  const pezzi = [];
+                  if (Number.isFinite(schedaPaese.persone) && schedaPaese.persone > 0) pezzi.push(`${schedaPaese.persone} ${L('inRoomWord')}`);
+                  if (Number.isFinite(schedaPaese.stanze) && schedaPaese.stanze > 0) pezzi.push(`${schedaPaese.stanze} ${L('tabRooms')}`);
+                  if (Number.isFinite(schedaPaese.temi) && schedaPaese.temi > 0) pezzi.push(`${schedaPaese.temi} ${L('topicsWord')}`);
+                  // Se qui non c'e niente da dire, si dice quello: un
+                  // riquadro vuoto sembra un guasto, non una piazza calma.
+                  if (!pezzi.length) return <span style={{ color: C.textMuted }}>{L('quietHereNow')}</span>;
+                  return <span>{pezzi.join(` ${PUNTO} `)}</span>;
+                })()}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
