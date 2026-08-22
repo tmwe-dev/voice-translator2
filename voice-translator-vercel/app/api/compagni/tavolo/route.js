@@ -30,6 +30,8 @@ async function handlePost(req) {
     const messaggi = Array.isArray(body.messaggi) ? body.messaggi.slice(-20) : [];
     // b.226 — DEBATE: obiettivo comune della tavola + azione 'sintesi'.
     const obiettivo = typeof body.obiettivo === 'string' ? body.obiettivo.slice(0, 300).trim() : '';
+    // b.391 — il documento che sta sul tavolo: non un turno, un contesto.
+    const briefing = typeof body.briefing === 'string' ? body.briefing.slice(0, 4000).trim() : '';
     const azione = typeof body.azione === 'string' ? body.azione : 'giro';
     // b.224 — obiettivi di vita nel prompt: anche al tavolo i Compagni li conoscono.
     const bloccoObiettivi = formattaObiettivi(Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : []);
@@ -77,7 +79,7 @@ async function handlePost(req) {
       // di quattro si riduceva sempre a una voce sola. Ora chi tace lo
       // decide da se, col canale esito di b.362 ("passo"), che guarda quel
       // singolo compagno e quel singolo turno.
-      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua });
+      const { system, prompt } = promptTavolo({ compagno: c, storia, ultimoUmano, altriQuestoGiro, obiettivo, convergenza, lingua, briefing });
       const r = await generaTesto({ system: system + bloccoObiettivi, prompt, provider: c.provider, modello: c.modello, userToken, maxTokens: 260, temperature: temperaturaLiberta(c.liberta) });
       if (!r.ok) {
         if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });

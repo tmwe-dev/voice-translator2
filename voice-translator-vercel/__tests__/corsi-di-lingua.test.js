@@ -200,3 +200,46 @@ describe('il carosello porta davanti la carta giusta', () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.391 — LE COSE COLLEGATE A META'.
+//
+// Secondo collaudo di Luca, e la lezione piu ripetuta della giornata:
+// un pezzo costruito, passato dalla schermata, validato dalla rotta,
+// accettato dalla funzione... e poi non consegnato all'ultimo passaggio.
+// Non da errore, non rompe niente: semplicemente non fa nulla, e il
+// difetto che doveva chiudere resta aperto sotto un lavoro che sembra
+// fatto.
+//
+// Queste prove guardano la CATENA, non i pezzi.
+// ═══════════════════════════════════════════════════════════════
+describe('la catena arriva fino in fondo', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const RAD = path.join(__dirname, '..');
+  const leggi = (p) => fs.readFileSync(path.join(RAD, p), 'utf8');
+
+  it('la lingua scelta e il profilo arrivano alla LEZIONE, non solo al programma', () => {
+    const g = leggi('app/lib/compagni/corsi/generatore.js');
+    const chiamata = g.slice(g.indexOf('promptLezione({ argomento, lezione'));
+    expect(chiamata.slice(0, 400), 'la lezione deve riceverli').toMatch(/linguaStudiata/);
+    expect(chiamata.slice(0, 400), 'la lezione deve riceverli').toMatch(/profilo/);
+  });
+
+  it('la categoria si DEDUCE: il menu che la chiedeva non esiste piu', () => {
+    const g = leggi('app/lib/compagni/corsi/generatore.js');
+    expect(g, 'senza questo ogni corso nasce "altro" e la rete di sicurezza non scatta')
+      .toMatch(/categoriaDaArgomento\(/);
+  });
+
+  it('il briefing del tavolo arriva ai Compagni come CONTESTO', () => {
+    const t = leggi('app/lib/compagni/tavolo.js');
+    expect(t).toMatch(/bloccoBriefing/);
+    const r = leggi('app/api/compagni/tavolo/route.js');
+    expect(r, 'la rotta lo accetta').toMatch(/body\.briefing/);
+    // (non si usa [^)]* perche dentro la chiamata ci sono altre parentesi)
+    expect(r, 'e lo passa').toMatch(/promptTavolo\(\{[\s\S]{0,200}briefing/);
+    const c = leggi('app/components/Life/Tavolo.js');
+    expect(c, 'la schermata lo manda').toMatch(/parlaTavolo\(\{[\s\S]{0,240}briefing/);
+  });
+});

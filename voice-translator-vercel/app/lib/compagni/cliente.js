@@ -221,8 +221,8 @@ export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi,
 
 /** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.
  *  Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
-export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo }) {
-  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo });
+export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing });
 }
 
 /** Sintesi del Debate: la conclusione condivisa verso l'obiettivo. */

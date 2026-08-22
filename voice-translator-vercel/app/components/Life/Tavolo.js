@@ -58,7 +58,7 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // di un tale chiamato "__briefing", e sporcavano la conversazione.
     const perServer = storia.filter(soloVoci).map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo });
+      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo, briefing });
       for (const r of (d.risposte || [])) {
         const c = perId.get(r.compagnoId) || {};
         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);

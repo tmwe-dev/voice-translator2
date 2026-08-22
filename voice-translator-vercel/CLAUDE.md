@@ -214,7 +214,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.391** (push #680) — dopo l'audit totale (69 reperti, tutti
+- Versione: **b.392** (push #681) — dopo l'audit totale (69 reperti, tutti
   chiusi tranne l'OCR dei Compiti, parcheggiato di proposito) e arrivata
   una lunga giornata di collaudo dal vivo con Luca su Mondo e sulla home.
   Fatto: il pianeta liberato dagli attrezzi che lo coprivano (ricerca e

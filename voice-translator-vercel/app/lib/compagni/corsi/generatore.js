@@ -16,7 +16,7 @@ import { promptProfilo, profiloEffettivo } from '../profili.js';
 import { RESPONSABILITA_MOTIVAZIONALE, RITMO_LEZIONE, RITMO_LINGUA, bloccoFormeDiProva, contestoStudente, riassuntoProgresso, ISTRUZIONE_APPUNTO, staccaAppunto } from './imparare.js';
 import { rilevaLinguaStudiata, istruzioniLingua } from './lingua.js';
 import { istruzioniDaScheda } from './schede.js';
-import { istruzioniProfilo } from './catalogo.js';
+import { istruzioniProfilo, categoriaDaArgomento } from './catalogo.js';
 import { filtraFontiCertificate } from './fonti.js';
 import { istruzioneScena } from './scena.js';
 import { assistentePer } from './assistenti.js';
@@ -344,7 +344,11 @@ export function elencoLezioniDa(dati) {
 }
 
 /** Genera il contenuto di una lezione; per le materie certificate cerca prima le fonti. */
-export async function generaLezione({ argomento, categoria = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '', materialeTesto = '', ripasso = false } = {}, { userToken = null } = {}) {
+export async function generaLezione({ argomento, categoria: categoriaChiesta = 'altro', lezione, livello = 'base', lingua = 'it', docente = null, osservazioni = [], progresso = [], notaPersona = '', durata = '', materialeTesto = '', ripasso = false, linguaStudiata = null, profilo = '' } = {}, { userToken = null } = {}) {
+  // b.391 — la categoria si DEDUCE se non ne e stata scelta una: il menu
+  // che la chiedeva non esiste piu, e senza questo ogni corso di
+  // farmacologia veniva trattato come un corso di giardinaggio.
+  const categoria = categoriaDaArgomento(`${argomento} ${lezione?.titolo || ''}`, categoriaChiesta);
   let fonti = [];
   // ── INIZIO b.247 — FAIL-CLOSED sulle materie certificate ──
   // Scelta dichiarata: per una materia che PRETENDE fonti (medicina,
@@ -404,7 +408,12 @@ export async function generaLezione({ argomento, categoria = 'altro', lezione, l
     }
   }
   // ── FINE b.247 ──
-  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata, materialeTesto, ripasso });
+  // b.391 — LA LINGUA SCELTA E IL PROFILO NON ARRIVAVANO QUI. Il lavoro
+  // di ieri (schede lingua, profili di chi studia) veniva passato dalla
+  // schermata, validato dalla rotta, accettato da promptLezione... e poi
+  // questa riga non glielo dava. Arrivava solo al PROGRAMMA delle
+  // lezioni, non alle lezioni stesse: cioe la parte che si legge.
+  const { system, prompt } = promptLezione({ argomento, lezione, livello, lingua, docente, fonti, osservazioni, progresso, fontiNonTrovate, notaPersona, durata, materialeTesto, ripasso, linguaStudiata, profilo });
   // b.301 PUNTO 5: la lezione universitaria/ricercatore ha piu respiro.
   // b.308 — spazio piu generoso: una lezione da documentario non deve
   // uscire tagliata a meta per un tetto stretto. Il costo segue la mole, ma

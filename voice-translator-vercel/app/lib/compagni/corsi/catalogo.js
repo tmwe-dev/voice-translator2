@@ -126,6 +126,45 @@ function getLivello(id) { return LIVELLI.find(l => l.id === id) || null; }
 function getCategoria(id) { return CATEGORIE.find(c => c.id === id) || null; }
 export function categoriaCertificata(id) { return !!getCategoria(id)?.fontiCertificate; }
 
+// ═══════════════════════════════════════════════════════════════
+// b.391 — LA RETE DI SICUREZZA ERA SCOLLEGATA DA MESI.
+//
+// Le materie che pretendono fonti (medicina, psicologia, nutrizione,
+// benessere) hanno una regola severa: se la ricerca fonti fallisce, la
+// lezione NON si genera. E dal collaudo di oggi ho aggiunto anche il
+// filtro sui domini, che butta via i siti di consumo.
+//
+// Nessuna delle due e mai scattata. Il motivo: la categoria si sceglieva
+// da un menu che b.300 ha TOLTO — «basta il campo di ricerca». Da
+// allora ogni corso nasce come "altro", e "altro" non e certificata.
+// Quindi un corso di FARMACOLOGIA a livello Ricercatore veniva trattato
+// come un corso di giardinaggio, e sotto le controindicazioni di un
+// betabloccante compariva un sito di fitness per consumatori.
+//
+// Togliere un menu era giusto: chiedere la categoria era una domanda
+// burocratica. Ma la categoria serviva a qualcosa, e quel qualcosa e
+// rimasto scollegato. Adesso si DEDUCE dall'argomento, come si fa gia
+// per la lingua studiata: chi scrive "Farmacologia" non deve anche
+// dichiarare che e medicina.
+// ═══════════════════════════════════════════════════════════════
+const INDIZI_CATEGORIA = [
+  ['medicina', /\b(medicin|farmac|farmacolog|patolog|clinic|diagnos|terapi|malatt|sintom|anatomi|fisiolog|cardiolog|neurolog|oncolog|pediatr|chirurg|antibiotic|vaccin|posolog|controindicaz|effetti collaterali|betabloccant|anticoagulant|insulin|dosagg)/i],
+  ['psicologia', /\b(psicolog|psichiatr|psicoterap|ansia|depression|trauma|disturb[oi] (?:d\w+ )?(?:personalit|alimentar|umore)|cognitiv[oa] comportament)/i],
+  ['nutrizione', /\b(nutrizion|dietolog|alimentazion|dieta|integrator|macronutrient|fabbisogno calor)/i],
+  ['benessere', /\b(benesser|salute ment|sonno e salute|stress cronico)/i],
+];
+
+/**
+ * La categoria dedotta dall'argomento, quando non ne e stata scelta una
+ * vera. Restituisce quella data se e gia significativa.
+ */
+export function categoriaDaArgomento(argomento = '', categoriaScelta = 'altro') {
+  if (categoriaScelta && categoriaScelta !== 'altro') return categoriaScelta;
+  const t = String(argomento || '');
+  for (const [id, re] of INDIZI_CATEGORIA) if (re.test(t)) return id;
+  return categoriaScelta || 'altro';
+}
+
 // b.363 — qui c'era lezioniPerLivello, che dava il minimo di lezioni per
 // livello. E stata sostituita da lezioniProfonde (b.301), che ai livelli
 // alti prende la coda della forbice invece del minimo; da allora nessuno

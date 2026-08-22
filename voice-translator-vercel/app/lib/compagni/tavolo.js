@@ -42,12 +42,29 @@ const REGOLE_DIBATTITO =
  * @param convergenza      istruzione di convergenza (facoltativa)
  * @param lingua
  */
-export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it' } = {}) {
+export function promptTavolo({ compagno, storia = [], ultimoUmano = '', altriQuestoGiro = [], obiettivo = '', convergenza = '', lingua = 'it', briefing = '' } = {}) {
   const nome = (compagno && compagno.nome) || 'Ospite';
   const persona = (compagno && compagno.personalita) || '';
   const bloccoObiettivo = obiettivo
     ? `\n\nOBIETTIVO COMUNE DELLA TAVOLA (tieni la rotta su questo): ${obiettivo}
 Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che manca, un'ambiguita della domanda o un presupposto non verificato E' un passo avanti.`
+    : '';
+  // b.391 — IL DOCUMENTO CHE AVETE DAVANTI.
+  //
+  // Secondo collaudo di Luca: in cima al tavolo c'era il briefing con i
+  // numeri (inflazione oltre il 6%, alimentari +10%, stipendi +2,6%), e
+  // due schermate sotto tutti e tre i Compagni rispondevano «mi manca un
+  // dato specifico». I dati non mancavano: erano nel primo messaggio
+  // della conversazione, e non arrivavano mai a loro.
+  //
+  // Venivano tolti apposta, e per un motivo giusto: infilati fra i turni
+  // sembravano il discorso di un tale chiamato «__briefing» e sporcavano
+  // la conversazione. Ma la conclusione sbagliata era buttarli — un
+  // briefing non e un TURNO, e un DOCUMENTO. Quindi non entra nella
+  // storia: entra nel CONTESTO, come una cosa che sta sul tavolo e che
+  // tutti possono guardare.
+  const bloccoBriefing = briefing
+    ? `\n\nSUL TAVOLO C'E' QUESTO, e lo avete letto tutti:\n${String(briefing).slice(0, 2000)}\n\nUSALO. Se contiene un numero che risponde alla domanda, DILLO invece di dire che ti manca il dato: dire "mi manca un dato" con il dato davanti e la cosa peggiore che puoi fare qui.`
     : '';
   const bloccoConvergenza = convergenza ? `\n\n${convergenza}` : '';
   // b.231 — involucro comune: al Tavolo nessuno ha ricerca/fonti in tempo
@@ -68,7 +85,7 @@ Avvicinare il gruppo al risultato vale anche in negativo: nominare un dato che m
 `${persona}
 Sei ${nome}, a una tavola rotonda con una persona e altri interlocutori. Rispondi in prima persona, conciso e sostanzioso (2-3 frasi). Parli con la persona e reagisci a cosa dicono gli altri, sempre puntando al risultato. Rispondi nella lingua: ${lingua}.
 
-${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoConvergenza}${involucro}`;
+${REGOLE_DIBATTITO}${bloccoObiettivo}${bloccoBriefing}${bloccoConvergenza}${involucro}`;
 
   const passato = (storia || []).slice(-8)
     .map(m => `[${m.ruolo === 'persona' ? 'persona' : m.ruolo}]: ${m.testo}`).join('\n');
