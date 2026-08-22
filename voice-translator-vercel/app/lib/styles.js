@@ -86,7 +86,14 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#eef2ff',
       textSecondary: 'rgba(238,242,255,0.82)',
       textTertiary: 'rgba(238,242,255,0.66)',
-      textMuted: 'rgba(238,242,255,0.42)',
+      // b.395 — il grigio secondario era sotto soglia anche qui, non solo
+      // sul tema chiaro: misurato sopra la carta, fra 3,60 e 3,90 contro
+      // il minimo di 4,5. Meno grave del 2,74 del chiaro (si leggeva, ma
+      // faticando). Serviva fra il 47 e il 50 per cento a seconda del
+      // tema: 52 per tutti e cinque, cosi resta un valore solo e c'e
+      // margine. Decisione di Luca, non mia: cambia l'aspetto di tutta
+      // l'applicazione, e cambiarlo di iniziativa non stava a me.
+      textMuted: 'rgba(238,242,255,0.52)',
       cardBg: 'rgba(140,170,255,0.06)',
       cardBorder: 'rgba(160,190,255,0.14)',
       inputBg: 'rgba(140,170,255,0.05)',
@@ -133,7 +140,7 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#fff4ea',
       textSecondary: 'rgba(255,244,234,0.82)',
       textTertiary: 'rgba(255,244,234,0.66)',
-      textMuted: 'rgba(255,244,234,0.42)',
+      textMuted: 'rgba(255,244,234,0.52)',
       cardBg: 'rgba(255,180,120,0.06)',
       cardBorder: 'rgba(255,190,140,0.14)',
       inputBg: 'rgba(255,180,120,0.05)',
@@ -180,7 +187,7 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#f2efe8',
       textSecondary: 'rgba(242,239,232,0.82)',
       textTertiary: 'rgba(242,239,232,0.66)',
-      textMuted: 'rgba(242,239,232,0.42)',
+      textMuted: 'rgba(242,239,232,0.52)',
       cardBg: 'rgba(242,239,232,0.05)',
       cardBorder: 'rgba(242,239,232,0.12)',
       inputBg: 'rgba(242,239,232,0.04)',
@@ -227,7 +234,7 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#ece8f8',
       textSecondary: 'rgba(236,232,248,0.82)',
       textTertiary: 'rgba(236,232,248,0.66)',
-      textMuted: 'rgba(236,232,248,0.42)',
+      textMuted: 'rgba(236,232,248,0.52)',
       cardBg: 'rgba(201,184,245,0.06)',
       cardBorder: 'rgba(201,184,245,0.14)',
       inputBg: 'rgba(201,184,245,0.05)',
@@ -274,7 +281,7 @@ export default function getStyles(theme = 'deep') {
       textPrimary: '#f4f7fc',
       textSecondary: 'rgba(244,247,252,0.84)',
       textTertiary: 'rgba(244,247,252,0.66)',
-      textMuted: 'rgba(244,247,252,0.42)',
+      textMuted: 'rgba(244,247,252,0.52)',
       cardBg: 'rgba(244,247,252,0.055)',
       cardBorder: 'rgba(130,175,255,0.16)',
       inputBg: 'rgba(244,247,252,0.045)',

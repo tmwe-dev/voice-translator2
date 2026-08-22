@@ -29,6 +29,26 @@ describe('il grigio secondario del tema chiaro non si leggeva', () => {
     expect(r, `contrasto misurato ${r.toFixed(2)}:1 — il minimo e 4,5`).toBeGreaterThanOrEqual(4.5);
   });
 
+  it('e NESSUN tema lascia indietro il suo grigio secondario', () => {
+    // b.395, decisione di Luca: la stessa misura vale per tutti e sei.
+    const s = leggi('app/lib/styles.js');
+    const temi = [...s.matchAll(/^ {4}([a-z]+): \{([\s\S]*?)^ {4}\},/gm)];
+    const esaminati = [];
+    for (const [, nome, corpo] of temi) {
+      const bg = corpo.match(/\n {6}bg: '(#[0-9a-f]{6})'/i);
+      const carta = corpo.match(/cardBg: '(rgba\([^)]*\))'/);
+      const muted = corpo.match(/textMuted: '(rgba\([^)]*\))'/);
+      if (!bg || !carta || !muted) continue;
+      const fondo = [1, 3, 5].map((i) => parseInt(bg[1].substr(i, 2), 16));
+      const c = rgba(carta[1]); const m = rgba(muted[1]);
+      const cartaPiena = sopra(c.slice(0, 3), fondo, c[3]);
+      const r = contrasto(sopra(m.slice(0, 3), cartaPiena, m[3]), cartaPiena);
+      esaminati.push(nome);
+      expect(r, `tema ${nome}: ${r.toFixed(2)}:1, il minimo e 4,5`).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(esaminati.length, 'e li ha guardati tutti e sei').toBe(6);
+  });
+
   it('e il 42% di partenza era davvero sotto: la prova sa distinguere', () => {
     const carta = sopra([255, 255, 255], [247, 248, 252], 0.62);
     const vecchio = sopra([16, 19, 28], carta, 0.42);
