@@ -1,11 +1,17 @@
 'use client';
-import { memo, useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { memo, useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
 import { vaInVetrina } from '../lib/decisioni.js';
 import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
 import VoiceCallOverlay from './VoiceCallOverlay.js';
 import MessageList from './MessageList.js';
+// b.372 — IL CAROSELLO DI RADIOCHAT, portato qui come SECONDO MODO di
+// leggere la stessa chat (ordine di Luca). Si carica solo se lo si
+// apre: si porta dietro three.js, e chi non lo usa non deve scaricarlo.
+import { daBarTalk } from './Carosello3D.js';
+const Carosello3D = lazy(() => import('./Carosello3D.js'));
+import ComandoZoom from './ui/ComandoZoom.js';
 import { IconCamera } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
@@ -53,6 +59,36 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
 
   // Il messaggio a cui si sta rispondendo, mostrato sopra il campo di
   // scrittura finche non si invia o non si annulla.
+  // b.372 — il carosello: quale carta si guarda, e le due manopole.
+  // Zoom e altezza si ricordano, come in RadioChat: sono regolazioni che
+  // uno fa una volta per il suo schermo, non a ogni apertura.
+  const [modoCarosello, setModoCarosello] = useState(false);
+  const [indiceCarosello, setIndiceCarosello] = useState(0);
+  const [zoomCarosello, setZoomCarosello] = useState(() => {
+    try { return parseFloat(localStorage.getItem('bartalk_carosello_zoom')) || 1.0; }
+    catch { /* memoria del browser negata (navigazione privata): si riparte dal valore normale */ return 1.0; }
+  });
+  const [altezzaCarosello, setAltezzaCarosello] = useState(() => {
+    try { return parseInt(localStorage.getItem('bartalk_carosello_alto')) || 0; }
+    catch { /* memoria del browser negata: si riparte dall'altezza normale */ return 0; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('bartalk_carosello_zoom', String(zoomCarosello)); }
+    catch { /* non poter RICORDARE una manopola non e un guasto da segnalare a nessuno */ }
+  }, [zoomCarosello]);
+  useEffect(() => {
+    try { localStorage.setItem('bartalk_carosello_alto', String(altezzaCarosello)); }
+    catch { /* non poter ricordare l'altezza della vista non e un guasto da dire a nessuno */ }
+  }, [altezzaCarosello]);
+
+  // i messaggi tradotti nella forma che il carosello si aspetta. Si
+  // rifa solo quando cambiano davvero: costruire otto immagini a ogni
+  // respiro sarebbe un macello.
+  const messaggiCarosello = useMemo(
+    () => (messages || []).map((m) => daBarTalk(m, myName, myLang)),
+    [messages, myName, myLang]
+  );
+
   const [rispostaA, setRispostaA] = useState(null);
   const [schedaChat, setSchedaChat] = useState(null); // { tipo, dati } | null — link condiviso in chat, aperto (b.154)
 
@@ -561,6 +597,39 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       )}
 
       {/* ── Messages ── */}
+      {/* b.372 — DUE MODI DI LEGGERE LA STESSA CHAT. Il carosello non si
+          aggiunge sotto l'elenco: lo SOSTITUISCE nello stesso posto,
+          stessa altezza. E il tasto per scambiarli sta sopra, su una riga
+          che c'era gia. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 12px', flexShrink: 0 }}>
+        <button onClick={() => { vibrate(6); setModoCarosello(v => !v); }}
+          aria-pressed={modoCarosello}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, padding: '5px 11px',
+            borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 11.5, fontWeight: 700,
+            background: modoCarosello ? 'rgba(38,217,176,0.14)' : 'rgba(255,255,255,0.05)',
+            border: `1px solid ${modoCarosello ? 'rgba(38,217,176,0.45)' : 'rgba(255,255,255,0.10)'}`,
+            color: modoCarosello ? '#26D9B0' : 'rgba(214,226,245,0.75)',
+            WebkitTapHighlightColor: 'transparent',
+          }}>
+          {modoCarosello ? L('listView') : L('carouselView')}
+        </button>
+      </div>
+
+      {modoCarosello ? (
+        <Suspense fallback={<div style={{ flex: 1 }} />}>
+          <Carosello3D
+            messages={messaggiCarosello}
+            currentIndex={indiceCarosello}
+            onIndexChange={setIndiceCarosello}
+            zoom={zoomCarosello}
+            verticalOffset={altezzaCarosello}
+            L={L} />
+          <ComandoZoom
+            zoom={zoomCarosello} onZoomChange={setZoomCarosello}
+            verticalOffset={altezzaCarosello} onVerticalOffsetChange={setAltezzaCarosello} />
+        </Suspense>
+      ) : (
       <MessageList
         messages={messages} streamingMsg={streamingMsg}
         myName={myName} myLang={myLang} prefs={prefs}
@@ -602,6 +671,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           setTaxiVisible(true);
         }}
       />
+      )}
 
       {/* Captions Overlay */}
       {showCaptions && partnerLiveText && (partnerSpeaking || partnerTyping) && (

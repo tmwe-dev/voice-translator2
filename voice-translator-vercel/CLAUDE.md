@@ -336,7 +336,14 @@ benvenuto che fa lo stesso lavoro, ed e l'unica difesa contro gli
 account usa-e-getta. Si dice con calma ("li abbiamo coperti noi,
 ricarichi quando ti va"), non con un allarme rosso: se lo racconti come
 un'infrazione hai sprecato il gesto. Vale per tutto, non solo la TV.
-DA DECIDERE con Luca: quanto si puo sforare, e se il tetto cresce.
+DECISO E IN PRODUZIONE (b.372, Luca: "la tolleranza decidi tu"):
+TRENTA MINUTI, la stessa misura del benvenuto — un numero solo da
+ricordare in tutto il portafoglio, e circa un sesto del pacchetto piu
+piccolo, cioe le stesse proporzioni dei due euro su dieci dell'esempio
+della scheda telefonica. Tolleranza ZERO per chi non ha mai ricaricato.
+Il numero vive in una funzione sola del database (wallet_tolleranza,
+migrazione 012, APPLICATA e verificata: 0 per chi non ha mai ricaricato,
+1800 per chi si).
 
 **CORREZIONE a "2000 spettatori costano come 20"**: vero per la
 TRADUZIONE (costo fisso per lingua), FALSO per la CONSEGNA (banda, che
@@ -488,6 +495,34 @@ nessuna schermata.
 
 **Ancora da fare, se Luca vuole**: bloccare una persona (non esiste;
 esiste solo segnalare discussioni e commenti).
+
+### Il carosello 3D della chat (b.372)
+
+Portato da RadioChat (~/Desktop/radiochat) come SECONDO MODO di leggere
+la stessa chat, ordine di Luca. Copiato, non riscritto: cambiati solo i
+tipi (li era TypeScript), i nomi dei campi dei messaggi (una funzione
+sola in cima, daBarTalk, invece di rincorrere i nomi in venti punti), e
+i colori per agente — che li erano Albert/Newton/Pitagora e qui non
+esistono: ci sono persone, e i due colori human/system c'erano gia.
+
+QUATTRO DIFETTI VERI TROVATI NELL'ORIGINALE E RIPARATI QUI:
+1. LE CARTE SI DISALLINEAVANO dal nono messaggio in poi. Si teneva un
+   elenco dei messaggi gia disegnati e si saltava chi era dentro: ma al
+   nono la finestra scorre, e il messaggio che passa dalla carta 1 alla
+   carta 0 risulta "gia fatto" e viene saltato. Da li ogni carta mostra
+   il messaggio del vicino — testo sbagliato attribuito alla persona
+   sbagliata. Ora non si ricorda "chi ho disegnato" ma COSA C'E' IN OGNI
+   CARTA.
+2. LA MEMORIA NON SI LIBERAVA: otto tele da 800x1100 per la densita
+   dello schermo restavano appese a ogni chiusura della chat.
+3. LA DENSITA' SENZA TETTO: su un telefono a densita tre si disegnavano
+   nove volte i pixel dello schermo.
+4. L'INQUADRATURA SALTAVA all'apertura: la scena nasceva a 62/67 e il
+   pezzo dello zoom ripartiva sempre da 50 — la distinzione
+   telefono/schermo non ha mai avuto effetto.
+
+Si carica solo se lo si apre (si porta dietro three.js). Non si aggiunge
+sotto l'elenco: lo SOSTITUISCE nello stesso posto.
 
 ### TRE COPIE DI BARTALK GIRANO SUL MAC DI LUCA — attenzione ai collaudi
 - porta 3005 = /Users/teameurope/Downloads/voice-translator2  ← LA NOSTRA
