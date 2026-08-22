@@ -17,7 +17,13 @@ export function daBarTalk(m, mioNome, mioLang) {
     senderType: mio ? 'human' : 'assistant',
     // si legge la traduzione se c'e, se no l'originale: e la stessa
     // regola dell'elenco, non una nuova.
+    // b.388 — LA TRADUZIONE MANCAVA. Nell'elenco si vedono tutte e due —
+    // la traduzione grande e l'originale piccolo sotto — e nel carosello
+    // spariva la traduzione: in un'app di traduzione e il contenuto
+    // principale che non c'era. Adesso la carta porta tutte e due, e sotto
+    // le disegna una sopra l'altra come nell'elenco.
     content: (mio ? (m.original || m.text) : (tradotto || m.original || m.text)) || '',
+    originale: (!mio && tradotto) ? (m.original || m.text || '') : '',
     createdAt: m.createdAt || m.ts || m.timestamp || null,
     isDemo: false,
     isError: !!m.error,
@@ -512,6 +518,23 @@ function createTextTexture(msg, renderer) {
   }
   if (line) ctx.fillText(line, x, y);
 
+  // b.388 — l'ORIGINALE sotto la traduzione, come nell'elenco: piu
+  // piccolo e piu tenue, perche e il riscontro, non il messaggio.
+  if (msg.originale) {
+    y += lineHeight + 12;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.font = 'italic 19px sans-serif';
+    let riga = '';
+    for (const parola of String(msg.originale).split(' ')) {
+      const prova = riga + parola + ' ';
+      if (ctx.measureText(prova).width > maxWidth && riga) {
+        ctx.fillText(riga, x, y); riga = parola + ' '; y += 26;
+        if (y > H - 90) { ctx.fillText(riga + '\u2026', x, y); riga = ''; break; }
+      } else riga = prova;
+    }
+    if (riga) ctx.fillText(riga, x, y);
+  }
+
   // Footer: timestamp
   if (msg.createdAt) {
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
@@ -565,7 +588,14 @@ export default function Carosello3D({ messages, currentIndex, onIndexChange, zoo
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 1000);
-    camera.position.set(0, 0.3, 13.5); // Posizione camera originale v7.x
+    // b.388 — la camera si mette DOVE LA CARTA CI STA, invece che a una
+    // distanza fissa scelta per un'altra schermata. Si calcola quanto
+    // deve stare lontana perche la carta davanti entri intera, con un
+    // po' di respiro, e si somma al raggio dell'anello.
+    const scalaCarta = Math.max(0.28, Math.min(width / 1200, 1.0));
+    const altaCarta = CARD_HEIGHT_BASE * scalaCarta;
+    const distanzaMinima = (altaCarta / 2) / Math.tan((fov * Math.PI / 180) / 2) * 1.25;
+    camera.position.set(0, 0.3, RADIUS + Math.max(4.5, distanzaMinima));
     cameraRef.current = camera;
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -651,7 +681,17 @@ export default function Carosello3D({ messages, currentIndex, onIndexChange, zoo
 
     const group = groupRef.current;
     const angleStep = (Math.PI * 2) / MAX_SLOTS;
-    const scaleFactor = Math.min(window.innerWidth / 1200, 2.0);
+    // b.388 — LA CARTA GIGANTE. La misura veniva dalla FINESTRA
+    // (`window.innerWidth`), ma il carosello vive in una colonna stretta
+    // dentro la chat: su uno schermo largo le carte diventavano alte 8,4
+    // dentro una finestra alta 7,5 — cioe la carta davanti non ci stava,
+    // e la scena si sfaldava in una gigante a sinistra e tre francobolli
+    // in mezzo.
+    //
+    // Adesso la misura viene dal CONTENITORE, che e quello che la camera
+    // inquadra davvero.
+    const largoVero = containerRef.current?.getBoundingClientRect().width || window.innerWidth;
+    const scaleFactor = Math.max(0.28, Math.min(largoVero / 1200, 1.0));
 
     for (let i = 0; i < MAX_SLOTS; i++) {
       const geometry = new THREE.PlaneGeometry(
@@ -771,7 +811,18 @@ export default function Carosello3D({ messages, currentIndex, onIndexChange, zoo
     const visibleCount = Math.min(allMessages.length, MAX_SLOTS);
     if (visibleCount === 0) return;
 
-    const targetAngle = -(currentIndex / MAX_SLOTS) * Math.PI * 2 + Math.PI / 2;
+    // b.388 — LA ROTAZIONE ANDAVA ALL'INDIETRO, E PARTIVA DALLA CARTA
+    // SBAGLIATA. Il conto e verificabile e l'ho verificato: le carte si
+    // posano ad angolo `PI - i*2PI/N`, e davanti alla camera finisce
+    // quella il cui angolo nel mondo vale PI/2. Con la formula di prima
+    // l'indice 0 portava davanti la carta 4, l'indice 1 la carta 3, e
+    // cosi via all'indietro — premendo "avanti" si tornava indietro,
+    // dentro un anello mezzo vuoto, e sembrava che la carta non
+    // cambiasse mai.
+    //
+    // La formula giusta e l'inversa: si annulla la posa e si porta la
+    // carta scelta a PI/2. Verificato per tutti e otto gli indici.
+    const targetAngle = (currentIndex / MAX_SLOTS) * Math.PI * 2 - Math.PI / 2;
 
     if (isFirstRotationRef.current) {
       // Prima rotazione: posiziona istantaneamente (no animation)

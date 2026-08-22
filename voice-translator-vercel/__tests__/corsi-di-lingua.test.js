@@ -152,3 +152,51 @@ describe('le tavole', () => {
     expect(elenco.split(',').length).toBeLessThanOrEqual(5);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// b.388 — IL CAROSELLO GIRAVA ALL'INDIETRO.
+//
+// Secondo collaudo di Luca: «premendo il tasto avanti il contatore sale
+// ma la carta davanti resta sempre la stessa». Il conto e verificabile,
+// e infatti sbagliava: le carte si posano ad angolo `PI - i*2PI/N`, e
+// davanti alla camera finisce quella il cui angolo nel mondo vale PI/2.
+// Con la formula di prima l'indice 0 portava davanti la carta 4 e
+// l'indice 1 la carta 3 — cioe premendo "avanti" si andava indietro,
+// dentro un anello mezzo vuoto.
+//
+// Questa prova rifa il conto. Non guarda il codice: guarda la geometria.
+// ═══════════════════════════════════════════════════════════════
+describe('il carosello porta davanti la carta giusta', () => {
+  const N = 8;
+  const posa = (i) => Math.PI - i * (2 * Math.PI / N);
+  const rotazione = (i) => (i / N) * Math.PI * 2 - Math.PI / 2;   // quella nuova
+  const davanti = (phi) => {
+    for (let j = 0; j < N; j++) {
+      let a = (posa(j) + phi) % (2 * Math.PI);
+      if (a < 0) a += 2 * Math.PI;
+      if (Math.abs(a - Math.PI / 2) < 1e-9) return j;
+    }
+    return -1;
+  };
+
+  it('ogni indice porta davanti LA SUA carta, non un altra', () => {
+    for (let i = 0; i < N; i++) expect(davanti(rotazione(i)), `indice ${i}`).toBe(i);
+  });
+
+  it('e andando avanti si va AVANTI', () => {
+    const ordine = [0, 1, 2, 3].map((i) => davanti(rotazione(i)));
+    expect(ordine).toEqual([0, 1, 2, 3]);
+  });
+
+  it('la carta davanti ci sta nell inquadratura, su ogni schermo', () => {
+    const R = 7.8, ALTA = 7.04;
+    for (const [largo, fov] of [[360, 62], [440, 67], [1200, 67], [1920, 67]]) {
+      const scala = Math.max(0.28, Math.min(largo / 1200, 1.0));
+      const alta = ALTA * scala;
+      const dist = Math.max(4.5, (alta / 2) / Math.tan((fov * Math.PI / 180) / 2) * 1.25);
+      const finestra = 2 * dist * Math.tan((fov * Math.PI / 180) / 2);
+      expect(alta, `schermo ${largo}`).toBeLessThan(finestra);
+      expect(R + dist, `schermo ${largo}`).toBeGreaterThan(R);
+    }
+  });
+});
