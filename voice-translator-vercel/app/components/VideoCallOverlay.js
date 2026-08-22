@@ -510,14 +510,14 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             onClick={() => webrtc.toggleVideo()}
             active={webrtc.videoEnabled}
             icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
-            label="Camera"
+            label={L('cameraWord')}
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
           <ControlBtn
             onClick={() => webrtc.toggleAudio()}
             active={webrtc.audioEnabled}
             icon={webrtc.audioEnabled ? <IconMic size={20}/> : <IconVolumeOff size={20}/>}
-            label="Micro"
+            label={L('micWord')}
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
           <ControlBtn
@@ -552,7 +552,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
               }}
               active={interpreterActive && !stanzaDiretta && !stanzaConPiuDiDue}
               icon={<IconGlobe size={18}/>}
-              label={interpreterActive ? 'Traduce' : 'Traduci'}
+              label={interpreterActive ? L('translatingWord') : L('translateWord')}
               color={(stanzaDiretta || stanzaConPiuDiDue) ? '#8b93a7' : '#3ddc84'}
               activeColor="rgba(61,220,132,0.18)" size={46}
             />
@@ -561,7 +561,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             onClick={() => setMostraTesto(v => !v)}
             active={mostraTesto}
             icon={<span style={{ fontSize: 13, fontWeight: 900, letterSpacing: 0.5 }}>CC</span>}
-            label="Sottotitoli"
+            label={L('subtitlesWord')}
             color="#38e1ff" activeColor="rgba(56,225,255,0.18)" size={46}
           />
           <ControlBtn
@@ -571,14 +571,14 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             }}
             active={volTTS > 0.01}
             icon={volTTS > 0.01 ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
-            label="Voce"
+            label={L('voiceWord')}
             color="#3ddc84" activeColor="rgba(61,220,132,0.18)" size={46}
           />
           <ControlBtn
             onClick={() => setVolumiAperti(v => !v)}
             active={volumiAperti}
             icon={<IconVolumeLow size={18}/>}
-            label="Volumi"
+            label={L('volumesWord')}
             color="#94a3b8" activeColor="rgba(148,163,184,0.2)" size={46}
           />
           {typeof navigator !== 'undefined' && navigator.mediaDevices?.getDisplayMedia && webrtc.condividiSchermo && (
@@ -696,7 +696,7 @@ const VideoCallOverlay = memo(function VideoCallOverlay({
             onClick={() => webrtc.toggleVideo()}
             active={webrtc.videoEnabled}
             icon={webrtc.videoEnabled ? <IconCamera size={20}/> : <IconCameraOff size={20}/>}
-            label={webrtc.videoEnabled ? 'Camera' : 'OFF'}
+            label={webrtc.videoEnabled ? L('cameraWord') : L('cameraOffWord')}
             color="#22c55e" activeColor="rgba(34,197,94,0.15)"
           />
           <ControlBtn size={48}

@@ -317,8 +317,8 @@ export default function StanzaVideoGruppo({ roomId, roomSessionToken, mioNome, o
               la STESSA preferenza del profilo. */}
           <div style={{ marginTop: 12, display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
             {[
-              { id: 'camera', acceso: cameraAccesa, su: () => setCameraAccesa(v => !v), icona: cameraAccesa ? '\u{1F4F9}' : '\u{1F6AB}', parola: cameraAccesa ? 'Camera' : 'Spenta' },
-              { id: 'micro', acceso: microfonoAcceso, su: () => setMicrofonoAcceso(v => !v), icona: microfonoAcceso ? '\u{1F3A4}' : '\u{1F507}', parola: microfonoAcceso ? 'Micro' : 'Muto' },
+              { id: 'camera', acceso: cameraAccesa, su: () => setCameraAccesa(v => !v), icona: cameraAccesa ? '\u{1F4F9}' : '\u{1F6AB}', parola: cameraAccesa ? L('cameraWord') : L('cameraOffWord') },
+              { id: 'micro', acceso: microfonoAcceso, su: () => setMicrofonoAcceso(v => !v), icona: microfonoAcceso ? '\u{1F3A4}' : '\u{1F507}', parola: microfonoAcceso ? L('micWord') : L('mutedWord') },
             ].map(b => (
               <button key={b.id} onClick={() => { vibrate(); b.su(); }} aria-pressed={b.acceso}
                 style={{ width: 74, padding: '10px 4px', borderRadius: 14, cursor: 'pointer', fontFamily: FONT,

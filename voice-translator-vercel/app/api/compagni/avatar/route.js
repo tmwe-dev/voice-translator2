@@ -30,6 +30,52 @@ async function dalCassetto(sb, chiave) {
   } catch { return null; }
 }
 
+// ═══════════════════════════════════════════════════════════════
+// b.381 — "SI PAGA UNA VOLTA SOLA" NON ERA GARANTITO.
+//
+// La sequenza era: guardo nel cassetto, non c'e, GENERO (a pagamento),
+// ripongo. Due persone che aprono la stessa lezione nello stesso momento
+// non si vedono: tutte e due trovano vuoto, tutte e due pagano, e la
+// seconda immagine sovrascrive la prima. Il cassetto risparmia dalla
+// SECONDA volta in poi, ma non protegge dalla prima volta fatta in due.
+//
+// Serve una PRENOTAZIONE, e deve essere atomica. L'archivio ce l'ha
+// gia: caricare un file senza permesso di sovrascrivere fallisce se il
+// file esiste — e quel fallimento e la prenotazione di qualcun altro.
+// Nessuna tabella nuova, nessun lucchetto da tenere in vita.
+//
+// Chi non riesce a prenotare non paga: aspetta qualche secondo che
+// l'altro finisca e usa la sua. Se l'altro non ce la fa, genera lui —
+// meglio pagare due volte che non dare l'immagine.
+// ═══════════════════════════════════════════════════════════════
+const PRENOTAZIONE_VALIDA_MS = 90 * 1000;
+
+async function prenota(sb, chiave) {
+  try {
+    const { error } = await sb.storage.from('tavole')
+      .upload(`${chiave}.lavoro`, Buffer.from(String(Date.now())), {
+        contentType: 'text/plain', upsert: false,
+      });
+    return !error;             // niente errore = la prenotazione e mia
+  } catch { return false; }
+}
+
+async function liberaPrenotazione(sb, chiave) {
+  try { await sb.storage.from('tavole').remove([`${chiave}.lavoro`]); }
+  catch { /* la prenotazione scadra da sola: non e un guasto */ }
+}
+
+/** Aspetta che chi ha prenotato finisca. Torna l'indirizzo, o null. */
+async function aspettaLAltro(sb, chiave, msMax = 25000) {
+  const scade = Date.now() + msMax;
+  while (Date.now() < scade) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const pronta = await dalCassetto(sb, chiave);
+    if (pronta) return pronta;
+  }
+  return null;
+}
+
 async function riponi(sb, chiave, dataUrl) {
   try {
     const base64 = dataUrl.split(',')[1];
@@ -107,12 +153,28 @@ async function handlePost(req) {
       tipo === 'scena' ? [ambienteReq?.id || ambientePer(nome, descrizione).id, livelloReq, elementiReq.slice(0, 5).join('|')]
       : tipo === 'icona' ? [descrizione || nome, livelloReq]
       : [nome, descrizione, livelloReq]) : null;
+    let prenotata = false;
     if (sb && chiave) {
       const giaPronta = await dalCassetto(sb, chiave);
       if (giaPronta) return NextResponse.json({ ok: true, url: giaPronta, dalCassetto: true });
+      // b.381 — prima di pagare, si prenota. Se la prenotazione e di un
+      // altro, si aspetta la SUA immagine invece di pagarne una seconda.
+      prenotata = await prenota(sb, chiave);
+      if (!prenotata) {
+        const daltri = await aspettaLAltro(sb, chiave);
+        if (daltri) return NextResponse.json({ ok: true, url: daltri, dalCassetto: true });
+        // l'altro non ce l'ha fatta: si procede lo stesso. Meglio pagare
+        // due volte che lasciare la lezione senza tavola.
+      }
     }
 
     const r = await generaAvatar({ prompt, userToken, riferimentoDataUrl, dimensione });
+    // b.381 — la prenotazione si libera SEMPRE, riuscita o no: se
+    // restasse su, tutti gli altri aspetterebbero un minuto e mezzo per
+    // niente. Si libera qui, appena il pagamento e finito, e non alla
+    // fine della funzione: sotto ci sono cinque uscite diverse e una
+    // qualunque di loro se ne dimenticherebbe.
+    if (prenotata && sb && chiave) await liberaPrenotazione(sb, chiave);
     if (!r.ok) {
       if (r.status === 401) return NextResponse.json({ error: 'Sessione non valida' }, { status: 401 });
       if (r.status === 402) return NextResponse.json({ error: 'Credito insufficiente', creditoEsaurito: true }, { status: 402 });
