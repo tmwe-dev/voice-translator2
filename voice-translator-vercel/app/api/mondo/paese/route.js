@@ -98,14 +98,27 @@ async function handleGet(req) {
 
   // I TEMI: quanti argomenti distinti si stanno discutendo qui. Le
   // discussioni, a differenza delle stanze, il Paese ce l'hanno sempre.
-  let temi = null;
+  let temi = null, temiCaldi = [];
   try {
     const { elencoDiscussioni } = await import('../../../lib/mondoDB.js');
     const lista = await elencoDiscussioni({ country: paese, limit: 60 });
     temi = new Set((lista || []).map((d) => d.topic).filter(Boolean)).size;
+    // b.401 — «IL PAESE DISCUTE», dal documento: non basta dire QUANTI
+    // temi, va detto QUALI. Sono contati sulle stesse discussioni, in
+    // ordine di quante ce ne sono: nessun giudizio, nessuna classifica
+    // di importanza — solo dove si sta parlando di piu.
+    const perTema = new Map();
+    for (const d of (lista || [])) {
+      if (!d.topic) continue;
+      perTema.set(d.topic, (perTema.get(d.topic) || 0) + 1);
+    }
+    temiCaldi = [...perTema.entries()]
+      .map(([topic, discussioni]) => ({ topic, discussioni }))
+      .sort((a, b) => b.discussioni - a.discussioni)
+      .slice(0, 6);
   } catch (e) {
     log.warn('conteggio temi non riuscito', { paese, errore: e?.message || 'ignoto' });
-    temi = null;
+    temi = null; temiCaldi = [];
   }
 
   return NextResponse.json({
@@ -113,6 +126,7 @@ async function handleGet(req) {
     persone,
     stanze,
     temi,
+    temiCaldi,
     // Quante delle stanze contate lo sono per approssimazione (lingua al
     // posto del luogo). Chi legge merita di sapere quanto e solido il
     // numero che sta guardando.

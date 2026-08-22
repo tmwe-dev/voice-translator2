@@ -173,6 +173,10 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // a pezzi. E in SOVRIMPOSIZIONE sul pianeta, non in colonna: un
   // elemento che appare non deve spingere giu quello che stai leggendo.
   const [schedaPaese, setSchedaPaese] = useState(null);
+  // b.401 — il tema toccato nella Home del Paese: si passa a News, e
+  // News apre proprio quel tema. Senza questo il tocco portava alle news
+  // del Paese ma non a QUEL tema, cioe faceva meta strada.
+  const [temaDaMondo, setTemaDaMondo] = useState(null);
   useEffect(() => {
     if (!paeseScelto) { setSchedaPaese(null); return; }
     let vivo = true;
@@ -682,6 +686,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               // risale fin qui, e da qui va al pianeta e alle Stanze.
               suPaeseScelto={(codice) => { setPaeseScelto(codice); setLangFilter(codice ? (linguaDelPaese(codice) || 'all') : 'all'); }}
               suScorrimento={seguiScorrimento}
+              temaDaFuori={temaDaMondo}
+              suTemaLetto={() => setTemaDaMondo(null)}
               C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
@@ -701,6 +707,38 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
       <div onScroll={seguiScorrimento} style={{ flex: 1, overflowY: 'auto', padding: '4px 16px calc(106px + env(safe-area-inset-bottom))', scrollbarWidth: 'none', pointerEvents: 'none' }}>
         {/* b.324 — D8: colonna centrata anche qui. */}
         <div style={{ ...COLONNA, pointerEvents: 'auto' }}>
+
+        {/* b.401 — «IL PAESE DISCUTE», dal documento di Luca. Entrando in
+            un Paese non basta dire quanti temi ci sono: va detto QUALI, e
+            devono essere toccabili — e il modo naturale di passare da
+            «sono in Giappone» a «vediamo cosa dicono dello yen».
+            Sono i temi VERI delle discussioni aperte li, in ordine di
+            quante ce ne sono: nessuna classifica di importanza, nessun
+            giudizio nostro. Compare solo quando c'e qualcosa da dire, e
+            sta sopra l'elenco senza spingerlo: quando non c'e, non
+            occupa nulla. */}
+        {paeseScelto && schedaPaese?.temiCaldi?.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: 1, color: C.textMuted, margin: '4px 0 8px' }}>
+              {L('talkedAboutHere')}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {schedaPaese.temiCaldi.map((t) => (
+                <button key={t.topic}
+                  onClick={() => { vibrate(8); setTemaDaMondo(t.topic); setTab('news'); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px',
+                    borderRadius: 999, cursor: 'pointer', fontFamily: FONT,
+                    background: C.card, border: `1px solid ${C.cardBorder}`,
+                    color: C.textPrimary, fontSize: 12.5, fontWeight: 700,
+                  }}>
+                  <span>{t.topic}</span>
+                  <span style={{ color: C.textMuted, fontWeight: 600 }}>{t.discussioni}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* b.363 — ECCO LE CARD FANTASMA CHE LUCA VEDEVA A OGNI APERTURA DI
             MONDO. Erano quattro rettangoli finti alti 80 pixel, con il velo

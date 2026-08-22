@@ -65,7 +65,7 @@ const QUERY_RAPIDE = {
 // Mondo, non un filtro locale di una singola pagina»: se lo cambi da una
 // parte deve cambiare dappertutto, altrimenti passando da News a Stanze
 // ti ritrovi in un altro posto senza averlo chiesto.
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento }) {
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null, suPaeseScelto, suScorrimento, temaDaFuori = null, suTemaLetto }) {
   const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -138,6 +138,16 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   // Paesi. Qui NON si riassume cosa pensa un Paese e non si calcola nessuna
   // percentuale — il documento lo vieta nella stessa riga in cui chiede la
   // funzione. Si CONTA dove se ne parla e quanto, e si entra a leggere.
+  // b.401 — il tema scelto nella Home del Paese arriva qui e diventa il
+  // filtro. Si consuma una volta sola: dopo comanda chi guarda, e non gli
+  // si rimette il filtro sotto le dita ogni volta che la schermata si
+  // ridisegna.
+  useEffect(() => {
+    if (!temaDaFuori) return;
+    setArgomentoFiltro(temaDaFuori);
+    suTemaLetto?.();
+  }, [temaDaFuori, suTemaLetto]);
+
   const [temaMondo, setTemaMondo] = useState(null);      // il tema aperto
   const [confronto, setConfronto] = useState(null);      // i conti, o null
   const [confrontoGuasto, setConfrontoGuasto] = useState(false);
