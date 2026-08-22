@@ -62,11 +62,25 @@ function lettiTroppoPresto(sorgente) {
   function esamina(corpo) {
     // 1. i nomi dichiarati con const/let a QUESTO livello, con la loro posizione
     const nati = new Map();
+    // b.389 — IL BUCO CHE AVEVO LASCIATO. Prima si guardava solo
+    // `const x = ...`, e si ignorava `const [x, setX] = useState()` —
+    // cioe la forma piu comune che esista in React. La guardia e passata
+    // sopra a un errore mio identico a quello per cui era nata: una
+    // riga che leggeva uno stato dichiarato trenta righe piu sotto.
+    //
+    // Qui si raccolgono tutti i nomi, anche quelli che nascono dentro
+    // parentesi quadre o graffe.
+    const raccogli = (nodo, dove) => {
+      if (!nodo) return;
+      if (nodo.type === 'Identifier') { nati.set(nodo.name, dove); return; }
+      if (nodo.type === 'ArrayPattern') { for (const el of nodo.elements) raccogli(el, dove); return; }
+      if (nodo.type === 'ObjectPattern') { for (const pr of nodo.properties) raccogli(pr.value || pr.argument, dove); return; }
+      if (nodo.type === 'AssignmentPattern') { raccogli(nodo.left, dove); return; }
+      if (nodo.type === 'RestElement') { raccogli(nodo.argument, dove); }
+    };
     for (const n of corpo) {
       if (n.type !== 'VariableDeclaration' || n.kind === 'var') continue;
-      for (const d of n.declarations) {
-        if (d.id?.type === 'Identifier') nati.set(d.id.name, n.start);
-      }
+      for (const d of n.declarations) raccogli(d.id, n.start);
     }
     // (se qui non nasce niente non si controlla nulla a QUESTO livello,
     //  ma si scende comunque: le funzioni annidate hanno il loro livello,

@@ -3,6 +3,7 @@ import Icon from './Icon.js';
 import { useState, useEffect, useRef } from 'react';
 import { LANGS, VOICES, AVATARS, AVATAR_NAMES, FONT } from '../lib/constants.js';
 import { t } from '../lib/i18n.js';
+import { memGet } from '../lib/memoria.js';
 import getStyles from '../lib/styles.js';
 import AvatarImg from './AvatarImg.js';
 import { PALETTE } from '../lib/palette.js';
@@ -115,7 +116,50 @@ export default function JoinView({ joinCode,
   // finiva nelle tre schermate anche quando aveva gia nome e lingua.
   // Il genere serve a scegliere una voce: e una preferenza, non una
   // chiave d'ingresso, e si imposta dopo con la chat gia aperta.
-  const isPrefilled = prefs.name && isInvited;
+  // b.389 — L'INVITO APERTO SULLO STESSO BROWSER DELL'HOST.
+  //
+  // Secondo collaudo di Luca: aprendo il link in una scheda nuova si
+  // entrava dritti nella stanza COME L'HOST — tutti i messaggi marcati
+  // «Tu», la lobby ferma su «In attesa del partner…» perche il partner
+  // era lui stesso, e la stanza che non registrava nessuno.
+  //
+  // La causa e l'ingresso automatico, che di per se e giusto: «l'ospite
+  // non deve fare niente, deve solo aprire la pagina e scrivere». Ma il
+  // nome lo prende dalle preferenze, che sono condivise fra le schede —
+  // quindi chi apre l'invito eredita l'identita di chi c'era.
+  //
+  // Non si toglie l'ingresso automatico: si interrompe SOLO nel caso che
+  // sbaglia. Se il nome con cui entrerei e gia quello dell'host della
+  // stanza, e non ho il segreto che dimostra che l'host sono io, allora
+  // e una collisione: si chiede chi sei. Per tutti gli altri — cioe per
+  // gli ospiti veri, che sono la maggioranza — non cambia niente.
+  const [collisioneHost, setCollisioneHost] = useState(false);
+  useEffect(() => {
+    const codice = String(joinCode || '').trim().toUpperCase();
+    const mio = String(prefs.name || '').trim();
+    if (!isInvited || !codice || !mio) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const r = await fetch(`/api/room?id=${encodeURIComponent(codice)}`, { signal: AbortSignal.timeout(8000) });
+        const d = await r.json();
+        const host = d?.room?.host;
+        if (!vivo || !host || host !== mio) return;
+        let segreto = null;
+        // si legge dallo STESSO magazzino in cui lo scrive chi crea la
+        // stanza (useRoomPolling): leggerlo altrove vorrebbe dire non
+        // trovarlo mai, e chiedere il nome anche all'host che rientra.
+        try { segreto = JSON.parse(memGet('vt-host-secrets') || '{}')[codice] || null; }
+        catch { /* memoria negata: senza prova si chiede, ed e la scelta prudente */ }
+        if (!segreto) setCollisioneHost(true);
+      } catch { /* la stanza non si legge: si prosegue come prima, non si blocca nessuno */ }
+    })();
+    return () => { vivo = false; };
+  }, [joinCode, prefs.name, isInvited]);
+
+  // b.389 — in collisione il modulo TORNA a chiedere: il nome c'e gia
+  // scritto ma si puo cambiare, ed e proprio quello che serve.
+  const isPrefilled = prefs.name && isInvited && !collisioneHost;
 
   // ─── ENTRA DA SOLO (b.133) ───
   //
@@ -133,7 +177,7 @@ export default function JoinView({ joinCode,
   // allora entriamo da questa parte. Se il timer di page.js ha
   // funzionato questo componente e gia smontato e il timer muore con lui:
   // non c'e modo di chiedere l'ingresso due volte.
-  const entraDaSolo = isInvited && !!String(prefs.name || '').trim();
+  const entraDaSolo = isInvited && !!String(prefs.name || '').trim() && !collisioneHost;
   const [ingressoBloccato, setIngressoBloccato] = useState(false);
   const ingressoRef = useRef(false);
 

@@ -113,9 +113,25 @@ describe('il genere non e una chiave d\'ingresso', () => {
     // Arrivava solo da `gg=`. Serve a scegliere una voce: si imposta
     // dopo, con la conversazione gia aperta.
     const s = senzaCommenti(leggi('app/components/JoinView.js'));
-    expect(s).toMatch(/const isPrefilled = prefs\.name && isInvited;/);
+    // b.389 — la riga chiedeva la condizione ESATTA, e da oggi ne ha un
+    // pezzo in piu: l'invito aperto sullo stesso browser dell'host torna
+    // a chiedere chi sei. Quello che questa prova deve difendere non e
+    // com'e scritta la condizione, ma che il GENERE non ci sia dentro:
+    // arrivava solo dai nostri QR e teneva fuori gli ospiti veri.
+    expect(s).toMatch(/const isPrefilled = prefs\.name && isInvited/);
     expect(s, 'il genere non deve comparire nella condizione')
       .not.toMatch(/const isPrefilled = [^;]*prefs\.gender/);
+  });
+
+  it("ma l'invito aperto sullo stesso browser dell'host torna a chiedere (b.389)", () => {
+    // Il difetto: si entrava come l'host, tutti i messaggi marcati «Tu»,
+    // e la lobby ferma su «In attesa del partner» perche il partner era
+    // lui stesso.
+    const s = leggi('app/components/JoinView.js');
+    expect(s, 'si riconosce la collisione').toMatch(/collisioneHost/);
+    expect(s, "e si controlla il segreto dell'host").toMatch(/vt-host-secrets/);
+    expect(s, "l'ingresso automatico si ferma solo li")
+      .toMatch(/const entraDaSolo = [^;]*!collisioneHost/);
   });
 });
 
