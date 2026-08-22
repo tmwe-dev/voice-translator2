@@ -154,6 +154,17 @@ const TAG_L2 = /\[L2:\s*([^\]]*?)\s*\]/gi;
 // non quadre — invece di sembrare un errore del programma.
 const TAG_TRADUZIONE = /\[([a-zA-Z]{2}):\s*([^\]]*?)\s*\]/g;
 
+/**
+ * b.377 — La pulizia dai tag inventati, in un posto solo: la usano sia
+ * lo schermo sia la voce. Erano due strade separate sullo stesso testo,
+ * ed e cosi che una si e sistemata e l'altra e rimasta rotta.
+ */
+export function ripuliscePerVoce(testo) {
+  return String(testo || '')
+    .replace(TAG_TRADUZIONE, (intero, codice, dentro) => (dentro ? `(${dentro})` : ''))
+    .replace(/\s{2,}/g, ' ');
+}
+
 /** Il testo da MOSTRARE: i tag spariscono, il contenuto resta. */
 export function testoVisibile(testo) {
   return String(testo || '')
@@ -251,7 +262,20 @@ export function segmentiPerVoce(testo, { linguaParlata = 'it', linguaStudiata = 
   // Unisce i vicini con la stessa lingua e butta i vuoti.
   const uniti = [];
   for (const p of pezzi) {
-    const t = p.testo.replace(/\s+/g, ' ').trim();
+    // b.377 — I TAG INVENTATI NON SI LEGGONO AD ALTA VOCE.
+    //
+    // Luca l'ha sentito: la voce inglese diceva «J», e subito dopo quella
+    // italiana diceva «significa parentesi IT due punti J». Qui si
+    // spezzava solo su [L2: ...]; tutto il resto finiva alla voce COSI'
+    // COM'ERA, e un tag che il modello si e inventato veniva scandito
+    // lettera per lettera.
+    //
+    // Toglierlo dallo schermo (b.375) non bastava: schermo e voce leggono
+    // dallo stesso testo ma per strade diverse, e la strada della voce
+    // era rimasta scoperta. Adesso passano tutte e due dalla stessa
+    // pulizia — che e l'unico modo perche non si separino di nuovo.
+    const pulito = p.lingua === linguaStudiata ? p.testo : ripuliscePerVoce(p.testo);
+    const t = pulito.replace(/\s+/g, ' ').trim();
     if (!t) continue;
     const ultimo = uniti[uniti.length - 1];
     if (ultimo && ultimo.lingua === p.lingua) ultimo.testo = `${ultimo.testo} ${t}`.trim();
