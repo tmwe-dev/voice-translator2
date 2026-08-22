@@ -130,8 +130,25 @@ describe('i call site veri usano davvero il secondo asse', () => {
   });
   it('la rotta Amico monta il profilo effettivo E la regia del turno', () => {
     const s = leggi('app/api/compagni/amico/route.js');
-    expect(s).toMatch(/profilo: profiloEffettivo\(compagno, 'amico'\)/);
+    // b.386 — questa riga chiedeva il nome ESATTO della superficie
+    // ('amico'). Da quando la stessa rotta serve anche il compagno che ti
+    // sta accanto mentre studi, la superficie ARRIVA DA CHI CHIAMA — e la
+    // prova e diventata rossa su un cambiamento che era una riparazione:
+    // prima la superficie era dichiarata e non la usava nessuno.
+    //
+    // E' la seconda prova oggi che descrive COME e scritto il codice
+    // invece di COSA deve essere vero. Adesso chiede la cosa giusta: che
+    // il profilo venga dal secondo asse, qualunque superficie sia.
+    expect(s).toMatch(/profilo: profiloEffettivo\(compagno, \w+\)/);
     expect(s).toMatch(/regiaConversazione\(\{ ultimo, storia: messaggi \}\)/);
+  });
+
+  it('e la superficie che arriva da fuori viene CONTROLLATA (b.386)', () => {
+    // finisce dentro un prompt: una superficie inventata dal client non
+    // deve poter passare.
+    const s = leggi('app/api/compagni/amico/route.js');
+    expect(s).toMatch(/SUPERFICI_PROFILO\.includes\(body\.superficie\)/);
+    expect(s, 'e se non e valida si ricade su amico').toMatch(/: 'amico'/);
   });
   it('il generatore dei corsi insegna col profilo didattico', () => {
     const s = leggi('app/lib/compagni/corsi/generatore.js');

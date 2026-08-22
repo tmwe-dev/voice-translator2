@@ -58,7 +58,7 @@ const QUERY_RAPIDE = {
   arte:       { it: 'arte cultura', en: 'art culture', es: 'arte cultura', fr: 'art culture', de: 'kunst kultur' },
 };
 
-function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti }) {
+function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApertaDiscussione, strumenti = false, suChiudiStrumenti, paeseDalGlobo = null }) {
   const { L, prefs, userToken, savePrefs } = useApp();
   const lingua = prefs.uiLang || 'en';
   // b.186 — "cerca -> apri discussione col link": la discussione pubblica
@@ -118,6 +118,11 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
   const [argomentoFiltro, setArgomentoFiltro] = useState(null);
   // b.363 — il paese scelto con un tocco sulla bandiera di una scheda
   const [paeseFiltro, setPaeseFiltro] = useState(null);
+  // b.386 — il paese toccato sul pianeta filtra anche le notizie. Prima
+  // arrivava solo alle stanze: si zoomava sull'Italia e le news restavano
+  // del mondo intero, il che faceva sembrare che il gesto non funzionasse
+  // a meta.
+  useEffect(() => { if (paeseDalGlobo !== undefined) setPaeseFiltro(paeseDalGlobo); }, [paeseDalGlobo]);
   const [riprova, setRiprova] = useState(0);
 
   useEffect(() => () => abortRef.current?.abort(), []);

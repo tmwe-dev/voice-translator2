@@ -205,11 +205,11 @@ export function cancellaMio(id, userToken) {
 /** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }.
  *  b.224 — `obiettivi` (attivi, dal dispositivo) rende il Compagno consapevole
  *  degli obiettivi di vita della persona. */
-export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi }) {
+export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi, superficie }) {
   // b.244-bis — `totale` e la lunghezza VERA della conversazione: la rotta
   // taglia i messaggi a 20 e senza questo il throttle della memoria si
   // rompeva dopo il ventesimo scambio (estraeva a ogni turno).
-  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi, totale: Array.isArray(messaggi) ? messaggi.length : 0 });
+  return postJSON('/api/compagni/amico', { compagnoId, messaggi, lingua, userToken, obiettivi, superficie, totale: Array.isArray(messaggi) ? messaggi.length : 0 });
 }
 
 /** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.

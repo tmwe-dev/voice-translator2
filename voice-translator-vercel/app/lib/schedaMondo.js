@@ -122,6 +122,27 @@ const PAESE_DI_CASA = {
   sw: 'KE', bn: 'BD', ta: 'IN', af: 'ZA',
 };
 
+/**
+ * b.386 — LA STRADA INVERSA: dal paese alla lingua che ci si parla.
+ *
+ * Serve perche le STANZE portano la lingua, non il luogo (e giusto cosi:
+ * una stanza in portoghese vale per il Brasile e per il Portogallo). Ma
+ * toccando un paese sul pianeta la persona si aspetta di vedere le
+ * stanze di quel posto — e l'unico modo onesto di avvicinarsi e la
+ * lingua che ci si parla.
+ *
+ * Dove un paese ne parla piu di una vince quella che si sente di piu:
+ * e un'approssimazione, e va detto invece che spacciata per esattezza.
+ */
+export function linguaDelPaese(codice) {
+  if (!codice) return null;
+  const c = String(codice).toUpperCase();
+  for (const [lingua, paese] of Object.entries(PAESE_DI_CASA)) {
+    if (paese === c && !lingua.includes('-')) return lingua;
+  }
+  return null;
+}
+
 export function paeseDaLingua(lingua) {
   if (!lingua) return null;
   const l = String(lingua);

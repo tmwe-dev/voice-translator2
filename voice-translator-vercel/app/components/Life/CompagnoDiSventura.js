@@ -45,6 +45,7 @@ export default function CompagnoDiSventura({
     try {
       const d = await parlaAmico({
         compagnoId: compagno.id, lingua, userToken, obiettivi: [],
+        superficie: 'sventura',
         messaggi: [{ ruolo: 'persona', testo: cosaDirgli({ argomento, pezzo, lingua }) }],
       });
       const testo = String(d?.risposta || '').trim();

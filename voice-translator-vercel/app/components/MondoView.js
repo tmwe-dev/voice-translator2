@@ -1,6 +1,6 @@
 'use client';
 import Icon from './Icon.js';
-import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, bandieraPaese } from '../lib/schedaMondo.js';
+import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, linguaDelPaese, bandieraPaese } from '../lib/schedaMondo.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { COLONNA } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
@@ -317,7 +317,19 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             // Prima lo zoom ci andava sopra e sotto restava il mondo
             // intero: il gesto piu naturale che c'e su un mappamondo non
             // faceva niente.
-            onPaeseScelto={(code) => { setPaeseScelto(code); setLangFilter(null); }} />
+            // b.386 — ERRORE MIO DI UN'ORA FA: mettevo il filtro lingua a
+            // `null`, e il filtro confronta con 'all' per dire "tutte" —
+            // quindi toccare il globo SVUOTAVA l'elenco delle stanze
+            // invece di filtrarlo.
+            //
+            // E le stanze portano la LINGUA, non il luogo. L'unico modo
+            // onesto di avvicinarsi al "mostrami le stanze di qui" e la
+            // lingua che in quel paese si parla; se non la conosciamo si
+            // lasciano tutte, che e meglio di nessuna.
+            onPaeseScelto={(code) => {
+              setPaeseScelto(code);
+              setLangFilter(code ? (linguaDelPaese(code) || 'all') : 'all');
+            }} />
           {/* b.367 — «IL PROTAGONISTA NON E' IL GLOBO» (Luca). Era vero
               alla lettera: il pianeta prendeva mezza pagina in pieno
               contrasto e gli elenchi restavano schiacciati sotto. Un velo
@@ -522,7 +534,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               tutta larghezza; ora sta nella colonna centrata (regola di Luca,
               gia standard in Life). */}
           <div style={{ ...COLONNA, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
+            <MondoNews strumenti={strumenti} suChiudiStrumenti={() => setStrumenti(false)} apriDiscussioneId={apriDiscussione} suApertaDiscussione={() => setApriDiscussione(null)} paeseDalGlobo={paeseScelto} C={C} onJoinRoom={onJoinRoom} onParlane={onParlane} />
           </div>
         </div>
       )}

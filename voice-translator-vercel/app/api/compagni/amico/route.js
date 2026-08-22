@@ -9,7 +9,7 @@ import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { involucroCompagno, temperaturaLiberta } from '../../../lib/compagni/contratto.js';
 import { regiaConversazione } from '../../../lib/compagni/controllore.js';
-import { profiloEffettivo } from '../../../lib/compagni/profili.js';
+import { profiloEffettivo, SUPERFICI_PROFILO } from '../../../lib/compagni/profili.js';
 import { LENTI_UMANE, contestoRelazione } from '../../../lib/compagni/vocazione.js';
 import { ISTRUZIONE_VOCE, staccaModoVoce } from '../../../lib/voceEspressiva.js';
 
@@ -32,6 +32,7 @@ async function handlePost(req) {
     const compagnoId = typeof body.compagnoId === 'string' ? body.compagnoId : '';
     const lingua = typeof body.lingua === 'string' ? body.lingua.slice(0, 8) : 'it';
     const messaggi = Array.isArray(body.messaggi) ? body.messaggi.slice(-20) : [];
+    const superficie = SUPERFICI_PROFILO.includes(body.superficie) ? body.superficie : 'amico';
     // b.224 — gli obiettivi di vita arrivano dal client (vivono sul dispositivo)
     // e finiscono nel prompt: così il Compagno LI CONOSCE e ti accompagna.
     const obiettivi = Array.isArray(body.obiettivi) ? body.obiettivi.slice(0, 12) : [];
@@ -72,7 +73,14 @@ async function handlePost(req) {
       // b.237 — qui il Compagno è un amico, non un motore di risposte.
       // Il Deep Setting del Compagno può cambiare il profilo di questa
       // superficie; senza override vale il default ('conversazionale').
-      profilo: profiloEffettivo(compagno, 'amico'),
+      // b.386 — LA SUPERFICIE ARRIVA DA CHI CHIAMA. Questa rotta serve
+      // due posti diversi — la chat dell'Amico e il compagno che ti sta
+      // accanto mentre studi — e rispondeva sempre come se fosse la
+      // chat. Cosi un Compagno regolato apposta per stare accanto veniva
+      // ignorato: la superficie l'avevo dichiarata e non la usava
+      // nessuno, che e il modo migliore per avere una regolazione che
+      // sembra esserci e non fa niente.
+      profilo: profiloEffettivo(compagno, superficie),
     });
     // b.237 — la lettura del turno: stima cosa sta facendo la persona (sfogo?
     // domanda? riflessione?) e la offre come IPOTESI. b.238 l'ha retrocessa da
