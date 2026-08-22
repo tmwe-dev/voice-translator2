@@ -133,6 +133,18 @@ describe('il campo per scrivere il commento finiva sotto la barra', () => {
     expect(d, 'i 10 pixel di prima non bastavano').not.toMatch(/paddingBottom: 'max\(10px, env\(safe-area-inset-bottom\)\)'/);
   });
 
+  it("anche il lettore dell'articolo, che e l'altra faccia dello stesso foglio", () => {
+    const l = leggi('app/components/ui/LettoreArticolo.js');
+    expect(l).toMatch(/paddingBottom: 'calc\(106px \+ env\(safe-area-inset-bottom\)\)'/);
+    expect(l, 'con la scatola che conta il riempimento').toMatch(/boxSizing: 'border-box'/);
+  });
+
+  it('ma NON sul foglio comune, o si sommerebbe a quello della faccia davanti', () => {
+    const n = leggi('app/components/MondoNews.js');
+    const quanti = (n.match(/106px/g) || []).length;
+    expect(quanti, "una volta sola, sull'elenco delle notizie").toBe(1);
+  });
+
   it('106 non e inventato: e la misura che usa gia il resto del progetto', () => {
     const n = leggi('app/components/MondoNews.js');
     expect(n, "la faccia davanti dello stesso ribaltamento").toMatch(/106px/);

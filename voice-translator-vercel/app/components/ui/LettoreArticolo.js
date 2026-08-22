@@ -84,7 +84,17 @@ export default function LettoreArticolo({ url, titolo, fonte, C, L, onIndietro }
   const bordo = `1px solid ${C.cardBorder}`;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: C.bg }}>
+    // b.394 — LA STESSA DIMENTICANZA DEL CAMPO COMMENTO, sull'altra
+    // faccia dello stesso foglio. Questo lettore arriva fino al bordo
+    // dello schermo, e li c'e la barra di navigazione: fissa, alta 94
+    // pixel piu l'area sicura. Gli ultimi 94 pixel dell'articolo
+    // stavano sotto di lei. La faccia davanti — l'elenco delle notizie
+    // — quello spazio se lo riserva gia; queste due dietro, no.
+    // Lo spazio si prende QUI e non sul foglio comune: sul foglio si
+    // sommerebbe a quello che la faccia davanti ha gia, e l'elenco
+    // delle notizie perderebbe mezzo schermo.
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, background: C.bg,
+      paddingBottom: 'calc(106px + env(safe-area-inset-bottom))', boxSizing: 'border-box' }}>
       {/* LA CORNICE: si vede sempre di chi e la pagina che si sta leggendo. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
