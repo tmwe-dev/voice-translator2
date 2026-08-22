@@ -216,3 +216,42 @@ describe('il riquadro del Paese dice solo numeri contati', () => {
     }
   });
 });
+
+describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
+  it('entrando in un Paese si vede di cosa si parla, non solo quanti temi', () => {
+    const r = leggi('app/api/mondo/paese/route.js');
+    expect(r, 'la rotta li conta e li ordina').toMatch(/temiCaldi = \[\.\.\.perTema\.entries\(\)\]/);
+    expect(r, 'e li porta fuori').toMatch(/temiCaldi,/);
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/L\('talkedAboutHere'\)/);
+    expect(v, "e compare solo se c'e qualcosa da dire").toMatch(/schedaPaese\?\.temiCaldi\?\.length > 0/);
+  });
+
+  it('toccare un tema fa tutta la strada, non meta', () => {
+    // prima portava alle news del Paese ma non a QUEL tema
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/setTemaDaMondo\(t\.topic\); setTab\('news'\)/);
+    expect(v, 'e lo passa a News').toMatch(/temaDaFuori=\{temaDaMondo\}/);
+    const n = leggi('app/components/MondoNews.js');
+    expect(n, 'che lo apre').toMatch(/setArgomentoFiltro\(temaDaFuori\)/);
+    expect(n, 'e lo consuma una volta sola').toMatch(/suTemaLetto\?\.\(\)/);
+  });
+
+  it('una sfumatura unisce il globo ai contenuti invece di tagliarli', () => {
+    const v = leggi('app/components/MondoView.js');
+    expect(v).toMatch(/0\.5 \+ discesa \* 0\.45/);
+    const blocco = v.slice(v.indexOf('0.5 + discesa * 0.45') - 400, v.indexOf('0.5 + discesa * 0.45'));
+    expect(blocco, 'e non ruba i tocchi').toMatch(/pointerEvents: 'none'/);
+  });
+
+  it("«talkedAboutHere» c'e in tutti e trentotto i pacchetti", async () => {
+    const { readdirSync } = await import('node:fs');
+    for (const f of readdirSync(join(process.cwd(), 'app/lib/locales')).filter((x) => x.endsWith('.js'))) {
+      const pacco = await import(`../app/lib/locales/${f}`);
+      const o = pacco.default || Object.values(pacco)[0];
+      expect(typeof o.talkedAboutHere, `${f}`).toBe('string');
+      expect(typeof o.whatWorldThinks, `${f}`).toBe('string');
+      expect(typeof o.countedAcross, `${f}`).toBe('string');
+    }
+  });
+});

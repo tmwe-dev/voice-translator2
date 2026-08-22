@@ -699,6 +699,23 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
           la scheda News si nascondeva durante la ricerca, l'elenco delle
           stanze NO. Cosi cercando restavano disegnati tutti e due: la
           popup dei risultati sopra, le stanze sotto, mescolate. */}
+      {/* b.402 — LA SFUMATURA CHE UNISCE PIANETA E CONTENUTI. Dal
+          documento di Luca: «una sfumatura verticale collega il globo al
+          contenuto» e «la superficie contenuti sale progressivamente e
+          copre il globo». Finora il bordo era netto: le schede spuntavano
+          dal nulla a meta pianeta, tagliate di netto. Questa fascia sta
+          fra i due e non prende tocchi: e solo il punto in cui il globo
+          finisce e la pagina comincia. Si fa piu decisa mentre scendi,
+          insieme al velo, cosi il passaggio segue il gesto. */}
+      {(tab === 'stanze' || tab === 'news') && !cercando && (
+        <div style={{
+          position: 'absolute', left: 0, right: 0, top: 0, height: 96,
+          pointerEvents: 'none', zIndex: 4,
+          background: `linear-gradient(180deg, rgba(5,7,15,${0.5 + discesa * 0.45}) 0%, rgba(5,7,15,0) 100%)`,
+          transition: 'background 160ms linear',
+        }} />
+      )}
+
       {tab === 'stanze' && !cercando && (
       // b.206 — bottom alzato: le ultime stanze finivano sotto la BottomNav (76px)
       // b.361 — IL GLOBO SI TRASCINA sotto la lista (collaudo di Luca): la
