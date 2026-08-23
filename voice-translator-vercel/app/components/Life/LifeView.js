@@ -19,7 +19,7 @@ const IDEE_CORSO = [
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
-import { suona as registraAudio, pausa as pausaAudio, riprendi as riprendiAudio, ferma as fermaAudio, ascolta as ascoltaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/audioLife.js';
+import { suona as registraAudio, pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import TestoLingua from './TestoLingua.js';
@@ -38,6 +38,7 @@ import CompitiView from './CompitiView.js';
 import AmicoChat from './AmicoChat.js';
 import Tavolo from './Tavolo.js';
 import { conRipiego } from '../../lib/ripiego.js';
+import Ascolta from '../Ascolta.js';  // b.404 — una sola grafica per ascoltare
 
 // ═══════════════════════════════════════════════════════════════
 // LifeView — la sezione Life (Luca). Autonoma: usa SOLO il dominio
@@ -99,8 +100,9 @@ function LifeView({ onApriStanza }) {
   // b.305 — TELECOMANDO AUDIO: un pulsante fluttuante che appare quando
   // qualcosa sta suonando e ti segue mentre cambi scheda di Life. Pausa,
   // riprendi, interrompi — sempre a portata.
-  const [audioStato, setAudioStato] = useState({ attivo: false, inPausa: false, etichetta: '' });
-  useEffect(() => ascoltaAudio(setAudioStato), []);
+  // b.404 — lo stato del telecomando non si tiene piu qui: lo legge il
+  // telecomando stesso, che ora sta in page.js. Life continua a usare
+  // pausa/ferma dal registro, che e cio che le serve davvero.
 
   const testoP = C.textPrimary || '#eef2ff';
   const muto = C.textMuted || 'rgba(242,244,247,0.6)';
@@ -183,45 +185,11 @@ function LifeView({ onApriStanza }) {
       {scheda === 'compagni' && <GestioneCompagni miei={miei} onCambiato={caricaMiei} {...{ L, C, lingua, userToken, testoP, muto, accent, card, bordo }} />}
     </div>
 
-    {/* b.305 — il telecomando audio: appare solo se qualcosa suona, resta
-        fisso in basso e ti segue mentre cambi scheda. */}
-    {audioStato.attivo && (
-      <div style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)',
-        bottom: 'max(16px, env(safe-area-inset-bottom))', zIndex: 200,
-        display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px 8px 16px',
-        borderRadius: 999, background: 'rgba(8,11,22,0.94)', backdropFilter: 'blur(14px)',
-        border: `1px solid ${accent}55`, boxShadow: '0 8px 30px rgba(0,0,0,0.5)', fontFamily: FONT }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: testoP, maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {'\u{1F509}'} {audioStato.etichetta || L('lifeAudio')}
-        </span>
-        {/* b.376 — MENTRE SI PREPARA LA VOCE DOPO il telecomando resta,
-            ma non finge di poter mettere in pausa il silenzio: mostra
-            che sta lavorando. Prima in quel momento spariva del tutto,
-            ed e per questo che a Luca lampeggiava a ogni cambio voce. */}
-        <button onClick={() => audioStato.inPausa ? riprendiAudio() : pausaAudio()}
-          disabled={audioStato.preparando}
-          aria-label={audioStato.preparando ? L('lifePreparing') : (audioStato.inPausa ? L('lifeResumeWord') : L('lifePauseWord'))}
-          style={{ width: 42, height: 42, borderRadius: 21, border: 'none',
-            cursor: audioStato.preparando ? 'default' : 'pointer',
-            background: audioStato.preparando ? `${accent}44` : accent,
-            color: '#04121c', fontSize: 18, fontWeight: 900 }}>
-          {audioStato.preparando ? '\u2026' : audioStato.inPausa ? '\u25B6' : '\u23F8'}
-        </button>
-        {/* b.363 — Stop fermava solo la voce in corso: il ciclo che genera
-            i turni proseguiva a spese di Luca e la voce ripartiva da sola
-            col turno successivo. Ora i cicli si iscrivono a `suInterruzione`
-            e questo tasto li ferma tutti. */}
-        {/* b.394 — questa etichetta di lettura era l'unica parola scritta
-            a mano in italiano dentro un telecomando tradotto in trentotto
-            lingue: chi usa il lettore di schermo in coreano si sentiva
-            leggere «Interrompi». */}
-        <button onClick={() => fermaAudio()} aria-label={L('stopAudio')}
-          style={{ width: 42, height: 42, borderRadius: 21, cursor: 'pointer',
-            background: 'transparent', border: `1px solid ${testoP}44`, color: testoP, fontSize: 15 }}>
-          {'\u23F9'}
-        </button>
-      </div>
-    )}
+    {/* b.404 — IL TELECOMANDO E' USCITO DA QUI. Non era piu roba di
+        Life: la voce suona anche nella stanza, nel taxi e nell'archivio,
+        e li non c'era niente per fermarla. Ora sta in page.js accanto
+        alla barra in basso, uguale identico, e lo vedono tutte le
+        pagine. Life continua a comandarlo come prima, dal registro. */}
     </div>
   );
 }
@@ -1263,10 +1231,14 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         {/* b.315 — CONTROLLI IN ALTO: ascolta/ferma, evidenzia, alza la mano.
             Restano in cima mentre il testo scorre sotto. */}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12, position: 'sticky', top: 0, zIndex: 5, paddingTop: 2 }}>
-          <button onClick={ascoltaLezione}
-            style={{ padding: '9px 14px', borderRadius: 12, border: `1px solid ${accent}`, background: ascoltando ? `${accent}22` : 'transparent', color: accent, fontWeight: 800, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-            {ascoltando ? `■ ${tt('lifeStopListen', 'Ferma')}` : `▶ ${tt('lifeListen', 'Ascolta')}`}
-          </button>
+          {/* b.404 — grafica comune. Il quadrato di Stop non serve piu
+              qui: mentre suona il telecomando in basso e acceso, ed e li
+              che si ferma — in un posto solo, per tutta l'app. */}
+          <Ascolta onAscolta={ascoltaLezione} suona={ascoltando}
+            parola={ascoltando ? tt('lifeStopListen', 'Ferma') : tt('lifeListen', 'Ascolta')}
+            etichetta={tt('lifeListen', 'Ascolta')}
+            colore={accent} bordo={`1px solid ${accent}`}
+            sfondo={ascoltando ? `${accent}22` : 'transparent'} />
           <button onClick={() => setEvidenzia((v) => !v)} aria-pressed={evidenzia}
             style={{ padding: '9px 12px', borderRadius: 12, border: bordo, background: evidenzia ? `${accent}14` : 'transparent', color: evidenzia ? accent : muto, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
             {evidenzia ? '✓ ' : ''}{tt('lifeHighlight', 'Evidenzia')}

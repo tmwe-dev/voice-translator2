@@ -2,6 +2,7 @@
 import { memo, useState, useMemo } from 'react';
 import { getLang, FONT } from '../lib/constants.js';
 import AvatarImg from './AvatarImg.js';
+import { IconPlay, IconVolume } from './Icons.js';  // b.404 — l'icona vera, non la lettera
 import { useApp } from '../contexts/AppContext.js';
 
 /**
@@ -90,7 +91,7 @@ const DetailView = memo(function DetailView({
                 background: S.colors.btnGradient, color: '#000', fontSize: 12, fontWeight: 700,
                 boxShadow: S.colors.btnGlow,
               }}>
-              ▶ Riprendi
+              {'\u25B6'} Riprendi{/* b.404 — resta un bottone suo: riprende la CONVERSAZIONE, non un audio */}
             </button>
           )}
         </div>
@@ -192,7 +193,8 @@ const DetailView = memo(function DetailView({
                               background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px',
                               color: playingMsgId === m.id ? S.colors.accent1 : S.colors.textMuted, fontSize: 14,
                             }}>
-                            {playingMsgId === m.id ? '' : '▶'}
+                            {/* b.404 — l'icona del sistema, non una lettera */}
+                            {playingMsgId === m.id ? <IconVolume size={16}/> : <IconPlay size={16}/>}
                           </button>
                         )}
                       </div>

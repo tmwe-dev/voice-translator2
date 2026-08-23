@@ -97,6 +97,8 @@ import SpatialBackdrop from './components/SpatialBackdrop.js';
 import { montaCancelloDiretta, impostaModalita } from './lib/modalitaSessione.js';
 import Sciame from './components/Sciame.js';
 import InstallaApp from './components/InstallaApp.js';
+// b.404 — il telecomando della voce vale per tutta l'app, non solo per Life.
+import TelecomandoVoce from './components/TelecomandoVoce.js';
 
 
 export default function Home() {
@@ -1493,6 +1495,12 @@ function HomeInner() {
   // Define BottomNav for views that use it (now with 5 tabs + FAB)
   const bottomNav = (
     <>
+      {/* b.404 — UN SOLO TELECOMANDO PER TUTTA LA PIATTAFORMA. Prima
+          viveva dentro LifeView: nella stanza, nel taxi e nell'archivio
+          la voce partiva e non c'era niente per fermarla. Sta qui,
+          insieme alla barra, cosi lo vedono tutte le pagine che la
+          hanno; compare da se solo quando qualcosa suona. */}
+      <TelecomandoVoce L={L} />
       <BottomNav currentView={view} onNewConversation={() => setShowNewConversation(true)} />
       <NewConversationSheet open={showNewConversation} onClose={() => setShowNewConversation(false)} onSelect={handleNewConversationSelect} />
     </>

@@ -4,6 +4,7 @@ import { useApp } from '../contexts/AppContext.js';
 import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+import Ascolta from './Ascolta.js';  // b.404
 
 // ═══════════════════════════════════════════════════════════════
 // b.355→b.356 — "PARLA ORA", il traduttore subito.
@@ -366,13 +367,15 @@ export default function PrimaProva({ onChiudi }) {
       {capovolto ? (<>{bloccoTradotto}{bloccoScrittura}</>) : (<>{bloccoScrittura}{bloccoTradotto}</>)}
 
       {/* la voce, sempre a portata di mano per farla ripetere */}
-      <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa || stato === 'parlo'}
-        style={{ width: '100%', padding: 13, borderRadius: 14, border: 'none', flexShrink: 0,
-          cursor: ultimaResa ? 'pointer' : 'default', fontFamily: FONT, fontSize: 15, fontWeight: 800,
-          background: 'rgba(255,255,255,0.06)',
-          color: ultimaResa ? (C.accent || '#5b8cff') : C.textMuted, opacity: stato === 'parlo' ? 0.7 : 1 }}>
-        {stato === 'parlo' ? '…' : `▶ ${L('listenWord')}`}
-      </button>
+      {/* b.404 — grafica comune. Qui era un bottone a riga piena col
+          triangolo scritto nel testo: stessa azione, settima forma. */}
+      <div style={{ display: 'flex', flexShrink: 0 }}>
+        <Ascolta onAscolta={() => parla(ultimaResa)}
+          preparando={stato === 'parlo'} disabilitato={!ultimaResa}
+          parola={L('listenWord')} etichetta={L('listenWord')}
+          sfondo="rgba(255,255,255,0.06)"
+          colore={ultimaResa ? (C.accent || '#5b8cff') : C.textMuted} />
+      </div>
     </div>
   );
 }

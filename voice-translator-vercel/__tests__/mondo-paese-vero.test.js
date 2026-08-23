@@ -119,10 +119,31 @@ describe('il globo e una porta: si entra, si vede dove sei, si esce', () => {
   it('il pianeta sa quanto sei sceso, e si vela di conseguenza', () => {
     const v = leggi('app/components/MondoView.js');
     expect(v, 'lo stato della discesa').toMatch(/const \[discesa, setDiscesa\]/);
-    expect(v, 'il velo lo usa').toMatch(/0\.42 \+ discesa \* 0\.5/);
     expect(v, "e l'elenco stanze lo racconta").toMatch(/onScroll=\{seguiScorrimento\}/);
     const n = leggi('app/components/MondoNews.js');
     expect(n, 'e anche le news, che sono meta di Mondo').toMatch(/onScroll=\{suScorrimento\}/);
+
+    // b.403 — punto 7 del piano di Luca. Qui c'era scritto il velo a
+    // memoria: `0.42 + discesa * 0.5`. Cosi il test non provava un
+    // comportamento, fotografava tre numeri — e quando i numeri sono
+    // cambiati (b.400, il velo spegneva il pianeta) e diventato rosso
+    // pur essendo il CODICE quello giusto. Ora si prova cio che conta:
+    // a riposo il pianeta si vede, scendendo si copre, e non si esce mai
+    // dai limiti dell'opacita.
+    const riga = v.match(/background: `linear-gradient\(180deg, rgba\(5,7,15,\$\{([^}]+)\}\)[^`]*`/);
+    expect(riga, 'il velo e un gradiente che dipende dalla discesa').toBeTruthy();
+    const opacita = (espressione, discesa) =>
+      Number(new Function('discesa', `return ${espressione}`)(discesa));
+    const cime = [...v.matchAll(/rgba\(5,7,15,\$\{([^}]+)\}\)/g)].map((m) => m[1]);
+    expect(cime.length, 'le tre fermate del gradiente').toBeGreaterThanOrEqual(3);
+    for (const e of cime.slice(0, 3)) {
+      const fermo = opacita(e, 0);
+      const sceso = opacita(e, 1);
+      expect(fermo, 'a riposo il globo non e spento').toBeLessThan(0.7);
+      expect(sceso, 'scendendo il velo si chiude').toBeGreaterThan(fermo);
+      expect(sceso, "l'opacita resta un'opacita").toBeLessThanOrEqual(1);
+      expect(fermo, "l'opacita resta un'opacita").toBeGreaterThanOrEqual(0);
+    }
   });
 
   it('il Paese torna indietro da News: si sceglie in un posto, lo sanno tutti', () => {

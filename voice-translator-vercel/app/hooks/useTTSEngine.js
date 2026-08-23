@@ -1,6 +1,10 @@
 'use client';
 import { useRef, useEffect } from 'react';
 import { AVATAR_NAMES, AVATARS } from '../lib/constants.js';
+// b.404 — LA VOCE DELLA STANZA ENTRA NEL REGISTRO. Finora questo motore
+// suonava per conto suo: il telecomando non lo vedeva e lo Stop non lo
+// fermava. Ora ogni blob che parte si annuncia, come fa Life da b.305.
+import { suona as registraVoce } from '../lib/voce.js';
 
 /**
  * useTTSEngine — All TTS engines extracted from useAudioSystem.
@@ -195,6 +199,11 @@ export default function useTTSEngine({
   // BLOB PLAYBACK HELPERS (shared by all engines)
   // ═══════════════════════════════════════════════
 
+  // b.404 — il nome scritto sul telecomando mentre suona. Non e un
+  // dettaglio: un telecomando che non dice COSA sta fermando e un
+  // interruttore al buio.
+  const etichettaVoce = 'BarTalk';
+
   function playBlobAudio(blobUrl) {
     return new Promise((resolve) => {
       const audio = getPersistentAudio();
@@ -207,6 +216,7 @@ export default function useTTSEngine({
       audio.src = blobUrl;
       // Ensure volume is up (may have been muted)
       audio.volume = 1.0;
+      registraVoce(audio, etichettaVoce); // b.404 — il telecomando ora la vede
       audio.play().catch((e) => { console.warn('[TTS] playBlobAudio play() rejected:', e?.message || e); cleanup(); resolve(false); });
     });
   }
@@ -222,6 +232,7 @@ export default function useTTSEngine({
       const safetyTimer = setTimeout(() => { console.warn('[TTS] playBlobNewAudio timeout'); a.pause(); resolve(false); }, 30000);
       a.onended = () => { clearTimeout(safetyTimer); resolve(true); };
       a.onerror = (e) => { console.warn('[TTS] playBlobNewAudio error:', e?.type || e); clearTimeout(safetyTimer); resolve(false); };
+      registraVoce(a, etichettaVoce); // b.404 — anche il percorso iOS
       a.play().catch((e) => { console.warn('[TTS] playBlobNewAudio play() rejected:', e?.message || e); clearTimeout(safetyTimer); resolve(false); });
     });
   }

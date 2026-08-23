@@ -3,6 +3,7 @@ import { memo, useState, useCallback } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { parlaTurno } from '../../lib/compagni/cliente.js';
 import PannelloPronuncia from './PannelloPronuncia.js';
+import Ascolta from '../Ascolta.js';  // b.404
 
 // ═══════════════════════════════════════════════════════════════
 // b.330 — PANNELLO LETTURA: l'esercizio chiesto da Luca per i corsi di
@@ -44,14 +45,14 @@ function PannelloLettura({ frasi, lingua, voceAssistente, nomeAssistente, userTo
           <div key={i} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: attiva === i ? `1px solid ${accent}` : bordo }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: testoP, lineHeight: 1.4 }}>{f}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => diLaFrase(i)} disabled={dicendo >= 0}
-                style={{ padding: '6px 11px', borderRadius: 9, border: `1px solid ${accent}`, background: 'transparent', color: accent, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: FONT, opacity: dicendo >= 0 && dicendo !== i ? 0.5 : 1 }}>
-                {dicendo === i ? '…' : `▶ ${nomeAssistente || 'Ascolta'}`}
-              </button>
-              <button onClick={() => diLaFrase(i, true)} disabled={dicendo >= 0}
-                style={{ padding: '6px 10px', borderRadius: 9, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>
-                ▶ Lenta
-              </button>
+              {/* b.404 — grafica comune, e il triangolo non e piu una lettera */}
+              <Ascolta onAscolta={() => diLaFrase(i)}
+                preparando={dicendo === i} disabilitato={dicendo >= 0 && dicendo !== i}
+                parola={nomeAssistente || 'Ascolta'} colore={accent} bordo={`1px solid ${accent}`} />
+              <Ascolta onAscolta={() => diLaFrase(i, true)}
+                disabilitato={dicendo >= 0} parola="Lenta"
+                etichetta="La stessa frase, rallentata"
+                colore={testoP} bordo={bordo} />
               <button onClick={() => setAttiva(attiva === i ? -1 : i)}
                 style={{ padding: '6px 11px', borderRadius: 9, border: 'none', background: attiva === i ? `${accent}22` : accent, color: attiva === i ? accent : '#04121c', fontWeight: 800, fontSize: 12, cursor: 'pointer', fontFamily: FONT }}>
                 {attiva === i ? 'Chiudi' : 'Leggila tu'}

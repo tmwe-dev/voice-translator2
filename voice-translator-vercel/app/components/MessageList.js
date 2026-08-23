@@ -4,6 +4,7 @@ import AvatarImg from './AvatarImg.js';
 import { IconPlay, IconVolume, IconCheck, IconCheckDouble, IconLoader, IconMic, IconKeyboard } from './Icons.js';
 import { PALETTE } from '../lib/palette.js';
 import BarraReazioni from './BarraReazioni.js';
+import Ascolta from './Ascolta.js';
 import Velo from './Velo.js';
 import { velare } from '../lib/velo.js';
 
@@ -304,14 +305,18 @@ const MessageList = memo(function MessageList({
                 </div>
               )}
               <div style={{display:'flex', alignItems:'center', gap:4, marginTop:2}}>
+                {/* b.404 — UNA SOLA GRAFICA PER ASCOLTARE. Qui c'era
+                    un'icona da 14 dentro un bottone da 2 pixel di
+                    imbottitura: il segno piu piccolo di tutta la
+                    piattaforma per l'azione piu ripetuta. Ora e il
+                    componente comune, che porta con se anche i 32 pixel
+                    di bersaglio che alla mano servono. */}
                 {hasTranslation && (
-                  <button onClick={() => playMessage(m)}
-                    aria-label={playingMsgId === m.id ? L('stopAudio') : L('playMessageAudio')}
-                    style={{padding:'2px 8px', borderRadius:8,
-                      background:'transparent', border:'none', color:S.colors.textMuted,
-                      fontSize:11, cursor:'pointer', WebkitTapHighlightColor:'transparent'}}>
-                    {playingMsgId === m.id ? <IconVolume size={14}/> : <IconPlay size={14}/>}
-                  </button>
+                  <Ascolta
+                    onAscolta={() => playMessage(m)}
+                    suona={playingMsgId === m.id}
+                    colore={S.colors.textMuted}
+                    etichetta={playingMsgId === m.id ? L('stopAudio') : L('playMessageAudio')} />
                 )}
                 {/* React button */}
                 <button onClick={() => setReactionPickerMsgId(reactionPickerMsgId === m.id ? null : m.id)}

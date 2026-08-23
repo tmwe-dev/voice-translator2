@@ -312,7 +312,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   const trafficoPaesi = useMemo(() => {
     const conto = {};
     for (const r of rooms) {
-      const p = paeseDaLingua(r.hostLang || r.lang);
+      const p = r.paese || paeseDaLingua(r.hostLang || r.lang); // b.403 — P1.1: il paese vero batte la lingua
       if (p) conto[p] = (conto[p] || 0) + 1 + (Number(r.membri) || 0) * 0.2;
     }
     for (const d of feedCaldo || []) {
@@ -329,7 +329,8 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
   // due a due, e il pianeta le AGGIUNGE a quelle di scena. Il paese lo
   // ricava dalla lingua finche le stanze non porteranno il luogo.
   const rotteVere = useMemo(() => {
-    const paesi = [...new Set(rooms.map((r) => paeseDaLingua(r.hostLang || r.lang)).filter(Boolean))];
+    // b.403 — P1.2: stessa regola del traffico. MX in spagnolo e MESSICO, non Spagna.
+    const paesi = [...new Set(rooms.map((r) => r.paese || paeseDaLingua(r.hostLang || r.lang)).filter(Boolean))];
     const coppie = [];
     for (let i = 0; i < paesi.length && coppie.length < 10; i++) {
       for (let j = i + 1; j < paesi.length && coppie.length < 10; j++) coppie.push([paesi[i], paesi[j]]);
@@ -485,14 +486,16 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             spostata. */}
         <div style={{ minWidth: 168 }}>
           {/* b.400 — L'ICONA ERA SPARITA (collaudo di Luca: «Stanze e
-              Notizie avevano una icona che e sparita»). Il componente
-              Scelta la sa gia disegnare: nessuno gliela passava piu. */}
+              Notizie avevano una icona che e sparita»). Sta sull'OPZIONE,
+              non sulla tendina: cosi vive dentro il pulsante accanto alla
+              parola. Al primo tentativo l'avevo passata come `icona` della
+              tendina, che e un titolo sopra: nella testata stretta usciva
+              dal riquadro e restava a mezz'aria in alto a sinistra. */}
           <Scelta C={C}
-            icona={tab === 'news' ? 'doc' : 'chat'}
             valore={tab}
             opzioni={[
-              { valore: 'stanze', etichetta: L('tabRooms'), conto: rooms?.length || null },
-              { valore: 'news', etichetta: L('tabNews') },
+              { valore: 'stanze', etichetta: L('tabRooms'), icona: 'chat', conto: rooms?.length || null },
+              { valore: 'news', etichetta: L('tabNews'), icona: 'doc' },
             ]}
             onCambia={(v) => { vibrate(6); setTab(v); }} />
         </div>

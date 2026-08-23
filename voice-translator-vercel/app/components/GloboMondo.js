@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { postoADestra } from '../lib/righello.js';
+import { postoADestra, MARGINE, COLONNA_DESTRA } from '../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
 // IL GLOBO DEL MONDO — il file di Luca, adattato per l'innesto.
@@ -15,10 +15,19 @@ import { postoADestra } from '../lib/righello.js';
 // che clicca i pulsanti del file (esistono ancora nel DOM, solo nascosti).
 // ═══════════════════════════════════════════════════════════════
 
+// b.401 — LE VISTE HANNO UN NOME (collaudo di Luca: «non si puo
+// selezionare la vista»). Prima erano tre icone senza etichetta dietro
+// un solo comando che le faceva girare in tondo: per tornare a quella di
+// prima bisognava premere due volte al buio, e niente diceva quale fosse
+// quella accesa. Un ciclo cieco non e una scelta.
+// b.403 — P1.11 DEL PIANO: l'iframe e di casa nostra, quindi i messaggi
+// si mandano al NOSTRO indirizzo, non a chiunque ('*').
+const ORIGINE = typeof window !== 'undefined' ? window.location.origin : '*';
+
 const STATI = [
-  { id: 'notte', icona: 'luna' },
-  { id: 'giorno', icona: 'sole' },
-  { id: 'ibrido', icona: 'mezzaluna' },
+  { id: 'notte', icona: 'luna', nome: 'Notte' },
+  { id: 'giorno', icona: 'sole', nome: 'Giorno' },
+  { id: 'ibrido', icona: 'mezzaluna', nome: 'Ibrido' },
 ];
 
 function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
@@ -51,6 +60,7 @@ function IconaCielo({ tipo, size = 26, color = '#dfe6f2' }) {
 export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', etichettaCielo = 'Cielo del pianeta', paese = null, rotte = null, traffico = null, onPaeseScelto = null }) {
   const ref = useRef(null);
   const [stato, setStato] = useState(0);
+  const [menuCielo, setMenuCielo] = useState(false); // b.401
 
   // b.363 — IL PAESE SCELTO DA FUORI ARRIVA AL PIANETA. Finora il globo e
   // l'app non si parlavano: toccando un paese sulla mappa lo sapeva solo
@@ -64,13 +74,17 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || null }, '*'); }
+      try { finestra.postMessage({ tipo: 'bartalk:paese', code: paese || null }, ORIGINE); }
       catch { /* il pianeta non e ancora pronto: si riprova quando lo dice lui */ }
     };
     manda();
     // se il pianeta si e appena acceso, glielo si ridice: al primo giro
     // puo non essere ancora in ascolto.
-    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    const suPronto = (ev) => {
+      if (ev.origin !== window.location.origin) return;      // b.403 — P1.11
+      if (ev.source !== ref.current?.contentWindow) return;
+      if (ev?.data?.tipo === 'bartalk:globo-pronto') manda();
+    };
     window.addEventListener('message', suPronto);
     return () => window.removeEventListener('message', suPronto);
   }, [paese]);
@@ -82,14 +96,22 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
   // senza stanze aperte il cielo resterebbe vuoto, e un cielo vuoto non
   // dice "non c'e nessuno", dice "e rotto".
   useEffect(() => {
+    // b.403 — P1.10: SI MANDANO ANCHE LE ROTTE VUOTE. Con `!rotte?.length`
+    // si usciva senza dire niente e il pianeta teneva acceso il volo di
+    // prima: chiuse le stanze, la rotta restava a disegnare traffico che
+    // non c'era piu.
     const finestra = ref.current?.contentWindow;
-    if (!finestra || !rotte?.length) return;
+    if (!finestra) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:rotte', coppie: rotte }, '*'); }
+      try { finestra.postMessage({ tipo: 'bartalk:rotte', coppie: rotte || [] }, ORIGINE); }
       catch { /* il pianeta non e ancora acceso: si riprova quando lo dice lui */ }
     };
     manda();
-    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    const suPronto = (ev) => {
+      if (ev.origin !== window.location.origin) return;      // b.403 — P1.11
+      if (ev.source !== ref.current?.contentWindow) return;
+      if (ev?.data?.tipo === 'bartalk:globo-pronto') manda();
+    };
     window.addEventListener('message', suPronto);
     return () => window.removeEventListener('message', suPronto);
   }, [rotte]);
@@ -103,11 +125,15 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     const finestra = ref.current?.contentWindow;
     if (!finestra || !traffico) return;
     const manda = () => {
-      try { finestra.postMessage({ tipo: 'bartalk:traffico', perPaese: traffico }, '*'); }
+      try { finestra.postMessage({ tipo: 'bartalk:traffico', perPaese: traffico }, ORIGINE); }
       catch { /* il pianeta non e ancora acceso: si riprova quando lo dice lui */ }
     };
     manda();
-    const suPronto = (ev) => { if (ev?.data?.tipo === 'bartalk:globo-pronto') manda(); };
+    const suPronto = (ev) => {
+      if (ev.origin !== window.location.origin) return;      // b.403 — P1.11
+      if (ev.source !== ref.current?.contentWindow) return;
+      if (ev?.data?.tipo === 'bartalk:globo-pronto') manda();
+    };
     window.addEventListener('message', suPronto);
     return () => window.removeEventListener('message', suPronto);
   }, [traffico]);
@@ -130,6 +156,11 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
   // liste sotto continuavano a mostrare il mondo intero.
   useEffect(() => {
     const suMessaggio = (ev) => {
+      // b.403 — P1.11: si ascolta solo il NOSTRO iframe. Prima bastava che
+      // un messaggio dicesse di chiamarsi 'bartalk:paese-scelto' — da
+      // qualunque finestra — per spostare il Paese di tutta la sezione.
+      if (ev.origin !== window.location.origin) return;
+      if (ev.source !== ref.current?.contentWindow) return;
       const d = ev?.data;
       if (!d || d.tipo !== 'bartalk:paese-scelto') return;
       onPaeseScelto?.(d.code ? String(d.code).toUpperCase() : null);
@@ -138,14 +169,16 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
     return () => window.removeEventListener('message', suMessaggio);
   }, [onPaeseScelto]);
 
-  const cambiaCielo = () => {
+  // b.401 — si SCEGLIE la vista, non si cicla: il menu qui sotto chiama
+  // questa con l'indice voluto. Il messaggio al pianeta e lo stesso.
+  const scegliCielo = (indice) => {
     const finestra = ref.current?.contentWindow;
     if (!finestra) return;
-    const prossimo = (stato + 1) % STATI.length;
-    try { finestra.postMessage({ tipo: 'bartalk:cielo', variante: CIELI[prossimo] }, '*'); }
+    try { finestra.postMessage({ tipo: 'bartalk:cielo', variante: CIELI[indice] }, ORIGINE); }
     catch { return; }
-    // l'icona avanza solo a comando dato davvero (b.363).
-    setStato(prossimo);
+    // l'icona cambia solo a comando dato davvero (b.363).
+    setStato(indice);
+    setMenuCielo(false);
   };
 
   const contenitore = sfondo
@@ -177,7 +210,8 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
       {/* b.363 — l'etichetta era in italiano fisso: chi usa un lettore di
           schermo in un'altra lingua sentiva una parola italiana in mezzo a
           un'interfaccia tradotta. */}
-      <button onClick={cambiaCielo} aria-label={etichettaCielo}
+      <button onClick={() => setMenuCielo((v) => !v)} aria-label={etichettaCielo}
+        aria-haspopup="listbox" aria-expanded={menuCielo}
         style={{
           // b.363 — SECONDO posto della colonna di destra, sotto la pila
           // (vedi lib/righello.js). Prima era su un asse tutto suo e si
@@ -192,6 +226,46 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
         }}>
         <IconaCielo tipo={STATI[stato].icona} size={26} />
       </button>
+
+      {/* ═══ INIZIO b.401 — LA SCELTA DELLA VISTA ═══
+          Tre voci col loro nome e la spunta su quella accesa. Si apre
+          sotto l'icona, nella stessa colonna del righello, e si chiude
+          toccando fuori. Nessun livello nuovo: sta alla quota della
+          luna (80), sopra il velo trasparente che intercetta i tocchi. */}
+      {menuCielo && (
+        <>
+          <div onClick={() => setMenuCielo(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 79, background: 'transparent' }} />
+          <div role="listbox" aria-label={etichettaCielo}
+            style={{
+              position: 'fixed', zIndex: 81,
+              right: MARGINE, top: `calc(${COLONNA_DESTRA.primo} + 40px)`,
+              minWidth: 152, padding: 4,
+              background: 'rgba(11,15,28,0.96)',
+              border: '1px solid rgba(255,255,255,0.10)', borderRadius: 12,
+              boxShadow: '0 14px 34px rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+            }}>
+            {STATI.map((v, i) => (
+              <button key={v.id} role="option" aria-selected={i === stato}
+                onClick={() => scegliCielo(i)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '9px 10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  background: i === stato ? 'rgba(255,255,255,0.07)' : 'transparent',
+                  color: i === stato ? '#eaf0ff' : 'rgba(214,226,245,0.85)',
+                  fontSize: 13, fontWeight: i === stato ? 800 : 600,
+                  textAlign: 'left', WebkitTapHighlightColor: 'transparent',
+                }}>
+                <IconaCielo tipo={v.icona} size={17} color={i === stato ? '#eaf0ff' : 'rgba(214,226,245,0.8)'} />
+                <span style={{ flex: 1 }}>{v.nome}</span>
+                {i === stato && <span style={{ fontSize: 12 }}>&#10003;</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {/* ═══ FINE b.401 ═══ */}
     </>
   );
 }

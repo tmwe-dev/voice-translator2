@@ -67,6 +67,12 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
           border: `1px solid ${aperta ? `${C.accent}55` : 'rgba(255,255,255,0.09)'}`,
           fontFamily: FONT, textAlign: 'left', WebkitTapHighlightColor: 'transparent',
         }}>
+        {/* b.400bis — L'ICONA DELL'OPZIONE, dentro il pulsante accanto alla
+            parola. La prop `icona` qui sopra disegna un TITOLO sopra la
+            tendina: in una testata stretta quel titolo esce dal riquadro
+            e l'icona finisce a mezz'aria (visto dal vivo). Quella che
+            serve a Stanze/Notizie e questa, attaccata al valore. */}
+        {scelta?.icona && <Icon name={scelta.icona} size={14} color={COLORE_VALORE} />}
         {scelta?.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{scelta.bandiera}</span>}
         <span style={{
           flex: 1, minWidth: 0, fontSize: 13.5, fontWeight: 700, color: COLORE_VALORE,
@@ -107,6 +113,7 @@ export default function Scelta({ etichetta, valore, opzioni, onCambia, C, icona 
                   border: 'none', borderBottom: bordo, fontFamily: FONT,
                   WebkitTapHighlightColor: 'transparent',
                 }}>
+                {o.icona && <Icon name={o.icona} size={14} color={scelto ? C.accent : 'rgba(214,226,245,0.88)'} />}
                 {o.bandiera && <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{o.bandiera}</span>}
                 <span style={{
                   flex: 1, minWidth: 0, fontSize: 13, fontWeight: scelto ? 800 : 600,

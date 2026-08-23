@@ -6,6 +6,7 @@ import { parlaTurno, drillPronuncia } from '../../lib/compagni/cliente.js';
 import { pausa as pausaAudioLife } from '../../lib/audioLife.js';
 import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
 import GraficoFonia from './GraficoFonia.js';
+import Ascolta from '../Ascolta.js';
 
 // ═══════════════════════════════════════════════════════════════
 // PANNELLO PRONUNCIA — dillo ad alta voce (Luca, b.244)
@@ -210,17 +211,19 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       <div style={{ fontSize: 17, fontWeight: 800, color: testoP, marginBottom: 10 }}>{frase}</div>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button onClick={ascoltaFrase} disabled={ascoltoFrase || stato === 'registro'}
-          style={{ padding: '10px 14px', borderRadius: 12, border: `1px solid ${accent}`, fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
-            background: 'transparent', color: accent, opacity: (ascoltoFrase || stato === 'registro') ? 0.6 : 1 }}>
-          {ascoltoFrase ? '…' : `▶ ${nomeAssistente ? `Ascolta ${nomeAssistente}` : 'Ascolta la frase'}`}
-        </button>
-        <button onClick={ascoltaLenta} disabled={ascoltoFrase || stato === 'registro'}
-          title="La stessa frase, rallentata"
-          style={{ padding: '10px 12px', borderRadius: 12, border: bordo, fontFamily: FONT, fontWeight: 700, cursor: 'pointer',
-            background: 'transparent', color: testoP, opacity: (ascoltoFrase || stato === 'registro') ? 0.6 : 1 }}>
-          ▶ Lenta
-        </button>
+        {/* b.404 — il triangolo era scritto a mano nel testo (`▶ Lenta`),
+            e per questo cambiava forma da una pagina all'altra. Ora e il
+            componente comune, con l'icona vera del sistema. */}
+        <Ascolta onAscolta={ascoltaFrase}
+          preparando={ascoltoFrase}
+          disabilitato={stato === 'registro'}
+          parola={nomeAssistente ? `Ascolta ${nomeAssistente}` : 'Ascolta la frase'}
+          colore={accent} bordo={`1px solid ${accent}`} />
+        <Ascolta onAscolta={ascoltaLenta}
+          preparando={ascoltoFrase}
+          disabilitato={stato === 'registro'}
+          parola="Lenta" etichetta="La stessa frase, rallentata"
+          colore={testoP} bordo={bordo} />
         <button onClick={registra} disabled={stato === 'valuto'}
           style={{ padding: '10px 16px', borderRadius: 12, border: 'none', fontFamily: FONT, fontWeight: 800, cursor: stato === 'valuto' ? 'default' : 'pointer',
             background: stato === 'registro' ? '#f87171' : accent, color: '#04121c', opacity: stato === 'valuto' ? 0.6 : 1 }}>
@@ -277,9 +280,9 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {drill.coppie.map((c, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button onClick={() => diParola(c.a)} style={{ padding: '5px 10px', borderRadius: 8, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>▶ {c.a}</button>
+                    <Ascolta onAscolta={() => diParola(c.a)} parola={c.a} colore={testoP} bordo={bordo} etichetta={`Ascolta ${c.a}`} />
                     <span style={{ color: muto, fontSize: 12 }}>contro</span>
-                    <button onClick={() => diParola(c.b)} style={{ padding: '5px 10px', borderRadius: 8, border: bordo, background: 'transparent', color: testoP, fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>▶ {c.b}</button>
+                    <Ascolta onAscolta={() => diParola(c.b)} parola={c.b} colore={testoP} bordo={bordo} etichetta={`Ascolta ${c.b}`} />
                   </div>
                 ))}
               </div>

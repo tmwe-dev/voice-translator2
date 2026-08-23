@@ -9,6 +9,7 @@ import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 import { compatibilitaVoceLingua } from '../../lib/vociLingue.js';
 import { conRipiego } from '../../lib/ripiego.js';
+import Ascolta from '../Ascolta.js';  // b.404 — una sola grafica per ascoltare
 
 // b.212 — le barre "stile ElevenLabs": l'utente regola il carattere a vista.
 const BARRE = [
@@ -338,7 +339,7 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
           <select value={bozza.voce?.id || ''} onChange={(e) => { const v = VOCI_ELENCO.find(x => x.id === e.target.value); setBozza((b) => ({ ...b, voce: v || b.voce })); }} style={{ ...input, flex: 1 }}>
             {VOCI_ELENCO.map((v) => <option key={v.id} value={v.id}>{v.nome}</option>)}
           </select>
-          <button onClick={() => provaVoce(bozza.voce?.id)} style={{ padding: '0 16px', borderRadius: 10, border: 'none', background: accent, color: '#04121c', fontWeight: 700, cursor: 'pointer', fontFamily: FONT }}>▶ {L('lifeTryVoice')}</button>
+          <Ascolta onAscolta={() => provaVoce(bozza.voce?.id)} parola={L('lifeTryVoice')} sfondo={accent} colore="#04121c" etichetta={L('lifeTryVoice')} />
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
