@@ -20,6 +20,26 @@ describe('adattatore Core', () => {
     expect(JSON.parse(calls[0].init.body).token).toBe('vero');
   });
 
+  it('fixedBody e autoritativo: il client non puo trasformare riscatta in invia', async () => {
+    const { route, params } = matchRoute('POST','/wallet/gifts/redeem');
+    const req = new Request('https://api.test/api/v1/wallet/gifts/redeem', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({ azione:'invia', codice:'REGALO-1', minuti:600 })
+    });
+    await callUpstream({ req, route, params, sessionToken:'vero' });
+    const body = JSON.parse(calls[0].init.body);
+    expect(body.azione).toBe('riscatta');
+    expect(calls[0].init.headers.get('authorization')).toBe('Bearer vero');
+  });
+
+  it('la query fissata dalla route non puo essere duplicata dal client', async () => {
+    const { route, params } = matchRoute('GET','/preferences');
+    const req = new Request('https://api.test/api/v1/preferences?action=delete-data');
+    await callUpstream({ req, route, params, sessionToken:'vero' });
+    const u = new URL(calls[0].url);
+    expect(u.searchParams.getAll('action')).toEqual(['get-prefs']);
+  });
+
   it('Glossary usa token e non userToken', async () => {
     const { route, params } = matchRoute('GET','/glossaries');
     const req = new Request('https://api.test/api/v1/glossaries');

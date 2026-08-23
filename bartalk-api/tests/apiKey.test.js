@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { issueApiKey, readApiKey } from '../lib/apiKey.js';
+import { DEFAULT_SCOPES, issueApiKey, readApiKey } from '../lib/apiKey.js';
 
 beforeEach(() => { process.env.BARTALK_API_SIGNING_SECRET = '0123456789abcdef0123456789abcdef0123456789abcdef'; });
 
@@ -12,6 +12,13 @@ describe('API key cifrata e legata alla sessione', () => {
     const p = readApiKey(k, { now: 2000 });
     expect(p.session).toBe('sessione-segreta-123');
     expect(p.scopes).toEqual(['translate']);
+  });
+  it('gli scope di default non regalano scritture sensibili', () => {
+    expect(DEFAULT_SCOPES).toContain('translate');
+    expect(DEFAULT_SCOPES).not.toContain('wallet:write');
+    expect(DEFAULT_SCOPES).not.toContain('keys:write');
+    expect(DEFAULT_SCOPES).not.toContain('profile:write');
+    expect(DEFAULT_SCOPES).not.toContain('companions:write');
   });
   it('una chiave alterata viene rifiutata', () => {
     const k = issueApiKey({ sessionToken: 'x', scopes: ['translate'] });

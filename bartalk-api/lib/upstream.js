@@ -25,7 +25,9 @@ function mergeQuery(upstream, incomingUrl) {
   const incoming = new URL(incomingUrl);
   const sensibili = new Set(['token','userToken','roomSessionToken','apiKey','authorization']);
   for (const [k, v] of incoming.searchParams) {
-    if (!sensibili.has(k)) target.searchParams.append(k, v);
+    // Una query fissata nella route (es. action=profile) e autoritativa:
+    // il client non puo aggiungere un secondo valore per cambiarne il significato.
+    if (!sensibili.has(k) && !target.searchParams.has(k)) target.searchParams.append(k, v);
   }
   return target;
 }
@@ -56,7 +58,9 @@ export async function callUpstream({ req, route, params, sessionToken }) {
     body = copy;
   } else if (!['GET', 'HEAD'].includes(method)) {
     let json = await readJson(req, route.maxJsonBytes || MAX_JSON_BYTES);
-    json = { ...(route.fixedBody || {}), ...json };
+    // Il contratto della route vince SEMPRE sul body del client.
+    // Prima era al contrario: {fixed, ...client} permetteva di cambiare action/azione.
+    json = { ...json, ...(route.fixedBody || {}) };
     json = transformBody(route.transform, json, params);
     if (route.auth === 'json:userToken') json.userToken = sessionToken;
     if (route.auth === 'json:token') json.token = sessionToken;

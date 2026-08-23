@@ -12,10 +12,10 @@ export default function Docs() {
       <li>Invia <code>POST /api/v1/auth/exchange</code> con <code>Authorization: Bearer &lt;sessione BarTalk&gt;</code>.</li>
       <li>Usa la chiave restituita <code>bt_live_...</code> come Bearer per le successive chiamate.</li>
     </ol>
-    <p>La scadenza della API key è un tetto massimo: se la sessione BarTalk sottostante scade o viene revocata, il Core rifiuta anche la API key.</p>
+    <p>Se non chiedi scope espliciti la chiave nasce in least-privilege: le scritture sensibili, il wallet e il BYOK richiedono scope dedicati.</p>
 
     <h2>Stanze</h2>
-    <p>Le operazioni di stanza mantengono il secondo livello di identità del Core: <code>roomSessionToken</code> nel JSON oppure <code>X-Room-Session</code> per le GET che lo prevedono. La API key non sostituisce la membership della stanza.</p>
+    <p>Le operazioni di stanza mantengono il secondo livello di identita del Core: <code>roomSessionToken</code> nel JSON oppure <code>X-Room-Session</code> per le GET che lo prevedono. La API key non sostituisce la membership della stanza.</p>
 
     <h2>Endpoint ({ROUTES.length})</h2>
     <div style={{overflowX:'auto'}}>
@@ -33,11 +33,13 @@ export default function Docs() {
     <h2>Garanzie architetturali</h2>
     <ul>
       <li>La business logic resta nel Core.</li>
-      <li>Il client non può sostituire il token account: il gateway sovrascrive <code>token</code>/<code>userToken</code> quando il Core li usa.</li>
+      <li>Il client non puo sostituire il token account: il gateway sovrascrive <code>token</code>/<code>userToken</code> quando il Core li usa.</li>
+      <li><code>fixedBody</code> e le query fissate dal gateway sono autoritative e non sovrascrivibili dal client.</li>
       <li>La sessione stanza resta separata e viene nuovamente validata dal Core.</li>
       <li>I rate limit del gateway si sommano a quelli autorevoli del Core.</li>
       <li>Audio e NDJSON vengono inoltrati come stream, senza reinterpretare il contenuto.</li>
-      <li>Admin, debug, test e checkout Stripe interno non sono pubblicati come API di integrazione.</li>
+      <li>Admin, debug, test, cron, webhook e Stripe raw non sono pubblicati. La ricarica passa solo dalla capability wallet autenticata.</li>
+      <li>L'invio regalo non e esposto finche il Core non offre idempotenza della mutazione.</li>
     </ul>
   </main>;
 }
