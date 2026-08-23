@@ -66,6 +66,19 @@ describe('adattatore Core', () => {
     expect(calls[0].init.headers.get('authorization')).toBe('Bearer account-session');
   });
 
+  it('heartbeat Live inoltra rinnova e sessione dal path, non dal client', async () => {
+    const { route, params } = matchRoute('POST','/live-sessions/sessione-vera/heartbeat');
+    const req = new Request('https://api.test/api/v1/live-sessions/sessione-vera/heartbeat', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({ azione:'chiudi', sessioneId:'falsa', userToken:'falso' }),
+    });
+    await callUpstream({ req, route, params, sessionToken:'account-session' });
+    const body = JSON.parse(calls[0].init.body);
+    expect(body.azione).toBe('rinnova');
+    expect(body.sessioneId).toBe('sessione-vera');
+    expect(body.userToken).toBe('account-session');
+  });
+
   it('learning/homework accetta il tetto Core da 6MB invece del tetto standard', async () => {
     const { route, params } = matchRoute('POST','/learning/homework');
     const payload={azione:'salva',job:{testo:'x'.repeat(600_000)}};
@@ -73,10 +86,10 @@ describe('adattatore Core', () => {
     await expect(callUpstream({req,route,params,sessionToken:'account-session'})).resolves.toBeInstanceOf(Response);
   });
 
-  it('DELETE /me/data non trasforma ok:true in una promessa di cancellazione totale', async () => {
+  it('DELETE /me/data riflette b.419 senza inventare residui Mondo', async () => {
     global.fetch = vi.fn(async (url, init) => {
       calls.push({ url: String(url), init });
-      return new Response(JSON.stringify({ ok:true, deleted:['profile','compagni'] }), {
+      return new Response(JSON.stringify({ ok:true, deleted:['profile','compagni','mondo_follows','mondo_comment_likes','mondo_segnalazioni'] }), {
         status:200,
         headers:{'content-type':'application/json'},
       });
@@ -87,9 +100,9 @@ describe('adattatore Core', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.deletionCoverage.status).toBe('partial');
-    expect(body.deletionCoverage.auditedCore).toBe('b.416');
-    expect(body.deletionCoverage.notGuaranteedByCore).toContain('translation_history_rows');
-    expect(body.deletionCoverage.notGuaranteedByCore).toContain('mondo_follows');
+    expect(body.deletionCoverage.auditedCore).toBe('b.419');
+    expect(body.deletionCoverage.notGuaranteedByCore).toEqual([]);
+    expect(body.deletionCoverage.legacyInactiveSurfaces).toContain('translation_history');
     const sent = JSON.parse(calls[0].init.body);
     expect(sent.action).toBe('delete-data');
     expect(sent.token).toBe('account-session');

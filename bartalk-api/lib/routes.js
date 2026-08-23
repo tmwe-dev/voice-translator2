@@ -38,6 +38,9 @@ export const ROUTES = [
   R('DELETE', '/companions/:id', 'companions:write', '/api/compagni/mie', 'json:userToken', { upstreamMethod: 'POST', fixedBody: { azione: 'cancella' }, transform: 'companionDelete' }),
   R('POST', '/companions/:id/messages', 'companions:chat', '/api/compagni/amico', 'json:userToken', { transform: 'companionMessage', limit: 40 }),
   R('POST', '/companions/:id/live-sessions', 'companions:live', '/api/compagni/live/session', 'json:userToken', { transform: 'liveOpen', limit: 10 }),
+  // b.418 Core: il Live ruota la riserva a tratti. Il client API deve mandare
+  // questo heartbeat con la cadenza restituita da `battitoSecondi` all'apertura.
+  R('POST', '/live-sessions/:sessionId/heartbeat', 'companions:live', '/api/compagni/live/session', 'json:userToken', { transform: 'liveRenew', limit: 60 }),
   R('DELETE', '/live-sessions/:sessionId', 'companions:live', '/api/compagni/live/session', 'json:userToken', { upstreamMethod: 'POST', transform: 'liveClose', limit: 20 }),
   R('POST', '/podcast/turns', 'companions:podcast', '/api/compagni/podcast', 'json:userToken', { limit: 60 }),
   R('POST', '/table', 'companions:chat', '/api/compagni/tavolo', 'json:userToken', { limit: 40 }),
@@ -132,6 +135,7 @@ export function transformBody(name, body, params) {
     };
   }
   if (name === 'liveOpen') return { ...body, azione: 'apri', compagnoId: params.id };
+  if (name === 'liveRenew') return { ...body, azione: 'rinnova', sessioneId: params.sessionId };
   if (name === 'liveClose') return { ...body, azione: 'chiudi', sessioneId: params.sessionId };
   if (name === 'conversationDelete') return { ...body, action: 'delete', convId: params.id };
   if (name === 'glossaryId') return { ...body, glossaryId: params.id };

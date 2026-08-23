@@ -33,17 +33,15 @@ function mergeQuery(upstream, incomingUrl) {
 }
 
 async function rispostaGateway(route, response, responseHeaders) {
-  // Audit b.416: il Core b.415 ha fatto un salto enorme sul DELETE USER,
-  // ma non esiste ancora una prova di cancellazione TOTALE. In particolare
-  // la tabella translations puo contenere testo originale/tradotto legato a
-  // user_id e Mondo ha follow/like/segnalazioni con identificativi utente.
-  // Oggi queste tabelle risultano vuote nel DB vivo, ma il contratto pubblico
-  // non deve dipendere dal fatto che oggi non ci siano righe.
+  // Core b.419: il cancellatore centrale copre anche i metadati personali
+  // Mondo (follow, like e segnalazioni). Restano intenzionalmente fuori il
+  // ledger wallet e i contenuti pubblici Mondo: sono retention/policy, non
+  // residui dimenticati. Il vecchio percorso `translations` non viene
+  // dichiarato cancellato: nel DB vivo la tabella e vuota e il codice non
+  // puo popolarla perche dipende dalla tabella legacy `profiles`, assente.
   //
-  // Il gateway NON duplica la business logic di cancellazione: continua a
-  // delegarla al Core. Aggiunge pero un esito macchina esplicito, cosi un
-  // integratore non puo interpretare `ok:true` come certificazione di
-  // cancellazione assoluta.
+  // Il gateway non duplica la cancellazione: descrive soltanto il perimetro
+  // auditato del Core, cosi `ok:true` non diventa una promessa piu forte.
   if (route.method === 'DELETE' && route.pattern === '/me/data' && response.ok) {
     try {
       const tipo = response.headers.get('content-type') || '';
@@ -53,15 +51,11 @@ async function rispostaGateway(route, response, responseHeaders) {
           ...data,
           deletionCoverage: {
             status: 'partial',
-            auditedCore: 'b.416',
+            auditedCore: 'b.419',
             retainedByPolicy: ['wallet_accounting', 'public_mondo_content'],
-            notGuaranteedByCore: [
-              'translation_history_rows',
-              'mondo_follows',
-              'mondo_comment_likes',
-              'mondo_reports',
-            ],
-            note: 'Deletion was requested from the BarTalk Core, but this response is not a certificate of total erasure.',
+            notGuaranteedByCore: [],
+            legacyInactiveSurfaces: ['translation_history'],
+            note: 'Core b.419 deletes the audited personal surfaces. Wallet accounting and public Mondo content remain by policy; legacy translation history is currently inactive and is not represented as deleted.',
           },
         };
         responseHeaders.set('content-type', 'application/json; charset=utf-8');
