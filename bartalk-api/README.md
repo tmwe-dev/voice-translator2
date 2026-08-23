@@ -5,7 +5,7 @@ Gateway API separato per `voice-translator2`.
 - Branch: `bartalk-api-v1`
 - Sorgente API: `bartalk-api/`
 - Core BarTalk: non duplicato e non modificato dalla API
-- Snapshot Core verificato: **b.420 / push #712** (`ee1a845845417ce43e0c4af8464531b53e8bbe8c`)
+- Snapshot Core verificato: **b.421 / push #713** (`bd2786f1cde7e9da1394a25625fc38721a4b384b`)
 
 ## Come dare la API a qualcuno
 
@@ -69,13 +69,13 @@ Altrimenti torna `503`, senza esporre valori segreti.
 
 ## Live Companion
 
-Il Core b.420 usa riserve a tratti e protocollo completo:
+Il Core b.421 mantiene il protocollo Live chiuso in b.420:
 
 1. `POST /companions/{id}/live-sessions` — apre;
 2. `POST /live-sessions/{sessionId}/heartbeat` — rinnova con la cadenza `battitoSecondi` restituita dall'apertura;
 3. `DELETE /live-sessions/{sessionId}` — chiude.
 
-b.420 serializza apertura/rinnovo/chiusura, impedisce la doppia apertura concorrente e conta come addebitato soltanto cio che il wallet ha realmente confermato.
+Il Core serializza apertura/rinnovo/chiusura, impedisce la doppia apertura concorrente e conta come addebitato soltanto cio che il wallet ha realmente confermato.
 
 ## Capability volutamente NON pubblicate
 
