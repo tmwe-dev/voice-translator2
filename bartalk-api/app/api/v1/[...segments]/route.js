@@ -1,4 +1,4 @@
-import { DEFAULT_SCOPES, bearer, issueApiKey, normalizeScopes, requireApiKey } from '../../../../lib/apiKey.js';
+import { bearer, issueApiKey, normalizeScopes, requireApiKey } from '../../../../lib/apiKey.js';
 import { API_KEY_TTL_DAYS, MAX_API_KEY_TTL_DAYS } from '../../../../lib/config.js';
 import { gatewayHealth } from '../../../../lib/health.js';
 import { checkRateLimit } from '../../../../lib/rateLimit.js';
@@ -99,8 +99,6 @@ async function handle(req, context) {
     }
   }
 
-  // Le porte pubbliche hanno un bucket PER CLIENT, non un unico bucket
-  // globale `public` capace di far bloccare tutti da un singolo chiamante.
   const rateIdentity = route.public ? publicRateIdentity(req) : apiToken;
   const rl = await checkRateLimit(rateIdentity, `${req.method}:${route.pattern}`, route.limit || 60);
   if (!rl.ok) return json({ error: 'Rate limit superato', requestId }, 429, { 'X-Request-Id': requestId, 'X-RateLimit-Remaining': '0' });
@@ -113,10 +111,6 @@ async function handle(req, context) {
     });
   }
 
-  // Alcune capability Core (Topics, voci, room/message capability-token,
-  // Mondo, Taxi...) non ricevono la sessione account. La API key pero e
-  // dichiaratamente legata a quella sessione: la riverifichiamo qui, cosi
-  // logout/cancellazione revocano SUBITO anche queste porte.
   if (requiresSessionProbe(route)) {
     try { await verifyCoreSession(sessionToken); }
     catch (e) { return json({ error: e.message, requestId }, e.status || 401, { 'X-Request-Id': requestId }); }
