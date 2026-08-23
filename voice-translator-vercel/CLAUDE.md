@@ -214,6 +214,40 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.414** (push #708) — BATCH F chiuso, e il confine di Life.
+  P1.21 — LIFE IN PRODUZIONE NON LA PROVAVA NESSUNO. Lo smoke verificava
+  homepage, health, Diretta e TaxiTalk: un deploy poteva essere verde con
+  l'intera sezione Life a pezzi. Ora prova LE PORTE: che le rotte di Life
+  esistano davvero nel pacchetto pubblicato, e che sappiano dire di no a
+  chi non ha diritto. VERIFICATO A MANO CONTRO LA PRODUZIONE VERA prima
+  di scriverlo: `/api/compagni/mie` 401, `/api/compagni/amico` 401,
+  `/api/compagni/live/session` 401 (che e anche la prova che la Via B di
+  b.407 e viva), `/api/topics/search` risponde `application/x-ndjson`
+  (il contratto da cui dipende b.409).
+  NON SPENDE NIENTE, ed e una scelta: questo gira a ogni invio su main, e
+  uno smoke che chiama il modello a ogni push diventa una voce di costo
+  che nessuno ha deciso. Cio che costa (un turno di Amico, una voce, un
+  syllabus) resta scoperto e va detto: si prova a mano.
+  E UNA RIGA L'HO TOLTA IO: avevo messo anche l'azione «dimentica», ma il
+  cancello dell'accesso scatta PRIMA di guardare quale azione chiedi,
+  quindi rispondeva 401 anche se l'azione non fosse esistita. Non
+  provava niente, e una prova che sembra provare e peggio di una prova
+  che manca.
+  P1.20 — IL CONFINE FRA LIFE E BARTALK. L'audit segnalava che la regola
+  scritta («niente di BarTalk tranne ponte.js») non descriveva piu la
+  realta. VERIFICATO, e aveva ragione a meta — la meta che conta e in
+  ordine: le CAPACITA' vere (modello, autorizzazione, portafoglio,
+  ricerca, fornitori, deposito veloce, registro accessi) stanno TUTTE in
+  `ponte.js` e in nessun altro file di Life. Cio che Life importa da solo
+  sono primitivi: colori, misure, memoria del telefono, registro
+  dell'audio. Non sono capacita, sono il pavimento.
+  Quindi non serviva un refactor: serviva scrivere il confine giusto
+  (`docs/PIANO-LIFE-COMPAGNI.md` §5-quater, con le due liste) e metterci
+  una guardia — `__tests__/confine-life-b414.test.js`. Provata in tutte e
+  due le direzioni: aggiungendo un import del portafoglio in memoria.js
+  diventa rossa e dice anche perche. Una regola scritta in un documento
+  che nessuno esegue e esattamente il motivo per cui l'audit ha dovuto
+  segnalarla.
 - Versione: **b.413** (push #707) — P1.15: l'impronta dell'utente di Life.
   Era `sha256(email)` troncato. Il difetto non e la funzione: e che
   l'email E' UN DATO INDOVINABILE — chi ha in mano un'impronta puo
@@ -473,7 +507,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2485 verdi su 166 file** · 0 errori di lint (avvisi tollerati)
+- Test: **2495 verdi su 167 file** (unendo b.413, che sta sul Mac; qui ne ho viste 2482 su 166) · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro
