@@ -591,6 +591,15 @@ export async function saveConversation(roomId) {
       ended: conv.ended,
       host: room.host,
       members: conv.members.map(m => m.name),
+      // b.433 — LE LINGUE ARRIVAVANO FIN QUI E VENIVANO BUTTATE. La
+      // conversazione le ha (ogni membro porta la sua), ma nella riga
+      // dell'archivio restavano solo i NOMI: e l'archivio e proprio il
+      // posto dove servono, perche fra due conversazioni la cosa che le
+      // distingue non e chi c'era, e da che lingua a che lingua.
+      // Si AGGIUNGE un campo invece di cambiare `members`: le righe
+      // scritte prima di oggi restano leggibili, e chi legge sa che
+      // «non lo so» e diverso da «nessuna».
+      lingue: [...new Set(conv.members.map(m => m.lang).filter(Boolean))],
       msgCount: conv.msgCount,
       hasSummary: false
     });

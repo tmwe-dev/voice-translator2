@@ -214,6 +214,26 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.433** (push #725) — MONDO e CHAT dal layout al programma.
+  Regola tenuta: si applica dove RIPARA qualcosa, non si restaura cio che
+  gia funziona. La Home per esempio NON e stata toccata — le sue sezioni
+  sono gia righe, con le icone in acciaio volute da Luca.
+  MONDO: la tendina Stanze/Notizie diventa DUE LINGUETTE. Erano due voci
+  dentro un coperchio col triangolino: per sapere che esisteva anche
+  l'altra bisognava aprirlo, e per passarci servivano due tocchi invece di
+  uno. Una tendina serve quando le voci sono tante; con due e solo un
+  coperchio. L'icona resta accanto alla parola, dov'era (b.400: Luca
+  l'aveva gia persa una volta in questo punto).
+  CHAT: nell'archivio non si vedeva DA CHE LINGUA A CHE LINGUA, ed e la
+  cosa che distingue una conversazione dall'altra. La causa era a monte:
+  la conversazione le lingue le ha — ogni membro porta la sua — ma nella
+  riga dell'elenco si teneva solo il NOME. Arrivavano fin li e venivano
+  buttate.
+  Si AGGIUNGE un campo invece di cambiare quello che c'era: le righe
+  scritte prima di oggi restano leggibili e mostrano la loro unica
+  bandiera, e chi legge distingue «non lo so» da «nessuna».
+  PROVA: `__tests__/layout-applicato-b433.test.js`.
+
 - Versione: **b.432** (push #724) — VITA, prima pagina portata dal layout
   al programma. E il primo pezzo e un difetto vero: «pagina amico life
   manca il microfono» (collaudo di Luca). Era vero alla lettera — li

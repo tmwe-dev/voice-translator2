@@ -219,7 +219,28 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
               >
                 {c.msgCount || 0} msg
               </span>
-              {c.lang && (
+              {/* b.433 — DA CHE LINGUA A CHE LINGUA (layout completo, pagina
+                  07). Fra due conversazioni la cosa che le distingue non e
+                  chi c'era: e fra quali lingue si e parlato, ed e proprio
+                  quello che non si vedeva. Prima compariva una bandiera
+                  sola, quella della stanza.
+                  Le righe scritte prima di oggi non portano le lingue: per
+                  loro resta la bandiera singola di prima, che e meglio di
+                  niente e non finge di essere due. */}
+              {Array.isArray(c.lingue) && c.lingue.length > 0 ? (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  padding: '3px 8px', borderRadius: 6, fontSize: 10, fontWeight: 700,
+                  background: `${C.purple}15`, color: C.purple,
+                }}>
+                  {c.lingue.slice(0, 3).map((l, i) => (
+                    <span key={l} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      {i > 0 && <span style={{ opacity: 0.6 }}>{'\u2192'}</span>}
+                      {getLangFlag(l)}
+                    </span>
+                  ))}
+                </span>
+              ) : c.lang ? (
                 <span
                   style={{
                     padding: '3px 8px',
@@ -232,7 +253,7 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
                 >
                   {getLangFlag(c.lang)}
                 </span>
-              )}
+              ) : null}
             </div>
             <span style={{ fontSize: 10, color: C.textMuted, flexShrink: 0 }}>
               {formatDate(c.created)}

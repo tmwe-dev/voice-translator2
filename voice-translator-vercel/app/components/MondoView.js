@@ -484,20 +484,36 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             testata occupa la riga che c'era gia — nessuna altezza in
             piu rubata agli elenchi, che era il motivo per cui l'avevo
             spostata. */}
-        <div style={{ minWidth: 168 }}>
-          {/* b.400 — L'ICONA ERA SPARITA (collaudo di Luca: «Stanze e
-              Notizie avevano una icona che e sparita»). Sta sull'OPZIONE,
-              non sulla tendina: cosi vive dentro il pulsante accanto alla
-              parola. Al primo tentativo l'avevo passata come `icona` della
-              tendina, che e un titolo sopra: nella testata stretta usciva
-              dal riquadro e restava a mezz'aria in alto a sinistra. */}
-          <Scelta C={C}
-            valore={tab}
-            opzioni={[
-              { valore: 'stanze', etichetta: L('tabRooms'), icona: 'chat', conto: rooms?.length || null },
-              { valore: 'news', etichetta: L('tabNews'), icona: 'doc' },
-            ]}
-            onCambia={(v) => { vibrate(6); setTab(v); }} />
+        {/* b.433 — DUE LINGUETTE AL POSTO DELLA TENDINA (layout completo,
+            pagina 02). Erano due voci dentro una tendina col triangolino:
+            per sapere che esisteva anche l'altra bisognava aprirla, e per
+            passarci due tocchi invece di uno. Sono due, si vedono tutte e
+            due, si cambia con un tocco. La tendina serve quando le voci
+            sono tante; con due e solo un coperchio.
+            L'icona resta sull'opzione, dov'era: accanto alla parola. */}
+        <div role="tablist" aria-label={L('worldNowTitle')} style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          {[
+            { id: 'stanze', parola: L('tabRooms'), icona: 'chat', conto: rooms?.length || null },
+            { id: 'news', parola: L('tabNews'), icona: 'doc', conto: null },
+          ].map((v) => {
+            const acceso = tab === v.id;
+            return (
+              <button key={v.id} role="tab" aria-selected={acceso}
+                onClick={() => { vibrate(6); setTab(v.id); }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 7, height: 44, padding: '0 14px',
+                  border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: FONT,
+                  fontSize: 14.5, fontWeight: 800, color: acceso ? C.accent : C.textMuted,
+                  borderBottom: `2px solid ${acceso ? C.accent : 'transparent'}`,
+                }}>
+                <Icon name={v.icona} size={16} color={acceso ? C.accent : C.textMuted} />
+                {v.parola}
+                {v.conto ? (
+                  <span style={{ fontSize: 12, fontWeight: 700, color: C.textMuted }}>{v.conto}</span>
+                ) : null}
+              </button>
+            );
+          })}
         </div>
         {/* b.398 — DOVE SEI, E COME USCIRNE. Dal documento di Luca: quando
             il globo non si vede piu «rimane un header sticky» col Paese e
