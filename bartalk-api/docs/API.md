@@ -2,7 +2,7 @@
 
 Base path: `/api/v1`.
 
-Snapshot Core auditato: **b.419 / push #711** (`d83df8455b08fbd7837c6a547f32b7d6ad9b9db9`).
+Snapshot Core auditato: **b.420 / push #712** (`ee1a845845417ce43e0c4af8464531b53e8bbe8c`).
 
 ## Autenticazione
 
@@ -14,63 +14,44 @@ Content-Type: application/json
 {"scopes":["translate","speech:stt","speech:tts"],"ttlDays":6}
 ```
 
-Senza `scopes` viene emesso un insieme **read/basic**. Gli scope di scrittura, wallet e BYOK vanno richiesti esplicitamente.
+- TTL ammesso: 1-7 giorni.
+- Se `scopes` e omesso vengono applicati i default least-privilege.
+- Se `scopes: []`, la chiave nasce volutamente senza privilegi.
+- La API key e una credenziale **server-side**; non va inserita in URL, repository o JavaScript pubblico.
+- La sessione BarTalk sottostante resta autorevole. Dove il Core non riceve direttamente il token account, il gateway verifica la sessione prima di inoltrare la capability.
+
+## Health
+
+`GET /health`
+
+Readiness reale del gateway. Risponde `200` solo se Core e signing secret sono disponibili; altrimenti `503`.
 
 ## Account
 
-- `GET /me` — profilo
-- `PATCH /me` — aggiorna profilo
-- `DELETE /me/data` — avvia il perimetro di cancellazione del Core
-- `GET /preferences`
-- `PUT /preferences`
+- `GET /me`
+- `PATCH /me`
+- `DELETE /me/data`
 
-### Cancellazione dati: contratto preciso
+### Cancellazione dati
 
-Il Core b.419 revoca tutte le sessioni e cancella Redis + le superfici persistenti Life/Compagni/PeepOff previste dal cancellatore centrale. b.419 aggiunge anche i metadati personali Mondo auditati:
+Core b.420 mantiene il perimetro GDPR chiuso in b.419:
 
-- `mondo_follows` (da entrambi i lati);
-- `mondo_comment_likes`;
-- `mondo_segnalazioni`.
+- rimuove profilo Redis, tutte le sessioni, dati Life/Compagni/PeepOff e attivita personale Mondo auditata;
+- mantiene il ledger wallet per retention contabile;
+- mantiene i contenuti pubblici Mondo per policy/procedura separata;
+- `translation_history` e una superficie legacy inattiva, non viene dichiarata come cancellata.
 
-Restano per policy il ledger wallet e i contenuti pubblici Mondo (`mondo_discussions`, `mondo_comments`).
-
-La vecchia superficie `translations` esiste ma nel database vivo auditato e a zero righe. Il percorso attuale che dovrebbe popolarla dipende da `profiles`, tabella non presente nel progetto; quindi la Public API **non la dichiara cancellata** e non la tratta come residuo attivo.
-
-Una risposta riuscita di `DELETE /me/data` aggiunge:
-
-```json
-{
-  "deletionCoverage": {
-    "status": "partial",
-    "auditedCore": "b.419",
-    "retainedByPolicy": ["wallet_accounting", "public_mondo_content"],
-    "notGuaranteedByCore": [],
-    "legacyInactiveSurfaces": ["translation_history"]
-  }
-}
-```
-
-`partial` significa che esistono retention esplicite; non significa che follow/like/segnalazioni siano ancora dimenticati dal Core.
-
-## Chiavi provider BYOK
-
-- `GET /provider-keys` — restituisce soltanto presenza/stato
-- `POST /provider-keys` — salva `{ "keys": { "openai": "...", ... } }`
-- `DELETE /provider-keys?provider=openai`
-
-Scope: `keys:read`, `keys:write`. I valori non vengono restituiti dal Core.
+La risposta aggiunge `deletionCoverage` per descrivere queste retention senza chiamarle erasure totale.
 
 ## Wallet
 
-- `GET /wallet` — saldo contabile attuale, uso e storico recente
-- `GET /wallet/payments` — storico compatibilita account
-- `POST /wallet/topups` — body `{ "pacchetto": "..." }`, restituisce URL checkout
-- `POST /wallet/gifts/redeem` — body `{ "codice": "..." }`
-- `POST /wallet/vouchers/redeem` — body `{ "codice": "..." }`
+- `GET /wallet`
+- `GET /wallet/payments`
+- `POST /wallet/topups`
+- `POST /wallet/gifts/redeem`
+- `POST /wallet/vouchers/redeem`
 
-Scope scrittura: `wallet:write`.
-
-`POST /wallet/gifts` non esiste volutamente nella v1: l'invio di credito non viene promosso finche il Core non garantisce idempotenza della mutazione.
+`POST /wallet/gifts` non esiste nella v1: l'invio credito non viene pubblicato senza contratto idempotente.
 
 ## Traduzione e voce
 
@@ -81,14 +62,14 @@ Scope scrittura: `wallet:write`.
 - `GET /voices`
 - `POST /voices/clone`
 
-Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione incapsulata nella API key.
+Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione incapsulata nella API key quando il Core usa `token/userToken`.
 
 ## Compagni
 
 - `GET /companions`
 - `POST /companions`
 - `DELETE /companions/{id}`
-- `DELETE /companions/{id}/memory` — **Dimentica** tutti i ricordi di quell'utente per quel Compagno
+- `DELETE /companions/{id}/memory`
 - `POST /companions/{id}/messages`
 - `POST /companions/{id}/live-sessions`
 - `POST /live-sessions/{sessionId}/heartbeat`
@@ -98,46 +79,16 @@ Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione
 - `POST /companions/avatar`
 - `POST /companions/generate`
 
-L'id nel path e autoritativo: un id inserito nel body non puo sostituirlo.
+### Live
 
-### Live b.419
+L'apertura restituisce `sessioneId` e `battitoSecondi`. Il client manda un heartbeat secondo quella cadenza. Il Core b.420:
 
-Il Core non usa piu un unico tetto da 15 minuti. La sessione Live viene contabilizzata a **tratti da 3 minuti parlati**, con una sola riserva attiva per volta e un solo Live per account.
-
-L'apertura restituisce almeno:
-
-```json
-{
-  "sessioneId": "...",
-  "signedUrl": "...",
-  "tettoSecondi": 540,
-  "battitoSecondi": 60
-}
-```
-
-`tettoSecondi` e il tetto del **singolo tratto di credito**, non la durata massima della telefonata.
-
-Il client deve inviare:
-
-```http
-POST /api/v1/live-sessions/{sessionId}/heartbeat
-Authorization: Bearer bt_live_...
-Content-Type: application/json
-
-{}
-```
-
-con la cadenza restituita da `battitoSecondi`. Il gateway forza `azione=rinnova` e il `sessionId` del path, quindi il body non puo trasformare un heartbeat in chiusura o scegliere un'altra sessione.
-
-Risposte rilevanti:
-
-- `200` — sessione viva; `rinnovato` indica se e stato ruotato il tratto;
-- `402` — credito terminato, la linea deve essere chiusa;
-- `403` — sessione non dell'account;
-- `409` — all'apertura esiste gia un Live attivo;
-- `410` — sessione non piu attiva.
-
-La chiusura resta `DELETE /live-sessions/{sessionId}` e il Core misura la durata server-side.
+- paga a tratti, senza tetto-condono da 15 minuti;
+- permette una sola linea per persona;
+- serializza apertura/rinnovo/chiusura;
+- impedisce che un heartbeat resusciti una linea chiusa;
+- considera scalato solo un commit wallet riuscito;
+- recupera in modo controllato i tratti se un heartbeat manca.
 
 ## Life / studio
 
@@ -147,59 +98,71 @@ La chiusura resta `DELETE /live-sessions/{sessionId}` e il Core misura la durata
 - `POST /learning/scans/deposit`
 - `POST /learning/scans/retrieve`
 
-La porta `scans/deposit` replica l'eccezione QR usa-e-getta gia prevista dal Core; il recupero richiede account. Il deposito logico e progettato per una vita breve, ma la pulizia Core e opportunistica (nuovo deposito/ritiro), quindi non va usato come archivio.
+`scans/deposit` e pubblico come il QR usa-e-getta del Core, ma ha rate-limit per client e limite JSON reale da 6 MB.
 
 ## Topics
 
-`GET /topics/search?q=...&lang=it&cat=notizie&fresh=1&deep=1&fonti=6`
+`GET /topics/search?...`
 
-Il gateway inoltra `application/x-ndjson` senza convertirlo in JSON.
+NDJSON inoltrato come stream. Prima dell'inoltro il gateway riverifica che la sessione BarTalk contenuta nella API key sia ancora valida.
 
 ## Stanze, messaggi e realtime
 
 - `GET|POST /rooms`
 - `GET|POST|PATCH /messages`
-- `GET /realtime/ice`
-- `POST /realtime/group-video`
-- `POST /reactions`
-
-Quando il Core richiede membership di stanza, restano necessari `roomSessionToken`/`X-Room-Session`.
-
-### TURN
-
-`GET /realtime/ice` espone il contratto reale di `/api/turn`. Il codice genera credenziali se esistono `TURN_SECRET` e `TURN_URLS`, ma coturn non risulta ancora installato/configurato. Se le env mancano, la risposta puo essere `{ "iceServers": [] }` e i client proseguono solo con STUN.
-
-## Archivio, contatti, glossari, community
-
 - `GET /conversations`
 - `GET|DELETE /conversations/{id}`
 - `POST /conversations/end`
+- `POST /reactions`
+- `GET /realtime/ice`
+- `POST /realtime/group-video`
+
+`roomSessionToken` / `X-Room-Session` resta un secondo livello di autorizzazione e viene validato dal Core. La API key non sostituisce la membership stanza.
+
+### TURN
+
+`GET /realtime/ice` espone il contratto reale del Core. Se coturn e le env TURN non sono configurati, `iceServers` puo essere vuoto e il client usa solo STUN.
+
+## Contatti, community e altre capability vive
+
 - `GET|POST /contacts`
-- `GET|POST /glossaries`
-- `GET|PATCH|DELETE /glossaries/{id}`
 - `GET|POST /community`
 - `POST /moderation`
 - `POST /summary`
-
-## PeepOff e TaxiTalk
-
 - `POST /peepoff`
 - `POST|GET|DELETE /taxi/destination`
 
-TaxiTalk mantiene il ciphertext-only del Core; la chiave di decifratura non viene inviata al server.
+## Capability escluse perche il Core non e operativo oggi
 
-## Errori gateway
+Non sono pubblicate:
 
-- `401` API key/sessione non valida
-- `402` credito insufficiente/terminato
-- `403` scope o ownership insufficienti
+- `/preferences` — il Core dipende da `profiles/user_settings`, assenti nel DB vivo;
+- `/provider-keys` — `/api/keys` dipende da `profiles/api_keys_vault`; il BYOK usato davvero dall'app e Redis-backed attraverso `/api/user`;
+- `/glossaries*` — `/api/glossary` dipende da `profiles/glossaries`, assenti nel DB vivo.
+
+La scelta e intenzionale: **una route presente nel sorgente non equivale a una capability funzionante**.
+
+## Limiti e framing
+
+- JSON standard: 512 KB reali.
+- Homework/scans: 6 MB reali.
+- Multipart: limite applicato ai byte realmente letti, non soltanto a `Content-Length`.
+- `Content-Length` upstream non viene copiato verso il client.
+- Parametri path decodificati in modo fail-closed e limitati.
+- Query sensibili (`token`, `userToken`, `roomSessionToken`, `apiKey`, `authorization`) non vengono propagate dalla query del client.
+
+## Errori
+
+- `400` richiesta non valida
+- `401` API key/sessione account/sessione stanza non valida
+- `402` credito insufficiente
+- `403` scope/ownership/membership negata
 - `409` conflitto di stato
 - `410` sessione non piu attiva
 - `413` payload troppo grande
 - `429` rate limit
 - `502` Core non disponibile
+- `503` gateway/capability non disponibile
 - `504` timeout Core
 
-Ogni errore generato dal gateway include `requestId`. Le risposte del Core espongono `X-BarTalk-Core-Status`.
-
-Specifica macchina: `/openapi`.
+Ogni risposta gateway include un `requestId` normalizzato. Specifica macchina: `/openapi`.
