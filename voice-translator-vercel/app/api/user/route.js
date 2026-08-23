@@ -57,20 +57,37 @@ async function handlePost(req) {
     // === GDPR: DELETE ALL DATA ===
     // b.168 — CONFERMATO (audit esterno 15/8): il messaggio dichiarava
     // "All your data has been deleted" in modo assoluto, ma
-    // deleteUserData() cancella solo le chiavi su Redis (profilo,
-    // pagamenti CACHE locale, referral, prestiti) e la sessione CORRENTE
-    // — non tocca il ledger del wallet su Supabase (obbligo di
-    // conservazione contabile legittimo: non e un difetto cancellarlo
-    // dopo, e un dato che si sceglie di non cancellare) ne le sessioni
-    // aperte su ALTRI dispositivi (scadono da sole entro 7 giorni, ma non
-    // vengono revocate subito qui — servirebbe un indice sessioni-per-
-    // utente che oggi non esiste). Il messaggio ora dice esattamente
-    // questo, non di piu.
+    // deleteUserData() cancellava solo le chiavi su Redis e la sessione
+    // CORRENTE. Il messaggio fu corretto per dire esattamente quello.
+    //
+    // b.415 — ADESSO E' IL COMPORTAMENTO A ESSERE CAMBIATO, non la frase.
+    // Due delle tre riserve scritte qui sopra non valgono piu:
+    //   - le sessioni sugli ALTRI dispositivi ora si revocano subito
+    //     (l'indice sessioni-per-utente, che «oggi non esiste», adesso
+    //     esiste: lo scrive createSession in users.js);
+    //   - i dati su Supabase ora si cancellano (Compagni, ricordi, corsi,
+    //     compiti, profilo studente, pronuncia, dispositivi PeepOff).
+    // Resta il portafoglio, per obbligo contabile — quella riserva era
+    // giusta allora ed e giusta adesso. E restano i contenuti pubblici di
+    // Mondo, che sono una DECISIONE DI PRODOTTO in sospeso, non una
+    // dimenticanza: una discussione contiene le risposte di altri.
+    //
+    // Questo commento e stato riscritto perche descriveva un codice che
+    // non c'e piu. Un commento che mente costa piu di un commento assente.
     if (action === 'delete-data') {
       const result = await deleteUserData(email, token);
       return NextResponse.json({
         ok: true,
-        message: 'Your profile, current session, referrals and lending tokens have been deleted. Wallet accounting records are retained for legal/bookkeeping obligations. Sessions open on other devices are not revoked immediately and expire naturally within 7 days.',
+        // b.415 — LA FRASE DICE QUELLO CHE SUCCEDE, e cambia perche e
+        // cambiato cio che succede: adesso spariscono anche i Compagni,
+        // i loro ricordi, i corsi, i compiti, il profilo studente, gli
+        // errori di pronuncia e i dispositivi PeepOff — che prima
+        // restavano tutti su Supabase — e TUTTE le sessioni, non solo
+        // questa. Restano il portafoglio (obbligo di legge) e i
+        // contenuti pubblici di Mondo, che non sono solo tuoi: una
+        // discussione contiene le risposte di altre persone, e
+        // cancellarla o anonimizzarla e una decisione di prodotto.
+        message: 'Deleted: profile, ALL sessions (every device, immediately), referrals, lending tokens, and all your Life data — Companions, their memories, courses, homework, student profile, pronunciation history and PeepOff devices. Retained: wallet accounting records (legal/bookkeeping obligation) and your public Mondo posts, which contain other people\'s replies — ask us and we will handle those case by case.',
         deleted: result.deleted,
       });
     }

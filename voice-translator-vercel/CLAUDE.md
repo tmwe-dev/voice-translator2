@@ -214,6 +214,46 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.415** (push #709) — «CANCELLA I MIEI DATI» ADESSO LI
+  CANCELLA. Audit esterno, P1. Verificato: `deleteUserData` toccava
+  profilo, sessione CORRENTE, pagamenti, codici, referral e prestiti —
+  tutto e solo su Redis. Su Supabase restava TUTTO: i Compagni, i loro
+  ricordi, i corsi, i compiti, il profilo studente, gli errori di
+  pronuncia, i dispositivi PeepOff con le chiavi pubbliche. E chi era
+  entrato anche dal telefono restava dentro fino alla scadenza naturale:
+  sette giorni, per un account che sta venendo cancellato.
+  Ora c'e `app/lib/cancellazione.js`, una porta sola. Cancella sotto
+  TUTTE E DUE le impronte (HMAC e la vecchia): non e ridondanza — le
+  righe di chi non e ancora tornato hanno ancora quella vecchia, e
+  cancellare solo la nuova lascerebbe indietro proprio i dati di chi non
+  usa l'app da un po', cioe con ogni probabilita di chi vuole sparire.
+  E revoca TUTTE le sessioni: l'indice sessioni-per-utente, che il
+  commento di b.168 dava per inesistente, adesso lo scrive `createSession`.
+  CIO CHE NON CANCELLA, detto invece che sottinteso: il portafoglio
+  (obbligo contabile, ed era gia cosi di proposito) e i contenuti
+  pubblici di Mondo — una discussione contiene le risposte di altre
+  persone, e cancellarla o anonimizzarla e una DECISIONE DI PRODOTTO, non
+  una riga di codice. La risposta all'utente ora lo dice.
+  BUSINESS: gli strumenti girano in una stanza con meno porte. Senza
+  `allow-top-navigation` uno strumento non puo portare via TUTTA
+  l'applicazione (che e come un XSS diventa una pagina di phishing),
+  senza `allow-downloads` non puo far partire scaricamenti, e il permesso
+  della fotocamera ora lo ha solo chi la usa (PeepOff non inquadra
+  niente, e se lo prendeva lo stesso). ONESTA: `allow-same-origin` c'e e
+  deve esserci — gli strumenti sono nostri e usano le nostre rotte.
+  Quindi NON e isolamento di origine: quello si ottiene solo con un
+  sottodominio dedicato, che e infrastruttura ed e di Luca.
+- E DUE PROVE MIE RISCRITTE, per la stessa ragione della volta scorsa:
+  `caccia-al-tesoro-b168` difendeva la frase «expire naturally within 7
+  days» e il titolo «non di piu». Erano fotografie di due LACUNE, non
+  requisiti: sono diventate rosse quando le lacune sono state chiuse.
+  L'intento di b.168 — non promettere una cancellazione totale, dire cosa
+  resta — vale ancora, e ora si controlla quello.
+- DECISIONE DI PRODOTTO IN SOSPESO (Luca): i contenuti pubblici di Mondo
+  quando qualcuno cancella l'account. Cancellare una discussione porta
+  via anche le risposte degli altri; anonimizzarla e un'altra cosa
+  ancora. Finche non e decisa, la risposta all'utente dichiara che
+  restano e invita a scrivere.
 - Versione: **b.414** (push #708) — BATCH F chiuso, e il confine di Life.
   P1.21 — LIFE IN PRODUZIONE NON LA PROVAVA NESSUNO. Lo smoke verificava
   homepage, health, Diretta e TaxiTalk: un deploy poteva essere verde con
@@ -507,7 +547,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2495 verdi su 167 file** (unendo b.413, che sta sul Mac; qui ne ho viste 2482 su 166) · 0 errori di lint (avvisi tollerati)
+- Test: **2497 verdi su 167 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

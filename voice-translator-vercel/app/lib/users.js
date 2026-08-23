@@ -14,6 +14,7 @@ import { redis } from './redis.js';
 import crypto from 'crypto';
 import { encryptKeys, decryptKeys } from './encryption.js';
 import { createLogger } from './logger.js';
+import { cancellaDatiPersistenti, revocaTutteLeSessioni } from './cancellazione.js';
 const log = createLogger('users');
 
 // Re-export all sub-modules for backward compatibility
@@ -180,7 +181,21 @@ export async function verifyAuthCode(email, code) {
 
 export async function createSession(email) {
   const token = crypto.randomUUID() + '-' + Date.now().toString(36);
-  await redis('SET', `session:${token}`, JSON.stringify({ email: email.toLowerCase(), created: Date.now() }), 'EX', 604800);
+  const basso = email.toLowerCase();
+  await redis('SET', `session:${token}`, JSON.stringify({ email: basso, created: Date.now() }), 'EX', 604800);
+  // b.415 — L'ELENCO DELLE SESSIONI DI UNA PERSONA, che non esisteva.
+  //
+  // Senza, «cancella i miei dati» poteva chiudere solo la sessione da cui
+  // stavi chiedendo: chi era entrato anche dal telefono restava dentro
+  // fino alla scadenza naturale, sette giorni. Per un account che sta
+  // venendo cancellato, sette giorni di accesso residuo sono un'eternita.
+  //
+  // L'insieme scade con la sessione piu lunga: se non ci si entra piu,
+  // sparisce da solo e non lascia niente in giro.
+  try {
+    await redis('SADD', `sessioni:${basso}`, token);
+    await redis('EXPIRE', `sessioni:${basso}`, 604800);
+  } catch { /* il deposito non risponde: la sessione vale lo stesso, si perde solo l'elenco */ }
   await updateUser(email, { lastLogin: Date.now() });
   return token;
 }
@@ -248,6 +263,21 @@ export async function deleteUserData(email, sessionToken) {
   if (sessionToken) {
     await redis('DEL', `session:${sessionToken}`);
     deleted.push('session');
+  }
+
+  // b.415 — E TUTTE LE ALTRE, non solo quella da cui stai chiedendo.
+  const revocate = await revocaTutteLeSessioni(lowerEmail);
+  if (revocate) deleted.push(`sessioni-revocate:${revocate}`);
+
+  // b.415 — E CIO CHE STA SU SUPABASE, che prima non veniva toccato:
+  // i Compagni, i loro ricordi, i corsi, i compiti, il profilo studente,
+  // gli errori di pronuncia, i dispositivi PeepOff. La cancellazione
+  // stava tutta in Redis e si fermava li.
+  const persistenti = await cancellaDatiPersistenti(lowerEmail);
+  deleted.push(...persistenti.cancellati);
+  if (persistenti.mancati.length) {
+    // Non si dice «cancellato» di cio che non si e riusciti a cancellare.
+    deleted.push(`NON-CANCELLATI:${persistenti.mancati.join(',')}`);
   }
 
   await redis('DEL', `payments:${lowerEmail}`);
