@@ -93,6 +93,37 @@ export function postoADestra(indice = 0) {
   };
 }
 
+
+// ═══ INIZIO b.400 — LA COLONNA DI SINISTRA (collaudo di Luca: «le
+// linguette si sovrappongono e vanno disposte con un po' di margine»).
+// Erano vere: la linguetta dei comandi stava a 132 ed e alta 58 (finisce
+// a 190), quella della lingua partiva a 168 — ventidue pixel dentro
+// l'altra. La quota della seconda era calcolata per allinearsi al
+// microfono della Home, che in Mondo non c'e: cosi in Mondo le due si
+// accavallavano. Ora la fila la decide il righello, come gia a destra:
+// una quota di partenza, un passo, e nessuno sceglie piu numeri suoi.
+export const COLONNA_SINISTRA = {
+  primo: 'max(132px, calc(env(safe-area-inset-top) + 124px))',
+  passo: LINGUETTA.altezza + 12,   // 58 di linguetta + 12 di respiro
+};
+
+/** La quota di una linguetta nella fila a sinistra (0 = la piu in alto). */
+export function postoASinistra(indice = 0) {
+  return indice === 0
+    ? { top: COLONNA_SINISTRA.primo }
+    : { top: `calc(${COLONNA_SINISTRA.primo} + ${indice * COLONNA_SINISTRA.passo}px)` };
+}
+
+/**
+ * Quanto spazio si deve tenere libero a destra perche `quanti` elementi
+ * fissi non finiscano sotto a cio che sta in testata. Serve alla testata
+ * di Mondo, dove il selettore del Paese arrivava fin sotto la luna.
+ */
+export function riservaADestra(quanti = 1) {
+  return COLONNA_DESTRA.bordo + (quanti - 1) * COLONNA_DESTRA.passo + COLONNA_DESTRA.larghezza + 8;
+}
+// ═══ FINE b.400 ═══
+
 /** La forma di una linguetta sul bordo sinistro, alla quota indicata. */
 export function formaLinguetta(C, posizione) {
   return {

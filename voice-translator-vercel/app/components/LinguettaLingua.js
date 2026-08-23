@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState } from 'react';
-import { formaLinguetta, LINGUETTA } from '../lib/righello.js';
+import { formaLinguetta, LINGUETTA, postoASinistra } from '../lib/righello.js';
 import { FONT, LANGS, getLang } from '../lib/constants.js';
 import Icon from './Icon.js';
 import { conRipiego } from '../lib/ripiego.js';
@@ -60,9 +60,10 @@ function LinguettaLingua({ prefs, savePrefs, L, onScegliVoce, accent = '#26D9B0'
             // microfono di "Parla ora", ed e li che deve stare la mano.
             // L'altezza e quella del tondo azzurro: la linguetta e alta 58,
             // quindi il suo bordo alto va 29 sopra il centro del microfono.
-            ...formaLinguetta({ card, cardBorder: null }, {
-              top: 'max(168px, calc(env(safe-area-inset-top) + 148px))',
-            }),
+            // b.400 — quota dal righello: posto 1 della fila a sinistra,
+            // cosi resta staccata dalla linguetta dei comandi invece di
+            // finirle sopra di ventidue pixel (collaudo di Luca).
+            ...formaLinguetta({ card, cardBorder: null }, postoASinistra(1)),
             border: bordo, borderLeft: 'none',
             fontFamily: FONT, zIndex: 60,
           }}>

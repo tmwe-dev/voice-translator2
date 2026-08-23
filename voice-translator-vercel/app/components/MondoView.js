@@ -2,7 +2,7 @@
 import Icon from './Icon.js';
 import { quando, viva, stileEtichetta, PUNTO, paeseDaLingua, linguaDelPaese, bandieraPaese, nomePaese } from '../lib/schedaMondo.js';
 import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
-import { COLONNA } from '../lib/righello.js';
+import { COLONNA, riservaADestra } from '../lib/righello.js';
 import PreferenzeMondo from './ui/PreferenzeMondo.js';
 import Scelta from './ui/Scelta.js';
 // ═══════════════════════════════════════════════
@@ -404,7 +404,14 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
               il velo che gli sta davanti. */}
           <div style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: `linear-gradient(180deg, rgba(5,7,15,${0.42 + discesa * 0.5}) 0%, rgba(5,7,15,${0.66 + discesa * 0.32}) 42%, rgba(5,7,15,${0.86 + discesa * 0.14}) 100%)`,
+            // b.400 — IL VELO ERA DIVENTATO UN COPERCHIO (collaudo di Luca:
+            // «hai reso tutto piu scuro dell'originale»). A riposo partiva
+            // da 0.42 e chiudeva a 0.86: sopra la Terra notturna, che e gia
+            // quasi nera, il pianeta spariva. Il velo serve a far comandare
+            // gli elenchi, non a spegnere il globo: a riposo ora si vede, e
+            // si chiude solo mentre si scende (il comportamento di b.398
+            // resta, cambiano i numeri).
+            background: `linear-gradient(180deg, rgba(5,7,15,${0.16 + discesa * 0.72}) 0%, rgba(5,7,15,${0.30 + discesa * 0.66}) 42%, rgba(5,7,15,${0.48 + discesa * 0.50}) 100%)`,
             transition: 'background 160ms linear',
           }} />
           {/* b.399 — «136 persone attive · 8 stanze · 12 temi», nelle
@@ -477,7 +484,11 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             piu rubata agli elenchi, che era il motivo per cui l'avevo
             spostata. */}
         <div style={{ minWidth: 168 }}>
+          {/* b.400 — L'ICONA ERA SPARITA (collaudo di Luca: «Stanze e
+              Notizie avevano una icona che e sparita»). Il componente
+              Scelta la sa gia disegnare: nessuno gliela passava piu. */}
           <Scelta C={C}
+            icona={tab === 'news' ? 'doc' : 'chat'}
             valore={tab}
             opzioni={[
               { valore: 'stanze', etichetta: L('tabRooms'), conto: rooms?.length || null },
@@ -494,7 +505,15 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
             Sta nella riga della testata che c'era gia: nessuna altezza in
             piu tolta agli elenchi. E ad altezza fissa — quando il Paese
             non c'e resta il vuoto, non si sposta niente. */}
-        <div style={{ marginLeft: 'auto', minHeight: 30, display: 'flex', alignItems: 'center' }}>
+        {/* b.400 — LA LUNA NON SI POTEVA CLICCARE (collaudo di Luca:
+            «a destra in alto si sovrappongono elementi», «la luna e il
+            sole non si possono cliccare, sono in un layer diverso»).
+            Il comando del cielo sta nella fila fissa in alto a destra;
+            questo selettore invece e nel flusso della testata e largo
+            fino a 190: gli finiva sopra, coprendo la parola e rubandogli
+            il tocco. Ora la testata TIENE LIBERA la colonna dove vive la
+            fila fissa — la misura la da il righello, non un numero a mano. */}
+        <div style={{ marginLeft: 'auto', marginRight: riservaADestra(1), minHeight: 30, display: 'flex', alignItems: 'center' }}>
           {paeseScelto ? (
             <button onClick={() => { vibrate(8); setPaeseScelto(null); setLangFilter('all'); }}
               aria-label={`${L('changeWord')} — ${nomePaese(paeseScelto)}`}
@@ -711,7 +730,7 @@ function MondoView({ onJoinRoom, onCreateRoom, onParlane }) {
         <div style={{
           position: 'absolute', left: 0, right: 0, top: 0, height: 96,
           pointerEvents: 'none', zIndex: 4,
-          background: `linear-gradient(180deg, rgba(5,7,15,${0.5 + discesa * 0.45}) 0%, rgba(5,7,15,0) 100%)`,
+          background: `linear-gradient(180deg, rgba(5,7,15,${0.22 + discesa * 0.68}) 0%, rgba(5,7,15,0) 100%)`, // b.400 — stessa cura del velo grande
           transition: 'background 160ms linear',
         }} />
       )}

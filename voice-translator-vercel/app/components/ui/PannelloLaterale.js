@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 import { FONT, vibrate } from '../../lib/constants.js';
-import { formaLinguetta, LINGUETTA } from '../../lib/righello.js';
+import { formaLinguetta, LINGUETTA, postoASinistra } from '../../lib/righello.js';
 
 // ═══════════════════════════════════════════════════════════════
 // IL PANNELLO LATERALE — dove vivono filtri e impostazioni di una
@@ -106,7 +106,8 @@ export function LinguettaPannello({ onApri, C, etichetta }) {
     // gemelle: stessa larghezza, stessa forma, stesso bordo.
     <button onClick={() => { vibrate(8); onApri?.(); }} aria-label={etichetta} title={etichetta}
       style={{
-        ...formaLinguetta(C, { top: 'max(132px, calc(env(safe-area-inset-top) + 124px))' }),
+        // b.400 — la quota viene dal righello: posto 0 della fila a sinistra.
+        ...formaLinguetta(C, postoASinistra(0)),
         zIndex: 62,
       }}>
       {/* tre righine: il segno universale di "qui ci sono i comandi" */}

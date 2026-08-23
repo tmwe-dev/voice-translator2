@@ -182,7 +182,11 @@ export default function GloboMondo({ sfondo = false, titolo = 'Il mondo ora', et
           // b.363 — SECONDO posto della colonna di destra, sotto la pila
           // (vedi lib/righello.js). Prima era su un asse tutto suo e si
           // vedeva che non era in riga con lei.
-          ...postoADestra(1), zIndex: 70,
+          // b.400 — POSTO 0, NON 1. In Mondo la pila del credito non c'e:
+          // il posto 0 restava vuoto e la luna finiva sotto il selettore
+          // del Paese, che partiva da destra. Ora e lei la prima della
+          // fila, e la testata le tiene libera la colonna (riservaADestra).
+          ...postoADestra(0), zIndex: 80,
           background: 'none', border: 'none', padding: 0, cursor: 'pointer',
           WebkitTapHighlightColor: 'transparent',
         }}>
