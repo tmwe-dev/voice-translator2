@@ -932,9 +932,25 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       const nLink = Array.isArray(a?.link) ? a.link.length : 0;
       const nVideo = Array.isArray(a?.video) ? a.video.length : 0;
       if (a && (nLink || nVideo)) {
+        // b.425 — SENZA DOPPIONI, e non e pignoleria.
+        //
+        // TROVATO NEL COLLAUDO DEL 23/08, premendo «Approfondisci» due
+        // volte sulla stessa lezione: l'accumulo e voluto (ogni pressione
+        // porta materiale NUOVO) ma la ricerca sullo stesso titolo
+        // restituisce gli stessi articoli, e finivano in fila due volte.
+        // Nella schermata si vedevano quattro link ripetuti identici.
+        // L'accumulo resta; quello che sparisce e la ripetizione.
+        const senzaDoppioni = (vecchi, nuovi) => {
+          const visti = new Set();
+          return [...(vecchi || []), ...(Array.isArray(nuovi) ? nuovi : [])].filter((x) => {
+            const chiave = String(x?.url || x?.link || x?.id || x?.titolo || JSON.stringify(x));
+            if (visti.has(chiave)) return false;
+            visti.add(chiave); return true;
+          });
+        };
         setArricchimento((prec) => {
           const base = prec && (prec.link || prec.video) ? prec : { link: [], video: [] };
-          return { link: [...(base.link || []), ...(Array.isArray(a.link) ? a.link : [])], video: [...(base.video || []), ...(Array.isArray(a.video) ? a.video : [])] };
+          return { link: senzaDoppioni(base.link, a.link), video: senzaDoppioni(base.video, a.video) };
         });
         // b.342 — il collaudo diceva "non fa niente": il risultato arrivava
         // fuori dallo schermo. Ora si va a VEDERLO.

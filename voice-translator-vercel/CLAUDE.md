@@ -214,6 +214,26 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.425** (push #717) — DUE DIFETTI TROVATI NEL COLLAUDO
+  FISICO del 23/08, non da un audit: li ho visti usando l'app in
+  produzione, con Chrome guidato da qui.
+  1. LA BARRA IN BASSO NON PARLAVA LA LINGUA DI CHI GUARDA. Messa
+     l'interfaccia in turco, tre voci dicevano «Ana sayfa», «Sohbetler»,
+     «Profil» e la quarta «Community»: in `BottomNav.js` quell'etichetta
+     era SCRITTA A MANO invece di essere una chiave, e restava in inglese
+     in tutte e trentotto le lingue. Stessa malattia che b.370 aveva
+     chiuso altrove, sopravvissuta qui perche la guardia sulle stringhe
+     cablate non guardava dentro questo file. Ora e `navCommunity` in
+     tutti i pacchetti, e `__tests__/barra-tradotta-b425.test.js`
+     controlla che NESSUNA voce della barra sia scritta a mano — cioe si
+     accorgera della prossima.
+  2. «APPROFONDISCI» PREMUTO DUE VOLTE MOSTRAVA I DOPPIONI. L'accumulo e
+     voluto (ogni pressione porta materiale nuovo) ma la ricerca sullo
+     stesso titolo restituisce gli stessi articoli, e finivano in fila
+     due volte: nel collaudo si vedevano quattro link ripetuti identici.
+     L'accumulo resta, la ripetizione no.
+  PROVA: la prova nuova e rossa sul `BottomNav.js` di prima, verde adesso.
+
 - Versione: **b.424** (push #716) — cinque correzioni di Luca sulla
   schermata appena rifatta, tutte dal suo schermo:
   1. TASTI PIU GRANDI: «in un telefono le dita fanno fatica». Erano 34,

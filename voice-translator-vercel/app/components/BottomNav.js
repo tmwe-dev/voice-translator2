@@ -82,7 +82,12 @@ const BottomNav = ({ currentView, onNewConversation }) => {
     // nessun elenco: li non si accendeva niente.
     { id: 'home', label: L('navHome'), views: ['home', 'quickinvite', 'speaker', 'taxi-chat'] },
     { id: 'conversations', label: L('navChat'), views: ['history', 'summary', 'detail'] },
-    { id: 'community', label: 'Community', views: ['mondo'] },
+    // b.425 — ERA SCRITTA A MANO, e restava in inglese in tutte e
+    // trentotto le lingue: nel collaudo, con l'interfaccia in turco,
+    // le altre tre voci dicevano «Ana sayfa», «Sohbetler», «Profil» e
+    // questa «Community». E' la stessa malattia che b.370 aveva chiuso
+    // altrove — e la guardia sulle stringhe cablate non guardava qui.
+    { id: 'community', label: L('navCommunity'), views: ['mondo'] },
     { id: 'profile', label: L('navProfile'), views: ['settings', 'account', 'credits', 'apikeys', 'voicetest', 'voice-clone', 'help', 'ai', 'contacts'] },
   ];
 
