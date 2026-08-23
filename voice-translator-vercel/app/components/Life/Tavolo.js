@@ -26,7 +26,25 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   const [attende, setAttende] = useState(false);
   // b.363 — il segnale di Interrompi che arriva dal telecomando di Life
   const fermatoRef = useRef(false);
-  useEffect(() => suInterruzione(() => { fermatoRef.current = true; }), []);
+  // b.412 · P1.11 — LO STOP NON ANNULLAVA LA GENERAZIONE GIA PARTITA.
+  //
+  // Il telecomando alzava `fermatoRef` e impediva la VOCE successiva, ma
+  // il server stava intanto generando le risposte di due-quattro
+  // Compagni: quel lavoro proseguiva fino in fondo, si pagava, e chi
+  // aveva premuto Stop restava ad aspettare una cosa che non voleva piu.
+  //
+  // Ora la richiesta ha un filo che si puo tagliare. Cio che il fornitore
+  // ha gia cominciato puo comunque essere addebitato — non lo controlliamo
+  // noi — ma NESSUN turno successivo parte, e l'attesa finisce subito.
+  const abortRef = useRef(null);
+  const fermaTutto = useCallback(() => {
+    fermatoRef.current = true;
+    try { abortRef.current?.abort(); } catch { /* non c'era nessuna richiesta in volo */ }
+    abortRef.current = null;
+  }, []);
+  const fermaRef = useRef(fermaTutto);
+  useEffect(() => { fermaRef.current = fermaTutto; }, [fermaTutto]);
+  useEffect(() => suInterruzione(() => fermaRef.current()), []);
   const [errore, setErrore] = useState('');
   const [obiettivo, setObiettivo] = useState(obiettivoIniziale || ''); // b.226 — Debate: l'obiettivo comune
   // b.302 — la Tavola rotonda assorbe il Dossier: puo partire da FONTI
@@ -34,6 +52,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // DOCUMENTO su richiesta, all'avvio o durante. Una sezione sola.
   const [conFonti, setConFonti] = useState(false);
   const [briefing, setBriefing] = useState('');   // l'articolo neutro dalle fonti
+  // b.412 · P1.12 — e DA DOVE VIENE: verificate | assenti | guaste. Senza
+  // questo, il report presentava come «fatti dalle fonti» anche un testo
+  // nato quando la ricerca era fallita.
+  const [statoFonti, setStatoFonti] = useState('verificate');
   const [fonti, setFonti] = useState([]);
   const [conDocumento, setConDocumento] = useState(false);
   const [documento, setDocumento] = useState(null);
@@ -49,6 +71,8 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     const t = testo.trim();
     if (!t || attende) return;
     fermatoRef.current = false;
+    // b.412 — un filo nuovo per ogni giro: quello vecchio e gia tagliato.
+    abortRef.current = new AbortController();
     setErrore('');
     const storia = [...messaggi, { ruolo: 'persona', testo: t }];
     setMessaggi(storia); setTesto(''); setAttende(true);
@@ -59,7 +83,11 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
     // di un tale chiamato "__briefing", e sporcavano la conversazione.
     const perServer = storia.filter(soloVoci).map(m => ({ ruolo: m.ruolo, testo: m.testo }));
     try {
-      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo, briefing });
+      const d = await parlaTavolo({ compagni: scelti, messaggi: perServer, lingua, userToken, obiettivi: obiettiviAttivi(), obiettivo, briefing, segnale: abortRef.current?.signal });
+      // b.412 · P1.11 — e si ricontrolla DOPO l'attesa, non solo prima:
+      // fra la partenza e il ritorno ci stanno secondi, e in quei secondi
+      // si preme Stop. Senza questo, le risposte comparivano lo stesso.
+      if (fermatoRef.current) return;
       for (const r of (d.risposte || [])) {
         const c = perId.get(r.compagnoId) || {};
         setMessaggi((m) => [...m, { ruolo: r.nome, testo: r.testo, avatar: c.avatar, colore: c.colore }]);
@@ -108,6 +136,10 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           // di avere davanti un testo fondato.
           setBriefing(d.articolo);
           setFonti(d.fonti || []);
+          // b.412 · P1.12 — lo stato non serve solo al riquadro: DEVE
+          // arrivare al prompt del report, che altrimenti intitola «dalle
+          // fonti» un testo nato senza fonti.
+          setStatoFonti(!!d.fontiGuaste ? 'guaste' : ((d.fonti || []).length ? 'verificate' : 'assenti'));
           setMessaggi([{
             ruolo: '__briefing', testo: d.articolo, fonti: d.fonti || [],
             // guaste se il server lo dichiara, oppure se semplicemente non
@@ -134,12 +166,12 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
       const discussione = messaggi
         .filter(soloVoci)
         .map(m => `${m.ruolo === 'persona' ? 'Persona' : m.ruolo}: ${m.testo}`).join('\n');
-      const r = await reportFinale({ argomento: (obiettivo || '').trim() || tt('lifeTableTopic', 'la tavola rotonda'), briefing, discussione, lingua, userToken });
+      const r = await reportFinale({ argomento: (obiettivo || '').trim() || tt('lifeTableTopic', 'la tavola rotonda'), briefing, statoFonti, discussione, lingua, userToken });
       if (r?.report) setDocumento(r.report);
     } catch (e) {
       setErrore(e?.status === 401 ? L('lifeLoginNeeded') : L('lifeError'));
     } finally { setGenDoc(false); }
-  }, [genDoc, messaggi, obiettivo, briefing, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [genDoc, messaggi, obiettivo, briefing, statoFonti, lingua, userToken, L]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const concludi = useCallback(async () => {
     if (attende || messaggi.length < 2) return;

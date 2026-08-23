@@ -4,7 +4,7 @@ import { FONT, LANGS, vibrate, clayCard } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { COMPAGNI_PREDEFINITI, compagnoVuoto, voceDaGenere, avatarDaGenere, VOCI_ELENCO, AVATAR_SCELTE, MODELLI, LIBERTA, LIBERTA_ETICHETTE } from '../../lib/compagni/catalogo.js';
 import { PROFILI, PROFILI_ELENCO, SUPERFICI_PROFILO, profiloPerSuperficie } from '../../lib/compagni/profili.js';
-import { salvaMio, cancellaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
+import { salvaMio, cancellaMio, dimenticaMio, parlaTurno, generaAgente, generaAvatar } from '../../lib/compagni/cliente.js';
 import { salvaImmagine, elencoImmagini } from '../../lib/compagni/galleria.js';
 import { componiPersonalita } from '../../lib/compagni/genera.js';
 import { compatibilitaVoceLingua } from '../../lib/vociLingue.js';
@@ -154,6 +154,26 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     if (!userToken) return;
     try { await cancellaMio(id, userToken); if (onCambiato) await onCambiato(); } catch { /* rete assente: la lista si aggiorna al prossimo caricamento */ }
   }, [userToken, onCambiato]);
+
+  // b.411 · P1.17 — «DIMENTICA», il diritto che c'era e non si poteva
+  // esercitare. `dimentica()` viveva in memoria.js da sempre e il piano
+  // promette una memoria cancellabile, ma nessuna schermata la chiamava:
+  // cercato in tutto il progetto, zero chiamanti. Una promessa di privacy
+  // senza un modo di esercitarla e una frase, non una promessa.
+  //
+  // Vale ANCHE per i Compagni del catalogo: quelli non si possono
+  // cancellare, ma possono avere ricordi tuoi. Prima non c'era proprio
+  // modo di liberarsene.
+  const [dimenticato, setDimenticato] = useState('');
+  const dimentica = useCallback(async (id) => {
+    if (!userToken) return;
+    try {
+      await dimenticaMio(id, userToken);
+      setDimenticato(id);
+      // la conferma sparisce da sola: e un'informazione, non un allarme
+      setTimeout(() => setDimenticato((x) => (x === id ? '' : x)), 2500);
+    } catch { setErrore(L('lifeError')); }
+  }, [userToken, L]);
 
   // b.219 — l'anteprima voce diceva sempre la frase generica ("Ciao, sono il
   // tuo Compagno"). Ora, se il Compagno ha un nome, la voce PRONUNCIA nome e
@@ -444,6 +464,15 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
         <div style={{ fontWeight: 700, color: testoP, fontSize: 14 }}>{c.nome}</div>
         <div style={{ fontSize: 11, color: muto, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.ruolo}</div>
       </div>
+      {/* b.411 · P1.17 — «Dimentica»: cancella cio che questo Compagno
+          ricorda di te, e lascia il Compagno. Sta su OGNI riga, anche sui
+          predefiniti, perche anche loro possono ricordare. */}
+      <button onClick={() => dimentica(c.id)} aria-label={tt('lifeForget', 'Dimentica cio che ricorda di me')}
+        title={tt('lifeForget', 'Dimentica cio che ricorda di me')}
+        style={{ background: 'none', border: bordo, borderRadius: 8, padding: '7px 9px', cursor: 'pointer',
+          color: dimenticato === c.id ? accent : muto, fontSize: 11, fontWeight: 700, fontFamily: FONT }}>
+        {dimenticato === c.id ? tt('lifeForgotten', 'fatto') : tt('lifeForgetShort', 'dimentica')}
+      </button>
       {mio
         ? <>
             <button onClick={() => modifica(c)} aria-label={L('lifeEdit')} style={{ background: 'none', border: bordo, borderRadius: 8, padding: 7, cursor: 'pointer' }}><Icon name="settings" size={14} color={testoP} /></button>

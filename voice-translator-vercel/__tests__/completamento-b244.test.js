@@ -169,17 +169,32 @@ describe('l\'appunto del Maestro e lo sblocco delle lezioni', () => {
 
 describe('throttle memoria — il difetto che l\'audit aveva ragione a segnalare', () => {
   it('si conta sul totale VERO, non sui messaggi tagliati a 20', () => {
-    // Il difetto: la rotta taglia a 20; superati i 20 scambi la lunghezza
-    // restava sempre 20 (+1 = 21) e 21 % 3 === 0 → estrazione a OGNI turno,
-    // cioè l'esatto contrario del "throttle leggero" promesso dal commento.
+    // Il difetto di b.244: la rotta taglia a 20; superati i 20 scambi la
+    // lunghezza restava sempre 20 (+1 = 21) e 21 % 3 === 0 → estrazione a
+    // OGNI turno, cioe l'esatto contrario del «throttle leggero» promesso.
+    //
+    // b.411 — QUESTA PROVA ERA SCRITTA SU UNA RIGA, NON SU UN INTENTO.
+    // Controllava alla lettera `const totaleTurni = (Number(body.totale)...`
+    // e quindi e diventata rossa quando il conteggio e passato dal client
+    // al server — cioe quando l'intento di b.244 e stato soddisfatto
+    // MEGLIO. Una prova cosi non difende il comportamento: difende una
+    // riga, e si mette di traverso alla prima cura vera. Riscritta su cio
+    // che conta: da dove NON puo venire il numero.
     const s = leggi('app/api/compagni/amico/route.js');
-    expect(s).toMatch(/const totaleTurni = \(Number\(body\.totale\) > 0 \? Number\(body\.totale\) : messaggi\.length\) \+ 1;/);
-    expect(s).toMatch(/totaleTurni % 3 === 0/);
-    expect(s).not.toMatch(/conRisposta\.length % 3 === 0/);
+    const codice = s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(codice, 'il tetto si applica ancora').toMatch(/totaleTurni % 3 === 0/);
+    expect(codice, 'e MAI sulla lista tagliata').not.toMatch(/conRisposta\.length % 3 === 0/);
+    expect(codice).not.toMatch(/messaggi\.length % 3 === 0/);
+    // b.411 · P1.18 — e nemmeno su cio che dichiara il client: il numero
+    // che decide una spesa non puo venire da chi non la paga.
+    expect(codice, 'il conteggio e del server').toMatch(/totaleTurni = await contaTurno\(/);
   });
 
-  it('e il client dichiara la lunghezza vera della conversazione', () => {
+  it('e il client dichiara comunque la lunghezza vera: e il ripiego', () => {
+    // b.411 — resta utile quando il deposito veloce non risponde: meglio
+    // un throttle imperfetto che nessun throttle.
     expect(leggi('app/lib/compagni/cliente.js')).toMatch(/totale: Array\.isArray\(messaggi\) \? messaggi\.length : 0/);
+    expect(leggi('app/api/compagni/amico/route.js')).toMatch(/ripiego/);
   });
 
   it('il rinvio a dopo la risposta non perde il lavoro se non si può rinviare', () => {

@@ -1,15 +1,29 @@
 const R = (method, pattern, scope, upstream, auth, opts = {}) => ({ method, pattern, scope, upstream, auth, limit: 60, ...opts });
 
-// Solo capability di prodotto concrete. Test/debug/admin/Stripe interni non sono esposti.
+// Solo capability di prodotto concrete e stabili. Test/debug/admin/cron/webhook/Stripe raw non sono esposti.
+// Le operazioni finanziarie che possono duplicare un addebito senza idempotenza (es. invio regalo)
+// restano fuori finche il Core non offre un contratto idempotente.
 export const ROUTES = [
   R('GET', '/health', null, '/api/health', 'none', { limit: 20, public: true }),
   { method: 'POST', pattern: '/auth/exchange', local: 'exchange', public: true, limit: 10 },
 
   R('GET', '/me', 'profile:read', '/api/user?action=profile', 'header'),
   R('PATCH', '/me', 'profile:write', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'update' } }),
-  R('GET', '/wallet', 'wallet:read', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'credits' } }),
-  R('GET', '/wallet/payments', 'wallet:read', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'payments' } }),
+  R('DELETE', '/me/data', 'profile:write', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'delete-data' }, limit: 5 }),
+  R('GET', '/preferences', 'profile:read', '/api/user?action=get-prefs', 'header'),
   R('PUT', '/preferences', 'profile:write', '/api/user', 'header', { fixedBody: { action: 'sync-prefs' } }),
+
+  // BYOK: il Core non restituisce mai i valori delle chiavi, solo lo stato.
+  R('GET', '/provider-keys', 'keys:read', '/api/keys', 'header'),
+  R('POST', '/provider-keys', 'keys:write', '/api/keys', 'header', { limit: 10 }),
+  R('DELETE', '/provider-keys', 'keys:write', '/api/keys', 'header', { limit: 10 }),
+
+  // Wallet contabile attuale. /api/user credits resta legacy e non e piu la fonte primaria.
+  R('GET', '/wallet', 'wallet:read', '/api/wallet/saldo', 'header'),
+  R('GET', '/wallet/payments', 'wallet:read', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'payments' } }),
+  R('POST', '/wallet/topups', 'wallet:write', '/api/wallet/ricarica', 'header', { limit: 10 }),
+  R('POST', '/wallet/gifts/redeem', 'wallet:write', '/api/wallet/regalo', 'header', { fixedBody: { azione: 'riscatta' }, limit: 10 }),
+  R('POST', '/wallet/vouchers/redeem', 'wallet:write', '/api/wallet/voucher', 'header', { limit: 10 }),
 
   R('POST', '/translate', 'translate', '/api/translate', 'json:userToken', { limit: 120 }),
   R('POST', '/transcribe', 'speech:stt', '/api/transcribe', 'form:userToken', { limit: 30, multipart: true }),
@@ -20,6 +34,7 @@ export const ROUTES = [
 
   R('GET', '/companions', 'companions:read', '/api/compagni/mie', 'json:userToken', { upstreamMethod: 'POST', fixedBody: { azione: 'elenco' } }),
   R('POST', '/companions', 'companions:write', '/api/compagni/mie', 'json:userToken', { fixedBody: { azione: 'salva' }, transform: 'companionCreate' }),
+  R('DELETE', '/companions/:id/memory', 'companions:write', '/api/compagni/mie', 'json:userToken', { upstreamMethod: 'POST', fixedBody: { azione: 'dimentica' }, transform: 'companionForget', limit: 20 }),
   R('DELETE', '/companions/:id', 'companions:write', '/api/compagni/mie', 'json:userToken', { upstreamMethod: 'POST', fixedBody: { azione: 'cancella' }, transform: 'companionDelete' }),
   R('POST', '/companions/:id/messages', 'companions:chat', '/api/compagni/amico', 'json:userToken', { transform: 'companionMessage', limit: 40 }),
   R('POST', '/companions/:id/live-sessions', 'companions:live', '/api/compagni/live/session', 'json:userToken', { transform: 'liveOpen', limit: 10 }),
@@ -106,6 +121,7 @@ export function transformBody(name, body, params) {
   if (!name) return body;
   if (name === 'companionCreate') return { ...body, compagno: body.compagno || body };
   if (name === 'companionDelete') return { ...body, id: params.id };
+  if (name === 'companionForget') return { ...body, id: params.id, azione: 'dimentica' };
   if (name === 'companionMessage') {
     return {
       ...body,

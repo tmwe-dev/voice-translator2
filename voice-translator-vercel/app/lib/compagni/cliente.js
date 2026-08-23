@@ -12,11 +12,15 @@ import { fermatoDavvero, suona } from '../voce.js';
 import { segnalaSessioneCaduta } from '../sessioneCaduta.js';
 import { cercaTopics } from '../topics/cliente.js';
 
-async function postJSON(url, corpo) {
+async function postJSON(url, corpo, segnale = null) {
+  // b.412 · P1.11 — una richiesta si puo tagliare. Serve al Tavolo, dove
+  // lo Stop deve poter chiudere anche cio che e gia partito: senza filo,
+  // l'attesa continuava fino in fondo per un lavoro che nessuno voleva.
   const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(corpo),
+    ...(segnale ? { signal: segnale } : {}),
   });
   let dati = null;
   try { dati = await r.json(); } catch { /* risposta senza corpo JSON leggibile */ }
@@ -216,6 +220,14 @@ export function salvaMio(compagno, userToken) {
 export function cancellaMio(id, userToken) {
   return postJSON('/api/compagni/mie', { azione: 'cancella', id, userToken });
 }
+/**
+ * b.411 · P1.17 — «Dimentica»: cancella i ricordi che un Compagno ha di
+ * te, lasciando il Compagno. Vale anche per quelli del catalogo, che non
+ * si possono cancellare ma possono ricordare.
+ */
+export function dimenticaMio(id, userToken) {
+  return postJSON('/api/compagni/mie', { azione: 'dimentica', id, userToken });
+}
 
 /** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }.
  *  b.224 — `obiettivi` (attivi, dal dispositivo) rende il Compagno consapevole
@@ -229,8 +241,8 @@ export function parlaAmico({ compagnoId, messaggi, lingua, userToken, obiettivi,
 
 /** Tavolo/Debate: tu + più Compagni verso un obiettivo comune.
  *  Ritorna { risposte: [{compagnoId,nome,voceId,testo}] }. */
-export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing }) {
-  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing });
+export function parlaTavolo({ compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing, segnale = null }) {
+  return postJSON('/api/compagni/tavolo', { compagni, messaggi, lingua, userToken, obiettivi, obiettivo, briefing }, segnale);
 }
 
 /** Sintesi del Debate: la conclusione condivisa verso l'obiettivo. */
@@ -243,8 +255,8 @@ export async function sintesiTavolo({ compagni, messaggi, lingua, userToken, obi
 export function preparaBriefing({ argomento, lingua, userToken }) {
   return postJSON('/api/compagni/dossier', { azione: 'briefing', argomento, lingua, userToken });
 }
-export function reportFinale({ argomento, briefing, discussione, lingua, userToken }) {
-  return postJSON('/api/compagni/dossier', { azione: 'report', argomento, briefing, discussione, lingua, userToken });
+export function reportFinale({ argomento, briefing, statoFonti, discussione, lingua, userToken }) {
+  return postJSON('/api/compagni/dossier', { azione: 'report', argomento, briefing, statoFonti, discussione, lingua, userToken });
 }
 
 /**

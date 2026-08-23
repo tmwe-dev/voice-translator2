@@ -3,7 +3,8 @@ import { dopo } from '../../../lib/dopo.js';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
-import { risolviCompagno } from '../../../lib/compagni/persistenza.js';
+import { redis } from '../../../lib/redis.js';
+import { risolviCompagno, idUtente } from '../../../lib/compagni/persistenza.js';
 import { ricordiPerContesto, contestoMemoria, estraiRicordi, aggiungiRicordi, tagsDalTesto } from '../../../lib/compagni/memoria.js';
 import { formattaObiettivi } from '../../../lib/compagni/obiettivi.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
@@ -14,6 +15,23 @@ import { LENTI_UMANE, contestoRelazione } from '../../../lib/compagni/vocazione.
 import { ISTRUZIONE_VOCE, staccaModoVoce } from '../../../lib/voceEspressiva.js';
 
 const log = createLogger('compagni-amico');
+
+// b.411 · P1.18 — quanti turni ha davvero questa conversazione, contati
+// da noi. Vive un giorno: una conversazione che riprende domani ricomincia
+// il conteggio, ed e il comportamento giusto — il throttle serve a non
+// estrarre a ogni battuta, non a ricordarsi per sempre.
+const CHIAVE_TURNI = (email, compagnoId) => `amico:turni:${idUtente(email)}:${String(compagnoId).slice(0, 64)}`;
+const VITA_TURNI = 24 * 60 * 60;
+
+async function contaTurno(email, compagnoId, ripiego) {
+  try {
+    const chiave = CHIAVE_TURNI(email, compagnoId);
+    const n = await redis('INCR', chiave);
+    if (Number(n) === 1) await redis('EXPIRE', chiave, VITA_TURNI);
+    if (Number(n) > 0) return Number(n);
+  } catch { /* deposito muto: si ripiega sul numero del client */ }
+  return (ripiego > 0 ? ripiego : 0) + 1;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // /api/compagni/amico — parla con un Compagno che ricorda.
@@ -124,9 +142,21 @@ async function handlePost(req) {
     // 21 % 3 === 0: da quel momento la memoria si estraeva a OGNI turno —
     // l'esatto contrario del "throttle leggero" che il commento prometteva.
     // Ora si conta sul totale vero, che il client conosce e dichiara.
+    // b.411 · P1.18 — IL CONTATORE ORA E' NOSTRO.
+    //
+    // `body.totale` lo dichiara il client. Non e un buco di accesso, ma e
+    // un controllo di COSTO in mano a chi non lo paga: un client
+    // modificato poteva mandare un totale che cade sempre sul multiplo di
+    // tre e far girare l'estrazione (una chiamata al modello) a ogni
+    // singolo turno — oppure mandare sempre 1 e non farla girare mai,
+    // spegnendo la memoria in silenzio.
+    //
+    // Ora conta il server, in Redis, per (utente, Compagno). Il numero
+    // del client resta come RIPIEGO se il deposito non risponde: meglio
+    // un throttle imperfetto che un throttle assente.
     if (compagno.memoria) {
       const conRisposta = [...messaggi, { ruolo: 'compagno', testo: rispostaPulita }];
-      const totaleTurni = (Number(body.totale) > 0 ? Number(body.totale) : messaggi.length) + 1;
+      const totaleTurni = await contaTurno(email, compagno.id, Number(body.totale) || messaggi.length);
       if (totaleTurni >= 4 && totaleTurni % 3 === 0) {
         dopo(async () => {
           try {

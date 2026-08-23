@@ -29,6 +29,22 @@ function daRiga(r) {
 }
 
 /** Pubblica un corso nella libreria. Ritorna il corso pubblicato o null. */
+// b.412 · P1.19 — la forma consentita di una lezione, e nient'altro.
+const PESI = ['alto', 'medio', 'basso'];
+function normalizzaLezione(l) {
+  if (!l || typeof l !== 'object') return null;
+  const titolo = String(l.titolo || '').slice(0, 160).trim();
+  if (!titolo) return null;                      // senza titolo non e una lezione
+  const obiettivi = (Array.isArray(l.obiettivi) ? l.obiettivi : [])
+    .slice(0, 8)
+    .map((o) => String(o || '').slice(0, 200).trim())
+    .filter(Boolean);
+  const peso = PESI.includes(l.peso) ? l.peso : 'medio';
+  // Solo questi tre campi escono di qui. Se domani serve il quarto, lo si
+  // aggiunge QUI: e l'unico posto dove guardare per sapere cosa viaggia.
+  return { titolo, obiettivi, peso };
+}
+
 export async function pubblicaCorso(email, corso = {}) {
   const autore = idUtente(email);
   if (!autore) return null;
@@ -37,7 +53,19 @@ export async function pubblicaCorso(email, corso = {}) {
   const titolo = String(corso.titolo || corso.argomento || '').slice(0, 160).trim();
   const argomento = String(corso.argomento || titolo).slice(0, 200).trim();
   if (!titolo || !argomento) return null;
-  const lezioni = Array.isArray(corso.lezioni) ? corso.lezioni.slice(0, 20) : [];
+  // b.412 · P1.19 — LE LEZIONI SI RICOSTRUISCONO CAMPO PER CAMPO.
+  //
+  // Prima si prendevano cosi com'erano (`slice(0, 20)` e via), quindi un
+  // client poteva pubblicare oggetti di forma qualunque entro il limite
+  // del corpo. Quei titoli e quegli obiettivi poi entrano nella schermata
+  // di ALTRI utenti e — peggio — dentro il prompt che genera le loro
+  // lezioni. E questa e la libreria aperta anche ai bambini.
+  //
+  // Non si filtra cio che si teme: si tiene solo cio che si conosce.
+  const lezioni = (Array.isArray(corso.lezioni) ? corso.lezioni : [])
+    .slice(0, 20)
+    .map(normalizzaLezione)
+    .filter(Boolean);
   if (!lezioni.length) return null;
   const id = `${slug(argomento)}-${autore.slice(2, 10)}`;
   const riga = {

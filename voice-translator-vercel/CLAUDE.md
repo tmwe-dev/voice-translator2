@@ -214,6 +214,138 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.414** (push #708) — BATCH F chiuso, e il confine di Life.
+  P1.21 — LIFE IN PRODUZIONE NON LA PROVAVA NESSUNO. Lo smoke verificava
+  homepage, health, Diretta e TaxiTalk: un deploy poteva essere verde con
+  l'intera sezione Life a pezzi. Ora prova LE PORTE: che le rotte di Life
+  esistano davvero nel pacchetto pubblicato, e che sappiano dire di no a
+  chi non ha diritto. VERIFICATO A MANO CONTRO LA PRODUZIONE VERA prima
+  di scriverlo: `/api/compagni/mie` 401, `/api/compagni/amico` 401,
+  `/api/compagni/live/session` 401 (che e anche la prova che la Via B di
+  b.407 e viva), `/api/topics/search` risponde `application/x-ndjson`
+  (il contratto da cui dipende b.409).
+  NON SPENDE NIENTE, ed e una scelta: questo gira a ogni invio su main, e
+  uno smoke che chiama il modello a ogni push diventa una voce di costo
+  che nessuno ha deciso. Cio che costa (un turno di Amico, una voce, un
+  syllabus) resta scoperto e va detto: si prova a mano.
+  E UNA RIGA L'HO TOLTA IO: avevo messo anche l'azione «dimentica», ma il
+  cancello dell'accesso scatta PRIMA di guardare quale azione chiedi,
+  quindi rispondeva 401 anche se l'azione non fosse esistita. Non
+  provava niente, e una prova che sembra provare e peggio di una prova
+  che manca.
+  P1.20 — IL CONFINE FRA LIFE E BARTALK. L'audit segnalava che la regola
+  scritta («niente di BarTalk tranne ponte.js») non descriveva piu la
+  realta. VERIFICATO, e aveva ragione a meta — la meta che conta e in
+  ordine: le CAPACITA' vere (modello, autorizzazione, portafoglio,
+  ricerca, fornitori, deposito veloce, registro accessi) stanno TUTTE in
+  `ponte.js` e in nessun altro file di Life. Cio che Life importa da solo
+  sono primitivi: colori, misure, memoria del telefono, registro
+  dell'audio. Non sono capacita, sono il pavimento.
+  Quindi non serviva un refactor: serviva scrivere il confine giusto
+  (`docs/PIANO-LIFE-COMPAGNI.md` §5-quater, con le due liste) e metterci
+  una guardia — `__tests__/confine-life-b414.test.js`. Provata in tutte e
+  due le direzioni: aggiungendo un import del portafoglio in memoria.js
+  diventa rossa e dice anche perche. Una regola scritta in un documento
+  che nessuno esegue e esattamente il motivo per cui l'audit ha dovuto
+  segnalarla.
+- Versione: **b.413** (push #707) — P1.15: l'impronta dell'utente di Life.
+  Era `sha256(email)` troncato. Il difetto non e la funzione: e che
+  l'email E' UN DATO INDOVINABILE — chi ha in mano un'impronta puo
+  provare le email finche torna, o costruirsi una tabella ed ENUMERARE
+  le persone. Mondo era gia passato all'HMAC per questo motivo esatto in
+  b.244, e il commento di Life diceva ancora «la stessa impronta di
+  Mondo», che da allora non era piu vero: un commento che mente e peggio
+  di nessun commento.
+  LA MIGRAZIONE E' IL PUNTO, e va capita: dagli id vecchi NON si risale
+  alle email, sono digest. Quindi una migrazione di massa e IMPOSSIBILE
+  — nessuno, nemmeno noi, sa a chi appartiene la riga `u_3f2a...`.
+  L'unico momento in cui quel legame esiste e quando la persona TORNA:
+  li abbiamo la sua email e possiamo calcolare tutte e due le impronte.
+  Il trasloco e quindi PIGRO: avviene alla prima apertura di Life, una
+  persona alla volta, dentro `elencaCompagni` (che e la prima cosa che
+  Life chiede). Idempotente, e se una tabella e guasta le altre passano
+  lo stesso — meglio nove su dieci che zero, e niente va perso perche
+  la riga resta dov'e.
+  Usa lo STESSO segreto di Mondo (`MONDO_ID_SECRET`) di proposito: due
+  segreti per la stessa idea sono due cose da ricordare e una da
+  dimenticare. Senza segreto si ricade sul vecchio schema dichiarandolo,
+  per non spegnere Life dove il segreto non c'e.
+- FERMO SU LUCA: se `MONDO_ID_SECRET` non e impostata su Vercel, questo
+  intervento non ha alcun effetto — l'impronta resta il digest di prima.
+  Non e un guasto e non finge: e scritto nel codice e verificato da una
+  prova. Ma finche non c'e, P1.15 e chiuso nel repository e APERTO in
+  produzione.
+- Versione: **b.412** (push #706) — tre punti che avevano in comune una
+  cosa: un'informazione c'era gia, e non arrivava dove serviva.
+  P1.12 — UN TESTO SENZA FONTI SI TRAVESTIVA DA EVIDENZA. Il Dossier SA
+  quando la ricerca fonti fallisce: lo dichiara (`fontiGuaste`), lo
+  registra, e la schermata lo mostra pure. Ma al prompt del report non
+  arrivava, e quel prompt intitolava «Fatti di partenza (dalle fonti)»
+  qualunque briefing non vuoto — comprese le volte in cui di fonti non ce
+  n'era nemmeno una. Ora il briefing porta con se il suo stato e ogni
+  stato ha la sua intestazione: supportati dalle fonti · contesto NON
+  verificato · ricerca fallita, non trattarlo come evidenza. Lo stato
+  attraversa tutta la catena (schermata, cliente, rotta, prompt): bastava
+  che si fermasse in un punto e il prompt tornava a mentire.
+  P1.11 — LO STOP DEL TAVOLO NON ANNULLAVA LA GENERAZIONE GIA PARTITA.
+  Alzava una bandierina che fermava la voce successiva, ma il server
+  stava generando le risposte di due-quattro Compagni: quel lavoro
+  proseguiva, si pagava, e chi aveva premuto Stop restava ad aspettare.
+  Ora la richiesta ha un filo che si taglia, e si ricontrolla anche DOPO
+  l'attesa — perche e proprio in quei secondi che si preme Stop. Cio che
+  il fornitore ha gia cominciato puo comunque essere addebitato: non lo
+  controlliamo noi, ed e scritto nel codice invece che sottinteso.
+  P1.19 — LE LEZIONI PUBBLICATE SI RICOSTRUISCONO CAMPO PER CAMPO. Prima
+  si salvavano cosi come arrivavano: un client poteva pubblicare oggetti
+  di forma qualunque, e quei titoli e obiettivi finiscono nella schermata
+  e DENTRO IL PROMPT che genera le lezioni di altri utenti. In una
+  libreria aperta anche ai bambini. Ora escono solo tre campi — titolo,
+  obiettivi, peso — con le loro misure, e chi ne vuole un quarto lo
+  aggiunge in un posto solo.
+- Versione: **b.411** (push #705) — BATCH E, seconda parte: la memoria
+  del Compagno. Sei punti chiusi, e una scoperta che non era nell'audit.
+  SCOPERTA, dai dati vivi: `compagno_memorie` e a ZERO righe. La memoria
+  non e rotta — E' SPENTA. `compagnoVuoto()` non imposta `memoria`, quindi
+  ogni Compagno nasce senza; l'interruttore nel form c'e (GestioneCompagni)
+  ma nessuno dei quattro Compagni di Luca lo ha acceso. NON l'ho acceso io:
+  accendere per difetto una memoria di fatti personali e una decisione di
+  prodotto e di privacy, e la prende lui. Ma finche resta spenta, tutto
+  cio che segue non si vede in produzione.
+  P1.13 — LA FINESTRA «RECENTE» NON ESISTEVA. Si prendevano le ultime otto
+  righe qualunque, senza guardare ne il livello ne la data: i ricordi
+  CONSOLIDATI (i piu importanti, e i piu vecchi) occupavano gli slot dei
+  recenti. Ora sono due domande separate, e la recente e davvero a sette
+  giorni — `GIORNI_RECENTI`, come dice il piano.
+  P1.14 — UN DEPOSITO GUASTO NON E' «NESSUN RICORDO». L'errore veniva
+  buttato (`data || []`) e da fuori le due cose erano identiche. Ora si
+  registra e si puo chiedere con `memoriaDisponibile()`: un Compagno che
+  dice «non ricordo» a chi gli ha appena raccontato qualcosa e un'altra
+  cosa da un Compagno senza ricordi.
+  P1.16 — CANCELLARE UN COMPAGNO CANCELLAVA SOLO LA SUA SCHEDA. Verificato
+  sul database vivo: fra `compagni` e `compagno_memorie` non esiste NESSUN
+  vincolo, quindi nessuna cascata. I ricordi restavano li per sempre, senza
+  piu una schermata capace di raggiungerli. Ora si cancellano prima i
+  ricordi e poi la scheda, e se i ricordi non si cancellano la scheda
+  RESTA: meglio un Compagno da ricancellare che ricordi orfani. Non si e
+  messo un vincolo nel database perche i Compagni PREDEFINITI non stanno
+  in quella tabella e una chiave esterna impedirebbe di ricordarli.
+  P1.17 — «DIMENTICA» ESISTEVA E NON SI POTEVA CHIEDERE. `dimentica()`
+  stava in memoria.js da sempre, il piano promette una memoria
+  «cancellabile», e i chiamanti erano ZERO in tutto il progetto. Ora la
+  catena c'e tutta e tre: azione nella rotta, verbo nel cliente, tasto su
+  OGNI riga di Gestione Compagni — anche sui predefiniti, che non si
+  possono cancellare ma possono ricordare.
+  P1.18 — IL CONTATORE DEI TURNI ERA DEL CLIENT. `body.totale` decideva
+  quando far girare l'estrazione, che e una chiamata al modello: un client
+  modificato poteva farla girare a ogni turno, o non farla girare mai.
+  Ora conta il server in Redis per (utente, Compagno), e il numero del
+  client resta come ripiego se il deposito non risponde.
+- E UNA PROVA MIA CHE SI E' MESSA DI TRAVERSO ALLA CURA. `completamento-b244`
+  controllava ALLA LETTERA la riga del throttle, non il suo intento: e
+  diventata rossa proprio quando l'intento di b.244 e stato soddisfatto
+  MEGLIO (il conteggio dal client al server). Riscritta su cio che conta:
+  da dove NON puo venire quel numero. E' la stessa malattia della
+  trappola numero 6, in un'altra forma — la prova difendeva una riga.
 - Versione: **b.410** (push #704) — BATCH E: i due P0 di privacy.
   P0.7 — LA CHAT E GLI OBIETTIVI SI LEGGEVANO FRA ACCOUNT. Le chiavi
   erano `vt-chat-<compagno>` e `vt-obiettivi`, senza dentro chi sei.
@@ -375,7 +507,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2445 verdi su 163 file** · 0 errori di lint (avvisi tollerati)
+- Test: **2495 verdi su 167 file** (unendo b.413, che sta sul Mac; qui ne ho viste 2482 su 166) · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

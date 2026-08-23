@@ -6,7 +6,9 @@ const ALGO = 'aes-256-gcm';
 const VERSION = 1;
 
 export const SCOPES = Object.freeze([
-  'profile:read', 'profile:write', 'wallet:read',
+  'profile:read', 'profile:write',
+  'wallet:read', 'wallet:write',
+  'keys:read', 'keys:write',
   'translate', 'speech:stt', 'speech:tts', 'voice:clone',
   'companions:read', 'companions:write', 'companions:chat', 'companions:live', 'companions:podcast',
   'learning', 'topics:read',
@@ -15,7 +17,17 @@ export const SCOPES = Object.freeze([
   'peepoff', 'taxi', 'glossary:read', 'glossary:write', 'summary', 'moderation',
 ]);
 
-export const DEFAULT_SCOPES = Object.freeze([...SCOPES]);
+// Least privilege: senza una lista esplicita non si emette piu una chiave con
+// tutte le capacita di scrittura/finanziarie. Gli scope sensibili vanno chiesti.
+export const DEFAULT_SCOPES = Object.freeze([
+  'profile:read', 'wallet:read',
+  'translate', 'speech:stt', 'speech:tts',
+  'companions:read', 'companions:chat', 'companions:live', 'companions:podcast',
+  'learning', 'topics:read',
+  'rooms:read', 'messages:read',
+  'contacts:read', 'community:read',
+  'peepoff', 'taxi', 'glossary:read', 'summary',
+]);
 
 function key() {
   return createHash('sha256').update(signingSecret()).digest();

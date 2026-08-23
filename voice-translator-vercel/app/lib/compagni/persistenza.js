@@ -12,11 +12,110 @@ import crypto from 'crypto';
 import { getSupabaseAdmin } from '../supabase.js';
 import { getCompagnoPredefinito } from './catalogo.js';
 import { pulisciProfili } from './profili.js';
+import { createLogger } from '../logger.js';
 
-/** Impronta pubblica dell'utente (sha256 dell'email, troncato). */
-export function idUtente(email) {
+const log = createLogger('compagni-persistenza');
+
+// ═══════════════════════════════════════════════════════════════
+// L'IMPRONTA DELL'UTENTE — b.413, P1.15 dell'audit
+//
+// Era `sha256(email)` troncato. Il difetto non e la funzione: e che
+// l'email E' UN DATO INDOVINABILE. Chiunque abbia in mano un'impronta
+// puo provare le email finche torna, oppure costruirsi una tabella e
+// ENUMERARE le persone. Mondo era gia passato all'HMAC per questo
+// motivo esatto (b.244), e il commento di Life diceva ancora «la stessa
+// impronta di Mondo» — che da allora non era piu vero. Un commento che
+// mente e peggio di nessun commento.
+//
+// LA MIGRAZIONE E' IL PUNTO DELICATO, e va spiegata. Dagli id vecchi
+// NON si risale alle email: sono digest. Quindi non esiste nessuna
+// migrazione di massa possibile — nessuno, nemmeno noi, sa a chi
+// appartiene la riga `u_3f2a...`. L'unico momento in cui quel legame
+// esiste e quando la persona TORNA: li abbiamo la sua email, e possiamo
+// calcolare tutte e due le impronte.
+//
+// Quindi il trasloco e PIGRO: avviene alla prima apertura di Life dopo
+// l'aggiornamento, per una persona alla volta, e si segna che e fatto.
+// Chi non torna non perde niente: le sue righe restano dove sono, con
+// la vecchia impronta, e il giorno che torna vengono spostate.
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * L'impronta VECCHIA: digest dell'email. Resta esportata perche serve al
+ * trasloco — e solo a quello. Nessun codice nuovo deve usarla per
+ * scrivere.
+ */
+export function idUtenteVecchio(email) {
   if (!email) return null;
   return 'u_' + crypto.createHash('sha256').update(String(email).trim().toLowerCase()).digest('hex').slice(0, 24);
+}
+
+/**
+ * L'impronta dell'utente. Con il segreto e un HMAC (non si puo indovinare
+ * partendo dall'email); senza, si ricade sul vecchio schema DICHIARANDOLO,
+ * per non spegnere Life in un ambiente che il segreto non ce l'ha.
+ *
+ * Stesso segreto di Mondo di proposito: due segreti per la stessa idea
+ * sono due cose da ricordare, e una da dimenticare.
+ */
+export function idUtente(email) {
+  if (!email) return null;
+  const segreto = process.env.MONDO_ID_SECRET;
+  if (!segreto) return idUtenteVecchio(email);
+  return 'u_' + crypto.createHmac('sha256', segreto)
+    .update(String(email).trim().toLowerCase()).digest('hex').slice(0, 24);
+}
+
+/** Le tabelle di Life dove vive l'impronta, e con che nome. */
+const TABELLE_IDENTITA = [
+  ['compagni', 'owner'],
+  ['compagno_memorie', 'owner'],
+  ['compiti_jobs', 'owner'],
+  ['compiti_materiali', 'owner'],
+  ['corsi_utente', 'owner'],
+  ['imparare_progresso', 'owner'],
+  ['imparare_studente', 'owner'],
+  ['profilo_studente', 'owner'],
+  ['pronuncia_profilo', 'owner'],
+  ['corsi_pubblici', 'autore'],
+];
+
+/**
+ * IL TRASLOCO PIGRO. Sposta le righe di QUESTA persona dalla vecchia
+ * impronta alla nuova. Idempotente: se non c'e niente da spostare non fa
+ * niente, e si puo richiamare quante volte si vuole.
+ *
+ * Va chiamata dove Life comincia — `elencaCompagni`, che e la prima cosa
+ * che la sezione chiede quando si apre.
+ *
+ * @returns {Promise<number>} quante righe ha spostato (0 = niente da fare)
+ */
+export async function assicuraIdentita(email) {
+  if (!email) return 0;
+  const nuovo = idUtente(email);
+  const vecchio = idUtenteVecchio(email);
+  if (!nuovo || nuovo === vecchio) return 0;   // senza segreto non c'e niente da traslocare
+  const sb = getSupabaseAdmin();
+  if (!sb) return 0;
+  let spostate = 0;
+  for (const [tabella, colonna] of TABELLE_IDENTITA) {
+    try {
+      const { data, error } = await sb.from(tabella)
+        .update({ [colonna]: nuovo }).eq(colonna, vecchio).select(colonna);
+      if (error) {
+        // Un guasto su una tabella non deve impedire il trasloco delle
+        // altre: meglio nove tabelle spostate e una da riprovare che
+        // zero. E non e distruttivo — la riga resta dov'e.
+        log.warn('trasloco identita non riuscito', { tabella, motivo: error.message });
+        continue;
+      }
+      spostate += (data || []).length;
+    } catch (e) {
+      log.warn('trasloco identita esploso', { tabella, motivo: e?.message || 'ignoto' });
+    }
+  }
+  if (spostate) log.info('identita traslocata', { righe: spostate });
+  return spostate;
 }
 
 /** slug stabile dal nome, per comporre l'id del Compagno. */
@@ -48,6 +147,12 @@ export async function elencaCompagni(email) {
   if (!owner) return [];
   const sb = getSupabaseAdmin();
   if (!sb) return [];
+  // b.413 · P1.15 — QUI COMINCIA LIFE, e qui si trasloca. E' l'unico
+  // momento in cui abbiamo insieme l'email e il bisogno di leggere:
+  // dagli id vecchi non si risale alle email, quindi una migrazione di
+  // massa non esiste. Idempotente e senza rumore: quando non c'e niente
+  // da spostare, non fa niente.
+  await assicuraIdentita(email);
   const { data, error } = await sb.from('compagni').select('*').eq('owner', owner).order('created_at', { ascending: true });
   if (error) return [];
   return (data || []).map(daRiga);
@@ -136,6 +241,17 @@ export async function cancellaCompagno(email, id) {
   if (!owner || !id) return false;
   const sb = getSupabaseAdmin();
   if (!sb) return false;
+  // b.411 · P1.16 — PRIMA I RICORDI, POI LA SCHEDA. Verificato sul
+  // database vivo: fra le due tabelle non c'e nessun vincolo e quindi
+  // nessuna cascata. Cancellando solo la scheda, i ricordi restavano li
+  // per sempre — dati personali di cui nessuna schermata sa piu niente.
+  //
+  // L'ordine conta: se saltasse la corrente in mezzo, meglio un Compagno
+  // senza ricordi (che si vede, e si puo ricancellare) che dei ricordi
+  // senza Compagno (che non si vedono piu).
+  const { error: guastoMemorie } = await sb.from('compagno_memorie')
+    .delete().eq('owner', owner).eq('compagno_id', id);
+  if (guastoMemorie) return false;   // non si cancella la scheda se i ricordi restano
   const { error } = await sb.from('compagni').delete().eq('owner', owner).eq('id', id);
   return !error;
 }

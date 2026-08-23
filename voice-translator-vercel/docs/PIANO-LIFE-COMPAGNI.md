@@ -210,8 +210,65 @@ Nota: la PERSISTENZA di Life (compagni, corsi, memorie, progressi) sta in tabell
 NOSTRE su Supabase e NON passa dal ponte — il ponte è solo per le capacità di BarTalk.
 ```
 
-Regola pratica: se un file di Life importa qualcosa di BarTalk che **non** sia `ponte.js`,
-è un errore di architettura. Un solo punto di contatto, una sola cosa da aggiornare.
+---
+
+## 5-quater. Il confine vero (b.414, P1.20)
+
+La regola qui sopra diceva: «se un file di Life importa qualcosa di
+BarTalk che non sia `ponte.js`, e un errore di architettura». Scritta
+cosi era **troppo larga**, e un audit esterno l'ha giustamente segnalata:
+Life importa da sempre colori, misure, la memoria del telefono e il
+registro dell'audio, e nessuna di quelle cose e un errore.
+
+**Verificato nel codice, non a memoria:** le CAPACITA' vere — il
+modello, l'autorizzazione, il portafoglio, la ricerca, i fornitori, il
+deposito veloce — stanno tutte in `ponte.js` e in nessun altro file di
+Life. La meta importante della regola era gia rispettata; quello che
+mancava era la definizione giusta, e qualcuno che la facesse rispettare.
+
+### Consentito direttamente
+
+```text
+primitivi di interfaccia   colori, misure, icone, tipografia (constants, styles)
+scorciatoie                ripiego, formattatori, piccole funzioni pure
+memoria del telefono       scaffale, memoria (localStorage/sessionStorage)
+registro dell'audio        voce (chi sta suonando, Pausa/Stop)
+persistenza DI Life        le sue tabelle su Supabase
+```
+
+Nessuna di queste costa, autorizza, o esce di casa.
+
+### Deve passare dalla cerniera
+
+```text
+il modello                 llmCaller
+l'autorizzazione, le chiavi apiAuth
+il portafoglio             wallet/*
+la ricerca                 topics/servizio
+i fornitori                providers
+il deposito veloce         redis
+il registro degli accessi  users
+```
+
+Queste costano, autorizzano, o escono di casa. Se serve un verbo nuovo
+lo si aggiunge in `ponte.js` — non lo si scavalca.
+
+### Chi lo tiene vero
+
+`__tests__/confine-life-b414.test.js`. Una regola scritta in un
+documento che nessuno esegue e esattamente il motivo per cui l'audit ha
+dovuto segnalarla. La prova va rossa il giorno in cui un file di Life
+importa una capacita per conto suo, e dice anche perche.
+
+Le rotte (`app/api/compagni/*`) restano fuori da questo controllo per
+scelta: non sono Life, sono la porta fra il mondo di fuori e Life, e
+devono poter guardare chi bussa.
+
+---
+
+Regola pratica: se un file di Life importa una CAPACITA' che non sia
+`ponte.js`, e un errore di architettura. Un solo punto di contatto, una
+sola cosa da aggiornare. Per l'elenco esatto, §5-quater.
 
 ---
 
