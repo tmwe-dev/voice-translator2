@@ -204,7 +204,10 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         // b.339 — la discussione scritta ENTRA nella sessione dal vivo: gli
         // ultimi scambi (i piu recenti pesano di piu) diventano il {{contesto}}
         // dell'agente, che riprende il filo invece di ripartire da zero.
-        <CompagnoLive compagno={scelto} lingua={lingua} onChiudi={() => setDalVivo(false)}
+        // b.407 — il gettone serve: la linea non parte piu dal browser, la
+        // apre il nostro server dopo aver guardato chi sei e quanto credito hai.
+        <CompagnoLive compagno={scelto} lingua={lingua} userToken={userToken}
+          onChiudi={() => setDalVivo(false)}
           onFine={accogliTurniDalVivo}
           contesto={messaggi.slice(-14).map((m) =>
             `${m.ruolo === 'persona' ? 'Persona' : (scelto?.nome || 'Tu')}: ${String(m.testo || '').slice(0, 400)}`

@@ -1,3 +1,32 @@
+# ═══════════════════════════════════════════════════════════════
+# b.408 — IL CANCELLO CHE MANCAVA.
+#
+# Un audit esterno del 23/08/2026 ha notato che qui giravano lint e
+# prove, ma NON la costruzione del prodotto. Verificato: era vero.
+# Quindi era possibile questo, ed e gia successo nella storia recente:
+#
+#   2377 prove verdi -> verificatore verde -> `next build` ROTTO
+#
+# Una prova verde non dimostra che l'applicazione si costruisca: le
+# prove girano sui moduli, la costruzione monta le pagine. Sono due
+# domande diverse e finora ne facevamo una sola.
+#
+# ONESTA SU COSA QUESTO CANCELLO PUO' E NON PUO' FARE: Vercel pubblica
+# da solo a ogni invio su main, e non aspetta questo controllo. Quindi
+# oggi il cancello vale davvero sulle PROPOSTE DI MODIFICA, e su main e
+# un allarme che suona presto — non una sbarra. Per farlo diventare una
+# sbarra vera servono due cose che stanno nelle mani di Luca, non nel
+# codice: la protezione del ramo main su GitHub (con questo controllo
+# obbligatorio), oppure spegnere la pubblicazione automatica di Vercel e
+# lasciarla a questo flusso. Finche non c'e, non si scrive da nessuna
+# parte che «la CI protegge la produzione».
+#
+# b.408 — CONSOLIDATO IN UNA CARTELLA SOLA. Esisteva anche
+# `voice-translator-vercel/.github/workflows/controlli.yml`, che GitHub
+# non ha MAI eseguito: i flussi di lavoro si leggono solo dalla
+# `.github/workflows` alla radice del deposito. Era un controllo che
+# sembrava esserci e non c'era.
+# ═══════════════════════════════════════════════════════════════
 name: CI
 
 on:
@@ -30,6 +59,18 @@ jobs:
 
       - name: Unit + integration tests
         run: npm test
+
+      # b.408 — LA DOMANDA CHE NESSUNO FACEVA: si costruisce?
+      # Va dopo le prove (che sono piu veloci a dire di no) e prima di
+      # qualunque cosa guardi la produzione.
+      - name: Production build (il prodotto deve costruirsi)
+        run: npm run build
+        env:
+          # La costruzione non deve dipendere da segreti veri: qui
+          # servono solo a far passare la validazione delle variabili.
+          # Se un giorno la costruzione avesse bisogno di un segreto
+          # VERO, sarebbe un difetto da correggere li, non qui.
+          NEXT_TELEMETRY_DISABLED: '1'
 
   production-smoke:
     runs-on: ubuntu-latest

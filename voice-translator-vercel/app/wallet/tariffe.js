@@ -19,6 +19,38 @@ export const COSTO_PROVIDER_CENT_MIN = {
 // 1 minuto con ElevenLabs scala 3 minuti di credito. Scritto anche in UI.
 export const MOLTIPLICATORE_PREMIUM = 3;
 
+// ── Conversazione DAL VIVO col Compagno (agente ElevenLabs) ──
+//
+// b.407, decisione della Via B (docs/PIANO-LIFE-COMPAGNI.md §5-ter).
+// Il dal-vivo e una conversazione vocale premium: dentro un minuto ci
+// stanno l'ascolto, il cervello e la voce, tutti dallo stesso fornitore.
+// Consuma quindi come la voce premium — un minuto parlato scala tre
+// minuti di credito. NON e un numero nuovo: e lo stesso moltiplicatore
+// gia scritto sopra, riusato di proposito perche l'utente ha una
+// regola sola da ricordare.
+//
+// ATTENZIONE, e un fermo su Luca: il listino VERO degli agenti
+// conversazionali ElevenLabs (che comprende anche il loro STT e il loro
+// modello) si legge solo dal pannello del suo piano, e potrebbe stare
+// sopra i 3,5 cent/min della sola voce. Finche non lo verifica, questo
+// numero e la stima piu prudente che possiamo giustificare — e sta qui,
+// in una riga sola, apposta per essere cambiato senza cercarlo.
+export const MOLTIPLICATORE_DAL_VIVO = MOLTIPLICATORE_PREMIUM;
+
+// Quanto si BLOCCA all'apertura della linea (credito, non parlato).
+// E' un tetto dichiarato, non un prezzo: alla chiusura si addebita la
+// durata vera e il resto torna indietro. Quindici minuti di telefonata
+// e la misura oltre la quale, se cade il collegamento, non vogliamo
+// tenere bloccato altro credito.
+export const LIVE_TETTO_MINUTI = 15;
+export const LIVE_TETTO_SECONDI = LIVE_TETTO_MINUTI * 60 * MOLTIPLICATORE_DAL_VIVO;
+
+/** Da secondi di telefonata a secondi di credito. Una riga, un posto solo. */
+export function creditoDalVivo(secondiParlati) {
+  const s = Number.isFinite(secondiParlati) ? Math.max(0, secondiParlati) : 0;
+  return Math.min(LIVE_TETTO_SECONDI, Math.ceil(s * MOLTIPLICATORE_DAL_VIVO));
+}
+
 // ── Pacchetti in vendita (Stripe) ──
 // secondi = credito che l'utente riceve. Le ore mostrate si calcolano da qui.
 export const PACCHETTI = [

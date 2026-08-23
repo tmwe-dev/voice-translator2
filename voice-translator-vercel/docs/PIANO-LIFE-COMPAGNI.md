@@ -78,9 +78,10 @@ Conseguenza: **una sola economia** (il wallet di BarTalk), **una sola privacy**,
 
 ## 5. Le regole non negoziabili
 
-1. **ElevenLabs = solo voce.** Usiamo le *voci* TTS, NON gli *agenti conversazionali*
-   ElevenLabs: quelli parlano in diretta nella loro lingua fissa e scavalcano la
-   traduzione — addio multilingua.
+1. **ElevenLabs = solo voce, TRANNE il dal-vivo.** Vedi §5-ter: la regola e
+   stata cambiata da Luca il 23/08/2026, con motivo scritto. Ovunque tranne
+   il Compagno Dal vivo usiamo le *voci* TTS e non gli agenti conversazionali:
+   quelli parlano nella loro lingua fissa e scavalcano la traduzione.
 2. **La personalità è una sola, nel nostro DB.** ElevenLabs non "possiede" i Compagni.
 3. **Tutto passa dal wallet.** Nessun token fuori dal conto autorizzazione→fornitore→esecuzione→contabilità.
 4. **Nessun Compagno cloud in modalità Diretta.** In Diretta la conversazione non esce
@@ -92,6 +93,92 @@ Conseguenza: **una sola economia** (il wallet di BarTalk), **una sola privacy**,
    (un adattatore sottile). Se domani BarTalk cambia dentro, cambia solo la cerniera —
    non venti punti di Life. Manutenibilità prima di tutto: Life si potrebbe staccare
    quasi come un pacchetto a sé.
+
+---
+
+## 5-ter. Il Compagno Dal vivo: decisione del 23/08/2026 (Luca)
+
+**Questo paragrafo cambia la regola 1. E' scritto PRIMA del codice, come
+chiede l'audit: «se Luca ha deliberatamente cambiato una di queste
+decisioni, non si adatta il codice in silenzio — si documenta la nuova
+decisione, si aggiorna il documento, si ridefinisce billing/privacy/auth,
+si aggiungono i test».**
+
+### Cosa e cambiato, e perche
+
+Il documento diceva: mai agenti conversazionali ElevenLabs. Il motivo
+era buono — «parlano nella loro lingua fissa e scavalcano la traduzione».
+Nel frattempo (b.316→b.406) il dal-vivo e stato costruito proprio su un
+agente conversazionale, la lingua gliela passiamo noi come variabile, e
+**funziona meglio di qualunque altra cosa in Life**. Parole di Luca:
+«il sistema funziona molto bene e non va cambiato, l'agente in tempo
+reale e la cosa che funziona meglio».
+
+Riscrivere il realtime in casa (STT streaming → nostro controllore →
+callLLM → TTS) significherebbe rifare turn-taking e interruzione: mesi
+di lavoro per rimpiazzare una cosa che gia funziona. **Non si tocca.**
+
+### Cosa NON cambia
+
+Il difetto vero non era mai «quale agente». Era che **la sessione partiva
+dal browser**, con un identificativo pubblico, senza sapere chi fosse
+l'utente, senza controllare il credito e senza contabilizzare niente. Su
+questo il documento non ha mai avuto un'eccezione, e non ne prende una:
+
+```
+NIENTE sessione dal-vivo aperta direttamente dal browser.
+```
+
+### La forma nuova
+
+```
+browser: «voglio parlare col Compagno X»  (gettone + id, nient'altro)
+   ↓
+POST /api/compagni/live/session { azione: 'apri' }
+   ↓  chi sei          → getSession(userToken)          401 se non lo sei
+   ↓  chi e X          → risolviCompagno(id, email)     404 se non e tuo
+   ↓  con che chiave   → resolveAuth(provider elevenlabs)
+   ↓  puoi permettertelo? → riserva(email, tetto)       402 se no
+   ↓  URL FIRMATO temporaneo da ElevenLabs
+   ↓
+browser: Conversation.startSession({ signedUrl })
+   ↓
+POST /api/compagni/live/session { azione: 'chiudi' }
+   ↓  durata calcolata DAL SERVER → commit(riserva, durata)
+```
+
+**Il browser non e piu autoritativo.** Prima mandava lui nome, ruolo,
+personalita e voce del Compagno: chiunque poteva cambiarli e ottenere un
+personaggio che non era suo. Ora manda solo `compagnoId`, e la
+personalita la risolve il server dal nostro DB. La regola 2 —
+«la personalita e una sola, nel nostro DB» — da oggi e vera anche qui.
+
+### Contabilita
+
+Il modello e quello gia deciso per la TV (vedi CLAUDE.md): riserva una
+stima all'apertura, **addebita il vero alla fine**, restituisci il resto.
+La durata la calcola il server dall'ora di apertura, non il client: e un
+numero che paga l'utente e non puo dipendere da chi paga.
+
+- unita: il SECONDO di credito, come tutto il resto del portafoglio
+- tariffa: `MOLTIPLICATORE_DAL_VIVO` in `app/wallet/tariffe.js`, che e
+  l'unico file coi numeri dei soldi
+- il tetto della riserva e `LIVE_TETTO_SECONDI`: chi non ha quel credito
+  non apre la linea (402), chi lo ha paga solo i minuti veri
+
+**Limite noto e dichiarato:** se il browser sparisce senza chiudere (app
+uccisa, batteria finita) la riserva resta appesa finche il cron delle
+riserve scadute la rilascia — e quella telefonata risulta gratis. Non e
+un buco nuovo: e il comportamento che il portafoglio ha gia per tutte le
+riserve orfane. Si chiude con un battito periodico, quando servira.
+
+### Privacy — da verificare sul pannello, non qui
+
+Al fornitore arrivano: l'audio della conversazione, la sua trascrizione,
+la personalita del Compagno e gli ultimi scambi scritti passati come
+contesto. Sul loro pannello vanno messi **audio saving OFF** e la
+ritenzione al minimo consentito dal piano. Finche non e verificato li,
+**non si scrive da nessuna parte che il dal-vivo e privato**.
 
 ---
 
@@ -115,7 +202,9 @@ ponte.js espone SOLO (i verbi verso BarTalk; nasconde il resto):
  ├─ generaTesto({personalita, modello, userToken, ...}) → callLLM + wallet (riserva/commit)
  ├─ traduci(testo, lingua)                               → /api/translate
  ├─ parla(testo, voceId, ...)                            → /api/tts-elevenlabs (wallet)
- └─ cerca(query, {profonda})                             → motore Topics/Cobra (SSRF-safe)
+ ├─ cerca(query, {profonda})                             → motore Topics/Cobra (SSRF-safe)
+ ├─ apriLineaDalVivo({...})                              → auth + wallet + URL firmato (§5-ter)
+ └─ chiudiLineaDalVivo({...})                            → commit sulla durata vera
 
 Nota: la PERSISTENZA di Life (compagni, corsi, memorie, progressi) sta in tabelle
 NOSTRE su Supabase e NON passa dal ponte — il ponte è solo per le capacità di BarTalk.

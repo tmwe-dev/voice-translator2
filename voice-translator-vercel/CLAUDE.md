@@ -214,36 +214,92 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.406** (push #700) — BATCH A dell'audit Live, la parte che
-  vale in OGNI CASO. La domanda grossa (P0.1: il cervello del dal-vivo
-  resta BarTalk con ElevenLabs solo voce, oppure ElevenLabs dietro una
-  sessione firmata dal nostro server?) e una DECISIONE DI PRODOTTO e
-  aspetta Luca — e con lei il passaggio dal portafoglio. Ma cinque
-  difetti di CompagnoLive non dipendono da quella scelta:
-  P1.1 quello che si diceva a voce non tornava mai nella chat scritta
-  (ora i turni entrano in cronologia col segno del microfono, vengono
-  consegnati anche uscendo di lato, e un Riprova li rimette nel contesto
-  della linea nuova); P1.2 un guasto del fornitore si travestiva da
-  «Conversazione chiusa» (ora ogni finale ha il suo nome: caduta rete,
-  guasto fornitore, microfono negato, chiusa da te, caduta e basta);
-  P1.3 il tasto Muto poteva MENTIRE — si accendeva sul comando, non
-  sulla conferma, e quando la libreria non sapeva spegnere il microfono
-  scriveva una proprieta a caso e diceva «Muto» lo stesso (ora il tasto
-  non compare se il comando non esiste, e se fallisce la scritta non
-  cambia); P1.4 Riprova non chiudeva la sessione precedente e le
-  richiamate della vecchia riscrivevano lo stato della nuova (numero di
-  generazione); P1.5 personalita e contesto entravano nel prompt come
-  istruzioni (ora riquadrati, ripuliti dei segnaposto del fornitore).
-  Piu due regole di casa portate anche qui: si fa silenzio prima di
-  aprire il microfono, e lo Stop del telecomando chiude la telefonata.
-- PROVE CHE MONTANO IL COMPONENTE, non che leggono il sorgente. Per farlo
-  e stato tolto un ostacolo vecchio: i componenti hanno JSX dentro file
-  `.js` (Next lo permette, il motore delle prove no), e per questo TUTTE
-  le prove sui componenti leggevano il sorgente con un'espressione
-  regolare. `vitest.config.js` ora lo gestisce. `compagno-live-b406`
-  monta CompagnoLive con una finta libreria ElevenLabs: 15 di quelle 19
-  prove erano ROSSE sul codice di prima.
-- Test: **2377 verdi su 159 file** · 0 errori di lint (avvisi tollerati)
+- Versione: **b.408** (push #702) — L'AUDIT ESTERNO DEL 23/08 verificato
+  punto per punto, non accettato per cortesia. Il suo P0 numero uno era
+  vero e piu grave di come lo descriveva: otto tabelle pubbliche su
+  Supabase con RLS spenta, ZERO politiche, e `anon` con SELECT **e
+  INSERT**. La chiave anon sta nel browser: c'era una strada
+  Internet -> REST Supabase -> chiave anon -> tabella, che scavalcava
+  del tutto la nostra (browser -> API -> getSession -> service role).
+  Dentro: compiti, materiali, scansioni, corsi, profilo studente,
+  errori di pronuncia, e i dispositivi PeepOff con chiavi pubbliche e
+  presenza. L'API di PeepOff era scritta bene apposta per non far uscire
+  niente: il portone era chiuso e la finestra sul retro aperta.
+  CHIUSO E VERIFICATO SUL DATABASE VIVO (migrazione 013, applicata):
+  rls=true, anon SELECT/INSERT=false, authenticated=false, service_role
+  legge ancora; advisor di sicurezza Supabase a ZERO errori e ZERO
+  avvisi (restano solo INFO «RLS enabled, no policy», che e il disegno
+  voluto — le altre venti tabelle sono fatte cosi da sempre).
+  RAGGIO VERIFICATO PRIMA, non dopo: quelle otto tabelle le tocca solo
+  codice di server con `getSupabaseAdmin()`; nel browser il client
+  anonimo esiste ma lo usano solo useRealtimeRoom e useWebRTC per i
+  canali realtime, senza nemmeno un `.from()`. Per l'applicazione non
+  cambia niente. La guardia che lo tiene vero nel tempo:
+  `__tests__/rls-porta-laterale-b408.test.js`.
+  Chiuso nella stessa migrazione anche il P1: le tre funzioni
+  SECURITY DEFINER di Mondo (conta_vista, dopo_commento, ricalcola_like)
+  avevano EXECUTE per anon. Non facevano uscire contenuti privati, ma
+  chiunque poteva gonfiare viste, commenti e mi-piace — e quei numeri
+  decidono cosa la gente vede. Ora EXECUTE revocato e search_path
+  blindato come nel portafoglio.
+  CI: aggiunto `npm run build`, che mancava — erano possibili (ed e gia
+  successo) 2377 prove verdi con la costruzione rotta. E consolidata in
+  una cartella sola: `voice-translator-vercel/.github/workflows/` non e
+  MAI stata eseguita da GitHub, che legge solo la `.github/workflows`
+  alla radice. Era un controllo che sembrava esserci e non c'era.
+- ONESTA SUL CANCELLO CI: Vercel pubblica da solo a ogni invio su main e
+  non aspetta la CI. Quindi oggi il cancello vale sulle proposte di
+  modifica, e su main e un allarme che suona presto — NON una sbarra.
+  Per farlo diventare una sbarra serve la protezione del ramo main su
+  GitHub con questo controllo obbligatorio, oppure spegnere la
+  pubblicazione automatica di Vercel. E in mano a Luca. Finche non c'e,
+  non si scrive da nessuna parte che «la CI protegge la produzione».
+- Versione: **b.407** (push #701) — LA VIA B, scelta da Luca il 23/08:
+  «il sistema funziona molto bene e non va cambiato, l'agente in tempo
+  reale e la cosa che funziona meglio». L'agente conversazionale
+  ElevenLabs RESTA. Cio che finisce e la sessione aperta dal browser.
+  Documento architetturale aggiornato PRIMA del codice, come chiede
+  l'audit: `docs/PIANO-LIFE-COMPAGNI.md` §5-ter porta la decisione, il
+  motivo, la forma nuova, la contabilita e il limite noto. La regola 1
+  («ElevenLabs = solo voce») ora rimanda li invece di essere smentita in
+  silenzio dal codice.
+  Nuovo: `POST /api/compagni/live/session` (azioni apri/chiudi) e i due
+  verbi `apriLineaDalVivo`/`chiudiLineaDalVivo` sulla cerniera `ponte.js`.
+  La linea risponde a otto domande in ordine: chi sei (dal gettone, mai
+  dal corpo) · con chi vuoi parlare · e tuo quel Compagno · in che lingua
+  (quella del Compagno vince) · puoi permettertelo (riserva, 402) · come
+  parli (indirizzo FIRMATO, non piu un id pubblico) · quanto e durata (la
+  misura il SERVER dall'ora di apertura) · quanto hai speso (commit sul
+  vero, il resto torna).
+  IL BROWSER NON E' PIU AUTORITATIVO: prima mandava nome, ruolo,
+  personalita e voce del Compagno — tutta roba scrivibile dagli strumenti
+  del browser. Ora manda un id e un gettone; il personaggio lo risolve il
+  server dal nostro database. La regola 2 del piano («la personalita e
+  una sola, nel nostro DB») da oggi e vera anche nel dal-vivo.
+  Tariffa in `app/wallet/tariffe.js`, l'unico file coi numeri dei soldi:
+  `MOLTIPLICATORE_DAL_VIVO` (= quello premium, un minuto parlato scala
+  tre minuti di credito) e `LIVE_TETTO_SECONDI` (15 minuti bloccati
+  all'apertura, restituiti alla chiusura).
+- FERMI SU LUCA per il dal-vivo (due, tutti e due suoi e non miei):
+  1. `ELEVENLABS_AMICO_AGENT_ID` va messa su Vercel LATO SERVER (quella
+     che c'e e `NEXT_PUBLIC_`, cioe esposta al browser). Senza, la rotta
+     risponde 503 e la scheda dice «il dal vivo non e acceso su questo
+     ambiente» — non finge di funzionare.
+  2. Il listino VERO degli agenti conversazionali ElevenLabs si legge
+     solo dal pannello del suo piano: comprende anche il loro STT e il
+     loro modello, e potrebbe stare sopra i 3,5 cent/min della sola voce.
+     Finche non lo verifica, il moltiplicatore e la stima piu prudente
+     giustificabile. Sta in una riga sola apposta.
+  3. Privacy del fornitore: audio saving OFF e ritenzione al minimo, sul
+     loro pannello. Finche non e verificato li, NON si scrive da nessuna
+     parte che il dal-vivo e privato.
+- Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
+  (fuori dal repository) coi cinque file toccati e le istruzioni per
+  tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
+- Test: **2385 verdi su 160 file** verificati qui sul solo b.408 (che
+  parte da b.406). Unito a b.407, che vive sul Mac di Luca e porta 24
+  prove sue, il totale atteso e 2409 su 161 file — lo conferma la sua
+  esecuzione prima del push, non io. · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro
@@ -251,7 +307,13 @@ qualunque refactoring. Non si propone di rimandarlo.
 - ATTENZIONE agli audit esterni: il 20/08/2026 un audit ha esaminato
   b.131 credendola corrente PERCHE questo blocco era rimasto fermo.
   Questo blocco va aggiornato A OGNI push, o depista chiunque legga.
-- Sentry: collegato in `instrumentation.js`, **DSN non impostato**
+- **SENTRY: NO, DECISIONE DI LUCA del 23/08/2026.** «Sentry non lo
+  voglio adesso.» Non e una cosa dimenticata ne un debito da rinfacciare:
+  e una scelta. Gli agganci restano nel codice e non danno fastidio; il
+  DSN resta vuoto di proposito. Un audit che lo segnala come lacuna sta
+  segnalando una decisione, non un difetto — e la risposta e questa riga.
+  Non riproporlo.
+- (storico) Sentry: collegato in `instrumentation.js`, **DSN non impostato**
   (azione di Luca su Vercel). Gli errori di esecuzione di Vercel si
   leggono gia col suo MCP (`get_runtime_errors`).
 - npm audit (20/08/2026): nanoid corretto; restano postcss+sharp (3
