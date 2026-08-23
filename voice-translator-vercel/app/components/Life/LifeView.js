@@ -1247,6 +1247,34 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           })()}
         </div>
 
+        {/* b.435 — A CHE PUNTO SEI, che non si e mai visto. L'indice della
+            lezione dentro il programma esisteva gia ed era calcolato in due
+            punti — serviva a sapere qual e la prossima e a registrare gli
+            esiti — ma a schermo non compariva da nessuna parte: si apriva
+            una lezione senza sapere se era la prima di tre o l'ottava di
+            venti, cioe senza sapere quanto manca.
+            Il contatore e scritto coi soli numeri («3 / 12») e non con una
+            parola in mezzo: cosi non serve una traduzione in trentotto
+            lingue per dire una cosa che i numeri dicono da soli.
+            Altezza fissa: se le lezioni non ci sono, il posto resta vuoto e
+            non si sposta niente. */}
+        {lezioni.length > 0 && (() => {
+          const posto = lezioni.findIndex((l) => l.titolo === aperta.lezione?.titolo);
+          if (posto < 0) return null;
+          const quota = ((posto + 1) / lezioni.length) * 100;
+          return (
+            <div style={{ margin: '0 0 14px' }} aria-label={`${posto + 1} / ${lezioni.length}`}>
+              <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+                <div style={{ width: `${quota}%`, height: '100%', background: accent, transition: 'width 240ms ease' }} />
+              </div>
+              <div style={{ marginTop: 6, fontSize: 11.5, fontWeight: 700, color: muto,
+                fontFamily: FONT, fontVariantNumeric: 'tabular-nums' }}>
+                {posto + 1} / {lezioni.length}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* b.335 — la conversazione VOCALE col Madrelingua: role-play vero,
             in lingua originale, dentro la lezione. */}
         {parlaAssist && (() => {

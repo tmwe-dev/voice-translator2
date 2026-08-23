@@ -91,3 +91,29 @@ describe('un archivio rotto non e un archivio vuoto', () => {
     expect(p).toMatch(/suRiprova=\{\(\) => \{ setArchivioGuasto\(false\); loadHistory\(\); \}\}/);
   });
 });
+
+describe('Impara — a che punto sei', () => {
+  it('la lezione dice quale su quante', () => {
+    // L'indice esisteva ed era gia calcolato in due punti — serviva a
+    // sapere qual e la prossima e a registrare gli esiti — ma a schermo
+    // non compariva: si apriva una lezione senza sapere se era la prima
+    // di tre o l'ottava di venti.
+    const v = senzaCommenti(leggi('app/components/Life/LifeView.js'));
+    expect(v, 'si cerca il posto della lezione aperta')
+      .toMatch(/const posto = lezioni\.findIndex\(\(l\) => l\.titolo === aperta\.lezione\?\.titolo\)/);
+    expect(v, 'e si scrive a schermo').toMatch(/\{posto \+ 1\} \/ \{lezioni\.length\}/);
+  });
+
+  it('e lo dice coi soli numeri, che non hanno bisogno di traduzione', () => {
+    const v = senzaCommenti(leggi('app/components/Life/LifeView.js'));
+    const i = v.indexOf('const posto = lezioni.findIndex');
+    const blocco = v.slice(i, i + 900);
+    expect(blocco, 'nessuna parola cablata in mezzo ai numeri').not.toMatch(/'di '|" di "/);
+    expect(blocco, 'cifre a larghezza fissa, o la riga balla').toMatch(/tabular-nums/);
+  });
+
+  it('se le lezioni non ci sono, non si disegna un vuoto', () => {
+    const v = senzaCommenti(leggi('app/components/Life/LifeView.js'));
+    expect(v).toMatch(/\{lezioni\.length > 0 && \(\(\) => \{/);
+  });
+});

@@ -214,6 +214,24 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.435** (push #727) — IMPARA: la lezione non diceva mai a
+  che punto sei. L'indice della lezione dentro il programma esisteva ed
+  era gia CALCOLATO in due punti — serve a sapere qual e la prossima e a
+  registrare gli esiti — ma a schermo non compariva da nessuna parte: si
+  apriva una lezione senza sapere se era la prima di tre o l'ottava di
+  venti, cioe senza sapere quanto manca. E' la stessa classe di difetto
+  delle lingue nell'archivio (b.433): il dato c'e, arriva fin li, e non
+  viene mostrato.
+  Il contatore e scritto coi soli numeri («3 / 12»), senza una parola in
+  mezzo: cosi non serve una traduzione in trentotto lingue per dire una
+  cosa che i numeri dicono da soli. Sopra, una barra sottile.
+  Altezza fissa e compare solo se le lezioni ci sono: quando non ci sono,
+  il posto non si disegna e non si sposta niente.
+  E DUE COSE CHE HO GUARDATO E NON HO TOCCATO, perche la regola e applicare
+  dove ripara: la Home (le sezioni sono gia righe con le icone in acciaio
+  volute da Luca) e la pagina del Credito (il numero grande c'e gia, a 34).
+  Restaurare cio che funziona non e lavoro: e rischio.
+
 - Versione: **b.434** (push #726) — L'ARCHIVIO ROTTO SEMBRAVA UN ARCHIVIO
   VUOTO, ed e il difetto peggiore trovato applicando il layout.
   `loadHistory` faceva `if (res.ok) { ...leggi... }` e nient'altro. Un 401,
