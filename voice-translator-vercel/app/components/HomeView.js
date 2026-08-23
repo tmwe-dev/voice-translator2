@@ -11,6 +11,11 @@ import { mapLang, preloadLang } from '../lib/i18n.js';
 import { IconQR, IconCar } from './Icons.js';
 import Icon from './Icon.js';
 import CarouselLingue from './CarouselLingue.js';
+// b.424 — IL RIBALTAMENTO CHE C'E GIA (ordine di Luca: «la pagina deve
+// apparire con un ribaltamento a 180 gradi della home e una pagina intera
+// con freccia in alto per tornare»). E lo stesso foglio che gira sulle
+// news: non se ne scrive un secondo.
+import Ribalta from './ui/Ribalta.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
 import { COLONNA } from '../lib/righello.js';
@@ -211,7 +216,17 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // alle card: le voci sono icone nude, non hanno piu una superficie.
 
   return (
-    <main style={S.page} aria-label={L('homeAria')}>
+    <main style={{ ...S.page, display: 'flex', flexDirection: 'column' }} aria-label={L('homeAria')}>
+      {/* b.424 — LA HOME GIRA SU SE STESSA. Prima «Parla ora» prendeva il
+          posto del contenuto dentro la home: si apriva e basta, e sembrava
+          di essere andati via. Adesso e il foglio intero che si volta, e
+          dietro c'e il traduttore a pagina piena. Una schermata che si apre
+          sopra dice «sei andato via»; un foglio che gira dice «e sempre la
+          stessa cosa, vista dall'altra parte» — ed e vero, perche tornando
+          la home e esattamente dov'era. */}
+      <Ribalta girato={mostraPrimaProva}
+        retro={<PrimaProva onChiudi={() => setMostraPrimaProva(false)} />}
+        fronte={
       <div style={{
         ...S.scrollCenter,
         display: 'flex', flexDirection: 'column',
@@ -262,9 +277,6 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             «nasconde le altre parti e i pulsanti e occupa la pagina per
             permettere la traduzione e la visualizzazione ampia»). La ✕
             riporta alla home normale. */}
-        {mostraPrimaProva ? (
-          <PrimaProva onChiudi={() => setMostraPrimaProva(false)} />
-        ) : (<>
 
         {/* b.354 — IL CAROSELLO DELLE BANDIERE (Wueform) al posto della
             dropdown: la lingua si sceglie qui, sotto il titolo. */}
@@ -445,9 +457,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           </div>
         )}
 
-        </>)}
-
       </div>
+        } />
 
       {/* ═══ b.358 — LA TENDINA DELLE SCELTE (stile Wueform) ═══
           Il barcode grande la apre: qui dentro ci sono TUTTE le porte per

@@ -214,6 +214,59 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.427** (push #719) — quattro correzioni di Luca sulla
+  stessa schermata, tutte dal suo schermo:
+  1. LA LISTA DELLE LINGUE E' QUELLA DELLA HOME, «esattamente identica»:
+     non una seconda scritta da me, ma lo STESSO componente — il carosello
+     delle bandiere con le frecce, il trascinamento col dito e l'elenco
+     completo con la ricerca. Cambia solo cosa sceglie: qui la lingua di
+     arrivo, sulla home quella che parli tu. La fila di pillole che avevo
+     fatto io e sparita.
+     ATTENZIONE, trappola vera: il carosello consegna la LINGUA INTERA,
+     non il suo codice. Prenderla per un codice avrebbe messo un oggetto
+     dove va una sigla e la meta sarebbe diventata una lingua inesistente,
+     in silenzio. Una prova lo tiene fermo.
+  2. SI APRE CON UN RIBALTAMENTO, e la pagina e INTERA. Prima «Parla ora»
+     prendeva il posto del contenuto dentro la home: si apriva e basta.
+     Adesso e il foglio intero che si volta, e dietro c'e il traduttore
+     senza cornice. E' lo STESSO ribaltamento delle news (ui/Ribalta.js):
+     non se ne e scritto un secondo.
+  3. IN ALTO A SINISTRA UNA FRECCIA, non piu una ✕ a destra. Una ✕ dice
+     «chiudi e butta via», una freccia dice «torna indietro» — e siccome
+     il foglio si gira, tornare e proprio quello che succede.
+  4. UN MICROFONO SOLO. «Il secondo microfono in basso deve essere solo
+     una freccia di invio testo, il microfono in mezzo fa gia tutto quello
+     che serve per l'audio.» Erano due comandi per la stessa cosa, e il
+     secondo faceva dubitare del primo. Ora: in mezzo la riga della VOCE
+     (microfono + altoparlante per ripetere), sotto la riga del TESTO
+     (campo + freccia di invio). Le cose della voce insieme, quelle del
+     testo insieme.
+     La freccia non aggiunge una strada nuova — la frase parte gia da sola
+     dopo novecento millesimi — ma toglie l'attesa e da un posto dove
+     premere a chi si aspetta di premere.
+
+- Versione: **b.426** (push #718) — «U.find is not a function»: LA STANZA
+  CHE MUORE IN MANO A CHI APRE UN INVITO.
+  TROVATO NEL COLLAUDO FISICO in produzione, aprendo il link d'invito di
+  una stanza appena creata: al posto della stanza, «Something went wrong
+  — TypeError: U.find is not a function», pagina intera sostituita dalla
+  scritta di errore. NON RIPRODOTTO ai tentativi successivi: e una CORSA,
+  la prima apertura arriva prima che `members` sia un elenco.
+  LA CAUSA, che vale piu del difetto: `roomInfo?.members?.find(...)`
+  protegge dal MANCANTE, non dal NON-ELENCO. Se `members` torna un
+  oggetto, il punto interrogativo non salta niente — chiama `.find` su un
+  oggetto e la schermata muore.
+  E LA COSA CHE FA PIU MALE: l'aiutante giusto ESISTEVA GIA' —
+  `membriDi()` in `app/lib/membri.js`, che fa `Array.isArray(m) ? m : []`
+  — era gia IMPORTATO in RoomView, ed era usato in UNO dei quattro punti.
+  Ora in tutti.
+  E LA PROVA HA TROVATO DA SOLA DUE PUNTI CHE MI ERANO SFUGGITI, in
+  `TalkControls.js` (`?.find` e `?.some`): e il motivo per cui una prova
+  deve difendere la REGOLA e non le righe che gia conosci.
+  PROVA: `__tests__/membri-non-elenco-b426.test.js` — l'aiutante regge
+  oggetti, stringhe, numeri, null; e nessun file tocca piu `members` a
+  mano. Rossa sul codice di prima, verde adesso.
+
 - Versione: **b.425** (push #717) — DUE DIFETTI TROVATI NEL COLLAUDO
   FISICO del 23/08, non da un audit: li ho visti usando l'app in
   produzione, con Chrome guidato da qui.

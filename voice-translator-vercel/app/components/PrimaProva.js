@@ -4,6 +4,11 @@ import { useApp } from '../contexts/AppContext.js';
 import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
+// b.424 — LA STESSA IDENTICA LISTA DELLA HOME (ordine di Luca: «crea una
+// lista come quella della home, esattamente identica»). Non se ne scrive
+// una seconda: si usa quella. Era una fila di pillole fatta da me, ed era
+// un'altra cosa in un altro posto per fare lo stesso mestiere.
+import CarouselLingue from './CarouselLingue.js';
 import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 
 // ═══════════════════════════════════════════════════════════════
@@ -37,7 +42,7 @@ export function riapriPrimaProva() {
 const RAPIDE = ['en', 'es', 'fr', 'de', 'zh', 'ja', 'ar', 'ru', 'pt'];
 
 export default function PrimaProva({ onChiudi }) {
-  const { L, S, prefs, savePrefs } = useApp();
+  const { L, S, prefs, savePrefs, setView } = useApp();
   const C = S?.colors || {};
 
   const miaLingua = prefs?.lang || 'it';
@@ -365,19 +370,24 @@ export default function PrimaProva({ onChiudi }) {
   );
 
   // ── LA SCELTA DELLA LINGUA: prende il posto della lettura, non la spinge ──
+  // b.424 — e la STESSA lista della home, lo stesso componente, con le
+  // stesse frecce, lo stesso trascinamento col dito e lo stesso elenco
+  // completo con la ricerca dietro il tastino a righine. Cambia solo cosa
+  // sceglie: qui la lingua di ARRIVO, sulla home quella che parli tu.
+  // La voce in fondo all'elenco porta alle impostazioni, esattamente come
+  // sulla home: e la stessa riga, non una copia che fa finta.
   const bloccoLingue = (
-    <div key="lingue" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none',
-      display: 'flex', flexWrap: 'wrap', gap: 8, alignContent: 'flex-start', padding: '4px 0' }}>
-      {mete.map((l) => (
-        <button key={l.code} onClick={() => { vibrate(6); setMeta(l.code); setScegliLingua(false); }}
-          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '0 15px', height: TASTO,
-            borderRadius: 999, cursor: 'pointer', fontFamily: FONT, fontSize: 14.5, fontWeight: 700,
-            background: meta === l.code ? `${C.accent || '#5b8cff'}22` : 'transparent',
-            border: meta === l.code ? `1.5px solid ${C.accent || '#5b8cff'}` : bordo,
-            color: meta === l.code ? (C.accent || '#5b8cff') : C.textSecondary }}>
-          <span style={{ fontSize: 17 }}>{l.flag}</span>{l.name}
-        </button>
-      ))}
+    <div key="lingue" style={{ flex: '1 1 auto', minHeight: 0, display: 'flex',
+      flexDirection: 'column', justifyContent: 'center', padding: '4px 0' }}>
+      <CarouselLingue
+        selezionata={meta}
+        // il carosello consegna la LINGUA intera, non il suo codice: cosi
+        // fa anche sulla home. Prenderla per un codice significherebbe
+        // mettere un oggetto dove va una sigla, e la meta diventerebbe
+        // una lingua che non esiste — in silenzio.
+        onScegli={(lingua) => { setMeta(lingua.code); setScegliLingua(false); }}
+        onLinguaMenu={() => { vibrate(); setView?.('settings'); }}
+        C={C} L={L} />
     </div>
   );
 
@@ -406,31 +416,11 @@ export default function PrimaProva({ onChiudi }) {
     }}>
       <div aria-hidden style={{ marginTop: 'auto' }} />
 
-      {vuoto && !capovolto && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')}
-            disabled={!micDisponibile}
-            style={{ width: 132, height: 132, borderRadius: 999, padding: 0,
-              cursor: micDisponibile ? 'pointer' : 'default',
-              border: `1px solid ${detto ? '#ff5470' : 'rgba(91,140,255,0.34)'}`,
-              background: detto
-                ? 'radial-gradient(circle at 50% 38%, rgba(255,84,112,0.30), rgba(255,84,112,0.08) 62%, transparent 74%)'
-                : 'radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%)',
-              boxShadow: detto
-                ? '0 0 0 10px rgba(255,84,112,0.06), 0 20px 60px -18px rgba(255,84,112,0.55)'
-                : '0 0 0 10px rgba(91,140,255,0.05), 0 20px 60px -18px rgba(91,140,255,0.55)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="mic" size={46} color={detto ? '#ff5470' : (C.accent || '#5b8cff')} />
-          </button>
-          <span style={{ fontSize: 17, fontWeight: 800, color: C.textPrimary, fontFamily: FONT }}>
-            {detto ? L('speakNowListening') : L('speakNowTitle')}
-          </span>
-        </div>
-      )}
-
-      {vuoto && capovolto && (
+      {vuoto && (
         <span style={{ color: C.textMuted, fontWeight: 600, fontFamily: FONT,
-          fontSize: 22, textAlign: 'center' }}>{L('speakNowEmptyFlipped')}</span>
+          fontSize: capovolto ? 22 : 15, textAlign: capovolto ? 'center' : 'left' }}>
+          {capovolto ? L('speakNowEmptyFlipped') : L('speakNowEmpty')}
+        </span>
       )}
 
       {storia.map((riga, i) => (
@@ -462,13 +452,59 @@ export default function PrimaProva({ onChiudi }) {
   );
 
   // ═══════════════════════════════════════════════════════════════
-  // LA RIGA IN BASSO — sempre li, sempre dritta, anche col ribaltone.
-  // Il campo per scrivere non si apre e non si chiude: c'e. Accanto il
-  // microfono e l'altoparlante, tutti e due grandi abbastanza da
-  // prenderli senza guardare.
+  // LA RIGA DELLA VOCE — un microfono solo, in mezzo, sempre li.
+  //
+  // b.424, collaudo di Luca: «il secondo microfono in basso deve essere
+  // solo una freccia di invio testo, il microfono in mezzo fa gia tutto
+  // quello che serve per l'audio». Aveva ragione: erano due comandi per
+  // la stessa cosa, e il secondo faceva dubitare del primo.
+  //
+  // Sta in una riga sua, ad altezza fissa, fra cio che si legge e cio che
+  // si scrive. Non cresce e non rimpicciolisce quando arriva una
+  // traduzione: se cambiasse misura sposterebbe tutto il resto, ed e la
+  // regola che non si tocca.
+  // Accanto, l'altoparlante per farla ripetere: le cose della voce stanno
+  // insieme, quelle del testo stanno insieme.
   // ═══════════════════════════════════════════════════════════════
-  const bloccoBasso = (
-    <div key="basso" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+  const bloccoVoce = (
+    <div key="voce" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center',
+      gap: 14, flexShrink: 0, padding: '2px 0' }}>
+      <span style={{ width: 54 }} />
+      <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')}
+        disabled={!micDisponibile}
+        style={{ width: 96, height: 96, borderRadius: 999, padding: 0,
+          cursor: micDisponibile ? 'pointer' : 'default',
+          border: `1px solid ${detto ? '#ff5470' : 'rgba(91,140,255,0.34)'}`,
+          background: detto
+            ? 'radial-gradient(circle at 50% 38%, rgba(255,84,112,0.30), rgba(255,84,112,0.08) 62%, transparent 74%)'
+            : 'radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%)',
+          boxShadow: detto
+            ? '0 0 0 8px rgba(255,84,112,0.06), 0 16px 46px -16px rgba(255,84,112,0.55)'
+            : '0 0 0 8px rgba(91,140,255,0.05), 0 16px 46px -16px rgba(91,140,255,0.55)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="mic" size={38} color={detto ? '#ff5470' : (C.accent || '#5b8cff')} />
+      </button>
+      <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa}
+        aria-label={L('listenWord')} title={L('listenWord')}
+        style={{ width: 54, height: 54, borderRadius: 999, flexShrink: 0, padding: 0,
+          border: bordo, background: 'rgba(255,255,255,0.06)',
+          opacity: ultimaResa ? 1 : 0.35, cursor: ultimaResa ? 'pointer' : 'default',
+          display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name="speaker" size={22} color={ultimaResa ? (C.accent || '#5b8cff') : C.textMuted} />
+      </button>
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════════
+  // LA RIGA DEL TESTO — il campo, e una freccia per mandarlo.
+  //
+  // b.424 — la freccia non aggiunge una strada nuova: la frase parte gia
+  // da sola novecento millesimi dopo che smetti di scrivere. Serve a non
+  // dover aspettare, e a dare un posto dove premere a chi si aspetta di
+  // premere qualcosa. Non si ribalta mai: si scrive mentre l'altro legge.
+  // ═══════════════════════════════════════════════════════════════
+  const bloccoTesto = (
+    <div key="testo" style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
       <textarea value={testo} onChange={(e) => setTesto(e.target.value)} rows={1}
         placeholder={L('writeWord')} aria-label={L('writeWord')}
         style={{ flex: 1, padding: '15px 14px', borderRadius: 16,
@@ -476,48 +512,50 @@ export default function PrimaProva({ onChiudi }) {
           background: 'rgba(255,255,255,0.05)', color: C.textPrimary, fontSize: 16,
           fontFamily: FONT, resize: 'none', outline: 'none', boxSizing: 'border-box',
           minHeight: 54, maxHeight: 110 }} />
-      {micDisponibile && (
-        <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')}
-          style={{ width: 54, height: 54, borderRadius: 16, cursor: 'pointer', flexShrink: 0, padding: 0,
-            border: detto ? '2px solid #ff5470' : `1px solid rgba(91,140,255,0.34)`,
-            background: detto ? 'rgba(255,84,112,0.16)' : 'rgba(91,140,255,0.13)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="mic" size={24} color={detto ? '#ff5470' : (C.accent || '#5b8cff')} />
-        </button>
-      )}
-      <button onClick={() => parla(ultimaResa)} disabled={!ultimaResa}
-        aria-label={L('listenWord')} title={L('listenWord')}
+      <button onClick={() => { if (testo.trim()) { vibrate(8); traduci(testo); } }}
+        disabled={!testo.trim()} aria-label={L('sendWord')} title={L('sendWord')}
         style={{ width: 54, height: 54, borderRadius: 16, flexShrink: 0, padding: 0,
-          border: bordo, background: 'rgba(255,255,255,0.06)',
-          opacity: ultimaResa ? 1 : 0.4, cursor: ultimaResa ? 'pointer' : 'default',
+          border: testo.trim() ? `1px solid rgba(91,140,255,0.34)` : bordo,
+          background: testo.trim() ? 'rgba(91,140,255,0.13)' : 'rgba(255,255,255,0.05)',
+          opacity: testo.trim() ? 1 : 0.4, cursor: testo.trim() ? 'pointer' : 'default',
           display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name="speaker" size={22} color={ultimaResa ? (C.accent || '#5b8cff') : C.textMuted} />
+        <Icon name="send" size={22} color={testo.trim() ? (C.accent || '#5b8cff') : C.textMuted} />
       </button>
     </div>
   );
 
   return (
     <div style={{
-      width: '100%', margin: '0 0 10px', boxSizing: 'border-box',
+      width: '100%', boxSizing: 'border-box',
       // b.357 — IL CONTENITORE RESTA DENTRO LO SCHERMO (collaudo di Luca:
       // «mantieni la chat e il contenitore all'interno dello schermo»).
       // b.423 — MA USA TUTTA L'ALTEZZA CHE C'E (collaudo di Luca: «penso
       // poi che dovresti usare tutta l'altezza disponibile»). Prima ne
       // lasciava fuori duecentodieci punti e sopra il testo restava una
       // fascia vuota grande quanto mezzo schermo.
+      // b.424 — PAGINA INTERA (ordine di Luca). Non e piu un riquadro
+      // dentro la home con i suoi bordi e i suoi margini: la home si e
+      // girata, e questo e il retro del foglio. Quindi niente cornice —
+      // riempie, e lascia in fondo solo lo spazio della barra di sistema.
       flex: '1 1 auto',
       minHeight: 0,
-      height: 'calc(100dvh - 158px)',
-      maxHeight: 'calc(100dvh - 140px)',
       display: 'flex', flexDirection: 'column', gap: 10,
       overflow: 'hidden',
-      background: C.cardBg || 'rgba(16,24,48,0.6)', border: `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`,
-      borderRadius: 20, padding: 14,
+      padding: '10px 14px calc(100px + env(safe-area-inset-bottom))',
     }}>
       {/* ── LA TESTATA. Resta DRITTA anche col ribaltone (a girare e solo
              l'area di lettura), quindi i tastini della misura si toccano
              mentre l'altro sta leggendo. ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* b.424 — LA FRECCIA PER TORNARE, in alto a sinistra dove la
+            cercano tutti. Prima era una ✕ a destra: una ✕ dice «chiudi e
+            butta via», una freccia dice «torna indietro» — e siccome il
+            foglio si gira, tornare e proprio quello che succede. */}
+        <button onClick={() => { try { memSet(FATTA, '1'); } catch { /* la memoria locale non e disponibile: si torna lo stesso */ } onChiudi?.(); }}
+          aria-label={L('backWord')} title={L('backWord')}
+          style={{ ...tondino(false), border: 'none' }}>
+          <Icon name="back" size={22} color={C.textPrimary} />
+        </button>
         {targhettaLingue}
         <span style={{ flex: 1 }} />
         {/* la misura del testo compare solo quando c'e del testo da misurare */}
@@ -536,18 +574,16 @@ export default function PrimaProva({ onChiudi }) {
           style={tondino(capovolto)}>
           <Icon name="swap" size={19} color={capovolto ? (C.accent || '#5b8cff') : C.textMuted} />
         </button>
-        <button onClick={() => { try { memSet(FATTA, '1'); } catch { /* la memoria locale non e disponibile: si chiude lo stesso */ } onChiudi?.(); }}
-          aria-label={L('close')}
-          style={{ ...tondino(false), border: 'none', color: C.textMuted, fontSize: 21 }}>✕</button>
       </div>
 
       {/* IL CENTRO: le lingue quando le chiedi, altrimenti cio che si legge.
           Una cosa per volta, sempre nello stesso posto: niente si sposta. */}
       {scegliLingua ? bloccoLingue : bloccoLettura}
 
-      {/* LA RIGA IN BASSO, sempre. Non si ribalta: si continua a scrivere
-          mentre l'altro legge. */}
-      {!scegliLingua && bloccoBasso}
+      {/* Sotto, sempre e in quest'ordine: la voce, poi il testo. Nessuna
+          delle due si ribalta — si parla e si scrive mentre l'altro legge. */}
+      {!scegliLingua && bloccoVoce}
+      {!scegliLingua && bloccoTesto}
     </div>
   );
 }

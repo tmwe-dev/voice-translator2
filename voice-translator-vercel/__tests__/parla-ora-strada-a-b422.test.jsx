@@ -69,26 +69,54 @@ describe('si apre con una cosa sola a schermo', () => {
     expect(src, 'e i vecchi 34 non ci sono piu').not.toMatch(/width: 34, height: 34/);
   });
 
-  it('il campo per scrivere sta in basso e NON si ribalta', () => {
+  it('si ribalta SOLO cio che l\'altro deve leggere', () => {
     // «mantieni il campo di testo in basso e ribalta solo il testo da leggere»
     const src = leggi('app/components/PrimaProva.js');
     const iLettura = src.indexOf('const bloccoLettura');
-    const iBasso = src.indexOf('const bloccoBasso');
+    const iVoce = src.indexOf('const bloccoVoce');
     expect(iLettura, "l'area di lettura esiste").toBeGreaterThan(0);
-    expect(iBasso, 'la riga in basso esiste').toBeGreaterThan(iLettura);
-    // la rotazione sta SOLO dentro l'area di lettura
-    const soloLettura = src.slice(iLettura, iBasso);
-    const soloBasso = src.slice(iBasso);
-    expect(soloLettura, "cio che si legge si gira").toMatch(/rotate\(180deg\)/);
-    expect(soloBasso, 'la riga per scrivere non si gira mai').not.toMatch(/rotate\(180deg\)/);
+    expect(iVoce, 'la riga della voce esiste').toBeGreaterThan(iLettura);
+    expect(src.slice(iLettura, iVoce), 'cio che si legge si gira').toContain('rotate(180deg)');
+    expect(src.slice(iVoce), 'ne la voce ne il testo si girano mai').not.toContain('rotate(180deg)');
   });
 
-  it('usa tutta l\'altezza che c\'e, non ne lascia fuori mezzo schermo', () => {
+  it('e una PAGINA INTERA, non piu un riquadro dentro la home', () => {
+    // b.424, ordine di Luca: «una pagina intera con freccia in alto per
+    // tornare alla home», e l'apertura e un ribaltamento del foglio.
     const src = leggi('app/components/PrimaProva.js');
-    expect(src, 'i 210 punti lasciati fuori non ci sono piu').not.toMatch(/100dvh - 210px/);
-    const m = src.match(/height: 'calc\(100dvh - (\d+)px\)'/);
-    expect(m, "l'altezza e dichiarata").toBeTruthy();
-    expect(Number(m[1]), 'e quello che resta fuori e poco').toBeLessThanOrEqual(170);
+    expect(src, 'niente piu altezza ritagliata a mano').not.toMatch(/height: 'calc\(100dvh/);
+    expect(src, 'niente piu cornice da riquadro').not.toMatch(/borderRadius: 20, padding: 14/);
+    const home = leggi('app/components/HomeView.js');
+    expect(home, 'la home gira su se stessa').toMatch(/<Ribalta girato=\{mostraPrimaProva\}/);
+    expect(home, 'e dietro c\'e il traduttore').toMatch(/retro=\{<PrimaProva/);
+  });
+
+  it('in alto a sinistra c\'e la freccia per tornare, non una ✕', () => {
+    const { container } = render(<PrimaProva onChiudi={() => {}} />);
+    expect(per(container, 'backWord'), 'la freccia indietro').toBeTruthy();
+    expect(per(container, 'close'), 'la ✕ non c\'e piu').toBeFalsy();
+  });
+
+  it('un microfono solo: quello in mezzo fa tutto', async () => {
+    // b.424: «il secondo microfono in basso deve essere solo una freccia
+    // di invio testo, il microfono in mezzo fa gia tutto per l'audio».
+    const { container } = render(<PrimaProva onChiudi={() => {}} />);
+    const microfoni = bottoni(container).filter((b) => (b.getAttribute('aria-label') || '') === 'dictateWord');
+    expect(microfoni.length, 'uno, non due').toBe(1);
+    expect(per(container, 'sendWord'), 'e in basso c\'e la freccia di invio').toBeTruthy();
+  });
+
+  it('la freccia di invio si accende solo quando c\'e qualcosa da mandare', async () => {
+    const { container } = render(<PrimaProva onChiudi={() => {}} />);
+    const invia = per(container, 'sendWord');
+    expect(invia.disabled, 'a campo vuoto e spenta').toBe(true);
+    const campo = container.querySelector('textarea');
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(campo.constructor.prototype, 'value').set;
+      setter.call(campo, 'Ciao');
+      campo.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(per(container, 'sendWord').disabled, 'con del testo si accende').toBe(false);
   });
 
   it('non c\'e piu il titolo «Parla ora» in testata: lo dice il microfono', () => {
@@ -111,8 +139,27 @@ describe('si apre con una cosa sola a schermo', () => {
     const targhetta = bottoni(container).find((b) => /→/.test(b.textContent || ''));
     await act(async () => { targhetta.click(); });
     expect(container.querySelector('textarea'), 'anche la riga in basso lascia il posto').toBeNull();
-    const conBandiere = bottoni(container).filter((b) => (b.textContent || '').length > 2);
-    expect(conBandiere.length, 'e al suo posto c\'e la fila delle lingue').toBeGreaterThan(5);
+  });
+
+  it('la lista delle lingue e LA STESSA della home, non una copia', () => {
+    // ordine di Luca: «crea una lista come quella della home, esattamente
+    // identica». Identica si ottiene in un modo solo: usando quella.
+    const src = leggi('app/components/PrimaProva.js');
+    expect(src, 'si importa il carosello della home').toMatch(/import CarouselLingue from '\.\/CarouselLingue\.js'/);
+    expect(src, 'e lo si usa').toMatch(/<CarouselLingue/);
+    expect(src, 'la fila di pillole fatta a mano non c\'e piu').not.toMatch(/mete\.map\(\(l\) =>/);
+    // e la home continua a usare lo stesso componente: se un giorno
+    // qualcuno lo cambia li, cambia anche qui. E' il punto.
+    const home = leggi('app/components/HomeView.js');
+    expect(home).toMatch(/<CarouselLingue/);
+  });
+
+  it('la lingua scelta arriva come lingua, non come oggetto messo per sigla', () => {
+    // il carosello consegna la LINGUA intera: prenderla per un codice
+    // metterebbe un oggetto dove va una sigla, e la meta diventerebbe una
+    // lingua inesistente, in silenzio.
+    const src = leggi('app/components/PrimaProva.js');
+    expect(src).toMatch(/onScegli=\{\(lingua\) => \{ setMeta\(lingua\.code\)/);
   });
 
   it('la misura si adatta all\'alfabeto: gli ideogrammi pesano di piu', () => {
@@ -166,11 +213,14 @@ describe('cio che era gia buono non e stato toccato', () => {
     expect(per(container, 'faceToFaceWord'), 'il tasto che gira lo schermo').toBeTruthy();
   });
 
-  it('la chiusura ricorda che la prova e stata fatta', async () => {
-    let chiuso = false;
-    const { container } = render(<PrimaProva onChiudi={() => { chiuso = true; }} />);
-    await act(async () => { per(container, 'close').click(); });
-    expect(chiuso).toBe(true);
+  it('tornando indietro si ricorda che la prova e stata fatta', async () => {
+    // b.424 — si torna con la freccia, non piu con la ✕: il foglio si
+    // gira, non si butta via niente. Ma il ricordo resta lo stesso, o la
+    // schermata si ripresenterebbe da sola a ogni apertura dell'app.
+    let tornato = false;
+    const { container } = render(<PrimaProva onChiudi={() => { tornato = true; }} />);
+    await act(async () => { per(container, 'backWord').click(); });
+    expect(tornato).toBe(true);
   });
 
   it('la voce si puo far ripetere, ma non e piu una barra che sembra obbligatoria', () => {

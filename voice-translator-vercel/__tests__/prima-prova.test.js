@@ -49,10 +49,10 @@ describe('il traduttore subito', () => {
     // (ordine di Luca: «mantieni il campo di testo in basso e ribalta solo
     // il testo da leggere»).
     const iLettura = src.indexOf('const bloccoLettura');
-    const iBasso = src.indexOf('const bloccoBasso');
+    const iVoce = src.indexOf('const bloccoVoce');
     expect(iLettura, "l'area di lettura esiste").toBeGreaterThan(0);
-    expect(src.slice(iLettura, iBasso), 'cio che si legge si gira').toContain('rotate(180deg)');
-    expect(src.slice(iBasso), 'la riga per scrivere non si gira mai').not.toContain('rotate(180deg)');
+    expect(src.slice(iLettura, iVoce), 'cio che si legge si gira').toContain('rotate(180deg)');
+    expect(src.slice(iVoce), 'ne la voce ne il testo si girano mai').not.toContain('rotate(180deg)');
   });
 
   it('non propone come meta la lingua che già parli', () => {
