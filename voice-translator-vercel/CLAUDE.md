@@ -214,29 +214,36 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.405** (push #699) — BATCH B dell'audit Life/Live: l'audio
-  di Life ha finalmente un padrone solo. La registrazione nel telecomando
-  e stata spostata DENTRO `parlaTurno`, che e la strada obbligata di ogni
-  voce: cosi i cinque punti che suonavano di nascosto (frase di
-  riferimento della Pronuncia, Lettura, TestoLingua, Compagno di
-  sventura, prova voce in Gestione Compagni) sono rientrati tutti in un
-  colpo, e il sesto che nascera domani e dentro senza saperlo. Aggiunto
-  `zittisci()`: fa silenzio E ASPETTA che sia vero, cosi il microfono
-  della Pronuncia non puo piu registrare la voce modello e falsare il
-  voto. Corretti i due difetti dello Stop del Podcast (la pausa nuda
-  lasciava la promessa del turno appesa per sempre; lo Stop premuto
-  durante la generazione faceva partire lo stesso la voce). Il ponte
-  `audioLife.js` di b.404 e stato tolto: tutti i chiamanti sono passati
-  a `voce.js`.
-  DIFETTO TROVATO DALLA PROVA, non dall'audit: `pause()` su un audio GIA
-  in pausa non emette l'evento `pause`, quindi «Pausa e poi Interrompi»
-  marchiava l'audio senza svegliare nessuno — promessa pendente per
-  sempre, ciclo mai chiuso, pillola accesa sul silenzio. Ora
-  l'interruzione bussa comunque.
-- Nuove prove di COMPORTAMENTO (non di stringhe): `audio-vita-b405.test.js`
-  fa girare `parlaTurno` e il registro con un audio finto. Tre di quelle
-  prove erano rosse sul codice di prima.
-- Test: **2358 verdi su 158 file** · 0 errori di lint (avvisi tollerati)
+- Versione: **b.406** (push #700) — BATCH A dell'audit Live, la parte che
+  vale in OGNI CASO. La domanda grossa (P0.1: il cervello del dal-vivo
+  resta BarTalk con ElevenLabs solo voce, oppure ElevenLabs dietro una
+  sessione firmata dal nostro server?) e una DECISIONE DI PRODOTTO e
+  aspetta Luca — e con lei il passaggio dal portafoglio. Ma cinque
+  difetti di CompagnoLive non dipendono da quella scelta:
+  P1.1 quello che si diceva a voce non tornava mai nella chat scritta
+  (ora i turni entrano in cronologia col segno del microfono, vengono
+  consegnati anche uscendo di lato, e un Riprova li rimette nel contesto
+  della linea nuova); P1.2 un guasto del fornitore si travestiva da
+  «Conversazione chiusa» (ora ogni finale ha il suo nome: caduta rete,
+  guasto fornitore, microfono negato, chiusa da te, caduta e basta);
+  P1.3 il tasto Muto poteva MENTIRE — si accendeva sul comando, non
+  sulla conferma, e quando la libreria non sapeva spegnere il microfono
+  scriveva una proprieta a caso e diceva «Muto» lo stesso (ora il tasto
+  non compare se il comando non esiste, e se fallisce la scritta non
+  cambia); P1.4 Riprova non chiudeva la sessione precedente e le
+  richiamate della vecchia riscrivevano lo stato della nuova (numero di
+  generazione); P1.5 personalita e contesto entravano nel prompt come
+  istruzioni (ora riquadrati, ripuliti dei segnaposto del fornitore).
+  Piu due regole di casa portate anche qui: si fa silenzio prima di
+  aprire il microfono, e lo Stop del telecomando chiude la telefonata.
+- PROVE CHE MONTANO IL COMPONENTE, non che leggono il sorgente. Per farlo
+  e stato tolto un ostacolo vecchio: i componenti hanno JSX dentro file
+  `.js` (Next lo permette, il motore delle prove no), e per questo TUTTE
+  le prove sui componenti leggevano il sorgente con un'espressione
+  regolare. `vitest.config.js` ora lo gestisce. `compagno-live-b406`
+  monta CompagnoLive con una finta libreria ElevenLabs: 15 di quelle 19
+  prove erano ROSSE sul codice di prima.
+- Test: **2377 verdi su 159 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

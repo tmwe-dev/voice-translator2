@@ -75,6 +75,37 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
     } catch { /* niente brief in attesa */ }
   }, [scelto]);
 
+  // b.406 · P1.1 — QUELLO CHE SI DICE A VOCE ENTRA NELLA CHAT SCRITTA.
+  //
+  // Fino a qui la continuita era a senso unico: gli ultimi messaggi
+  // scritti entravano nella telefonata, ma la telefonata non tornava
+  // indietro. Dopo dieci minuti di conversazione vocale col Compagno, il
+  // messaggio successivo si comportava come se non fosse mai avvenuta —
+  // e nemmeno la memoria persistente riceveva niente.
+  //
+  // I turni entrano in coda alla stessa cronologia, quindi vengono
+  // salvati sul dispositivo come tutti gli altri e viaggiano al server
+  // col messaggio successivo. `dalVivo: true` li marca: servira a
+  // mostrarli diversi, e serve a non ricontarli.
+  const accogliTurniDalVivo = useCallback((turni) => {
+    if (!Array.isArray(turni) || !turni.length) return;
+    setMessaggi((m) => {
+      // dedup: la stessa battuta consegnata due volte (chiusura + smontaggio)
+      // non deve comparire due volte.
+      const gia = new Set(m.map((x) => `${x.ruolo}|${String(x.testo || '').trim()}`));
+      const nuovi = [];
+      for (const t of turni) {
+        const testo = String(t?.testo || '').trim();
+        if (!testo) continue;
+        const chiave = `${t.ruolo}|${testo}`;
+        if (gia.has(chiave)) continue;
+        gia.add(chiave);
+        nuovi.push({ ruolo: t.ruolo === 'persona' ? 'persona' : 'compagno', testo, dalVivo: true });
+      }
+      return nuovi.length ? [...m, ...nuovi] : m;
+    });
+  }, []);
+
   const invia = useCallback(async () => {
     const t = testo.trim();
     if (!t || !scelto || attende) return;
@@ -174,6 +205,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
         // ultimi scambi (i piu recenti pesano di piu) diventano il {{contesto}}
         // dell'agente, che riprende il filo invece di ripartire da zero.
         <CompagnoLive compagno={scelto} lingua={lingua} onChiudi={() => setDalVivo(false)}
+          onFine={accogliTurniDalVivo}
           contesto={messaggi.slice(-14).map((m) =>
             `${m.ruolo === 'persona' ? 'Persona' : (scelto?.nome || 'Tu')}: ${String(m.testo || '').slice(0, 400)}`
           ).join('\n')}
@@ -211,6 +243,14 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
             padding: '9px 12px', borderRadius: 14, fontSize: 14, lineHeight: 1.45, fontFamily: FONT,
             background: m.ruolo === 'persona' ? accent : card, color: m.ruolo === 'persona' ? '#04121c' : testoP,
             border: m.ruolo === 'persona' ? 'none' : bordo }}>
+            {/* b.406 — un turno DETTO A VOCE si vede che e stato detto a
+                voce. Mescolarlo allo scritto senza segno farebbe leggere a
+                Luca una chat che non ha mai scritto. */}
+            {m.dalVivo && (
+              <span aria-hidden style={{ display: 'inline-flex', verticalAlign: 'middle', marginRight: 6, opacity: 0.6 }}>
+                <Icon name="mic" size={11} color={m.ruolo === 'persona' ? '#04121c' : muto} />
+              </span>
+            )}
             {m.testo}
             {m.ruolo === 'compagno' && (
               <button onClick={() => riascolta(i)} disabled={sentendo >= 0} aria-label={L('listenWord')} title={L('listenWord')}
