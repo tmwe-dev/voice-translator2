@@ -8,7 +8,7 @@
 > contro chiave. Il resto sta sotto "da leggere", e non si chiama
 > difetto.
 
-Rotte totali: **45** — vive: **41**, rimosse: **4**
+Rotte totali: **43** — vive: **39**, rimosse: **4**
 
 ## Come si legge
 
@@ -33,9 +33,7 @@ Rotte totali: **45** — vive: **41**, rimosse: **4**
 | /api/contacts | POST | si | contacts | — | — | — | si |
 | /api/conversation | POST GET | si | conversation | — | — | si | si |
 | /api/debug | POST | si | debug | — | — | — | si |
-| /api/glossary | POST | si | glossary | — | — | — | si |
-| /api/health | GET | — | — | — | — | — | si |
-| /api/keys | GET POST DELETE | si | keys | — | — | — | si |
+| /api/health | GET | si | health | — | — | — | si |
 | /api/messages | POST PATCH GET | si | messages | messages-patch | — | si | si |
 | /api/moderazione | POST | si | moderazione | — | — | — | si |
 | /api/mondo | POST GET | si | mondo | — | — | — | si |
@@ -46,24 +44,24 @@ Rotte totali: **45** — vive: **41**, rimosse: **4**
 | /api/reazioni | POST | si | reazioni | — | — | — | si |
 | /api/room | POST GET | si | room | — | — | — | si |
 | /api/stanza-video | POST | si | stanza-video | — | — | — | si |
-| /api/startrek | POST | — | — | startrek | — | — | — |
+| /api/startrek | POST | si | startrek-guard | startrek | — | — | — |
 | /api/stripe | POST | si | stripe | — | — | — | — |
 | /api/stt-token | POST | si | stt-token | — | — | — | si |
 | /api/subscription | POST | si | subscription | — | — | — | si |
 | /api/summary | POST | si | summary | — | — | — | si |
-| /api/test-login | POST | — | — | — | — | — | — |
+| /api/test-login | POST | si | test-login | — | — | — | — |
 | /api/transcribe | POST | si | transcribe | — | — | — | — |
 | /api/translate | POST | si | translate | — | si | — | — |
 | /api/translate-consensus | POST | si | translate-consensus | — | — | — | si |
 | /api/translate-free | POST | si | translate-free | free-translate free-chars | — | — | si |
 | /api/translate-test | POST | si | translate-test | — | — | — | — |
-| /api/translate-test-llm | POST | — | — | — | — | — | — |
+| /api/translate-test-llm | POST | si | translate-test-llm | — | — | — | — |
 | /api/tts | POST | si | tts | — | si | — | — |
 | /api/tts-edge | GET POST | si | tts-edge | — | — | — | — |
 | /api/tts-elevenlabs | POST GET | si | tts-elevenlabs | — | — | — | si |
-| /api/tts-test | POST | — | — | — | — | — | — |
+| /api/tts-test | POST | si | tts-test | — | — | — | — |
 | /api/turn | GET | si | turn | — | — | — | — |
-| /api/user | POST GET PUT | si | user | — | — | — | si |
+| /api/user | POST GET | si | user | — | — | — | si |
 | /api/voci | GET POST | si | voci | — | — | — | — |
 | /api/voice-clone | POST GET | si | voice-clone | — | — | si | si |
 
@@ -91,12 +89,9 @@ Nessuna.
 - `/api/health` — un sorvegliante esterno deve poter chiedere se l'applicazione e viva, senza credenziali
 - `/api/og` — la chiedono i programmi di WhatsApp e dei social, che non hanno credenziali
 
-### Chiuse in un modo diverso dalla guardia (4)
+### Chiuse in un modo diverso dalla guardia (0)
 
-- `/api/startrek`
-- `/api/test-login`
-- `/api/translate-test-llm`
-- `/api/tts-test`
+
 
 Pagine di collaudo dietro un interruttore o una parola d'ordine.
 

@@ -214,6 +214,28 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.422** (push #714) — IL METODO NUOVO PER LA GRAFICA, deciso
+  da Luca il 23/08/2026: «fai in modo di poterlo applicare subito se ne
+  scegliamo uno, poi lo salvi, perche dobbiamo fare questo lavoro in
+  serie per tutte le pagine in sequenza».
+  Nasce `template/`, e la prima pagina e `template/parla-ora.html`: com'e
+  oggi la schermata «Parla ora» e tre modi di semplificarla, disegnati coi
+  colori del tema «deep» e con le misure prese dal componente vero, una
+  per una. Non e un disegno: e cio che si vedra, e quando Luca sceglie
+  una lettera si copia di li invece di reinventare.
+  E' la stessa disciplina che vale gia su Funnemail (si progetta nel
+  template, il codice si COPIA nella pagina viva, mai il contrario), e da
+  oggi vale anche qui. Nel file ci sono anche le sei regole con cui
+  guarderemo tutte le pagine successive — una cosa sola comanda, niente
+  scatole vuote, il segnaposto non insegna, si contano i tocchi, niente
+  spinte in basso, i colori vengono dal tema.
+  NESSUN CODICE DELL'APP TOCCATO: `PrimaProva.js` e intatto. Questo push
+  porta solo il template e questa riga di diario.
+  E UNA COSA IMPARATA SCRIVENDOLO, che vale per ogni template futuro: un
+  commento HTML dentro un commento HTML lo CHIUDE in anticipo, e il resto
+  della nota finisce a schermo come testo. Mi e successo, si vedeva, ed e
+  corretto — i marcatori INIZIO/FINE non si nominano dentro un commento.
+
 - Versione: **b.421** (push #713) — LA VERSIONE CHE L'UTENTE LEGGE NON
   MENTE PIU. `APP_VERSION` era ferma a `b.405` col programma a b.420:
   quindici versioni indietro. Non e un dettaglio estetico — quel numero

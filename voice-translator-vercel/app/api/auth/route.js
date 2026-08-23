@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAuthCode, verifyAuthCode, createUser, getUser, createSession, getSession, deleteSession, getReferralCode, applyReferral, maskApiKeys } from '../../lib/users.js';
 import { checkRateLimit, getRateLimitKey } from '../../lib/rateLimit.js';
-import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { t } from '../../lib/i18n.js';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { createLogger } from '../../lib/logger.js';
@@ -125,51 +124,24 @@ async function handler(req) {
       // Create session
       const sessionToken = await createSession(email);
 
-      // Sync profile to Supabase (non-blocking)
-      // Note: profiles.id is FK on auth.users(id) — cannot insert without a valid auth.users UUID.
-      // The trigger `on_auth_user_created` auto-creates profiles on Supabase Auth signup.
-      // Here we only UPDATE existing profiles or attempt insert with a resolved auth UUID.
-      let supabaseUserId = null;
-      try {
-        const sb = getSupabaseAdmin();
-        if (sb) {
-          const { data: existing } = await sb.from('profiles').select('id').eq('email', email).single();
-          if (existing) {
-            // Profile exists — update it
-            supabaseUserId = existing.id;
-            await sb.from('profiles').update({
-              name: user.name || name || '',
-              avatar: user.avatar || avatar || '/avatars/1.webp',
-              lang: user.lang || lang || 'it',
-              last_login: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            }).eq('id', existing.id);
-          } else {
-            // Profile doesn't exist — try to find auth.users UUID first
-            // Without a valid auth.users UUID, we cannot insert (FK constraint)
-            const { data: authUser } = await sb.auth.admin.listUsers();
-            const matchedUser = authUser?.users?.find(u => u.email === email);
-
-            if (matchedUser?.id) {
-              // auth.users exists → safe to insert profile with their UUID
-              const { data: newProfile } = await sb.from('profiles').insert({
-                id: matchedUser.id,
-                email,
-                name: user.name || name || '',
-                avatar: user.avatar || avatar || '/avatars/1.webp',
-                lang: user.lang || lang || 'it',
-                tier: user.tier || 'free',
-                credits: user.credits || 0,
-                last_login: new Date().toISOString(),
-              }).select('id').single();
-              supabaseUserId = newProfile?.id;
-            }
-            // If no auth.users match, skip Supabase profile creation
-            // User still works fully via Redis — Supabase sync happens later
-          }
-        }
-      } catch (e) { log.error('Supabase profile sync error:', e.message); }
-
+      // ═══════════════════════════════════════════════════════════════
+      // b.422 — LA "SINCRONIZZAZIONE DEL PROFILO SU SUPABASE" NON HA MAI
+      // SINCRONIZZATO NIENTE.
+      //
+      // Qui, a ogni accesso, si cercava la persona in `public.profiles`
+      // per aggiornarla o crearla, e se non c'era si chiamava
+      // `sb.auth.admin.listUsers()` — l'elenco INTERO degli utenti di
+      // Supabase Auth — per provare a trovarne l'UUID. Verificato sul
+      // database vivo di produzione: `public.profiles` NON ESISTE.
+      // Quindi la select falliva sempre, l'insert falliva sempre, e
+      // `supabaseUserId` usciva sempre null. Il campo partiva lo stesso
+      // nella risposta del login, dove nessuna schermata lo leggeva
+      // (verificato: zero riferimenti nel client).
+      //
+      // Non era neutro: l'elenco completo degli utenti veniva scaricato
+      // a ogni accesso di ogni persona, per buttarlo via un istante
+      // dopo. Un costo vero, pagato per un risultato che non esisteva.
+      // ═══════════════════════════════════════════════════════════════
       // Get referral code for this user
       const userReferralCode = await getReferralCode(email);
 
@@ -177,7 +149,7 @@ async function handler(req) {
       // b.166 — CONFERMATO (caccia al tesoro): `user` grezzo conteneva le
       // apiKeys dell'utente decriptate IN CHIARO, spedite al client a ogni
       // login. Mascherate qui, coerente con /api/user (azione 'profile').
-      return NextResponse.json({ ok: true, token: sessionToken, user: maskApiKeys(user), referralInfo, referralCode: userReferralCode, platformHasElevenLabs, supabaseUserId });
+      return NextResponse.json({ ok: true, token: sessionToken, user: maskApiKeys(user), referralInfo, referralCode: userReferralCode, platformHasElevenLabs });
     }
 
     // === CHECK SESSION (me) ===
@@ -192,31 +164,18 @@ async function handler(req) {
       // Tell frontend if platform has ElevenLabs key configured
       const platformHasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
-      // Enrich with Supabase subscription data
-      let subscription = null;
-      try {
-        const sb = getSupabaseAdmin();
-        if (sb) {
-          const { data: profile } = await sb.from('profiles')
-            .select('id, tier, subscription_plan, subscription_status, subscription_period_end, credits')
-            .eq('email', session.email).single();
-          if (profile) {
-            subscription = {
-              id: profile.id,
-              tier: profile.tier,
-              plan: profile.subscription_plan,
-              status: profile.subscription_status,
-              periodEnd: profile.subscription_period_end,
-              credits: profile.credits,
-            };
-          }
-        }
-      } catch (e) { /* Supabase not configured, no problem */ }
-
+      // ═══════════════════════════════════════════════════════════════
+      // b.422 — anche qui si arricchiva la risposta con l'abbonamento
+      // letto da `public.profiles`, che non esiste: `subscription`
+      // usciva sempre null. Il client legge il piano dalla scheda utente
+      // (Redis), non da qui. Tolto: era una lettura a vuoto su OGNI
+      // apertura dell'app, perche 'me' e la prima chiamata che parte
+      // quando si ripristina la sessione da localStorage.
+      // ═══════════════════════════════════════════════════════════════
       // b.166 — stesso mascheramento: 'me' viene chiamata ad ogni apertura
       // app (restore sessione da localStorage), quindi era il punto piu
       // frequente di fuga delle chiavi in chiaro.
-      return NextResponse.json({ user: maskApiKeys(user), referralCode: userReferralCode, platformHasElevenLabs, subscription });
+      return NextResponse.json({ user: maskApiKeys(user), referralCode: userReferralCode, platformHasElevenLabs });
     }
 
     // === LOGOUT ===

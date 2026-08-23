@@ -112,24 +112,21 @@ export async function resolveAuth({
         throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
       }
       {
+        // ── b.422 — VIA IL RIPIEGO SULLA CASSAFORTE `api_keys_vault` ──
+        // Verificato sul database vivo di produzione: la tabella
+        // `api_keys_vault` NON ESISTE nello schema `public`, e nemmeno
+        // `profiles`, da cui keyVault.js ricavava l'user_id prima di
+        // leggerla. Quel ripiego quindi non ha MAI restituito una chiave:
+        // `getDecryptedKey` usciva sempre null, e il codice proseguiva con
+        // la chiave di piattaforma esattamente come fa adesso.
+        // La strada VERA del BYOK e quella qui sotto — `useOwnKeys` piu le
+        // chiavi cifrate AES-256-GCM su Redis (users.js) — e non si tocca.
+        // Tenere accanto un ripiego che non ripiega e peggio che non averlo:
+        // chi leggeva credeva che ci fosse una seconda strada.
         const ownKey = user.useOwnKeys && user.apiKeys?.[provider];
         if (ownKey) {
           apiKey = ownKey;
           isOwnKey = true;
-        } else {
-          // Fallback: check encrypted key vault
-          if (!ownKey && user.useOwnKeys) {
-            try {
-              const { getDecryptedKey } = await import('./keyVault.js');
-              const vaultKey = await getDecryptedKey(billingEmail, provider);
-              if (vaultKey) {
-                apiKey = vaultKey;
-                isOwnKey = true;
-              }
-            } catch (e) {
-              log.error('KeyVault fallback error:', e);
-            }
-          }
         }
         // ── Credito: l'UNICA verità è il wallet (ledger Supabase) ──
         // Il vecchio user.credits (Redis, centesimi) non decide più nulla:
@@ -172,24 +169,21 @@ export async function resolveAuth({
       throw NextResponse.json({ error: ERRORS.UNAUTHORIZED }, { status: 401 });
     }
     {
+      // ── b.422 — VIA IL RIPIEGO SULLA CASSAFORTE `api_keys_vault` ──
+      // Verificato sul database vivo di produzione: la tabella
+      // `api_keys_vault` NON ESISTE nello schema `public`, e nemmeno
+      // `profiles`, da cui keyVault.js ricavava l'user_id prima di
+      // leggerla. Quel ripiego quindi non ha MAI restituito una chiave:
+      // `getDecryptedKey` usciva sempre null, e il codice proseguiva con
+      // la chiave di piattaforma esattamente come fa adesso.
+      // La strada VERA del BYOK e quella qui sotto — `useOwnKeys` piu le
+      // chiavi cifrate AES-256-GCM su Redis (users.js) — e non si tocca.
+      // Tenere accanto un ripiego che non ripiega e peggio che non averlo:
+      // chi leggeva credeva che ci fosse una seconda strada.
       const ownKey = lenderUser.useOwnKeys && lenderUser.apiKeys?.[provider];
       if (ownKey) {
         apiKey = ownKey;
         isOwnKey = true;
-      } else {
-        // Fallback: check encrypted key vault
-        if (!ownKey && lenderUser.useOwnKeys) {
-          try {
-            const { getDecryptedKey } = await import('./keyVault.js');
-            const vaultKey = await getDecryptedKey(billingEmail, provider);
-            if (vaultKey) {
-              apiKey = vaultKey;
-              isOwnKey = true;
-            }
-          } catch (e) {
-            log.error('KeyVault fallback error:', e);
-          }
-        }
       }
       // Credito del prestatore: decide il wallet
       // b.159 — stesso difetto e stessa correzione del percorso userToken
@@ -266,24 +260,21 @@ export async function resolveAuth({
         throw NextResponse.json({ error: ERRORS.HOST_NO_CREDITS }, { status: 402 });
       }
       {
+        // ── b.422 — VIA IL RIPIEGO SULLA CASSAFORTE `api_keys_vault` ──
+        // Verificato sul database vivo di produzione: la tabella
+        // `api_keys_vault` NON ESISTE nello schema `public`, e nemmeno
+        // `profiles`, da cui keyVault.js ricavava l'user_id prima di
+        // leggerla. Quel ripiego quindi non ha MAI restituito una chiave:
+        // `getDecryptedKey` usciva sempre null, e il codice proseguiva con
+        // la chiave di piattaforma esattamente come fa adesso.
+        // La strada VERA del BYOK e quella qui sotto — `useOwnKeys` piu le
+        // chiavi cifrate AES-256-GCM su Redis (users.js) — e non si tocca.
+        // Tenere accanto un ripiego che non ripiega e peggio che non averlo:
+        // chi leggeva credeva che ci fosse una seconda strada.
         const ownKey = hostUser.useOwnKeys && hostUser.apiKeys?.[provider];
         if (ownKey) {
           apiKey = ownKey;
           isOwnKey = true;
-        } else {
-          // Fallback: check encrypted key vault
-          if (!ownKey && hostUser.useOwnKeys) {
-            try {
-              const { getDecryptedKey } = await import('./keyVault.js');
-              const vaultKey = await getDecryptedKey(billingEmail, provider);
-              if (vaultKey) {
-                apiKey = vaultKey;
-                isOwnKey = true;
-              }
-            } catch (e) {
-              log.error('KeyVault fallback error:', e);
-            }
-          }
         }
         // Credito dell'host (regola inviti: paga chi apre): decide il wallet
         // b.159 — stesso difetto e stessa correzione del percorso userToken

@@ -9,17 +9,31 @@ const log = createLogger('admin');
 // ═══════════════════════════════════════════════
 // Admin Dashboard API
 //
-// Actions:
-//   stats         — platform overview (users, revenue, costs, rooms)
-//   users         — paginated user list with search
-//   user-detail   — single user full detail
-//   usage-chart   — daily usage for chart rendering
-//   top-languages — most used language pairs
-//   revenue       — revenue breakdown by day
-//   errors        — recent translation failures
+// Azioni:
+//   top-languages — le coppie di lingue piu tradotte (tabella `translations`)
 //
-// Auth: Requires valid session token + email in ADMIN_EMAILS
-// ═══════════════════════════════════════════════
+// Auth: sessione valida + email in ADMIN_EMAILS
+//
+// ═══════════════════════════════════════════════════════════════
+// b.422 — IL CRUSCOTTO MOSTRAVA ZERI, NON DATI.
+//
+// Fino a ieri questa rotta rispondeva a sette azioni: stats, users,
+// user-detail, usage-chart, top-languages, revenue, errors. Sei su
+// sette interrogavano `profiles`, `rooms`, `usage_daily`, `payments`,
+// `user_settings` — e verificato sul database vivo di produzione:
+// NESSUNA DI QUESTE CINQUE TABELLE ESISTE nello schema `public`.
+//
+// Non tornavano errori: Supabase risponde con un errore che il codice
+// leggeva come «zero righe». Quindi il pannello si apriva, si popolava
+// di zeri e di tabelle vuote, e aveva l'aria di un cruscotto che
+// funziona su un servizio senza clienti. E' la forma peggiore di
+// guasto: non si vede, e chi guarda prende decisioni su numeri finti.
+//
+// Resta `top-languages`, che legge `translations` — l'unica tabella
+// vera di questa rotta. I conti VERI del prodotto (economia, servizi
+// AI, voucher, consumo per utente) stanno da un'altra parte e non sono
+// mai passati di qui: /api/wallet/admin, pannello "Wallet" di /sesamo.
+// ═══════════════════════════════════════════════════════════════
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase());
 
@@ -29,7 +43,7 @@ function isAdmin(email) {
 
 async function handlePost(req) {
   try {
-    const { action, token, adminEmail, page, limit, search, userId, days } = await req.json();
+    const { action, token, days } = await req.json();
 
     // Session-based auth: verify token, then check admin whitelist
     const session = token ? await getSession(token) : null;
@@ -48,117 +62,6 @@ async function handlePost(req) {
     }
 
     const numDays = days || 30;
-    const numLimit = Math.min(limit || 50, 200);
-    const numPage = page || 0;
-    const dateFrom = new Date(Date.now() - numDays * 86400000).toISOString().split('T')[0];
-
-    // ── Platform Stats ──
-    if (action === 'stats') {
-      const [users, proUsers, bizUsers, activeRooms, todayUsage, todayPayments, monthlyRevenue] = await Promise.all([
-        sb.from('profiles').select('id', { count: 'exact', head: true }),
-        sb.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_plan', 'pro'),
-        sb.from('profiles').select('id', { count: 'exact', head: true }).eq('subscription_plan', 'business'),
-        sb.from('rooms').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        sb.from('usage_daily').select('translations, tts_chars, stt_seconds, cost_eur_cents, tokens_used').eq('date', new Date().toISOString().split('T')[0]),
-        sb.from('payments').select('amount_eur_cents').eq('status', 'completed').gte('created_at', new Date().toISOString().split('T')[0]),
-        sb.from('payments').select('amount_eur_cents').eq('status', 'completed').gte('created_at', dateFrom),
-      ]);
-
-      const todayData = todayUsage.data || [];
-      return NextResponse.json({
-        totalUsers: users.count || 0,
-        proUsers: proUsers.count || 0,
-        businessUsers: bizUsers.count || 0,
-        activeRooms: activeRooms.count || 0,
-        today: {
-          translations: todayData.reduce((s, r) => s + (r.translations || 0), 0),
-          ttsChars: todayData.reduce((s, r) => s + (r.tts_chars || 0), 0),
-          sttSeconds: todayData.reduce((s, r) => s + (r.stt_seconds || 0), 0),
-          costCents: todayData.reduce((s, r) => s + (r.cost_eur_cents || 0), 0),
-          tokens: todayData.reduce((s, r) => s + (r.tokens_used || 0), 0),
-          revenue: (todayPayments.data || []).reduce((s, r) => s + (r.amount_eur_cents || 0), 0),
-        },
-        monthlyRevenue: (monthlyRevenue.data || []).reduce((s, r) => s + (r.amount_eur_cents || 0), 0),
-      });
-    }
-
-    // ── User List ──
-    if (action === 'users') {
-      let query = sb.from('profiles')
-        .select('id, email, name, tier, credits, total_spent, total_messages, subscription_plan, subscription_status, created_at')
-        .order('created_at', { ascending: false })
-        .range(numPage * numLimit, (numPage + 1) * numLimit - 1);
-
-      // b.363 — il testo di ricerca entrava nella stringa del filtro dopo
-      // aver neutralizzato SOLO i caratteri jolly. Ma quella stringa e' un
-      // elenco separato da virgole, con punti e parentesi che hanno un
-      // significato per chi la interpreta: una virgola o una parentesi nel
-      // testo cercato cambiava la forma del filtro, non solo il suo
-      // contenuto. E il taglio a cento caratteri arrivava DOPO, quindi non
-      // proteggeva da un valore che non fosse nemmeno una parola.
-      // Ora: dev'essere una parola, si taglia prima, e restano solo i
-      // caratteri che hanno senso in un nome o in un indirizzo email.
-      if (typeof search === 'string' && search.trim()) {
-        const ripulito = search
-          .substring(0, 60)
-          .replace(/[^\p{L}\p{N}@._+ -]/gu, '')
-          .trim();
-        if (ripulito) {
-          const sanitized = ripulito.replace(/[%_\\]/g, '\\$&');
-          query = query.or(`email.ilike.%${sanitized}%,name.ilike.%${sanitized}%`);
-        }
-      }
-
-      const { data, error, count } = await query;
-      // b.363 — uscita di guasto muta: dal registro sembrava che non
-      // fosse successo niente. Era una query fallita, e il motivo si perdeva.
-      if (error) {
-        log.error('Elenco utenti: query fallita');
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
-      return NextResponse.json({ users: data || [], total: count });
-    }
-
-    // ── User Detail ──
-    if (action === 'user-detail') {
-      if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 });
-      const [profile, settings, payments, usage, translations] = await Promise.all([
-        sb.from('profiles').select('*').eq('id', userId).single(),
-        sb.from('user_settings').select('*').eq('user_id', userId).single(),
-        sb.from('payments').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(20),
-        sb.from('usage_daily').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(30),
-        sb.from('translations').select('source_lang, target_lang, provider, duration_ms, cost_eur_cents, created_at')
-          .eq('user_id', userId).order('created_at', { ascending: false }).limit(50),
-      ]);
-      return NextResponse.json({
-        profile: profile.data,
-        settings: settings.data,
-        payments: payments.data || [],
-        usage: usage.data || [],
-        recentTranslations: translations.data || [],
-      });
-    }
-
-    // ── Usage Chart (daily aggregated for all users) ──
-    if (action === 'usage-chart') {
-      const { data } = await sb
-        .from('usage_daily')
-        .select('date, translations, tts_chars, stt_seconds, cost_eur_cents, tokens_used')
-        .gte('date', dateFrom)
-        .order('date', { ascending: true });
-
-      // Aggregate by date
-      const byDate = {};
-      for (const row of (data || [])) {
-        if (!byDate[row.date]) byDate[row.date] = { date: row.date, translations: 0, ttsChars: 0, sttSeconds: 0, costCents: 0, tokens: 0 };
-        byDate[row.date].translations += row.translations || 0;
-        byDate[row.date].ttsChars += row.tts_chars || 0;
-        byDate[row.date].sttSeconds += row.stt_seconds || 0;
-        byDate[row.date].costCents += row.cost_eur_cents || 0;
-        byDate[row.date].tokens += row.tokens_used || 0;
-      }
-      return NextResponse.json({ chart: Object.values(byDate) });
-    }
 
     // ── Top Language Pairs ──
     if (action === 'top-languages') {
@@ -175,28 +78,6 @@ async function handlePost(req) {
       }
       const sorted = Object.entries(pairs).sort((a, b) => b[1] - a[1]).slice(0, 20);
       return NextResponse.json({ pairs: sorted.map(([pair, count]) => ({ pair, count })) });
-    }
-
-    // ── Revenue Chart ──
-    if (action === 'revenue') {
-      const { data } = await sb
-        .from('payments')
-        .select('amount_eur_cents, type, plan, created_at')
-        .eq('status', 'completed')
-        .gte('created_at', new Date(Date.now() - numDays * 86400000).toISOString())
-        .order('created_at', { ascending: true });
-
-      // Aggregate by date
-      const byDate = {};
-      for (const row of (data || [])) {
-        const date = row.created_at.split('T')[0];
-        if (!byDate[date]) byDate[date] = { date, credits: 0, subscriptions: 0, total: 0 };
-        const amount = row.amount_eur_cents || 0;
-        if (row.type === 'subscription') byDate[date].subscriptions += amount;
-        else byDate[date].credits += amount;
-        byDate[date].total += amount;
-      }
-      return NextResponse.json({ revenue: Object.values(byDate) });
     }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });

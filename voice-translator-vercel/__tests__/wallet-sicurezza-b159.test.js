@@ -194,18 +194,20 @@ describe('/api/transcribe: durata blindata, tetto giornaliero tracciato (b.159)'
   });
 });
 
-describe('TESTING_MODE: voice-clone e glossary usano la costante blindata (b.159)', () => {
+describe('TESTING_MODE: voice-clone usa la costante blindata (b.159)', () => {
   it('voice-clone non legge piu process.env.TESTING_MODE alla lettera', () => {
     const src = leggi('app/api/voice-clone/route.js');
     expect(src).toContain("import { TESTING_MODE } from '../../lib/config.js';");
     expect(src).not.toMatch(/const testingMode = process\.env\.TESTING_MODE/);
   });
 
-  it('glossary non legge piu process.env.TESTING_MODE alla lettera', () => {
-    const src = leggi('app/api/glossary/route.js');
-    expect(src).toContain("import { TESTING_MODE } from '../../lib/config.js';");
-    expect(src).not.toMatch(/const testingMode = process\.env\.TESTING_MODE/);
-  });
+  // b.422 — qui c'era lo stesso caso per /api/glossary. Quella rotta non
+  // esiste piu: leggeva `profiles` per riconoscere la persona e
+  // `glossaries` per i termini, e sul database vivo di produzione non
+  // esiste nessuna delle due — la rotta rispondeva sempre 404 'Profile
+  // not found'. Il glossario che funziona davvero e un'altra cosa: vive
+  // sul telefono (app/lib/glossario.js, provato da glossario.test.js) e
+  // viaggia dentro la richiesta di traduzione.
 });
 
 describe('vercel.json: il cron di riconciliazione oraria esiste (b.159)', () => {

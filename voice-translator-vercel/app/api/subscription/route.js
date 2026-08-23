@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import Stripe from 'stripe';
-import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
 import { createLogger } from '../../lib/logger.js';
 
@@ -80,8 +79,6 @@ async function handlePost(req) {
 
     if (!action) return NextResponse.json({ error: 'No action' }, { status: 400 });
 
-    const sb = getSupabaseAdmin();
-
     // ── List plans (public — no auth required) ──
     if (action === 'plans') {
       return NextResponse.json({
@@ -102,13 +99,10 @@ async function handlePost(req) {
     }
     const verifiedEmail = session.email;
 
-    // Resolve userId from Supabase profile (ignore userId from body for security)
-    let verifiedUserId = null;
-    if (sb) {
-      const { data: profile } = await sb.from('profiles').select('id').eq('email', verifiedEmail).single();
-      verifiedUserId = profile?.id || null;
-    }
-
+    // b.422 — qui si risolveva `verifiedEmail` in `verifiedUserId`
+    // leggendo `public.profiles`. Quella tabella non esiste (b.159 lo
+    // aveva gia scritto nel commento dell'azione 'cancel', qui sotto):
+    // `verifiedUserId` restava sempre null e non serviva piu a nessuno.
     // b.158 — CONFERMATO, difetto critico letto nel codice: 'subscribe'
     // e 'portal' aprono un vero addebito/vera gestione Stripe (carta
     // vera, abbonamento vero, rinnovo automatico vero), ma NESSUNA
@@ -128,14 +122,11 @@ async function handlePost(req) {
     }
 
     // ── Subscription Status ──
+    // b.422 — leggeva `public.profiles`, che non esiste: la `.single()`
+    // falliva sempre e si finiva comunque sulla riga qui sotto. Adesso
+    // c'e solo quella, che dice la verita: in questo prodotto gli
+    // abbonamenti non sono piu attivi (b.158), il credito sta nel wallet.
     if (action === 'status') {
-      if (sb) {
-        const query = verifiedUserId
-          ? sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('id', verifiedUserId)
-          : sb.from('profiles').select('tier, subscription_status, subscription_plan, subscription_period_end, credits').eq('email', verifiedEmail);
-        const { data } = await query.single();
-        if (data) return NextResponse.json(data);
-      }
       return NextResponse.json({ tier: 'free', subscription_status: 'none', subscription_plan: 'free', credits: 0 });
     }
 

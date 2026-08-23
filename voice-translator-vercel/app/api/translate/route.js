@@ -7,8 +7,11 @@ import { deductLendingTokens } from '../../lib/users.js';
 import { resolveAuth, trackDailySpend } from '../../lib/apiAuth.js';
 import { MIN_CREDITS, MIN_CHARGE, calcGptCost, calcTtsCost, usdToEurCents, roundCost, roundEurCents } from '../../lib/config.js';
 import { redis } from '../../lib/redis.js';
-import { getSupabaseAdmin } from '../../lib/supabase.js';
-import { trackUsage, saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
+// b.422 — getSupabaseAdmin non serve piu qui: serviva solo alla
+// ricerca in `profiles` (tabella inesistente) che apriva il blocco di
+// registrazione dello storico. Ora l'unico contatto col database passa
+// da saveTranslation, che il client se lo prende da se.
+import { saveTranslation as saveTranslationDB } from '../../lib/supabaseAPI.js';
 import { validateOutput, MODEL_MAP, calcConfidence, getSimpleHash } from '../../lib/translateValidation.js';
 import { buildSystemPrompt, buildMessages } from '../../lib/translatePrompt.js';
 import { callLLM, callLLMWithFallback } from '../../lib/llmCaller.js';
@@ -542,43 +545,65 @@ async function handlePost(req) {
       const tokenEstimate = Math.ceil((text.length + (translated?.length || 0)) / 4);
       bgTasks.push(deductLendingTokens(lendingCodeUsed, tokenEstimate).catch(() => {}));
     }
-    // Supabase tracking (fully non-blocking)
+    // ═══════════════════════════════════════════════════════════════
+    // b.422 — LO STORICO DELLE TRADUZIONI NON PASSA PIU DA `profiles`.
+    //
+    // Qui c'era, prima di ogni cosa, una `sb.from('profiles').select('id')
+    // .eq('email', billingEmail).single()`. Verificato sul database vivo
+    // di produzione: la tabella `public.profiles` NON ESISTE. Quella
+    // select falliva sempre, `profile` restava vuoto, e il `if (!profile)
+    // return` subito sotto buttava via TUTTO il blocco.
+    //
+    // E' questa la ragione per cui `translations` — che invece esiste — e
+    // rimasta a ZERO RIGHE: non era l'insert a fallire, era che l'insert
+    // non veniva mai nemmeno tentato. Il commento di b.246 diceva «la
+    // tabella translations NON ESISTEVA»: non era vero, e per mesi ha
+    // fatto guardare nel posto sbagliato.
+    //
+    // Adesso si scrive direttamente. `user_id` resta vuoto perche non
+    // esiste piu nessun posto da cui ricavare un UUID di persona: la
+    // colonna nasceva come chiave esterna verso `profiles`, che non c'e.
+    // Cio che serve al rapporto costi per fornitore (fornitore, modello,
+    // costo, coppia di lingue — vedi app/wallet/costi-fornitori.js) c'e
+    // tutto. Se l'insert dovesse comunque fallire, adesso si vede nel
+    // registro invece di sparire (b.246).
+    //
+    // Tolta anche la chiamata a trackUsage: scriveva in `usage_daily`
+    // tramite la funzione `increment_usage`, e nemmeno quella tabella
+    // esiste. La spesa vera la contano il wallet e trackDailySpend.
+    // ═══════════════════════════════════════════════════════════════
     try {
-      const sb = getSupabaseAdmin();
-      if (sb && billingEmail) {
-        bgTasks.push(
-          sb.from('profiles').select('id').eq('email', billingEmail).single()
-            .then(({ data: profile }) => {
-              if (!profile) return;
-              saveTranslationDB({
-                user_id: profile.id, room_id: roomId || null,
-                source_lang: sourceLang, target_lang: targetLang,
-                source_text: text.substring(0, 500),
-                translated_text: (translated || '').substring(0, 500),
-                // b.235 — provider/model REALI (motore effettivo), non il
-                // modello Global selezionato: prima una traduzione Qwen veniva
-                // registrata come openai/gpt-4o-mini, falsando le statistiche.
-                provider: motoreUsato,
-                ai_model: risultatoAsia ? (risultatoAsia.provider || 'qwen') : modelInfo.actual,
-                tokens_in: usage?.prompt_tokens || 0, tokens_out: usage?.completion_tokens || 0,
-                duration_ms: Date.now() - _t0, cost_usd: roundCost(msgCostUsd),
-                cost_eur_cents: roundEurCents(msgCostEurCents),
-                is_cached: false, context_type: domainContext || 'general',
-              }).catch((e) => {
-                // b.246 — prima era `.catch(() => {})`: la tabella
-                // `translations` NON ESISTEVA e ogni insert falliva in
-                // silenzio, da mesi. Registrare i consumi e poi buttare
-                // l'errore e' peggio che non registrarli: si crede di avere
-                // uno storico e non si ha niente.
-                log.warn('storico traduzione non salvato:', e?.message);
-              });
-              trackUsage(profile.id, {
-                translations: 1, costCents: Math.round(msgCostEurCents),
-                tokens: (usage?.prompt_tokens || 0) + (usage?.completion_tokens || 0),
-              }).catch(() => {});
-            }).catch(() => {})
-        );
-      }
+      bgTasks.push(
+        saveTranslationDB({
+          user_id: null, room_id: roomId || null,
+          source_lang: sourceLang, target_lang: targetLang,
+          // b.422-bis — IL TESTO NON SI SCRIVE PIU, ne l'originale ne la
+          // traduzione. Prima ne finivano 500 caratteri per parte in ogni
+          // riga; finche l'insert non partiva mai la cosa era teorica, ma
+          // riaccendendolo diventava vera — e con `user_id` vuoto sarebbe
+          // stato CIO CHE DI PEGGIO C'E: contenuto di persone vere che
+          // nessuna cancellazione account puo piu raggiungere, perche non
+          // si sa piu di chi sia. Sarebbe l'esatto contrario di b.419.
+          // Cio per cui questa tabella serve davvero — il rapporto costi
+          // per fornitore (app/wallet/costi-fornitori.js): fornitore,
+          // modello, gettoni, costo, coppia di lingue — non ha bisogno di
+          // sapere cosa si sono detti.
+          // b.235 — provider/model REALI (motore effettivo), non il
+          // modello Global selezionato: prima una traduzione Qwen veniva
+          // registrata come openai/gpt-4o-mini, falsando le statistiche.
+          provider: motoreUsato,
+          ai_model: risultatoAsia ? (risultatoAsia.provider || 'qwen') : modelInfo.actual,
+          tokens_in: usage?.prompt_tokens || 0, tokens_out: usage?.completion_tokens || 0,
+          duration_ms: Date.now() - _t0, cost_usd: roundCost(msgCostUsd),
+          cost_eur_cents: roundEurCents(msgCostEurCents),
+          is_cached: false, context_type: domainContext || 'general',
+        }).catch((e) => {
+          // b.246 — prima era `.catch(() => {})`: registrare i consumi e
+          // poi buttare l'errore e' peggio che non registrarli, perche si
+          // crede di avere uno storico e non si ha niente.
+          log.warn('storico traduzione non salvato:', e?.message);
+        })
+      );
     } catch (e) { log.warn('Supabase tracking setup failed:', e?.message); }
     // Fire all background tasks without awaiting
     if (bgTasks.length > 0) Promise.allSettled(bgTasks).catch(() => {});

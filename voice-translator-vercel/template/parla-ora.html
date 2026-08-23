@@ -1,0 +1,661 @@
+<title>Parla ora, quattro strade</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     TEMPLATE — "Parla ora"  ·  b.421  ·  prima pagina della serie
+
+     METODO (ordine di Luca, 23/08/2026): la grafica si disegna QUI,
+     poi il codice si COPIA nel componente vero. Mai il contrario.
+
+     I colori e le misure di questo file NON sono inventati: sono
+     presi dal tema "deep" dell'app e dal componente vero, uno per
+     uno. Quindi cio che si vede qui e cio che si vedra la.
+
+     Quando Luca sceglie una strada, si copia il blocco delimitato dai
+     marcatori INIZIO / FINE dentro il componente, traducendo le classi
+     in stili in linea come vuole quel file.
+     (I marcatori non si scrivono qui dentro: un commento dentro un
+      commento lo chiude in anticipo, e il resto finisce a schermo.
+      Ci sono cascato scrivendo questo file, e si vedeva.)
+     ═══════════════════════════════════════════════════════════════ -->
+
+<style>
+  /* ── I COLORI VERI DEL TEMA "deep" (app/lib/styles.js) ── */
+  :root {
+    --bg:            #05070f;
+    --bg-grad:       linear-gradient(168deg, #05070f 0%, #0a0f1f 45%, #101730 80%, #05070f 100%);
+    --testo:         #eef2ff;
+    --testo-2:       rgba(238,242,255,0.82);
+    --testo-3:       rgba(238,242,255,0.66);
+    --muto:          rgba(238,242,255,0.52);
+    --carta:         rgba(140,170,255,0.06);
+    --bordo:         rgba(160,190,255,0.14);
+    --campo:         rgba(140,170,255,0.05);
+    --spento:        rgba(238,242,255,0.10);
+    --accento:       #5b8cff;
+    --accento-2:     #38e1ff;
+    --rosso:         #ff5470;
+    --verde:         #3ddc84;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image: var(--bg-grad);
+    background-attachment: fixed;
+    color: var(--testo);
+    font-family: var(--font);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── L'IMPAGINATO DELLA PAGINA (non fa parte del prodotto) ── */
+  .foglio { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
+
+  .occhiello {
+    font-size: 11px; font-weight: 800; letter-spacing: 1.6px;
+    color: var(--accento); margin: 0 0 10px;
+  }
+  h1 {
+    margin: 0 0 10px; font-size: clamp(26px, 5vw, 40px);
+    font-weight: 800; letter-spacing: -0.6px; line-height: 1.1;
+    text-wrap: balance;
+  }
+  .sommario {
+    margin: 0 0 8px; max-width: 62ch; font-size: 15px; line-height: 1.55;
+    color: var(--testo-2);
+  }
+  .nota-metodo {
+    max-width: 62ch; font-size: 13px; line-height: 1.6; color: var(--muto);
+    border-left: 2px solid var(--bordo); padding-left: 12px; margin: 18px 0 0;
+  }
+
+  .pista {
+    display: flex; gap: 18px; overflow-x: auto; padding: 30px 0 14px;
+    scroll-snap-type: x mandatory; scrollbar-width: none;
+  }
+  .pista::-webkit-scrollbar { display: none; }
+
+  .colonna { flex: 0 0 auto; width: 340px; scroll-snap-align: center; }
+
+  .cartellino { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .cartellino .lettera {
+    font-size: 11px; font-weight: 800; letter-spacing: 1.2px;
+    color: var(--accento); font-variant-numeric: tabular-nums;
+  }
+  .cartellino .nome { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
+  .cartellino.oggi .lettera, .cartellino.oggi .nome { color: var(--muto); }
+  .sottotitolo { font-size: 12.5px; line-height: 1.5; color: var(--testo-3); margin: 0 0 14px; min-height: 38px; }
+
+  /* ── LA CORNICE DEL TELEFONO ── */
+  .telefono {
+    width: 340px; height: 640px; border-radius: 30px;
+    border: 1px solid var(--bordo);
+    background: var(--bg);
+    background-image: var(--bg-grad);
+    overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px -22px rgba(0,0,0,0.75);
+  }
+  .telefono.spenta { opacity: 0.72; }
+
+  /* la barra in basso dell'app, per non dimenticarsi che c'e */
+  .barra-app {
+    flex-shrink: 0; height: 58px; border-top: 1px solid var(--bordo);
+    display: flex; align-items: center; justify-content: space-around;
+    background: rgba(5,7,15,0.85);
+  }
+  .barra-app span { font-size: 9.5px; font-weight: 700; color: var(--muto); }
+  .barra-app span.acceso { color: var(--accento); }
+
+  .schermo { flex: 1; min-height: 0; padding: 12px; display: flex; }
+
+  /* ══════════════════════════════════════════════════════════════
+     IL PANNELLO — misure copiate dal componente vero:
+     raggio 20 · riempimento 14 · distanza 10 · carta + bordo
+     ══════════════════════════════════════════════════════════════ */
+  .pannello {
+    flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px;
+    background: var(--carta); border: 1px solid var(--bordo);
+    border-radius: 20px; padding: 14px;
+    overflow: hidden;
+  }
+
+  /* testata */
+  .testata { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .testata .titolo { flex: 1; font-size: 14px; font-weight: 800; }
+  .pillola {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 13px; border-radius: 999px;
+    border: 1px solid var(--bordo); background: transparent;
+    font-family: var(--font); font-size: 12.5px; font-weight: 800;
+    color: var(--testo-2); cursor: pointer;
+  }
+  .chiudi {
+    background: none; border: none; color: var(--muto);
+    font-size: 17px; cursor: pointer; padding: 4px; font-family: var(--font);
+  }
+
+  /* campo di scrittura (misure vere: riempimento 13 · raggio 14 · testo 16) */
+  .riga-scrittura { display: flex; gap: 8px; align-items: stretch; }
+  .campo {
+    flex: 1; padding: 13px; border-radius: 14px;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+    color: var(--muto); font-size: 16px; font-family: var(--font);
+    line-height: 1.4; min-height: 84px;
+  }
+  .mic-piccolo {
+    width: 52px; border-radius: 14px; flex-shrink: 0;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+
+  /* fila delle lingue */
+  .fila-lingue { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 2px; scrollbar-width: none; }
+  .fila-lingue::-webkit-scrollbar { display: none; }
+  .meta {
+    flex-shrink: 0; display: flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    font-family: var(--font); font-size: 12.5px; font-weight: 700;
+    background: transparent; border: 1px solid var(--bordo); color: var(--testo-2);
+  }
+  .meta.scelta {
+    background: rgba(91,140,255,0.13);
+    border: 1.5px solid var(--accento); color: var(--accento);
+  }
+
+  /* il registro */
+  .registro {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
+    padding: 13px; border-radius: 16px; border: 1px solid var(--bordo);
+    background: rgba(255,255,255,0.04);
+  }
+  .registro .spinta { margin-top: auto; }
+  .vuoto { color: var(--muto); font-weight: 500; font-size: 14px; }
+  .frase-grande { font-size: 26px; font-weight: 800; line-height: 1.25; color: var(--testo); overflow-wrap: anywhere; }
+  .frase-vecchia { font-size: 15px; font-weight: 800; line-height: 1.25; color: var(--muto); }
+
+  /* la barra Ascolta di oggi */
+  .barra-ascolta {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px; border-radius: 14px; flex-shrink: 0;
+    background: rgba(255,255,255,0.06); color: var(--muto);
+    font-size: 13px; font-weight: 700;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     PROPOSTA A — il pulsante solo
+     ══════════════════════════════════════════════════════════════ */
+  .rotta {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.04);
+    font-family: var(--font); font-size: 14px; font-weight: 700; color: var(--testo);
+  }
+  .rotta .freccia { color: var(--muto); font-size: 12px; }
+
+  .palco {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px; padding: 8px;
+  }
+  .mic-grande {
+    width: 132px; height: 132px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(91,140,255,0.34);
+    background: radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 10px rgba(91,140,255,0.05), 0 20px 60px -18px rgba(91,140,255,0.55);
+    transition: transform .18s ease;
+  }
+  .mic-grande:active { transform: scale(0.96); }
+  .invito { font-size: 17px; font-weight: 800; color: var(--testo); }
+  .invito-sotto { font-size: 12.5px; color: var(--muto); margin-top: -12px; }
+
+  /* il posto FISSO dove compare la traduzione: stessa area del microfono */
+  .esito {
+    flex: 1; min-height: 0; display: flex; flex-direction: column;
+    justify-content: center; gap: 12px; padding: 4px 2px;
+  }
+  .detto-da-te { font-size: 13px; color: var(--muto); font-weight: 600; }
+  .tradotto { font-size: 30px; font-weight: 800; line-height: 1.2; color: var(--testo); }
+  .sotto-esito { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .tondino {
+    width: 38px; height: 38px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .parla-di-nuovo {
+    flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.13);
+    color: var(--accento); font-size: 13.5px; font-weight: 800; font-family: var(--font);
+  }
+  .tastiera-angolo {
+    position: absolute; left: 22px; bottom: 78px;
+    width: 38px; height: 38px; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.04);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     PROPOSTA B — la conversazione
+     ══════════════════════════════════════════════════════════════ */
+  .filo { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding: 4px 2px; }
+  .filo .spinta { margin-top: auto; }
+  .scambio { display: flex; flex-direction: column; gap: 4px; }
+  .scambio .mio { font-size: 12.5px; color: var(--muto); font-weight: 600; }
+  .scambio .suo { font-size: 21px; font-weight: 800; line-height: 1.28; color: var(--testo); }
+  .scambio.ultimo .suo { font-size: 27px; }
+  .composer {
+    flex-shrink: 0; display: flex; align-items: center; gap: 10px;
+    padding: 8px; border-radius: 999px;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+  }
+  .composer .invito-min { flex: 1; font-size: 14px; color: var(--muto); font-weight: 600; padding-left: 8px; }
+  .mic-composer {
+    width: 46px; height: 46px; border-radius: 999px; flex-shrink: 0; cursor: pointer;
+    border: 1px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.16);
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── la spiegazione sotto ogni telefono ── */
+  .spiega { margin-top: 16px; font-size: 13px; line-height: 1.6; color: var(--testo-2); }
+  .spiega b { color: var(--testo); font-weight: 800; }
+  .spiega ul { margin: 8px 0 0; padding-left: 18px; }
+  .spiega li { margin-bottom: 6px; }
+  .costo {
+    margin-top: 12px; font-size: 11.5px; color: var(--muto);
+    border-top: 1px solid var(--bordo); padding-top: 10px;
+  }
+
+  /* ── il blocco finale col metodo ── */
+  .regole { margin-top: 46px; border-top: 1px solid var(--bordo); padding-top: 30px; }
+  .regole h2 { font-size: 20px; font-weight: 800; margin: 0 0 6px; letter-spacing: -0.3px; }
+  .regole .sotto { font-size: 13.5px; color: var(--muto); margin: 0 0 22px; max-width: 62ch; }
+  .griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .regola {
+    border: 1px solid var(--bordo); border-radius: 16px; padding: 16px;
+    background: var(--carta);
+  }
+  .regola .n { font-size: 11px; font-weight: 800; color: var(--accento); letter-spacing: 1.2px; }
+  .regola .t { font-size: 14.5px; font-weight: 800; margin: 6px 0 6px; }
+  .regola .d { font-size: 12.5px; line-height: 1.6; color: var(--testo-3); }
+
+  .scegli {
+    margin-top: 34px; padding: 20px; border-radius: 18px;
+    border: 1px solid rgba(91,140,255,0.30); background: rgba(91,140,255,0.08);
+    font-size: 14px; line-height: 1.6; color: var(--testo-2);
+  }
+  .scegli b { color: var(--testo); }
+
+  .suggerimento-tocco {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    font-size: 11.5px; font-weight: 700; color: var(--accento);
+  }
+
+  @media (max-width: 760px) {
+    .foglio { padding: 22px 0 54px; }
+    .occhiello, h1, .sommario, .nota-metodo, .regole, .scegli { padding-left: 18px; padding-right: 18px; }
+    .pista { padding-left: 18px; padding-right: 18px; }
+    .regole, .scegli { margin-left: 0; margin-right: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="foglio">
+
+  <p class="occhiello">TEMPLATE · PAGINA 1 DI N · b.421</p>
+  <h1>Parla ora — quattro strade</h1>
+  <p class="sommario">
+    Il primo schermo che tocca chi apre BarTalk. Oggi ha tre zone che comandano insieme
+    e due scatole vuote: nessuna dice da dove si comincia. Qui sotto c'e com'e adesso,
+    e tre modi di semplificarla — coi colori e le misure vere dell'app, non un disegno.
+  </p>
+  <p class="nota-metodo">
+    <b>Il metodo, da oggi in avanti:</b> la grafica si disegna qui, poi il codice si copia
+    nel file vero. Mai il contrario. Cosi quello che approvi e esattamente quello che
+    esce, e la stessa pagina resta per confrontare la prossima volta.
+    <span class="suggerimento-tocco">▸ tocca i telefoni: si muovono</span>
+  </p>
+
+  <div class="pista">
+
+    <!-- ═══════════════════════════════════════════════════════
+         OGGI — riproduzione fedele di com'e adesso
+         ═══════════════════════════════════════════════════════ -->
+    <div class="colonna">
+      <div class="cartellino oggi">
+        <span class="lettera">OGGI</span>
+        <span class="nome">Com'e adesso</span>
+      </div>
+      <p class="sottotitolo">Due scatole vuote, il microfono di lato, tre cose che comandano insieme.</p>
+
+      <div class="telefono spenta">
+        <div class="schermo">
+          <div class="pannello">
+            <div class="testata">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+              <span class="titolo">Parla ora</span>
+              <button class="pillola">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+                Faccia a faccia
+              </button>
+              <button class="chiudi">✕</button>
+            </div>
+
+            <div>
+              <div class="riga-scrittura">
+                <div class="campo">Scrivi o detta qui: la traduzione parte da sola</div>
+                <div class="mic-piccolo">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+                </div>
+              </div>
+              <div class="fila-lingue">
+                <span class="meta scelta">🇺🇸 English (US)</span>
+                <span class="meta">🇪🇸 Español (España)</span>
+                <span class="meta">🇫🇷 França</span>
+              </div>
+            </div>
+
+            <div class="registro">
+              <div class="spinta"></div>
+              <span class="vuoto">Qui la traduzione, testo e voce.</span>
+            </div>
+
+            <div class="barra-ascolta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              Ascolta
+            </div>
+          </div>
+        </div>
+        <div class="barra-app">
+          <span class="acceso">Home</span><span>Chat</span><span>+</span><span>Community</span><span>Profilo</span>
+        </div>
+      </div>
+
+      <div class="spiega">
+        <b>Cosa costa a chi apre.</b>
+        <ul>
+          <li>Il 70% dello schermo e vuoto e cerchiato di bordi.</li>
+          <li>Il microfono e un tastino di lato: in un traduttore <b>vocale</b>.</li>
+          <li>Il segnaposto e un'istruzione, non un invito.</li>
+          <li>Vedi dove vai, non da dove parti. E la fila si taglia a destra.</li>
+          <li>«Ascolta» sembra un passo obbligatorio: <b>non lo e</b> — la voce parte gia da sola, quel tasto serve solo a ripetere.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════
+         INIZIO PROPOSTA A — il pulsante solo
+         ═══════════════════════════════════════════════════════ -->
+    <div class="colonna">
+      <div class="cartellino">
+        <span class="lettera">A</span>
+        <span class="nome">Un pulsante solo</span>
+      </div>
+      <p class="sottotitolo">Un microfono in mezzo, due bandiere in alto. Non c'e altro su cui pensare.</p>
+
+      <div class="telefono">
+        <div class="schermo">
+          <div class="pannello" id="pannelloA">
+            <div class="testata">
+              <button class="rotta" onclick="giraA()">
+                <span>🇮🇹</span><span class="freccia">→</span><span>🇺🇸</span>
+              </button>
+              <span style="flex:1"></span>
+              <button class="pillola" style="padding:8px 10px" title="Faccia a faccia">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+              </button>
+              <button class="chiudi">✕</button>
+            </div>
+
+            <!-- lo stesso posto, due contenuti: qui non si spinge mai giu nulla -->
+            <div class="palco" id="palcoA" onclick="giraA()">
+              <div class="mic-grande">
+                <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+              </div>
+              <div class="invito">Parla</div>
+              <div class="invito-sotto">in italiano</div>
+            </div>
+
+            <div class="esito" id="esitoA" style="display:none" onclick="giraA()">
+              <div class="detto-da-te">Buonasera, avete un tavolo per due?</div>
+              <div class="tradotto">Good evening, do you have a table for two?</div>
+              <div class="sotto-esito">
+                <div class="tondino">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#eef2ff" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+                </div>
+                <div class="parla-di-nuovo">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/></svg>
+                  Parla ancora
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="tastiera-angolo" title="scrivi invece di parlare">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(238,242,255,0.52)" stroke-width="2" stroke-linecap="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+        </div>
+        <div class="barra-app">
+          <span class="acceso">Home</span><span>Chat</span><span>+</span><span>Community</span><span>Profilo</span>
+        </div>
+      </div>
+
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Le lingue diventano <b>una targhetta sola</b>: 🇮🇹 → 🇺🇸. Vedi anche da dove parti.</li>
+          <li>Il microfono e <b>l'unica cosa grande</b> a schermo.</li>
+          <li>La traduzione compare <b>dove stava il microfono</b>: stesso posto, niente che si sposta.</li>
+          <li>La tastiera e un'iconcina d'angolo, per chi preferisce scrivere.</li>
+          <li>Via il registro vuoto e via la barra «Ascolta»: resta un altoparlantino per ripetere.</li>
+        </ul>
+        <div class="costo">
+          <b>Cosa si perde:</b> non vedi piu le frasi precedenti. Se serve, si recupera con la B.
+        </div>
+      </div>
+    </div>
+    <!-- FINE PROPOSTA A -->
+
+    <!-- ═══════════════════════════════════════════════════════
+         INIZIO PROPOSTA B — la conversazione
+         ═══════════════════════════════════════════════════════ -->
+    <div class="colonna">
+      <div class="cartellino">
+        <span class="lettera">B</span>
+        <span class="nome">La conversazione</span>
+      </div>
+      <p class="sottotitolo">Un filo unico come una chat, e il microfono grande in basso. Resta la storia.</p>
+
+      <div class="telefono">
+        <div class="schermo">
+          <div class="pannello">
+            <div class="testata">
+              <button class="rotta">
+                <span>🇮🇹</span><span class="freccia">→</span><span>🇺🇸</span>
+              </button>
+              <span style="flex:1"></span>
+              <button class="pillola" style="padding:8px 10px" title="Faccia a faccia">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+              </button>
+              <button class="chiudi">✕</button>
+            </div>
+
+            <div class="filo" id="filoB">
+              <div class="spinta"></div>
+              <div class="vuoto" id="vuotoB">Parla: quello che dici compare qui, tradotto.</div>
+              <div id="scambiB" style="display:none">
+                <div class="scambio" style="margin-bottom:16px">
+                  <span class="mio">Buonasera, avete un tavolo per due?</span>
+                  <span class="suo">Good evening, do you have a table for two?</span>
+                </div>
+                <div class="scambio ultimo">
+                  <span class="mio">Preferiamo fuori, se si puo.</span>
+                  <span class="suo">We'd prefer outside, if possible.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="composer" onclick="giraB()">
+              <span class="invito-min" id="invitoB">Tocca e parla</span>
+              <div class="mic-composer">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="barra-app">
+          <span class="acceso">Home</span><span>Chat</span><span>+</span><span>Community</span><span>Profilo</span>
+        </div>
+      </div>
+
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Una scatola sola, non due: il filo <b>e</b> la pagina.</li>
+          <li>Il microfono sta in basso, grande e fisso — <b>la forma che tutti conoscono</b>.</li>
+          <li>Quello che hai detto resta sopra, piccolo; la traduzione sotto, grande.</li>
+          <li>Vuoto all'inizio: una riga sola, poi sparisce da sola.</li>
+        </ul>
+        <div class="costo">
+          <b>Cosa costa:</b> il microfono e meno protagonista della A. In compenso si arriva col pollice.
+        </div>
+      </div>
+    </div>
+    <!-- FINE PROPOSTA B -->
+
+    <!-- ═══════════════════════════════════════════════════════
+         INIZIO PROPOSTA C — i tre tagli
+         ═══════════════════════════════════════════════════════ -->
+    <div class="colonna">
+      <div class="cartellino">
+        <span class="lettera">C</span>
+        <span class="nome">I tre tagli</span>
+      </div>
+      <p class="sottotitolo">Stessa struttura di oggi, tolte le tre cose che costano di piu. Il rischio piu basso.</p>
+
+      <div class="telefono">
+        <div class="schermo">
+          <div class="pannello">
+            <div class="testata">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="2" stroke-linecap="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>
+              <span class="titolo">Parla ora</span>
+              <button class="pillola" style="padding:8px 10px" title="Faccia a faccia">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 16V4M7 4 3 8M7 4l4 4"/><path d="M17 8v12M17 20l4-4M17 20l-4-4"/></svg>
+              </button>
+              <button class="chiudi">✕</button>
+            </div>
+
+            <div class="rotta" style="align-self:flex-start">
+              <span>🇮🇹</span><span class="freccia">→</span><span>🇺🇸</span>
+            </div>
+
+            <div class="palco" style="gap:14px">
+              <div class="mic-grande" style="width:108px;height:108px">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5b8cff" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v4"/></svg>
+              </div>
+              <div class="invito">Parla</div>
+            </div>
+
+            <div class="campo" style="min-height:0;padding:11px 13px;font-size:14px;flex-shrink:0">
+              …oppure scrivi
+            </div>
+          </div>
+        </div>
+        <div class="barra-app">
+          <span class="acceso">Home</span><span>Chat</span><span>+</span><span>Community</span><span>Profilo</span>
+        </div>
+      </div>
+
+      <div class="spiega">
+        <b>Cosa cambia — solo tre tagli.</b>
+        <ul>
+          <li>Il registro <b>non esiste</b> finche non c'e niente dentro. Una scatola, non due.</li>
+          <li>Il microfono diventa grande e centrale; il campo di testo passa dietro, piccolo.</li>
+          <li>Via la barra «Ascolta»: parla da sola, e un altoparlantino ripete.</li>
+        </ul>
+        <div class="costo">
+          <b>Perche esiste questa strada:</b> non tocca la struttura. Se vuoi vedere subito un
+          miglioramento senza rischiare niente, e questa.
+        </div>
+      </div>
+    </div>
+    <!-- FINE PROPOSTA C -->
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LE REGOLE — valgono per tutte le pagine della serie
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="regole">
+    <h2>Le sei regole, che valgono per tutte le pagine</h2>
+    <p class="sotto">
+      Questa e la prima di una serie. Le regole qui sotto non riguardano solo «Parla ora»:
+      sono il criterio con cui guarderemo ogni schermata successiva.
+    </p>
+
+    <div class="griglia">
+      <div class="regola">
+        <div class="n">01</div>
+        <div class="t">Una cosa sola comanda</div>
+        <div class="d">Su ogni schermo dev'esserci un elemento visibilmente piu grande di tutti gli altri. Se ne comandano tre, non comanda nessuno.</div>
+      </div>
+      <div class="regola">
+        <div class="n">02</div>
+        <div class="t">Niente scatole vuote</div>
+        <div class="d">Una scatola vuota e una promessa non mantenuta, e sembra un modulo da compilare. Niente, finche non c'e qualcosa da metterci dentro.</div>
+      </div>
+      <div class="regola">
+        <div class="n">03</div>
+        <div class="t">Il segnaposto non insegna</div>
+        <div class="d">Se serve una frase per spiegare cosa fare, il disegno non ha fatto il suo lavoro. Una parola, o niente.</div>
+      </div>
+      <div class="regola">
+        <div class="n">04</div>
+        <div class="t">Si conta quanti tocchi</div>
+        <div class="d">Prima di approvare una schermata si contano i tocchi che servono per arrivare in fondo. Se sono piu di due, si guarda perche.</div>
+      </div>
+      <div class="regola">
+        <div class="n">05</div>
+        <div class="t">Niente spinte in basso</div>
+        <div class="d">Cio che compare SOSTITUISCE nello stesso posto, ad altezza fissa. Non spinge giu quello che stai gia leggendo.</div>
+      </div>
+      <div class="regola">
+        <div class="n">06</div>
+        <div class="t">I colori vengono dal tema</div>
+        <div class="d">Nessun colore scritto a mano nel componente: sei temi, e uno solo che sbaglia si vede subito. Stessa cosa per le parole: nessuna frase fuori dalle trentotto lingue.</div>
+      </div>
+    </div>
+
+    <div class="scegli">
+      <b>La mia raccomandazione: la A</b>, con la storia della B recuperata scorrendo verso l'alto.
+      Chi apre trova un pulsante e basta; chi ha bisogno di rileggere trova quello che si sono detti.
+      La <b>C</b> resta come strada di sicurezza: tre tagli, nessun rischio, si fa in un'ora.
+      <br><br>
+      Dimmi la lettera e la porto nel file vero. Poi si passa alla pagina dopo, con le stesse sei regole.
+    </div>
+  </div>
+</div>
+
+<script>
+  // Solo per far vedere i due momenti: vuoto e con la traduzione.
+  // Non e codice del prodotto: nel prodotto lo stato cambia da solo.
+  function giraA() {
+    var p = document.getElementById('palcoA');
+    var e = document.getElementById('esitoA');
+    var vuoto = p.style.display !== 'none';
+    p.style.display = vuoto ? 'none' : 'flex';
+    e.style.display = vuoto ? 'flex' : 'none';
+  }
+  function giraB() {
+    var v = document.getElementById('vuotoB');
+    var s = document.getElementById('scambiB');
+    var i = document.getElementById('invitoB');
+    var vuoto = s.style.display === 'none';
+    v.style.display = vuoto ? 'none' : 'block';
+    s.style.display = vuoto ? 'block' : 'none';
+    i.textContent = vuoto ? 'Tocca e parla ancora' : 'Tocca e parla';
+  }
+</script>

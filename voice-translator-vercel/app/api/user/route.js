@@ -1,10 +1,29 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
 import { getSession, getUser, updateUser, saveApiKeys, getCredits, getPaymentHistory, deleteUserData, maskApiKeys } from '../../lib/users.js';
-import { saveUserSettings, getUserSettings, getProfileByEmail } from '../../lib/supabaseAPI.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('user');
+
+// ═══════════════════════════════════════════════════════════════
+// b.422 — LE PREFERENZE NON SONO MAI STATE SU SUPABASE.
+//
+// Questa rotta aveva due azioni per tenere allineate le preferenze fra
+// telefono e server: `get-prefs` (GET) e `sync-prefs` (PUT). Tutte e due
+// cominciavano da `getProfileByEmail`, che leggeva `public.profiles`, e
+// scrivevano/leggevano `public.user_settings`. Verificato sul database
+// vivo di produzione: NESSUNA DELLE DUE TABELLE ESISTE.
+//
+// Conseguenza, per tutto il tempo in cui il codice e stato in piedi:
+// `get-prefs` rispondeva sempre `{ prefs: {} }` e `sync-prefs` sempre
+// «No Supabase profile yet — sync skipped». Nessun cliente le chiamava
+// (verificato: zero riferimenti nel client — le preferenze vivono nella
+// memoria del telefono, vedi savePrefs in app/page.js), quindi non si
+// perde niente: si toglie solo la mappa di due strade che non portavano
+// da nessuna parte, e con lei ottanta righe di conversione fra nomi di
+// colonne che non esistono.
+// ═══════════════════════════════════════════════════════════════
+
 
 // POST /api/user - User profile actions
 async function handlePost(req) {
@@ -129,42 +148,6 @@ async function handleGet(req) {
       });
     }
 
-    // === GET PREFERENCES FROM SUPABASE ===
-    if (action === 'get-prefs') {
-      try {
-        // Resolve email → Supabase profile UUID
-        const profile = await getProfileByEmail(session.email);
-        if (!profile?.id) {
-          return NextResponse.json({ prefs: {} });
-        }
-        const settings = await getUserSettings(profile.id);
-        if (!settings) {
-          return NextResponse.json({ prefs: {} });
-        }
-        // Map snake_case DB columns → camelCase client fields
-        const prefs = {
-          sourceLang: settings.source_lang,
-          targetLang: settings.target_lang,
-          ttsEnabled: settings.tts_enabled,
-          ttsEngine: settings.tts_engine,
-          ttsVoice: settings.tts_voice,
-          ttsAutoPlay: settings.tts_auto_play,
-          sttEngine: settings.stt_engine,
-          aiModel: settings.ai_model,
-          theme: settings.theme,
-          contextType: settings.context_type,
-          voiceSpeed: settings.voice_speed,
-          autoTranslate: settings.auto_translate,
-          showOriginal: settings.show_original,
-          notificationSound: settings.notification_sound,
-        };
-        return NextResponse.json({ prefs });
-      } catch (e) {
-        log.warn('get-prefs error:', e.message);
-        return NextResponse.json({ prefs: {} });
-      }
-    }
-
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {
     log.error('User GET error:', e);
@@ -172,73 +155,5 @@ async function handleGet(req) {
   }
 }
 
-// PUT /api/user - Update user preferences (sync-prefs action)
-async function handlePut(req) {
-  try {
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
-    const session = await getSession(token);
-    if (!session) return NextResponse.json({ error: 'Session expired' }, { status: 401 });
-
-    const { action, prefs } = await req.json();
-
-    // === SYNC PREFERENCES TO SUPABASE ===
-    if (action === 'sync-prefs') {
-      try {
-        if (!prefs || typeof prefs !== 'object') {
-          return NextResponse.json({ error: 'Invalid prefs object' }, { status: 400 });
-        }
-
-        // Resolve email → Supabase profile UUID
-        const profile = await getProfileByEmail(session.email);
-        if (!profile?.id) {
-          log.warn('sync-prefs: no Supabase profile for', session.email);
-          return NextResponse.json({ ok: true, message: 'No Supabase profile yet — sync skipped' });
-        }
-
-        // Convert camelCase client fields → snake_case DB columns
-        // Only include fields that exist in user_settings table
-        const settingsToSave = {};
-        if (prefs.sourceLang !== undefined) settingsToSave.source_lang = prefs.sourceLang;
-        if (prefs.targetLang !== undefined) settingsToSave.target_lang = prefs.targetLang;
-        if (prefs.ttsEnabled !== undefined) settingsToSave.tts_enabled = prefs.ttsEnabled;
-        if (prefs.ttsEngine !== undefined) settingsToSave.tts_engine = prefs.ttsEngine;
-        if (prefs.ttsVoice !== undefined) settingsToSave.tts_voice = prefs.ttsVoice;
-        if (prefs.ttsAutoPlay !== undefined) settingsToSave.tts_auto_play = prefs.ttsAutoPlay;
-        if (prefs.sttEngine !== undefined) settingsToSave.stt_engine = prefs.sttEngine;
-        if (prefs.aiModel !== undefined) settingsToSave.ai_model = prefs.aiModel;
-        if (prefs.theme !== undefined) settingsToSave.theme = prefs.theme;
-        if (prefs.contextType !== undefined) settingsToSave.context_type = prefs.contextType;
-        if (prefs.voiceSpeed !== undefined) settingsToSave.voice_speed = prefs.voiceSpeed;
-        if (prefs.autoTranslate !== undefined) settingsToSave.auto_translate = prefs.autoTranslate;
-        if (prefs.showOriginal !== undefined) settingsToSave.show_original = prefs.showOriginal;
-        if (prefs.notificationSound !== undefined) settingsToSave.notification_sound = prefs.notificationSound;
-
-        // Save to Supabase user_settings table (with resolved UUID)
-        const result = await saveUserSettings(profile.id, settingsToSave);
-
-        if (!result) {
-          log.warn('saveUserSettings returned null');
-          return NextResponse.json({ ok: false, message: 'Failed to save settings' }, { status: 500 });
-        }
-
-        return NextResponse.json({ ok: true, message: 'Preferences synced' });
-      } catch (e) {
-        log.warn('sync-prefs error:', e.message);
-        // Don't fail hard - sync errors are non-blocking
-        return NextResponse.json({ ok: true, message: 'Sync queued (will retry)' });
-      }
-    }
-
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (e) {
-    log.error('User PUT error:', e);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
-  }
-}
-
 export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'user' });
 export const GET = withApiGuard(handleGet, { maxRequests: 60, prefix: 'user' });
-export const PUT = withApiGuard(handlePut, { maxRequests: 60, prefix: 'user' });

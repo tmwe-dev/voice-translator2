@@ -1,122 +1,55 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../lib/apiGuard.js';
-import { getSupabaseAdmin } from '../../lib/supabase.js';
 import { getSession } from '../../lib/users.js';
 import { createLogger } from '../../lib/logger.js';
 
 const log = createLogger('analytics');
 
-// ═══════════════════════════════════════════════
-// User Analytics API
+// ═══════════════════════════════════════════════════════════════
+// b.422 — LE STATISTICHE PERSONALI NON SONO MAI ARRIVATE AL PRIMO PASSO.
 //
-// Actions:
-//   summary     — 30-day overview stats
-//   daily       — daily breakdown for chart
-//   languages   — most used language pairs
-//   providers   — provider usage breakdown
-//   glossaries  — glossary list + management
-// ═══════════════════════════════════════════════
+// Questa rotta offriva quattro azioni — summary, daily, languages,
+// providers — e tutte e quattro cominciavano dalla stessa riga:
+//
+//     const { data: profile } = await sb.from('profiles')
+//       .select('id').eq('email', session.email).single();
+//     if (!profile) return ... 404 'Profile not found'
+//
+// Verificato sul database vivo di produzione: `public.profiles` NON
+// ESISTE. Quindi OGNI chiamata usciva con 404 alla riga sopra, sempre,
+// per chiunque. Le azioni sotto — che leggevano `usage_daily` (anche
+// lei inesistente), la funzione `get_user_analytics` e `translations`
+// filtrata per `user_id` — non sono mai state eseguite nemmeno una
+// volta.
+//
+// E non sono nemmeno recuperabili: `translations` esiste, ma il suo
+// `user_id` nasceva come chiave esterna verso `profiles`, quindi non
+// c'e piu nessun modo di dire quali traduzioni siano di chi. Senza
+// quel filtro le stesse query risponderebbero con i dati di TUTTI a
+// chiunque sia collegato — che non e la stessa funzione con meno
+// precisione, e un'altra funzione e sbagliata.
+//
+// Restano la porta e la sua guardia, perche l'indirizzo e ancora
+// bersagliato da fuori (vedi sotto) e una porta che si apre e peggio di
+// una che risponde "azione sconosciuta".
+//
+// ── DA GUARDARE, NON RISOLTO QUI ──
+// app/lib/monitor.js manda a /api/analytics due `navigator.sendBeacon`
+// (errori del browser e metriche). Non sono mai stati accettati: il
+// beacon non porta nessun `token`, quindi si e sempre fermato al 401
+// della riga qui sotto — molto prima di `profiles`. Gli errori veri li
+// raccoglie Sentry (sentry.client.config.js). Toccare il monitoraggio
+// non e parte di questa pulizia: qui si annota e basta.
+// ═══════════════════════════════════════════════════════════════
 
 async function handlePost(req) {
   try {
-    const { action, token, days } = await req.json();
+    const { token } = await req.json();
     if (!token) return NextResponse.json({ error: 'Auth required' }, { status: 401 });
 
     // Verify session
     const session = await getSession(token);
     if (!session?.email) return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
-
-    const sb = getSupabaseAdmin();
-    // b.363 — uscita di guasto muta: dal registro sembrava che non
-    // fosse successo niente. Le statistiche sparivano in silenzio.
-    if (!sb) {
-      log.warn('Statistiche: Supabase non configurato');
-      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
-    }
-
-    // b.363 — il numero di giorni arrivava dal client e finiva dritto in
-    // `Date.now() - giorni * 86400000`. Con un numero enorme (o negativo,
-    // o una stringa) la data che ne usciva era fuori scala: la conversione
-    // in testo esplodeva con "Invalid time value" e la rotta rispondeva
-    // 500 — un guasto nostro provocato a comando da chiunque. E con un
-    // valore appena grande la query scorreva l'intero archivio.
-    // Un giorno come minimo, un anno come massimo: e' quello che i grafici
-    // dell'applicazione chiedono davvero.
-    const richiesti = Number(days);
-    const numDays = Number.isFinite(richiesti) ? Math.min(Math.max(Math.trunc(richiesti), 1), 365) : 30;
-    const dateFrom = new Date(Date.now() - numDays * 86400000).toISOString().split('T')[0];
-
-    // Get user ID from email
-    const { data: profile } = await sb.from('profiles').select('id').eq('email', session.email).single();
-    if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
-    const userId = profile.id;
-
-    // ── Summary ──
-    if (action === 'summary') {
-      const { data } = await sb.rpc('get_user_analytics', { p_user_id: userId, p_days: numDays });
-      const analytics = data?.[0] || {};
-
-      // Also get recent translations count by language
-      const { data: langData } = await sb
-        .from('translations')
-        .select('source_lang, target_lang')
-        .eq('user_id', userId)
-        .gte('created_at', new Date(Date.now() - numDays * 86400000).toISOString())
-        .limit(5000);
-
-      const langPairs = {};
-      for (const t of (langData || [])) {
-        const key = `${t.source_lang}→${t.target_lang}`;
-        langPairs[key] = (langPairs[key] || 0) + 1;
-      }
-      const topPairs = Object.entries(langPairs).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-      return NextResponse.json({
-        ...analytics,
-        topLanguagePairs: topPairs.map(([pair, count]) => ({ pair, count })),
-        period: numDays,
-      });
-    }
-
-    // ── Daily Breakdown ──
-    if (action === 'daily') {
-      const { data } = await sb
-        .from('usage_daily')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('date', dateFrom)
-        .order('date', { ascending: true });
-
-      return NextResponse.json({ daily: data || [] });
-    }
-
-    // ── Language Usage ──
-    if (action === 'languages') {
-      const { data } = await sb
-        .from('translations')
-        .select('source_lang, target_lang, provider, duration_ms')
-        .eq('user_id', userId)
-        .gte('created_at', new Date(Date.now() - numDays * 86400000).toISOString())
-        .limit(10000);
-
-      const pairs = {};
-      const providers = {};
-      let totalDuration = 0;
-
-      for (const t of (data || [])) {
-        const pairKey = `${t.source_lang}→${t.target_lang}`;
-        pairs[pairKey] = (pairs[pairKey] || 0) + 1;
-        providers[t.provider || 'unknown'] = (providers[t.provider || 'unknown'] || 0) + 1;
-        totalDuration += t.duration_ms || 0;
-      }
-
-      return NextResponse.json({
-        languagePairs: Object.entries(pairs).sort((a, b) => b[1] - a[1]).map(([pair, count]) => ({ pair, count })),
-        providers: Object.entries(providers).sort((a, b) => b[1] - a[1]).map(([provider, count]) => ({ provider, count })),
-        totalTranslations: (data || []).length,
-        avgDurationMs: (data || []).length > 0 ? Math.round(totalDuration / data.length) : 0,
-      });
-    }
 
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (e) {

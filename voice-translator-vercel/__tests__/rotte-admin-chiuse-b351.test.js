@@ -12,7 +12,12 @@ import { describe, it, expect } from 'vitest';
 const ROTTE = [
   { nome: 'admin', modulo: '../app/api/admin/route.js', metodi: ['POST'] },
   { nome: 'debug', modulo: '../app/api/debug/route.js', metodi: ['POST'] },
-  { nome: 'keys', modulo: '../app/api/keys/route.js', metodi: ['GET', 'POST'] },
+  // b.422 — /api/keys non c'e piu. Era l'unica porta della cassaforte
+  // `api_keys_vault`, tabella che sul database vivo di produzione NON
+  // ESISTE: la rotta rispondeva sempre «nessuna chiave» e nessuna
+  // schermata la chiamava (verificato: zero riferimenti nel client).
+  // Il BYOK vero passa da /api/user (azione 'save-keys'), che salva le
+  // chiavi cifrate su Redis — ed e quello che resolveAuth legge.
   { nome: 'wallet/admin', modulo: '../app/api/wallet/admin/route.js', metodi: ['GET', 'POST'] },
   { nome: 'analytics', modulo: '../app/api/analytics/route.js', metodi: ['POST'] },
   // b.349 — anche la rotta PeepOff pretende la sessione: dentro ci sono

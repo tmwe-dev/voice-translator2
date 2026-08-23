@@ -15,6 +15,31 @@
 // alimentate, e ogni ritocco allo schema del database costava lavoro su
 // codice che nessuno eseguiva. Sono state tolte. Il vecchio testo resta
 // nella storia del progetto, se un giorno servissero davvero.
+//
+// b.422 — E DELLE OTTO RIMASTE, SETTE PARLAVANO CON TABELLE CHE NON
+// ESISTONO. Verificato sul database vivo di produzione: nello schema
+// `public` non ci sono `profiles`, `user_settings`, `payments`,
+// `usage_daily`, `audit_logs`. Quindi:
+//
+//   · getProfileByEmail  → `profiles`      : tornava SEMPRE null;
+//   · getUserSettings    → `user_settings` : idem;
+//   · saveUserSettings   → `user_settings` : non ha mai scritto niente;
+//   · savePayment        → `payments`      : idem;
+//   · logAudit           → `audit_logs`    : nessun registro e mai
+//                          esistito, e il catch se ne mangiava l'errore;
+//   · trackUsage         → RPC `increment_usage`, che scrive in
+//                          `usage_daily`: una funzione che non puo
+//                          esistere sopra una tabella che non esiste;
+//   · addCreditsDB       → RPC `add_credits`, che scrive `profiles.credits`.
+//
+// Non era una svista da poco: getProfileByEmail era il PRIMO passo di
+// quasi tutte le altre strade, e siccome tornava null, tutto quello che
+// veniva dopo veniva saltato in silenzio. E' cosi che `translations` e
+// rimasta a zero righe per mesi (vedi app/api/translate/route.js).
+//
+// Resta viva una funzione sola: saveTranslation. `translations` esiste
+// davvero, ed e la fonte del rapporto costi per fornitore
+// (app/wallet/costi-fornitori.js).
 // ═══════════════════════════════════════════════
 
 // b.363 — isSupabaseEnabled era importato e mai usato: portato dentro
@@ -22,46 +47,6 @@
 import { getSupabaseAdmin } from './supabase.js';
 import { createLogger } from './logger.js';
 const log = createLogger('supabaseAPI');
-
-// ── Profile ──
-
-export async function getProfileByEmail(email) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('profiles')
-    .select('*')
-    .eq('email', email.toLowerCase())
-    .single();
-  if (error) return null;
-  return data;
-}
-
-// ── Settings ──
-
-export async function getUserSettings(userId) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('user_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .single();
-  if (error) return null;
-  return data;
-}
-
-export async function saveUserSettings(userId, settings) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('user_settings')
-    .upsert({ user_id: userId, ...settings, updated_at: new Date().toISOString() })
-    .select()
-    .single();
-  if (error) { log.error('saveSettings error:', error.message); return null; }
-  return data;
-}
 
 // ── Translations ──
 
@@ -75,68 +60,4 @@ export async function saveTranslation(translation) {
     .single();
   if (error) { log.error('saveTranslation error:', error.message); return null; }
   return data;
-}
-
-// ── Payments ──
-
-export async function savePayment(payment) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return null;
-  const { data, error } = await sb
-    .from('payments')
-    .insert(payment)
-    .select()
-    .single();
-  if (error) { log.error('savePayment error:', error.message); return null; }
-  return data;
-}
-
-// ── Usage Analytics ──
-
-export async function trackUsage(userId, stats) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return;
-  try {
-    await sb.rpc('increment_usage', {
-      p_user_id: userId,
-      p_translations: stats.translations || 0,
-      p_tts_chars: stats.ttsChars || 0,
-      p_stt_seconds: stats.sttSeconds || 0,
-      p_cost_cents: stats.costCents || 0,
-      p_tokens: stats.tokens || 0,
-    });
-  } catch (e) {
-    log.error('trackUsage error:', e.message);
-  }
-}
-
-// ── Credits (atomic operations via RPC) ──
-
-export async function addCreditsDB(userId, amount) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return 0;
-  const { data, error } = await sb.rpc('add_credits', {
-    p_user_id: userId,
-    p_amount: amount,
-  });
-  if (error) { log.error('addCredits error:', error.message); return 0; }
-  return data;
-}
-
-// ── Audit Log ──
-
-export async function logAudit(userId, action, resource, details, ipAddress) {
-  const sb = getSupabaseAdmin();
-  if (!sb) return;
-  try {
-    await sb.from('audit_logs').insert({
-      user_id: userId,
-      action,
-      resource,
-      details: details || {},
-      ip_address: ipAddress,
-    });
-  } catch (e) {
-    log.error('logAudit error:', e.message);
-  }
 }

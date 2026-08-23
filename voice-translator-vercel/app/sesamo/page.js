@@ -16,26 +16,33 @@ function detectLang() {
   return mapLang((typeof navigator !== 'undefined' ? navigator.language : 'en').split('-')[0]);
 }
 
+// ═══════════════════════════════════════════════════════════════
+// b.422 — TRE PANNELLI SU CINQUE MOSTRAVANO ZERI FINTI.
+//
+// "Panoramica", "Utenti" e "Incassi" leggevano `profiles`, `rooms`,
+// `usage_daily` e `payments`: verificato sul database vivo di
+// produzione, nessuna di quelle tabelle esiste. Il pannello si apriva
+// lo stesso, con zero utenti, zero stanze e zero incassi — e aveva
+// l'aria del cruscotto di un servizio senza clienti, invece che di un
+// cruscotto rotto. Sono stati tolti insieme alle azioni che li
+// alimentavano (vedi app/api/admin/route.js).
+//
+// Restano i due che leggono dati veri: le coppie di lingue (tabella
+// `translations`) e il Wallet, che ha sempre avuto una sua rotta —
+// /api/wallet/admin — ed e li che stanno i conti del prodotto.
+// ═══════════════════════════════════════════════════════════════
 const TAB_KEYS = [
-  { id: 'overview', labelKey: 'adminOverview', icon: '\u{1F4CA}' },
-  { id: 'users', labelKey: 'adminUsers', icon: '\u{1F465}' },
-  { id: 'revenue', labelKey: 'adminRevenue', icon: '\u{1F4B0}' },
   { id: 'languages', labelKey: 'adminLanguages', icon: '\u{1F30D}' },
   { id: 'wallet', label: 'Wallet', icon: '\u{1F4B6}' },
 ];
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('languages');
   const [adminEmail, setAdminEmail] = useState('');
   const [authenticated, setAuthenticated] = useState(false);
   const [lang, setLang] = useState('en');
   useEffect(() => { setLang(detectLang()); }, []);
   const L = (key) => t(lang, key);
-  const [stats, setStats] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [userSearch, setUserSearch] = useState('');
-  const [usageChart, setUsageChart] = useState([]);
-  const [revenueChart, setRevenueChart] = useState([]);
   const [topLanguages, setTopLanguages] = useState([]);
   const [loading, setLoading] = useState(false);
   // b.92 — chi e collegato davvero, e perche l'accesso e stato rifiutato
@@ -77,7 +84,10 @@ export default function AdminPage() {
   async function login() {
     setLoading(true);
     setErrore('');
-    const data = await fetchAdmin('stats');
+    // b.422 — si entra chiedendo le coppie di lingue: era 'stats', che
+    // non esiste piu. Serve solo a farsi riconoscere dal server, che
+    // rifiuta con 403 chi non e in ADMIN_EMAILS.
+    const data = await fetchAdmin('top-languages', { days: 30 });
     if (data.error) {
       // b.92 — prima era un alert col messaggio tecnico inglese
       setErrore(/admin/i.test(data.error)
@@ -86,25 +96,9 @@ export default function AdminPage() {
       setLoading(false);
       return;
     }
-    setStats(data);
+    setTopLanguages(data.pairs || []);
     setAuthenticated(true);
-    // Load all data
-    const [usage, revenue, langs, userList] = await Promise.all([
-      fetchAdmin('usage-chart', { days: 30 }),
-      fetchAdmin('revenue', { days: 30 }),
-      fetchAdmin('top-languages', { days: 30 }),
-      fetchAdmin('users', { limit: 50 }),
-    ]);
-    setUsageChart(usage.chart || []);
-    setRevenueChart(revenue.revenue || []);
-    setTopLanguages(langs.pairs || []);
-    setUsers(userList.users || []);
     setLoading(false);
-  }
-
-  async function searchUsers() {
-    const data = await fetchAdmin('users', { search: userSearch, limit: 50 });
-    setUsers(data.users || []);
   }
 
   if (!authenticated) {
@@ -159,7 +153,6 @@ export default function AdminPage() {
   }
 
   const fmt = (n) => (n || 0).toLocaleString('it-IT');
-  const fmtEur = (cents) => `€${((cents || 0) / 100).toFixed(2)}`;
 
   return (
     <div style={{ fontFamily: FONT, background: '#0a0a0a', color: '#e4e4e7', minHeight: '100vh', padding: 20 }}>
@@ -184,127 +177,6 @@ export default function AdminPage() {
             </button>
           ))}
         </div>
-
-        {/* ── Overview Tab ── */}
-        {activeTab === 'overview' && stats && (
-          <>
-            {/* KPI Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
-              {[
-                { label: L('adminTotalUsers'), value: fmt(stats.totalUsers), color: '#3b82f6' },
-                { label: 'Pro', value: fmt(stats.proUsers), color: '#f97316' },
-                { label: 'Business', value: fmt(stats.businessUsers), color: '#a855f7' },
-                { label: L('adminActiveToday'), value: fmt(stats.activeRooms), color: '#22c55e' },
-                { label: L('adminTranslations30d'), value: fmt(stats.today?.translations), color: '#06b6d4' },
-                { label: 'Cost Today', value: fmtEur(stats.today?.costCents), color: '#ef4444' },
-                { label: 'Revenue Today', value: fmtEur(stats.today?.revenue), color: '#22c55e' },
-                { label: L('adminRevenue30d'), value: fmtEur(stats.monthlyRevenue), color: '#f59e0b' },
-              ].map(kpi => (
-                <div key={kpi.label} style={{ background: '#18181b', borderRadius: 12, padding: 16, borderLeft: `3px solid ${kpi.color}` }}>
-                  <div style={{ fontSize: 12, color: '#71717a', marginBottom: 4 }}>{kpi.label}</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: kpi.color }}>{kpi.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Usage Chart (text-based sparkline) */}
-            <div style={{ background: '#18181b', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 600 }}>{'\u{1F4C8}'} {L('adminTranslations30d')}</h3>
-              <div style={{ display: 'flex', gap: 2, alignItems: 'end', height: 80 }}>
-                {usageChart.slice(-30).map((d, i) => {
-                  const max = Math.max(...usageChart.map(x => x.translations || 1));
-                  const h = Math.max(4, ((d.translations || 0) / max) * 72);
-                  return (
-                    <div key={i} style={{ flex: 1, background: '#f97316', borderRadius: '2px 2px 0 0', height: h, minWidth: 3, opacity: 0.4 + (i / 30) * 0.6 }}
-                      title={`${d.date}: ${d.translations} traduzioni`} />
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Users Tab ── */}
-        {activeTab === 'users' && (
-          <div style={{ background: '#18181b', borderRadius: 12, padding: 20 }}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <input value={userSearch} onChange={e => setUserSearch(e.target.value)}
-                placeholder={L('adminSearch') + '...'} onKeyDown={e => e.key === 'Enter' && searchUsers()}
-                style={{ flex: 1, background: '#09090b', border: '1px solid #27272a', borderRadius: 8, padding: '8px 12px', color: '#e4e4e7', fontSize: 14, fontFamily: FONT }} />
-              <button onClick={searchUsers} style={{ background: '#f97316', color: '#000', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', fontFamily: FONT }}>
-                {'\u{1F50D}'} {L('adminSearch')}
-              </button>
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #27272a' }}>
-                    {[L('adminEmail'), L('adminName'), L('adminPlan'), L('adminCredits'), 'Spent', 'Messages', L('adminLastLogin')].map(h => (
-                      <th key={h} style={{ padding: 8, textAlign: 'left', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map(u => (
-                    <tr key={u.id} style={{ borderBottom: '1px solid #1a1a1e' }}>
-                      <td style={{ padding: 8, fontSize: 13 }}>{u.email}</td>
-                      <td style={{ padding: 8, color: '#a1a1aa' }}>{u.name}</td>
-                      <td style={{ padding: 8 }}>
-                        <span style={{ background: u.subscription_plan === 'business' ? '#a855f7' : u.subscription_plan === 'pro' ? '#f97316' : '#27272a',
-                          color: u.subscription_plan !== 'free' ? '#fff' : '#71717a', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
-                          {u.subscription_plan || 'free'}
-                        </span>
-                      </td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>{fmt(u.credits)}</td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>{fmtEur(u.total_spent)}</td>
-                      <td style={{ padding: 8, textAlign: 'right' }}>{fmt(u.total_messages)}</td>
-                      <td style={{ padding: 8, color: '#71717a', fontSize: 12 }}>{u.created_at?.split('T')[0]}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* ── Revenue Tab ── */}
-        {activeTab === 'revenue' && (
-          <div style={{ background: '#18181b', borderRadius: 12, padding: 20 }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: 16, fontWeight: 600 }}>{'\u{1F4B0}'} {L('adminRevenueLast30')}</h3>
-            {revenueChart.length === 0 ? (
-              <div style={{ color: '#71717a', fontSize: 14 }}>Nessun pagamento nel periodo</div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #27272a' }}>
-                      <th style={{ padding: 8, textAlign: 'left', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>Data</th>
-                      <th style={{ padding: 8, textAlign: 'right', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>Crediti</th>
-                      <th style={{ padding: 8, textAlign: 'right', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>Abbonamenti</th>
-                      <th style={{ padding: 8, textAlign: 'right', color: '#71717a', fontWeight: 500, fontSize: 11, textTransform: 'uppercase' }}>Totale</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {revenueChart.map(r => (
-                      <tr key={r.date} style={{ borderBottom: '1px solid #1a1a1e' }}>
-                        <td style={{ padding: 8 }}>{r.date}</td>
-                        <td style={{ padding: 8, textAlign: 'right' }}>{fmtEur(r.credits)}</td>
-                        <td style={{ padding: 8, textAlign: 'right' }}>{fmtEur(r.subscriptions)}</td>
-                        <td style={{ padding: 8, textAlign: 'right', fontWeight: 600, color: '#22c55e' }}>{fmtEur(r.total)}</td>
-                      </tr>
-                    ))}
-                    <tr style={{ borderTop: '2px solid #27272a' }}>
-                      <td style={{ padding: 8, fontWeight: 700 }}>TOTALE</td>
-                      <td style={{ padding: 8, textAlign: 'right', fontWeight: 700 }}>{fmtEur(revenueChart.reduce((s, r) => s + r.credits, 0))}</td>
-                      <td style={{ padding: 8, textAlign: 'right', fontWeight: 700 }}>{fmtEur(revenueChart.reduce((s, r) => s + r.subscriptions, 0))}</td>
-                      <td style={{ padding: 8, textAlign: 'right', fontWeight: 700, color: '#22c55e' }}>{fmtEur(revenueChart.reduce((s, r) => s + r.total, 0))}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* ── Wallet Tab: economics reali, servizi AI, voucher ── */}
         {activeTab === 'wallet' && <AdminWallet />}
