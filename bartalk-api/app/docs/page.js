@@ -4,7 +4,10 @@ export default function Docs() {
   return <main style={{maxWidth:1100,margin:'40px auto',padding:'0 20px',fontFamily:'system-ui',lineHeight:1.55}}>
     <h1>BarTalk API v1</h1>
     <p>Gateway isolato sul Core b.420: autentica, applica scope, verifica la sessione e inoltra soltanto capability operative.</p>
-    <p><a href="/openapi">OpenAPI 3.1 JSON</a> · <a href="/api/v1/health">Readiness</a></p>
+    <p><a href="/start">Start Here</a> · <a href="/llms.txt">llms.txt</a> · <a href="/quickstart.md">Quickstart Markdown</a> · <a href="/openapi">OpenAPI 3.1 JSON</a> · <a href="/developer.json">Developer manifest</a> · <a href="/api/v1/health">Readiness</a></p>
+
+    <h2>Come condividere la API</h2>
+    <p>Per un umano condividi <code>/start</code>. Per Lovable, Claude, Codex, ChatGPT o altri agenti condividi <code>/llms.txt</code>. Non servono spiegazioni aggiuntive: quei documenti rimandano sempre alla OpenAPI corrente.</p>
 
     <h2>Autenticazione</h2>
     <ol>
@@ -12,7 +15,7 @@ export default function Docs() {
       <li>Invia <code>POST /api/v1/auth/exchange</code> con <code>Authorization: Bearer &lt;sessione BarTalk&gt;</code>.</li>
       <li>Usa la chiave <code>bt_live_...</code> come Bearer per le chiamate successive.</li>
     </ol>
-    <p>TTL massimo 7 giorni. Gli scope di default sono least-privilege; <code>scopes: []</code> crea davvero una chiave senza privilegi.</p>
+    <p>TTL massimo 7 giorni. Gli scope di default sono least-privilege; <code>scopes: []</code> crea davvero una chiave senza privilegi. Le chiavi API vanno mantenute server-side.</p>
 
     <h2>Stanze</h2>
     <p>La API key non sostituisce la membership: <code>roomSessionToken</code>/<code>X-Room-Session</code> resta il capability token della stanza e viene validato dal Core.</p>
