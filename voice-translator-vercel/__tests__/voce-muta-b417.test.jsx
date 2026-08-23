@@ -92,8 +92,20 @@ beforeEach(() => {
 afterEach(cleanup);
 
 // La strada vera: si scrive, la traduzione arriva, la voce parte da sola.
+//
+// b.422 — il campo di scrittura non e piu a schermo dall'inizio: la
+// schermata si apre col solo microfono (strada A del template, approvata da
+// Luca) e chi preferisce scrivere lo chiede col tastino del foglio. Quindi
+// qui prima si preme quel tastino, poi si scrive.
+// L'INTENTO DI QUESTA PROVA NON CAMBIA: la frase entra nel registro PRIMA
+// che si provi a parlare, cosi qualunque cosa succeda alla voce il testo
+// c'e. Cambia solo la porta da cui si entra.
 async function traduciDavvero() {
   const { container } = render(<PrimaProva onChiudi={() => {}} />);
+  const apriScrittura = [...container.querySelectorAll('button')]
+    .find((b) => /scriv|write|escrib|schreib|pis|yaz/i.test(b.getAttribute('aria-label') || ''));
+  expect(apriScrittura, 'il tastino per scrivere invece di parlare esiste').toBeTruthy();
+  await act(async () => { apriScrittura.click(); });
   const campo = container.querySelector('textarea') || container.querySelector('input[type="text"]');
   expect(campo, 'il campo dove si scrive esiste').toBeTruthy();
   await act(async () => {

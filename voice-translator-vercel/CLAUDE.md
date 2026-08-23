@@ -214,6 +214,47 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.423** (push #715) — «PARLA ORA» E' LA STRADA A. Disegno
+  approvato da Luca sul template (`template/parla-ora.html`), applicato al
+  componente: la logica di traduzione, dettatura e voce NON e stata
+  toccata, e cambiato solo cio che si vede.
+  UNA COSA SOLA A SCHERMO. Chi apre trova un microfono grande in mezzo e
+  due bandiere in alto. Prima trovava tre zone che comandavano insieme e
+  DUE scatole vuote col bordo intorno, che sembrano un modulo da
+  compilare. Il campo di scrittura ora si apre col tastino del foglio (non
+  e piu la strada principale: questo e un traduttore VOCALE), le lingue si
+  aprono dalla targhetta, e ognuna di queste cose prende SEMPRE lo stesso
+  posto — niente spinge giu niente.
+  LA TARGHETTA DICE DA DOVE A DOVE. Prima si vedeva solo la meta, e la
+  fila si tagliava a destra: non si sapeva ne da dove si partiva ne quante
+  lingue ci fossero.
+  VIA IL TITOLO «Parla ora» dalla testata: diceva dove sei in una
+  schermata in cui non puoi essere altrove. Lo dice il microfono.
+  VIA LA BARRA «ASCOLTA» a tutta larghezza. Non era un difetto di come
+  funziona — la voce parte gia da sola — ma di come lo DICE: con quel
+  triangolo da riproduzione sembrava un passo obbligatorio. Ora e un
+  tondino che serve solo a far ripetere.
+  LA MISURA DEL TESTO PER IL TASSISTA, ordine di Luca nello stesso
+  messaggio: la base scende da 34-58 a 30-52 (circa un decimo in meno),
+  due tastini A− A+ la muovono di un passo, e il passo si SALVA nelle
+  preferenze (`testoGrande`, da -2 a +3). I tastini stanno nella TESTATA,
+  che resta dritta anche col ribaltone: si toccano mentre l'altro legge.
+  Compaiono solo quando c'e del testo da misurare.
+  DUE PROVE MIE RISCRITTE, stessa malattia della trappola numero 6:
+  `prima-prova` controllava ALLA LETTERA la riga
+  `capovolto ? (<>{bloccoTradotto}{bloccoScrittura}</>)` — difendeva una
+  RIGA, non un comportamento, e si e fatta rossa quando il disegno e
+  cambiato pur restando vero cio che proteggeva. E `voce-muta-b417`
+  cercava il campo di scrittura a schermo: ora ci si arriva col tastino,
+  e l'intento (la frase entra nel registro PRIMA che si provi a parlare)
+  e intatto.
+  PROVA: `__tests__/parla-ora-strada-a-b422.test.jsx` — dodici prove che
+  MONTANO il componente e lo toccano, non leggono il sorgente.
+  NON VERIFICATO A SCHERMO: nel browser di questa postazione c'e aperta
+  una finestra di accesso Google che blocca la navigazione e che non
+  posso chiudere io. Le prove montano il componente davvero, ma il
+  collaudo a occhio lo fa Luca.
+
 - Versione: **b.422** (push #714) — IL METODO NUOVO PER LA GRAFICA, deciso
   da Luca il 23/08/2026: «fai in modo di poterlo applicare subito se ne
   scegliamo uno, poi lo salvi, perche dobbiamo fare questo lavoro in

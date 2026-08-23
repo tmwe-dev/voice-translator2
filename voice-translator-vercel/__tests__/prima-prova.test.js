@@ -40,7 +40,14 @@ describe('il traduttore subito', () => {
   it('il faccia a faccia gira il testone di 180 gradi', () => {
     expect(src, 'il tasto che capovolge esiste').toMatch(/setCapovolto/);
     expect(src, 'il tradotto si legge al contrario, dal lato dell\'altro').toContain("rotate(180deg)");
-    expect(src, 'capovolto: prima il tradotto, poi la scrittura').toMatch(/capovolto \? \(<>\{bloccoTradotto\}\{bloccoScrittura\}<\/>\)/);
+    // b.422 — questa riga prima si controllava ALLA LETTERA, e si e fatta
+    // rossa quando il disegno e cambiato (strada A, approvata da Luca)
+    // pur restando vero cio che difendeva. E' la trappola numero 6 in
+    // un'altra forma: la prova proteggeva una RIGA, non un comportamento.
+    // Cio che conta e questo: quando si capovolge, quello che l'altro
+    // legge e il TESTO TRADOTTO, e occupa il centro dello schermo.
+    expect(src, 'capovolto, al centro va il tradotto').toMatch(/capovolto \? bloccoTradotto/);
+    expect(src, 'e il campo di scrittura resta sotto, non sopra').toMatch(/\{scrivo && !scegliLingua && bloccoScrittura\}/);
   });
 
   it('non propone come meta la lingua che già parli', () => {
