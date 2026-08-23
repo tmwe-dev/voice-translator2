@@ -33,14 +33,34 @@ describe('registro API', () => {
     expect(requiresSessionProbe(matchRoute('GET','/topics/search').route)).toBe(true);
     expect(requiresSessionProbe(matchRoute('GET','/messages').route)).toBe(true);
     expect(requiresSessionProbe(matchRoute('GET','/community').route)).toBe(true);
-    expect(requiresSessionProbe(matchRoute('GET','/wallet').route)).toBe(false); // Bearer inoltrato al Core
-    expect(requiresSessionProbe(matchRoute('POST','/translate').route)).toBe(false); // userToken inoltrato
-    expect(requiresSessionProbe(matchRoute('POST','/learning/scans/deposit').route)).toBe(false); // pubblico
+    expect(requiresSessionProbe(matchRoute('GET','/wallet').route)).toBe(false);
+    expect(requiresSessionProbe(matchRoute('POST','/translate').route)).toBe(false);
+    expect(requiresSessionProbe(matchRoute('POST','/learning/scans/deposit').route)).toBe(false);
   });
 
   it('rifiuta parametri path malformati invece di lanciarli nel Core', () => {
     expect(matchRoute('GET','/conversations/%E0%A4%A')).toBe(null);
     expect(matchRoute('GET','/conversations/a%2Fb')).toBe(null);
+  });
+
+  it('i contatti espongono soltanto azioni non finanziarie note', () => {
+    expect(transformBody('contactsWrite', { action:'add', contactEmail:'a@example.com' }, {}))
+      .toMatchObject({ action:'add' });
+    expect(transformBody('contactsWrite', { action:'create-invite' }, {}))
+      .toMatchObject({ action:'create-invite' });
+
+    for (const body of [
+      { action:'create-invite', giftAmount:100 },
+      { action:'accept-invite', inviteCode:'VT-GIFT-1' },
+      { action:'future-core-action' },
+    ]) {
+      try {
+        transformBody('contactsWrite', body, {});
+        throw new Error('la trasformazione doveva rifiutare');
+      } catch (e) {
+        expect(e.status).toBe(400);
+      }
+    }
   });
 
   it('non espone rotte interne, mutazioni finanziarie non idempotenti o superfici legacy rotte', () => {
