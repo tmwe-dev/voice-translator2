@@ -1,36 +1,44 @@
 # Architettura BarTalk API v1
 
-La Public API e un gateway separato dal Core BarTalk.
-
 ```text
 client esterno
   -> API key bt_live_* / scope / rate limit
-    -> sessione BarTalk verificata
+    -> sessione BarTalk ancora valida
       -> BarTalk Core
-        -> wallet / provider / memoria / Compagni / Supabase / Redis
+        -> wallet / provider / memoria / Compagni / Redis / Supabase vivo
 ```
 
-## Regole
+## Regole non negoziabili
 
 1. Il gateway non duplica business logic del Core.
-2. Identita e ownership restano autoritative nel Core; `token/userToken` vengono sempre sostituiti dal gateway quando previsti.
-3. Gli identificativi nel path prevalgono sui valori dichiarabili nel body.
-4. Mutazioni finanziarie non idempotenti non vengono pubblicate.
-5. Il contratto pubblico segue il Core auditato: b.419 / push #711.
-6. Il Live b.418+ e un protocollo a tre passi: **apri -> heartbeat/rinnova -> chiudi**. Il gateway espone tutti e tre senza calcolare credito autonomamente.
-7. La cancellazione dati resta nel cancellatore centrale del Core. La API descrive retention e superfici legacy senza eseguire DELETE paralleli sul database.
-8. La branch API non deve modificare `voice-translator-vercel/**`.
+2. Una route Core viene pubblicata solo se la capability e realmente operativa nel backend vivo.
+3. Identita e ownership restano autoritative nel Core; `token/userToken` vengono sovrascritti dal gateway dove previsti.
+4. Le route che non inoltrano la sessione account fanno un **session probe** sul Core prima di eseguire la capability.
+5. Gli identificativi nel path prevalgono sui valori dichiarabili nel body.
+6. `fixedBody` e query fissate dalla route non sono sovrascrivibili.
+7. Le query non possono iniettare token/account secrets.
+8. Mutazioni finanziarie non idempotenti non vengono pubblicate.
+9. Payload e multipart sono limitati sui byte reali.
+10. La branch API non modifica `voice-translator-vercel/**`.
+
+## Credenziali
+
+La API key contiene la sessione BarTalk cifrata AES-256-GCM, non in chiaro. TTL massimo 7 giorni. Un array di scope vuoto resta vuoto. Logout/cancellazione/scadenza della sessione Core invalida l'uso della chiave anche sulle capability Core che non consumano direttamente il token account.
+
+## Rate limiting
+
+Le chiavi API hanno bucket separati. Le porte pubbliche usano un'impronta client (indirizzo proxy + user-agent) invece dell'unico bucket globale `public`. Redis distribuito e consigliato; il fallback locale resta una seconda barriera insieme ai limiti del Core.
 
 ## Live
 
-`POST /companions/{id}/live-sessions` apre la sessione e restituisce `battitoSecondi`.
+`apri -> heartbeat/rinnova -> chiudi`.
 
-`POST /live-sessions/{sessionId}/heartbeat` forza `azione=rinnova` e usa il `sessionId` del path.
+Il gateway non calcola credito. b.420 nel Core serializza le corse fra apertura, rinnovo e chiusura e contabilizza soltanto commit wallet confermati.
 
-`DELETE /live-sessions/{sessionId}` forza `azione=chiudi`.
+## Readiness
 
-Lock, riserve, durata, idempotenza e gestione del credito restano responsabilita del Core.
+`/api/v1/health` e locale al gateway e controlla sia raggiungibilita del Core sia disponibilita del signing secret. Un deploy che mostra la documentazione ma non puo emettere API key non viene dichiarato healthy.
 
-## GDPR
+## Superfici legacy
 
-La API non promette erasure totale quando esistono retention deliberate. In b.419 il Core cancella anche follow, like e segnalazioni Mondo; wallet accounting e contenuti pubblici Mondo restano per policy. `translation_history` viene marcato come superficie legacy inattiva, non come dato cancellato.
+Preferenze server, provider-key vault e glossari non sono pubblicati finche lo schema Supabase autorevole non esiste realmente in produzione. Questo evita una seconda verita fra documentazione/API e backend.
