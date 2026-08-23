@@ -214,6 +214,26 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.431** (push #723) — «OVERRIDE FOR FIELD 'voice_id' IS NOT
+  ALLOWED BY CONFIG»: la telefonata dal vivo moriva sul nascere. Trovato da
+  Luca provandola.
+  NON E' UN GUASTO NOSTRO E NON E' SUO: e un PERMESSO spento dall'altra
+  parte. Ogni Compagno ha la sua voce e noi la chiediamo all'apertura, ma
+  l'agente di ElevenLabs si lascia cambiare la voce solo se glielo si e
+  consentito nelle sue impostazioni. Non essendo consentito, rifiutava — e
+  finora rifiutava TUTTA la telefonata.
+  Adesso: si chiede la voce del Compagno; se viene rifiutata SOLO per
+  quello, si riapre subito senza chiederla e la telefonata si fa con la
+  voce predefinita dell'agente. Una voce diversa da quella giusta e un
+  difetto; nessuna telefonata e un difetto molto peggiore. E si DICE a
+  schermo, invece di lasciar credere che sia la voce del proprio Compagno.
+  Il rifiuto puo arrivare in due forme — come avviso di linea e come
+  eccezione all'apertura — e sono coperte tutte e due.
+  FERMO SU LUCA, ed e un interruttore, non codice: elevenlabs.io →
+  l'agente → Security → Overrides → consentire `voice_id`. Finche resta
+  spento, ogni Compagno parlera con la stessa voce (e lo schermo lo dice).
+  Acceso quello, ognuno torna ad avere la propria senza toccare niente qui.
+
 - Versione: **b.430** (push #722) — L'INDIRIZZO E LA MAPPA DENTRO «PARLA
   ORA». Collaudo di Luca: «non vedo il tasto per mostrare la mappa o
   inserire un indirizzo». Non era nascosto: non c'era. Stava solo in

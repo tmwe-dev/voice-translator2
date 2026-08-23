@@ -276,14 +276,40 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       }, ogniQuanto);
 
       const { Conversation } = await import('@elevenlabs/client');
-      const conv = await Conversation.startSession({
+
+      // ═══════════════════════════════════════════════════════════════
+      // b.431 — «Override for field 'voice_id' is not allowed by config».
+      //
+      // Trovato da Luca provandolo: si preme «Dal vivo» e la linea muore
+      // sul nascere con quel messaggio in rosso. Non e un guasto nostro e
+      // non e un guasto suo: e un PERMESSO spento dall'altra parte.
+      // Ogni Compagno ha la sua voce, e noi la chiediamo all'apertura; ma
+      // l'agente del fornitore accetta di farsi cambiare la voce solo se
+      // qualcuno gliel'ha consentito nelle sue impostazioni. Se non gliel'ha
+      // consentito, rifiuta — e finora rifiutava TUTTA la telefonata.
+      //
+      // Una voce diversa da quella giusta e un difetto. Nessuna telefonata
+      // e un difetto molto peggiore. Quindi: si chiede la voce del
+      // Compagno; se viene rifiutata SOLO per quello, si riprova subito
+      // senza chiederla, e la telefonata si fa con la voce predefinita.
+      // Chi guarda lo vede scritto: non gli si fa credere che sia la voce
+      // del suo Compagno.
+      //
+      // Perche resti un rimedio e non diventi la regola: si registra, e la
+      // riga qui sotto dice a chi legge dove si accende il permesso.
+      // (elevenlabs.io → l'agente → Security → Overrides → voice_id)
+      // ═══════════════════════════════════════════════════════════════
+      const rifiutoDellaVoce = (m) => /override.*voice_id|voice_id.*not allowed/i.test(String(m || ''));
+      let vocePropriaRifiutata = false;
+
+      const apriLinea = async (conVoce) => Conversation.startSession({
         // niente piu `agentId`: l'indirizzo e gia firmato dal nostro server
         signedUrl: permesso.signedUrl,
         connectionType: 'websocket',
         // Le variabili le costruisce il server dal Compagno vero: il
         // browser non decide piu chi e il personaggio ne come parla.
         dynamicVariables: permesso.variabili,
-        ...(permesso.voceId ? { overrides: { tts: { voiceId: permesso.voceId } } } : {}),
+        ...(conVoce && permesso.voceId ? { overrides: { tts: { voiceId: permesso.voceId } } } : {}),
         onConnect: () => { if (mioTurno()) setStato('vivo'); },
         onDisconnect: (d) => {
           if (!mioTurno()) return;
@@ -294,6 +320,10 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         onError: (messaggio) => {
           console.warn('[CompagnoLive] errore di linea:', messaggio);
           if (!mioTurno()) return;
+          // b.431 — se e SOLO la voce a non essere consentita, non e un
+          // guasto: e un permesso. Lo gestisce chi ha aperto la linea,
+          // qui non si butta giu niente.
+          if (rifiutoDellaVoce(messaggio)) { vocePropriaRifiutata = true; return; }
           // A linea gia aperta un errore puo essere passeggero: si mostra
           // senza buttare giu la chiamata. Prima dell'apertura, e fatale.
           setDettaglio(String(messaggio || ''));
@@ -311,7 +341,30 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
           setRighe((r) => [...r.slice(-24), { chi: source === 'user' ? 'tu' : 'lui', testo }]);
         },
       });
-      if (!mioTurno()) { conv.endSession?.().catch?.(() => {}); return; }
+
+      let conv;
+      try {
+        conv = await apriLinea(true);
+      } catch (e) {
+        // Il rifiuto puo arrivare anche come eccezione, non solo come avviso.
+        if (!rifiutoDellaVoce(e?.message)) throw e;
+        vocePropriaRifiutata = true;
+        conv = null;
+      }
+      if (!mioTurno()) { conv?.endSession?.().catch?.(() => {}); return; }
+      if (!conv || vocePropriaRifiutata) {
+        // Si riapre senza chiedere la voce: meglio la voce predefinita che
+        // nessuna telefonata. E si dice, invece di lasciarlo credere.
+        console.warn('[b.431] il fornitore non consente di cambiare voce: si prosegue con la sua');
+        try { await conv?.endSession?.(); } catch { /* la linea era gia caduta da se: non c'e niente da chiudere */ }
+        conv = await apriLinea(false);
+        if (!mioTurno()) { conv?.endSession?.().catch?.(() => {}); return; }
+        // Le parole di questa schermata sono scritte qui da sempre (vedi
+        // gli stati poco piu sotto): questa riga segue la stessa strada,
+        // per non lasciarne una a meta fra due modi diversi.
+        setDettaglio('Il fornitore non consente di cambiare voce: parla con la sua.');
+      }
+      if (!conv) { setStato('guasto_fornitore'); return; }
       convRef.current = conv;
       // P1.3 — il comando del microfono si mostra SOLO se la libreria lo
       // espone davvero. Prima, quando non c'era, si scriveva una proprieta
