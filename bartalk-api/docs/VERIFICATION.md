@@ -1,6 +1,6 @@
 # Verifica delle capability esposte
 
-Snapshot del Core usato per questa revisione: `8e831153f5a29e0e66ef506d4207a9826accdb4e` — **b.416 / push #710**, 23 agosto 2026.
+Snapshot del Core usato per questa revisione: `d83df8455b08fbd7837c6a547f32b7d6ad9b9db9` — **b.419 / push #711**, 23 agosto 2026.
 
 ## Regola
 
@@ -19,7 +19,7 @@ Un endpoint entra nella Public API solo se:
 |---|---|---|
 | `/v1/health` | `/api/health` | porta pubblica di health |
 | `/v1/me` | `/api/user` | sessione Core, profilo |
-| `/v1/me/data` | `/api/user action=delete-data` | b.415: cancellatore centrale + revoca sessioni; b.416 audit: copertura non ancora totale, il gateway aggiunge `deletionCoverage.status=partial` |
+| `/v1/me/data` | `/api/user action=delete-data` | b.419: cancellatore centrale + revoca sessioni + metadati personali Mondo; retention esplicite dichiarate |
 | `/v1/preferences` | `/api/user?action=get-prefs` / `sync-prefs` | identita da Bearer |
 | `/v1/provider-keys` | `/api/keys` | valori mai restituiti; storage cifrato nel Core |
 | `/v1/wallet` | `/api/wallet/saldo` | fonte contabile attuale; identita da sessione |
@@ -30,29 +30,30 @@ Un endpoint entra nella Public API solo se:
 | `/v1/transcribe` | `/api/transcribe` | multipart, Direct guard, auth, wallet |
 | `/v1/tts*` | `/api/tts*` | router/voce premium e wallet nel Core |
 | `/v1/companions` | `/api/compagni/mie` | CRUD account-scoped |
-| `/v1/companions/{id}/memory` | `/api/compagni/mie azione=dimentica` | capability introdotta in b.411; id del path prevale sul body |
+| `/v1/companions/{id}/memory` | `/api/compagni/mie azione=dimentica` | capability b.411; id del path prevale sul body |
 | `/v1/companions/{id}/messages` | `/api/compagni/amico` | controller/memoria/relazione/wallet |
-| `/v1/companions/{id}/live-sessions` | `/api/compagni/live/session` | server-resolved companion, signed URL, wallet; supporto economico dichiarato max 15 minuti continuativi |
+| `/v1/companions/{id}/live-sessions` | `/api/compagni/live/session azione=apri` | b.418: server-resolved companion, signed URL, una sessione per account, riserva a tratti |
+| `/v1/live-sessions/{sessionId}/heartbeat` | `/api/compagni/live/session azione=rinnova` | b.418: rinnova/ruota la riserva; sessionId del path autoritativo |
+| `/v1/live-sessions/{sessionId}` | `/api/compagni/live/session azione=chiudi` | durata e contabilita decise dal server |
 | `/v1/topics/search` | `/api/topics/search` | NDJSON preservato |
-| `/v1/learning/*` | `/api/compagni/*` e `/api/compiti` | Life usa il Core; b.414 aggiunge smoke produzione sulle porte |
+| `/v1/learning/*` | `/api/compagni/*` e `/api/compiti` | Life usa il Core |
 | `/v1/conversations*` | `/api/conversation` | account/partecipazione e Direct guard nel Core |
-| `/v1/realtime/*` | `/api/turn`, `/api/stanza-video` | endpoint TURN pronto, relay non ancora configurato in b.416 |
+| `/v1/realtime/*` | `/api/turn`, `/api/stanza-video` | endpoint TURN presente; relay operativo dipende dalla configurazione esterna |
 | `/v1/contacts` | `/api/contacts` | il gateway sovrascrive il campo `token` |
 | `/v1/glossaries` | `/api/glossary` | ownership nel Core |
 | `/v1/community` | `/api/mondo` | pubblicazione/privilegi restano nel Core |
 | `/v1/peepoff` | `/api/peepoff` | signaling/presenza; contenuto messaggi non memorizzato dalla route |
 | `/v1/taxi/destination` | `/api/taxi/destination` | ciphertext-only |
 
-## Correzioni rispetto alla prima API v1
+## Correzioni della API v1 fino a b.419
 
-- `/v1/wallet` non usa piu il vecchio `getCredits()` di `/api/user`: usa `/api/wallet/saldo`.
-- aggiunto `DELETE /v1/companions/{id}/memory` per la funzione **Dimentica** di b.411.
-- aggiunti `GET/PUT /v1/preferences`.
-- aggiunto BYOK `GET/POST/DELETE /v1/provider-keys` con scope dedicati.
-- aggiunti checkout ricarica e riscatti wallet sicuri.
-- gli scope di default non includono piu automaticamente tutte le scritture sensibili.
-- `fixedBody` e query fissate dal gateway sono autoritative e non sovrascrivibili dal client.
-- audit b.416: `DELETE /v1/me/data` aggiunge un esito macchina di **copertura parziale** invece di trasformare `ok:true` in una promessa di erasure totale.
+- `/v1/wallet` usa `/api/wallet/saldo`, non il vecchio credits di `/api/user`.
+- `DELETE /v1/companions/{id}/memory` espone **Dimentica**.
+- BYOK e wallet hanno scope dedicati.
+- `fixedBody`, query e identificativi del path sono autoritativi.
+- il gateway non espone invio regalo senza idempotenza.
+- b.419: `DELETE /v1/me/data` non elenca piu follow/like/segnalazioni come residui: il Core li cancella.
+- b.418/b.419: aggiunto `POST /v1/live-sessions/{sessionId}/heartbeat`; senza questa porta la Public API non avrebbe seguito il nuovo contratto economico delle chiamate lunghe.
 
 ## Funzioni volutamente NON pubblicate
 
@@ -60,55 +61,54 @@ Un endpoint entra nella Public API solo se:
 - Stripe raw;
 - subscription legacy;
 - translate-test/free/test-llm e TTS test;
-- invio regalo di credito: oggi il Core non espone un contratto idempotente per questa mutazione. Un retry non deve poter scalare due volte.
+- invio regalo di credito finche il Core non offre idempotenza.
 
-## Stato dei problemi dell'audit rilevanti al Core
+## Stato audit rilevante
 
-Verificato sul database vivo durante questa revisione:
-
-- le 8 tabelle precedentemente senza RLS restano protette secondo il modello server-only verificato nell'audit precedente;
-- le funzioni Mondo `SECURITY DEFINER` erano gia state revocate ad `anon/authenticated` e b.416 non tocca quel codice;
-- `compagno_memorie` risultava ancora a **0 righe** nell'ultima verifica: la memoria e tecnicamente riparata ma non dimostrata in uso reale;
-- `compiti_scansioni` risultava **0 righe**; il codice dichiara TTL 15 minuti ma la pulizia e opportunistica (deposito successivo/ritiro), non una scadenza DB autonoma;
-- `translations` risultava **0 righe**, ma lo schema consente `source_text` e `translated_text` associati a `user_id`, e `/api/translate` contiene il percorso di salvataggio;
-- `mondo_follows`, `mondo_comment_likes` e `mondo_segnalazioni` risultavano senza righe, ma possiedono identificativi utente e non sono nel cancellatore b.415.
+- RLS server-only e funzioni SECURITY DEFINER Mondo: correzioni precedenti restano parte del modello verificato.
+- b.418 elimina il vecchio condono oltre 15 minuti: `creditoDalVivo()` non tronca piu l'intera telefonata; le riserve Live ruotano a tratti da 3 minuti parlati.
+- b.418 introduce il lock di una sola sessione Live per account nel Core.
+- b.419 cancella `mondo_follows`, `mondo_comment_likes`, `mondo_segnalazioni` nel perimetro DELETE USER.
+- `translations` esiste nel database vivo ma risultava a 0 righe; il percorso attuale di salvataggio dipende dalla tabella legacy `profiles`, che non esiste. Non viene quindi pubblicizzata ne come storico funzionante ne come dato cancellato.
+- risultano inoltre legacy/non presenti nel DB vivo `profiles`, `payments`, `usage_daily` e altre superfici del vecchio wrapper Supabase: e un debito del Core, non business logic da ricreare nel gateway.
 
 ## Limiti ancora dichiarati
 
 ### Live
 
-- Via B resta una scelta deliberata: il Live usa il runtime conversazionale ElevenLabs, non il runtime cognitivo completo della chat scritta.
-- La sessione riserva `LIVE_TETTO_SECONDI = 15 minuti * moltiplicatore 3`; `creditoDalVivo()` applica `Math.min(...)`, quindi una linea oltre 15 minuti non rinnova la riserva e non ha un contratto economico corretto. La Public API documenta massimo 15 minuti continuativi finche il Core non introduce rinnovo/heartbeat o hard close.
-- La privacy ElevenLabs resta volutamente con retention attiva durante il collaudo; deve essere cambiata prima di utenti reali secondo la decisione documentata nel Core.
+La Public API segue il contratto b.418:
+
+1. apertura;
+2. heartbeat con cadenza `battitoSecondi`;
+3. chiusura.
+
+Il gateway non cerca di correggere race condition interne al Core: se il Core cambia semantica di lock/rinnovo/close, la API deve riallinearsi senza duplicarla.
 
 ### TURN
 
-b.416 ha corretto una precedente affermazione falsa: **non esistono script coturn pronti nel repository**. Il codice `/api/turn` genera credenziali temporanee se esistono `TURN_SECRET` e `TURN_URLS`, ma manca ancora il relay coturn installato/configurato. Senza queste env ritorna `iceServers: []` e il sistema usa solo STUN.
+Il codice `/api/turn` genera credenziali temporanee se esistono `TURN_SECRET` e `TURN_URLS`; l'operativita del relay coturn resta una configurazione infrastrutturale esterna. Senza env puo tornare `iceServers: []`.
 
 ### Identita Life
 
-b.413 usa HMAC per l'identita Life **solo se `MONDO_ID_SECRET` e impostato**; senza variabile il Core ricade intenzionalmente sul digest precedente. La configurazione Vercel non e stata verificabile tramite il connettore disponibile, quindi resta un punto operativo aperto.
+L'HMAC Life dipende da `MONDO_ID_SECRET` server-side. La Public API non puo certificare la configurazione dell'ambiente Core.
 
 ### Produzione e CI
 
-- b.416 ha Vercel `success`.
-- Il diario Core dichiara **2497 test verdi su 167 file** e 0 errori lint; il connettore GitHub disponibile mostra il check Vercel ma non fornisce in questa sessione una prova indipendente della suite completa su push.
-- `main` non risulta protetto da required checks nell'ultima verifica precedente: CI e ancora allarme, non barriera di produzione.
+Il deploy Core b.419 risulta Vercel `success` nella verifica del 23/08/2026. Il conteggio storico `2497 test / 167 file` nel diario Core precede le nuove prove b.417-b.419 e non viene riusato qui come certificazione indipendente della suite attuale.
 
-## Cancellazione dati: stato corretto dopo il nuovo audit
+## Cancellazione dati: stato b.419
 
-Il salto di b.415 e reale: il Core ora cancella Redis, Life/Compagni/PeepOff sotto impronta vecchia e nuova e revoca tutte le sessioni. Non e pero corretto chiamarlo ancora **totale**.
+La Public API continua a usare `deletionCoverage.status=partial` per un motivo preciso: restano retention deliberate, non residui Mondo dimenticati.
 
-Restano per scelta dichiarata:
+Retained by policy:
 
 - wallet accounting;
 - contenuti pubblici Mondo.
 
-Non risultano ancora garantiti dal cancellatore centrale:
+Metadati personali Mondo auditati: **cancellati dal Core b.419**.
 
-- eventuali righe `translations` associate all'utente;
-- Mondo follow;
-- Mondo comment likes;
-- Mondo segnalazioni.
+Superficie legacy inattiva dichiarata separatamente:
 
-La Public API non duplica queste cancellazioni: sarebbe una seconda business logic. Espone invece `deletionCoverage.status=partial` finche il Core non chiude il perimetro in un unico posto.
+- `translation_history`.
+
+La Public API non duplica nessuna cancellazione nel gateway.
