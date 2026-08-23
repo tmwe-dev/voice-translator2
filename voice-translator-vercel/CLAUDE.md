@@ -214,6 +214,35 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.424** (push #716) — cinque correzioni di Luca sulla
+  schermata appena rifatta, tutte dal suo schermo:
+  1. TASTI PIU GRANDI: «in un telefono le dita fanno fatica». Erano 34,
+     ora 44 — la misura sotto la quale un dito comincia a sbagliare
+     bersaglio. Un numero solo, dichiarato una volta.
+  2. TUTTA L'ALTEZZA: lasciava fuori 210 punti e sopra il testo restava
+     una fascia vuota grande quanto mezzo schermo. Ora ne lascia 158.
+  3. VIA L'ICONA TASTIERA, e il campo di testo c'e SEMPRE, in basso. Un
+     comando che apre una cosa che poteva star li da sola e un tocco
+     chiesto per niente.
+  4. SI RIBALTA SOLO CIO CHE SI LEGGE. Prima si giravano di posto i due
+     blocchi interi; adesso la riga per scrivere resta dritta e usabile e
+     a girare e soltanto il testo per l'altro. Si continua a scrivere
+     mentre lui legge.
+  5. LA MISURA SI ADATTA ALL'ALFABETO: «ottimale per lingue occidentali,
+     una via di mezzo per medio oriente e asia». Un ideogramma porta in un
+     carattere solo quanto una sillaba intera e alla stessa misura pesa di
+     piu; arabo ed ebraico stanno in mezzo. Sconto dell'88% per cinese,
+     giapponese, coreano, thai, hindi, bengali, tamil, arabo ed ebraico.
+  E IL TESTO STA IN MEZZO, non schiacciato in fondo: due distanziatori lo
+  centrano quando c'e spazio e si ritirano da soli quando e lungo, cosi si
+  puo comunque scorrere (con `justify-content: center` la parte che esce
+  sopra diventerebbe irraggiungibile — era gia successo in b.357).
+  DUE PROVE MIE RISCRITTE, e una di queste per la SECONDA volta in due
+  ore: `prima-prova` difendeva la riga che decide l'ordine dei blocchi, e
+  si e fatta rossa a ogni cambio di disegno pur restando vero ogni volta
+  cio che proteggeva. Ora chiede la cosa che vale per qualunque disegno:
+  si gira solo cio che l'altro legge, e la riga per scrivere mai.
+
 - Versione: **b.423** (push #715) — «PARLA ORA» E' LA STRADA A. Disegno
   approvato da Luca sul template (`template/parla-ora.html`), applicato al
   componente: la logica di traduzione, dettatura e voce NON e stata

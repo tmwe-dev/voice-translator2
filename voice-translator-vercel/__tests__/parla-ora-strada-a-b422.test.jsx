@@ -47,20 +47,48 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('si apre con una cosa sola a schermo', () => {
-  it('il microfono c\'e, e il campo di scrittura NO', () => {
+  it('il microfono c\'e, e il campo per scrivere anche', () => {
+    // b.423, collaudo di Luca: «l'icona tastiera non serve, eliminala e
+    // lascia sempre un campo di testo disponibile per scrivere».
     const { container } = render(<PrimaProva onChiudi={() => {}} />);
     expect(per(container, 'dictateWord'), 'il microfono e li').toBeTruthy();
-    expect(container.querySelector('textarea'), 'niente campo da compilare all\'apertura').toBeNull();
+    expect(container.querySelector('textarea'), 'e il campo c\'e sempre').toBeTruthy();
   });
 
-  it('il campo si apre col tastino, e si richiude', async () => {
+  it('non esiste piu nessun tastino che apre il campo: era un tocco per niente', () => {
     const { container } = render(<PrimaProva onChiudi={() => {}} />);
-    const scrivi = per(container, 'writeWord');
-    expect(scrivi, 'il tastino per scrivere esiste').toBeTruthy();
-    await act(async () => { scrivi.click(); });
-    expect(container.querySelector('textarea'), 'ora il campo c\'e').toBeTruthy();
-    await act(async () => { per(container, 'writeWord').click(); });
-    expect(container.querySelector('textarea'), 'e si richiude').toBeNull();
+    const apre = bottoni(container).filter((b) => (b.getAttribute('aria-label') || '') === 'writeWord');
+    expect(apre.length, 'niente icona tastiera').toBe(0);
+  });
+
+  it('i tasti si prendono con un dito: nessuno sotto i 44 punti', () => {
+    // «i tasti devono essere piu grandi perche in un telefono le dita
+    // fanno fatica». Sotto i 44 un dito comincia a sbagliare bersaglio.
+    const src = leggi('app/components/PrimaProva.js');
+    expect(src, 'la misura del tasto e dichiarata una volta sola').toMatch(/const TASTO = 44/);
+    expect(src, 'e i vecchi 34 non ci sono piu').not.toMatch(/width: 34, height: 34/);
+  });
+
+  it('il campo per scrivere sta in basso e NON si ribalta', () => {
+    // «mantieni il campo di testo in basso e ribalta solo il testo da leggere»
+    const src = leggi('app/components/PrimaProva.js');
+    const iLettura = src.indexOf('const bloccoLettura');
+    const iBasso = src.indexOf('const bloccoBasso');
+    expect(iLettura, "l'area di lettura esiste").toBeGreaterThan(0);
+    expect(iBasso, 'la riga in basso esiste').toBeGreaterThan(iLettura);
+    // la rotazione sta SOLO dentro l'area di lettura
+    const soloLettura = src.slice(iLettura, iBasso);
+    const soloBasso = src.slice(iBasso);
+    expect(soloLettura, "cio che si legge si gira").toMatch(/rotate\(180deg\)/);
+    expect(soloBasso, 'la riga per scrivere non si gira mai').not.toMatch(/rotate\(180deg\)/);
+  });
+
+  it('usa tutta l\'altezza che c\'e, non ne lascia fuori mezzo schermo', () => {
+    const src = leggi('app/components/PrimaProva.js');
+    expect(src, 'i 210 punti lasciati fuori non ci sono piu').not.toMatch(/100dvh - 210px/);
+    const m = src.match(/height: 'calc\(100dvh - (\d+)px\)'/);
+    expect(m, "l'altezza e dichiarata").toBeTruthy();
+    expect(Number(m[1]), 'e quello che resta fuori e poco').toBeLessThanOrEqual(170);
   });
 
   it('non c\'e piu il titolo «Parla ora» in testata: lo dice il microfono', () => {
@@ -78,13 +106,24 @@ describe('si apre con una cosa sola a schermo', () => {
     expect(targhetta.getAttribute('aria-label'), 'e dice le due lingue per esteso').toMatch(/→/);
   });
 
-  it('le lingue prendono il posto del microfono, non lo spingono giu', async () => {
+  it('le lingue prendono il posto della lettura, non la spingono giu', async () => {
     const { container } = render(<PrimaProva onChiudi={() => {}} />);
-    const targhetta = bottoni(container).find((b) => /→|→/.test(b.textContent || ''));
+    const targhetta = bottoni(container).find((b) => /→/.test(b.textContent || ''));
     await act(async () => { targhetta.click(); });
-    expect(per(container, 'dictateWord'), 'il microfono grande lascia il posto').toBeFalsy();
+    expect(container.querySelector('textarea'), 'anche la riga in basso lascia il posto').toBeNull();
     const conBandiere = bottoni(container).filter((b) => (b.textContent || '').length > 2);
     expect(conBandiere.length, 'e al suo posto c\'e la fila delle lingue').toBeGreaterThan(5);
+  });
+
+  it('la misura si adatta all\'alfabeto: gli ideogrammi pesano di piu', () => {
+    // «la dimensione della seconda immagine e ottimale per lingue
+    // occidentali, e una via di mezzo invece per medio oriente e asia».
+    const src = leggi('app/components/PrimaProva.js');
+    expect(src).toMatch(/ALFABETI_DENSI/);
+    for (const l of ['zh', 'ja', 'ko', 'ar', 'he', 'th', 'hi']) {
+      expect(src, `${l} sta fra gli alfabeti densi`).toMatch(new RegExp(`'${l}'`));
+    }
+    expect(src, 'e lo sconto e una via di mezzo, non un dimezzamento').toMatch(/denso \? 0\.88 : 1/);
   });
 });
 
