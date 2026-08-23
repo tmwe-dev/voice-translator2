@@ -32,6 +32,55 @@ function mergeQuery(upstream, incomingUrl) {
   return target;
 }
 
+async function rispostaGateway(route, response, responseHeaders) {
+  // Audit b.416: il Core b.415 ha fatto un salto enorme sul DELETE USER,
+  // ma non esiste ancora una prova di cancellazione TOTALE. In particolare
+  // la tabella translations puo contenere testo originale/tradotto legato a
+  // user_id e Mondo ha follow/like/segnalazioni con identificativi utente.
+  // Oggi queste tabelle risultano vuote nel DB vivo, ma il contratto pubblico
+  // non deve dipendere dal fatto che oggi non ci siano righe.
+  //
+  // Il gateway NON duplica la business logic di cancellazione: continua a
+  // delegarla al Core. Aggiunge pero un esito macchina esplicito, cosi un
+  // integratore non puo interpretare `ok:true` come certificazione di
+  // cancellazione assoluta.
+  if (route.method === 'DELETE' && route.pattern === '/me/data' && response.ok) {
+    try {
+      const tipo = response.headers.get('content-type') || '';
+      if (tipo.includes('application/json')) {
+        const data = await response.clone().json();
+        const body = {
+          ...data,
+          deletionCoverage: {
+            status: 'partial',
+            auditedCore: 'b.416',
+            retainedByPolicy: ['wallet_accounting', 'public_mondo_content'],
+            notGuaranteedByCore: [
+              'translation_history_rows',
+              'mondo_follows',
+              'mondo_comment_likes',
+              'mondo_reports',
+            ],
+            note: 'Deletion was requested from the BarTalk Core, but this response is not a certificate of total erasure.',
+          },
+        };
+        responseHeaders.set('content-type', 'application/json; charset=utf-8');
+        responseHeaders.delete('content-length');
+        return new Response(JSON.stringify(body), {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+        });
+      }
+    } catch {
+      // Se il Core cambia formato, non mascheriamo il suo risultato: si
+      // inoltra la risposta originale e il test di contratto dovra segnalarlo.
+    }
+  }
+
+  return new Response(response.body, { status: response.status, statusText: response.statusText, headers: responseHeaders });
+}
+
 export async function callUpstream({ req, route, params, sessionToken }) {
   const method = route.upstreamMethod || route.method;
   const target = mergeQuery(route.upstream, req.url);
@@ -74,7 +123,7 @@ export async function callUpstream({ req, route, params, sessionToken }) {
     const v = response.headers.get(name); if (v) responseHeaders.set(name, v);
   }
   responseHeaders.set('X-BarTalk-Core-Status', String(response.status));
-  return new Response(response.body, { status: response.status, statusText: response.statusText, headers: responseHeaders });
+  return rispostaGateway(route, response, responseHeaders);
 }
 
 export async function verifyCoreSession(sessionToken) {
