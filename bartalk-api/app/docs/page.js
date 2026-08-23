@@ -3,7 +3,7 @@ import { ROUTES } from '../../lib/routes.js';
 export default function Docs() {
   return <main style={{maxWidth:1100,margin:'40px auto',padding:'0 20px',fontFamily:'system-ui',lineHeight:1.55}}>
     <h1>BarTalk API v1</h1>
-    <p>Gateway isolato sul Core b.420: autentica, applica scope, verifica la sessione e inoltra soltanto capability operative.</p>
+    <p>Gateway isolato sul Core b.421: autentica, applica scope, verifica la sessione e inoltra soltanto capability operative.</p>
     <p><a href="/start">Start Here</a> · <a href="/llms.txt">llms.txt</a> · <a href="/quickstart.md">Quickstart Markdown</a> · <a href="/openapi">OpenAPI 3.1 JSON</a> · <a href="/developer.json">Developer manifest</a> · <a href="/api/v1/health">Readiness</a></p>
 
     <h2>Come condividere la API</h2>
