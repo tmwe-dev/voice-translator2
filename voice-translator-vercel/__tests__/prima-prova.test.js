@@ -56,8 +56,25 @@ describe('il traduttore subito', () => {
 
   it('se la voce fallisce, il testo resta comunque', () => {
     // La sintesi è un di più: non deve far fallire tutta la prova.
-    const bloccoVoce = src.slice(src.indexOf('tts-edge') - 400, src.indexOf('tts-edge') + 800);
-    expect(bloccoVoce).toMatch(/catch/);
+    //
+    // b.417 — QUESTA PROVA ERA UNA FOTOGRAFIA, ed e diventata rossa quando
+    // l'intento e stato soddisfatto MEGLIO. Misurava 1200 caratteri intorno
+    // a «tts-edge» e pretendeva di trovarci «catch»: spostando la richiesta
+    // della voce in una funzione sua, il catch e rimasto (e ora copre TUTTE
+    // e due le rotte, non una), ma la finestra si e riempita di commento.
+    // E' la trappola numero 6 del CLAUDE.md in un'altra forma: la prova
+    // difendeva una riga invece della cosa che quella riga faceva.
+    //
+    // Cio che conta davvero e questo: la riga entra nel registro PRIMA che
+    // si provi a parlare. Qualunque cosa succeda alla voce — server giu,
+    // audio vuoto, telefono muto — il testo tradotto e gia sullo schermo.
+    const codice = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    const registro = codice.indexOf('setStoria((prima) =>');
+    const voce = codice.indexOf('parla(d.translated)');
+    expect(registro, 'la riga finisce nel registro').toBeGreaterThan(-1);
+    expect(voce, 'e la voce si chiede DOPO averla scritta').toBeGreaterThan(registro);
+    // e la richiesta della voce non puo far esplodere niente
+    expect(codice, 'ogni rotta della voce e dentro una rete').toMatch(/const chiediVoce = async[\s\S]{0,600}catch/);
   });
 
   it('dice cosa sta facendo e cosa è andato storto', () => {

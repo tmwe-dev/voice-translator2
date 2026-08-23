@@ -5,6 +5,7 @@ import { memDel, memSet } from '../lib/memoria.js';
 import { LANGS, getLang, FONT, vibrate } from '../lib/constants.js';
 import Icon from './Icon.js';
 import Ascolta from './Ascolta.js';  // b.404
+import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 
 // ═══════════════════════════════════════════════════════════════
 // b.355→b.356 — "PARLA ORA", il traduttore subito.
@@ -46,7 +47,7 @@ export default function PrimaProva({ onChiudi }) {
   // b.356 — i messaggi SI SUSSEGUONO, non scompaiono (collaudo di Luca):
   // ogni frase tradotta resta nel registro, la nuova si accoda sotto.
   const [storia, setStoria] = useState([]);
-  const [stato, setStato] = useState('quieto'); // quieto | traduco | parlo | errore
+  const [stato, setStato] = useState('quieto'); // quieto | traduco | parlo | errore | muto (b.417: la traduzione c'e, la voce no)
   const [capovolto, setCapovolto] = useState(false); // FACCIA A FACCIA
   const [detto, setDetto] = useState(false);         // microfono acceso
   const recRef = useRef(null);
@@ -62,50 +63,89 @@ export default function PrimaProva({ onChiudi }) {
     ...LANGS.filter((l) => !RAPIDE.includes(l.code) && l.code !== miaLingua)];
 
   // ── LA VOCE (sempre col testo esplicito: cosi non insegue lo stato) ──
+  //
+  // b.356 — la traduzione la legge una voce ElevenLabs NATIVA della lingua
+  // d'arrivo (collaudo di Luca): la rotta sceglie da se la voce madrelingua.
+  //
+  // b.417 — TRE COSE ERANO SBAGLIATE QUI, e si vedevano solo quando il
+  // fornitore aveva una giornata storta. In produzione oggi:
+  // «Edge TTS: sintesi riuscita ma audio vuoto», 32 volte su 5 persone.
+  //
+  //  1. «ok» non vuol dire «c'e un suono». Una risposta puo tornare 200 e
+  //     portare zero byte: si costruiva un Audio vuoto, partiva `onerror`, e
+  //     lo stato tornava «quieto» come se avesse parlato. La Diretta questo
+  //     controllo lo fa da sempre (`blob.size > 0`); qui mancava.
+  //  2. IL RIPIEGO PROMESSO NON ESISTEVA. Il commento diceva «si ripiega
+  //     sulla voce di sistema: meglio una voce che nessuna voce», ma il
+  //     codice ripiegava su /api/tts-edge, che e un altro SERVER — se il
+  //     fornitore tace tacciono tutti e due. Ora l'ultimo gradino e la voce
+  //     del telefono, che non dipende dalla nostra rete ne dal nostro
+  //     credito. Non si usa /api/tts (OpenAI, il ripiego della Diretta)
+  //     perche quella rotta passa dal portafoglio e senza gettone risponde
+  //     401: farla spendere a chi sta solo provando l'app sarebbe una
+  //     decisione di prodotto, non una riparazione.
+  //  3. QUANDO NON PARLA, LO DICE. Prima restava muta in silenzio, e questa
+  //     e la PRIMA cosa che tocca chi apre l'app: la traduzione compare nel
+  //     registro e la voce non arriva mai, senza una parola.
   const parla = useCallback(async (daLeggere) => {
     const t = String(daLeggere || '').trim();
     if (!t) return;
     setStato('parlo');
-    try {
-      const tgt = getLang(meta);
-      const lingua = tgt?.speech || meta;
-      // b.356 — la traduzione la legge una voce ElevenLabs NATIVA della
-      // lingua d'arrivo (collaudo di Luca): la rotta sceglie da se la voce
-      // madrelingua per quella lingua. Se ElevenLabs non risponde — credito
-      // finito, chiave assente, rete — si ripiega sulla voce di sistema:
-      // meglio una voce che nessuna voce.
-      let v = null;
+    const tgt = getLang(meta);
+    const lingua = tgt?.speech || meta;
+
+    // Chiede una voce a una rotta. Torna il suono, oppure null quando non
+    // c'e NIENTE DA SUONARE — che comprende il caso «200 con zero byte».
+    const chiediVoce = async (rotta) => {
       try {
-        v = await fetch('/api/tts-elevenlabs', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
+        const v = await fetch(rotta, {
+          // b.363 — prima non c'era tetto di attesa: se la rete restava muta
+          // la chiamata pendeva per sempre e l'utente non vedeva mai un esito.
+          signal: AbortSignal.timeout(30000),
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: t, langCode: lingua }),
         });
+        if (!v.ok) return null;
+        const suono = await v.blob();
+        return suono && suono.size > 0 ? suono : null;
       } catch (e) {
-        // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
-        // registro non compariva nulla, e il motivo vero (rete caduta, attesa
-        // scaduta, credito finito, server rotto) restava irrecuperabile.
-        if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
-        v = null; /* ElevenLabs irraggiungibile: si prova la voce di sistema */ }
-      if (!v || !v.ok) {
-        v = await fetch('/api/tts-edge', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */,
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: t, langCode: lingua }),
-        });
+        // b.363 — prima questo guasto non lasciava traccia da nessuna parte:
+        // nel registro non compariva nulla, e il motivo vero (rete caduta,
+        // attesa scaduta, credito finito, server rotto) restava irrecuperabile.
+        if (e?.name !== 'AbortError') console.warn(`[b.417] ${rotta}:`, e?.message || e);
+        return null;
       }
-      if (!v.ok) { setStato('quieto'); return; }
-      const url = URL.createObjectURL(await v.blob());
-      try { audioRef.current?.pause(); } catch { /* la voce precedente era gia ferma: niente da interrompere */ }
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => { URL.revokeObjectURL(url); setStato('quieto'); };
-      audio.onerror = () => setStato('quieto');
-      audio.play().catch(() => setStato('quieto'));
-    } catch (e) {
-      // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
-      // registro non compariva nulla, e il motivo vero (rete caduta, attesa
-      // scaduta, credito finito, server rotto) restava irrecuperabile.
-      if (e?.name !== 'AbortError') console.warn('[b.363] /api/tts-elevenlabs:', e?.message || e);
-      setStato('quieto'); }
+    };
+
+    let suono = await chiediVoce('/api/tts-elevenlabs');
+    if (!suono) suono = await chiediVoce('/api/tts-edge');
+
+    if (!suono) {
+      // Nessun server ha una voce: parla il telefono. `parlaColSistema`
+      // torna true solo se la voce E' PARTITA davvero (b.262), non se la
+      // funzione e stata chiamata — altrimenti si tornerebbe a fingere.
+      let partita = false;
+      try { partita = await parlaColSistema(t, lingua); } catch { /* nemmeno la voce del telefono: lo dice lo stato qui sotto */ }
+      setStato(partita ? 'quieto' : 'muto');
+      return;
+    }
+
+    const url = URL.createObjectURL(suono);
+    try { audioRef.current?.pause(); } catch { /* la voce precedente era gia ferma: niente da interrompere */ }
+    const audio = new Audio(url);
+    audioRef.current = audio;
+    audio.onended = () => { URL.revokeObjectURL(url); setStato('quieto'); };
+    // b.417 — se la riproduzione fallisce QUI, il suono c'era ma il telefono
+    // non lo ha suonato (audio bloccato, formato rifiutato): si ritenta con
+    // la voce di sistema invece di tornare zitti.
+    const ripiega = async () => {
+      URL.revokeObjectURL(url);
+      let partita = false;
+      try { partita = await parlaColSistema(t, lingua); } catch { /* niente voce di sistema su questo telefono */ }
+      setStato(partita ? 'quieto' : 'muto');
+    };
+    audio.onerror = ripiega;
+    audio.play().catch(ripiega);
   }, [meta]);
 
   // ── LA TRADUZIONE: la frase finita entra nel registro, con la voce ──
@@ -321,6 +361,10 @@ export default function PrimaProva({ onChiudi }) {
           textAlign: capovolto ? 'center' : 'left' }}>…</div>
       )}
       {stato === 'errore' && <div style={{ color: '#ff5470', fontSize: 12, fontFamily: FONT }}>{L('speakNowError')}</div>}
+      {/* b.417 — la traduzione e arrivata, la voce no. Non e l'errore della
+          traduzione (quella si legge, li sopra): e un avviso, e va detto,
+          perche restare zitti senza motivo e il difetto che stiamo chiudendo. */}
+      {stato === 'muto' && <div style={{ color: C.textSecondary || 'rgba(255,255,255,0.6)', fontSize: 12, fontFamily: FONT }}>{L('speakNowVoiceless')}</div>}
     </div>
   );
 
