@@ -1,6 +1,7 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { suona as registraAudio } from '../../lib/audioLife.js';
+// b.405 — niente piu registrazione a mano: la voce entra nel registro
+// dentro `parlaTurno`, che e l'unica strada che passa di li.
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno, valutaCinqueAssi } from '../../lib/compagni/cliente.js';
@@ -92,8 +93,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       // b.317 — audit D2: la voce parla nella LINGUA del Compagno, se ne ha una.
       // b.363 — anche questa voce passa dal telecomando di Life: prima
       // suonava fuori da ogni comando e i tasti Pausa/Stop non la vedevano.
-      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce },
-        (a) => registraAudio(a, scelto?.nome || 'Amico'));
+      // b.405 — registra `parlaTurno`: qui basta dire chi sta parlando.
+      if (d.voceId) parlaTurno({ voceId: d.voceId, testo: d.risposta, lingua: scelto.lingua || lingua, userToken, modoVoce: d.modoVoce, chi: scelto?.nome || 'Amico' });
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
@@ -113,8 +114,7 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
     if (!m || sentendo >= 0) return;
     setSentendo(i);
     try {
-      await parlaTurno({ voceId: m.voceId || null, testo: m.testo, lingua: scelto?.lingua || lingua, userToken, modoVoce: m.modoVoce || null },
-        (a) => registraAudio(a, scelto?.nome || 'Amico'));
+      await parlaTurno({ voceId: m.voceId || null, testo: m.testo, lingua: scelto?.lingua || lingua, userToken, modoVoce: m.modoVoce || null, chi: scelto?.nome || 'Amico' });
     } catch { /* la voce e un di piu: il testo resta leggibile */ }
     finally { setSentendo(-1); }
   }, [messaggi, sentendo, scelto, lingua, userToken]);

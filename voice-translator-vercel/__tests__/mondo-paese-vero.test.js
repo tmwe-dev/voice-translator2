@@ -259,9 +259,28 @@ describe('la Home del Paese, e il passaggio fra pianeta e contenuti', () => {
   });
 
   it('una sfumatura unisce il globo ai contenuti invece di tagliarli', () => {
+    // b.405 — era scritto a memoria anche qui: `0.5 + discesa * 0.45`.
+    // Stesso difetto del velo grande: fotografava due numeri, non un
+    // comportamento, ed e diventato rosso quando in b.400 la fascia e
+    // stata schiarita pur restando giusta. Ora si prova la fascia per
+    // quello che deve fare: partire velata in cima, sparire in fondo,
+    // farsi piu decisa mentre scendi, e non prendere i tocchi.
     const v = leggi('app/components/MondoView.js');
-    expect(v).toMatch(/0\.5 \+ discesa \* 0\.45/);
-    const blocco = v.slice(v.indexOf('0.5 + discesa * 0.45') - 400, v.indexOf('0.5 + discesa * 0.45'));
+    const fascia = v.match(
+      /background: `linear-gradient\(180deg, rgba\(5,7,15,\$\{([^}]+)\}\) 0%, rgba\(5,7,15,0\) 100%\)`/,
+    );
+    expect(fascia, 'la fascia di raccordo esiste e dipende dalla discesa').toBeTruthy();
+    expect(fascia[1], 'e segue il gesto').toMatch(/discesa/);
+
+    const opacita = (d) => Number(new Function('discesa', `return ${fascia[1]}`)(d));
+    const fermo = opacita(0);
+    const sceso = opacita(1);
+    expect(fermo, 'a riposo il globo si vede attraverso').toBeLessThan(0.7);
+    expect(fermo, "l'opacita resta un'opacita").toBeGreaterThanOrEqual(0);
+    expect(sceso, 'scendendo il raccordo si chiude').toBeGreaterThan(fermo);
+    expect(sceso, "l'opacita resta un'opacita").toBeLessThanOrEqual(1);
+
+    const blocco = v.slice(Math.max(0, fascia.index - 400), fascia.index);
     expect(blocco, 'e non ruba i tocchi').toMatch(/pointerEvents: 'none'/);
   });
 

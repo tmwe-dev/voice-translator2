@@ -1,6 +1,6 @@
 'use client';
 import { memo, useState, useRef, useCallback, useEffect } from 'react';
-import { suona as registraAudio, suInterruzione, apriCiclo } from '../../lib/audioLife.js';
+import { suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaTavolo, parlaTurno, sintesiTavolo, preparaBriefing, reportFinale } from '../../lib/compagni/cliente.js';
@@ -72,8 +72,9 @@ function Tavolo({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
         if (fermatoRef.current) break;
         // b.363 — la voce del tavolo entra nel telecomando di Life:
         // prima Pausa e Stop non avevano alcuna presa su di lei.
-        if (r.voceId) await parlaTurno({ voceId: r.voceId, testo: r.testo, lingua, userToken },
-          (a) => registraAudio(a, r.nome || 'Tavolo'));
+        // b.405 — la registrazione a mano non serve piu: la fa `parlaTurno`,
+        // che e la strada di tutti. Qui resta solo il nome da mostrare.
+        if (r.voceId) await parlaTurno({ voceId: r.voceId, testo: r.testo, lingua, userToken, chi: r.nome || 'Tavolo' });
       }
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel

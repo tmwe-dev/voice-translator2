@@ -19,7 +19,7 @@ const IDEE_CORSO = [
   { ic: '🎨', et: 'Arte', q: 'Storia dell\'arte: opere famose e artisti da conoscere' },
 ];
 import { generaTurnoPodcast, generaSyllabus, generaLezione, generaQuiz, parlaTurno, parlaBilingue, elencoMiei, corsiDisponibili, pubblicaCorso, generaIllustrazione, generaTavola, arricchisciLezione, registraEsito, chiediAlMaestro, salvaCorsoMio, mieiCorsiUtente, segnaLibroCorso, progressoCorso, profiloStudente, salvaProfiloStudente } from '../../lib/compagni/cliente.js';
-import { suona as registraAudio, pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
+import { pausa as pausaAudio, ferma as fermaAudio, fermaElemento, suInterruzione, apriCiclo } from '../../lib/voce.js';
 import { rilevaLinguaStudiata, testoVisibile, staccaLettura } from '../../lib/compagni/corsi/lingua.js';
 import PannelloLettura from './PannelloLettura.js';
 import TestoLingua from './TestoLingua.js';
@@ -239,7 +239,18 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
 
   const ferma = useCallback(() => {
     fermatoRef.current = true;
-    if (audioRef.current) { try { audioRef.current.pause(); } catch { /* già fermo o non avviato */ } }
+    // b.405 — QUESTO STOP NON FERMAVA DAVVERO, e il difetto era invisibile.
+    //
+    // `parlaTurno` distingue una PAUSA (si riprende) da un'INTERRUZIONE (si
+    // chiude e si libera il file), e riconosce la seconda dal segno che
+    // lascia `fermaElemento`. Qui c'era un `pause()` nudo: nessun segno,
+    // quindi la promessa del turno restava appesa per sempre, `vai()` non
+    // usciva mai dal suo `await`, il `finally` non veniva raggiunto e
+    // `chiudiCiclo()` non partiva. Sullo schermo tornava scritto «pronto»
+    // mentre il telecomando restava convinto che si stesse ancora parlando.
+    //
+    // Stesso contratto del telecomando: un solo modo di dire basta.
+    fermaElemento(audioRef.current);
     setStato('pronto'); setAttuale(-1);
   }, []);
 
@@ -265,12 +276,24 @@ function Podcast({ compagni, L, lingua, userToken, testoP, muto, accent, card, b
           argomento: argomento.trim(), compagni: scelti, round, lingua, userToken,
           indice: i, precedenti: lista.slice(-6).map((t) => ({ nome: t.nome, testo: t.testo })),
         });
+        // b.405 — SI RICONTROLLA DOPO L'ATTESA, non solo prima.
+        //
+        // Il controllo in cima al giro guardava lo stato di PRIMA della
+        // richiesta. Ma una generazione dura secondi, e in quei secondi
+        // l'utente puo premere Interrompi: il server finiva comunque, la
+        // risposta tornava, e da qui partiva la voce di un turno che
+        // nessuno voleva piu sentire — dopo lo Stop, con lo schermo che
+        // diceva «pronto». Chi ha detto basta ha detto basta.
+        if (fermatoRef.current) break;
         if (d.fine) break;
         if (d.saltato || !d.turno) { if (i >= (d.totale || 0) - 1) break; continue; }
         lista.push(d.turno);
         setCopioni([...lista]);
         setAttuale(lista.length - 1);
-        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken }, (a) => { audioRef.current = a; registraAudio(a, 'Podcast'); });
+        // b.405 — `chi` al posto della registrazione a mano: ora registra
+        // `parlaTurno`. Il callback serve solo a tenere il riferimento per
+        // lo Stop locale.
+        await parlaTurno({ voceId: d.turno.voceId, testo: d.turno.testo, lingua, userToken, chi: d.turno.nome || 'Podcast' }, (a) => { audioRef.current = a; });
       }
       if (!fermatoRef.current) { setStato('pronto'); setAttuale(-1); }
     } catch (e) {
@@ -1021,7 +1044,7 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
   // b.314 — il Maestro parla con la sua voce (usato per risposta e rientro).
   const diLaVoce = useCallback(async (testo) => {
     if (!testo) return;
-    try { await parlaTurno({ voceId: tutor?.voce?.id || voceMaestroRef.current, testo, lingua: linguaCorso, userToken, onVoce: (v) => { voceMaestroRef.current = v; } }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Maestro'); }); } catch { /* la voce e un di piu */ }
+    try { await parlaTurno({ voceId: tutor?.voce?.id || voceMaestroRef.current, testo, lingua: linguaCorso, userToken, chi: tutor?.nome || 'Maestro', onVoce: (v) => { voceMaestroRef.current = v; } }, (a) => { audioLezioneRef.current = a; }); } catch { /* la voce e un di piu */ }
   }, [tutor, linguaCorso, userToken]);
 
   // b.313/b.314 — invia la domanda; il Maestro risponde ancorato alla sezione,
@@ -1099,7 +1122,8 @@ function Impara({ compagni, L, lingua, userToken, testoP, muto, accent, card, bo
           linguaParlata: linguaCorso,
           linguaStudiata: (l2 && l2 !== linguaCorso) ? l2 : linguaCorso,
           userToken,
-        }, (a) => { audioLezioneRef.current = a; registraAudio(a, 'Lezione'); });
+          chi: tutor?.nome || 'Lezione',
+        }, (a) => { audioLezioneRef.current = a; });
         if (stopLetturaRef.current) break;
         // b.313 — hai alzato la mano DURANTE il paragrafo? Ora e' finito: il
         // Maestro si gira, si dialoga, e la lettura aspetta la ripresa.

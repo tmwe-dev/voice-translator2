@@ -167,7 +167,10 @@ function GestioneCompagni({ miei, onCambiato, L, lingua, userToken, testoP, muto
     // b.317 — audit D4: l'anteprima provava la voce nella lingua dell'APP,
     // non in quella scelta per il Compagno: creavi "Yuki, maestra di
     // giapponese" e la sentivi in italiano. Ora prova la combinazione vera.
-    parlaTurno({ voceId, testo: campione, lingua: bozza?.lingua || lingua, userToken });
+    // b.405 — l'anteprima si sovrapponeva a un podcast o a una lezione in
+    // corso perche nasceva fuori dal registro. Ora entra come tutte le altre:
+    // la voce precedente tace da sola, e Interrompi prende anche questa.
+    parlaTurno({ voceId, testo: campione, lingua: bozza?.lingua || lingua, userToken, chi: nome || L('lifeVoiceSample') });
   }, [bozza, lingua, userToken, L]);
 
   // b.223 — carica la galleria locale (IndexedDB) quando si apre un form.

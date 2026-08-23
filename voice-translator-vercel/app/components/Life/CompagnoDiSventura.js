@@ -55,7 +55,10 @@ export default function CompagnoDiSventura({
       setBattuta(testo);
       ultimoRef.current = Date.now();
       // la voce la dice la rotta stessa: e la sua, non una che indoviniamo noi
-      parlaTurno({ voceId: d?.voceId || compagno.voce?.id || null, testo, lingua, userToken, modoVoce: d?.modoVoce || 'neutro' })
+      // b.405 — col nome sul telecomando: il compagno di banco parlava fuori
+      // dal registro, quindi lo Stop non lo prendeva e poteva sovrapporsi al
+      // Maestro proprio mentre la regola dice che parla quando il Maestro tace.
+      parlaTurno({ voceId: d?.voceId || compagno.voce?.id || null, testo, lingua, userToken, modoVoce: d?.modoVoce || 'neutro', chi: compagno?.nome || 'Compagno' })
         .catch(() => { /* senza voce la battuta resta scritta: va bene lo stesso */ });
     } catch { /* il compagno non risponde: sta zitto, non e un guasto */ }
     finally { setPensa(false); }

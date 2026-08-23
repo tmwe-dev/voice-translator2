@@ -214,21 +214,29 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
-- Versione: **b.405** (push #694) — dopo l'audit totale (69 reperti, tutti
-  chiusi tranne l'OCR dei Compiti, parcheggiato di proposito) e arrivata
-  una lunga giornata di collaudo dal vivo con Luca su Mondo e sulla home.
-  Fatto: il pianeta liberato dagli attrezzi che lo coprivano (ricerca e
-  filtri sono in un pannello laterale che si apre da una linguetta sul
-  bordo), le schede di News e Stanze riscritte con la STESSA grammatica
-  (da dove · di cosa · quando · chi · cos'e · quanta vita), il selettore
-  argomenti costruito sui dati veri, un righello unico per tutto cio che
-  galleggia, il canale fra app e pianeta (scegliendo un paese parte lo
-  zoom che il globo sa gia fare), le linee fisse e i pianeti decorativi
-  spenti, l'acciaio tolto dal menu in basso a favore di icone sottili.
-  E il consumo del deposito veloce tagliato dell'80% sul percorso piu
-  battuto: si chiedevano venti volte al minuto notizie che arrivavano
-  gia da sole.
-- Test: **2206 verdi su 149 file** · 0 errori di lint (avvisi tollerati)
+- Versione: **b.405** (push #699) — BATCH B dell'audit Life/Live: l'audio
+  di Life ha finalmente un padrone solo. La registrazione nel telecomando
+  e stata spostata DENTRO `parlaTurno`, che e la strada obbligata di ogni
+  voce: cosi i cinque punti che suonavano di nascosto (frase di
+  riferimento della Pronuncia, Lettura, TestoLingua, Compagno di
+  sventura, prova voce in Gestione Compagni) sono rientrati tutti in un
+  colpo, e il sesto che nascera domani e dentro senza saperlo. Aggiunto
+  `zittisci()`: fa silenzio E ASPETTA che sia vero, cosi il microfono
+  della Pronuncia non puo piu registrare la voce modello e falsare il
+  voto. Corretti i due difetti dello Stop del Podcast (la pausa nuda
+  lasciava la promessa del turno appesa per sempre; lo Stop premuto
+  durante la generazione faceva partire lo stesso la voce). Il ponte
+  `audioLife.js` di b.404 e stato tolto: tutti i chiamanti sono passati
+  a `voce.js`.
+  DIFETTO TROVATO DALLA PROVA, non dall'audit: `pause()` su un audio GIA
+  in pausa non emette l'evento `pause`, quindi «Pausa e poi Interrompi»
+  marchiava l'audio senza svegliare nessuno — promessa pendente per
+  sempre, ciclo mai chiuso, pillola accesa sul silenzio. Ora
+  l'interruzione bussa comunque.
+- Nuove prove di COMPORTAMENTO (non di stringhe): `audio-vita-b405.test.js`
+  fa girare `parlaTurno` e il registro con un audio finto. Tre di quelle
+  prove erano rosse sul codice di prima.
+- Test: **2358 verdi su 158 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

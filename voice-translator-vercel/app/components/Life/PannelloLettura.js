@@ -23,12 +23,15 @@ function PannelloLettura({ frasi, lingua, voceAssistente, nomeAssistente, userTo
     if (dicendo >= 0) return;
     setDicendo(i);
     try {
-      await parlaTurno({ voceId: voceAssistente || null, testo: frasi[i], lingua: lingua || 'en', userToken, modoVoce: 'neutro' }, (a) => {
+      // b.405 — il callback qui cambiava solo la velocita: l'audio non finiva
+      // nel registro, e la lettura restava fuori dal telecomando. Ora la
+      // registra `parlaTurno`; `chi` e il nome che compare sul comando.
+      await parlaTurno({ voceId: voceAssistente || null, testo: frasi[i], lingua: lingua || 'en', userToken, modoVoce: 'neutro', chi: nomeAssistente || 'Lettura' }, (a) => {
         if (lenta) { try { a.playbackRate = 0.7; } catch { /* il rallentamento e un di piu */ } }
       });
     } catch { /* la voce e un di piu */ }
     finally { setDicendo(-1); }
-  }, [dicendo, frasi, lingua, voceAssistente, userToken]);
+  }, [dicendo, frasi, lingua, voceAssistente, nomeAssistente, userToken]);
 
   if (!frasi?.length) return null;
   return (

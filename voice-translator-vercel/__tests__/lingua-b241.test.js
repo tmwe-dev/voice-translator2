@@ -22,7 +22,7 @@ import {
 } from '../app/lib/compagni/corsi/lingua.js';
 import { promptLezione } from '../app/lib/compagni/corsi/generatore.js';
 import { parlaBilingue } from '../app/lib/compagni/cliente.js';
-import { fermaElemento, fermatoDavvero } from '../app/lib/audioLife.js';
+import { fermaElemento, fermatoDavvero } from '../app/lib/voce.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -226,9 +226,15 @@ describe('il tag L2 arriva alla voce, e non arriva mai agli occhi', () => {
     URL.revokeObjectURL = () => {};
     // appena la voce parte, l'utente esce dalla lezione
     global.Audio = class {
-      constructor() { this.dataset = {}; this.ended = false; }
-      play() { setTimeout(() => fermaElemento(this), 0); return Promise.resolve(); }
-      pause() { if (this.onpause) this.onpause(); }
+      // b.405 — questo finto audio non sapeva ascoltare, e il registro
+      // (che ora e sulla strada di tutti) gli parla. Una finzione che non
+      // somiglia alla cosa vera prova soltanto se stessa.
+      constructor() { this.dataset = {}; this.ended = false; this.paused = true; this._o = {}; }
+      addEventListener(t, f) { (this._o[t] ||= []).push(f); }
+      removeEventListener(t, f) { this._o[t] = (this._o[t] || []).filter((x) => x !== f); }
+      dispatchEvent(e) { for (const f of [...(this._o[e.type] || [])]) f(); if (this[`on${e.type}`]) this[`on${e.type}`](); return true; }
+      play() { this.paused = false; setTimeout(() => fermaElemento(this), 0); return Promise.resolve(); }
+      pause() { if (this.paused) return; this.paused = true; this.dispatchEvent({ type: 'pause' }); }
     };
     try {
       await parlaBilingue(

@@ -61,7 +61,7 @@ describe('la pillola audio stava accesa in silenzio', () => {
   beforeEach(async () => {
     // ogni prova con lo stato pulito: il modulo tiene i contatori dentro
     vi.resetModules();
-    audio = await import('../app/lib/audioLife.js');
+    audio = await import('../app/lib/voce.js');
   });
 
   it('aprire una scheda NON accende il telecomando', () => {

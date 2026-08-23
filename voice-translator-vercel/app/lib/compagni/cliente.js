@@ -8,7 +8,7 @@
 // ═══════════════════════════════════════════════════════════════
 
 import { segmentiPerVoce } from './corsi/lingua.js';
-import { fermatoDavvero } from '../audioLife.js';
+import { fermatoDavvero, suona } from '../voce.js';
 import { segnalaSessioneCaduta } from '../sessioneCaduta.js';
 
 async function postJSON(url, corpo) {
@@ -258,7 +258,7 @@ export function reportFinale({ argomento, briefing, discussione, lingua, userTok
  * I pezzi vicini nella stessa lingua sono già uniti da segmentiPerVoce, così
  * non si paga una chiamata per ogni parola.
  */
-export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce }, onAudio) {
+export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParlata, linguaStudiata, userToken, modoVoce, onVoce, chi }, onAudio) {
   const pezzi = segmentiPerVoce(testo, { linguaParlata, linguaStudiata });
   // b.363 — CHI INTERROMPE DEVE FAR TACERE ANCHE IL PEZZO DOPO. Una frase con
   // parti in lingua straniera non si dice in un fiato: si dice in due, tre,
@@ -283,6 +283,7 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
       testo: p.testo,
       lingua: p.lingua,
       userToken,
+      chi,
       // Una citazione in lingua straniera si legge piana: è un modello di
       // pronuncia, non un'interpretazione.
       modoVoce: suaLingua ? 'neutro' : modoVoce,
@@ -291,7 +292,23 @@ export async function parlaBilingue({ voceId, voceAssistente, testo, linguaParla
   }
 }
 
-export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, onVoce }, onAudio) {
+/**
+ * b.405 — QUI PASSA OGNI VOCE DI LIFE, E DA QUI SI REGISTRA.
+ *
+ * L'audit di Luca ha trovato cinque punti che facevano parlare senza dirlo
+ * al telecomando: la frase di riferimento della Pronuncia, la lettura,
+ * il testo in lingua, il Compagno di sventura e la prova voce in Gestione
+ * Compagni. Conseguenze reali: lo Stop non li fermava, potevano parlarsi
+ * sopra, e — la peggiore — il microfono della Pronuncia poteva registrare
+ * la voce modello perche `pausa()` non sapeva che stesse suonando.
+ *
+ * Correggerli uno per uno avrebbe lasciato l'architettura fragile: il sesto
+ * punto che nasce domani sarebbe di nuovo fuori. Registra `parlaTurno`, che
+ * e la strada obbligata di tutti: chi arriva dopo e dentro senza saperlo.
+ * `chi` e il nome che il telecomando mostra; `onAudio` resta per chi deve
+ * tenere il riferimento o cambiare la velocita.
+ */
+export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, onVoce, chi }, onAudio) {
   try {
     const r = await fetch('/api/tts-elevenlabs', {
       method: 'POST',
@@ -308,6 +325,9 @@ export async function parlaTurno({ voceId, testo, lingua, userToken, modoVoce, o
     const url = URL.createObjectURL(blob);
     await new Promise((risolvi) => {
       const audio = new Audio(url);
+      // b.405 — prima di tutto il resto: il telecomando deve sapere che
+      // questa voce esiste, e la precedente deve tacere.
+      suona(audio, chi || '');
       if (onAudio) onAudio(audio);
       // b.232 — anche l'INTERRUZIONE (Stop del podcast) risolve la promise:
       // audio.pause() non emette onended/onerror e il ciclo di `vai` restava

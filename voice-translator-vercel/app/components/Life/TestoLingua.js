@@ -40,7 +40,10 @@ export default function TestoLingua({
     vibrate(6);
     setDicendo(i);
     try {
-      await parlaTurno({ voceId: voceAssistente || null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' });
+      // b.405 — `chi` e il nome sul telecomando: da qui in poi anche questa
+      // voce e nel registro unico (la registra `parlaTurno`), quindi Pausa e
+      // Interrompi la prendono e non puo parlare sopra il Maestro.
+      await parlaTurno({ voceId: voceAssistente || null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro', chi: 'Lingua' });
     } catch { /* la voce puo non arrivare (rete, credito): il testo resta leggibile lo stesso */ }
     finally { setDicendo(-1); }
   }, [dicendo, voceAssistente, lingua, userToken]);

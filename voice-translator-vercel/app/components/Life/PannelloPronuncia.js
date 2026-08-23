@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { FONT } from '../../lib/constants.js';
 import { valutaPronuncia, paroleDaRivedere } from '../../lib/compagni/corsi/pronuncia.js';
 import { parlaTurno, drillPronuncia } from '../../lib/compagni/cliente.js';
-import { pausa as pausaAudioLife } from '../../lib/audioLife.js';
+import { zittisci, suona as registraAudio } from '../../lib/voce.js';
 import { analizza, confronta, qualityGate } from '../../lib/fonia.js';
 import GraficoFonia from './GraficoFonia.js';
 import Ascolta from '../Ascolta.js';
@@ -52,8 +52,8 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
     finally { setDrillCarico(false); }
   }, [drillCarico, lingua, userToken]);
   const diParola = useCallback((testo) => {
-    parlaTurno({ voceId: voceAssistente || null, testo, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }).catch(() => {});
-  }, [voceAssistente, lingua, userToken]);
+    parlaTurno({ voceId: voceAssistente || null, testo, lingua: lingua || 'en', userToken, modoVoce: 'neutro', chi: nomeAssistente || 'Pronuncia' }).catch(() => {});
+  }, [voceAssistente, nomeAssistente, lingua, userToken]);
 
   const decodifica = useCallback(async (blob) => {
     if (!audioCtxRef.current) {
@@ -142,7 +142,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
     try {
       // b.323 — la frase la dice l'ASSISTENTE MADRELINGUA (voce fissa del
       // personaggio), non una voce qualsiasi.
-      await parlaTurno({ voceId: voceAssistente || null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro' }, async (audio) => {
+      await parlaTurno({ voceId: voceAssistente || null, testo: frase, lingua: lingua || 'en', userToken, modoVoce: 'neutro', chi: nomeAssistente || 'Pronuncia' }, async (audio) => {
         // b.322 — mentre la voce dice la frase, si CATTURA il riferimento e
         // se ne calcola l'analisi: e la "fascia attesa" del grafico.
         try {
@@ -155,7 +155,7 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
     }
     catch { /* la voce e un di piu */ }
     finally { setAscoltoFrase(false); }
-  }, [ascoltoFrase, frase, lingua, userToken, decodifica, voceAssistente]);
+  }, [ascoltoFrase, frase, lingua, userToken, decodifica, voceAssistente, nomeAssistente]);
 
   // b.323 — RIPETIZIONE LENTA: la stessa frase dell'Assistente, rallentata
   // in locale (gratis, nessuna nuova chiamata). Se il riferimento non c'e
@@ -167,10 +167,20 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
     try {
       const a = new Audio(URL.createObjectURL(b));
       a.playbackRate = 0.7;
-      a.onended = () => { try { URL.revokeObjectURL(a.src); } catch { /* url gia revocato: non e un guasto */ } };
-      a.play().catch(() => { /* autoplay negato: si riprova col tasto */ });
+      // b.405 — l'unico `new Audio` di Life che non passa da `parlaTurno`
+      // (il file e gia in mano nostra: si rallenta in locale, senza pagare
+      // una seconda chiamata). Registrarlo a mano e obbligatorio, se no e
+      // l'ultimo buco: lo Stop non lo prende e il microfono lo sente.
+      registraAudio(a, nomeAssistente || 'Lenta');
+      const liberaUrl = () => { try { URL.revokeObjectURL(a.src); } catch { /* url gia revocato: non e un guasto */ } };
+      a.onended = liberaUrl;
+      // b.405 — audit P2.3: prima si liberava l'indirizzo SOLO a fine ascolto.
+      // Un errore di lettura o un autoplay negato lo lasciavano appeso in
+      // memoria, e dopo molte prove se ne accumulavano parecchi.
+      a.onerror = liberaUrl;
+      a.play().catch(() => { liberaUrl(); /* autoplay negato: si riprova col tasto */ });
     } catch { /* la ripetizione lenta e un di piu */ }
-  }, [ascoltaFrase]);
+  }, [ascoltaFrase, nomeAssistente]);
 
   const registra = useCallback(async () => {
     if (stato === 'registro') { // secondo tocco: si ferma
@@ -182,7 +192,18 @@ export default function PannelloPronuncia({ frase, lingua, userToken, onEsito, v
       // b.317 — audit 6.7: se la lezione sta ancora parlando, il microfono
       // catturava il TTS e lo mandava a trascrivere. Prima si registra, si
       // mette in PAUSA la voce in corso.
-      pausaAudioLife();
+      //
+      // b.405 — MA NON BASTAVA, e per due motivi. Il primo: la voce di
+      // riferimento di questo stesso pannello non era nel registro, quindi
+      // la pausa non la prendeva — si chiedeva silenzio proprio all'unica
+      // voce che non si poteva sentire. Il secondo: `pausa()` non diceva
+      // QUANDO il silenzio era arrivato, e il microfono si apriva nella riga
+      // dopo. Whisper poteva trascrivere il modello insieme allo studente e
+      // il punteggio veniva falsato verso l'alto.
+      //
+      // Ora la voce di riferimento passa da `parlaTurno`, che la registra, e
+      // qui si ASPETTA il silenzio prima di chiedere il microfono.
+      await zittisci();
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
       const pezzi = [];
