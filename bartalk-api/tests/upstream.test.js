@@ -72,4 +72,26 @@ describe('adattatore Core', () => {
     const req=new Request('https://api.test/api/v1/learning/homework',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
     await expect(callUpstream({req,route,params,sessionToken:'account-session'})).resolves.toBeInstanceOf(Response);
   });
+
+  it('DELETE /me/data non trasforma ok:true in una promessa di cancellazione totale', async () => {
+    global.fetch = vi.fn(async (url, init) => {
+      calls.push({ url: String(url), init });
+      return new Response(JSON.stringify({ ok:true, deleted:['profile','compagni'] }), {
+        status:200,
+        headers:{'content-type':'application/json'},
+      });
+    });
+    const { route, params } = matchRoute('DELETE','/me/data');
+    const req = new Request('https://api.test/api/v1/me/data', { method:'DELETE' });
+    const res = await callUpstream({ req, route, params, sessionToken:'account-session' });
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.deletionCoverage.status).toBe('partial');
+    expect(body.deletionCoverage.auditedCore).toBe('b.416');
+    expect(body.deletionCoverage.notGuaranteedByCore).toContain('translation_history_rows');
+    expect(body.deletionCoverage.notGuaranteedByCore).toContain('mondo_follows');
+    const sent = JSON.parse(calls[0].init.body);
+    expect(sent.action).toBe('delete-data');
+    expect(sent.token).toBe('account-session');
+  });
 });
