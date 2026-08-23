@@ -1,6 +1,6 @@
 # Verifica delle capability esposte
 
-Snapshot del Core usato per questa revisione: `86e087369565f01ed748c12281b215b57a4e7feb` — **b.414 / push #708**, 23 agosto 2026.
+Snapshot del Core usato per questa revisione: `3451c21916d5f6538f0438d9b318c7df7b4487d0` — **b.415 / push #709**, 23 agosto 2026.
 
 ## Regola
 
@@ -18,7 +18,7 @@ Un endpoint entra nella Public API solo se:
 |---|---|---|
 | `/v1/health` | `/api/health` | porta pubblica di health |
 | `/v1/me` | `/api/user` | sessione Core, profilo |
-| `/v1/me/data` | `/api/user action=delete-data` | usa esattamente il perimetro GDPR dichiarato dal Core |
+| `/v1/me/data` | `/api/user action=delete-data` | b.415: cancellatore centrale Supabase/Redis + revoca tutte le sessioni; ledger wallet e Mondo pubblico restano dichiaratamente fuori |
 | `/v1/preferences` | `/api/user?action=get-prefs` / `sync-prefs` | identita da Bearer |
 | `/v1/provider-keys` | `/api/keys` | valori mai restituiti; storage cifrato nel Core |
 | `/v1/wallet` | `/api/wallet/saldo` | fonte contabile attuale; identita da sessione |
@@ -67,11 +67,17 @@ Verificato sul database vivo durante questa revisione:
 - le 3 funzioni Mondo `SECURITY DEFINER` non sono eseguibili da `anon/authenticated` e hanno `search_path=public, pg_temp`;
 - `compagno_memorie` e ancora a **0 righe**: la memoria e tecnicamente riparata ma non risulta usata nei dati vivi al momento della verifica.
 
-b.410-b.414 hanno inoltre aggiunto isolamento locale tra account, minimizzazione deterministica della memoria sensibile, dimentica/cancellazione ricordi, conteggio server-side dei turni memoria, stato delle fonti, abort del Tavolo e smoke Life.
+b.410-b.415 hanno inoltre aggiunto isolamento locale tra account, minimizzazione deterministica della memoria sensibile, dimentica/cancellazione ricordi, conteggio server-side dei turni memoria, stato delle fonti, abort del Tavolo e smoke Life.
 
 ## Limiti ancora dichiarati
 
 - Il Live usa ancora il runtime cognitivo ElevenLabs scelto dalla Via B; non e lo stesso runtime completo della chat scritta.
-- Il tetto/contabilizzazione della sessione Live non risulta modificato da b.411-b.414.
+- Il tetto/contabilizzazione della sessione Live non risulta modificato da b.411-b.415.
 - b.413 usa HMAC per l'identita Life **solo se `MONDO_ID_SECRET` e impostato**; senza variabile il Core ricade intenzionalmente sul digest precedente.
 - I test di produzione b.414 verificano le porte Life e i rifiuti 401/contratto Topics, non chiamate AI a pagamento.
+
+### b.415
+
+Il precedente debito GDPR dell'audit e sostanzialmente chiuso nel Core: `deleteUserData()` passa ora da `cancellazione.js`, cancella le superfici persistenti previste sotto impronta vecchia e nuova e revoca tutte le sessioni dell'utente. Rimangono per scelta il ledger wallet e i contenuti pubblici Mondo; quest'ultimo richiede ancora una decisione di prodotto su cancellazione vs anonimizzazione.
+
+b.415 riduce anche i privilegi degli iframe Business (niente top-navigation/download automatico; camera solo dove serve), ma `allow-same-origin` resta necessario: non e isolamento di origine completo.

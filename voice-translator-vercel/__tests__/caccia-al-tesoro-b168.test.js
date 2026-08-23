@@ -190,21 +190,40 @@ describe('/api/user delete-data: il messaggio non promette piu una cancellazione
     expect(codiceSenzaCommenti).not.toContain('All your data has been deleted');
   });
 
-  it('il nuovo messaggio nomina esplicitamente cosa resta: wallet e sessioni su altri dispositivi', () => {
+  it('il messaggio nomina esplicitamente cosa RESTA', () => {
+    // b.415 — QUESTA PROVA CERCAVA «other devices», e in b.168 era
+    // giusto: quella frase c'era perche le sessioni sugli altri
+    // dispositivi NON venivano revocate, e il messaggio doveva dirlo.
+    // Adesso vengono revocate, quindi la frase e sparita — e la prova e
+    // diventata rossa per aver difeso un LIMITE invece dell'INTENTO.
+    // L'intento di b.168 era: non promettere una cancellazione totale,
+    // dire cosa resta. Quello vale ancora, ed e quello che si controlla.
     const block = codiceSenzaCommenti.slice(codiceSenzaCommenti.indexOf("action === 'delete-data'"));
-    expect(block).toMatch(/wallet/i);
-    expect(block).toMatch(/other devices/i);
+    expect(block, 'il portafoglio resta, per obbligo contabile').toMatch(/wallet/i);
+    expect(block, 'e si dice che qualcosa resta, invece di sottintenderlo').toMatch(/retained/i);
+    expect(block, 'e non si promette il totale').not.toMatch(/All your data has been deleted/i);
   });
 
-  it('deleteUserData continua a cancellare profilo, sessione corrente, referral, prestiti (non di piu)', () => {
+  it('deleteUserData cancella profilo, sessione, referral e prestiti — e da b.415 anche il resto', () => {
     const users = leggi('app/lib/users.js');
     const fn = users.slice(users.indexOf('export async function deleteUserData'));
     expect(fn).toContain("deleted.push('profile')");
     expect(fn).toContain("deleted.push('session')");
     expect(fn).toContain("deleted.push('referrals')");
     expect(fn).toContain("deleted.push('lending-tokens')");
-    // Non tocca il ledger Supabase del wallet: nessun riferimento a wallet/credit_ledger qui.
-    expect(fn).not.toMatch(/wallet|credit_ledger/i);
+    // b.415 — il titolo diceva «non di piu», e quella era la fotografia
+    // di una lacuna, non un requisito: su Supabase restava tutto. Ora si
+    // cancella anche quello, e si revocano TUTTE le sessioni.
+    expect(fn).toMatch(/cancellaDatiPersistenti/);
+    expect(fn).toMatch(/revocaTutteLeSessioni/);
+  });
+
+  it('ma il portafoglio NON si cancella: e un dato che si sceglie di tenere', () => {
+    // Questa parte di b.168 resta vera e va difesa: le scritture
+    // contabili si conservano per obbligo di legge.
+    const canc = leggi('app/lib/cancellazione.js');
+    const codice = canc.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(codice).not.toMatch(/credit_ledger|wallet_riserve|'gifts'|'vouchers'/);
   });
 });
 

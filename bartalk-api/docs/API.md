@@ -22,7 +22,7 @@ Senza `scopes` viene emesso un insieme **read/basic**. Gli scope di scrittura, w
 - `GET /preferences`
 - `PUT /preferences`
 
-Nota GDPR: `/me/data` non promette una cancellazione assoluta diversa da quella del Core; i record contabili possono essere trattenuti e le altre sessioni seguono il comportamento corrente del Core.
+Nota GDPR (Core b.415): `/me/data` revoca tutte le sessioni e cancella i dati persistenti previsti da Life/Compagni/PeepOff oltre al profilo Redis. Restano il ledger wallet per obblighi contabili e i contenuti pubblici Mondo, come dichiarato dal Core.
 
 ## Chiavi provider BYOK
 

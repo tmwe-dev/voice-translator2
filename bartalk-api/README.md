@@ -5,7 +5,7 @@ Gateway API separato per `voice-translator2`.
 - Branch: `bartalk-api-v1`
 - Sorgente API: `bartalk-api/`
 - Core BarTalk: non duplicato e non modificato dalla API
-- Snapshot Core verificato: **b.414 / push #708**
+- Snapshot Core verificato: **b.415 / push #709**
 
 ## Principio
 
@@ -66,3 +66,7 @@ Vedi:
 - `docs/ARCHITECTURE.md`
 - `docs/VERIFICATION.md`
 - `/openapi`
+
+## Allineamento GDPR b.415
+
+`DELETE /api/v1/me/data` usa il nuovo cancellatore centrale del Core b.415: revoca tutte le sessioni e rimuove i dati persistenti Life/Compagni/PeepOff previsti dal Core. Restano volutamente fuori il ledger wallet e i contenuti pubblici Mondo secondo la policy dichiarata dal prodotto.

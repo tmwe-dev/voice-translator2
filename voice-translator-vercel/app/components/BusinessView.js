@@ -25,6 +25,8 @@ const STRUMENTI = [
     descKey: 'bizcardDesc',
     url: '/scanner/index.html?skin=bartalk',
     icona: 'credit',
+    // b.415 — la fotocamera SERVE qui: si inquadra un biglietto.
+    permessi: 'camera',
   },
   // b.349 — PEEPOFF, l'app sorella: messaggi che non passano mai da un
   // server. L'indirizzo e la tua email con # al posto di @.
@@ -34,6 +36,11 @@ const STRUMENTI = [
     descKey: 'peepoffDesc',
     url: '/posta',
     icona: 'lock',
+    // b.415 — PeepOff non inquadra e non registra niente: prima gli si
+    // davano fotocamera e microfono lo stesso, perche l'attributo era
+    // scritto una volta sola per tutti. Un permesso concesso a chi non
+    // lo usa e solo una cosa in piu che puo andare storta.
+    permessi: '',
   },
 ];
 
@@ -86,8 +93,28 @@ function BusinessView({ onBack }) {
       )}
 
       {aperto && (
+        // b.415 — GLI STRUMENTI STANNO IN UNA STANZA CON MENO PORTE.
+        //
+        // L'audit: «gli strumenti vengono caricati in iframe same-origin
+        // senza sandbox. Non e una vulnerabilita immediata, ma un XSS in
+        // uno strumento legacy ha conseguenze maggiori».
+        //
+        // ONESTA SU COSA QUESTO FA E NON FA. `allow-same-origin` c'e e
+        // deve esserci: gli strumenti sono NOSTRI e hanno bisogno del
+        // deposito del telefono e delle nostre rotte. Quindi questo NON
+        // e un isolamento di origine — quello si ottiene solo mettendoli
+        // su un sottodominio dedicato, che e infrastruttura e sta a Luca.
+        //
+        // Cio che toglie davvero, e non e poco: senza
+        // `allow-top-navigation` uno strumento non puo portare TUTTA
+        // l'applicazione altrove (che e il modo in cui un XSS diventa una
+        // pagina di phishing), e senza `allow-downloads` non puo far
+        // partire scaricamenti da solo. E il permesso della fotocamera
+        // ora lo ha solo chi la usa.
         <iframe src={aperto.url} title={nomeDi(aperto)}
-          allow="camera; microphone"
+          allow={aperto.permessi || ''}
+          sandbox="allow-scripts allow-forms allow-modals allow-popups allow-same-origin"
+          referrerPolicy="no-referrer"
           style={{ flex: 1, width: '100%', border: 'none', display: 'block', background: PALETTE.bgDeep }} />
       )}
     </div>
