@@ -136,6 +136,17 @@ export async function cancellaCompagno(email, id) {
   if (!owner || !id) return false;
   const sb = getSupabaseAdmin();
   if (!sb) return false;
+  // b.411 · P1.16 — PRIMA I RICORDI, POI LA SCHEDA. Verificato sul
+  // database vivo: fra le due tabelle non c'e nessun vincolo e quindi
+  // nessuna cascata. Cancellando solo la scheda, i ricordi restavano li
+  // per sempre — dati personali di cui nessuna schermata sa piu niente.
+  //
+  // L'ordine conta: se saltasse la corrente in mezzo, meglio un Compagno
+  // senza ricordi (che si vede, e si puo ricancellare) che dei ricordi
+  // senza Compagno (che non si vedono piu).
+  const { error: guastoMemorie } = await sb.from('compagno_memorie')
+    .delete().eq('owner', owner).eq('compagno_id', id);
+  if (guastoMemorie) return false;   // non si cancella la scheda se i ricordi restano
   const { error } = await sb.from('compagni').delete().eq('owner', owner).eq('id', id);
   return !error;
 }

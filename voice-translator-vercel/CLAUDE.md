@@ -214,6 +214,50 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.411** (push #705) — BATCH E, seconda parte: la memoria
+  del Compagno. Sei punti chiusi, e una scoperta che non era nell'audit.
+  SCOPERTA, dai dati vivi: `compagno_memorie` e a ZERO righe. La memoria
+  non e rotta — E' SPENTA. `compagnoVuoto()` non imposta `memoria`, quindi
+  ogni Compagno nasce senza; l'interruttore nel form c'e (GestioneCompagni)
+  ma nessuno dei quattro Compagni di Luca lo ha acceso. NON l'ho acceso io:
+  accendere per difetto una memoria di fatti personali e una decisione di
+  prodotto e di privacy, e la prende lui. Ma finche resta spenta, tutto
+  cio che segue non si vede in produzione.
+  P1.13 — LA FINESTRA «RECENTE» NON ESISTEVA. Si prendevano le ultime otto
+  righe qualunque, senza guardare ne il livello ne la data: i ricordi
+  CONSOLIDATI (i piu importanti, e i piu vecchi) occupavano gli slot dei
+  recenti. Ora sono due domande separate, e la recente e davvero a sette
+  giorni — `GIORNI_RECENTI`, come dice il piano.
+  P1.14 — UN DEPOSITO GUASTO NON E' «NESSUN RICORDO». L'errore veniva
+  buttato (`data || []`) e da fuori le due cose erano identiche. Ora si
+  registra e si puo chiedere con `memoriaDisponibile()`: un Compagno che
+  dice «non ricordo» a chi gli ha appena raccontato qualcosa e un'altra
+  cosa da un Compagno senza ricordi.
+  P1.16 — CANCELLARE UN COMPAGNO CANCELLAVA SOLO LA SUA SCHEDA. Verificato
+  sul database vivo: fra `compagni` e `compagno_memorie` non esiste NESSUN
+  vincolo, quindi nessuna cascata. I ricordi restavano li per sempre, senza
+  piu una schermata capace di raggiungerli. Ora si cancellano prima i
+  ricordi e poi la scheda, e se i ricordi non si cancellano la scheda
+  RESTA: meglio un Compagno da ricancellare che ricordi orfani. Non si e
+  messo un vincolo nel database perche i Compagni PREDEFINITI non stanno
+  in quella tabella e una chiave esterna impedirebbe di ricordarli.
+  P1.17 — «DIMENTICA» ESISTEVA E NON SI POTEVA CHIEDERE. `dimentica()`
+  stava in memoria.js da sempre, il piano promette una memoria
+  «cancellabile», e i chiamanti erano ZERO in tutto il progetto. Ora la
+  catena c'e tutta e tre: azione nella rotta, verbo nel cliente, tasto su
+  OGNI riga di Gestione Compagni — anche sui predefiniti, che non si
+  possono cancellare ma possono ricordare.
+  P1.18 — IL CONTATORE DEI TURNI ERA DEL CLIENT. `body.totale` decideva
+  quando far girare l'estrazione, che e una chiamata al modello: un client
+  modificato poteva farla girare a ogni turno, o non farla girare mai.
+  Ora conta il server in Redis per (utente, Compagno), e il numero del
+  client resta come ripiego se il deposito non risponde.
+- E UNA PROVA MIA CHE SI E' MESSA DI TRAVERSO ALLA CURA. `completamento-b244`
+  controllava ALLA LETTERA la riga del throttle, non il suo intento: e
+  diventata rossa proprio quando l'intento di b.244 e stato soddisfatto
+  MEGLIO (il conteggio dal client al server). Riscritta su cio che conta:
+  da dove NON puo venire quel numero. E' la stessa malattia della
+  trappola numero 6, in un'altra forma — la prova difendeva una riga.
 - Versione: **b.410** (push #704) — BATCH E: i due P0 di privacy.
   P0.7 — LA CHAT E GLI OBIETTIVI SI LEGGEVANO FRA ACCOUNT. Le chiavi
   erano `vt-chat-<compagno>` e `vt-obiettivi`, senza dentro chi sei.
@@ -375,7 +419,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2445 verdi su 163 file** · 0 errori di lint (avvisi tollerati)
+- Test: **2457 verdi su 164 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

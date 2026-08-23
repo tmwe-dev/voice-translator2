@@ -22,6 +22,16 @@ import { generaTesto } from './ponte.js';
 
 const log = createLogger('compagni-memoria');
 
+// b.411 · P1.13 — la misura della finestra «recente», scritta una volta.
+// Il piano dice sette giorni: da oggi lo dice anche il codice.
+export const GIORNI_RECENTI = 7;
+
+// b.411 · P1.14 — l'ultima lettura e andata bene? Serve a non far dire al
+// Compagno «non mi ricordo» quando la verita e «non sono riuscito a
+// leggere». Chi costruisce il prompt lo puo chiedere.
+let memoriaGuasta = false;
+export function memoriaDisponibile() { return !memoriaGuasta; }
+
 export const TAG_MEMORIA = ['famiglia', 'lavoro', 'studio', 'emozione', 'successo', 'difficolta', 'salute', 'hobby', 'relazioni', 'obiettivi', 'evento', 'preferenza', 'opinione', 'aneddoto', 'progresso', 'altro'];
 
 // b.231 — indizi testuali → tag, per RICHIAMARE i ricordi consolidati
@@ -114,19 +124,37 @@ export async function ricordiPerContesto(email, compagnoId, tagsRilevanti = []) 
   if (!owner || !compagnoId) return [];
   const sb = getSupabaseAdmin();
   if (!sb) return [];
-  const { data: recenti } = await sb.from('compagno_memorie')
+  // b.411 · P1.13 — LA FINESTRA RECENTE NON ESISTEVA. Il piano dice
+  // «RECENTE ~ 7 giorni, CONSOLIDATA separata», ma qui si prendevano le
+  // ultime otto righe QUALUNQUE, senza guardare ne il livello ne la data.
+  // Conseguenza: i ricordi consolidati — che per disegno sono i piu
+  // importanti e i piu vecchi — occupavano gli slot dei recenti, e il
+  // Compagno ti parlava di te di sei mesi fa credendo di parlarti di ieri.
+  const settimanaFa = new Date(Date.now() - GIORNI_RECENTI * 24 * 60 * 60 * 1000).toISOString();
+  const { data: recenti, error: guastoRecenti } = await sb.from('compagno_memorie')
     .select('content, summary, tags, importance, layer')
     .eq('owner', owner).eq('compagno_id', compagnoId)
+    .eq('layer', 'recent').gte('created_at', settimanaFa)
     .order('created_at', { ascending: false }).limit(8);
   let consolidati = [];
+  let guastoConsolidati = null;
   if (Array.isArray(tagsRilevanti) && tagsRilevanti.length) {
-    const { data } = await sb.from('compagno_memorie')
+    const { data, error } = await sb.from('compagno_memorie')
       .select('content, summary, tags, importance, layer')
       .eq('owner', owner).eq('compagno_id', compagnoId).eq('layer', 'consolidated')
       .overlaps('tags', tagsRilevanti)
       .order('importance', { ascending: false }).limit(6);
     consolidati = data || [];
+    guastoConsolidati = error || null;
   }
+  // b.411 · P1.14 — UN DEPOSITO GUASTO NON E' «NESSUN RICORDO». Prima
+  // l'errore veniva buttato (`data || []`) e da fuori le due cose erano
+  // identiche: un Compagno senza ricordi e un Compagno che non riesce a
+  // leggerli. La differenza conta, perche nel secondo caso il Compagno
+  // dice «non ricordo» a chi gli ha appena raccontato qualcosa.
+  const guasto = guastoRecenti || guastoConsolidati;
+  if (guasto) log.warn('memoria non letta', { motivo: guasto.message || 'ignoto' });
+  memoriaGuasta = !!guasto;
   // Unione senza duplicati (per content).
   const visti = new Set();
   const uniti = [];
@@ -169,7 +197,25 @@ export async function estraiRicordi(messaggi, { userToken } = {}) {
   } catch { return []; }
 }
 
-/** Cancella la memoria di un Compagno (diritto dell'utente). */
+/**
+ * b.411 · P1.16 — CANCELLARE UN COMPAGNO CANCELLAVA SOLO LA SUA SCHEDA.
+ *
+ * Verificato sul database vivo: fra `compagni` e `compagno_memorie` non
+ * esiste NESSUN vincolo, quindi nessuna cascata. I ricordi restavano li
+ * per sempre — dati personali senza piu un proprietario raggiungibile,
+ * perche sparito il Compagno dalla schermata non c'e piu modo di
+ * arrivarci.
+ *
+ * Non si aggiunge un vincolo nel database, e per un motivo: i Compagni
+ * PREDEFINITI non stanno nella tabella `compagni` (vengono dal catalogo),
+ * quindi una chiave esterna renderebbe impossibile ricordare qualcosa di
+ * loro. Si cancella qui, esplicitamente — la seconda strada che l'audit
+ * stesso indica.
+ *
+ * Ed e la stessa funzione che serve al tasto «Dimentica» (P1.17): il
+ * diritto di far dimenticare e la cancellazione del Compagno passano
+ * dalla stessa porta, cosi non possono divergere.
+ */
 export async function dimentica(email, compagnoId) {
   const owner = idUtente(email);
   if (!owner || !compagnoId) return false;

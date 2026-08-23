@@ -216,6 +216,14 @@ export function salvaMio(compagno, userToken) {
 export function cancellaMio(id, userToken) {
   return postJSON('/api/compagni/mie', { azione: 'cancella', id, userToken });
 }
+/**
+ * b.411 · P1.17 — «Dimentica»: cancella i ricordi che un Compagno ha di
+ * te, lasciando il Compagno. Vale anche per quelli del catalogo, che non
+ * si possono cancellare ma possono ricordare.
+ */
+export function dimenticaMio(id, userToken) {
+  return postJSON('/api/compagni/mie', { azione: 'dimentica', id, userToken });
+}
 
 /** Parla con un Compagno (Amico/Coach). Ritorna { risposta, voceId, memoria }.
  *  b.224 — `obiettivi` (attivi, dal dispositivo) rende il Compagno consapevole

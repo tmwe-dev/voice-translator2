@@ -3,6 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { elencaCompagni, salvaCompagno, cancellaCompagno } from '../../../lib/compagni/persistenza.js';
+import { dimentica } from '../../../lib/compagni/memoria.js';
 
 const log = createLogger('compagni-mie');
 
@@ -47,6 +48,22 @@ async function handlePost(req) {
     if (azione === 'cancella') {
       if (!body.id) return NextResponse.json({ error: 'id richiesto' }, { status: 400 });
       const fatto = await cancellaCompagno(email, body.id);
+      return NextResponse.json({ ok: fatto });
+    }
+
+    // b.411 · P1.17 — «DIMENTICA», che esisteva e non si poteva chiedere.
+    //
+    // `dimentica()` stava in memoria.js da sempre, e il piano promette una
+    // memoria «cancellabile». Ma nessuna schermata e nessuna rotta la
+    // chiamava: cercato in tutto il progetto, zero chiamanti. Una promessa
+    // di privacy che non ha un modo di essere esercitata non e una
+    // promessa, e una frase.
+    //
+    // Vale anche per i PREDEFINITI: un Compagno del catalogo puo avere
+    // ricordi tuoi, e non lo si puo cancellare per liberarsene.
+    if (azione === 'dimentica') {
+      if (!body.id) return NextResponse.json({ error: 'id richiesto' }, { status: 400 });
+      const fatto = await dimentica(email, String(body.id).slice(0, 96));
       return NextResponse.json({ ok: fatto });
     }
 
