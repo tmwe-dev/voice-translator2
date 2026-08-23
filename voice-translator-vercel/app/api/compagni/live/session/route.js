@@ -4,7 +4,7 @@ import { createLogger } from '../../../../lib/logger.js';
 import { getSession } from '../../../../lib/users.js';
 import { getLang } from '../../../../lib/constants.js';
 import { risolviCompagno } from '../../../../lib/compagni/persistenza.js';
-import { apriLineaDalVivo, chiudiLineaDalVivo } from '../../../../lib/compagni/ponte.js';
+import { apriLineaDalVivo, rinnovaLineaDalVivo, chiudiLineaDalVivo } from '../../../../lib/compagni/ponte.js';
 
 // ═══════════════════════════════════════════════════════════════
 // LA PORTA DEL DAL VIVO — b.407, Via B (docs/PIANO-LIFE-COMPAGNI.md §5-ter)
@@ -43,12 +43,17 @@ const SPIEGAZIONI = {
   'sessione-mancante': 'Sessione non indicata.',
   'sessione-illeggibile': 'Sessione non valida.',
   'non-e-tua': 'Questa sessione non e tua.',
+  // b.418
+  'gia-in-corso': 'Hai gia una telefonata aperta. Chiudila prima di aprirne un altra.',
+  'credito-finito': 'Il credito e finito: la telefonata si chiude qui.',
+  'sessione-chiusa': 'La telefonata non e piu aperta.',
 };
 
 async function handlePost(req) {
   try {
     const body = await req.json();
-    const azione = body.azione === 'chiudi' ? 'chiudi' : 'apri';
+    // b.418 — tre azioni: si apre, si tiene viva, si chiude.
+    const azione = ['chiudi', 'rinnova'].includes(body.azione) ? body.azione : 'apri';
     const userToken = typeof body.userToken === 'string' ? body.userToken : '';
 
     // ── CHI SEI. Sempre dal gettone: il corpo della richiesta lo scrive
@@ -59,6 +64,20 @@ async function handlePost(req) {
     }
     const email = sessione.email;
     const adesso = Date.now();
+
+    // ── IL BATTITO (b.418). Il telefono si fa sentire mentre parla; se il
+    //    tratto pagato sta per finire, se ne conferma uno e se ne apre un
+    //    altro. Se il credito e finito, qui si dice — e il browser chiude.
+    if (azione === 'rinnova') {
+      const sessioneId = typeof body.sessioneId === 'string' ? body.sessioneId.slice(0, 64) : '';
+      const r = await rinnovaLineaDalVivo({ sessioneId, email, adesso });
+      if (!r.ok) {
+        const corpo = { error: SPIEGAZIONI[r.motivo] || 'La telefonata non prosegue', motivo: r.motivo };
+        if (r.motivo === 'credito-finito') { corpo.creditoEsaurito = true; corpo.secondiParlati = r.secondiParlati; corpo.creditoScalato = r.scalato; }
+        return NextResponse.json(corpo, { status: r.status || 400 });
+      }
+      return NextResponse.json({ ok: true, secondiParlati: r.secondiParlati, creditoScalato: r.scalato, rinnovato: !!r.rinnovato });
+    }
 
     // ── CHIUSURA: si paga il vero e il resto torna nel portafoglio.
     if (azione === 'chiudi') {
@@ -108,6 +127,7 @@ async function handlePost(req) {
       voceId: r.voceId,
       lingua: linguaEff,
       tettoSecondi: r.tettoSecondi,
+      battitoSecondi: r.battitoSecondi,
     });
   } catch (e) {
     log.error('Errore:', e);
@@ -115,8 +135,16 @@ async function handlePost(req) {
   }
 }
 
-// Una telefonata sola per volta, e una manciata di tentativi: aprire una
-// linea e un gesto raro. Il tetto basso e la rete contro chi provasse a
-// far firmare indirizzi a raffica.
+// b.418 — IL TETTO E' SALITO DA 10 A 60, e va detto perche non sembri un
+// allentamento distratto. Fino a ieri questa porta la si bussava due
+// volte per telefonata (apri, chiudi) e dieci al minuto erano larghi.
+// Adesso c'e il battito: una richiesta al minuto per ogni linea aperta,
+// e in una casa dietro un solo indirizzo di rete ci stanno piu persone.
+// Con dieci, due telefonate in corso sotto lo stesso tetto si
+// strozzavano a vicenda — e strozzare un battito vuol dire chiudere una
+// telefonata che sta pagando.
+// Cio che il tetto proteggeva resta protetto: l'APERTURA e ancora un
+// gesto raro, e ogni apertura passa comunque dal paletto della persona
+// (una linea sola) e dalla riserva sul portafoglio.
 export const maxDuration = 30;
-export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'compagni-live-session' });
+export const POST = withApiGuard(handlePost, { maxRequests: 60, prefix: 'compagni-live-session' });

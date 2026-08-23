@@ -38,10 +38,17 @@ vi.mock('../app/lib/apiAuth.js', () => ({
 // ── il deposito veloce, finto ──
 const deposito = new Map();
 vi.mock('../app/lib/redis.js', () => ({
-  redis: async (comando, chiave, valore) => {
-    if (comando === 'SET') { deposito.set(chiave, valore); return 'OK'; }
+  // b.418 — sa fare anche `SET ... NX`, perche adesso il paletto della
+  // «una telefonata sola» ci si appoggia: un finto che dice sempre OK
+  // farebbe passare due linee e la prova non se ne accorgerebbe.
+  redis: async (comando, chiave, valore, ...resto) => {
+    if (comando === 'SET') {
+      if (resto.includes('NX') && deposito.has(chiave)) return null;
+      deposito.set(chiave, valore); return 'OK';
+    }
     if (comando === 'GET') return deposito.get(chiave) ?? null;
     if (comando === 'DEL') { deposito.delete(chiave); return 1; }
+    if (comando === 'EXPIRE') return 1;
     return null;
   },
 }));
@@ -138,7 +145,11 @@ describe('il portafoglio: si blocca un tetto, si paga il vero', () => {
     expect(c.ok).toBe(true);
     expect(c.secondiParlati).toBe(90);
     expect(c.creditoScalato).toBe(90 * MOLTIPLICATORE_DAL_VIVO);
-    expect(portafoglio.commit).toEqual([{ id: 1, secondi: 270, dettaglio: { tipo: 'dal_vivo', secondi_parlati: 90 } }]);
+    expect(portafoglio.commit.length, 'un tratto solo: novanta secondi ci stanno dentro').toBe(1);
+    expect(portafoglio.commit[0].id).toBe(1);
+    expect(portafoglio.commit[0].secondi).toBe(270);
+    expect(portafoglio.commit[0].dettaglio.tipo).toBe('dal_vivo');
+    expect(portafoglio.commit[0].dettaglio.secondi_parlati).toBe(90);
   });
 
   it('LA DURATA NON LA DICHIARA IL BROWSER: si misura qui', async () => {
@@ -150,7 +161,8 @@ describe('il portafoglio: si blocca un tetto, si paga il vero', () => {
       secondi: 1,           // il browser prova a dire «e durata un secondo»
     });
     expect(c.secondiParlati, 'dieci minuti veri').toBe(600);
-    expect(portafoglio.commit[0].secondi).toBe(creditoDalVivo(600));
+    const totale = portafoglio.commit.reduce((t, m) => t + m.secondi, 0);
+    expect(totale, 'b.418 — dieci minuti si pagano tutti, anche se in piu tratti').toBe(creditoDalVivo(600));
   });
 
   it('una linea aperta e chiusa senza parlare non si paga', async () => {
@@ -161,13 +173,23 @@ describe('il portafoglio: si blocca un tetto, si paga il vero', () => {
     expect(portafoglio.release[0].motivo).toBe('nessun-parlato');
   });
 
-  it('e non si addebita mai piu del tetto bloccato', async () => {
-    // se qualcosa andasse storto nell'orologio, il commit non puo superare
-    // cio che era stato riservato: si addebiterebbe credito mai bloccato.
+  it('non si addebita mai piu di quanto e stato bloccato, un tratto alla volta', async () => {
+    // b.418 — QUESTA PROVA DIFENDEVA IL DIFETTO. Chiedeva che una
+    // telefonata lunghissima si fermasse a `LIVE_TETTO_SECONDI`: cioe
+    // fotografava il `Math.min` che REGALAVA tutto il parlato oltre il
+    // tetto. E' diventata rossa quando il regalo e finito, ed e giusto
+    // cosi. Cio che va difeso davvero e un'altra cosa: nessun singolo
+    // addebito puo superare la riserva che lo copre — quello si
+    // addebiterebbe credito mai bloccato.
     const a = await apri();
-    const c = await chiudiLineaDalVivo({ sessioneId: a.sessioneId, email: 'luca@esempio.it', adesso: 9_999_999_999 });
-    expect(c.creditoScalato).toBe(LIVE_TETTO_SECONDI);
-    expect(portafoglio.commit[0].secondi).toBeLessThanOrEqual(LIVE_TETTO_SECONDI);
+    const c = await chiudiLineaDalVivo({ sessioneId: a.sessioneId, email: 'luca@esempio.it', adesso: 1_000_000 + 600_000 });
+    expect(c.creditoScalato, 'dieci minuti veri, pagati tutti').toBe(creditoDalVivo(600));
+    for (const m of portafoglio.commit) {
+      expect(m.secondi, 'nessun addebito supera il suo tratto').toBeLessThanOrEqual(LIVE_TETTO_SECONDI);
+    }
+    const bloccato = portafoglio.riserve.reduce((t, r) => t + r.secondi, 0);
+    expect(bloccato, 'e in totale non si scala piu di quanto si e bloccato')
+      .toBeGreaterThanOrEqual(c.creditoScalato);
   });
 
   it('se il fornitore non firma, il credito bloccato torna subito', async () => {

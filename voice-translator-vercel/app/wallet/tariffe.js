@@ -37,18 +37,60 @@ export const MOLTIPLICATORE_PREMIUM = 3;
 // in una riga sola, apposta per essere cambiato senza cercarlo.
 export const MOLTIPLICATORE_DAL_VIVO = MOLTIPLICATORE_PREMIUM;
 
-// Quanto si BLOCCA all'apertura della linea (credito, non parlato).
-// E' un tetto dichiarato, non un prezzo: alla chiusura si addebita la
-// durata vera e il resto torna indietro. Quindici minuti di telefonata
-// e la misura oltre la quale, se cade il collegamento, non vogliamo
-// tenere bloccato altro credito.
-export const LIVE_TETTO_MINUTI = 15;
-export const LIVE_TETTO_SECONDI = LIVE_TETTO_MINUTI * 60 * MOLTIPLICATORE_DAL_VIVO;
+// ═══ LA LINEA DAL VIVO SI PAGA A TRATTI — b.418 ═══
+//
+// FINO A IERI ERA UN BLOCCO SOLO DA QUINDICI MINUTI, e aveva due difetti
+// che si sommavano, tutti e due miei, scritti in b.407.
+//
+//  1. IL TETTO ERA ANCHE UN CONDONO. `creditoDalVivo` faceva
+//     `Math.min(TETTO, ...)` e NESSUNO fermava la telefonata al
+//     quindicesimo minuto: dal sedicesimo in poi si parlava gratis, e il
+//     fornitore lo pagavamo noi.
+//  2. PEGGIO, E NON ERA NELL'AUDIT: una riserva viva da piu di DIECI
+//     minuti viene rilasciata dal cron delle riserve scadute
+//     (migrazione 011, `INTERVAL '10 minutes'`, in agenda ogni ora a :15).
+//     Il tetto di quindici minuti era gia oltre la vita massima di una
+//     riserva: se il cron passava durante la telefonata, la riserva
+//     spariva e alla chiusura il commit non trovava piu niente da
+//     scalare. Non «meno del dovuto»: ZERO, tutta la telefonata.
+//
+// Da qui in poi si tiene UNA riserva sola alla volta, corta, e la si
+// RUOTA prima che invecchi: si conferma il consumato, se ne apre una
+// nuova. Tre minuti parlati per tratto — comodamente dentro i dieci
+// minuti del cron, con margine per un telefono lento o una rete storta.
+//
+// EFFETTO COLLATERALE BUONO: se il telefono sparisce a meta telefonata,
+// cio che e gia stato confermato resta addebitato e solo l'ultimo tratto
+// torna indietro. Prima si perdeva tutto.
+export const LIVE_TRATTO_MINUTI = 3;
+export const LIVE_TRATTO_SECONDI = LIVE_TRATTO_MINUTI * 60 * MOLTIPLICATORE_DAL_VIVO;
 
-/** Da secondi di telefonata a secondi di credito. Una riga, un posto solo. */
+// Quando ruotare: se del tratto in corso resta meno di questo, si
+// conferma e se ne apre un altro. Il battito del telefono arriva ogni
+// minuto, quindi un minuto di credito di margine basta e avanza.
+export const LIVE_SOGLIA_RINNOVO = 60 * MOLTIPLICATORE_DAL_VIVO;
+
+// Ogni quanto il telefono deve farsi sentire. Se smette, la linea muore
+// da sola: la riserva in corso la libera il cron, e il resto e gia
+// confermato.
+export const LIVE_BATTITO_SECONDI = 60;
+
+// b.407 → b.418: i vecchi nomi restano perche la parola «tetto» compare
+// ancora nella risposta al browser e nelle prove. Adesso pero il tetto e
+// quello del SINGOLO TRATTO, non della telefonata: la telefonata non ha
+// piu un tetto, ha un rinnovo.
+export const LIVE_TETTO_MINUTI = LIVE_TRATTO_MINUTI;
+export const LIVE_TETTO_SECONDI = LIVE_TRATTO_SECONDI;
+
+/**
+ * Da secondi di telefonata a secondi di credito. Una riga, un posto solo.
+ * b.418 — SENZA `Math.min`: quello non era un tetto di sicurezza, era il
+ * punto in cui si smetteva di far pagare. Il tetto vero e la riserva, e
+ * ora la riserva si rinnova.
+ */
 export function creditoDalVivo(secondiParlati) {
   const s = Number.isFinite(secondiParlati) ? Math.max(0, secondiParlati) : 0;
-  return Math.min(LIVE_TETTO_SECONDI, Math.ceil(s * MOLTIPLICATORE_DAL_VIVO));
+  return Math.ceil(s * MOLTIPLICATORE_DAL_VIVO);
 }
 
 // ── Pacchetti in vendita (Stripe) ──
