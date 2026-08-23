@@ -62,6 +62,17 @@
   .cartellino .nome { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
   .didascalia { font-size: 12.5px; line-height: 1.5; color: var(--testo-3); margin: 0 0 14px; min-height: 38px; }
 
+  /* ══ IL BOLLINO DI STATO — cosa e gia nel programma e cosa no ══ */
+  .stato {
+    display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.6px;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .stato.fatto   { color: var(--verde); background: rgba(61,220,132,0.12); border: 1px solid rgba(61,220,132,0.28); }
+  .stato.gia     { color: var(--muto);  background: rgba(238,242,255,0.06); border: 1px solid var(--bordo); }
+  .stato.dafare  { color: var(--oro);   background: rgba(255,196,77,0.10); border: 1px solid rgba(255,196,77,0.26); }
+  .legenda { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 0; }
+
   /* ══ LA CORNICE DEL TELEFONO ══ */
   .telefono {
     width: 340px; height: 660px; border-radius: 30px; border: 1px solid var(--bordo);
@@ -173,7 +184,7 @@
 
 <div class="foglio">
 
-  <p class="occhiello">TEMPLATE · PAGINA 2 DI N · b.431</p>
+  <p class="occhiello">TEMPLATE · PAGINA 2 DI N · aggiornato a b.435</p>
   <h1>BarTalk, layout completo</h1>
   <p class="sommario">
     La stessa mentalita di «Parla ora», portata su tutte le schermate. Il sistema resta
@@ -196,13 +207,35 @@
        LE PAGINE
        ═══════════════════════════════════════════════════════════ -->
   <h2 class="sezione">Le pagine</h2>
-  <p class="sotto">Scorri di lato. Ogni telefono e a misura vera, coi colori veri.</p>
+  <p class="sotto">
+    Scorri di lato. Ogni telefono e a misura vera, coi colori veri, e porta il suo BOLLINO:
+    cosi il file non e piu un disegno fermo, ma dice a che punto siamo.
+  </p>
+  <div class="legenda">
+    <span class="stato fatto" style="margin:0">FATTO</span>
+    <span style="font-size:12.5px;color:var(--testo-3);align-self:center">portata nel programma, col numero della versione</span>
+  </div>
+  <div class="legenda">
+    <span class="stato gia" style="margin:0">GIA COSI</span>
+    <span style="font-size:12.5px;color:var(--testo-3);align-self:center">guardata e NON toccata: era gia come la vuole il layout</span>
+  </div>
+  <div class="legenda" style="margin-bottom:6px">
+    <span class="stato dafare" style="margin:0">DA FARE</span>
+    <span style="font-size:12.5px;color:var(--testo-3);align-self:center">disegnata qui, non ancora nel programma</span>
+  </div>
+  <p class="sotto" style="margin-top:14px">
+    <b style="color:var(--testo)">Cinque fatte, tre gia a posto, cinque da fare.</b>
+    E una regola che vale per tutte: si applica dove RIPARA qualcosa, non si restaura cio che
+    gia funziona. Ogni pagina segnata FATTO ha chiuso un difetto vero, non un difetto di
+    gusto — il microfono che mancava, le lingue buttate un passo prima di servire, un tocco
+    in piu per cambiare scheda, la lezione che sapeva a che punto sei e non lo diceva.
+  </p>
 
   <div class="pista">
 
     <!-- ── HOME ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">01</span><span class="nome">Home</span></div>
+      <div class="cartellino"><span class="lettera">01</span><span class="nome">Home</span><span class="stato gia">GIA COSI</span></div>
       <p class="didascalia">Il microfono comanda. Le sezioni sono righe, non riquadri: si leggono in fila.</p>
       <div class="telefono">
         <div class="schermo">
@@ -243,7 +276,7 @@
 
     <!-- ── MONDO ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span></div>
+      <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span><span class="stato fatto">FATTO · b.433</span></div>
       <p class="didascalia">Il pianeta e la porta. Dice sempre dove sei, e come uscirne.</p>
       <div class="telefono">
         <div class="globo"></div><div class="velo"></div>
@@ -290,7 +323,7 @@
 
     <!-- ── VITA ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span></div>
+      <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span><span class="stato fatto">FATTO · b.432</span></div>
       <p class="didascalia">Sette schede erano troppe da leggere in fila. Restano sette, ma con l'icona che parla.</p>
       <div class="telefono">
         <div class="schermo">
@@ -332,7 +365,7 @@
 
     <!-- ── STANZA ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">04</span><span class="nome">Stanza</span></div>
+      <div class="cartellino"><span class="lettera">04</span><span class="nome">Stanza</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi c'e e in che lingua, prima di tutto. Il menu ••• smette di comprimersi.</p>
       <div class="telefono">
         <div class="schermo">
@@ -370,7 +403,7 @@
 
     <!-- ── BUSINESS ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span></div>
+      <div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Strumenti, non riquadri. Ognuno dice cosa fa in una riga.</p>
       <div class="telefono">
         <div class="schermo">
@@ -406,7 +439,7 @@
 
     <!-- ── PROFILO ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">06</span><span class="nome">Profilo</span></div>
+      <div class="cartellino"><span class="lettera">06</span><span class="nome">Profilo</span><span class="stato gia">GIA COSI</span></div>
       <p class="didascalia">Il credito in alto, perche e la cosa che si viene a guardare.</p>
       <div class="telefono">
         <div class="schermo">
@@ -455,7 +488,7 @@
 
     <!-- ── CHAT / STORICO ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">07</span><span class="nome">Chat</span></div>
+      <div class="cartellino"><span class="lettera">07</span><span class="nome">Chat</span><span class="stato fatto">FATTO · b.433</span></div>
       <p class="didascalia">Le conversazioni avute. Ognuna dice con chi, in che lingue, e quando.</p>
       <div class="telefono">
         <div class="schermo">
@@ -479,7 +512,7 @@
 
     <!-- ── IMPARA · una lezione ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">08</span><span class="nome">Impara</span></div>
+      <div class="cartellino"><span class="lettera">08</span><span class="nome">Impara</span><span class="stato fatto">FATTO · b.435</span></div>
       <p class="didascalia">Una lezione per volta. Il Maestro legge, tu segui, e puoi alzare la mano.</p>
       <div class="telefono">
         <div class="schermo">
@@ -513,7 +546,7 @@
 
     <!-- ── PODCAST ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">09</span><span class="nome">Podcast</span></div>
+      <div class="cartellino"><span class="lettera">09</span><span class="nome">Podcast</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi parla adesso, e cosa sta dicendo. Il resto scorre sotto.</p>
       <div class="telefono">
         <div class="schermo">
@@ -547,7 +580,7 @@
 
     <!-- ── OBIETTIVI E COMPITI ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">10</span><span class="nome">Obiettivi</span></div>
+      <div class="cartellino"><span class="lettera">10</span><span class="nome">Obiettivi</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Poche cose, con quanto manca. Aggiungerne una e una riga sola.</p>
       <div class="telefono">
         <div class="schermo">
@@ -585,7 +618,7 @@
 
     <!-- ── TAXITALK ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">11</span><span class="nome">TaxiTalk</span></div>
+      <div class="cartellino"><span class="lettera">11</span><span class="nome">TaxiTalk</span><span class="stato fatto">META · b.430</span></div>
       <p class="didascalia">Stessa forma del traduttore. Cambia solo che qui c'e anche dove vai.</p>
       <div class="telefono">
         <div class="schermo">
@@ -624,7 +657,7 @@
 
     <!-- ── CREDITO ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">12</span><span class="nome">Credito</span></div>
+      <div class="cartellino"><span class="lettera">12</span><span class="nome">Credito</span><span class="stato gia">GIA COSI</span></div>
       <p class="didascalia">Quanto ti resta, cosa lo consuma, e come ricaricare. In quest'ordine.</p>
       <div class="telefono">
         <div class="schermo">
@@ -656,7 +689,7 @@
 
     <!-- ── PRIMO AVVIO ── -->
     <div class="colonna">
-      <div class="cartellino"><span class="lettera">13</span><span class="nome">Primo avvio</span></div>
+      <div class="cartellino"><span class="lettera">13</span><span class="nome">Primo avvio</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Una domanda per schermata. Nessuno legge due domande insieme.</p>
       <div class="telefono">
         <div class="schermo" style="padding:10px 12px">
