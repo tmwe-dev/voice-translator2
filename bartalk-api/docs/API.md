@@ -125,12 +125,15 @@ NDJSON inoltrato come stream. Prima dell'inoltro il gateway riverifica che la se
 
 ## Contatti, community e altre capability vive
 
-- `GET|POST /contacts`
+- `GET /contacts`
+- `POST /contacts` — soltanto azioni non finanziarie: `heartbeat`, `offline`, `add`, `remove`, `start-chat`, `create-invite` senza credito, `get-gift-info`
 - `GET|POST /community`
 - `POST /moderation`
 - `POST /summary`
 - `POST /peepoff`
 - `POST|GET|DELETE /taxi/destination`
+
+`POST /contacts` e fail-closed: azioni Core future non diventano pubbliche automaticamente. `create-invite` con `giftAmount` e `accept-invite` sono rifiutate dalla v1 prima del Core perche possono muovere credito e il relativo flusso legacy non offre idempotenza end-to-end sufficiente per un gateway pubblico.
 
 ## Capability escluse perche il Core non e operativo oggi
 
@@ -153,7 +156,7 @@ La scelta e intenzionale: **una route presente nel sorgente non equivale a una c
 
 ## Errori
 
-- `400` richiesta non valida
+- `400` richiesta non valida / azione non pubblicata
 - `401` API key/sessione account/sessione stanza non valida
 - `402` credito insufficiente
 - `403` scope/ownership/membership negata
