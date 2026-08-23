@@ -15,7 +15,7 @@ import { useApp } from '../contexts/AppContext.js';
 // filter chips, conversation list with avatars
 // ═══════════════════════════════════════════════
 
-function HistoryView({ convHistory, viewConversation, verifiedName, archivioSoloLocale = false }) {
+function HistoryView({ convHistory, viewConversation, verifiedName, archivioSoloLocale = false, guasto = false, suRiprova }) {
   const { L, S, prefs, setView, status, theme, setTheme, uiLang } = useApp();
   const _S = getStyles(theme);
   const col = _S.colors || {};
@@ -489,7 +489,22 @@ function HistoryView({ convHistory, viewConversation, verifiedName, archivioSolo
           scrollbarWidth: 'none',
         }}
       >
-        {convHistory.length === 0 ? (
+        {/* b.434 — PRIMA IL GUASTO, POI IL VUOTO. Sono due cose diverse e
+            finora si vedevano uguali: a chi non riusciva a leggere
+            l'archivio si diceva «nessuna conversazione, comincia a
+            parlare» — cioe gli si diceva che i suoi dati non ci sono.
+            Un guasto detto bene ha tre cose: cosa non ha funzionato, che
+            non e colpa tua, e cosa si puo fare adesso. */}
+        {guasto ? (
+          <EmptyState
+            icon=""
+            title={L('loadError')}
+            desc={L('connErrorRetry')}
+            actionLabel={L('retryWord')}
+            onAction={() => suRiprova?.()}
+            S={{ colors: C }}
+          />
+        ) : convHistory.length === 0 ? (
           <EmptyState
             icon=""
             title={archivioSoloLocale ? L('archiveLocalOnly') : L('noConversations')}

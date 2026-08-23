@@ -54,3 +54,40 @@ describe("Chat — da che lingua a che lingua", () => {
     expect(s, 'le lingue vuote si scartano').toMatch(/\.filter\(Boolean\)/);
   });
 });
+
+describe('un archivio rotto non e un archivio vuoto', () => {
+  it('un rifiuto del server non passa piu in silenzio', () => {
+    // Prima: `if (res.ok) { ...si legge... }` e basta. Un 401, un 429, un
+    // guasto del server: NIENTE. L'elenco restava a zero e la schermata
+    // diceva «nessuna conversazione». A chi era caduta la rete si diceva
+    // che i suoi dati non ci sono.
+    const p = senzaCommenti(leggi('app/page.js'));
+    const dentro = p.slice(p.indexOf('async function loadHistory'), p.indexOf('async function loadHistory') + 2000);
+    expect(dentro, 'il ramo del rifiuto esiste').toMatch(/\} else \{\s*setArchivioGuasto\(true\);/);
+    expect(dentro, 'e anche quello della rete caduta').toMatch(/catch \(e\) \{[\s\S]*setArchivioGuasto\(true\)/);
+  });
+
+  it('anche una risposta illeggibile e un guasto, non un vuoto', () => {
+    const p = senzaCommenti(leggi('app/page.js'));
+    expect(p).toMatch(/if \(!d\) \{ setArchivioGuasto\(true\); return; \}/);
+  });
+
+  it('quando riesce, il guasto si spegne', () => {
+    // se restasse acceso, un solo singhiozzo lascerebbe la schermata
+    // rotta per sempre — lo stesso difetto della firma anti-doppione.
+    const p = senzaCommenti(leggi('app/page.js'));
+    expect(p).toMatch(/setArchivioGuasto\(false\)/);
+  });
+
+  it('la schermata lo dice, e da un modo per riprovare', () => {
+    const h = senzaCommenti(leggi('app/components/HistoryView.js'));
+    expect(h, 'il guasto si controlla PRIMA del vuoto').toMatch(/\{guasto \? \([\s\S]{0,400}\) : convHistory\.length === 0 \? \(/);
+    expect(h, 'e c\'e il tasto per riprovare').toMatch(/actionLabel=\{L\('retryWord'\)\}/);
+    expect(h, 'che riprova davvero').toMatch(/onAction=\{\(\) => suRiprova\?\.\(\)\}/);
+  });
+
+  it('e chi riprova rilegge davvero l\'archivio', () => {
+    const p = senzaCommenti(leggi('app/page.js'));
+    expect(p).toMatch(/suRiprova=\{\(\) => \{ setArchivioGuasto\(false\); loadHistory\(\); \}\}/);
+  });
+});

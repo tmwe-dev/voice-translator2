@@ -214,6 +214,29 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.434** (push #726) — L'ARCHIVIO ROTTO SEMBRAVA UN ARCHIVIO
+  VUOTO, ed e il difetto peggiore trovato applicando il layout.
+  `loadHistory` faceva `if (res.ok) { ...leggi... }` e nient'altro. Un 401,
+  un 429, un guasto del server: NIENTE — nessuno stato, nessun avviso.
+  L'elenco restava a zero e la schermata mostrava «Nessuna conversazione ·
+  le tue conversazioni appariranno qui, inizia una chat». Cioe a una
+  persona a cui era caduta la rete si diceva che i suoi dati non esistono,
+  e la si invitava a ricominciare da capo. La rete caduta finiva nel
+  `console.error` e basta.
+  E' la stessa regola gia imparata in b.236 per la vetrina delle stanze —
+  un guasto non si traveste da vuoto — che qui non era mai stata
+  applicata. Il layout la chiama «i quattro stati»: vuoto, carica, rotto,
+  pieno. Il terzo mancava.
+  Ora si distinguono tre esiti: riuscito, rifiutato, caduto. E anche una
+  risposta illeggibile e un guasto, non un vuoto. Quando riesce, il guasto
+  si SPEGNE — se restasse acceso un solo singhiozzo lascerebbe la
+  schermata rotta per sempre, che e lo stesso difetto della firma
+  anti-doppione di b.428.
+  La schermata dice le tre cose che un guasto deve dire — cosa non ha
+  funzionato, che non e colpa tua, cosa si puo fare adesso — e il tasto
+  «Riprova» rilegge davvero l'archivio.
+  PROVA: cinque prove nuove in `layout-applicato-b433.test.js`.
+
 - Versione: **b.433** (push #725) — MONDO e CHAT dal layout al programma.
   Regola tenuta: si applica dove RIPARA qualcosa, non si restaura cio che
   gia funziona. La Home per esempio NON e stata toccata — le sue sezioni

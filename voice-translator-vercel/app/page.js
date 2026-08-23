@@ -170,6 +170,14 @@ function HomeInner() {
   // esistere: non c'e niente a cui legarlo). Va detto, altrimenti
   // sembra che le conversazioni siano sparite.
   const [archivioSoloLocale, setArchivioSoloLocale] = useState(false);
+  // b.434 — L'ARCHIVIO ROTTO SEMBRAVA UN ARCHIVIO VUOTO. Se la richiesta
+  // non riusciva — 401, 429, un guasto del server, la rete che cade — non
+  // succedeva NIENTE: l'elenco restava a zero e la schermata diceva
+  // «nessuna conversazione, comincia a parlare». Cioe a una persona a cui
+  // e caduta la rete si diceva che i suoi dati non ci sono. E' la stessa
+  // regola gia imparata in b.236 per la vetrina delle stanze: un guasto
+  // non si traveste da vuoto.
+  const [archivioGuasto, setArchivioGuasto] = useState(false);
   const [currentConv, setCurrentConv] = useState(null);
   const [detailConversation, setDetailConversation] = useState(null);
   const [detailMessages, setDetailMessages] = useState([]);
@@ -803,8 +811,19 @@ function HomeInner() {
       const res = await fetch('/api/conversation', { method:'POST', headers:{'Content-Type':'application/json'},
         signal: AbortSignal.timeout(15000),
         body: JSON.stringify({ action:'list', userToken: token }) });
-      if (res.ok) { const d = await res.json().catch(() => ({})); setConvHistory(d.conversations || []); }
-    } catch (e) { console.error('History error:', e); }
+      if (res.ok) {
+        const d = await res.json().catch(() => null);
+        // b.434 — anche una risposta illeggibile e un guasto, non un vuoto.
+        if (!d) { setArchivioGuasto(true); return; }
+        setConvHistory(d.conversations || []);
+        setArchivioGuasto(false);
+      } else {
+        setArchivioGuasto(true);
+      }
+    } catch (e) {
+      console.error('History error:', e);
+      setArchivioGuasto(true);
+    }
   }
 
   async function endChatAndSave() {
@@ -1602,6 +1621,7 @@ function HomeInner() {
     <>
       <Suspense fallback={<LazyFallback />}>
       <HistoryView convHistory={convHistory} archivioSoloLocale={archivioSoloLocale} viewConversation={viewConversation}
+        guasto={archivioGuasto} suRiprova={() => { setArchivioGuasto(false); loadHistory(); }}
         verifiedName={roomPolling.verifiedNameRef?.current || prefs.name} />
       </Suspense>
       {bottomNav}
