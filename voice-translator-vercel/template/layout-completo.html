@@ -1,0 +1,574 @@
+<title>BarTalk, layout completo</title>
+<!-- ═══════════════════════════════════════════════════════════════
+     TEMPLATE — TUTTE LE PAGINE  ·  b.431  ·  seconda pagina della serie
+
+     METODO (ordine di Luca): la grafica si disegna QUI, poi il codice si
+     COPIA nel componente vero. Mai il contrario.
+
+     Colori e misure vengono dal tema "deep" e dai componenti veri, uno
+     per uno. Le immagini, le icone e la posizione dei menu NON cambiano:
+     l'ordine di Luca e «in linea di massima il sistema va bene cosi».
+
+     Cio che cambia e SOLO la disciplina: una testata sola sempre uguale,
+     tasti che un dito prende, niente scatole vuote, una cosa che comanda
+     per schermata, e cio che appare che sostituisce invece di spingere.
+
+     IL KIT in fondo e la parte che serve davvero per applicare: sono i
+     pezzi riusabili con le misure esatte. Si copia di li.
+     ═══════════════════════════════════════════════════════════════ -->
+
+<style>
+  :root {
+    --bg:        #05070f;
+    --bg-grad:   linear-gradient(168deg, #05070f 0%, #0a0f1f 45%, #101730 80%, #05070f 100%);
+    --testo:     #eef2ff;
+    --testo-2:   rgba(238,242,255,0.82);
+    --testo-3:   rgba(238,242,255,0.66);
+    --muto:      rgba(238,242,255,0.52);
+    --carta:     rgba(140,170,255,0.06);
+    --bordo:     rgba(160,190,255,0.14);
+    --campo:     rgba(140,170,255,0.05);
+    --spento:    rgba(238,242,255,0.10);
+    --accento:   #5b8cff;
+    --accento-2: #38e1ff;
+    --rosso:     #ff5470;
+    --verde:     #3ddc84;
+    --oro:       #ffc44d;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+    --tasto: 44px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); background-image: var(--bg-grad);
+    background-attachment: fixed; color: var(--testo);
+    font-family: var(--font); -webkit-font-smoothing: antialiased;
+  }
+  .foglio { max-width: 1240px; margin: 0 auto; padding: 28px 20px 70px; }
+
+  .occhiello { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: var(--accento); margin: 0 0 10px; }
+  h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 40px); font-weight: 800; letter-spacing: -0.6px; line-height: 1.1; text-wrap: balance; }
+  .sommario { margin: 0 0 6px; max-width: 64ch; font-size: 15px; line-height: 1.55; color: var(--testo-2); }
+  .nota { max-width: 64ch; font-size: 13px; line-height: 1.6; color: var(--muto); border-left: 2px solid var(--bordo); padding-left: 12px; margin: 16px 0 0; }
+
+  h2.sezione { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; margin: 44px 0 4px; }
+  p.sotto { font-size: 13.5px; color: var(--muto); margin: 0 0 18px; max-width: 64ch; }
+
+  .pista { display: flex; gap: 18px; overflow-x: auto; padding: 22px 0 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .pista::-webkit-scrollbar { display: none; }
+  .colonna { flex: 0 0 auto; width: 340px; scroll-snap-align: center; }
+
+  .cartellino { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+  .cartellino .lettera { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; color: var(--accento); }
+  .cartellino .nome { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
+  .didascalia { font-size: 12.5px; line-height: 1.5; color: var(--testo-3); margin: 0 0 14px; min-height: 38px; }
+
+  /* ══ LA CORNICE DEL TELEFONO ══ */
+  .telefono {
+    width: 340px; height: 660px; border-radius: 30px; border: 1px solid var(--bordo);
+    background: var(--bg); background-image: var(--bg-grad);
+    overflow: hidden; position: relative; display: flex; flex-direction: column;
+    box-shadow: 0 24px 60px -22px rgba(0,0,0,0.75);
+  }
+  .schermo { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 12px 0; }
+
+  /* la barra in basso: STESSA POSIZIONE, non si tocca */
+  .barra {
+    flex-shrink: 0; height: 62px; border-top: 1px solid var(--bordo);
+    display: flex; align-items: center; justify-content: space-around;
+    background: rgba(5,7,15,0.85);
+  }
+  .barra i { font-style: normal; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; color: var(--muto); }
+  .barra i.on { color: var(--accento); }
+  .barra .piu { width: 40px; height: 40px; border-radius: 999px; background: rgba(238,242,255,0.14); display: flex; align-items: center; justify-content: center; }
+
+  /* ══ IL KIT — i pezzi riusabili ══ */
+  .testata { display: flex; align-items: center; gap: 8px; flex-shrink: 0; height: var(--tasto); }
+  .tondino {
+    width: var(--tasto); height: var(--tasto); border-radius: 999px; flex-shrink: 0;
+    border: 1px solid var(--bordo); background: transparent; color: var(--testo-2);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    font-family: var(--font); font-size: 15px; font-weight: 800; padding: 0;
+  }
+  .tondino.on { border: 1.5px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+  .tondino.nudo { border: none; }
+  .titolo { flex: 1; font-size: 16px; font-weight: 800; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pillola {
+    display: inline-flex; align-items: center; gap: 7px; height: var(--tasto); padding: 0 15px;
+    border-radius: 999px; border: 1px solid var(--bordo); background: rgba(255,255,255,0.04);
+    color: var(--testo); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: var(--font);
+    white-space: nowrap;
+  }
+  .pillola.on { border: 1.5px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+
+  .corpo { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+  .corpo::-webkit-scrollbar { display: none; }
+
+  /* stato vuoto: una riga, non un riquadro */
+  .vuoto { color: var(--muto); font-size: 14px; line-height: 1.5; padding: 6px 2px; }
+
+  .riga-campo { display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; padding-bottom: 10px; }
+  .campo {
+    flex: 1; min-height: 54px; padding: 15px 14px; border-radius: 16px;
+    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+    color: var(--muto); font-size: 16px; font-family: var(--font); line-height: 1.35;
+  }
+  .quadro {
+    width: 54px; height: 54px; border-radius: 16px; flex-shrink: 0; padding: 0;
+    border: 1px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.13);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .quadro.spento { border: 1px solid var(--bordo); background: rgba(255,255,255,0.05); opacity: 0.4; }
+
+  .scheda { border: 1px solid var(--bordo); border-radius: 18px; background: var(--carta); overflow: hidden; }
+  .scheda .dentro { padding: 13px 14px; }
+  .scheda h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; line-height: 1.32; }
+  .scheda .eti { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--muto); font-weight: 700; }
+  .chip { border: 1px solid var(--bordo); border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 700; color: var(--testo-3); }
+  .foto { height: 116px; background: linear-gradient(135deg, rgba(91,140,255,0.14), rgba(56,225,255,0.10)); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; color: rgba(91,140,255,0.45); }
+
+  .riga-voce { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 2px; border-bottom: 1px solid var(--bordo); }
+  .riga-voce .t { font-size: 15px; font-weight: 700; }
+  .riga-voce .d { font-size: 12px; color: var(--muto); margin-top: 2px; }
+  .riga-voce .frec { color: var(--muto); font-size: 17px; }
+
+  .schede-fila { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; padding: 4px 0 8px; }
+  .schede-fila::-webkit-scrollbar { display: none; }
+  .scheda-voce { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--muto); cursor: pointer; }
+  .scheda-voce.on { color: var(--accento); border-bottom: 2px solid var(--accento); }
+
+  .globo { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 42%, rgba(56,225,255,0.13), transparent 55%), radial-gradient(circle at 50% 40%, rgba(91,140,255,0.16), transparent 45%); }
+  .velo { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(5,7,15,0.42) 0%, rgba(5,7,15,0.70) 42%, rgba(5,7,15,0.92) 100%); }
+
+  .bolla { max-width: 78%; padding: 11px 13px; border-radius: 16px; font-size: 14.5px; line-height: 1.4; }
+  .bolla.mia { align-self: flex-end; background: rgba(91,140,255,0.16); border: 1px solid rgba(91,140,255,0.28); }
+  .bolla.sua { align-self: flex-start; background: var(--carta); border: 1px solid var(--bordo); }
+  .bolla .orig { display: block; font-size: 11.5px; color: var(--muto); margin-top: 4px; }
+
+  .spiega { margin-top: 14px; font-size: 13px; line-height: 1.62; color: var(--testo-2); }
+  .spiega b { color: var(--testo); font-weight: 800; }
+  .spiega ul { margin: 8px 0 0; padding-left: 18px; }
+  .spiega li { margin-bottom: 5px; }
+
+  .griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 14px; }
+  .regola { border: 1px solid var(--bordo); border-radius: 16px; padding: 16px; background: var(--carta); }
+  .regola .n { font-size: 11px; font-weight: 800; color: var(--accento); letter-spacing: 1.2px; }
+  .regola .t { font-size: 14.5px; font-weight: 800; margin: 6px 0; }
+  .regola .d { font-size: 12.5px; line-height: 1.6; color: var(--testo-3); }
+  .regola .m { font-size: 11.5px; color: var(--muto); margin-top: 8px; font-variant-numeric: tabular-nums; }
+
+  .kit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .pezzo { border: 1px solid var(--bordo); border-radius: 18px; padding: 16px; background: var(--carta); }
+  .pezzo .nome { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
+  .pezzo .mis { font-size: 11.5px; color: var(--accento); font-weight: 700; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .pezzo .prova { background: rgba(5,7,15,0.5); border-radius: 12px; padding: 12px; }
+  .pezzo .perche { font-size: 12px; color: var(--testo-3); line-height: 1.55; margin-top: 10px; }
+
+  @media (max-width: 760px) {
+    .foglio { padding: 22px 0 60px; }
+    .occhiello, h1, .sommario, .nota, h2.sezione, p.sotto, .griglia, .kit { padding-left: 18px; padding-right: 18px; }
+    .pista { padding-left: 18px; padding-right: 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="foglio">
+
+  <p class="occhiello">TEMPLATE · PAGINA 2 DI N · b.431</p>
+  <h1>BarTalk, layout completo</h1>
+  <p class="sommario">
+    La stessa mentalita di «Parla ora», portata su tutte le schermate. Il sistema resta
+    quello: stesse immagini, stesse icone, stessa barra in basso, stesse funzioni.
+    Cambia solo la disciplina — una testata sola sempre uguale, tasti che un dito prende,
+    niente scatole vuote, una cosa che comanda, e cio che appare sostituisce invece di
+    spingere giu.
+  </p>
+  <p class="nota">
+    <b>Come si usa:</b> qui sotto ci sono le pagine e, in fondo, il <b>kit</b> — i pezzi
+    riusabili con le misure esatte. Quando si tocca una pagina si copia dal kit, non si
+    reinventa. Cosi due schermate diverse non finiscono per fare la stessa cosa in due modi.
+  </p>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LE PAGINE
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="sezione">Le pagine</h2>
+  <p class="sotto">Scorri di lato. Ogni telefono e a misura vera, coi colori veri.</p>
+
+  <div class="pista">
+
+    <!-- ── HOME ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">01</span><span class="nome">Home</span></div>
+      <p class="didascalia">Il microfono comanda. Le sezioni sono righe, non riquadri: si leggono in fila.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="pillola">🇮🇹 <span style="color:var(--muto);font-size:12px">→</span> 🇺🇸</span>
+            <span style="flex:1"></span>
+            <span class="tondino">⚡</span>
+          </div>
+          <div class="corpo" style="align-items:center;justify-content:center;gap:0">
+            <div style="display:flex;align-items:center;gap:10px;color:var(--muto);font-size:12px;font-weight:700">
+              <span>‹</span><span style="opacity:.3">🇰🇷</span><span style="opacity:.55">🇹🇼</span>
+              <span style="font-size:26px">🇺🇸</span><span style="opacity:.55">🇪🇸</span><span style="opacity:.3">🇫🇷</span><span>›</span>
+            </div>
+            <div style="font-size:12.5px;font-weight:700;color:var(--accento);margin:8px 0 26px">English (US) ✓</div>
+            <div style="width:132px;height:132px;border-radius:999px;border:1px solid rgba(91,140,255,0.34);
+              background:radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%);
+              box-shadow:0 0 0 10px rgba(91,140,255,0.05), 0 20px 60px -18px rgba(91,140,255,0.55);
+              display:flex;align-items:center;justify-content:center;font-size:44px">🎙</div>
+            <div style="font-size:17px;font-weight:800;margin-top:14px">Parla ora</div>
+            <div style="width:100%;margin-top:26px">
+              <div class="riga-voce"><div><div class="t">Il mondo ora</div><div class="d">Stanze aperte, discussioni senza barriere</div></div><span class="frec">›</span></div>
+              <div class="riga-voce"><div><div class="t">Vita</div><div class="d">Podcast, tutor e corsi coi tuoi Compagni</div></div><span class="frec">›</span></div>
+              <div class="riga-voce" style="border-bottom:none"><div><div class="t">Business</div><div class="d">Biglietti da visita e strumenti di lavoro</div></div><span class="frec">›</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="barra"><i class="on">⌂<span>Home</span></i><i>💬<span>Chat</span></i><i><span class="piu">+</span></i><i>🌐<span>Community</span></i><i>👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia rispetto a oggi.</b>
+        <ul>
+          <li>Le sezioni erano riquadri con bordo: adesso sono <b>righe</b>. Tre riquadri uguali non dicono da dove cominciare, tre righe si leggono in fila.</li>
+          <li>La pila del credito diventa un tondino nella testata, allineato agli altri.</li>
+          <li>Il carosello resta identico: si tocca la bandiera al centro per scegliere.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── MONDO ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span></div>
+      <p class="didascalia">Il pianeta e la porta. Dice sempre dove sei, e come uscirne.</p>
+      <div class="telefono">
+        <div class="globo"></div><div class="velo"></div>
+        <div class="schermo" style="position:relative;z-index:2">
+          <div class="testata">
+            <span class="pillola on">🇯🇵 Giappone <span style="color:var(--muto);font-weight:600">Cambia</span> ›</span>
+            <span style="flex:1"></span>
+            <span class="tondino">⚡</span>
+          </div>
+          <div class="schede-fila" style="margin-top:8px">
+            <span class="scheda-voce on">Stanze</span><span class="scheda-voce">Notizie</span>
+          </div>
+          <div class="corpo" style="padding-top:4px">
+            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">QUI SE NE PARLA</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <span class="chip" style="padding:7px 12px;border-radius:999px">yen <b style="color:var(--muto)">3</b></span>
+              <span class="chip" style="padding:7px 12px;border-radius:999px">tecnologia <b style="color:var(--muto)">2</b></span>
+            </div>
+            <div class="scheda" style="margin-top:6px">
+              <div class="dentro">
+                <h4>Tokyo · Yen e inflazione</h4>
+                <div class="eti"><span class="chip">日本語 → tradotto</span><span style="color:var(--verde)">● 43 dentro</span></div>
+              </div>
+            </div>
+            <div class="scheda">
+              <div class="dentro">
+                <h4>Chi sale sul palco stasera</h4>
+                <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="barra"><i>⌂<span>Home</span></i><i>💬<span>Chat</span></i><i><span class="piu">+</span></i><i class="on">🌐<span>Community</span></i><i>👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Il selettore Stanze/Notizie era una tendina col triangolino: diventano <b>due linguette</b>, si vedono tutte e due senza aprire niente.</li>
+          <li>Il Paese e «Cambia» stanno nella stessa pillola: dove sei e come uscirne, in un pezzo solo.</li>
+          <li>Il pianeta resta dietro e si vela scorrendo, come gia fa.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── VITA ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span></div>
+      <p class="didascalia">Sette schede erano troppe da leggere in fila. Restano sette, ma con l'icona che parla.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo">←</span>
+            <span class="titolo">Archimede</span>
+            <span class="tondino">A−</span><span class="tondino">A+</span><span class="tondino on">🎙</span>
+          </div>
+          <div class="schede-fila" style="margin-top:8px">
+            <span class="scheda-voce">🎙<span>Podcast</span></span>
+            <span class="scheda-voce on">💬<span>Amico</span></span>
+            <span class="scheda-voce">👥<span>Tavolo</span></span>
+            <span class="scheda-voce">🎓<span>Impara</span></span>
+            <span class="scheda-voce">◎<span>Obiettivi</span></span>
+            <span class="scheda-voce">↺<span>Compiti</span></span>
+          </div>
+          <div class="corpo">
+            <div class="bolla sua">Buongiorno. Di cosa parliamo oggi?</div>
+            <div class="bolla mia">Vorrei capire l'inflazione in Giappone.</div>
+            <div class="bolla sua">Partiamo dai fatti: lo yen ha perso il 12% in un anno.</div>
+          </div>
+          <div class="riga-campo">
+            <div class="campo">Scrivi un messaggio…</div>
+            <div class="quadro">🎙</div>
+            <div class="quadro">➤</div>
+          </div>
+        </div>
+        <div class="barra"><i>⌂<span>Home</span></i><i class="on">💬<span>Chat</span></i><i><span class="piu">+</span></i><i>🌐<span>Community</span></i><i>👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li><b>Il microfono nel campo</b>, che oggi manca: l'unico era dentro «Dal vivo», e dettare non si poteva.</li>
+          <li>«Dal vivo» diventa un tondino acceso nella testata, allineato agli altri comandi.</li>
+          <li>Le sette schede restano dove sono: cambia solo che l'icona sta sopra la parola, cosi si riconoscono senza leggerle.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── STANZA ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">04</span><span class="nome">Stanza</span></div>
+      <p class="didascalia">Chi c'e e in che lingua, prima di tutto. Il menu ••• smette di comprimersi.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo">←</span>
+            <span class="titolo">Yen e inflazione</span>
+            <span class="tondino">⇅</span><span class="tondino">⋯</span>
+          </div>
+          <div class="eti" style="padding:8px 2px 0">
+            <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span>
+            <span style="color:var(--verde)">● 2 dentro</span>
+          </div>
+          <div class="corpo">
+            <div class="bolla sua">こんにちは、はじめまして。<span class="orig">Buongiorno, piacere di conoscerti.</span></div>
+            <div class="bolla mia">Piacere mio. Parliamo dello yen?<span class="orig">はじめまして。円について話しましょうか。</span></div>
+            <div class="bolla sua">もちろんです。<span class="orig">Certamente.</span></div>
+          </div>
+          <div class="riga-campo">
+            <div class="campo">Scrivi…</div>
+            <div class="quadro">🎙</div>
+            <div class="quadro">➤</div>
+          </div>
+        </div>
+        <div class="barra"><i>⌂<span>Home</span></i><i class="on">💬<span>Chat</span></i><i><span class="piu">+</span></i><i>🌐<span>Community</span></i><i>👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Chi c'e e in che lingua sta <b>sotto la testata</b>, sempre visibile: era dentro il menu •••, cioe nascosto.</li>
+          <li>Ogni messaggio porta l'originale sotto la traduzione, piccolo. Chi vuole controllare puo.</li>
+          <li>Il menu ••• si apre a larghezza vera, non piu schiacciato a fisarmonica.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── BUSINESS ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span></div>
+      <p class="didascalia">Strumenti, non riquadri. Ognuno dice cosa fa in una riga.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo">←</span>
+            <span class="titolo">Business</span>
+            <span class="tondino">⚡</span>
+          </div>
+          <div class="corpo">
+            <div class="scheda">
+              <div class="foto">L</div>
+              <div class="dentro">
+                <h4>Il tuo biglietto da visita</h4>
+                <div class="eti"><span class="chip">letto 14 volte</span><span class="chip">4 lingue</span></div>
+              </div>
+            </div>
+            <div class="riga-voce"><div><div class="t">Scansiona un biglietto</div><div class="d">La foto diventa un contatto</div></div><span class="frec">›</span></div>
+            <div class="riga-voce"><div><div class="t">Rubrica</div><div class="d">Chi hai incontrato, e dove</div></div><span class="frec">›</span></div>
+            <div class="riga-voce" style="border-bottom:none"><div><div class="t">Strumenti</div><div class="d">Firma, PDF, traduzione documenti</div></div><span class="frec">›</span></div>
+          </div>
+        </div>
+        <div class="barra"><i>⌂<span>Home</span></i><i>💬<span>Chat</span></i><i><span class="piu">+</span></i><i>🌐<span>Community</span></i><i class="on">👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Il biglietto e <b>una cosa sola grande</b> in cima: e il motivo per cui si apre questa pagina.</li>
+          <li>Il resto sono righe, come sulla Home. Stessa forma, stesso gesto.</li>
+          <li>Le immagini dei biglietti non si toccano.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ── PROFILO ── -->
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">06</span><span class="nome">Profilo</span></div>
+      <p class="didascalia">Il credito in alto, perche e la cosa che si viene a guardare.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo">←</span>
+            <span class="titolo">Profilo</span>
+          </div>
+          <div class="corpo">
+            <div class="scheda">
+              <div class="dentro" style="display:flex;align-items:center;gap:12px">
+                <div style="width:52px;height:52px;border-radius:999px;background:rgba(91,140,255,0.18);display:flex;align-items:center;justify-content:center;font-size:22px">👤</div>
+                <div style="flex:1">
+                  <h4 style="margin:0">Luca</h4>
+                  <div class="eti"><span>🇮🇹 Italiano</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="scheda">
+              <div class="dentro">
+                <div style="display:flex;align-items:baseline;gap:8px">
+                  <div style="font-size:30px;font-weight:800;color:var(--verde)">162h</div>
+                  <div style="font-size:13px;color:var(--muto)">11m di credito</div>
+                </div>
+                <div style="height:6px;border-radius:3px;background:var(--spento);margin:10px 0 4px;overflow:hidden">
+                  <div style="width:72%;height:100%;background:var(--verde)"></div>
+                </div>
+                <div style="font-size:11.5px;color:var(--muto)">Ricarica ›</div>
+              </div>
+            </div>
+            <div class="riga-voce"><div><div class="t">Lingua dei menu</div><div class="d">Segui la lingua che parlo</div></div><span class="frec">›</span></div>
+            <div class="riga-voce"><div><div class="t">Voce</div><div class="d">Come ti sentono gli altri</div></div><span class="frec">›</span></div>
+            <div class="riga-voce" style="border-bottom:none"><div><div class="t">Privacy e dati</div><div class="d">Cosa teniamo, e per quanto</div></div><span class="frec">›</span></div>
+          </div>
+        </div>
+        <div class="barra"><i>⌂<span>Home</span></i><i>💬<span>Chat</span></i><i><span class="piu">+</span></i><i>🌐<span>Community</span></i><i class="on">👤<span>Profilo</span></i></div>
+      </div>
+      <div class="spiega">
+        <b>Cosa cambia.</b>
+        <ul>
+          <li>Il credito e <b>un numero grande</b>, non una pila da interpretare: e la cosa che si viene a controllare.</li>
+          <li>Ogni riga dice cosa fa <b>sotto il titolo</b>: nessuno deve entrare per scoprirlo.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       IL KIT
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="sezione">Il kit — i pezzi che si copiano</h2>
+  <p class="sotto">
+    Questa e la parte che serve davvero per applicare. Ogni pezzo ha la sua misura esatta:
+    si copia di qui e non si reinventa, cosi due schermate non finiscono per fare la stessa
+    cosa in due modi diversi.
+  </p>
+
+  <div class="kit">
+
+    <div class="pezzo">
+      <div class="nome">La testata</div>
+      <div class="mis">altezza 44 · distanza 8 · freccia a sinistra</div>
+      <div class="prova">
+        <div class="testata">
+          <span class="tondino nudo">←</span>
+          <span class="titolo">Titolo</span>
+          <span class="tondino">A−</span><span class="tondino on">⇅</span>
+        </div>
+      </div>
+      <div class="perche">Sempre la stessa, in ogni pagina. La freccia a sinistra perche la cercano tutti li; i comandi a destra, tutti tondi e tutti della stessa misura. Resta dritta anche quando la pagina si ribalta.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">Il tondino</div>
+      <div class="mis">44 × 44 · raggio pieno · icona 19</div>
+      <div class="prova" style="display:flex;gap:8px">
+        <span class="tondino">A−</span><span class="tondino">A+</span>
+        <span class="tondino on">⇅</span><span class="tondino nudo">✕</span>
+      </div>
+      <div class="perche">Quarantaquattro e la misura sotto la quale un dito comincia a sbagliare bersaglio. Acceso = bordo e fondo dell'accento. Nudo = senza bordo, per indietro e chiudi.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La pillola</div>
+      <div class="mis">altezza 44 · riempimento 0 15 · testo 14,5</div>
+      <div class="prova" style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="pillola">🇮🇹 → 🇺🇸</span>
+        <span class="pillola on">🇯🇵 Giappone Cambia ›</span>
+      </div>
+      <div class="perche">Per le cose che hanno uno stato e si cambiano: lingua, Paese, modo. Alta come un tondino, cosi sulla stessa riga niente balla.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La riga in basso</div>
+      <div class="mis">campo min 54 · tasti 54 × 54 · raggio 16</div>
+      <div class="prova">
+        <div class="riga-campo" style="padding-bottom:0">
+          <div class="campo">Scrivi…</div><div class="quadro">🎙</div><div class="quadro">➤</div>
+        </div>
+      </div>
+      <div class="perche">Dove si scrive sta sempre in basso, sempre a schermo, e non si ribalta mai. A destra prima la voce, poi l'invio: le cose della voce insieme, quelle del testo insieme.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">Lo stato vuoto</div>
+      <div class="mis">una riga di testo · nessun bordo</div>
+      <div class="prova"><div class="vuoto">Ancora niente qui. Parla o scrivi: comparira in questo posto.</div></div>
+      <div class="perche">Mai un riquadro vuoto col bordo intorno: sembra un modulo da compilare, e una promessa non mantenuta. Una riga che dice cosa succedera, e basta.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La riga-voce</div>
+      <div class="mis">titolo 15 · sotto 12 · filetto in fondo</div>
+      <div class="prova">
+        <div class="riga-voce"><div><div class="t">Il mondo ora</div><div class="d">Stanze aperte, discussioni senza barriere</div></div><span class="frec">›</span></div>
+        <div class="riga-voce" style="border-bottom:none"><div><div class="t">Vita</div><div class="d">Podcast, tutor e corsi</div></div><span class="frec">›</span></div>
+      </div>
+      <div class="perche">Sostituisce i riquadri per gli elenchi di sezioni. Tre riquadri uguali non dicono da dove cominciare; tre righe si leggono in fila, e ognuna spiega se stessa sotto il titolo.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La scheda</div>
+      <div class="mis">raggio 18 · foto 16:9 · riempimento 13/14</div>
+      <div class="prova">
+        <div class="scheda">
+          <div class="foto">N</div>
+          <div class="dentro"><h4>Il treno Milano–Parigi riapre</h4><div class="eti"><span class="chip">🇮🇹</span><span>Il Post · 2h</span></div></div>
+        </div>
+      </div>
+      <div class="perche">Per le cose che hanno un'immagine: notizie, stanze, biglietti. La foto non si tocca, e sotto c'e sempre il fondale con l'iniziale, cosi se muore in volo non resta un buco.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">Le linguette</div>
+      <div class="mis">icona sopra · parola 11 · riga accesa sotto</div>
+      <div class="prova">
+        <div class="schede-fila"><span class="scheda-voce">🎙<span>Podcast</span></span><span class="scheda-voce on">💬<span>Amico</span></span><span class="scheda-voce">👥<span>Tavolo</span></span></div>
+      </div>
+      <div class="perche">Per passare da una parte all'altra della stessa sezione. L'icona sta sopra la parola: si riconosce senza leggere, e in trentotto lingue le parole cambiano lunghezza ma le icone no.</div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LE REGOLE
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="sezione">Le regole, uguali per tutte le pagine</h2>
+  <p class="sotto">Le sei della prima volta, piu due imparate applicandole.</p>
+
+  <div class="griglia">
+    <div class="regola"><div class="n">01</div><div class="t">Una cosa sola comanda</div><div class="d">Su ogni schermata un elemento e visibilmente piu grande di tutti. Se ne comandano tre, non comanda nessuno.</div></div>
+    <div class="regola"><div class="n">02</div><div class="t">Niente scatole vuote</div><div class="d">Una scatola vuota col bordo sembra un modulo da compilare. Una riga di testo, o niente.</div></div>
+    <div class="regola"><div class="n">03</div><div class="t">Il segnaposto non insegna</div><div class="d">Se serve una frase per spiegare cosa fare, il disegno non ha fatto il suo lavoro.</div></div>
+    <div class="regola"><div class="n">04</div><div class="t">Si contano i tocchi</div><div class="d">Prima di approvare una schermata si contano i tocchi per arrivare in fondo. Piu di due, si guarda perche.</div></div>
+    <div class="regola"><div class="n">05</div><div class="t">Niente spinte in basso</div><div class="d">Cio che appare SOSTITUISCE nello stesso posto, ad altezza fissa.</div></div>
+    <div class="regola"><div class="n">06</div><div class="t">I colori vengono dal tema</div><div class="d">Nessun colore scritto a mano: sei temi, e uno solo che sbaglia si vede subito. Stessa cosa per le parole, in trentotto lingue.</div></div>
+    <div class="regola"><div class="n">07</div><div class="t">Quarantaquattro</div><div class="d">Nessun tasto sotto i 44 punti. In un telefono le dita fanno fatica, e sotto quella misura sbagliano bersaglio.<div class="m">imparata a b.424</div></div></div>
+    <div class="regola"><div class="n">08</div><div class="t">Si gira solo cio che l'altro legge</div><div class="d">Quando una schermata si mostra a qualcun altro, ruota il testo — non il tuo modo di scrivere.<div class="m">imparata a b.424</div></div></div>
+  </div>
+
+  <div style="margin-top:34px;padding:20px;border-radius:18px;border:1px solid rgba(91,140,255,0.30);background:rgba(91,140,255,0.08);font-size:14px;line-height:1.62;color:var(--testo-2)">
+    <b style="color:var(--testo)">Cosa NON cambia, ed e la maggior parte.</b><br>
+    Le immagini, le icone, gli avatar, il pianeta, il carosello delle bandiere, la barra in
+    basso e la sua posizione, i nomi delle sezioni, e ogni funzione che oggi c'e. Il sistema
+    va bene com'e: qui si mette in ordine come si presenta, non cosa fa.<br><br>
+    Dimmi da quale pagina partiamo e la porto nel programma. Il kit resta qui, e cresce
+    ogni volta che ne serve un pezzo nuovo.
+  </div>
+</div>
