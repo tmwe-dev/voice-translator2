@@ -6,20 +6,27 @@ import { FONT, vibrate } from '../../lib/constants.js';
 import Icon from '../Icon.js';
 import { parlaAmico, parlaTurno, valutaCinqueAssi } from '../../lib/compagni/cliente.js';
 import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
-import { memGet, memSet, sesGet, sesDel } from '../../lib/memoria.js';
+import { sesGet, sesDel } from '../../lib/memoria.js';
+import { leggi as leggiScaffale, scrivi as scriviScaffale } from '../../lib/scaffale.js';
 import CompagnoLive from './CompagnoLive.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
-const CHIAVE_CHAT = (id) => `vt-chat-${id}`;
+//
+// b.410 (P0.7) — E ADESSO STA SU UNO SCAFFALE CON IL TUO NOME. La chiave
+// era `vt-chat-<compagno>`, senza dentro chi sei: sullo stesso telefono
+// bastava uscire, entrare con un altro account e riaprire lo stesso
+// Compagno per leggere la conversazione di prima. Una chat con l'Amico
+// non e una preferenza: e la cosa piu personale che c'e in Life.
+const NOME_CHAT = (id) => `chat:${id}`;
 function caricaChat(id) {
   if (typeof window === 'undefined' || !id) return [];
-  try { const s = memGet(CHIAVE_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
+  try { const s = leggiScaffale(NOME_CHAT(id)); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a.slice(-100) : []; }
   catch { return []; }
 }
 function salvaChat(id, messaggi) {
   if (typeof window === 'undefined' || !id) return;
-  try { memSet(CHIAVE_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
+  try { scriviScaffale(NOME_CHAT(id), JSON.stringify((messaggi || []).slice(-100))); }
   catch { /* quota/privato: si perde solo la persistenza, non la chat viva */ }
 }
 

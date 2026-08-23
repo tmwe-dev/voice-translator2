@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-import { memGet, memSet } from '../memoria.js';
+import { leggi as leggiScaffale, scrivi as scriviScaffale } from '../scaffale.js';
 // OBIETTIVI DI VITA — il "tutor che ti accompagna" (Luca)
 //
 // Modellato sugli LTObjective del Life Tutor di RadioChat (titolo,
@@ -14,7 +14,11 @@ import { memGet, memSet } from '../memoria.js';
 // guardato, così il modulo è sicuro anche lato server.
 // ═══════════════════════════════════════════════════════════════
 
-const CHIAVE = 'vt-obiettivi';
+// b.410 (P0.7) — la chiave era `vt-obiettivi`, senza dentro chi sei: su
+// un telefono condiviso gli obiettivi di uno erano gli obiettivi di
+// tutti. E questo elenco qui sotto dice da solo perche e grave: salute,
+// relazioni, lavoro, finanza sono categorie del prodotto, non ipotesi.
+const NOME = 'obiettivi';
 
 export const CATEGORIE_OBIETTIVO = [
   { id: 'studio', etichetta: 'Studio', icona: '📚' },
@@ -32,12 +36,12 @@ export const STATI_OBIETTIVO = ['attivo', 'raggiunto', 'pausa'];
 
 function leggiGrezzo() {
   if (typeof window === 'undefined') return [];
-  try { const s = memGet(CHIAVE); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a : []; }
+  try { const s = leggiScaffale(NOME); const a = s ? JSON.parse(s) : []; return Array.isArray(a) ? a : []; }
   catch { return []; }
 }
 function scrivi(lista) {
   if (typeof window === 'undefined') return;
-  try { memSet(CHIAVE, JSON.stringify(lista)); } catch { /* quota/privato: si perde solo la persistenza */ }
+  try { scriviScaffale(NOME, JSON.stringify(lista)); } catch { /* quota/privato: si perde solo la persistenza */ }
 }
 
 /** Normalizza un obiettivo (dal client o dal corpo di una richiesta). */

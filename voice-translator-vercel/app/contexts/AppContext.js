@@ -7,6 +7,7 @@
 
 import { createContext, useContext, useCallback, useMemo, useState, useEffect } from 'react';
 import { t, mapLang, preloadLang, ascoltaLingueCaricate } from '../lib/i18n.js';
+import { entra } from '../lib/scaffale.js';
 
 const AppContext = createContext(null);
 
@@ -15,6 +16,15 @@ const AppContext = createContext(null);
  * page.js passes all values; child components consume via useApp().
  */
 export function AppProvider({ children, value }) {
+  // b.410 (P0.7) — CHI STA USANDO IL TELEFONO, detto una volta sola e in
+  // un posto solo. Lo scaffale della memoria locale (chat con l'Amico,
+  // obiettivi di vita) ha bisogno di sapere di chi sono le cose che
+  // conserva: senza, sullo stesso telefono un account leggeva quelle
+  // dell'altro. Qui passa ogni cambio di accesso, quindi e il punto
+  // giusto — non ce n'e un secondo da tenere allineato.
+  const emailInCorso = value.auth?.userAccount?.email || '';
+  useEffect(() => { entra(emailInCorso); }, [emailInCorso]);
+
   // ── b.136 · L() SEGUE LA LINGUA DELL'INTERFACCIA, NON QUELLA PARLATA ──
   //
   // Questa riga diceva:

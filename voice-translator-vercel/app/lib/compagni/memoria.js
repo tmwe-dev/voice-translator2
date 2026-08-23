@@ -14,9 +14,13 @@
 // Diretta, per-utente e per-Compagno, cancellabili. (Vedi il piano §9.)
 // ═══════════════════════════════════════════════════════════════
 
+import { minimizzaTutti } from './minimizza.js';
+import { createLogger } from '../logger.js';
 import { getSupabaseAdmin } from '../supabase.js';
 import { idUtente } from './persistenza.js';
 import { generaTesto } from './ponte.js';
+
+const log = createLogger('compagni-memoria');
 
 export const TAG_MEMORIA = ['famiglia', 'lavoro', 'studio', 'emozione', 'successo', 'difficolta', 'salute', 'hobby', 'relazioni', 'obiettivi', 'evento', 'preferenza', 'opinione', 'aneddoto', 'progresso', 'altro'];
 
@@ -68,7 +72,23 @@ export async function aggiungiRicordi(email, compagnoId, ricordi) {
   if (!owner || !compagnoId || !Array.isArray(ricordi) || ricordi.length === 0) return 0;
   const sb = getSupabaseAdmin();
   if (!sb) return 0;
-  const righe = ricordi
+  // b.410 (P0.8) — LA SECONDA BARRIERA, prima del database.
+  //
+  // Il prompt dell'estrazione chiede gia di non memorizzare diagnosi,
+  // farmaci, documenti, indirizzi e recapiti. Ma un prompt e una
+  // richiesta a un modello, non un controllo: fra l'estrazione e questo
+  // INSERT non c'era niente che guardasse. Ora c'e, e non usa AI —
+  // riconosce forme, copre cio che si riconosce, e butta via il ricordo
+  // quando la forma dice «farmaco con dosaggio», perche li il dettaglio
+  // E' il dato e coprirlo lascerebbe una frase che finge di tacere.
+  const setaccio = minimizzaTutti(ricordi);
+  const motivi = Object.keys(setaccio.conto);
+  if (motivi.length) {
+    // Il registro dice QUANTI e DI CHE TIPO, mai cosa: scriverci dentro il
+    // dato che stavi proteggendo sarebbe comico.
+    log.info('memoria minimizzata', setaccio.conto);
+  }
+  const righe = setaccio.ricordi
     .filter(m => m && m.content)
     .slice(0, 20)
     .map(m => ({

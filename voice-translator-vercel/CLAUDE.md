@@ -214,6 +214,52 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.410** (push #704) — BATCH E: i due P0 di privacy.
+  P0.7 — LA CHAT E GLI OBIETTIVI SI LEGGEVANO FRA ACCOUNT. Le chiavi
+  erano `vt-chat-<compagno>` e `vt-obiettivi`, senza dentro chi sei.
+  Sullo stesso telefono: parli con Omar, esci, entra un altro account,
+  riapre Omar e legge la tua conversazione. E gli Obiettivi hanno per
+  DISEGNO le categorie salute, relazioni, lavoro, finanza — sta scritto
+  nel loro catalogo. Ora c'e `app/lib/scaffale.js`: ogni cosa personale
+  sta su `vt:<impronta>:<nome>`, dove l'impronta e un numero ricavato
+  dall'email e non rileggibile al contrario (l'email in chiaro dentro
+  una chiave la legge chiunque apra gli strumenti del browser). Chi non
+  ha fatto l'accesso ha la sua impronta di ospite, nata a caso su quel
+  telefono. L'identita la dichiara `AppContext` a ogni cambio di
+  accesso: un posto solo, non due da tenere allineati.
+  IL TRASLOCO, e il ragionamento perche possa essere contestato: le
+  vecchie chiavi non dicono di chi sono. Si migrano UNA VOLTA SOLA, alla
+  prima identita che compare dopo l'aggiornamento, e poi si cancellano.
+  Prima di oggi quei dati erano leggibili da OGNI account del telefono:
+  darli al primo che entra non espone niente che non fosse gia esposto a
+  lui, e da quel momento li chiude a tutti gli altri. Meno esposizione di
+  prima in ogni caso, mai di piu. Il costo possibile e che finiscano
+  nello scaffale sbagliato fra due persone che gia se li vedevano
+  entrambe.
+  P0.8 — LA MEMORIA SENSIBILE ERA AFFIDATA AL SOLO PROMPT. Il prompt
+  dell'estrazione chiede gia di non memorizzare diagnosi, farmaci,
+  documenti, indirizzi e recapiti — e lo chiede bene. Ma un prompt e una
+  richiesta a un modello, non un controllo: fra l'estrazione e l'INSERT
+  non c'era niente che guardasse. Ora c'e `app/lib/compagni/minimizza.js`,
+  deterministico e senza AI: riconosce FORME, copre cio che riconosce
+  (email, telefoni, IBAN, carte con Luhn, codice fiscale, documenti,
+  indirizzi) e SCARTA il ricordo intero quando la forma dice «farmaco
+  con dosaggio» — perche li il dettaglio E' il dato, e coprirlo
+  lascerebbe una frase che finge di tacere. Il registro dice quanti e di
+  che tipo, mai cosa.
+  LIMITE DICHIARATO, e va tenuto: gli schemi degli indirizzi sono
+  italiani ed europei. Un indirizzo in thailandese non viene
+  riconosciuto. Abbassa il rischio, non lo azzera, e la prima difesa
+  resta il prompt. Non si scriva da nessuna parte che e una garanzia.
+- DUE DIFETTI MIEI PRESI DALLE PROVE MENTRE LI SCRIVEVO, e questa e la
+  ragione per cui vanno scritte prima di dichiarare fatto:
+  1. la regola dell'indirizzo copriva «Ha finito il corso di inglese nel
+     2024», perche in italiano «corso» e anche una strada. Un ricordo
+     mutilato per sbaglio e peggio di un ricordo non filtrato: sparisce
+     senza che nessuno lo sappia. Ora la via pretende un nome proprio.
+  2. la regola del telefono, senza guardie di cifra, prendeva quindici
+     cifre di un numero interno lungo sedici e lasciava «[omesso]6».
+     Sembrava colpa della regola delle carte: non lo era.
 - Versione: **b.409** (push #703) — BATCH C e D del piano Life: due
   funzioni che erano nel codice e non hanno MAI dato un risultato.
   P0.5 — IN IMPARA I CONTENUTI «LINK» E «FOTO» NON HANNO MAI PRODOTTO
@@ -329,7 +375,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2429 verdi su 162 file** · 0 errori di lint (avvisi tollerati)
+- Test: **2445 verdi su 163 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro
