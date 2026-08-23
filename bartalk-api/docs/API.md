@@ -2,6 +2,8 @@
 
 Base path: `/api/v1`.
 
+Snapshot Core auditato: **b.416 / push #710** (`8e831153f5a29e0e66ef506d4207a9826accdb4e`).
+
 ## Autenticazione
 
 ```http
@@ -18,11 +20,35 @@ Senza `scopes` viene emesso un insieme **read/basic**. Gli scope di scrittura, w
 
 - `GET /me` — profilo
 - `PATCH /me` — aggiorna profilo
-- `DELETE /me/data` — esegue il perimetro di cancellazione dati che il Core dichiara
+- `DELETE /me/data` — avvia il perimetro di cancellazione del Core
 - `GET /preferences`
 - `PUT /preferences`
 
-Nota GDPR (Core b.415): `/me/data` revoca tutte le sessioni e cancella i dati persistenti previsti da Life/Compagni/PeepOff oltre al profilo Redis. Restano il ledger wallet per obblighi contabili e i contenuti pubblici Mondo, come dichiarato dal Core.
+### Cancellazione dati: contratto preciso
+
+Il Core b.415/b.416 revoca tutte le sessioni e cancella Redis + le superfici persistenti Life/Compagni/PeepOff previste dal cancellatore centrale. Restano per scelta il ledger wallet e i contenuti pubblici Mondo.
+
+L'audit b.416 ha pero verificato che il contratto non e ancora una prova di cancellazione **totale**: `translations` puo contenere testo originale/tradotto legato a `user_id`, mentre Mondo possiede anche follow, like e segnalazioni con identificativi utente. Nel database vivo controllato durante l'audit queste tabelle risultavano senza righe utente, ma il gateway non basa il contratto sul fatto che oggi siano vuote.
+
+Per questo una risposta riuscita di `DELETE /me/data` aggiunge:
+
+```json
+{
+  "deletionCoverage": {
+    "status": "partial",
+    "auditedCore": "b.416",
+    "retainedByPolicy": ["wallet_accounting", "public_mondo_content"],
+    "notGuaranteedByCore": [
+      "translation_history_rows",
+      "mondo_follows",
+      "mondo_comment_likes",
+      "mondo_reports"
+    ]
+  }
+}
+```
+
+`ok: true` significa quindi **richiesta di cancellazione eseguita dal Core**, non certificato assoluto di erasure.
 
 ## Chiavi provider BYOK
 
@@ -71,6 +97,12 @@ Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione
 
 L'id nel path e autoritativo: un id inserito nel body non puo sostituirlo.
 
+### Live: limite economico attuale
+
+Il Core riserva all'apertura un massimo equivalente a **15 minuti di linea**. Con il moltiplicatore corrente 3x, il campo Core `tettoSecondi` e espresso in **secondi di credito**, non in secondi di orologio.
+
+Il Core b.416 non rinnova automaticamente la riserva e `creditoDalVivo()` limita l'addebito alla riserva iniziale. Finche questo non viene cambiato, un integratore deve trattare una sessione Live come **massimo 15 minuti continuativi**, chiuderla e riaprirla se vuole proseguire. Una sessione piu lunga non e un contratto economico supportato dalla Public API v1.
+
 ## Life / studio
 
 - `POST /learning/course`
@@ -79,7 +111,7 @@ L'id nel path e autoritativo: un id inserito nel body non puo sostituirlo.
 - `POST /learning/scans/deposit`
 - `POST /learning/scans/retrieve`
 
-La porta `scans/deposit` replica l'eccezione QR usa-e-getta gia prevista dal Core; il recupero richiede account.
+La porta `scans/deposit` replica l'eccezione QR usa-e-getta gia prevista dal Core; il recupero richiede account. Il deposito logico e progettato per una vita breve, ma la pulizia Core e opportunistica (nuovo deposito/ritiro), quindi non va usato come archivio.
 
 ## Topics
 
@@ -96,6 +128,10 @@ Il gateway inoltra `application/x-ndjson` senza convertirlo in JSON.
 - `POST /reactions`
 
 Quando il Core richiede membership di stanza, restano necessari `roomSessionToken`/`X-Room-Session`.
+
+### TURN
+
+`GET /realtime/ice` espone il contratto reale di `/api/turn`. Nel Core b.416 la generazione di credenziali e pronta, ma **coturn non risulta ancora installato/configurato**. Se `TURN_SECRET` e `TURN_URLS` non sono presenti nel Core, la risposta e `{ "iceServers": [] }` e i client proseguono solo con STUN. Questo significa che reti CGNAT/NAT restrittive non sono ancora garantite.
 
 ## Archivio, contatti, glossari, community
 
