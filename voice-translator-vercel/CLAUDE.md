@@ -214,6 +214,22 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.421** (push #713) — LA VERSIONE CHE L'UTENTE LEGGE NON
+  MENTE PIU. `APP_VERSION` era ferma a `b.405` col programma a b.420:
+  quindici versioni indietro. Non e un dettaglio estetico — quel numero
+  compare in Impostazioni, nell'OGGETTO DELLA MAIL DI ASSISTENZA e dentro
+  l'ESPORTAZIONE DEI DATI PERSONALI: chi segnala un difetto dichiara una
+  versione che non sta usando, e noi lo cerchiamo quindici versioni
+  indietro.
+  Non si possono unire le due fonti: b.417, b.418 e b.419 sono uscite
+  tutte col push #711, quindi lo scarto fra `APP_VERSION` e `PUSH` non e
+  costante e nessuna delle due si ricava dall'altra. Cio che si puo fare
+  e impedire che divergano IN SILENZIO: `__tests__/versione-unica-b421.test.js`
+  le confronta col diario qui sopra e diventa rossa se si aggiorna
+  CLAUDE.md dimenticandosi della costante. Controlla anche che nessuna
+  schermata scriva un numero di versione a mano.
+  SEGNALATO DA UN AUDIT ESTERNO e verificato: era vero.
+
 - Versione: **b.420** (push #712) — LE TRE CORSE DEL DAL-VIVO. Non
   vengono da un audit esterno: sono difetti MIEI, nati con b.418 ieri, e
   li ha trovati Luca rileggendo il codice nuovo. Tutti e tre veri,

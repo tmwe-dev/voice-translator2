@@ -1,6 +1,21 @@
 // Shared constants for BarTalk app
 
-export const APP_VERSION = 'b.405';
+// ── La versione che l'utente LEGGE (Impostazioni, mail di assistenza,
+//    esportazione dei suoi dati) ──
+//
+// b.421 — ERA FERMA A b.405, QUINDICI VERSIONI INDIETRO, e nessuno se
+// n'era accorto per un motivo strutturale: la versione ha due fonti
+// (questa e `PUSH` qui sotto) e solo una delle due si aggiorna da sola
+// nell'abitudine. Non e un difetto grafico: chi scrive all'assistenza
+// dichiara una versione che non sta usando, e l'esportazione dei suoi
+// dati porta in giro un numero falso.
+//
+// NON si puo ricavare l'una dall'altra: oggi b.417, b.418 e b.419 sono
+// uscite tutte con lo stesso push #711, quindi lo scarto fra i due
+// numeri cambia. Restano due, e a tenerle allineate ci pensa una prova
+// (`__tests__/versione-unica-b421.test.js`) che le confronta col diario:
+// se si aggiorna CLAUDE.md e ci si dimentica di qui, diventa rossa.
+export const APP_VERSION = 'b.421';
 
 // ── Numero di rilascio, visibile in alto a sinistra nella home ──
 // Serve a Luca per sapere a colpo d'occhio se la pagina che ha davanti e
@@ -8,7 +23,7 @@ export const APP_VERSION = 'b.405';
 // ancora arrivato al suo browser (o la pagina viene dalla cache).
 // VA AUMENTATO DI UNO A OGNI PUSH SU main. Corrisponde al numero di
 // commit del ramo: `git rev-list --count HEAD`.
-export const PUSH = 712;
+export const PUSH = 713;
 
 export const APP_URL = process.env.NEXT_PUBLIC_URL || 'https://voice-translator2.vercel.app';
 
