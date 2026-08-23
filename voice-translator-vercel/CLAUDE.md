@@ -214,6 +214,17 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.416** (push #710) — solo diario, nessun codice toccato,
+  e due righe che mentivano.
+  1. Registrata la decisione di Luca sulla ritenzione di ElevenLabs
+     (resta accesa durante il collaudo) con le due conseguenze che si
+     porta dietro, e verificato che oggi il prodotto non promette da
+     nessuna parte che il dal-vivo e privato. Vedi il punto 3 dei FERMI.
+  2. Corretta la riga sul TURN: diceva «script pronti in deploy/coturn/»
+     e quella cartella non esiste. Ci sono cascato io stesso oggi,
+     mandando Luca sul server Contabo per una cosa che sta li ma riguarda
+     un altro problema (il certificato del ponte Redis). Il diario
+     adesso dice cosa serve davvero e in che ordine.
 - Versione: **b.415** (push #709) — «CANCELLA I MIEI DATI» ADESSO LI
   CANCELLA. Audit esterno, P1. Verificato: `deleteUserData` toccava
   profilo, sessione CORRENTE, pagamenti, codici, referral e prestiti —
@@ -541,9 +552,29 @@ qualunque refactoring. Non si propone di rimandarlo.
      loro modello, e potrebbe stare sopra i 3,5 cent/min della sola voce.
      Finche non lo verifica, il moltiplicatore e la stima piu prudente
      giustificabile. Sta in una riga sola apposta.
-  3. Privacy del fornitore: audio saving OFF e ritenzione al minimo, sul
-     loro pannello. Finche non e verificato li, NON si scrive da nessuna
-     parte che il dal-vivo e privato.
+  3. Privacy del fornitore — **DECISO DA LUCA il 23/08/2026: RESTA
+     ACCESO DURANTE IL COLLAUDO.** «Privacy Settings / data retention →
+     questo dobbiamo lasciarlo attivo durante la fase di test, lo
+     disattiveremo poi.» E' una scelta ragionevole e va rispettata:
+     mentre si collauda una linea vocale, poter riascoltare cosa e
+     successo vale piu della ritenzione minima.
+     NON e quindi una lacuna, e nessun audit deve segnalarla come tale.
+     Ma porta con se DUE conseguenze, e sono la ragione per cui sta
+     scritto qui invece che in un pensiero:
+       a) finche resta acceso, in nessun punto del prodotto si puo
+          scrivere che il dal-vivo e privato. VERIFICATO il 23/08: oggi
+          non c'e nessuna frase del genere — l'unica riga sulla privacy
+          (`faqPrivacyA`) parla delle STANZE e dice «sui nostri
+          server», che resta vero. Chi aggiunge una frase sul dal-vivo
+          deve prima guardare questo punto.
+       b) va SPENTO prima che entri qualcuno che non sia Luca. Non
+          «prima o poi»: prima del primo utente vero. Finche parla solo
+          lui, l'unica conversazione conservata dal fornitore e la sua.
+     Dove si spegne: elevenlabs.io/app/agents/agents → l'agente
+     `agent_9101...` → scheda **Advanced** → Privacy Settings (*Disable
+     audio saving*) e Data Retention. Il default e DUE ANNI, e c'e
+     l'opzione per applicare la nuova ritenzione anche a cio che e gia
+     archiviato: quella va spuntata, o vale solo da li in avanti.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
@@ -567,8 +598,26 @@ qualunque refactoring. Non si propone di rimandarlo.
 - npm audit (20/08/2026): nanoid corretto; restano postcss+sharp (3
   avvisi alti) il cui fix richiede Next 16.3.1 — migrazione da fare in
   un ramo a parte con collaudo, MAI con `audit fix --force` a caldo.
-- TURN proprio (coturn): script pronti in `deploy/coturn/`, manca il
-  deploy fisico + variabili su Vercel (azione di Luca).
+- TURN proprio (coturn) — **QUESTA RIGA ERA FALSA, corretta il 23/08/2026.**
+  Diceva «script pronti in `deploy/coturn/`». Verificato: la cartella
+  `deploy/` NON ESISTE nel repository, e nemmeno un file che nomini
+  coturn. Non c'e nessuno script pronto. Sta scritto qui perche una riga
+  di diario che promette qualcosa che non c'e fa perdere mezz'ora a
+  chiunque la legga — a me e successo oggi.
+  COSA SERVE DAVVERO, e in che ordine:
+    1. un coturn INSTALLATO da qualche parte con un nome e un
+       certificato (puo stare sul server Contabo che c'e gia);
+    2. su Vercel, due variabili di SERVER — `TURN_SECRET` (lo stesso
+       `static-auth-secret` del coturn) e `TURN_URLS` (per esempio
+       `turn:turn.bartalk.app:3478,turns:turn.bartalk.app:5349`).
+  Il codice e gia pronto e non aspetta altro: `/api/turn` risponde
+  `{ iceServers: [] }` finche le variabili mancano, e il telefono
+  prosegue coi soli STUN. L'assenza del ponte e uno stato normale, non
+  un guasto — ed e per questo che nessuno se n'e accorto.
+  NON CONFONDERLO con `accendi-https.sh` sul server Contabo: quello e il
+  certificato del PONTE REDIS (il ripiego a Upstash), un problema
+  diverso. Io li ho confusi una volta: sono due cose che stanno sulla
+  stessa macchina e non c'entrano niente l'una con l'altra.
 
 ### Banco di prova a due utenti, SENZA secondo telefono
 
