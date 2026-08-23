@@ -37,6 +37,7 @@ import { redis } from './redis.js';
 import { createLogger } from './logger.js';
 import { idUtente, idUtenteVecchio } from './compagni/persistenza.js';
 import { emailInIndirizzo } from './peepoff/indirizzo.js';
+import { idPubblico } from './mondoDB.js';
 
 const log = createLogger('cancellazione');
 
@@ -51,6 +52,22 @@ const TABELLE_LIFE = [
   ['imparare_studente', 'owner'],
   ['profilo_studente', 'owner'],
   ['pronuncia_profilo', 'owner'],
+];
+
+// b.419 — I METADATI DI MONDO. Sono TUOI e di nessun altro: chi segui,
+// cosa ti e piaciuto, cosa hai segnalato. Vanno via con te.
+//
+// Non vanno confusi coi CONTENUTI pubblici (mondo_discussions,
+// mondo_comments), che contengono le risposte di altre persone e
+// restano una decisione di prodotto — vedi in testa a questo file.
+// L'audit esterno del 23/08 faceva questa distinzione, ed e giusta.
+//
+// L'identita qui e `idPubblico(email)`, non l'impronta di Life: sono due
+// schemi diversi (Mondo e passato all'HMAC in b.244, Life in b.413) e
+// usare quello sbagliato lascerebbe le righe dove sono senza dire niente.
+const TABELLE_MONDO = [
+  ['mondo_comment_likes', 'user_id'],
+  ['mondo_segnalazioni', 'segnalante'],
 ];
 
 /**
@@ -80,6 +97,47 @@ export async function cancellaDatiPersistenti(email) {
     }
     (fatta ? cancellati : mancati).push(tabella);
   }
+
+  // ── I METADATI DI MONDO (b.419) ──
+  const pubblico = idPubblico(email);
+  if (pubblico) {
+    for (const [tabella, colonna] of TABELLE_MONDO) {
+      const { error } = await sb.from(tabella).delete().eq(colonna, pubblico);
+      (error ? mancati : cancellati).push(tabella);
+      if (error) log.warn('cancellazione non riuscita', { tabella, motivo: error.message });
+    }
+    // I «segui» hanno due lati e sono personali tutti e due: quelli che
+    // hai messo tu, e quelli che altri hanno messo a un profilo che sta
+    // per non esistere piu. Un seguito verso il vuoto non e dato di
+    // nessuno: e spazzatura che punta a te.
+    const a = await sb.from('mondo_follows').delete().eq('follower_user_id', pubblico);
+    const b = await sb.from('mondo_follows').delete().eq('followed_user_id', pubblico);
+    (!a.error && !b.error ? cancellati : mancati).push('mondo_follows');
+  }
+
+  // ── LO STORICO DELLE TRADUZIONI (b.419) ──
+  //
+  // L'audit lo elencava come residuo, e sulla carta ha ragione: la
+  // tabella `translations` ha `user_id`, `source_text` e
+  // `translated_text` (500 caratteri per parte), e la cancellazione non
+  // la toccava.
+  //
+  // VERIFICATO SUL DATABASE VIVO, ed e un'altra storia: `translations` e
+  // a ZERO righe e non puo riempirsi. Chi scrive quelle righe cerca
+  // prima `profiles.id` partendo dall'email — e la tabella `profiles`
+  // NON ESISTE in questo progetto (ne `payments`, ne `usage_daily`, che
+  // altri punti del codice interrogano allo stesso modo). La select
+  // fallisce, e l'insert non parte mai.
+  //
+  // Quindi qui non si cancella niente: non perche sia stato deciso, ma
+  // perche non c'e niente e non ci sara finche quel pezzo e rotto. NON
+  // si scrive `translations` fra i cancellati: dichiarare cancellata una
+  // cosa che non si e toccata e esattamente la bugia che b.415 ha tolto
+  // dalla risposta all'utente.
+  //
+  // DEBITO RESIDUO, dichiarato e non nascosto: lo storico delle
+  // traduzioni non funziona da sempre. E' un difetto suo, non della
+  // cancellazione, e va riparato dove nasce — non qui.
 
   // PeepOff non usa l'impronta: usa l'indirizzo `nome#dominio` ricavato
   // dall'email. Dentro ci sono le chiavi pubbliche del dispositivo e la
