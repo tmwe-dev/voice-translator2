@@ -241,16 +241,46 @@
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
 
-  /* b.437 — IL SELETTORE DI SEZIONE, RIMESSO. Collaudo di Luca: «stanze e
-     notizie avevano in mezzo un'immagine e due frecce che hai eliminato,
-     ripristinale». Vero: gliel'avevo tolto in b.367 per guadagnare
-     altezza, e poi in b.433 l'avevo sostituito con due linguette piatte.
-     Torna com'era — freccia, icona in acciaio col nome, freccia — perche
-     le frecce dicono che ci si scorre, cosa che due parole affiancate non
-     dicono. */
-  .selettore { display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; padding: 6px 0 2px; }
-  .selettore .sez { display: flex; align-items: center; gap: 9px; padding: 0 10px; font-size: 15.5px; color: var(--testo); }
+  /* l'icona in acciaio della sezione, in testata */
   .acciaio.s { width: 30px; height: 30px; }
+
+  /* b.438 — LA MINIATURA. Collaudo di Luca: «manca la thumbnail
+     miniatura della foto dell'articolo, o del video, o del post della
+     chat». Vero, e non e un dettaglio: una notizia senza la sua foto e
+     una riga di testo in mezzo ad altre righe di testo, e in un elenco
+     l'occhio si aggancia all'immagine prima che alla parola. Cinquantasei
+     per cinquantasei, a sinistra, e il testo le scorre accanto.
+     Qui nel template dentro non c'e una foto vera ma il posto dove va,
+     con l'icona di cosa sara: inventare foto di articoli che non
+     esistono renderebbe il template piu bello e meno vero. */
+  .mini {
+    width: 56px; height: 56px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(150deg, rgba(140,170,255,0.16), rgba(91,140,255,0.05));
+    border: 0.5px solid var(--bordo);
+    display: flex; align-items: center; justify-content: center; color: var(--testo-3);
+    background-size: cover; background-position: center;
+  }
+  .mini.gr { width: 72px; height: 72px; border-radius: 14px; }
+
+  /* b.438 — QUANTI SONO DENTRO. Era «● 2 dentro» in verde, alto quanto il
+     titolo della stanza: gridava piu del nome della stanza, che e la cosa
+     per cui uno la sceglie. Adesso l'icona delle persone e il numero. Il
+     verde resta, perche il verde qui significa una cosa sola — la stanza
+     e viva — e quel significato non si cambia. */
+  .quanti { display: inline-flex; align-items: center; gap: 4px; color: var(--verde); font-size: 12.5px; }
+  .quanti .ic { width: 14px; height: 14px; }
+
+  /* b.438 — LA SEZIONE IN TESTATA, CENTRATA. Ordine di Luca: «Mondo in
+     alto allineato alla bandiera, al centro, senza nome e senza frecce».
+     Centrata DAVVERO: in assoluto sulla riga, non spinta al centro da due
+     lati di larghezza diversa — che e il modo in cui una cosa quasi
+     centrata si vede che non lo e. */
+  .sez-testata {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: var(--tasto); height: var(--tasto);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .testata { position: relative; }
 
   .linguetta {
     position: absolute; left: 0; top: 108px; width: 46px; height: 58px;
@@ -305,6 +335,9 @@
   .foto { height: 116px; background: linear-gradient(135deg, rgba(91,140,255,0.14), rgba(56,225,255,0.10)); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600; color: rgba(91,140,255,0.45); }
 
   .riga-voce { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 2px; border-bottom: 1px solid var(--bordo); }
+  /* con la miniatura davanti, il blocco del testo deve prendersi lo
+     spazio che avanza: se no il nome finisce contro la freccia */
+  .riga-voce > div:not(.faccia):not(.mini) { flex: 1; min-width: 0; }
   .riga-voce .t { font-size: 15px; font-weight: 500; }
   .riga-voce .d { font-size: 12px; color: var(--muto); margin-top: 2px; }
   .riga-voce .frec { color: var(--muto); font-size: 17px; }
@@ -390,8 +423,6 @@
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
   <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol>
-  <symbol id="i-sx" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
-  <symbol id="i-dx" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></symbol>
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
@@ -446,8 +477,12 @@
     «Cambia»: erano tre pezzi per dire una cosa che l'utente ha appena scelto lui. Si tocca la
     bandiera e si cambia Paese.
     <br><br>
-    <span class="ril">6 · Torna il selettore di sezione</span> con l'immagine in acciaio e le due
-    frecce, che avevo tolto due volte.
+    <span class="ril">6 · La sezione e l'icona in acciaio</span>, sola e centrata sulla riga della
+    bandiera: senza nome e senza frecce. E arrivano le <span class="ril">miniature</span> — la
+    foto dell'articolo, il fermo immagine del video, la faccia di chi ha scritto — e
+    <span class="ril">la faccia di chi hai davanti</span> accanto al nome, in testata. Il
+    «● 2 dentro» verde, che gridava piu del nome della stanza, diventa l'icona delle persone
+    col numero.
     <br><br>
     <span class="ril">7 · Il giallo sul blu.</span> Da quando non c'e piu il grassetto il rilievo
     lo deve fare il colore. La regola e stretta: <span class="ril">il blu e l'applicazione, il
@@ -550,17 +585,12 @@
         <div class="schermo" style="position:relative;z-index:2">
           <div class="testata">
             <span class="bandiera" title="Tocca per cambiare Paese">🇯🇵</span>
+            <span class="sez-testata" title="Tocca per cambiare sezione">
+              <span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span>
+            </span>
             <span style="flex:1"></span>
             <span class="tondino" title="Ingrandisci il carattere">Aa</span>
             <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
-          </div>
-          <div class="selettore">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-sx"/></svg></span>
-            <span class="sez">
-              <span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span>
-              <span>Stanze</span>
-            </span>
-            <span class="tondino nudo"><svg class="ic"><use href="#i-dx"/></svg></span>
           </div>
           <div class="corpo" style="padding-top:4px">
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">QUI SE NE PARLA</div>
@@ -571,13 +601,16 @@
             <div class="scheda" style="margin-top:6px">
               <div class="dentro">
                 <h4>Tokyo · Yen e inflazione</h4>
-                <div class="eti"><span class="chip">日本語 → tradotto</span><span style="color:var(--verde)">● 43 dentro</span></div>
+                <div class="eti"><span class="chip">日本語 → tradotto</span><span class="quanti"><svg class="ic"><use href="#i-users"/></svg>43</span></div>
               </div>
             </div>
             <div class="scheda">
-              <div class="dentro">
-                <h4>Chi sale sul palco stasera</h4>
-                <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span></div>
+              <div class="dentro" style="display:flex;gap:11px;align-items:flex-start">
+                <div class="mini"><svg class="ic"><use href="#i-image"/></svg></div>
+                <div style="flex:1;min-width:0">
+                  <h4>Chi sale sul palco stasera</h4>
+                  <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -587,7 +620,7 @@
       <div class="spiega">
         <span class="ril">Cosa cambia.</span>
         <ul>
-          <li><span class="ril">Torna il selettore con l'immagine e le due frecce</span>, che avevo tolto due volte. Le frecce dicono che li ci si scorre; due parole affiancate non lo dicono.</li>
+          <li><span class="ril">La sezione e l'icona in acciaio</span>, sola e centrata sulla riga della bandiera. Senza nome e senza frecce: occupavano una riga intera per dire una parola, e la riga della testata c'era gia.</li>
           <li><span class="ril">Della testata resta la bandiera</span>, grande e sola. «Giappone» e «Cambia» erano tre pezzi per dire una cosa che l'utente ha appena scelto lui. Si tocca la bandiera e si cambia Paese, dal pannello.</li>
           <li>Il pianeta resta dietro e si vela scorrendo, come gia fa.</li>
         </ul>
@@ -602,7 +635,7 @@
         <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Archimede</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="faccia" style="width:30px;height:30px;background-image:var(--img-av1)"></span><span class="titolo">Archimede</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
           </div>
           <div class="corpo">
             <div class="bolla sua">Buongiorno. Di cosa parliamo oggi?</div>
@@ -636,7 +669,7 @@
           </div>
           <div class="eti" style="padding:8px 2px 0">
             <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span>
-            <span style="color:var(--verde)">● 2 dentro</span>
+            <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>2</span>
           </div>
           <div class="corpo">
             <div class="bolla sua">こんにちは、はじめまして。<span class="orig">Buongiorno, piacere di conoscerti.</span></div>
@@ -697,7 +730,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Profilo</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+            <span class="titolo">Profilo</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div class="scheda">
@@ -746,13 +779,13 @@
         <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
+            <span class="titolo">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
           </div>
           <div class="corpo">
-            <div class="riga-voce"><div><div class="t">Kenji</div><div class="d">🇮🇹 → 🇯🇵 · 24 messaggi · ieri</div></div><span class="frec">›</span></div>
-            <div class="riga-voce"><div><div class="t">Yen e inflazione</div><div class="d">stanza · 4 persone · 2 giorni fa</div></div><span class="frec">›</span></div>
-            <div class="riga-voce"><div><div class="t">Taxi · aeroporto</div><div class="d">🇮🇹 → 🇪🇸 · 6 messaggi · lunedi</div></div><span class="frec">›</span></div>
-            <div class="riga-voce" style="border-bottom:none"><div><div class="t">Archimede</div><div class="d">Compagno · 12 turni · lunedi</div></div><span class="frec">›</span></div>
+            <div class="riga-voce"><div class="faccia" style="width:44px;height:44px;background-image:var(--img-av3)"></div><div><div class="t">Kenji</div><div class="d">🇮🇹 → 🇯🇵 · 24 messaggi · ieri</div></div><span class="frec">›</span></div>
+            <div class="riga-voce"><div class="mini" style="width:44px;height:44px"><svg class="ic"><use href="#i-users"/></svg></div><div><div class="t">Yen e inflazione</div><div class="d">stanza · 4 persone · 2 giorni fa</div></div><span class="frec">›</span></div>
+            <div class="riga-voce"><div class="mini" style="width:44px;height:44px"><svg class="ic"><use href="#i-pin"/></svg></div><div><div class="t">Taxi · aeroporto</div><div class="d">🇮🇹 → 🇪🇸 · 6 messaggi · lunedi</div></div><span class="frec">›</span></div>
+            <div class="riga-voce" style="border-bottom:none"><div class="faccia" style="width:44px;height:44px;background-image:var(--img-av1)"></div><div><div class="t">Archimede</div><div class="d">Compagno · 12 turni · lunedi</div></div><span class="frec">›</span></div>
           </div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
@@ -1061,7 +1094,7 @@
           </div>
           <div class="eti" style="padding:8px 2px 0">
             <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span><span class="chip">🇪🇸 Rosa</span>
-            <span style="color:var(--verde)">● 3</span>
+            <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>3</span>
           </div>
           <div class="corpo">
             <div class="bolla sua">お待たせしました。<span class="orig">Scusate l'attesa.</span></div>
@@ -1171,8 +1204,13 @@
             <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
-            <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span><span class="chip">economia</span></div>
-            <div style="font-size:17px;font-weight: 600;line-height:1.35">Lo yen perde il dodici per cento in un anno</div>
+            <div style="display:flex;gap:12px;align-items:flex-start">
+              <div class="mini gr"><svg class="ic g"><use href="#i-image"/></svg></div>
+              <div style="flex:1;min-width:0">
+                <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span><span class="chip">economia</span></div>
+                <div style="font-size:17px;font-weight: 600;line-height:1.35;margin-top:5px">Lo yen perde il dodici per cento in un anno</div>
+              </div>
+            </div>
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">3 COMMENTI</div>
             <div class="scheda"><div class="dentro"><div class="eti"><span class="chip">🇮🇹 Marco</span><span>1h</span></div>
               <div style="font-size:14px;line-height:1.45;margin-top:6px">Da noi si sente sui viaggi, non sulla spesa.</div></div></div>
@@ -1194,7 +1232,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="faccia" style="width:30px;height:30px;background-image:var(--img-av3)"></span><span class="titolo">Kenji</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
           </div>
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:12px;padding:6px 2px">
@@ -1881,16 +1919,38 @@
     </div>
 
     <div class="pezzo">
-      <div class="nome">Il selettore di sezione</div>
-      <div class="mis">frecce 44 · icona in acciaio 30 · centrato</div>
+      <div class="nome">La sezione, in testata</div>
+      <div class="mis">icona in acciaio 30 · centrata in assoluto · bersaglio 44</div>
       <div class="prova">
-        <div class="selettore">
-          <span class="tondino nudo"><svg class="ic"><use href="#i-sx"/></svg></span>
-          <span class="sez"><span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span><span>Stanze</span></span>
-          <span class="tondino nudo"><svg class="ic"><use href="#i-dx"/></svg></span>
+        <div class="testata" style="height:44px">
+          <span class="bandiera">🇯🇵</span>
+          <span class="sez-testata"><span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span></span>
+          <span style="flex:1"></span>
+          <span class="tondino">Aa</span>
         </div>
       </div>
-      <div class="perche">Rimesso su richiesta di Luca dopo che l'avevo tolto due volte. Le due frecce fanno una cosa che due parole affiancate non fanno: dicono che li ci si scorre, e che le sezioni sono in fila. L'icona in acciaio da alla sezione una faccia, non solo un nome.</div>
+      <div class="perche">L'icona sola, in mezzo alla riga della bandiera: niente nome sotto e niente frecce ai lati. Occupava una riga intera per dire una parola, e la riga della testata c'era gia. Centrata in assoluto, non spinta al centro da due lati di larghezza diversa — che e il modo in cui una cosa quasi centrata si vede che non lo e.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La miniatura</div>
+      <div class="mis">56 × 56 · raggio 12 · a sinistra · grande 72</div>
+      <div class="prova" style="display:flex;gap:10px;align-items:center">
+        <div class="mini"><svg class="ic"><use href="#i-image"/></svg></div>
+        <div class="mini"><svg class="ic"><use href="#i-video"/></svg></div>
+        <div class="mini"><svg class="ic"><use href="#i-users"/></svg></div>
+      </div>
+      <div class="perche">La foto dell'articolo, il fermo immagine del video, la faccia di chi ha scritto. In un elenco l'occhio si aggancia all'immagine prima che alla parola: senza, una notizia e una riga di testo in mezzo ad altre righe di testo. Qui dentro c'e il posto e l'icona di cosa sara, non una foto inventata.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">Quanti sono dentro</div>
+      <div class="mis">icona 14 · testo 12,5 · verde</div>
+      <div class="prova" style="display:flex;gap:16px;align-items:center">
+        <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>43</span>
+        <span class="quanti"><svg class="ic"><use href="#i-users"/></svg>2</span>
+      </div>
+      <div class="perche">Era «● 2 dentro», alto quanto il titolo della stanza: gridava piu del nome, che e la cosa per cui uno la stanza la sceglie. L'icona e il numero bastano. Il verde resta, perche qui significa una cosa sola — la stanza e viva — e quel significato non si cambia.</div>
     </div>
 
   </div>
@@ -1958,7 +2018,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Archimede</span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="faccia" style="width:30px;height:30px;background-image:var(--img-av1)"></span><span class="titolo">Archimede</span>
             <span class="tondino" title="Ingrandisci il carattere">Aa</span>
             <span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
           </div>
@@ -1966,7 +2026,7 @@
         </div>
         <div class="velo-lato"></div>
         <div class="pannello">
-          <div class="testa"><span class="n">Archimede</span><span class="tondino"><svg class="ic"><use href="#i-x"/></svg></span></div>
+          <div class="testa"><span class="faccia" style="width:30px;height:30px;background-image:var(--img-av1)"></span><span class="n">Archimede</span><span class="tondino"><svg class="ic"><use href="#i-x"/></svg></span></div>
           <div class="dentro">
             <div class="gruppo">
               <span class="eti-lato">Cosa fate insieme</span>
@@ -1994,7 +2054,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji</span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="faccia" style="width:30px;height:30px;background-image:var(--img-av3)"></span><span class="titolo">Kenji</span>
             <span class="tondino" title="Ingrandisci il carattere">Aa</span>
             <span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
           </div>
@@ -2111,6 +2171,8 @@
       </thead>
       <tbody style="font-variant-numeric:tabular-nums">
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto tondo</td><td style="padding:11px 14px;color:var(--accento)">44 × 44</td><td style="padding:11px 14px;color:var(--testo-3)">sotto, un dito sbaglia bersaglio</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Miniatura</td><td style="padding:11px 14px;color:var(--accento)">56 × 56 · raggio 12</td><td style="padding:11px 14px;color:var(--testo-3)">72 quando l'articolo e aperto</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Faccia in testata</td><td style="padding:11px 14px;color:var(--accento)">30 · tonda</td><td style="padding:11px 14px;color:var(--testo-3)">fra la freccia e il nome</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Linguetta del pannello</td><td style="padding:11px 14px;color:var(--accento)">46 × 58 · raggio 0 16 16 0</td><td style="padding:11px 14px;color:var(--testo-3)">misura del righello vero</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Pannello laterale</td><td style="padding:11px 14px;color:var(--accento)">min(330, 86%) di larghezza</td><td style="padding:11px 14px;color:var(--testo-3)">coprente: dietro c'e il pianeta</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Voce del pannello</td><td style="padding:11px 14px;color:var(--accento)">alta 44 · raggio 12</td><td style="padding:11px 14px;color:var(--testo-3)">i quarantaquattro valgono anche qui</td></tr>
