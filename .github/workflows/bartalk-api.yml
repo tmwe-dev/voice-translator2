@@ -1,0 +1,37 @@
+name: BarTalk API v1
+
+on:
+  push:
+    branches: [bartalk-api-v1]
+  pull_request:
+    branches: [bartalk-api-v1]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bartalk-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install
+        run: npm install --ignore-scripts
+
+      - name: Tests
+        run: npm test
+        env:
+          BARTALK_API_SIGNING_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+        env:
+          BARTALK_API_SIGNING_SECRET: 0123456789abcdef0123456789abcdef0123456789abcdef
+          NEXT_TELEMETRY_DISABLED: 1
