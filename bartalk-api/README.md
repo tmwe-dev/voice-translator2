@@ -7,6 +7,34 @@ Gateway API separato per `voice-translator2`.
 - Core BarTalk: non duplicato e non modificato dalla API
 - Snapshot Core verificato: **b.420 / push #712** (`ee1a845845417ce43e0c4af8464531b53e8bbe8c`)
 
+## Come dare la API a qualcuno
+
+Non inviare codice, segreti o spiegazioni lunghe.
+
+Per una persona:
+
+```text
+Apri https://bartalk-api-tmweapps-projects.vercel.app/start
+```
+
+Per Lovable, Claude, Codex, ChatGPT o un altro agente:
+
+```text
+Leggi https://bartalk-api-tmweapps-projects.vercel.app/llms.txt e costruisci usando esclusivamente la BarTalk Public API v1 e la relativa OpenAPI.
+```
+
+Punti di ingresso pubblici:
+
+- `/start` — pagina umana “Start Here”
+- `/llms.txt` — istruzioni per AI/agent
+- `/quickstart.md` — quickstart Markdown
+- `/developer.json` — manifest machine-readable
+- `/openapi` — OpenAPI 3.1, contratto tecnico autorevole
+- `/docs` — documentazione completa
+- `/api/v1/health` — readiness runtime
+
+Nessuno deve ricevere `BARTALK_API_SIGNING_SECRET` o la sessione personale del proprietario. Ogni integrazione usa una sessione BarTalk autorizzata e ottiene la propria chiave `bt_live_*` tramite `/api/v1/auth/exchange`.
+
 ## Principio
 
 `client esterno -> API key/scopes/rate limit -> BarTalk Core -> business logic`
