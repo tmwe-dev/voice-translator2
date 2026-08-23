@@ -214,6 +214,33 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.412** (push #706) — tre punti che avevano in comune una
+  cosa: un'informazione c'era gia, e non arrivava dove serviva.
+  P1.12 — UN TESTO SENZA FONTI SI TRAVESTIVA DA EVIDENZA. Il Dossier SA
+  quando la ricerca fonti fallisce: lo dichiara (`fontiGuaste`), lo
+  registra, e la schermata lo mostra pure. Ma al prompt del report non
+  arrivava, e quel prompt intitolava «Fatti di partenza (dalle fonti)»
+  qualunque briefing non vuoto — comprese le volte in cui di fonti non ce
+  n'era nemmeno una. Ora il briefing porta con se il suo stato e ogni
+  stato ha la sua intestazione: supportati dalle fonti · contesto NON
+  verificato · ricerca fallita, non trattarlo come evidenza. Lo stato
+  attraversa tutta la catena (schermata, cliente, rotta, prompt): bastava
+  che si fermasse in un punto e il prompt tornava a mentire.
+  P1.11 — LO STOP DEL TAVOLO NON ANNULLAVA LA GENERAZIONE GIA PARTITA.
+  Alzava una bandierina che fermava la voce successiva, ma il server
+  stava generando le risposte di due-quattro Compagni: quel lavoro
+  proseguiva, si pagava, e chi aveva premuto Stop restava ad aspettare.
+  Ora la richiesta ha un filo che si taglia, e si ricontrolla anche DOPO
+  l'attesa — perche e proprio in quei secondi che si preme Stop. Cio che
+  il fornitore ha gia cominciato puo comunque essere addebitato: non lo
+  controlliamo noi, ed e scritto nel codice invece che sottinteso.
+  P1.19 — LE LEZIONI PUBBLICATE SI RICOSTRUISCONO CAMPO PER CAMPO. Prima
+  si salvavano cosi come arrivavano: un client poteva pubblicare oggetti
+  di forma qualunque, e quei titoli e obiettivi finiscono nella schermata
+  e DENTRO IL PROMPT che genera le lezioni di altri utenti. In una
+  libreria aperta anche ai bambini. Ora escono solo tre campi — titolo,
+  obiettivi, peso — con le loro misure, e chi ne vuole un quarto lo
+  aggiunge in un posto solo.
 - Versione: **b.411** (push #705) — BATCH E, seconda parte: la memoria
   del Compagno. Sei punti chiusi, e una scoperta che non era nell'audit.
   SCOPERTA, dai dati vivi: `compagno_memorie` e a ZERO righe. La memoria
@@ -419,7 +446,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2457 verdi su 164 file** · 0 errori di lint (avvisi tollerati)
+- Test: **2472 verdi su 165 file** (attesi unendo b.411 e b.412; qui ne ho viste 2460 su 164, senza le prove di b.411 che stanno sul Mac) · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

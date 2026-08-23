@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
-import { preparaBriefing, sintetizzaReport } from '../../../lib/compagni/dossier.js';
+import { preparaBriefing, sintetizzaReport, FONTI } from '../../../lib/compagni/dossier.js';
 
 const log = createLogger('compagni-dossier');
 
@@ -46,7 +46,13 @@ async function handlePost(req) {
     if (azione === 'report') {
       const discussione = typeof body.discussione === 'string' ? body.discussione : '';
       if (!discussione.trim()) return NextResponse.json({ error: 'Serve la discussione' }, { status: 400 });
-      const r = await sintetizzaReport({ argomento, briefing: body.briefing || '', discussione, lingua, userToken });
+      // b.412 · P1.12 — lo STATO delle fonti viaggia col briefing. Il client
+      // lo sa gia (lo mostra a schermo come «senza fonti»): senza passarlo
+      // qui, il report scriveva «dalle fonti» anche quando fonti non ce
+      // n'erano. Cio che non arriva al prompt, per il prompt non esiste.
+      const statoFonti = body.statoFonti === FONTI.GUASTE || body.statoFonti === FONTI.ASSENTI
+        ? body.statoFonti : FONTI.VERIFICATE;
+      const r = await sintetizzaReport({ argomento, briefing: body.briefing || '', statoFonti, discussione, lingua, userToken });
       if (!r.ok) return esito(r);
       return NextResponse.json({ ok: true, report: r.report });
     }

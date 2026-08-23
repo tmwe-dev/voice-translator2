@@ -43,11 +43,35 @@ Da 3 a 5 punti, da 2 a 3 domande.${bloccoFonti}${bloccoSenzaFonti}`;
 }
 
 // ── PROMPT: report finale (il documento) ──
-export function promptReport({ argomento, briefing = '', discussione = '', lingua = 'it' } = {}) {
+// b.412 · P1.12 — DA DOVE VIENE QUEL TESTO.
+//
+// Il Dossier fa gia la cosa giusta a monte: se la ricerca non trova
+// fonti, il prompt del briefing dice «NON inventare dati/date/citazioni»
+// e porta fuori `fontiGuaste`. Ma poi quel testo arrivava al report e
+// veniva presentato come «Fatti di partenza (dalle fonti)» ogni volta
+// che non era vuoto — comprese le volte in cui di fonti non ce n'era
+// nemmeno una. Un testo generalista si travestiva da evidenza.
+//
+// Ora il briefing non viaggia piu come stringa nuda: porta con se il suo
+// stato, e ogni stato ha la sua intestazione. Non e una sfumatura: e la
+// differenza fra «questo e verificato» e «questo e un discorso».
+export const FONTI = { VERIFICATE: 'verificate', ASSENTI: 'assenti', GUASTE: 'guaste' };
+
+function intestazioneBriefing(stato) {
+  if (stato === FONTI.GUASTE) {
+    return 'Testo di contesto — LA RICERCA FONTI E\' FALLITA: non trattarlo come evidenza, non citarlo come fatto accertato';
+  }
+  if (stato === FONTI.ASSENTI) {
+    return 'Contesto generale NON verificato da fonti in questa sessione';
+  }
+  return 'Fatti di partenza supportati dalle fonti';
+}
+
+export function promptReport({ argomento, briefing = '', statoFonti = FONTI.VERIFICATE, discussione = '', lingua = 'it' } = {}) {
   const system = `Sei un analista che scrive un documento UTILE e CONCRETO, non un verbale della discussione. Chi lo legge vuole SAPERE e SAPER FARE, non sapere "chi ha detto cosa". Scrivi in lingua: ${lingua}. Vietato riempitivo, frasi vaghe ("e importante considerare", "gioca un ruolo cruciale") e conclusioni che non concludono.`;
   const prompt =
 `Tema: "${argomento}".
-${briefing ? `Fatti di partenza (dalle fonti):\n${briefing}\n\n` : ''}Confronto fra gli esperti (usalo come MATERIA PRIMA, non da riassumere nome per nome):
+${briefing ? `${intestazioneBriefing(statoFonti)}:\n${briefing}\n\n` : ''}Confronto fra gli esperti (usalo come MATERIA PRIMA, non da riassumere nome per nome):
 ${discussione}
 
 Scrivi il DOCUMENTO finale, in testo semplice, con SOSTANZA in ogni riga:
@@ -113,9 +137,9 @@ export async function preparaBriefing({ argomento, lingua = 'it', userToken = nu
  * Il report finale dalla discussione. `discussione` è il testo dei turni.
  * Ritorna { ok, report }.
  */
-export async function sintetizzaReport({ argomento, briefing = '', discussione = '', lingua = 'it', userToken = null } = {}) {
+export async function sintetizzaReport({ argomento, briefing = '', statoFonti = FONTI.VERIFICATE, discussione = '', lingua = 'it', userToken = null } = {}) {
   if (!discussione || !discussione.trim()) return { ok: false, motivo: 'discussione-mancante' };
-  const { system, prompt } = promptReport({ argomento, briefing, discussione, lingua });
+  const { system, prompt } = promptReport({ argomento, briefing, statoFonti, discussione, lingua });
   // b.308 — il report della DISCUSSIONE INTERA aveva un tetto fisso di 1100:
   // su un dibattito lungo usciva mozzato. Ora lo spazio SEGUE la mole della
   // discussione (piu turni -> report piu ampio), con un soffitto generoso.
