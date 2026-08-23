@@ -1,24 +1,18 @@
 const R = (method, pattern, scope, upstream, auth, opts = {}) => ({ method, pattern, scope, upstream, auth, limit: 60, ...opts });
 
 // Solo capability di prodotto concrete e stabili. Test/debug/admin/cron/webhook/Stripe raw non sono esposti.
-// Le operazioni finanziarie che possono duplicare un addebito senza idempotenza (es. invio regalo)
-// restano fuori finche il Core non offre un contratto idempotente.
+// Una rotta Core esistente NON basta: la capability deve essere realmente operativa sul backend vivo.
+// Per questo v1 non pubblica preferenze server, /api/keys e glossari: oggi dipendono dallo schema
+// Supabase legacy `profiles/user_settings/api_keys_vault/glossaries`, non presente in produzione.
 export const ROUTES = [
-  R('GET', '/health', null, '/api/health', 'none', { limit: 20, public: true }),
+  { method: 'GET', pattern: '/health', local: 'health', public: true, limit: 20 },
   { method: 'POST', pattern: '/auth/exchange', local: 'exchange', public: true, limit: 10 },
 
   R('GET', '/me', 'profile:read', '/api/user?action=profile', 'header'),
   R('PATCH', '/me', 'profile:write', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'update' } }),
   R('DELETE', '/me/data', 'profile:write', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'delete-data' }, limit: 5 }),
-  R('GET', '/preferences', 'profile:read', '/api/user?action=get-prefs', 'header'),
-  R('PUT', '/preferences', 'profile:write', '/api/user', 'header', { fixedBody: { action: 'sync-prefs' } }),
 
-  // BYOK: il Core non restituisce mai i valori delle chiavi, solo lo stato.
-  R('GET', '/provider-keys', 'keys:read', '/api/keys', 'header'),
-  R('POST', '/provider-keys', 'keys:write', '/api/keys', 'header', { limit: 10 }),
-  R('DELETE', '/provider-keys', 'keys:write', '/api/keys', 'header', { limit: 10 }),
-
-  // Wallet contabile attuale. /api/user credits resta legacy e non e piu la fonte primaria.
+  // Wallet contabile attuale. Lo storico compatibilita e Redis-backed nel Core.
   R('GET', '/wallet', 'wallet:read', '/api/wallet/saldo', 'header'),
   R('GET', '/wallet/payments', 'wallet:read', '/api/user', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'payments' } }),
   R('POST', '/wallet/topups', 'wallet:write', '/api/wallet/ricarica', 'header', { limit: 10 }),
@@ -38,8 +32,6 @@ export const ROUTES = [
   R('DELETE', '/companions/:id', 'companions:write', '/api/compagni/mie', 'json:userToken', { upstreamMethod: 'POST', fixedBody: { azione: 'cancella' }, transform: 'companionDelete' }),
   R('POST', '/companions/:id/messages', 'companions:chat', '/api/compagni/amico', 'json:userToken', { transform: 'companionMessage', limit: 40 }),
   R('POST', '/companions/:id/live-sessions', 'companions:live', '/api/compagni/live/session', 'json:userToken', { transform: 'liveOpen', limit: 10 }),
-  // b.418 Core: il Live ruota la riserva a tratti. Il client API deve mandare
-  // questo heartbeat con la cadenza restituita da `battitoSecondi` all'apertura.
   R('POST', '/live-sessions/:sessionId/heartbeat', 'companions:live', '/api/compagni/live/session', 'json:userToken', { transform: 'liveRenew', limit: 60 }),
   R('DELETE', '/live-sessions/:sessionId', 'companions:live', '/api/compagni/live/session', 'json:userToken', { upstreamMethod: 'POST', transform: 'liveClose', limit: 20 }),
   R('POST', '/podcast/turns', 'companions:podcast', '/api/compagni/podcast', 'json:userToken', { limit: 60 }),
@@ -54,8 +46,8 @@ export const ROUTES = [
 
   R('GET', '/topics/search', 'topics:read', '/api/topics/search', 'query', { stream: true, limit: 15 }),
 
-  // Superfici applicative gia esistenti. Il body mantiene il contratto del Core;
-  // il gateway aggiunge solamente l'identita verificata quando il Core la usa.
+  // Queste superfici usano Redis/capability token nel Core. Dove la sessione
+  // account non viene inoltrata, il gateway la riverifica prima della chiamata.
   R('GET', '/rooms', 'rooms:read', '/api/room', 'none'),
   R('POST', '/rooms', 'rooms:write', '/api/room', 'json:userToken'),
   R('GET', '/messages', 'messages:read', '/api/messages', 'none'),
@@ -70,11 +62,6 @@ export const ROUTES = [
   R('POST', '/realtime/group-video', 'rooms:write', '/api/stanza-video', 'none', { limit: 180 }),
   R('GET', '/contacts', 'contacts:read', '/api/contacts', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'list' } }),
   R('POST', '/contacts', 'contacts:write', '/api/contacts', 'json:token'),
-  R('GET', '/glossaries', 'glossary:read', '/api/glossary', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'list' } }),
-  R('GET', '/glossaries/:id', 'glossary:read', '/api/glossary', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'get' }, transform: 'glossaryId' }),
-  R('POST', '/glossaries', 'glossary:write', '/api/glossary', 'json:token', { fixedBody: { action: 'create' }, transform: 'glossaryData' }),
-  R('PATCH', '/glossaries/:id', 'glossary:write', '/api/glossary', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'update' }, transform: 'glossaryUpdate' }),
-  R('DELETE', '/glossaries/:id', 'glossary:write', '/api/glossary', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'delete' }, transform: 'glossaryId' }),
   R('POST', '/summary', 'summary', '/api/summary', 'json:userToken'),
   R('POST', '/moderation', 'moderation', '/api/moderazione', 'none'),
   R('GET', '/community', 'community:read', '/api/mondo', 'none'),
@@ -120,6 +107,12 @@ export function matchRoute(method, path) {
   return null;
 }
 
+export function requiresSessionProbe(route) {
+  if (!route || route.public || route.local) return false;
+  // Questi contratti fanno gia validare la sessione account al Core.
+  return !new Set(['header', 'json:token', 'json:userToken', 'form:userToken']).has(route.auth);
+}
+
 export function transformBody(name, body, params) {
   if (!name) return body;
   if (name === 'companionCreate') return { ...body, compagno: body.compagno || body };
@@ -138,8 +131,5 @@ export function transformBody(name, body, params) {
   if (name === 'liveRenew') return { ...body, azione: 'rinnova', sessioneId: params.sessionId };
   if (name === 'liveClose') return { ...body, azione: 'chiudi', sessioneId: params.sessionId };
   if (name === 'conversationDelete') return { ...body, action: 'delete', convId: params.id };
-  if (name === 'glossaryId') return { ...body, glossaryId: params.id };
-  if (name === 'glossaryData') return { ...body, data: body.data || body };
-  if (name === 'glossaryUpdate') return { ...body, glossaryId: params.id, data: body.data || body };
   return body;
 }
