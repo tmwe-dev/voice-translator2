@@ -1,6 +1,6 @@
 # Deploy autonomo BarTalk API v1
 
-Ultimo allineamento Core verificato: **b.416 / push #710** (`8e831153f5a29e0e66ef506d4207a9826accdb4e`).
+Ultimo allineamento Core verificato: **b.419 / push #711** (`d83df8455b08fbd7837c6a547f32b7d6ad9b9db9`).
 
 ## Vercel
 
@@ -29,20 +29,19 @@ I valori segreti **non devono essere committati** in GitHub.
 
 ### Stato di verifica delle env
 
-Il connettore usato per creare il progetto/deploy non espone in modo coerente la lettura dei progetti/env dello stesso team: `list_projects/get_project/get_deployment` hanno restituito zero progetti/404 anche dopo una creazione riuscita. Di conseguenza questa documentazione **non afferma** che `BARTALK_API_SIGNING_SECRET` sia persistita nel progetto finche non viene verificata da Vercel tramite un canale di lettura funzionante o da un test reale di `/auth/exchange`.
+Il connettore usato per creare il progetto/deploy non esponeva in modo coerente la lettura dei progetti/env dello stesso team. Questa documentazione quindi non afferma che il segreto di firma sia persistito nel progetto finche non viene verificato tramite un test reale di `/auth/exchange` o un canale Vercel di lettura coerente.
 
-Un deploy che mostra `/docs` ma non possiede il segreto puo comunque costruire l'app; fallira invece l'emissione delle API key. La prova autorevole e quindi il punto 4 qui sotto, non la sola build.
-
-## Verifica minima di produzione
+## Verifica minima di produzione dopo b.419
 
 1. `GET /docs` deve caricare la documentazione.
-2. `GET /openapi` deve restituire OpenAPI 3.1.
+2. `GET /openapi` deve restituire OpenAPI 3.1 con `/live-sessions/{sessionId}/heartbeat`.
 3. `GET /api/v1/health` deve raggiungere il Core.
-4. `POST /api/v1/auth/exchange` con una sessione BarTalk valida deve emettere una chiave `bt_live_...`. **Questo verifica anche che il segreto di firma sia realmente disponibile al runtime.**
+4. `POST /api/v1/auth/exchange` con sessione BarTalk valida deve emettere una chiave `bt_live_...`.
 5. Una chiave alterata/scaduta deve essere rifiutata.
-6. Le route account devono continuare a sovrascrivere `token/userToken` col valore autenticato dal gateway.
-7. `DELETE /api/v1/me/data` deve restituire `deletionCoverage.status=partial` finche il Core non completa il perimetro di cancellazione.
-8. `GET /api/v1/realtime/ice` puo legittimamente restituire `iceServers: []` finche il Core non ha coturn + `TURN_SECRET/TURN_URLS`.
+6. Le route account devono sovrascrivere `token/userToken` col valore autenticato dal gateway.
+7. Apertura Live deve restituire `sessioneId` e `battitoSecondi`; l'heartbeat deve inoltrare `azione=rinnova` con il `sessionId` del path.
+8. `DELETE /api/v1/me/data` deve dichiarare `auditedCore=b.419`, non elencare piu follow/like/segnalazioni come residui, e mantenere esplicite le retention di policy.
+9. `GET /api/v1/realtime/ice` puo legittimamente restituire `iceServers: []` finche il Core non ha coturn + `TURN_SECRET/TURN_URLS`.
 
 ## Regola di isolamento
 
