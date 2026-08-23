@@ -32,6 +32,43 @@ function requestBodyFor(route) {
   };
 }
 
+function descriptionFor(route) {
+  if (route.method === 'DELETE' && route.pattern === '/me/data') {
+    return 'Scope richiesto: `profile:write`. Avvia la cancellazione dati nel Core. Il gateway aggiunge `deletionCoverage.status=partial`: il Core b.416 non costituisce ancora una garanzia di erasure totale per storico traduzioni e metadati Mondo non editoriali.';
+  }
+  if (route.method === 'POST' && route.pattern === '/companions/:id/live-sessions') {
+    return 'Scope richiesto: `companions:live`. Apre una sessione Live governata dal Core. Contratto economico v1: massimo 15 minuti continuativi; il Core b.416 non rinnova automaticamente la riserva oltre quel tetto.';
+  }
+  if (route.method === 'GET' && route.pattern === '/realtime/ice') {
+    return 'Scope richiesto: `rooms:read`. Restituisce gli ICE server del Core. Finche coturn/TURN_SECRET/TURN_URLS non sono configurati, `iceServers` puo essere vuoto e il client usa solo STUN.';
+  }
+  return route.scope
+    ? `Scope richiesto: \`${route.scope}\`. Il gateway trasporta la richiesta; la business logic autorevole resta nel BarTalk Core.`
+    : 'Endpoint pubblico del gateway.';
+}
+
+function successResponseFor(route) {
+  if (route.method === 'DELETE' && route.pattern === '/me/data') {
+    return {
+      description: 'Richiesta di cancellazione eseguita dal Core; copertura auditata come parziale.',
+      content: {
+        'application/json': {
+          schema: {
+            type: 'object',
+            additionalProperties: true,
+            properties: {
+              ok: { type: 'boolean' },
+              deleted: { type: 'array', items: { type: 'string' } },
+              deletionCoverage: { $ref: '#/components/schemas/DeletionCoverage' },
+            },
+          },
+        },
+      },
+    };
+  }
+  return { description: 'Risposta del BarTalk Core' };
+}
+
 function schemaFor(route) {
   if (route.local === 'exchange') {
     return {
@@ -51,14 +88,12 @@ function schemaFor(route) {
   const parameters = pathParameters(route.pattern);
   return {
     summary: `${route.method} ${route.pattern}`,
-    description: route.scope
-      ? `Scope richiesto: \`${route.scope}\`. Il gateway trasporta la richiesta; la business logic autorevole resta nel BarTalk Core.`
-      : 'Endpoint pubblico del gateway.',
+    description: descriptionFor(route),
     security: route.public ? [] : apiSecurity,
     ...(parameters.length ? { parameters } : {}),
     ...(requestBodyFor(route) ? { requestBody: requestBodyFor(route) } : {}),
     responses: {
-      '200': { description: 'Risposta del BarTalk Core' },
+      '200': successResponseFor(route),
       '400': { description: 'Richiesta non valida' },
       '401': { description: 'API key, sessione BarTalk o sessione stanza non valida' },
       '402': { description: 'Credito insufficiente' },
@@ -83,7 +118,7 @@ export function buildOpenApi(origin = 'https://api.example.com') {
     openapi: '3.1.0',
     info: {
       title: 'BarTalk API', version: '1.0.0',
-      description: 'API pubblica versionata che espone capability verificate del BarTalk Core senza duplicarne business logic, wallet, memoria o provider routing.',
+      description: 'API pubblica versionata che espone capability verificate del BarTalk Core senza duplicarne business logic, wallet, memoria o provider routing. Snapshot di verifica: Core b.416 / push #710.',
     },
     servers: [{ url: origin }],
     paths,
@@ -95,6 +130,17 @@ export function buildOpenApi(origin = 'https://api.example.com') {
       schemas: {
         ApiKeyScopes: { type: 'array', uniqueItems: true, items: { type: 'string', enum: SCOPES } },
         Error: { type: 'object', required: ['error'], properties: { error: { type: 'string' }, requestId: { type: 'string' } } },
+        DeletionCoverage: {
+          type: 'object',
+          required: ['status', 'auditedCore', 'retainedByPolicy', 'notGuaranteedByCore'],
+          properties: {
+            status: { type: 'string', const: 'partial' },
+            auditedCore: { type: 'string', const: 'b.416' },
+            retainedByPolicy: { type: 'array', items: { type: 'string' } },
+            notGuaranteedByCore: { type: 'array', items: { type: 'string' } },
+            note: { type: 'string' },
+          },
+        },
       },
     },
   };
