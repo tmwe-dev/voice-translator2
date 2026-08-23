@@ -282,10 +282,24 @@
   }
   .testata { position: relative; }
 
+  /* b.439, ordine di Luca: «lo sfondo della linguetta fallo semitrasparente
+     e sfumato». Era un rettangolino pieno al 94%: una toppa scura
+     appiccicata sul bordo, che si vedeva anche quando non serviva.
+     Adesso e vetro — sfuma da sinistra a destra e si dissolve verso la
+     punta, cosi non ha un lato netto che la stacca dalla pagina. Il
+     contenuto dietro si intravede sfocato: e li, non e stato coperto.
+     Le tre righine restano piene: e l'unica cosa che deve leggersi. */
   .linguetta {
     position: absolute; left: 0; top: 108px; width: 46px; height: 58px;
-    border-radius: 0 16px 16px 0; border: 0.5px solid var(--bordo); border-left: none;
-    background: rgba(10,15,31,0.94); color: var(--testo-3);
+    border-radius: 0 16px 16px 0;
+    border: 0.5px solid rgba(160,190,255,0.10); border-left: none;
+    background: linear-gradient(100deg,
+      rgba(14,20,40,0.62) 0%,
+      rgba(14,20,40,0.34) 58%,
+      rgba(14,20,40,0.12) 100%);
+    -webkit-backdrop-filter: blur(11px) saturate(120%);
+    backdrop-filter: blur(11px) saturate(120%);
+    color: var(--testo-3);
     display: flex; align-items: center; justify-content: center; z-index: 5; cursor: pointer;
   }
   .velo-lato { position: absolute; inset: 0; background: rgba(0,0,0,0.55); z-index: 8; }
@@ -1890,13 +1904,14 @@
     <div class="pezzo">
       <div class="nome">La linguetta</div>
       <div class="mis">46 × 58 · raggio 0 16 16 0 · a 108 dal bordo alto</div>
-      <div class="prova" style="position:relative;height:210px;background:var(--bg);border-radius:12px;overflow:hidden">
+      <div class="prova" style="position:relative;height:210px;background:var(--bg);background-image:var(--bg-grad);border-radius:12px;overflow:hidden">
+        <div style="position:absolute;left:14px;top:22px;right:14px;font-size:14px;color:var(--testo-2);line-height:1.5">Il contenuto dietro si intravede: la linguetta e vetro, non una toppa. Sfuma verso la punta, cosi non ha un lato netto che la stacca dalla pagina.</div>
         <div class="linguetta" style="top:10px;opacity:.22"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="linguetta" style="top:76px;border-color:var(--giallo-bor);color:var(--giallo);background:var(--giallo-vel)"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="linguetta" style="top:142px;opacity:.22"><svg class="ic"><use href="#i-menu"/></svg></div>
         <span style="position:absolute;left:58px;top:88px;font-size:12px;color:var(--muto)">tieni premuto e trascina</span>
       </div>
-      <div class="perche">La maniglia del pannello. Appoggiata al bordo sinistro, sporge appena, e non copre mai i contenuti — le liste sono strette apposta per lasciarle il posto. Tre righine: e il segno che tutti riconoscono per «qui ci sono i comandi». Le misure sono quelle del righello vero, non nuove.<br><br><span class="ril">Si tiene premuta e si sposta su e giu dove si vuole</span>, e il posto resta quello scelto anche dopo. Una maniglia fissa va bene per chi l'ha messa: chi tiene il telefono con l'altra mano, o ha il pollice corto, la trova sempre nel punto sbagliato. Muoverla e l'unico modo di darle ragione a tutti senza chiedere niente a nessuno.</div>
+      <div class="perche">La maniglia del pannello. Appoggiata al bordo sinistro, sporge appena, e non copre mai i contenuti — le liste sono strette apposta per lasciarle il posto. Tre righine: e il segno che tutti riconoscono per «qui ci sono i comandi». Le misure sono quelle del righello vero, non nuove. Il fondo e vetro sfumato: si dissolve verso la punta e lascia intravedere cosa c'e dietro, invece di coprirlo con una toppa scura.<br><br><span class="ril">Si tiene premuta e si sposta su e giu dove si vuole</span>, e il posto resta quello scelto anche dopo. Una maniglia fissa va bene per chi l'ha messa: chi tiene il telefono con l'altra mano, o ha il pollice corto, la trova sempre nel punto sbagliato. Muoverla e l'unico modo di darle ragione a tutti senza chiedere niente a nessuno.</div>
     </div>
 
     <div class="pezzo">
