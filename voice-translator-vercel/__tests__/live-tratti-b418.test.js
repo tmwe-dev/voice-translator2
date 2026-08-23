@@ -21,17 +21,34 @@
 // ═══════════════════════════════════════════════════════════════
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
+// b.420 — IL FINTO PORTAFOGLIO ADESSO SA DIRE DI NO, come quello vero.
+// `wallet_commit` rifiuta una riserva inesistente o gia chiusa, e da
+// b.420 `commit()` lo riporta al chiamante. Un finto che diceva sempre
+// di si non poteva accorgersi di un tratto contato e mai incassato:
+// e' esattamente il difetto numero 3 segnalato oggi.
+// `scaduta(id)` imita il cron delle riserve scadute.
 const portafoglio = { riserve: [], commit: [], release: [], credito: Infinity };
+const stato = new Map();   // riservaId -> 'attiva' | 'confermata' | 'rilasciata'
+const scaduta = (id) => stato.set(id, 'rilasciata');
 vi.mock('../app/wallet/riserva.js', () => ({
   riserva: async (utente, secondi, dettaglio) => {
     if (secondi > portafoglio.credito) return { ok: false, motivo: 'credito-insufficiente' };
     portafoglio.credito -= secondi;
     const id = portafoglio.riserve.length + 1;
     portafoglio.riserve.push({ id, utente, secondi, dettaglio });
+    stato.set(id, 'attiva');
     return { ok: true, riservaId: id };
   },
-  commit: async (id, secondi, dettaglio) => { portafoglio.commit.push({ id, secondi, dettaglio }); },
-  release: async (id, motivo) => { portafoglio.release.push({ id, motivo }); },
+  commit: async (id, secondi, dettaglio) => {
+    if (stato.get(id) !== 'attiva') return { ok: false, motivo: `riserva gia chiusa (${stato.get(id) || 'inesistente'})` };
+    stato.set(id, 'confermata');
+    portafoglio.commit.push({ id, secondi, dettaglio });
+    return { ok: true };
+  },
+  release: async (id, motivo) => {
+    if (stato.get(id) === 'attiva') stato.set(id, 'rilasciata');
+    portafoglio.release.push({ id, motivo });
+  },
 }));
 
 vi.mock('../app/lib/apiAuth.js', () => ({
@@ -44,7 +61,11 @@ const deposito = new Map();
 vi.mock('../app/lib/redis.js', () => ({
   redis: async (comando, chiave, valore, ...resto) => {
     if (comando === 'SET') {
+      // b.420 — il finto conosce NX e XX, perche adesso il codice ci
+      // conta: NX e il paletto e il lucchetto, XX e la riga che impedisce
+      // a un battito di resuscitare una telefonata gia chiusa.
       if (resto.includes('NX') && deposito.has(chiave)) return null;
+      if (resto.includes('XX') && !deposito.has(chiave)) return null;
       deposito.set(chiave, valore); return 'OK';
     }
     if (comando === 'GET') return deposito.get(chiave) ?? null;
@@ -70,6 +91,7 @@ const EMAIL = 'luca@esempio.it';
 beforeEach(() => {
   portafoglio.riserve.length = 0; portafoglio.commit.length = 0; portafoglio.release.length = 0;
   portafoglio.credito = Infinity;
+  stato.clear();
   deposito.clear();
   global.fetch = async () => ({ ok: true, status: 200, json: async () => ({ signed_url: 'wss://firmato/x' }), text: async () => '' });
 });

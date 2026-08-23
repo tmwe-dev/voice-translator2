@@ -81,17 +81,46 @@ export async function riserva(utente, secondiPrevisti, dettaglio = {}) {
  * l'utente (l'addebito e gia avvenuto con la riserva): un errore qui
  * viene solo loggato, mai propagato — coerente con "l'addebito non
  * deve mai far cadere una risposta gia pronta".
+ *
+ * b.420 — ADESSO DICE ANCHE SE E' RIUSCITO, e serviva.
+ *
+ * Prima non restituiva niente: un fallimento veniva scritto nel
+ * registro e il chiamante andava avanti convinto di aver scalato. Nel
+ * dal-vivo questo diventava un buco vero — se il cron delle riserve
+ * scadute aveva gia chiuso la riserva, `wallet_commit` risponde
+ * «riserva gia chiusa», qui si registrava l'errore, e la chiusura della
+ * telefonata contava lo stesso quei minuti come pagati. Tre minuti che
+ * l'utente non ha mai pagato e che noi credevamo incassati.
+ *
+ * La promessa di prima resta INTATTA: non lancia mai, non propaga
+ * niente, non puo far cadere una risposta gia pronta. Cambia solo che
+ * chi vuole sapere com'e andata adesso puo chiederlo. I quattordici
+ * chiamanti che ignorano il valore continuano a funzionare identici.
+ *
+ * @returns {Promise<{ok: boolean, motivo?: string}>}
  */
 export async function commit(riservaId, secondiReali, dettaglio = {}) {
-  if (!riservaId) return;
+  if (!riservaId) return { ok: false, motivo: 'riserva mancante' };
   try {
     const importo = Math.max(0, Math.round(secondiReali ?? 0));
-    const { error } = await db().rpc('wallet_commit', {
+    const { data, error } = await db().rpc('wallet_commit', {
       p_riserva_id: riservaId, p_secondi_reali: importo, p_dettaglio: dettaglio,
     });
-    if (error) console.error('[wallet] commit riserva fallito:', riservaId, error.message);
+    if (error) {
+      console.error('[wallet] commit riserva fallito:', riservaId, error.message);
+      return { ok: false, motivo: error.message };
+    }
+    // wallet_commit RETURNS TABLE (ok BOOLEAN, motivo TEXT): rifiuta una
+    // riserva inesistente o gia chiusa, e lo dice.
+    const r = data?.[0];
+    if (r && r.ok === false) {
+      console.error('[wallet] commit riserva rifiutato:', riservaId, r.motivo);
+      return { ok: false, motivo: r.motivo || 'riserva rifiutata' };
+    }
+    return { ok: true };
   } catch (e) {
     console.error('[wallet] commit riserva fallito:', riservaId, e.message);
+    return { ok: false, motivo: e.message };
   }
 }
 

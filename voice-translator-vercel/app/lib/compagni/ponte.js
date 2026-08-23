@@ -342,6 +342,14 @@ const VITA_LINEA = 4 * 60 * 60;   // 4 ore: molto oltre qualunque telefonata
 const CHIAVE_PERSONA = (chi) => `live:utente:${chi}`;
 const VITA_PALETTO = 5 * 60;      // 5 minuti, rinfrescati a ogni battito
 
+// b.420 — IL LUCCHETTO DELLA SINGOLA TELEFONATA. Il battito e la
+// chiusura leggono e riscrivono lo stesso stato: senza niente in mezzo,
+// un battito gia partito poteva confermare un tratto DOPO che la
+// chiusura aveva gia chiuso il conto, e riscrivere una sessione appena
+// cancellata. Chi tocca una linea la tiene per se mentre lo fa.
+const CHIAVE_LUCCHETTO = (id) => `live:lucchetto:${id}`;
+const VITA_LUCCHETTO = 15;        // se qualcuno muore a meta, si sblocca da solo
+
 /**
  * Ripulisce un valore che finira dentro il prompt del fornitore.
  * b.406 (P1.5) faceva questo lavoro nel browser; ora lo fa il server,
@@ -419,6 +427,23 @@ async function lasciaPaletto(chiave, sessioneId) {
 }
 
 /**
+ * Prende il lucchetto della telefonata. `tentativi` dice quanto insistere:
+ * il battito non insiste (saltare un battito non fa danni), la chiusura
+ * si, perche deve poter chiudere.
+ */
+async function prendiLucchetto(sessioneId, tentativi = 1) {
+  for (let i = 0; i < tentativi; i++) {
+    if (await redis('SET', CHIAVE_LUCCHETTO(sessioneId), '1', 'NX', 'EX', VITA_LUCCHETTO)) return true;
+    if (i < tentativi - 1) await new Promise((r) => setTimeout(r, 150));
+  }
+  return false;
+}
+
+async function lasciaLucchetto(sessioneId) {
+  await redis('DEL', CHIAVE_LUCCHETTO(sessioneId)).catch(() => {});
+}
+
+/**
  * APRE LA LINEA. Restituisce solo cio che serve al browser per parlare.
  * @returns {{ok:true, sessioneId, signedUrl, variabili, voceId, tettoSecondi, battitoSecondi}}
  *          | {ok:false, motivo, status}
@@ -449,6 +474,39 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
   const p = await prendiPaletto(chiPersona, sessioneId);
   if (!p.ok) return { ok: false, motivo: 'gia-in-corso', status: 409 };
 
+  // b.420 — LA SESSIONE SI SCRIVE SUBITO, PRIMA DI CHIAMARE IL FORNITORE.
+  //
+  // Era una finestra di corsa vera, e non l'aveva vista nessuno dei due
+  // audit: fra il `SET NX` del paletto e la scrittura della sessione
+  // c'era una chiamata HTTP a ElevenLabs, che dura centinaia di
+  // millisecondi. In quel buco una seconda richiesta trovava il paletto
+  // occupato, andava a cercare la linea che lo teneva, NON LA TROVAVA —
+  // perche non era ancora stata scritta — e concludeva che il paletto
+  // fosse il fantasma di una linea morta. Lo sovrascriveva, e si
+  // aprivano due telefonate.
+  //
+  // Il controllo del fantasma serve e resta (una linea caduta non deve
+  // chiudere fuori la persona per sempre), ma deve avere qualcosa da
+  // trovare. Ora la linea esiste da subito, dichiarata «in apertura»:
+  // se il fornitore poi non firma, si cancella insieme al paletto.
+  const primaNota = {
+    email: email || null,
+    paga,
+    riservaId: null,
+    apertaIl: adesso,
+    scalato: 0,
+    tratti: 1,
+    compagnoId: compagno?.id || '',
+    paletto: p.paletto || null,
+    stato: 'in-apertura',
+  };
+  await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify(primaNota), 'EX', VITA_LINEA);
+
+  const disfa = async () => {
+    await redis('DEL', CHIAVE_LINEA(sessioneId)).catch(() => {});
+    await lasciaPaletto(p.paletto, sessioneId);
+  };
+
   let riservaId = null;
   if (paga) {
     const r = await riserva(paga, LIVE_TRATTO_SECONDI, {
@@ -458,7 +516,7 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
       costo_cent: costoProviderCent(LIVE_TRATTO_SECONDI / MOLTIPLICATORE_DAL_VIVO, 'gpt-5.4-mini', 'elevenlabs-flash'),
     });
     if (!r.ok) {
-      await lasciaPaletto(p.paletto, sessioneId);
+      await disfa();
       return { ok: false, motivo: 'credito-insufficiente', status: 402, servono: LIVE_TRATTO_SECONDI };
     }
     riservaId = r.riservaId;
@@ -467,15 +525,10 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
   try {
     const signedUrl = await indirizzoFirmato(apiKey);
     await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify({
-      email: email || null,
-      paga,
+      ...primaNota,
       riservaId,             // il tratto APERTO adesso (null se non paga)
       trattoApertoIl: adesso,
-      scalato: 0,            // credito gia CONFERMATO dai tratti chiusi
-      tratti: 1,
-      apertaIl: adesso,
-      compagnoId: compagno?.id || '',
-      paletto: p.paletto || null,
+      stato: 'aperta',
     }), 'EX', VITA_LINEA);
     return {
       ok: true,
@@ -488,7 +541,7 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
     };
   } catch (e) {
     if (riservaId) await release(riservaId, 'firma-non-riuscita').catch(() => {});
-    await lasciaPaletto(p.paletto, sessioneId);
+    await disfa();
     log.warn('linea dal vivo non firmata:', e?.message || e);
     return { ok: false, motivo: 'firma-non-riuscita', status: 502 };
   }
@@ -521,6 +574,22 @@ async function leggiLinea(sessioneId, email) {
  */
 export async function rinnovaLineaDalVivo({ sessioneId, email, adesso }) {
   if (!sessioneId) return { ok: false, motivo: 'sessione-mancante', status: 400 };
+
+  // b.420 — UN BATTITO CHE TROVA OCCUPATO SALTA IL GIRO, e va benissimo:
+  // il tratto in corso ha un minuto di margine e il battito successivo
+  // arriva fra sessanta secondi. Insistere qui vorrebbe dire tenere in
+  // attesa una chiusura, che invece deve poter chiudere.
+  if (!await prendiLucchetto(sessioneId, 1)) {
+    return { ok: true, secondiParlati: 0, scalato: 0, rinnovato: false, occupato: true };
+  }
+  try {
+    return await battito({ sessioneId, email, adesso });
+  } finally {
+    await lasciaLucchetto(sessioneId);
+  }
+}
+
+async function battito({ sessioneId, email, adesso }) {
   const l = await leggiLinea(sessioneId, email);
   if (l.assente) return { ok: false, motivo: 'sessione-chiusa', status: 410 };
   if (l.illeggibile) { await redis('DEL', CHIAVE_LINEA(sessioneId)); return { ok: false, motivo: 'sessione-illeggibile', status: 400 }; }
@@ -544,11 +613,17 @@ export async function rinnovaLineaDalVivo({ sessioneId, email, adesso }) {
   //    nuovo: se il credito e finito, quello che hai gia parlato resta
   //    pagato e la linea si chiude — non si regala e non si ruba.
   const quota = Math.max(0, Math.min(LIVE_TRATTO_SECONDI, dovuto - scalato));
+  let nuovoScalato = scalato;
   if (linea.riservaId) {
-    if (quota > 0) await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati }).catch(() => {});
-    else await release(linea.riservaId, 'tratto-non-consumato').catch(() => {});
+    if (quota > 0) {
+      // b.420 — si conta solo cio che il portafoglio ha DAVVERO confermato.
+      const esito = await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati });
+      if (esito?.ok) nuovoScalato += quota;
+      else log.warn('dal vivo: tratto non confermato dal portafoglio', { motivo: esito?.motivo });
+    } else {
+      await release(linea.riservaId, 'tratto-non-consumato').catch(() => {});
+    }
   }
-  const nuovoScalato = scalato + quota;
 
   const r = await riserva(linea.paga, LIVE_TRATTO_SECONDI, {
     tipo: 'dal_vivo',
@@ -566,13 +641,27 @@ export async function rinnovaLineaDalVivo({ sessioneId, email, adesso }) {
     return { ok: false, motivo: 'credito-finito', status: 402, secondiParlati, scalato: nuovoScalato };
   }
 
-  await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify({
+  // b.420 — SI RISCRIVE SOLO SE LA SESSIONE ESISTE ANCORA (`XX`).
+  //
+  // Senza, un battito partito un istante prima di una chiusura poteva
+  // RESUSCITARE la telefonata: la chiusura cancellava la chiave, il
+  // battito la riscriveva, e restavano in piedi una sessione fantasma e
+  // una riserva che nessuno avrebbe piu chiuso. Il lucchetto qui sopra
+  // rende la cosa quasi impossibile; questa riga la rende impossibile.
+  const scritta = await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify({
     ...linea,
     riservaId: r.riservaId,
     trattoApertoIl: adesso,
     scalato: nuovoScalato,
     tratti: (linea.tratti || 1) + 1,
-  }), 'EX', VITA_LINEA);
+  }), 'XX', 'EX', VITA_LINEA);
+
+  if (!scritta) {
+    // La telefonata e stata chiusa mentre stavamo rinnovando: il tratto
+    // appena aperto non servira a nessuno e torna indietro subito.
+    await release(r.riservaId, 'linea-chiusa-durante-il-rinnovo').catch(() => {});
+    return { ok: false, motivo: 'sessione-chiusa', status: 410, secondiParlati, scalato: nuovoScalato };
+  }
   if (linea.paletto) await redis('EXPIRE', linea.paletto, VITA_PALETTO);
 
   return { ok: true, secondiParlati, scalato: nuovoScalato, rinnovato: true };
@@ -591,6 +680,22 @@ export async function rinnovaLineaDalVivo({ sessioneId, email, adesso }) {
  */
 export async function chiudiLineaDalVivo({ sessioneId, email, adesso }) {
   if (!sessioneId) return { ok: false, motivo: 'sessione-mancante', status: 400 };
+
+  // b.420 — la chiusura INSISTE (un secondo abbondante) invece di
+  // saltare: un battito dura un attimo, e chiudere non e rimandabile.
+  // Se proprio non ottiene il lucchetto chiude lo stesso — meglio una
+  // corsa improbabile che una telefonata che non si chiude — e il conto
+  // regge comunque, perche adesso si conta solo cio che il portafoglio
+  // conferma davvero.
+  const conLucchetto = await prendiLucchetto(sessioneId, 8);
+  try {
+    return await chiusura({ sessioneId, email, adesso });
+  } finally {
+    if (conLucchetto) await lasciaLucchetto(sessioneId);
+  }
+}
+
+async function chiusura({ sessioneId, email, adesso }) {
   const l = await leggiLinea(sessioneId, email);
   // Gia chiusa (o scaduta): non e un errore da mostrare, e un doppio clic.
   if (l.assente) return { ok: true, secondiParlati: 0, creditoScalato: 0, gia: true };
@@ -611,9 +716,19 @@ export async function chiudiLineaDalVivo({ sessioneId, email, adesso }) {
   const quota = Math.min(LIVE_TRATTO_SECONDI, resta);
   if (linea.riservaId) {
     if (quota > 0) {
-      await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati })
-        .catch(() => { /* il commit non lancia: la riserva scadra da sola */ });
-      scalato += quota; resta -= quota;
+      // b.420 — SI CONTA SOLO CIO CHE E' STATO CONFERMATO DAVVERO.
+      //
+      // Prima si sommava `quota` a `scalato` qualunque cosa rispondesse
+      // il portafoglio, perche `commit()` non rispondeva affatto. Il caso
+      // che fa male: il battito non arriva, passano piu di dieci minuti,
+      // il cron rilascia la riserva, l'utente chiude, `wallet_commit`
+      // dice «riserva gia chiusa» — e noi contavamo quei minuti come
+      // incassati. Adesso, se il commit non passa, quel tratto resta nel
+      // dovuto e se lo prende il recupero qui sotto, che apre una riserva
+      // nuova e la conferma subito.
+      const esito = await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati });
+      if (esito?.ok) { scalato += quota; resta -= quota; }
+      else log.warn('dal vivo: ultimo tratto non confermato, si recupera', { motivo: esito?.motivo });
     } else {
       // linea aperta e chiusa senza dire una parola: non si paga niente.
       await release(linea.riservaId, 'nessun-parlato').catch(() => {});
@@ -645,7 +760,15 @@ export async function chiudiLineaDalVivo({ sessioneId, email, adesso }) {
       log.warn('dal vivo: credito insufficiente alla chiusura, scalato il possibile', { manca: resta });
       break;
     }
-    await commit(r.riservaId, pezzo, { tipo: 'dal_vivo', recupero: true, secondi_parlati: secondiParlati }).catch(() => {});
+    const esito = await commit(r.riservaId, pezzo, { tipo: 'dal_vivo', recupero: true, secondi_parlati: secondiParlati });
+    if (!esito?.ok) {
+      // Una riserva appena creata e appena confermata non dovrebbe
+      // fallire: se succede, il portafoglio ha un problema suo. Si
+      // libera cio che si e bloccato e non si conta niente.
+      await release(r.riservaId, 'recupero-non-confermato').catch(() => {});
+      log.error('dal vivo: recupero non confermato dal portafoglio', { motivo: esito?.motivo });
+      break;
+    }
     scalato += pezzo; resta -= pezzo;
   }
 

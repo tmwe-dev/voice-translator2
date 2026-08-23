@@ -20,7 +20,7 @@
 // vero e minore, il doppio commit e rifiutato, release restituisce
 // l'intera riserva. Zero righe lasciate per l'utente di test.
 // ═══════════════════════════════════════════════════════════════
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
@@ -110,15 +110,40 @@ describe('app/wallet/riserva.js: wrapper JS per riserva/commit/release', () => {
     expect(blocco).toMatch(/catch \(e\) \{[\s\S]*return \{ ok: false, motivo: 'errore: ' \+ e\.message \};/);
   });
 
-  it('commit() e release() non propagano mai errori al chiamante (solo log): non devono far cadere una risposta gia pronta', () => {
+  it('commit() e release() non propagano mai errori al chiamante: non devono far cadere una risposta gia pronta', async () => {
+    // b.420 — QUESTA PROVA ERA UNA FOTOGRAFIA, ed e diventata rossa
+    // quando l'intento e stato soddisfatto MEGLIO. Vietava a `commit()`
+    // di contenere la stringa `return { ok: false` — usando l'assenza di
+    // un valore di ritorno come sinonimo di «non propaga errori». Non e
+    // la stessa cosa: RESTITUIRE un esito non e PROPAGARE un errore.
+    // Anzi, non restituire niente ha prodotto un difetto vero (il
+    // dal-vivo contava come incassati tratti che il portafoglio aveva
+    // rifiutato), ed e per questo che b.420 lo ha cambiato.
+    //
+    // Cio che va difeso e il COMPORTAMENTO, e adesso lo si esercita:
+    // qualunque cosa succeda al database, queste due non lanciano.
+    vi.resetModules();
+    vi.doMock('@supabase/supabase-js', () => ({
+      createClient: () => ({ rpc: async () => { throw new Error('database in fiamme'); } }),
+    }));
+    const { commit, release } = await import('../app/wallet/riserva.js');
+    await expect(commit(1, 10, {}), 'commit non lancia mai').resolves.toBeDefined();
+    await expect(release(1, 'x'), 'release non lancia mai').resolves.toBeUndefined();
+    vi.doUnmock('@supabase/supabase-js');
+    vi.resetModules();
+  });
+
+  it('e il guasto resta scritto nel registro, non sparisce', () => {
     const iCommit = src.indexOf('export async function commit(');
     const iRelease = src.indexOf('export async function release(');
-    const bloccoCommit = src.slice(iCommit, iRelease);
-    const bloccoRelease = src.slice(iRelease);
-    expect(bloccoCommit).not.toMatch(/return \{ ok: false/);
-    expect(bloccoRelease).not.toMatch(/return \{ ok: false/);
-    expect(bloccoCommit).toContain('console.error');
-    expect(bloccoRelease).toContain('console.error');
+    expect(src.slice(iCommit, iRelease)).toContain('console.error');
+    expect(src.slice(iRelease)).toContain('console.error');
+  });
+
+  it('ma `riserva()` resta l\'unica fail-closed delle tre', () => {
+    // la distinzione che conta: la riserva BLOCCA, le altre due no.
+    const blocco = src.slice(src.indexOf('export async function riserva('), src.indexOf('export async function commit('));
+    expect(blocco).toContain("return { ok: false, motivo: 'errore db: ' + error.message };");
   });
 
   it('riserva() valida l\'importo prima di toccare il database (nessuna RPC con un numero non valido)', () => {

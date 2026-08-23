@@ -214,6 +214,58 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.420** (push #712) — LE TRE CORSE DEL DAL-VIVO. Non
+  vengono da un audit esterno: sono difetti MIEI, nati con b.418 ieri, e
+  li ha trovati Luca rileggendo il codice nuovo. Tutti e tre veri,
+  verificati riga per riga prima di toccare niente.
+  1. FRA IL PALETTO E LA SESSIONE C'ERA UNA CHIAMATA HTTP. Il paletto si
+     prende con `SET NX` (atomico, giusto), ma la riga che dice «la linea
+     esiste» veniva scritta solo DOPO aver chiesto la firma a ElevenLabs:
+     centinaia di millisecondi. In quel buco una seconda richiesta
+     trovava il paletto occupato, cercava la linea che lo teneva, NON LA
+     TROVAVA, e concludeva che fosse il fantasma di una linea morta. Lo
+     sovrascriveva, e si aprivano due telefonate — cioe esattamente cio
+     che b.418 diceva di aver chiuso. Ora la linea si scrive SUBITO,
+     dichiarata «in apertura», e se il fornitore non firma si cancella
+     insieme al paletto.
+     E LA MIA PROVA NON POTEVA ACCORGERSENE: apriva una linea DOPO
+     l'altra (`await apri(); await apri();`), mai INSIEME. Una prova di
+     concorrenza che non e concorrente non prova niente. Ora le aperture
+     partono con `Promise.all` e il fornitore si puo tenere in attesa a
+     comando, cosi la finestra esiste davvero.
+  2. BATTITO E CHIUSURA LEGGEVANO LO STESSO STATO SENZA NIENTE IN MEZZO.
+     Un battito partito un istante prima di una chiusura poteva
+     RESUSCITARE la telefonata: la chiusura cancellava la chiave, il
+     battito la riscriveva, e restavano una sessione fantasma e una
+     riserva che nessuno avrebbe piu chiuso. Ora c'e un lucchetto per
+     sessione (`live:lucchetto:<id>`, `SET NX`), e soprattutto il battito
+     riscrive con `XX`: se la sessione non esiste piu, la scrittura non
+     avviene e il tratto appena aperto torna indietro subito. Il
+     lucchetto rende la cosa quasi impossibile, `XX` la rende impossibile.
+     Il battito che trova occupato SALTA IL GIRO (ne arriva un altro fra
+     sessanta secondi); la chiusura invece insiste, perche chiudere non e
+     rimandabile.
+  3. `commit()` NON DICEVA SE ERA RIUSCITO, ed e il piu insidioso.
+     Restituiva `undefined`: un rifiuto finiva nel registro e il
+     chiamante andava avanti convinto di aver scalato. Lo scenario che fa
+     male: il battito non arriva, passano piu di dieci minuti, il cron
+     rilascia la riserva, l'utente chiude, `wallet_commit` risponde
+     «riserva gia chiusa» — e noi contavamo quei minuti come incassati.
+     Ora `commit()` torna `{ok, motivo}` e nel dal-vivo si somma SOLO cio
+     che il portafoglio ha davvero confermato; quello che non passa
+     ricade nel recupero, che apre una riserva nuova e la conferma. Se
+     non c'e piu credito si dichiara MENO, mai di piu.
+     LA PROMESSA DI PRIMA RESTA INTATTA: `commit()` non lancia, non
+     propaga, non puo far cadere una risposta gia pronta. I quattordici
+     chiamanti che ignorano il valore funzionano identici.
+  E I FINTI PORTAFOGLI DELLE PROVE ADESSO SANNO DIRE DI NO, come quello
+  vero: una riserva gia chiusa non si conferma due volte. Un finto che
+  dice sempre di si non puo accorgersi di un tratto contato e mai
+  incassato — era il difetto numero 3, e le mie prove ci passavano sopra.
+  PROVA: `__tests__/live-corse-b420.test.js`. NOVE prove rosse sul codice
+  di ieri (verificato rimettendo `ponte.js` e `riserva.js` di b.419 in
+  posto), tutte verdi adesso.
+
 - **COME SI FA GIRARE LA SUITE DA QUI (imparato il 23/08, a caro prezzo).**
   I processi in background NON sopravvivono fra una chiamata e l'altra
   del ponte verso il Mac: `nohup npx vitest ... &` viene ucciso appena la

@@ -14,7 +14,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // ── il portafoglio, finto ma con la memoria ──
-const portafoglio = { riserve: [], commit: [], release: [], nega: false };
+const portafoglio = { riserve: [], commit: [], release: [], chiuse: new Set(), nega: false };
 vi.mock('../app/wallet/riserva.js', () => ({
   riserva: async (utente, secondi, dettaglio) => {
     if (portafoglio.nega) return { ok: false, motivo: 'credito-insufficiente' };
@@ -22,8 +22,15 @@ vi.mock('../app/wallet/riserva.js', () => ({
     portafoglio.riserve.push({ id, utente, secondi, dettaglio });
     return { ok: true, riservaId: id };
   },
-  commit: async (id, secondi, dettaglio) => { portafoglio.commit.push({ id, secondi, dettaglio }); },
-  release: async (id, motivo) => { portafoglio.release.push({ id, motivo }); },
+  // b.420 — come quello vero: una riserva gia chiusa non si conferma
+  // due volte, e adesso `commit()` lo dice a chi ha chiamato.
+  commit: async (id, secondi, dettaglio) => {
+    if (portafoglio.chiuse.has(id)) return { ok: false, motivo: 'riserva gia chiusa' };
+    portafoglio.chiuse.add(id);
+    portafoglio.commit.push({ id, secondi, dettaglio });
+    return { ok: true };
+  },
+  release: async (id, motivo) => { portafoglio.chiuse.add(id); portafoglio.release.push({ id, motivo }); },
 }));
 
 // ── l'autorizzazione, finta ──
@@ -43,7 +50,11 @@ vi.mock('../app/lib/redis.js', () => ({
   // farebbe passare due linee e la prova non se ne accorgerebbe.
   redis: async (comando, chiave, valore, ...resto) => {
     if (comando === 'SET') {
+      // b.420 — il finto conosce NX e XX, perche adesso il codice ci
+      // conta: NX e il paletto e il lucchetto, XX e la riga che impedisce
+      // a un battito di resuscitare una telefonata gia chiusa.
       if (resto.includes('NX') && deposito.has(chiave)) return null;
+      if (resto.includes('XX') && !deposito.has(chiave)) return null;
       deposito.set(chiave, valore); return 'OK';
     }
     if (comando === 'GET') return deposito.get(chiave) ?? null;
@@ -73,6 +84,7 @@ const fornitore = { stato: 200, corpo: { signed_url: 'wss://firmato.example/x' }
 
 beforeEach(() => {
   portafoglio.riserve.length = 0; portafoglio.commit.length = 0; portafoglio.release.length = 0;
+  portafoglio.chiuse.clear();
   portafoglio.nega = false;
   autorizzazione.esplode = false; autorizzazione.isOwnKey = false; autorizzazione.email = 'luca@esempio.it';
   deposito.clear();
