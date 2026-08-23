@@ -5,63 +5,74 @@ Gateway API separato per `voice-translator2`.
 - Branch: `bartalk-api-v1`
 - Sorgente API: `bartalk-api/`
 - Core BarTalk: non duplicato e non modificato dalla API
-- Snapshot Core verificato: **b.419 / push #711**
+- Snapshot Core verificato: **b.420 / push #712** (`ee1a845845417ce43e0c4af8464531b53e8bbe8c`)
 
 ## Principio
 
-La Public API non ricopia traduzione, wallet, memoria, Compagni o provider. Fa da frontiera stabile:
-
 `client esterno -> API key/scopes/rate limit -> BarTalk Core -> business logic`
 
-Il Core resta autoritativo su identita, credito, privacy, membership, Direct Mode, memoria e provider.
+Il Core resta autoritativo su identita, credito, privacy, membership, memoria e provider. La API pubblica soltanto capability che risultano realmente operative sul backend vivo.
 
-## Superfici esposte
-
-- Health
-- Profilo, preferenze e cancellazione dati prevista dal Core
-- Stato/salvataggio/rimozione chiavi provider BYOK
-- Wallet contabile, storico, checkout ricarica, riscatto voucher/regalo
-- Traduzione, STT, TTS, ElevenLabs TTS, clonazione voce
-- Compagni CRUD, chat, memoria/dimentica, Live con heartbeat, Podcast, Tavolo, avatar, generazione
-- Life: corsi, dossier, compiti, scansioni
-- Topics NDJSON
-- Rooms, messages, archivio conversazioni, reazioni, realtime/TURN
-- Contacts, Glossary, Summary, Moderation, Mondo
-- PeepOff e TaxiTalk
-
-La lista esatta e sempre generata da `lib/routes.js` e pubblicata su `/openapi`.
-
-## Sicurezza
+## Sicurezza v1
 
 - API key `bt_live_...` cifrata/autenticata AES-256-GCM.
-- La sessione BarTalk incapsulata resta verificata dal Core a ogni operazione.
-- Scope espliciti e **least privilege di default**: gli scope di scrittura/finanziari/BYOK vanno richiesti.
-- Il gateway sovrascrive `userToken`/`token` con l'identita contenuta nella API key.
-- Gli ID nei path sono autoritativi per le mutazioni sensibili (Compagni, Live, conversazioni, glossari).
-- Rate limit per chiave; Redis distribuito opzionale; restano anche i limiti del Core.
-- Nessuna service-role o chiave provider esposta.
+- TTL massimo **7 giorni**, coerente con la sessione BarTalk sottostante.
+- `scopes: []` significa zero privilegi; i default si applicano solo se `scopes` viene omesso.
+- Lunghezza/formato delle API key limitati prima della decodifica.
+- Logout, scadenza o cancellazione della sessione BarTalk revocano anche le route API che non inoltrano direttamente il token: il gateway fa un session probe sul Core.
+- `token`/`userToken` sono sempre sostituiti dal gateway sulle route che li usano.
+- Identificativi del path prevalgono sul body.
+- Query fissate e `fixedBody` sono autoritativi.
+- Rate limit delle porte pubbliche separato per client, non globale per tutto Internet.
+- JSON limitato sui byte reali; multipart limitato sul corpo realmente letto, anche se `Content-Length` manca o mente.
+- Il gateway non inoltra `Content-Length` upstream potenzialmente obsoleto dopo streaming/decompressione.
+- Request ID normalizzato prima di essere inoltrato/risposto.
 - Admin/debug/test/cron/webhook e Stripe raw esclusi.
-- `POST /wallet/gifts` (invio credito) non e esposto finche il Core non offre idempotenza: un retry di rete non deve poter regalare due volte.
+- Mutazioni finanziarie non idempotenti non vengono pubblicate.
 
-## Live b.419
+## Readiness
 
-Il Core b.418/b.419 contabilizza il Live a tratti e permette una sola sessione per account. L'apertura restituisce `sessioneId` e `battitoSecondi`.
+`GET /api/v1/health` e un health **del gateway**, non soltanto del Core. Torna `200` solo se:
 
-Un client Public API deve:
+1. il Core `/api/health` risponde;
+2. `BARTALK_API_SIGNING_SECRET` e realmente configurato.
 
-1. aprire con `POST /companions/{id}/live-sessions`;
-2. inviare `POST /live-sessions/{sessionId}/heartbeat` con la cadenza indicata da `battitoSecondi`;
-3. chiudere con `DELETE /live-sessions/{sessionId}`.
+Altrimenti torna `503`, senza esporre valori segreti.
 
-Se il rinnovo fallisce per credito esaurito il Core puo rispondere `402` e la linea non deve continuare gratis. Il gateway non calcola costi: inoltra il contratto autorevole del Core.
+## Live Companion
+
+Il Core b.420 usa riserve a tratti e protocollo completo:
+
+1. `POST /companions/{id}/live-sessions` — apre;
+2. `POST /live-sessions/{sessionId}/heartbeat` — rinnova con la cadenza `battitoSecondi` restituita dall'apertura;
+3. `DELETE /live-sessions/{sessionId}` — chiude.
+
+b.420 serializza apertura/rinnovo/chiusura, impedisce la doppia apertura concorrente e conta come addebitato soltanto cio che il wallet ha realmente confermato.
+
+## Capability volutamente NON pubblicate
+
+Tre superfici del Core esistono come codice ma dipendono oggi dallo schema Supabase legacy non presente nel database vivo:
+
+- preferenze server (`profiles` + `user_settings`);
+- `/api/keys` / provider-key vault (`profiles` + `api_keys_vault`);
+- glossari (`profiles` + `glossaries`).
+
+Una API corretta non espone una capability morta. Verranno reinserite solo quando il Core avra un contratto persistente realmente funzionante e testato.
+
+Il BYOK usato dall'app BarTalk continua a funzionare tramite il percorso Redis autorevole del Core (`/api/user action=save-keys`); quello che non viene pubblicato e il vecchio vault Supabase incompleto.
 
 ## Configurazione
 
-Copia `.env.example`. Minimo:
+Necessarie:
 
-- `BARTALK_API_SIGNING_SECRET`
+- `BARTALK_API_SIGNING_SECRET` (>=32 caratteri)
 - `BARTALK_CORE_URL` se diverso dalla produzione predefinita
-- `API_REDIS_URL` / `API_REDIS_TOKEN` consigliati per rate limit distribuito
+- `BARTALK_API_KEY_TTL_DAYS` (1-7, default 6)
+
+Consigliate per rate limit distribuito:
+
+- `API_REDIS_URL`
+- `API_REDIS_TOKEN`
 
 ## Verifica
 
@@ -72,16 +83,11 @@ npm run lint
 npm run build
 ```
 
-Il workflow `.github/workflows/bartalk-api.yml` esegue gli stessi tre gate sulla branch.
+Il workflow `.github/workflows/bartalk-api.yml` esegue gli stessi gate sulla branch.
 
 Vedi:
 - `docs/API.md`
 - `docs/ARCHITECTURE.md`
 - `docs/VERIFICATION.md`
+- `docs/DEPLOYMENT.md`
 - `/openapi`
-
-## Allineamento GDPR b.419
-
-`DELETE /api/v1/me/data` usa il cancellatore centrale del Core. b.419 include anche i metadati personali Mondo auditati (`mondo_follows`, `mondo_comment_likes`, `mondo_segnalazioni`). Restano volutamente fuori il ledger wallet e i contenuti pubblici Mondo secondo la policy dichiarata dal prodotto.
-
-La superficie legacy `translation_history` non viene dichiarata cancellata: nel database vivo `translations` e vuota e il percorso attuale non la popola perche dipende dalla vecchia tabella `profiles`, assente. La Public API segnala questa distinzione invece di inventare una garanzia.
