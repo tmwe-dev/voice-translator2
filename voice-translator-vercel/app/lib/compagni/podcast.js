@@ -31,6 +31,34 @@ export const PODCAST_LIMITI = {
   ROUND_PREDEFINITI: 4,
 };
 
+// ── b.409 · QUANTE RICHIESTE PUO' FARE UN PODCAST ONESTO ──
+//
+// In b.244 il podcast e passato da UNA richiesta per tutto a UNA
+// RICHIESTA PER TURNO: era la cura giusta per i timeout. Ma il tetto di
+// frequenza della rotta e rimasto quello di prima — dieci al minuto —
+// cioe un numero dimensionato per un'architettura che non esiste piu.
+//
+// Il contratto della rotta permette MAX_COMPAGNI x MAX_ROUND turni, piu
+// la richiesta finale che dice «e finita». Il tetto lo si RICAVA da li,
+// non lo si sceglie: se domani qualcuno alza MAX_ROUND, il tetto lo
+// segue da solo e nessuno deve ricordarsene.
+//
+// QUANDO SI VEDEVA. Non sempre — ed e giusto dirlo: mentre la voce
+// parla, fra un turno e l'altro passano dieci-venti secondi, e in un
+// minuto ci stanno tre o quattro richieste. Ma quando la voce NON parte
+// (credito della voce premium finito, fornitore giu, riproduzione
+// negata dal telefono, suoneria in silenzioso) il giro resta solo
+// generazione: due-quattro secondi a turno, quindi quindici-trenta
+// richieste al minuto. Cioe il 429 arrivava addosso a chi stava gia
+// avendo una giornata storta, e il podcast si fermava a meta.
+//
+// Il tetto per IP resta una rete anti-abuso — deve stare SOPRA il flusso
+// legittimo, non tagliarlo.
+export const PODCAST_RICHIESTE_MAX =
+  PODCAST_LIMITI.MAX_COMPAGNI * PODCAST_LIMITI.MAX_ROUND   // i turni possibili
+  + 1                                                       // la richiesta che chiude
+  + 8;                                                      // margine per ritentativi
+
 /** Stringe un valore fra due estremi. */
 function fra(n, min, max) {
   n = Math.floor(Number(n) || 0);

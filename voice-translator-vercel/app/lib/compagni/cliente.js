@@ -10,6 +10,7 @@
 import { segmentiPerVoce } from './corsi/lingua.js';
 import { fermatoDavvero, suona } from '../voce.js';
 import { segnalaSessioneCaduta } from '../sessioneCaduta.js';
+import { cercaTopics } from '../topics/cliente.js';
 
 async function postJSON(url, corpo) {
   const r = await fetch(url, {
@@ -93,10 +94,17 @@ export async function arricchisciLezione({ modalita, titolo, argomento, lingua =
       return { modalita, video: (d.video || d.risultati || []).slice(0, 3) };
     }
     if (modalita === 'link' || modalita === 'foto') {
-      const r = await fetch(`/api/topics/search?q=${encodeURIComponent(q)}&lang=${lingua}&cat=notizie&fonti=4`);
-      if (!r.ok) return null;
-      const d = await r.json();
-      const fonti = (d.argomenti || d.risultati || d.fonti || []).slice(0, 4);
+      // b.409 — QUI NON HA MAI FUNZIONATO NIENTE, e in silenzio.
+      //
+      // C'era `await r.json()` su una rotta che risponde A RIGHE (una
+      // per stadio: cerco, ho tre fonti, fine). Un corpo di piu righe
+      // non e JSON valido: la lettura lanciava, il catch qui sotto
+      // restituiva null, e in Impara i contenuti «link» e «foto» non
+      // producevano MAI un risultato. Non ogni tanto: mai, da sempre.
+      //
+      // Ora si passa dal lettore comune, lo stesso che usa Mondo.
+      const fine = await cercaTopics({ q, lingua, cat: 'notizie', fonti: 4 });
+      const fonti = (fine?.argomenti || []).slice(0, 4);
       return { modalita, link: fonti };
     }
   } catch { /* la community non risponde: la lezione resta senza arricchimento, non e un guasto */ }

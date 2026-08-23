@@ -214,6 +214,39 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.409** (push #703) — BATCH C e D del piano Life: due
+  funzioni che erano nel codice e non hanno MAI dato un risultato.
+  P0.5 — IN IMPARA I CONTENUTI «LINK» E «FOTO» NON HANNO MAI PRODOTTO
+  NIENTE. Non ogni tanto: mai, da sempre. `/api/topics/search` risponde
+  A RIGHE (una per stadio del lavoro), e `arricchisciLezione` ci faceva
+  sopra `await r.json()`: un corpo di piu righe non e JSON valido, la
+  lettura lanciava, il catch restituiva `null` e la schermata degradava
+  in silenzio. Mondo la stessa rotta la leggeva bene, perche aveva il
+  suo lettore scritto a mano DENTRO il componente. Ora il lettore e uno
+  solo, in `app/lib/topics/cliente.js`, e lo usano tutti e due — come
+  chiede l'audit alla lettera: «un solo client Topics condiviso, NON
+  duplicare un parser diverso in ogni componente». Il secondo parser non
+  e stato scritto: e stato tolto quello che c'era e messo in comune.
+  P0.2 — IL TETTO DEL PODCAST ERA SOTTO IL SUO STESSO FLUSSO. `10` al
+  minuto era il numero giusto per quando il podcast era UNA richiesta;
+  da b.244 e una richiesta PER TURNO, e il contratto ne permette
+  MAX_COMPAGNI x MAX_ROUND = 40, piu quella che chiude. Ora il tetto si
+  RICAVA dal contratto (`PODCAST_RICHIESTE_MAX`): se domani qualcuno
+  alza i round, il tetto lo segue da solo.
+  ONESTA SU QUANDO SI VEDEVA: non sempre. Mentre la voce parla passano
+  10-20 secondi fra un turno e l'altro, e in un minuto ci stanno 3-4
+  richieste. Ma quando la voce NON parte — credito premium finito,
+  fornitore giu, riproduzione negata, telefono in silenzioso — il giro
+  resta sola generazione: 2-4 secondi a turno, cioe 15-30 richieste al
+  minuto. Il 429 arrivava addosso a chi stava gia avendo una giornata
+  storta, e il podcast si fermava a meta.
+- TRAPPOLA NUMERO 6, CI SONO CASCATO LA QUARTA VOLTA. Scrivendo la
+  guardia sul tetto del Podcast ho controllato che nella rotta non ci
+  fosse piu `maxRequests: 10` — e la prova leggeva il MIO commento, che
+  quella stringa la contiene per spiegare il difetto. Ora i commenti si
+  scartano prima di guardare il codice. La regola era gia scritta nel
+  punto 6 qui sopra: rileggerla non basta, va applicata quando si scrive
+  la prova, non dopo.
 - Versione: **b.408** (push #702) — L'AUDIT ESTERNO DEL 23/08 verificato
   punto per punto, non accettato per cortesia. Il suo P0 numero uno era
   vero e piu grave di come lo descriveva: otto tabelle pubbliche su
@@ -296,10 +329,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2385 verdi su 160 file** verificati qui sul solo b.408 (che
-  parte da b.406). Unito a b.407, che vive sul Mac di Luca e porta 24
-  prove sue, il totale atteso e 2409 su 161 file — lo conferma la sua
-  esecuzione prima del push, non io. · 0 errori di lint (avvisi tollerati)
+- Test: **2429 verdi su 162 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro

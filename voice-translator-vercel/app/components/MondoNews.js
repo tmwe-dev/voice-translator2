@@ -19,6 +19,7 @@ import { memo, useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { segnaApertura } from '../lib/interessi.js';
 import { COLONNA } from '../lib/righello.js';
 import { ordinaFeed } from '../lib/ordineFeed.js';
+import { cercaTopics } from '../lib/topics/cliente.js';   // b.409 — il lettore a righe, uno per tutti
 import Scelta from './ui/Scelta.js';
 import { bandieraPaese, nomePaese, quando, tipoContenuto, fonteDi, viva, stileEtichetta, PUNTO, paeseDaLingua } from '../lib/schedaMondo.js';
 import PannelloLaterale from './ui/PannelloLaterale.js';
@@ -264,34 +265,22 @@ function MondoNews({ C, onJoinRoom, onParlane, apriDiscussioneId = null, suApert
     setCercando(true); setErrore(''); setProcesso([]); setDaCache(false);
     vibrate(10);
     try {
-      const paramProfonda = profonda ? `&deep=1&fonti=${numFonti}` : '';
-      const res = await fetch(
-        `/api/topics/search?q=${encodeURIComponent(pulita)}&lang=${lingua}&cat=${cat}${fresca ? '&fresh=1' : ''}${paramProfonda}`,
-        { signal: ac.signal });
-      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let resto = '';
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        resto += decoder.decode(value, { stream: true });
-        const righe = resto.split('\n');
-        resto = righe.pop();
-        for (const riga of righe) {
-          if (!riga.trim()) continue;
-          let r; try { r = JSON.parse(riga); } catch { continue; }
-          if (r.stadio === 'fine') {
-            setArgomenti(r.argomenti || []);
-            setStanze(r.stanze || []);
-            setDaCache(!!r.daCache);
-          } else if (r.stadio === 'errore') {
-            setErrore('guasto');
-          } else {
-            const testo = descriviStadio(r);
-            if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
-          }
-        }
+      // b.409 — IL LETTORE A RIGHE NON VIVE PIU QUI DENTRO. Era scritto
+      // a mano in questa funzione, e in Life non c'era: la stessa rotta
+      // veniva letta bene in Mondo e male in Impara, dove non ha mai
+      // prodotto un risultato. Ora e uno solo, in lib/topics/cliente.js.
+      // Il comportamento e lo stesso di prima, riga per riga.
+      const fine = await cercaTopics(
+        { q: pulita, lingua, cat, fresca, profonda, fonti: profonda ? numFonti : 0, segnale: ac.signal },
+        (r) => {
+          const testo = descriviStadio(r);
+          if (testo) setProcesso(p => [...p.slice(-5), { testo, id: p.length }]);
+        },
+      );
+      if (fine) {
+        setArgomenti(fine.argomenti || []);
+        setStanze(fine.stanze || []);
+        setDaCache(!!fine.daCache);
       }
     } catch (e) {
       // b.363 — prima questo guasto non lasciava traccia da nessuna parte: nel

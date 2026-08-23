@@ -3,7 +3,7 @@ import { withApiGuard } from '../../../lib/apiGuard.js';
 import { createLogger } from '../../../lib/logger.js';
 import { getSession } from '../../../lib/users.js';
 import { risolviCompagni } from '../../../lib/compagni/persistenza.js';
-import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI } from '../../../lib/compagni/podcast.js';
+import { ordineTurni, promptTurno, validaPodcast, PODCAST_LIMITI, PODCAST_RICHIESTE_MAX } from '../../../lib/compagni/podcast.js';
 import { generaTesto } from '../../../lib/compagni/ponte.js';
 import { analizzaConvergenza, istruzioneConvergenza } from '../../../lib/compagni/orchestratore.js';
 import { temperaturaLiberta, staccaEsito } from '../../../lib/compagni/contratto.js';
@@ -101,7 +101,11 @@ async function handlePost(req) {
   }
 }
 
-// Il podcast fa più chiamate AI: tetto di frequenza basso per prevenire abusi.
 // b.205 — la generazione lunga di Life puo superare i 15s: diamo tempo alla funzione.
 export const maxDuration = 60;
-export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'compagni-podcast' });
+// b.409 — IL TETTO SI RICAVA DAL CONTRATTO, non si sceglie a mano. Qui
+// c'era `maxRequests: 10`, un numero giusto per quando il podcast era UNA
+// richiesta sola; da b.244 e una richiesta PER TURNO, e il contratto ne
+// permette fino a MAX_COMPAGNI x MAX_ROUND. Un tetto sotto il flusso
+// legittimo non e una difesa: e un difetto che si presenta come difesa.
+export const POST = withApiGuard(handlePost, { maxRequests: PODCAST_RICHIESTE_MAX, prefix: 'compagni-podcast' });
