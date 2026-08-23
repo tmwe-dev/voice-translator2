@@ -41,7 +41,7 @@ Un endpoint entra nella Public API solo se:
 | `/rooms`, `/messages` | Redis room/message Core | room capability token + session probe API |
 | `/conversations*` | archivio Redis Core | account/partecipazione Core |
 | `/realtime/*` | TURN/video Core | TURN puo essere vuoto finche non configurato |
-| `/contacts` | Redis contacts Core | account session Core |
+| `/contacts` | Redis contacts Core | solo sottoinsieme non finanziario; action allowlist |
 | `/community` | Mondo Core | roomSessionToken per pubblicazione + session probe API |
 | `/summary`, `/moderation` | Core | scope API + regole Core |
 | `/peepoff` | Core | identita/account Core |
@@ -61,6 +61,10 @@ Un endpoint entra nella Public API solo se:
 
 `/api/glossary` dipende da `profiles` e `glossaries`, assenti nel DB vivo. Le rotte glossario restano fuori dalla API finche la capability non e realmente persistente.
 
+### Contatti finanziari
+
+Il Core multiplexa in `/api/contacts` anche inviti con credito. `create-invite` con `giftAmount` addebita il mittente; `accept-invite` puo accreditare il destinatario. Queste azioni non vengono pubblicate dalla v1. Il gateway usa un'allowlist di azioni non finanziarie e rifiuta anche qualunque action futura sconosciuta, evitando che un nuovo ramo Core diventi pubblico per accidente.
+
 ## Hardening gateway verificabile da test
 
 - `scopes: []` resta vuoto.
@@ -76,6 +80,8 @@ Un endpoint entra nella Public API solo se:
 - route identityless richiedono session probe.
 - public rate limit separato per client.
 - health fallisce se manca signing secret o Core.
+- contatti gift/accept-invite vengono bloccati prima del Core.
+- future action contatti sconosciute vengono bloccate fail-closed.
 - OpenAPI copre tutte e sole le route registrate.
 
 ## Limiti non classificati come bug API
@@ -103,4 +109,5 @@ Poi smoke reali:
 6. sessione Core revocata -> API key rifiutata anche su `/topics/search` o `/voices`;
 7. Live open -> heartbeat -> close;
 8. payload oversize -> 413;
-9. DELETE account -> `deletionCoverage.auditedCore=b.420`.
+9. POST contacts con `giftAmount` o `accept-invite` -> 400 senza chiamata Core;
+10. DELETE account -> `deletionCoverage.auditedCore=b.420`.
