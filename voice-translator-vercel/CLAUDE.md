@@ -214,6 +214,35 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.432** (push #724) — VITA, prima pagina portata dal layout
+  al programma. E il primo pezzo e un difetto vero: «pagina amico life
+  manca il microfono» (collaudo di Luca). Era vero alla lettera — li
+  dentro l'unico microfono e quello di «Dal vivo», che apre una
+  telefonata. Dettare nel campo, la cosa piu ovvia parlando con un
+  Compagno, non si poteva.
+  LA DETTATURA ORA STA IN UN POSTO SOLO: `app/lib/dettatura.js`. NON e una
+  quarta copia — la stessa cosa era gia scritta a mano in tre punti (Prima
+  prova, TaxiTalk, vecchia schermata taxi) e ognuna si e portata dietro i
+  suoi difetti e le sue riparazioni, diverse fra loro. E' la malattia che
+  il diario ha gia curato con il lettore delle notizie in b.409: «non un
+  secondo parser, ma quello che c'era messo in comune».
+  LE TRE COPIE VECCHIE NON SONO STATE TOCCATE, ed e una scelta: funzionano,
+  e il codice della voce non si riscrive senza poterlo provare davvero.
+  Quando una di loro si aprira per altro, si sposta li.
+  DUE COSE CHE LA DETTATURA COMUNE FA E LE COPIE NON FACEVANO TUTTE:
+  il silenzio («no-speech») NON chiude l'ascolto — fermare tutto per una
+  pausa e il modo piu sicuro di far sembrare rotto il microfono; e alla
+  chiusura si consegna solo cio che era DEFINITIVO, perche un residuo
+  provvisorio puo dire una cosa diversa da quella che si e sentita.
+  QUI NON INVIA DA SOLO, a differenza della Prima prova: si parla con
+  qualcuno che rispondera, e la frase la si rilegge prima di mandarla.
+  Sono due gesti diversi e vanno tenuti diversi.
+  E LA RIGA IN BASSO PRENDE LE MISURE DEL KIT (`template/layout-completo.html`):
+  campo alto 54 col testo a 16 — sotto i sedici il telefono ingrandisce da
+  solo la pagina quando ci si scrive dentro — e i due tasti quadri 54x54.
+  PROVA: `__tests__/microfono-amico-b432.test.jsx`, dodici prove col
+  riconoscimento finto.
+
 - Versione: **b.431** (push #723) — «OVERRIDE FOR FIELD 'voice_id' IS NOT
   ALLOWED BY CONFIG»: la telefonata dal vivo moriva sul nascere. Trovato da
   Luca provandola.

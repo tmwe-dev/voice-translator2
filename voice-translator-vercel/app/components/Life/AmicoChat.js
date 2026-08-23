@@ -9,6 +9,13 @@ import { obiettiviAttivi } from '../../lib/compagni/obiettivi.js';
 import { sesGet, sesDel } from '../../lib/memoria.js';
 import { leggi as leggiScaffale, scrivi as scriviScaffale } from '../../lib/scaffale.js';
 import CompagnoLive from './CompagnoLive.js';
+// b.432 — IL MICROFONO CHE MANCAVA (collaudo di Luca: «pagina amico life
+// manca il microfono»). Qui dentro l'unico era quello di «Dal vivo», che
+// apre una telefonata: dettare nel campo non si poteva.
+// La dettatura NON e scritta qui: sta in un posto solo, perche la stessa
+// cosa era gia scritta a mano in tre punti diversi e ognuno si portava
+// dietro i suoi difetti.
+import { ascolta as ascoltaVoce, dettaturaDisponibile } from '../../lib/dettatura.js';
 
 // b.231 — la storia della chat ora PERSISTE per Compagno (prima viveva solo
 // in memoria e spariva a ogni ricarica o cambio Compagno). Sta sul dispositivo.
@@ -39,6 +46,8 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
   const [scelto, setScelto] = useState(null);
   const [messaggi, setMessaggi] = useState([]);
   const [testo, setTesto] = useState('');
+  const [detto, setDetto] = useState(false);   // b.432 — microfono aperto
+  const ascoltoRef = useRef(null);
   const [attende, setAttende] = useState(false);
   const [errore, setErrore] = useState('');
   // b.316 — conversazione VOCALE dal vivo (widget ElevenLabs, personalita
@@ -112,6 +121,33 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
       return nuovi.length ? [...m, ...nuovi] : m;
     });
   }, []);
+
+  // b.432 — un tocco apre il microfono, il secondo lo chiude e lascia nel
+  // campo quello che hai detto. NON invia da solo: qui la frase la
+  // rileggi prima di mandarla, perche parli con qualcuno che ti
+  // rispondera — non e una traduzione da consegnare al volo.
+  const detta = useCallback(() => {
+    if (ascoltoRef.current) {
+      ascoltoRef.current.ferma();
+      ascoltoRef.current = null;
+      setDetto(false);
+      return;
+    }
+    const sessione = ascoltaVoce({
+      lingua: lingua || 'it',
+      inizio: testo,
+      suTesto: (t) => setTesto(t),
+      suFine: (t) => { ascoltoRef.current = null; setDetto(false); if (t) setTesto(t); },
+    });
+    if (!sessione) return;
+    ascoltoRef.current = sessione;
+    setDetto(true);
+    vibrate(8);
+  }, [lingua, testo]);
+
+  // Uscendo dalla schermata il microfono si chiude: lasciarlo aperto
+  // vorrebbe dire tenere acceso l'ascolto di una pagina che non c'e piu.
+  useEffect(() => () => { ascoltoRef.current?.ferma(); ascoltoRef.current = null; }, []);
 
   const invia = useCallback(async () => {
     const t = testo.trim();
@@ -277,11 +313,32 @@ function AmicoChat({ compagni, L, lingua, userToken, testoP, muto, accent, card,
 
       {errore && <div style={{ color: '#f87171', fontSize: 13, padding: '6px 0' }}>{errore}</div>}
 
-      <div style={{ display: 'flex', gap: 8, paddingTop: 10 }}>
+      {/* b.432 — LA RIGA IN BASSO, con le misure del kit (template/
+          layout-completo.html): campo alto 54 e testo 16 — sotto i sedici
+          il telefono ingrandisce da solo la pagina quando ci si scrive
+          dentro — e i due tasti quadri 54 per 54, che un dito prende.
+          Prima erano dodici di riempimento e quindici di testo. */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, paddingTop: 10 }}>
         <input value={testo} onChange={(e) => setTesto(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') invia(); }}
-          aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')} style={{ flex: 1, padding: 12, borderRadius: 12, border: bordo, background: card, color: testoP, fontSize: 15, fontFamily: FONT }} />
-        <button onClick={invia} disabled={attende} aria-label={L('send')} style={{ padding: '0 16px', borderRadius: 12, border: 'none', background: accent, color: '#04121c', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>
-          <Icon name="send" size={16} color="#04121c" />
+          aria-label={L('lifeChatPh')} placeholder={L('lifeChatPh')}
+          style={{ flex: 1, minWidth: 0, height: 54, padding: '0 14px', borderRadius: 16,
+            border: detto ? '2px solid #ff5470' : bordo, background: card, color: testoP,
+            fontSize: 16, fontFamily: FONT, outline: 'none' }} />
+        {dettaturaDisponibile() && (
+          <button onClick={detta} aria-pressed={detto} aria-label={L('dictateWord')} title={L('dictateWord')}
+            style={{ width: 54, height: 54, borderRadius: 16, flexShrink: 0, padding: 0, cursor: 'pointer',
+              border: detto ? '2px solid #ff5470' : `1px solid ${accent}55`,
+              background: detto ? 'rgba(255,84,112,0.16)' : `${accent}22`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="mic" size={22} color={detto ? '#ff5470' : accent} />
+          </button>
+        )}
+        <button onClick={invia} disabled={attende || !testo.trim()} aria-label={L('send')}
+          style={{ width: 54, height: 54, borderRadius: 16, flexShrink: 0, padding: 0, border: 'none',
+            background: accent, opacity: (attende || !testo.trim()) ? 0.4 : 1,
+            cursor: (attende || !testo.trim()) ? 'default' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name="send" size={20} color="#04121c" />
         </button>
       </div>
     </div>
