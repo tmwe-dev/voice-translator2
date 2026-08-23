@@ -15,10 +15,30 @@ describe('adattatore Core', () => {
 
   it('Contacts usa token e sovrascrive quello dichiarato dal client', async () => {
     const { route, params } = matchRoute('POST','/contacts');
-    const req = new Request('https://api.test/api/v1/contacts', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({action:'list',token:'falso'}) });
+    const req = new Request('https://api.test/api/v1/contacts', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({action:'add',contactEmail:'a@example.com',token:'falso'}) });
     await callUpstream({ req, route, params, sessionToken:'vero', requestId:'req-1' });
     expect(JSON.parse(calls[0].init.body).token).toBe('vero');
     expect(calls[0].init.headers.get('x-request-id')).toBe('req-1');
+  });
+
+  it('Contacts blocca gli inviti con credito prima di raggiungere il Core', async () => {
+    const { route, params } = matchRoute('POST','/contacts');
+    const req = new Request('https://api.test/api/v1/contacts', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({ action:'create-invite', giftAmount:100, token:'falso' }),
+    });
+    await expect(callUpstream({ req, route, params, sessionToken:'vero' })).rejects.toMatchObject({ status:400 });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('Contacts blocca anche accept-invite perche puo muovere credito', async () => {
+    const { route, params } = matchRoute('POST','/contacts');
+    const req = new Request('https://api.test/api/v1/contacts', {
+      method:'POST', headers:{'content-type':'application/json'},
+      body:JSON.stringify({ action:'accept-invite', inviteCode:'VT-GIFT-X' }),
+    });
+    await expect(callUpstream({ req, route, params, sessionToken:'vero' })).rejects.toMatchObject({ status:400 });
+    expect(calls).toHaveLength(0);
   });
 
   it('fixedBody e autoritativo: il client non puo trasformare riscatta in invia', async () => {
