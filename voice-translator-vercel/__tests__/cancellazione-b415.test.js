@@ -124,6 +124,65 @@ describe('le sessioni: tutte, non solo quella da cui stai chiedendo', () => {
   });
 });
 
+describe('b.419 — e la tua attivita su Mondo, che e tua e di nessun altro', () => {
+  // L'audit esterno del 23/08: «mondo_follows, mondo_comment_likes,
+  // mondo_segnalazioni sono metadati personali, vanno cancellati; le
+  // discussioni e i commenti sono contenuto pubblico e restano una
+  // decisione di prodotto». VERIFICATO: era vero, non si toccavano.
+  it('chi segui, i tuoi mi-piace e le tue segnalazioni spariscono', async () => {
+    await cancellazione.cancellaDatiPersistenti(EMAIL);
+    const toccate = new Set(cancellazioni.map((c) => c.tabella));
+    for (const t of ['mondo_comment_likes', 'mondo_segnalazioni', 'mondo_follows']) {
+      expect(toccate.has(t), `${t}: prima restava li per sempre`).toBe(true);
+    }
+  });
+
+  it("e si usa l'identita di MONDO, chiedendola a Mondo", async () => {
+    const { idPubblico } = await import('../app/lib/mondoDB.js');
+    await cancellazione.cancellaDatiPersistenti(EMAIL);
+    const like = cancellazioni.find((c) => c.tabella === 'mondo_comment_likes');
+    expect(like.valore).toBe(idPubblico(EMAIL));
+
+    // SCOPERTA SCRIVENDO QUESTA PROVA, e va scritta perche e facile
+    // fraintenderla: OGGI `idPubblico` di Mondo e `idUtente` di Life
+    // danno lo STESSO valore. Non e un caso ed e voluto — b.413 ha
+    // scelto apposta lo stesso segreto e la stessa forma («due segreti
+    // per la stessa idea sono due cose da ricordare e una da
+    // dimenticare»). Quindi questa prova NON puo distinguere le due
+    // identita, e sarebbe disonesto far finta di si.
+    // Cio che fissa e da CHI si va a chiedere l'identita: il giorno che
+    // una delle due cambia — e Mondo l'ha gia cambiata una volta, in
+    // b.244 — questa riga resta giusta da sola.
+    expect(like.valore, 'oggi coincidono, e la prova lo dichiara').toBe(persistenza.idUtente(EMAIL));
+  });
+
+  it('i «segui» si tolgono da tutti e due i lati', async () => {
+    // quelli messi da te, e quelli messi a un profilo che sta per sparire.
+    await cancellazione.cancellaDatiPersistenti(EMAIL);
+    const f = cancellazioni.filter((c) => c.tabella === 'mondo_follows').map((c) => c.colonna);
+    expect(f).toContain('follower_user_id');
+    expect(f).toContain('followed_user_id');
+  });
+
+  it('ma NON tocca discussioni e commenti: quelli non sono solo tuoi', async () => {
+    // dentro ci sono le risposte di altre persone. E' una decisione di
+    // prodotto in sospeso, e finche non e presa la risposta lo dichiara.
+    await cancellazione.cancellaDatiPersistenti(EMAIL);
+    const toccate = new Set(cancellazioni.map((c) => c.tabella));
+    expect(toccate.has('mondo_discussions')).toBe(false);
+    expect(toccate.has('mondo_comments')).toBe(false);
+  });
+
+  it('e non dichiara cancellato lo storico traduzioni, che non tocca', async () => {
+    // `translations` e a ZERO righe sul database vivo e non puo riempirsi:
+    // chi la scrive cerca `profiles.id`, e `profiles` non esiste. Qui non
+    // si cancella niente — e soprattutto non lo si dichiara.
+    const { cancellati } = await cancellazione.cancellaDatiPersistenti(EMAIL);
+    expect(cancellati).not.toContain('translations');
+    expect(cancellazioni.some((c) => c.tabella === 'translations')).toBe(false);
+  });
+});
+
 describe('la catena e una sola, e la frase dice la verita', () => {
   const leggi = async (p) => {
     const { readFileSync } = await import('node:fs');
@@ -145,6 +204,7 @@ describe('la catena e una sola, e la frase dice la verita', () => {
     expect(r).toMatch(/ALL sessions/);
     expect(r).toMatch(/Companions/);
     expect(r).toMatch(/PeepOff/);
+    expect(r, 'b.419 — e l\'attivita su Mondo').toMatch(/who you follow/);
     // e cio che resta, detto invece che sottinteso
     expect(r).toMatch(/Retained/);
     expect(r).toMatch(/wallet accounting/);

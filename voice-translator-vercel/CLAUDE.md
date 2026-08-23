@@ -214,6 +214,154 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- **COME SI FA GIRARE LA SUITE DA QUI (imparato il 23/08, a caro prezzo).**
+  I processi in background NON sopravvivono fra una chiamata e l'altra
+  del ponte verso il Mac: `nohup npx vitest ... &` viene ucciso appena la
+  chiamata finisce, e il file di registro resta li a meta senza dire
+  niente. Per due volte ho creduto che la suite fosse «in corso» e invece
+  era morta. La suite intera si lancia A SPICCHI, uno per chiamata:
+  `npx vitest run --shard=1/8 --reporter=dot` ... fino a `8/8`.
+  Trentatre secondi a spicchio, tutti e otto stanno dentro i limiti.
+  E `pgrep -f vitest` NON serve a sapere se sta girando: trova la propria
+  riga di comando e risponde sempre di si.
+
+- Versione: **b.419** (push #711) — IL PERIMETRO GDPR: l'attivita su
+  Mondo. Terzo punto dell'audit del 23/08, e questo l'audit lo aveva
+  visto giusto: `mondo_follows`, `mondo_comment_likes` e
+  `mondo_segnalazioni` sono metadati TUOI e di nessun altro — chi segui,
+  cosa ti e piaciuto, cosa hai segnalato — e non venivano toccati.
+  Adesso vanno via, e i «segui» da tutti e due i lati: quelli messi da te
+  e quelli messi a un profilo che sta per non esistere piu.
+  RESTA FUORI, e resta dichiarato: `mondo_discussions` e `mondo_comments`
+  contengono le risposte di altre persone. Decisione di prodotto, non una
+  riga di codice, e non la prendo io.
+  LO STORICO TRADUZIONI: l'audit lo elencava come residuo e sulla carta
+  aveva ragione (`translations` ha `user_id`, `source_text`,
+  `translated_text`). VERIFICATO SUL DATABASE VIVO: e a ZERO righe e non
+  puo riempirsi. Chi scrive quelle righe cerca prima `profiles.id`
+  partendo dall'email, e la tabella `profiles` NON ESISTE in questo
+  progetto — come non esistono `payments` e `usage_daily`, che altri
+  punti del codice interrogano allo stesso modo. La select fallisce e
+  l'insert non parte mai. Quindi non si cancella niente E NON LO SI
+  DICHIARA: scrivere «translations» fra i cancellati sarebbe la stessa
+  bugia che b.415 ha tolto dalla risposta all'utente.
+  DEBITO RESIDUO (nuovo, non era in nessun audit): lo storico delle
+  traduzioni, i pagamenti e l'uso giornaliero interrogano tre tabelle che
+  non esistono. Non e un difetto della cancellazione: e una funzione
+  morta da riparare dove nasce.
+- Versione: **b.418** (push #711) — LA TELEFONATA DAL VIVO SI PAGA TUTTA,
+  E SE NE APRE UNA SOLA. Primo e terzo punto dell'audit, ed erano lo
+  stesso intervento. DUE FALLE SOMMATE, tutte e due mie, scritte in b.407:
+  1. IL TETTO ERA UN CONDONO. `creditoDalVivo` faceva `Math.min(TETTO,...)`
+     e NESSUNO fermava la telefonata al quindicesimo minuto: verificato,
+     in `CompagnoLive` non c'era nessun timer. Dal sedicesimo minuto in
+     poi si parlava gratis e il fornitore lo pagavamo noi.
+  2. PEGGIO, E NON ERA NELL'AUDIT: una riserva viva da piu di DIECI
+     minuti la rilascia `wallet_rilascia_riserve_scadute` (migrazione
+     011, `INTERVAL '10 minutes'`, in agenda su Vercel ogni ora a :15).
+     Il tetto da quindici minuti era gia oltre la vita massima di una
+     riserva: se il cron passava durante la telefonata, alla chiusura il
+     commit non trovava piu niente. Non «meno del dovuto»: ZERO, tutta
+     la telefonata.
+  Ora si tiene UNA riserva sola alla volta, da TRE minuti parlati, e la
+  si RUOTA prima che invecchi: si conferma il consumato, se ne apre una
+  nuova. Il telefono manda un battito ogni minuto (`azione: 'rinnova'`).
+  Se il credito finisce a meta, la linea si chiude e cio che hai parlato
+  resta pagato — non si regala e non si ruba.
+  E SE IL BATTITO NON ARRIVA MAI (telefono vecchio, rete che lo mangia,
+  pagina chiusa di colpo) alla chiusura si aprono e si confermano subito
+  i tratti mancanti: prima, in quel caso, si sarebbe pagato un tratto
+  solo. Se il credito non basta si scala il possibile e ci si ferma —
+  e la tolleranza di casa, si finisce cio che si e cominciato.
+  P2 — UNA TELEFONATA SOLA PER PERSONA. Il commento della rotta lo diceva
+  gia e non lo imponeva nessuno: due schede, due telefoni o due tentativi
+  contemporanei aprivano due linee, due riserve e due conti. Ora c'e un
+  paletto in Redis (`live:utente:<email>`) preso con `SET NX`, che e
+  atomico: fra due richieste che arrivano insieme ne passa una sola. Il
+  paletto e corto (5 minuti) e si rinfresca a ogni battito, cosi una
+  linea caduta non chiude fuori la persona per sempre; e si toglie SOLO
+  se e ancora nostro, per non scoperchiare la telefonata di un altro.
+  IL TETTO DELLA ROTTA E' SALITO DA 10 A 60 richieste al minuto, e va
+  detto: prima questa porta la si bussava due volte per telefonata, ora
+  c'e un battito al minuto per ogni linea aperta, e in una casa dietro un
+  solo indirizzo di rete ci stanno piu persone. Strozzare un battito vuol
+  dire chiudere una telefonata che sta pagando. Cio che il tetto
+  proteggeva resta protetto: l'apertura passa comunque dal paletto e
+  dalla riserva.
+  E UNA PROVA MIA RISCRITTA, terza volta di fila: `live-sessione-b407`
+  pretendeva che una telefonata lunghissima si fermasse a
+  `LIVE_TETTO_SECONDI` — cioe FOTOGRAFAVA il regalo. E' diventata rossa
+  quando il regalo e finito. Ora difende la cosa vera: nessun singolo
+  addebito puo superare la riserva che lo copre.
+  PROVA: `__tests__/live-tratti-b418.test.js` — 4, 14, 16 e 31 minuti,
+  credito che finisce a meta, doppia chiusura, telefono che non batte,
+  doppia apertura. Rosse sul codice di prima (verificato rimettendo
+  `tariffe.js` e `ponte.js` vecchi in posto), verdi adesso.
+
+- Versione: **b.417** (push #711) — LA PRIMA PROVA NON RESTA PIU MUTA
+  SENZA DIRLO. Non viene da un audit: viene dai registri di produzione.
+  «Edge TTS: sintesi riuscita ma audio vuoto» — 32 volte, 5 persone,
+  l'ultima alle 10:18 del 23/08 sulla build in linea. NON RIPRODOTTO: ho
+  chiamato la sintesi su dieci lingue in produzione e tutte e dieci
+  rispondono con audio vero. Quindi e il fornitore che ogni tanto
+  consegna zero byte, non un guasto nostro. Cio che era nostro e la
+  REAZIONE, e la Prima prova reagiva peggio di tutti gli altri.
+  TRE COSE, e si vedevano solo quando il fornitore aveva una giornata
+  storta:
+  1. «OK» NON VUOL DIRE «C'E UN SUONO». Una risposta puo tornare 200 con
+     zero byte: si costruiva un Audio vuoto, scattava `onerror`, e lo
+     stato tornava «quieto» come se avesse parlato. La Diretta questo
+     controllo (`blob.size > 0`) lo fa da sempre; qui mancava.
+  2. IL RIPIEGO PROMESSO NON ESISTEVA. Il commento di b.356 diceva «si
+     ripiega sulla voce di sistema: meglio una voce che nessuna voce»,
+     ma il codice ripiegava su /api/tts-edge, che e un altro SERVER: se
+     il fornitore tace, tacciono tutti e due. Un commento che promette
+     una cosa che il codice non fa e peggio di nessun commento.
+  3. RESTAVA MUTA SENZA DIRLO, ed e la PRIMA cosa che tocca chi apre
+     l'app: la traduzione compare nel registro, la voce non arriva mai,
+     e nessuna parola spiega perche.
+  Ora l'ultimo gradino e la voce del telefono (`app/lib/voceSistema.js`),
+  che non dipende dalla nostra rete ne dal nostro credito, e se non parte
+  nemmeno quella lo schermo lo DICE (`speakNowVoiceless`, in tutte e
+  trentotto le lingue — nessuna lingua di serie B).
+  PERCHE NON /api/tts (OpenAI), che e il ripiego della Diretta: quella
+  rotta passa dal portafoglio (`resolveAuth`, riserva/commit/release) e
+  senza gettone risponde 401. Portarla nella Prima prova vorrebbe dire
+  far spendere credito a chi sta solo provando l'app — DECISIONE DI
+  PRODOTTO, non una riparazione, e non la prendo io (punto 8).
+  LA VOCE DEL TELEFONO ORA STA IN UN POSTO SOLO. Il codice esisteva gia
+  dentro `useTTSEngine` (il motore di Stanza e Taxi) e funziona: e stato
+  SPOSTATO, non riscritto. `useTTSEngine` lo importa, i suoi sei punti di
+  chiamata non sono stati toccati. E' la stessa cura di b.409 col lettore
+  NDJSON: non un secondo parser, ma quello che c'era messo in comune.
+  DUE DIFETTI LATENTI TROVATI DALLA PROVA, non a occhio, tutti e due li
+  da prima di oggi dentro `useTTSEngine`: in `diciPezzo` il timer
+  `tienilaSveglia` era un `const` dichiarato DOPO `speak()` e `finito()`
+  lo azzerava (con una sintesi che risponde SUBITO scoppiava prima che la
+  variabile esistesse, e la promessa non si risolveva piu); e se la
+  sintesi finisce DENTRO `speak`, il timer veniva acceso dopo la fine e
+  non lo spegneva piu nessuno — girava ogni cinque secondi per tutta la
+  vita della pagina. Nei browser veri `onend` arriva dopo, quindi non si
+  vedevano.
+  CORREZIONE DI UNA COSA CHE AVEVO SCRITTO IO E CHE ERA FALSA: nel primo
+  messaggio di questo commit avevo scritto che «la suite intera si e
+  piantata per ventitre minuti» per colpa di quel timer. Non e vero, e
+  non l'avevo verificato: la suite non si era piantata: veniva UCCISA.
+  In questo ambiente i processi lanciati in background non sopravvivono
+  fra una chiamata e l'altra del ponte verso il Mac, quindi la suite si
+  fermava a ogni giro senza dirlo. Il difetto del timer resta vero e la
+  correzione resta giusta; la diagnosi che gli avevo appiccicato no.
+  E UNA PROVA MIA RISCRITTA, la stessa malattia di sempre:
+  `prima-prova` misurava 1200 caratteri intorno a «tts-edge» e pretendeva
+  di trovarci «catch». E' diventata rossa quando l'intento e stato
+  soddisfatto MEGLIO (il catch ora copre tutte e due le rotte, non una):
+  la finestra si era riempita di commento. Trappola numero 6 in un'altra
+  forma. Ora chiede la cosa vera: la riga entra nel registro PRIMA che si
+  provi a parlare, quindi qualunque cosa succeda alla voce il testo c'e.
+  PROVA: `__tests__/voce-muta-b417.test.jsx`, il componente montato
+  davvero. TRE prove ROSSE sul codice di prima (verificato rimettendo il
+  file vecchio in posto e rilanciandole) e verdi adesso.
+
 - Versione: **b.416** (push #710) — solo diario, nessun codice toccato,
   e due righe che mentivano.
   1. Registrata la decisione di Luca sulla ritenzione di ElevenLabs

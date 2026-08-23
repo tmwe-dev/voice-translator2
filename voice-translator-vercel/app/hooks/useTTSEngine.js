@@ -5,6 +5,7 @@ import { AVATAR_NAMES, AVATARS } from '../lib/constants.js';
 // suonava per conto suo: il telecomando non lo vedeva e lo Stop non lo
 // fermava. Ora ogni blob che parte si annuncia, come fa Life da b.305.
 import { suona as registraVoce } from '../lib/voce.js';
+import { preparaVociSistema, svuotaCacheVoci, trovaVoceMigliore, parlaColSistema } from '../lib/voceSistema.js';
 
 /**
  * useTTSEngine — All TTS engines extracted from useAudioSystem.
@@ -34,17 +35,12 @@ export default function useTTSEngine({
   getPersistentAudio,
   activeBlobUrlsRef,
 }) {
-  const voiceCacheRef = useRef({});
   const ttsPrewarmedRef = useRef(false);
 
   // Preload browser voices (Chrome loads them asynchronously)
-  useEffect(() => {
-    if (typeof speechSynthesis === 'undefined') return;
-    speechSynthesis.getVoices();
-    const handler = () => { voiceCacheRef.current = {}; };
-    speechSynthesis.addEventListener('voiceschanged', handler);
-    return () => speechSynthesis.removeEventListener('voiceschanged', handler);
-  }, []);
+  // b.417 — la cache e l'ascolto di `voiceschanged` vivono nel modulo
+  // condiviso: qui si scaldano e basta.
+  useEffect(() => { preparaVociSistema(); svuotaCacheVoci(); }, []);
 
   // Pre-warm TTS connections when audio is ready
   useEffect(() => {
@@ -73,115 +69,17 @@ export default function useTTSEngine({
   // BROWSER TTS
   // ═══════════════════════════════════════════════
 
-  function findBestVoice(lang) {
-    if (typeof speechSynthesis === 'undefined') return null;
-    if (voiceCacheRef.current[lang]) return voiceCacheRef.current[lang];
-    const voices = speechSynthesis.getVoices();
-    if (!voices.length) return null;
-    const langLower = lang.toLowerCase();
-    const langBase = langLower.split('-')[0];
-    const matching = voices.filter(v => v.lang.toLowerCase().split('-')[0] === langBase);
-    if (matching.length === 0) return null;
+  // b.417 — spostata in app/lib/voceSistema.js, che e l'unico posto
+  // dove sta la voce del telefono. Il nome locale resta per non
+  // toccare i sei punti che la chiamano.
+  const findBestVoice = trovaVoceMigliore;
 
-    function scoreVoice(v) {
-      let score = 0;
-      const name = v.name.toLowerCase();
-      if (v.lang.toLowerCase() === langLower) score += 10;
-      if (name.includes('google')) score += 50;
-      if (name.includes('microsoft')) score += 45;
-      if (name.includes('neural')) score += 40;
-      if (name.includes('natural')) score += 40;
-      if (name.includes('premium')) score += 35;
-      if (name.includes('enhanced')) score += 30;
-      if (name.includes('wavenet')) score += 25;
-      if (name.includes('compact')) score -= 20;
-      if (name.includes('espeak')) score -= 30;
-      return score;
-    }
-
-    matching.sort((a, b) => scoreVoice(b) - scoreVoice(a));
-    const best = matching[0];
-    voiceCacheRef.current[lang] = best;
-    return best;
-  }
-
-  // Split text for Chrome's 15-second speech bug (CJK/Thai aware)
-  function splitTextForSpeech(text, maxChars = 180) {
-    if (text.length <= maxChars) return [text];
-    const chunks = [];
-    let remaining = text;
-    while (remaining.length > 0) {
-      if (remaining.length <= maxChars) { chunks.push(remaining); break; }
-      let splitAt = -1;
-      for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-        const ch = remaining[i];
-        if ('.!?;\u3002\uFF01\uFF1F\u0E2F'.includes(ch)) { splitAt = i + 1; break; }
-      }
-      if (splitAt === -1) {
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.5; i--) {
-          if (',\u3001\uFF0C'.includes(remaining[i])) { splitAt = i + 1; break; }
-        }
-      }
-      if (splitAt === -1) {
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.3; i--) {
-          if (remaining[i] === ' ') { splitAt = i + 1; break; }
-        }
-      }
-      if (splitAt === -1) {
-        for (let i = Math.min(maxChars, remaining.length) - 1; i >= maxChars * 0.4; i--) {
-          const ch = remaining.charCodeAt(i);
-          if (ch >= 0x0E40 && ch <= 0x0E44) { splitAt = i; break; }
-        }
-      }
-      if (splitAt === -1) splitAt = maxChars;
-      chunks.push(remaining.substring(0, splitAt).trim());
-      remaining = remaining.substring(splitAt).trim();
-    }
-    return chunks.filter(c => c.length > 0);
-  }
-
-  const BROWSER_TTS_RATE = { 'th': 0.8, 'zh': 0.85, 'ja': 0.85, 'ko': 0.88, 'vi': 0.82, 'ar': 0.88, 'hi': 0.9 };
-
-  // b.262 — la promessa risolve con true se la voce E' PARTITA (onstart):
-  // "finito" e "mai partito" erano indistinguibili, e un telefono con
-  // l'audio bloccato sembrava aver parlato.
-  function speakChunk(text, lang, voice) {
-    return new Promise((resolve) => {
-      if (typeof speechSynthesis === 'undefined') { resolve(false); return; }
-      let partita = false;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = lang;
-      const langBase = lang.split('-')[0].toLowerCase();
-      u.rate = BROWSER_TTS_RATE[langBase] || 0.95;
-      u.pitch = 1.0;
-      u.volume = 1.0;
-      if (voice) u.voice = voice;
-      const timeoutMs = Math.min(20000, Math.max(3000, text.length * 120));
-      const safetyTimer = setTimeout(() => { speechSynthesis.cancel(); resolve(partita); }, timeoutMs);
-      function done() { clearInterval(keepAlive); clearTimeout(safetyTimer); resolve(partita); }
-      u.onstart = () => { partita = true; };
-      u.onend = done;
-      u.onerror = done;
-      if (speechSynthesis.paused) speechSynthesis.resume();
-      speechSynthesis.speak(u);
-      const keepAlive = setInterval(() => {
-        if (speechSynthesis.speaking && !speechSynthesis.paused) return;
-        if (speechSynthesis.paused) speechSynthesis.resume();
-      }, 5000);
-    });
-  }
-
-  async function browserSpeak(text, lang) {
-    if (typeof speechSynthesis === 'undefined') return false;
-    speechSynthesis.cancel();
-    const voice = findBestVoice(lang);
-    const chunks = splitTextForSpeech(text);
-    let almenoUno = false;
-    for (const chunk of chunks) {
-      if (await speakChunk(chunk, lang, voice)) almenoUno = true;
-    }
-    return almenoUno;
-  }
+  // b.417 — spezzare il testo, dire un pezzo e leggere tutto con la
+  // voce del telefono stanno in app/lib/voceSistema.js: lo stesso
+  // codice, spostato, perche adesso serve anche alla Prima prova.
+  // `spezzaPerLaVoce` qui non si chiama piu da sola: la usa
+  // `parlaColSistema` dentro il modulo.
+  const browserSpeak = parlaColSistema;
 
   function checkVoiceAvailability(lang) {
     if (typeof speechSynthesis === 'undefined') return { available: false, quality: 'none' };

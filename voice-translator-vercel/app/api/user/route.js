@@ -87,7 +87,7 @@ async function handlePost(req) {
         // contenuti pubblici di Mondo, che non sono solo tuoi: una
         // discussione contiene le risposte di altre persone, e
         // cancellarla o anonimizzarla e una decisione di prodotto.
-        message: 'Deleted: profile, ALL sessions (every device, immediately), referrals, lending tokens, and all your Life data — Companions, their memories, courses, homework, student profile, pronunciation history and PeepOff devices. Retained: wallet accounting records (legal/bookkeeping obligation) and your public Mondo posts, which contain other people\'s replies — ask us and we will handle those case by case.',
+        message: 'Deleted: profile, ALL sessions (every device, immediately), referrals, lending tokens, all your Life data — Companions, their memories, courses, homework, student profile, pronunciation history and PeepOff devices — and your Mondo activity: who you follow, your likes and the reports you filed. Retained: wallet accounting records (legal/bookkeeping obligation) and your public Mondo posts, which contain other people\'s replies — ask us and we will handle those case by case.',
         deleted: result.deleted,
       });
     }

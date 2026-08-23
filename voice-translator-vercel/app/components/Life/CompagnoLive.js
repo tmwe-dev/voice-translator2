@@ -104,6 +104,14 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
 
   // b.407 — la sessione aperta dal server: serve per chiudere il conto.
   const sessioneIdRef = useRef(null);
+  // b.418 — IL BATTITO. Mentre si parla, il telefono si fa sentire ogni
+  // minuto: il server conferma il tratto consumato e ne apre un altro.
+  // Senza, una telefonata lunga scavallava la vita della riserva (dieci
+  // minuti) e finiva per non essere pagata affatto.
+  const battitoRef = useRef(null);
+  const fermaBattito = useCallback(() => {
+    if (battitoRef.current) { clearInterval(battitoRef.current); battitoRef.current = null; }
+  }, []);
   // il contesto scritto piu recente, letto quando serve: se lo si chiudesse
   // dentro `apriLinea`, un Riprova ripartirebbe con quello di dieci minuti fa.
   const contestoRef = useRef('');
@@ -115,6 +123,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
   // pagina si sta chiudendo — se non parte, la riserva resta bloccata
   // fino al cron delle riserve scadute e quella telefonata risulta gratis.
   const chiudiConto = useCallback(() => {
+    fermaBattito();
     const id = sessioneIdRef.current;
     if (!id) return;
     sessioneIdRef.current = null;
@@ -126,7 +135,7 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
         keepalive: true,
       }).catch(() => { /* il conto lo chiudera il cron delle riserve scadute */ });
     } catch { /* nemmeno la partenza della chiamata e riuscita: il conto lo chiudera il cron delle riserve scadute */ }
-  }, [userToken]);
+  }, [userToken, fermaBattito]);
 
   // P1.1 — i turni parlati diventano messaggi della chat scritta. Prima
   // la continuita era a senso unico: lo scritto entrava nel dal-vivo, il
@@ -228,6 +237,44 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       }
       sessioneIdRef.current = permesso.sessioneId || null;
 
+      // b.418 — DA QUI IN POI SI PAGA A TRATTI. Ogni battito il server
+      // guarda quanto e stato parlato: se il tratto sta per finire lo
+      // conferma e ne apre un altro. Se il credito e finito lo dice, e la
+      // telefonata si chiude con calma invece di continuare gratis.
+      fermaBattito();
+      const ogniQuanto = Math.max(15, Number(permesso.battitoSecondi) || 60) * 1000;
+      battitoRef.current = setInterval(async () => {
+        const id = sessioneIdRef.current;
+        if (!id || !mioTurno()) { fermaBattito(); return; }
+        let esito = null;
+        try {
+          const b = await fetch('/api/compagni/live/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ azione: 'rinnova', userToken, sessioneId: id }),
+          });
+          esito = { ok: b.ok, corpo: await b.json().catch(() => null) };
+        } catch {
+          // Un battito perso non chiude niente: la rete va e viene, e il
+          // tratto in corso e gia pagato. Si riprova al prossimo.
+          return;
+        }
+        if (esito.ok || !mioTurno()) return;
+        const motivo = esito.corpo?.motivo || '';
+        if (motivo !== 'credito-finito' && motivo !== 'sessione-chiusa') return;
+        // Il server ha gia chiuso il conto: qui non si richiude, si
+        // riaggancia. Chiamare `chiudiConto` addebiterebbe due volte.
+        fermaBattito();
+        sessioneIdRef.current = null;
+        chiusuraVolutaRef.current = true;
+        try { await convRef.current?.endSession?.(); } catch { /* la linea era gia caduta */ }
+        convRef.current = null;
+        if (!mioTurno()) return;
+        setDettaglio(String(esito.corpo?.error || ''));
+        setStato('credito_finito');
+        consegnaTurni();
+      }, ogniQuanto);
+
       const { Conversation } = await import('@elevenlabs/client');
       const conv = await Conversation.startSession({
         // niente piu `agentId`: l'indirizzo e gia firmato dal nostro server
@@ -276,13 +323,14 @@ function CompagnoLive({ compagno, lingua, userToken, contesto, onChiudi, onFine,
       console.warn('[CompagnoLive] apertura fallita:', e);
       if (mioTurno()) { setStato('avvio_fallito'); setDettaglio(String(e?.message || e || 'guasto sconosciuto')); }
     }
-  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto]);
+  }, [compagno, lingua, userToken, consegnaTurni, chiudiConto, fermaBattito]);
 
   useEffect(() => {
     vivoRef.current = true;
     apriLinea();
     return () => {
       vivoRef.current = false;
+      fermaBattito();
       generazioneRef.current += 1;   // le richiamate in ritardo non hanno piu voce in capitolo
       chiusuraVolutaRef.current = true;
       convRef.current?.endSession?.().catch?.(() => {});

@@ -25,7 +25,7 @@ import OpenAI, { toFile } from 'openai';
 import { resolveAuth } from '../apiAuth.js';
 import { riserva, commit, release } from '../../wallet/riserva.js';
 import { preventivoTesto } from '../../wallet/addebita.js';
-import { COSTO_AVATAR_SECONDI, LIVE_TETTO_SECONDI, MOLTIPLICATORE_DAL_VIVO, creditoDalVivo } from '../../wallet/tariffe.js';
+import { COSTO_AVATAR_SECONDI, LIVE_TRATTO_SECONDI, LIVE_SOGLIA_RINNOVO, LIVE_BATTITO_SECONDI, MOLTIPLICATORE_DAL_VIVO, creditoDalVivo } from '../../wallet/tariffe.js';
 import { costoProviderCent } from '../../wallet/provider-costi.js';
 import { redis } from '../redis.js';
 import { randomUUID } from 'crypto';
@@ -330,6 +330,18 @@ const AGENTE_DAL_VIVO = process.env.ELEVENLABS_AMICO_AGENT_ID
 const CHIAVE_LINEA = (id) => `live:sessione:${id}`;
 const VITA_LINEA = 4 * 60 * 60;   // 4 ore: molto oltre qualunque telefonata
 
+// b.418 — UNA TELEFONATA SOLA PER PERSONA. Il commento della rotta lo
+// diceva gia («una telefonata sola per volta») ma non lo imponeva
+// nessuno: due schede, due telefoni o due tentativi contemporanei
+// aprivano due linee, due riserve e due conti. Il paletto sta qui, in
+// Redis, perche e l'unico posto che vedono tutte le istanze del server.
+//
+// La vita del paletto e CORTA di proposito: se il telefono sparisce
+// senza chiudere, dopo pochi minuti la persona puo richiamare. Finche
+// la linea vive, ogni battito lo rinfresca.
+const CHIAVE_PERSONA = (chi) => `live:utente:${chi}`;
+const VITA_PALETTO = 5 * 60;      // 5 minuti, rinfrescati a ogni battito
+
 /**
  * Ripulisce un valore che finira dentro il prompt del fornitore.
  * b.406 (P1.5) faceva questo lavoro nel browser; ora lo fa il server,
@@ -380,8 +392,35 @@ async function indirizzoFirmato(apiKey) {
 }
 
 /**
+ * Il paletto della persona. Torna true se la linea puo aprirsi.
+ * b.418 — `SET ... NX` e atomico: fra due richieste che arrivano insieme
+ * ne passa esattamente una, e non «quella che legge per prima».
+ */
+async function prendiPaletto(chi, sessioneId) {
+  if (!chi) return { ok: true, paletto: null };
+  const chiave = CHIAVE_PERSONA(chi);
+  const preso = await redis('SET', chiave, sessioneId, 'NX', 'EX', VITA_PALETTO);
+  if (preso) return { ok: true, paletto: chiave };
+  // C'e gia una linea. E' viva davvero, o e il fantasma di una caduta?
+  const altra = await redis('GET', chiave);
+  if (altra && await redis('GET', CHIAVE_LINEA(altra))) {
+    return { ok: false };
+  }
+  // Il paletto c'e ma la linea che lo teneva non esiste piu: si sostituisce.
+  await redis('SET', chiave, sessioneId, 'EX', VITA_PALETTO);
+  return { ok: true, paletto: chiave };
+}
+
+/** Toglie il paletto SOLO se e ancora nostro: mai quello di un altro. */
+async function lasciaPaletto(chiave, sessioneId) {
+  if (!chiave) return;
+  const chi = await redis('GET', chiave);
+  if (chi === sessioneId) await redis('DEL', chiave);
+}
+
+/**
  * APRE LA LINEA. Restituisce solo cio che serve al browser per parlare.
- * @returns {{ok:true, sessioneId, signedUrl, variabili, voceId, tettoSecondi}}
+ * @returns {{ok:true, sessioneId, signedUrl, variabili, voceId, tettoSecondi, battitoSecondi}}
  *          | {ok:false, motivo, status}
  */
 export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua, contesto, adesso }) {
@@ -402,26 +441,41 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
   // dell'utente non si scala niente, perche non paghiamo noi.
   const paga = billingEmail && !isOwnKey ? billingEmail : null;
 
+  const sessioneId = randomUUID();
+
+  // ── UNA SOLA. Prima di bloccare credito, non dopo: aprire due linee e
+  //    aprire due conti, e il secondo non lo chiuderebbe nessuno.
+  const chiPersona = String(email || '').toLowerCase();
+  const p = await prendiPaletto(chiPersona, sessioneId);
+  if (!p.ok) return { ok: false, motivo: 'gia-in-corso', status: 409 };
+
   let riservaId = null;
   if (paga) {
-    const r = await riserva(paga, LIVE_TETTO_SECONDI, {
+    const r = await riserva(paga, LIVE_TRATTO_SECONDI, {
       tipo: 'dal_vivo',
       compagno: compagno?.id || '',
-      costo_cent: costoProviderCent(LIVE_TETTO_SECONDI / MOLTIPLICATORE_DAL_VIVO, 'gpt-5.4-mini', 'elevenlabs-flash'),
+      tratto: 1,
+      costo_cent: costoProviderCent(LIVE_TRATTO_SECONDI / MOLTIPLICATORE_DAL_VIVO, 'gpt-5.4-mini', 'elevenlabs-flash'),
     });
-    if (!r.ok) return { ok: false, motivo: 'credito-insufficiente', status: 402, servono: LIVE_TETTO_SECONDI };
+    if (!r.ok) {
+      await lasciaPaletto(p.paletto, sessioneId);
+      return { ok: false, motivo: 'credito-insufficiente', status: 402, servono: LIVE_TRATTO_SECONDI };
+    }
     riservaId = r.riservaId;
   }
 
   try {
     const signedUrl = await indirizzoFirmato(apiKey);
-    const sessioneId = randomUUID();
     await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify({
       email: email || null,
       paga,
-      riservaId,
+      riservaId,             // il tratto APERTO adesso (null se non paga)
+      trattoApertoIl: adesso,
+      scalato: 0,            // credito gia CONFERMATO dai tratti chiusi
+      tratti: 1,
       apertaIl: adesso,
       compagnoId: compagno?.id || '',
+      paletto: p.paletto || null,
     }), 'EX', VITA_LINEA);
     return {
       ok: true,
@@ -429,49 +483,171 @@ export async function apriLineaDalVivo({ compagno, email, userToken, nomeLingua,
       signedUrl,
       variabili: variabiliDalVivo({ compagno, nomeLingua, contesto }),
       voceId: compagno?.voce?.id || null,
-      tettoSecondi: LIVE_TETTO_SECONDI,
+      tettoSecondi: LIVE_TRATTO_SECONDI,
+      battitoSecondi: LIVE_BATTITO_SECONDI,
     };
   } catch (e) {
     if (riservaId) await release(riservaId, 'firma-non-riuscita').catch(() => {});
+    await lasciaPaletto(p.paletto, sessioneId);
     log.warn('linea dal vivo non firmata:', e?.message || e);
     return { ok: false, motivo: 'firma-non-riuscita', status: 502 };
   }
+}
+
+/** Legge la linea e controlla che sia di chi la sta chiedendo. */
+async function leggiLinea(sessioneId, email) {
+  const grezzo = await redis('GET', CHIAVE_LINEA(sessioneId));
+  if (!grezzo) return { assente: true };
+  let linea = null;
+  try { linea = JSON.parse(grezzo); } catch { linea = null; }
+  if (!linea) return { illeggibile: true };
+  // La sessione e di chi l'ha aperta. Senza questo, un identificativo
+  // rubato chiuderebbe (e addebiterebbe) la telefonata di un altro.
+  if (linea.email && email && linea.email !== email) return { nonTua: true };
+  return { linea };
+}
+
+/**
+ * IL BATTITO — b.418. Il telefono si fa sentire ogni minuto; qui si
+ * guarda quanto e stato parlato e, se il tratto in corso sta per
+ * finire, lo si CONFERMA e se ne apre un altro.
+ *
+ * Perche ruotare invece di allargare: una riserva viva da piu di dieci
+ * minuti la rilascia il cron delle riserve scadute, e a quel punto alla
+ * chiusura non ci sarebbe piu niente da scalare. Un tratto corto e
+ * confermato in fretta non fa in tempo a invecchiare.
+ *
+ * @returns {{ok:true, secondiParlati, scalato}} | {ok:false, motivo, status}
+ */
+export async function rinnovaLineaDalVivo({ sessioneId, email, adesso }) {
+  if (!sessioneId) return { ok: false, motivo: 'sessione-mancante', status: 400 };
+  const l = await leggiLinea(sessioneId, email);
+  if (l.assente) return { ok: false, motivo: 'sessione-chiusa', status: 410 };
+  if (l.illeggibile) { await redis('DEL', CHIAVE_LINEA(sessioneId)); return { ok: false, motivo: 'sessione-illeggibile', status: 400 }; }
+  if (l.nonTua) return { ok: false, motivo: 'non-e-tua', status: 403 };
+  const linea = l.linea;
+
+  const secondiParlati = Math.max(0, Math.round((adesso - (linea.apertaIl || adesso)) / 1000));
+  const dovuto = creditoDalVivo(secondiParlati);
+  const scalato = Math.max(0, linea.scalato || 0);
+  // quanto resta del tratto in corso
+  const restante = LIVE_TRATTO_SECONDI - (dovuto - scalato);
+
+  // Finche il tratto regge, il battito serve solo a rinfrescare i tempi.
+  if (!linea.paga || restante > LIVE_SOGLIA_RINNOVO) {
+    await redis('EXPIRE', CHIAVE_LINEA(sessioneId), VITA_LINEA);
+    if (linea.paletto) await redis('EXPIRE', linea.paletto, VITA_PALETTO);
+    return { ok: true, secondiParlati, scalato, rinnovato: false };
+  }
+
+  // ── ROTAZIONE. Prima si conferma il consumato, poi si apre il tratto
+  //    nuovo: se il credito e finito, quello che hai gia parlato resta
+  //    pagato e la linea si chiude — non si regala e non si ruba.
+  const quota = Math.max(0, Math.min(LIVE_TRATTO_SECONDI, dovuto - scalato));
+  if (linea.riservaId) {
+    if (quota > 0) await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati }).catch(() => {});
+    else await release(linea.riservaId, 'tratto-non-consumato').catch(() => {});
+  }
+  const nuovoScalato = scalato + quota;
+
+  const r = await riserva(linea.paga, LIVE_TRATTO_SECONDI, {
+    tipo: 'dal_vivo',
+    compagno: linea.compagnoId || '',
+    tratto: (linea.tratti || 1) + 1,
+    costo_cent: costoProviderCent(LIVE_TRATTO_SECONDI / MOLTIPLICATORE_DAL_VIVO, 'gpt-5.4-mini', 'elevenlabs-flash'),
+  });
+
+  if (!r.ok) {
+    // Credito finito a meta telefonata. La linea si chiude qui: il conto
+    // e gia a posto (il tratto appena consumato e stato confermato) e non
+    // resta niente appeso.
+    await redis('DEL', CHIAVE_LINEA(sessioneId));
+    await lasciaPaletto(linea.paletto, sessioneId);
+    return { ok: false, motivo: 'credito-finito', status: 402, secondiParlati, scalato: nuovoScalato };
+  }
+
+  await redis('SET', CHIAVE_LINEA(sessioneId), JSON.stringify({
+    ...linea,
+    riservaId: r.riservaId,
+    trattoApertoIl: adesso,
+    scalato: nuovoScalato,
+    tratti: (linea.tratti || 1) + 1,
+  }), 'EX', VITA_LINEA);
+  if (linea.paletto) await redis('EXPIRE', linea.paletto, VITA_PALETTO);
+
+  return { ok: true, secondiParlati, scalato: nuovoScalato, rinnovato: true };
 }
 
 /**
  * CHIUDE IL CONTO. La durata NON arriva dal browser: si calcola qui,
  * dall'ora di apertura. Un numero che paga l'utente non puo dipendere
  * da chi paga.
+ *
+ * b.418 — `creditoScalato` e il TOTALE della telefonata: i tratti gia
+ * confermati piu l'ultimo. Non ha piu un tetto, perche non ce l'ha piu
+ * la telefonata.
+ *
  * @returns {{ok:true, secondiParlati, creditoScalato}} | {ok:false, motivo, status}
  */
 export async function chiudiLineaDalVivo({ sessioneId, email, adesso }) {
   if (!sessioneId) return { ok: false, motivo: 'sessione-mancante', status: 400 };
-  const grezzo = await redis('GET', CHIAVE_LINEA(sessioneId));
+  const l = await leggiLinea(sessioneId, email);
   // Gia chiusa (o scaduta): non e un errore da mostrare, e un doppio clic.
-  if (!grezzo) return { ok: true, secondiParlati: 0, creditoScalato: 0, gia: true };
+  if (l.assente) return { ok: true, secondiParlati: 0, creditoScalato: 0, gia: true };
+  if (l.illeggibile) { await redis('DEL', CHIAVE_LINEA(sessioneId)); return { ok: false, motivo: 'sessione-illeggibile', status: 400 }; }
+  if (l.nonTua) return { ok: false, motivo: 'non-e-tua', status: 403 };
+  const linea = l.linea;
 
-  let linea = null;
-  try { linea = JSON.parse(grezzo); } catch { linea = null; }
-  if (!linea) { await redis('DEL', CHIAVE_LINEA(sessioneId)); return { ok: false, motivo: 'sessione-illeggibile', status: 400 }; }
-
-  // La sessione e di chi l'ha aperta. Senza questo, un identificativo
-  // rubato chiuderebbe (e addebiterebbe) la telefonata di un altro.
-  if (linea.email && email && linea.email !== email) {
-    return { ok: false, motivo: 'non-e-tua', status: 403 };
-  }
-
+  // Si toglie PRIMA di addebitare: due chiusure che arrivano insieme
+  // (il tasto e la chiusura della pagina) non devono pagare due volte.
   await redis('DEL', CHIAVE_LINEA(sessioneId));
+  await lasciaPaletto(linea.paletto, sessioneId);
 
   const secondiParlati = Math.max(0, Math.round((adesso - (linea.apertaIl || adesso)) / 1000));
-  const creditoScalato = creditoDalVivo(secondiParlati);
+  let scalato = Math.max(0, linea.scalato || 0);
+  let resta = Math.max(0, creditoDalVivo(secondiParlati) - scalato);
+
+  // ── L'ULTIMO TRATTO, quello ancora aperto.
+  const quota = Math.min(LIVE_TRATTO_SECONDI, resta);
   if (linea.riservaId) {
-    if (creditoScalato > 0) {
-      await commit(linea.riservaId, creditoScalato, { tipo: 'dal_vivo', secondi_parlati: secondiParlati })
+    if (quota > 0) {
+      await commit(linea.riservaId, quota, { tipo: 'dal_vivo', tratto: linea.tratti || 1, secondi_parlati: secondiParlati })
         .catch(() => { /* il commit non lancia: la riserva scadra da sola */ });
+      scalato += quota; resta -= quota;
     } else {
       // linea aperta e chiusa senza dire una parola: non si paga niente.
       await release(linea.riservaId, 'nessun-parlato').catch(() => {});
     }
   }
-  return { ok: true, secondiParlati, creditoScalato };
+
+  // ── E CIO CHE IL BATTITO NON HA FATTO IN TEMPO A CONFERMARE.
+  //
+  // b.418 — serve perche il battito puo mancare: un telefono vecchio che
+  // non lo manda, una rete che lo mangia, la pagina chiusa di colpo. In
+  // quel caso al momento della chiusura si e parlato piu di quanto ci sia
+  // di bloccato, e un commit non puo superare la sua riserva. Invece di
+  // regalare la differenza si aprono i tratti mancanti e si confermano
+  // subito: sono gia stati consumati, non c'e niente da tenere bloccato.
+  //
+  // Se il credito non basta piu, si scala quello che c'e e ci si ferma —
+  // e la tolleranza di casa: si finisce cio che si e cominciato, non si
+  // insegue una persona a saldo zero.
+  let giri = 0;
+  while (resta > 0 && linea.paga && giri < 40) {
+    giri += 1;
+    const pezzo = Math.min(LIVE_TRATTO_SECONDI, resta);
+    const r = await riserva(linea.paga, pezzo, {
+      tipo: 'dal_vivo', compagno: linea.compagnoId || '', tratto: (linea.tratti || 1) + giri,
+      recupero: true,
+      costo_cent: costoProviderCent(pezzo / MOLTIPLICATORE_DAL_VIVO, 'gpt-5.4-mini', 'elevenlabs-flash'),
+    });
+    if (!r.ok) {
+      log.warn('dal vivo: credito insufficiente alla chiusura, scalato il possibile', { manca: resta });
+      break;
+    }
+    await commit(r.riservaId, pezzo, { tipo: 'dal_vivo', recupero: true, secondi_parlati: secondiParlati }).catch(() => {});
+    scalato += pezzo; resta -= pezzo;
+  }
+
+  return { ok: true, secondiParlati, creditoScalato: scalato };
 }
