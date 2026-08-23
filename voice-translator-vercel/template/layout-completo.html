@@ -161,17 +161,37 @@
   /* stato vuoto: una riga, non un riquadro */
   .vuoto { color: var(--muto); font-size: 14px; line-height: 1.5; padding: 6px 2px; }
 
+  /* ══ IL MODULO DEL TESTO — una fascia sola, a tutta larghezza ══
+     b.436, collaudo di Luca: «lo spazio che dedichi al testo e troppo
+     piccolo, vai a tutta larghezza del modulo».
+     Prima il campo era una striscia stretta fra due tasti quadri da
+     cinquantaquattro: centoventiquattro punti di larghezza portati via su
+     un telefono che ne ha trecentoquaranta, cioe piu di un terzo della
+     riga tolto proprio a quello che si deve leggere.
+     Adesso i comandi stanno DENTRO la fascia, appoggiati a destra. Il
+     testo comincia dal bordo sinistro, e quando la frase e lunga la fascia
+     cresce in ALTEZZA — non si restringe mai. */
   .riga-campo { display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; padding-bottom: 10px; }
+  .modulo {
+    flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 6px;
+    min-height: 54px; padding: 8px 8px 8px 14px; border-radius: 16px;
+    border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05);
+  }
   .campo {
-    flex: 1; min-height: 54px; padding: 15px 14px; border-radius: 16px;
+    flex: 1; min-width: 0; min-height: 54px; padding: 15px 14px; border-radius: 16px;
     border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05);
     color: var(--muto); font-size: 16px; font-family: var(--font); line-height: 1.35;
   }
+  /* dentro la fascia il campo non porta piu bordo ne fondo: e gia dentro uno */
+  .modulo .campo { border: none; background: transparent; padding: 8px 0; min-height: 0; }
   .quadro {
     width: 54px; height: 54px; border-radius: 16px; flex-shrink: 0; padding: 0;
     border: 0.5px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.13);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
+  /* i comandi dentro la fascia sono piu piccoli, ma il bersaglio del dito
+     resta quello di prima: lo da la fascia, che e alta cinquantaquattro. */
+  .modulo .quadro { width: 38px; height: 38px; border-radius: 12px; }
   .quadro.spento { border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05); opacity: 0.4; }
 
   .scheda { border: 1px solid var(--bordo); border-radius: 18px; background: var(--carta); overflow: hidden; }
@@ -447,7 +467,7 @@
           <div class="testata">
             <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
             <span class="titolo">Archimede</span>
-            <span class="tondino">A−</span><span class="tondino">A+</span><span class="tondino on"><svg class="ic"><use href="#i-mic"/></svg></span>
+            <span class="tondino">A−</span><span class="tondino">A+</span><span class="tondino on"><svg class="ic"><use href="#i-phone"/></svg></span>
           </div>
           <div class="schede-fila" style="margin-top:8px">
             <span class="scheda-voce"><svg class="ic"><use href="#i-mic"/></svg><span>Podcast</span></span>
@@ -462,11 +482,10 @@
             <div class="bolla mia">Vorrei capire l'inflazione in Giappone.</div>
             <div class="bolla sua">Partiamo dai fatti: lo yen ha perso il 12% in un anno.</div>
           </div>
-          <div class="riga-campo">
-            <div class="campo">Scrivi un messaggio…</div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi un messaggio…</div>
             <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div>
             <div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div>
+          </div></div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
@@ -474,7 +493,9 @@
         <span class="ril">Cosa cambia.</span>
         <ul>
           <li><span class="ril">Il microfono nel campo</span>, che oggi manca: l'unico era dentro «Dal vivo», e dettare non si poteva.</li>
-          <li>«Dal vivo» diventa un tondino acceso nella testata, allineato agli altri comandi.</li>
+          <li><span class="ril">«Dal vivo» prende la cornetta, non il microfono.</span> Erano due microfoni nella stessa
+              schermata, uno in alto e uno di fianco al testo, e non c'era modo di sapere quale facesse cosa. Sono due
+              gesti diversi: uno DETTA nel campo, l'altro CHIAMA. Adesso lo dicono le icone.</li>
           <li>Le sette schede restano dove sono: cambia solo che l'icona sta sopra la parola, cosi si riconoscono senza leggerle.</li>
         </ul>
       </div>
@@ -500,11 +521,10 @@
             <div class="bolla mia">Piacere mio. Parliamo dello yen?<span class="orig">はじめまして。円について話しましょうか。</span></div>
             <div class="bolla sua">もちろんです。<span class="orig">Certamente.</span></div>
           </div>
-          <div class="riga-campo">
-            <div class="campo">Scrivi…</div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi…</div>
             <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div>
             <div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div>
+          </div></div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
@@ -648,10 +668,9 @@
             <div class="scheda"><div class="foto">A</div></div>
             <div style="font-size:14.5px;color:var(--testo-2);line-height:1.55">Five of them are vowels: A, E, I, O, U.</div>
           </div>
-          <div class="riga-campo">
-            <div class="campo">Alza la mano e chiedi…</div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Alza la mano e chiedi…</div>
             <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div>
+          </div></div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
@@ -761,9 +780,8 @@
               </div>
             </div>
           </div>
-          <div class="riga-campo">
-            <div class="campo">Parla o scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Parla o scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
+          </div></div>
         </div>
         <div class="barra"><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-home)"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
@@ -937,7 +955,7 @@
             <div class="bolla sua" style="align-self:flex-start">Ya estamos todos.<span class="orig">Ci siamo tutti.</span></div>
             <div class="bolla mia">Perfetto, cominciamo.<span class="orig">完璧です、始めましょう。</span></div>
           </div>
-          <div class="riga-campo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div></div>
         </div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
@@ -1041,7 +1059,7 @@
             <div class="scheda"><div class="dentro"><div class="eti"><span class="chip">🇯🇵 Kenji</span><span>40m</span></div>
               <div style="font-size:14px;line-height:1.45;margin-top:6px">Qui invece sulla spesa si sente eccome.<span style="display:block;font-size:11.5px;color:var(--muto);margin-top:4px">ここでは買い物で強く感じます。</span></div></div></div>
           </div>
-          <div class="riga-campo"><div class="campo">Scrivi un commento…</div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div>
+          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi un commento…</div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div></div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
@@ -1405,14 +1423,14 @@
     </div>
 
     <div class="pezzo">
-      <div class="nome">La riga in basso</div>
-      <div class="mis">campo min 54 · tasti 54 × 54 · raggio 16</div>
+      <div class="nome">Il modulo del testo</div>
+      <div class="mis">fascia min 54 · comandi dentro, 38 × 38 · raggio 16 / 12</div>
       <div class="prova">
         <div class="riga-campo" style="padding-bottom:0">
-          <div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
+          <div class="modulo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div>
         </div>
       </div>
-      <div class="perche">Dove si scrive sta sempre in basso, sempre a schermo, e non si ribalta mai. A destra prima la voce, poi l'invio: le cose della voce insieme, quelle del testo insieme.</div>
+      <div class="perche">Dove si scrive sta sempre in basso, sempre a schermo, e non si ribalta mai. Una fascia sola a tutta larghezza, con i comandi DENTRO invece che di fianco: prima due tasti da cinquantaquattro portavano via piu di un terzo della riga proprio a quello che si deve leggere. Il bersaglio del dito non cala — lo da l'altezza della fascia, non la misura del tondino. A destra prima la voce, poi l'invio.</div>
     </div>
 
     <div class="pezzo">
@@ -1773,7 +1791,7 @@
       </thead>
       <tbody style="font-variant-numeric:tabular-nums">
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto tondo</td><td style="padding:11px 14px;color:var(--accento)">44 × 44</td><td style="padding:11px 14px;color:var(--testo-3)">sotto, un dito sbaglia bersaglio</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto quadro (voce, invio)</td><td style="padding:11px 14px;color:var(--accento)">54 × 54 · raggio 16</td><td style="padding:11px 14px;color:var(--testo-3)">alto come il campo accanto</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Comandi dentro il modulo (voce, invio)</td><td style="padding:11px 14px;color:var(--accento)">38 × 38 · raggio 12</td><td style="padding:11px 14px;color:var(--testo-3)">il bersaglio del dito lo da la fascia, alta 54</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo dove si scrive</td><td style="padding:11px 14px;color:var(--accento)">min 54 · max 110 · testo 16</td><td style="padding:11px 14px;color:var(--testo-3)">sotto 16 il telefono ingrandisce da solo</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo di ricerca</td><td style="padding:11px 14px;color:var(--accento)">48 · raggio 14</td><td style="padding:11px 14px;color:var(--testo-3)">piu basso: si interroga, non si compila</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Testata</td><td style="padding:11px 14px;color:var(--accento)">44 · distanza 8</td><td style="padding:11px 14px;color:var(--testo-3)">una riga, sempre la stessa</td></tr>
