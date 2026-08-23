@@ -193,10 +193,25 @@ const SettingsView = memo(function SettingsView({ apiKeyInputs, userAccount, log
           {apertoInterfaccia && (
             <div style={{ maxHeight: 260, overflowY: 'auto', padding: '4px 0 10px',
               borderBottom: `1px solid ${c.cardBorder}` }}>
+              {/* b.429 — LA STRADA PER TORNARE INDIETRO, che non c'era.
+                  b.254 dice: i menu seguono la lingua parlata FINCHE non li
+                  hai scelti a mano. Ma sceglierli a mano era una porta a
+                  senso unico: `uiLangScelta` diventava vero e non lo
+                  rimetteva falso nessuno, in tutta l'applicazione. Da quel
+                  momento cambiare lingua sulla home non toccava piu i menu,
+                  e non c'era modo di capire perche ne di rimediare.
+                  Trovato dal collaudo di Luca: «quando cambio la lingua non
+                  aggiorna il testo dei tasti in home page». */}
+              <Scelta c={c} attiva={!prefs.uiLangScelta}
+                titolo={L('followSpokenLang')}
+                onClick={() => {
+                  savePrefs({ ...prefs, uiLangScelta: false, uiLang: mapLang(prefs.lang || 'en') });
+                  setApertoInterfaccia(false);
+                }} />
               {LINGUE_INTERFACCIA.map(codice => {
                 const l = getLang(codice);
                 return (
-                  <Scelta c={c} key={codice} attiva={codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
+                  <Scelta c={c} key={codice} attiva={!!prefs.uiLangScelta && codice === (prefs.uiLang || mapLang(prefs.lang || 'en'))}
                     titolo={`${l.flag}  ${l.name}`}
                     onClick={() => { /* b.254 — scegliendola QUI la scelta diventa esplicita: da
                        questo momento la home non la cambia piu da sola. */

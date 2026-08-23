@@ -29,6 +29,36 @@ import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 
 const FATTA = 'vt-prima-prova-fatta';
 
+// ═══════════════════════════════════════════════════════════════
+// b.429 — CHI STA A PAGINA PIENA NON VUOLE NIENTE SOPRA.
+//
+// Collaudo di Luca: «hai nascosto dietro alla pila batteria il selettore
+// dell'inversione testo». Vero: la pila e fissa nell'angolo in alto a
+// destra sopra tutto, e da quando questa schermata e una pagina intera i
+// suoi comandi le finiscono sotto.
+//
+// La pila NON si sposta: Luca l'ha chiesta li tre volte, e spostarla
+// significherebbe rompere ogni altra schermata per aggiustarne una. Le
+// pagine piene infatti la nascondono gia — stanza, diretta, taxi, lobby:
+// sono elencate a mano in page.js. Questa non poteva entrare in
+// quell'elenco perche non e una vista, e un pannello dentro la home.
+// Quindi lo dice lei quando c'e: un interruttore solo, senza React,
+// perche a leggerlo e page.js che sta piu in alto di tutto.
+// ═══════════════════════════════════════════════════════════════
+let aperta = false;
+const spettatori = new Set();
+function annuncia() {
+  spettatori.forEach((fn) => { try { fn(aperta); } catch { /* uno spettatore rotto non ferma gli altri */ } });
+}
+/** Vero mentre «Parla ora» occupa lo schermo. */
+export function primaProvaAperta() { return aperta; }
+/** Si iscrive all'apertura e alla chiusura; la funzione restituita disiscrive. */
+export function ascoltaPrimaProva(fn) {
+  spettatori.add(fn);
+  fn(aperta);
+  return () => spettatori.delete(fn);
+}
+
 export function riapriPrimaProva() {
   try { memDel(FATTA); } catch { /* niente memoria: pazienza */ }
 }
@@ -71,6 +101,12 @@ export default function PrimaProva({ onChiudi }) {
   const giaChiestaRef = useRef(''); // l'ultima frase gia chiesta: non si chiede due volte
   const audioRef = useRef(null);
   const registroRef = useRef(null);
+
+  // b.429 — finche questa pagina e a schermo, chi galleggia sopra si toglie.
+  useEffect(() => {
+    aperta = true; annuncia();
+    return () => { aperta = false; annuncia(); };
+  }, []);
 
   const mete = [...RAPIDE.map((c) => LANGS.find((l) => l.code === c)).filter(Boolean),
     ...LANGS.filter((l) => !RAPIDE.includes(l.code) && l.code !== miaLingua)];

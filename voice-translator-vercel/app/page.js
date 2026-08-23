@@ -7,7 +7,7 @@
 import { trasportoAmmesso, TRASPORTO, modalitaDiStanza, vaInVetrina } from './lib/decisioni.js';
 import { postoADestra } from './lib/righello.js';
 import { useState, useRef, useEffect, useCallback, lazy, Suspense } from 'react';
-import { t, mapLang, preloadLang } from './lib/i18n.js';
+import { t, mapLang, preloadLang, ascoltaLingueCaricate } from './lib/i18n.js';
 import { APP_URL, LANGS, VOICES, AVATARS, AVATAR_NAMES, MODES, CONTEXTS, FONT, CREDIT_PACKAGES,
   getLang, vibrate, formatCredits } from './lib/constants.js';
 // Custom hooks
@@ -36,6 +36,7 @@ import WelcomeView from './components/WelcomeView.js';
 import SceltaPaeseView from './components/SceltaPaeseView.js';
 import LinguettaLingua from './components/LinguettaLingua.js';
 import { BatteryPillSlot } from './components/BatteryPill.js'; // b.359 — la pila, verticale, sopra la linguetta
+import { ascoltaPrimaProva } from './components/PrimaProva.js'; // b.429 — a pagina piena non le galleggia niente sopra
 import CondivisoSheet from './components/CondivisoSheet.js';
 import HomeView from './components/HomeView.js';
 import JoinView from './components/JoinView.js';
@@ -1167,7 +1168,27 @@ function HomeInner() {
   // deve far scaricare un pacchetto danese che non esiste.
   const linguaInterfaccia = prefs.uiLang || mapLang(prefs.lang || 'en');
   useEffect(() => { preloadLang(linguaInterfaccia); }, [linguaInterfaccia]);
-  const L = (key) => t(linguaInterfaccia, key);
+  // b.429 — E QUI CI SI SVEGLIA QUANDO IL PACCHETTO ARRIVA. In b.256 il
+  // difetto era stato chiuso dentro AppContext, e chi prende L da li si
+  // aggiorna. Ma QUESTA L, che vive in page.js e viene passata a mano a
+  // tre schermate, non ascoltava niente: dodici lingue su quattordici si
+  // caricano a parte, e finche non arrivano si ripiega sull'inglese. Quando
+  // arrivavano, React non aveva nessun motivo di ridisegnare — e quelle tre
+  // schermate restavano in inglese finche non succedeva qualcos'altro.
+  // Mezzo difetto chiuso e mezzo lasciato aperto e il modo piu sicuro di
+  // non accorgersene mai.
+  const [versioneLingua, setVersioneLingua] = useState(0);
+  useEffect(() => ascoltaLingueCaricate((codice) => {
+    if (codice === linguaInterfaccia) setVersioneLingua((v) => v + 1);
+  }), [linguaInterfaccia]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `versioneLingua`
+  // non si legge dentro: e proprio il suo cambiare che deve far rinascere L().
+  const L = useCallback((key) => t(linguaInterfaccia, key), [linguaInterfaccia, versioneLingua]);
+
+  // b.429 — mentre «Parla ora» e a pagina piena, la pila e la linguetta
+  // della lingua si tolgono: le finivano sopra ai comandi.
+  const [primaProvaSuSchermo, setPrimaProvaSuSchermo] = useState(false);
+  useEffect(() => ascoltaPrimaProva(setPrimaProvaSuSchermo), []);
 
   // b.136 — la scelta del paese si raggiunge da tre punti diversi: il
   // primo avvio, il riepilogo nel benvenuto e la riga "Paese" nelle
@@ -1335,7 +1356,7 @@ function HomeInner() {
           calme: non in onboarding (paese/welcome/loading), non in chiamata
           (room/speaker/lobby/summary/taxi), non dove c'e gia la voce
           (voicetest). Da qui si cambia lingua e voce al volo. */}
-      {!['loading', 'paese', 'welcome', 'room', 'speaker', 'taxi-chat', 'taxi', 'lobby', 'summary', 'join', 'voicetest'].includes(view) && (
+      {!primaProvaSuSchermo && !['loading', 'paese', 'welcome', 'room', 'speaker', 'taxi-chat', 'taxi', 'lobby', 'summary', 'join', 'voicetest'].includes(view) && (
         <>
           {/* b.363 — LA PILA SE NE VA DALLA LINGUETTA. Stava appoggiata
               sopra la bandiera, a sinistra; ora vive per conto suo

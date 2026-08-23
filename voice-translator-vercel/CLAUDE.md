@@ -214,6 +214,34 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.429** (push #721) — due difetti dal collaudo di Luca, e un
+  terzo trovato cercandone uno dei due.
+  1. «QUANDO CAMBIO LA LINGUA NON AGGIORNA IL TESTO DEI TASTI IN HOME».
+     Sotto ci sono DUE cose distinte.
+     (a) LA PORTA A SENSO UNICO. b.254 dice: i menu seguono la lingua
+     parlata FINCHE non li scegli a mano. Ma sceglierli a mano metteva
+     `uiLangScelta` a vero e NESSUNO in tutta l'applicazione lo rimetteva
+     falso — cercato ovunque, esisteva un solo punto e scriveva solo
+     `true`. Da quel momento la home non poteva piu cambiare i menu, e non
+     c'era ne un modo di capirlo ne uno di rimediare. Adesso in cima
+     all'elenco delle lingue dell'interfaccia c'e «Segui la lingua che
+     parlo», accesa proprio quando non hai scelto a mano.
+     (b) MEZZO DIFETTO DI b.256 ERA RIMASTO APERTO. Quel difetto — chi
+     aveva gia disegnato non veniva svegliato quando il pacchetto lingua
+     entrava in memoria — era stato chiuso dentro AppContext. Ma page.js
+     ha una SUA L, passata a mano a tre schermate, e non ascoltava niente:
+     quelle tre restavano nella lingua di ripiego finche non succedeva
+     qualcos'altro. Ora ascolta anche lei.
+  2. «HAI NASCOSTO DIETRO ALLA PILA BATTERIA IL SELETTORE DELL'INVERSIONE
+     TESTO, SPOSTALA». La pila NON si e spostata, e la ragione va detta:
+     Luca l'ha chiesta in alto a destra tre volte, e spostarla vorrebbe
+     dire rompere ogni altra schermata per aggiustarne una. Le pagine
+     piene la nascondono gia — stanza, diretta, taxi, lobby — ma «Parla
+     ora» non poteva entrare in quell'elenco perche non e una vista, e un
+     pannello dentro la home. Adesso lo dice lei quando e a schermo, e
+     page.js toglie pila e linguetta finche resta aperta.
+  PROVA: `__tests__/lingua-e-pila-b429.test.jsx`.
+
 - Versione: **b.428** (push #720) — «LA TRADUZIONE NON E' PARTITA CON IL
   PRIMO MESSAGGIO». Collaudo di Luca, e il difetto non era il primo
   messaggio: era che UNA frase andata storta restava bruciata per sempre.
