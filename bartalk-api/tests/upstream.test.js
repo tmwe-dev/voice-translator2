@@ -16,8 +16,9 @@ describe('adattatore Core', () => {
   it('Contacts usa token e sovrascrive quello dichiarato dal client', async () => {
     const { route, params } = matchRoute('POST','/contacts');
     const req = new Request('https://api.test/api/v1/contacts', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({action:'list',token:'falso'}) });
-    await callUpstream({ req, route, params, sessionToken:'vero' });
+    await callUpstream({ req, route, params, sessionToken:'vero', requestId:'req-1' });
     expect(JSON.parse(calls[0].init.body).token).toBe('vero');
+    expect(calls[0].init.headers.get('x-request-id')).toBe('req-1');
   });
 
   it('fixedBody e autoritativo: il client non puo trasformare riscatta in invia', async () => {
@@ -33,20 +34,11 @@ describe('adattatore Core', () => {
   });
 
   it('la query fissata dalla route non puo essere duplicata dal client', async () => {
-    const { route, params } = matchRoute('GET','/preferences');
-    const req = new Request('https://api.test/api/v1/preferences?action=delete-data');
+    const { route, params } = matchRoute('GET','/me');
+    const req = new Request('https://api.test/api/v1/me?action=delete-data');
     await callUpstream({ req, route, params, sessionToken:'vero' });
     const u = new URL(calls[0].url);
-    expect(u.searchParams.getAll('action')).toEqual(['get-prefs']);
-  });
-
-  it('Glossary usa token e non userToken', async () => {
-    const { route, params } = matchRoute('GET','/glossaries');
-    const req = new Request('https://api.test/api/v1/glossaries');
-    await callUpstream({ req, route, params, sessionToken:'vero' });
-    const body=JSON.parse(calls[0].init.body);
-    expect(body.token).toBe('vero');
-    expect(body.userToken).toBeUndefined();
+    expect(u.searchParams.getAll('action')).toEqual(['profile']);
   });
 
   it('GET messaggi inoltra X-Room-Session senza sostituirla con la sessione account', async () => {
@@ -86,7 +78,28 @@ describe('adattatore Core', () => {
     await expect(callUpstream({req,route,params,sessionToken:'account-session'})).resolves.toBeInstanceOf(Response);
   });
 
-  it('DELETE /me/data riflette b.419 senza inventare residui Mondo', async () => {
+  it('multipart applica il limite ai byte reali anche senza fidarsi del Content-Length', async () => {
+    const matched = matchRoute('POST','/transcribe');
+    const route = { ...matched.route, maxMultipartBytes: 100 };
+    const form = new FormData();
+    form.set('audio', new Blob(['x'.repeat(1000)], { type:'audio/webm' }), 'a.webm');
+    const req = new Request('https://api.test/api/v1/transcribe', { method:'POST', body:form });
+    await expect(callUpstream({ req, route, params:matched.params, sessionToken:'s' })).rejects.toMatchObject({ status:413 });
+    expect(calls).toHaveLength(0);
+  });
+
+  it('non inoltra un Content-Length upstream che puo essere diventato falso', async () => {
+    global.fetch = vi.fn(async (url, init) => {
+      calls.push({ url:String(url), init });
+      return new Response('abc', { status:200, headers:{ 'content-type':'text/plain', 'content-length':'999' } });
+    });
+    const { route, params } = matchRoute('GET','/wallet');
+    const req = new Request('https://api.test/api/v1/wallet');
+    const res = await callUpstream({ req, route, params, sessionToken:'s' });
+    expect(res.headers.get('content-length')).toBeNull();
+  });
+
+  it('DELETE /me/data riflette b.420 senza inventare residui Mondo', async () => {
     global.fetch = vi.fn(async (url, init) => {
       calls.push({ url: String(url), init });
       return new Response(JSON.stringify({ ok:true, deleted:['profile','compagni','mondo_follows','mondo_comment_likes','mondo_segnalazioni'] }), {
@@ -100,7 +113,7 @@ describe('adattatore Core', () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.deletionCoverage.status).toBe('partial');
-    expect(body.deletionCoverage.auditedCore).toBe('b.419');
+    expect(body.deletionCoverage.auditedCore).toBe('b.420');
     expect(body.deletionCoverage.notGuaranteedByCore).toEqual([]);
     expect(body.deletionCoverage.legacyInactiveSurfaces).toContain('translation_history');
     const sent = JSON.parse(calls[0].init.body);
