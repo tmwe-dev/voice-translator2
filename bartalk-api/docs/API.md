@@ -2,7 +2,7 @@
 
 Base path: `/api/v1`.
 
-Snapshot Core auditato: **b.416 / push #710** (`8e831153f5a29e0e66ef506d4207a9826accdb4e`).
+Snapshot Core auditato: **b.419 / push #711** (`d83df8455b08fbd7837c6a547f32b7d6ad9b9db9`).
 
 ## Autenticazione
 
@@ -26,29 +26,31 @@ Senza `scopes` viene emesso un insieme **read/basic**. Gli scope di scrittura, w
 
 ### Cancellazione dati: contratto preciso
 
-Il Core b.415/b.416 revoca tutte le sessioni e cancella Redis + le superfici persistenti Life/Compagni/PeepOff previste dal cancellatore centrale. Restano per scelta il ledger wallet e i contenuti pubblici Mondo.
+Il Core b.419 revoca tutte le sessioni e cancella Redis + le superfici persistenti Life/Compagni/PeepOff previste dal cancellatore centrale. b.419 aggiunge anche i metadati personali Mondo auditati:
 
-L'audit b.416 ha pero verificato che il contratto non e ancora una prova di cancellazione **totale**: `translations` puo contenere testo originale/tradotto legato a `user_id`, mentre Mondo possiede anche follow, like e segnalazioni con identificativi utente. Nel database vivo controllato durante l'audit queste tabelle risultavano senza righe utente, ma il gateway non basa il contratto sul fatto che oggi siano vuote.
+- `mondo_follows` (da entrambi i lati);
+- `mondo_comment_likes`;
+- `mondo_segnalazioni`.
 
-Per questo una risposta riuscita di `DELETE /me/data` aggiunge:
+Restano per policy il ledger wallet e i contenuti pubblici Mondo (`mondo_discussions`, `mondo_comments`).
+
+La vecchia superficie `translations` esiste ma nel database vivo auditato e a zero righe. Il percorso attuale che dovrebbe popolarla dipende da `profiles`, tabella non presente nel progetto; quindi la Public API **non la dichiara cancellata** e non la tratta come residuo attivo.
+
+Una risposta riuscita di `DELETE /me/data` aggiunge:
 
 ```json
 {
   "deletionCoverage": {
     "status": "partial",
-    "auditedCore": "b.416",
+    "auditedCore": "b.419",
     "retainedByPolicy": ["wallet_accounting", "public_mondo_content"],
-    "notGuaranteedByCore": [
-      "translation_history_rows",
-      "mondo_follows",
-      "mondo_comment_likes",
-      "mondo_reports"
-    ]
+    "notGuaranteedByCore": [],
+    "legacyInactiveSurfaces": ["translation_history"]
   }
 }
 ```
 
-`ok: true` significa quindi **richiesta di cancellazione eseguita dal Core**, non certificato assoluto di erasure.
+`partial` significa che esistono retention esplicite; non significa che follow/like/segnalazioni siano ancora dimenticati dal Core.
 
 ## Chiavi provider BYOK
 
@@ -89,6 +91,7 @@ Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione
 - `DELETE /companions/{id}/memory` — **Dimentica** tutti i ricordi di quell'utente per quel Compagno
 - `POST /companions/{id}/messages`
 - `POST /companions/{id}/live-sessions`
+- `POST /live-sessions/{sessionId}/heartbeat`
 - `DELETE /live-sessions/{sessionId}`
 - `POST /podcast/turns`
 - `POST /table`
@@ -97,11 +100,44 @@ Il gateway sostituisce sempre l'identita dichiarabile dal client con la sessione
 
 L'id nel path e autoritativo: un id inserito nel body non puo sostituirlo.
 
-### Live: limite economico attuale
+### Live b.419
 
-Il Core riserva all'apertura un massimo equivalente a **15 minuti di linea**. Con il moltiplicatore corrente 3x, il campo Core `tettoSecondi` e espresso in **secondi di credito**, non in secondi di orologio.
+Il Core non usa piu un unico tetto da 15 minuti. La sessione Live viene contabilizzata a **tratti da 3 minuti parlati**, con una sola riserva attiva per volta e un solo Live per account.
 
-Il Core b.416 non rinnova automaticamente la riserva e `creditoDalVivo()` limita l'addebito alla riserva iniziale. Finche questo non viene cambiato, un integratore deve trattare una sessione Live come **massimo 15 minuti continuativi**, chiuderla e riaprirla se vuole proseguire. Una sessione piu lunga non e un contratto economico supportato dalla Public API v1.
+L'apertura restituisce almeno:
+
+```json
+{
+  "sessioneId": "...",
+  "signedUrl": "...",
+  "tettoSecondi": 540,
+  "battitoSecondi": 60
+}
+```
+
+`tettoSecondi` e il tetto del **singolo tratto di credito**, non la durata massima della telefonata.
+
+Il client deve inviare:
+
+```http
+POST /api/v1/live-sessions/{sessionId}/heartbeat
+Authorization: Bearer bt_live_...
+Content-Type: application/json
+
+{}
+```
+
+con la cadenza restituita da `battitoSecondi`. Il gateway forza `azione=rinnova` e il `sessionId` del path, quindi il body non puo trasformare un heartbeat in chiusura o scegliere un'altra sessione.
+
+Risposte rilevanti:
+
+- `200` — sessione viva; `rinnovato` indica se e stato ruotato il tratto;
+- `402` — credito terminato, la linea deve essere chiusa;
+- `403` — sessione non dell'account;
+- `409` — all'apertura esiste gia un Live attivo;
+- `410` — sessione non piu attiva.
+
+La chiusura resta `DELETE /live-sessions/{sessionId}` e il Core misura la durata server-side.
 
 ## Life / studio
 
@@ -131,7 +167,7 @@ Quando il Core richiede membership di stanza, restano necessari `roomSessionToke
 
 ### TURN
 
-`GET /realtime/ice` espone il contratto reale di `/api/turn`. Nel Core b.416 la generazione di credenziali e pronta, ma **coturn non risulta ancora installato/configurato**. Se `TURN_SECRET` e `TURN_URLS` non sono presenti nel Core, la risposta e `{ "iceServers": [] }` e i client proseguono solo con STUN. Questo significa che reti CGNAT/NAT restrittive non sono ancora garantite.
+`GET /realtime/ice` espone il contratto reale di `/api/turn`. Il codice genera credenziali se esistono `TURN_SECRET` e `TURN_URLS`, ma coturn non risulta ancora installato/configurato. Se le env mancano, la risposta puo essere `{ "iceServers": [] }` e i client proseguono solo con STUN.
 
 ## Archivio, contatti, glossari, community
 
@@ -155,7 +191,10 @@ TaxiTalk mantiene il ciphertext-only del Core; la chiave di decifratura non vien
 ## Errori gateway
 
 - `401` API key/sessione non valida
-- `403` scope insufficiente o rifiuto Core
+- `402` credito insufficiente/terminato
+- `403` scope o ownership insufficienti
+- `409` conflitto di stato
+- `410` sessione non piu attiva
 - `413` payload troppo grande
 - `429` rate limit
 - `502` Core non disponibile
