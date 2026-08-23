@@ -61,7 +61,9 @@ export const ROUTES = [
   R('GET', '/realtime/ice', 'rooms:read', '/api/turn', 'none', { limit: 120 }),
   R('POST', '/realtime/group-video', 'rooms:write', '/api/stanza-video', 'none', { limit: 180 }),
   R('GET', '/contacts', 'contacts:read', '/api/contacts', 'json:token', { upstreamMethod: 'POST', fixedBody: { action: 'list' } }),
-  R('POST', '/contacts', 'contacts:write', '/api/contacts', 'json:token'),
+  // Il Core multiplexa anche inviti-regalo dentro /api/contacts. La v1 espone
+  // solo azioni non finanziarie: niente creazione/accettazione di gift invite.
+  R('POST', '/contacts', 'contacts:write', '/api/contacts', 'json:token', { transform: 'contactsWrite' }),
   R('POST', '/summary', 'summary', '/api/summary', 'json:userToken'),
   R('POST', '/moderation', 'moderation', '/api/moderazione', 'none'),
   R('GET', '/community', 'community:read', '/api/mondo', 'none'),
@@ -109,8 +111,11 @@ export function matchRoute(method, path) {
 
 export function requiresSessionProbe(route) {
   if (!route || route.public || route.local) return false;
-  // Questi contratti fanno gia validare la sessione account al Core.
   return !new Set(['header', 'json:token', 'json:userToken', 'form:userToken']).has(route.auth);
+}
+
+function badRequest(message) {
+  const e = new Error(message); e.status = 400; return e;
 }
 
 export function transformBody(name, body, params) {
@@ -131,5 +136,17 @@ export function transformBody(name, body, params) {
   if (name === 'liveRenew') return { ...body, azione: 'rinnova', sessioneId: params.sessionId };
   if (name === 'liveClose') return { ...body, azione: 'chiudi', sessioneId: params.sessionId };
   if (name === 'conversationDelete') return { ...body, action: 'delete', convId: params.id };
+  if (name === 'contactsWrite') {
+    const action = typeof body?.action === 'string' ? body.action : '';
+    const allowed = new Set(['heartbeat', 'offline', 'add', 'remove', 'start-chat', 'create-invite', 'get-gift-info']);
+    if (!allowed.has(action)) throw badRequest('Azione contatti non pubblicata dalla API v1');
+    // Anche `create-invite` e consentita soltanto nella forma NON finanziaria.
+    // La presenza stessa di giftAmount viene rifiutata: non la ignoriamo in
+    // silenzio per evitare che un client creda di aver creato un regalo.
+    if (action === 'create-invite' && Object.prototype.hasOwnProperty.call(body, 'giftAmount')) {
+      throw badRequest('Gli inviti con credito non sono pubblicati dalla API v1');
+    }
+    return body;
+  }
   return body;
 }
