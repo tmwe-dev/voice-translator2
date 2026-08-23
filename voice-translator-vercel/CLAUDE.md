@@ -214,6 +214,33 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.413** (push #707) — P1.15: l'impronta dell'utente di Life.
+  Era `sha256(email)` troncato. Il difetto non e la funzione: e che
+  l'email E' UN DATO INDOVINABILE — chi ha in mano un'impronta puo
+  provare le email finche torna, o costruirsi una tabella ed ENUMERARE
+  le persone. Mondo era gia passato all'HMAC per questo motivo esatto in
+  b.244, e il commento di Life diceva ancora «la stessa impronta di
+  Mondo», che da allora non era piu vero: un commento che mente e peggio
+  di nessun commento.
+  LA MIGRAZIONE E' IL PUNTO, e va capita: dagli id vecchi NON si risale
+  alle email, sono digest. Quindi una migrazione di massa e IMPOSSIBILE
+  — nessuno, nemmeno noi, sa a chi appartiene la riga `u_3f2a...`.
+  L'unico momento in cui quel legame esiste e quando la persona TORNA:
+  li abbiamo la sua email e possiamo calcolare tutte e due le impronte.
+  Il trasloco e quindi PIGRO: avviene alla prima apertura di Life, una
+  persona alla volta, dentro `elencaCompagni` (che e la prima cosa che
+  Life chiede). Idempotente, e se una tabella e guasta le altre passano
+  lo stesso — meglio nove su dieci che zero, e niente va perso perche
+  la riga resta dov'e.
+  Usa lo STESSO segreto di Mondo (`MONDO_ID_SECRET`) di proposito: due
+  segreti per la stessa idea sono due cose da ricordare e una da
+  dimenticare. Senza segreto si ricade sul vecchio schema dichiarandolo,
+  per non spegnere Life dove il segreto non c'e.
+- FERMO SU LUCA: se `MONDO_ID_SECRET` non e impostata su Vercel, questo
+  intervento non ha alcun effetto — l'impronta resta il digest di prima.
+  Non e un guasto e non finge: e scritto nel codice e verificato da una
+  prova. Ma finche non c'e, P1.15 e chiuso nel repository e APERTO in
+  produzione.
 - Versione: **b.412** (push #706) — tre punti che avevano in comune una
   cosa: un'informazione c'era gia, e non arrivava dove serviva.
   P1.12 — UN TESTO SENZA FONTI SI TRAVESTIVA DA EVIDENZA. Il Dossier SA
@@ -446,7 +473,7 @@ qualunque refactoring. Non si propone di rimandarlo.
 - Prima della Via B e stato lasciato un backup in `~/Downloads/backup-bartalk-b406/`
   (fuori dal repository) coi cinque file toccati e le istruzioni per
   tornare indietro. Il punto di ripartenza vero resta il commit `8b7192d`.
-- Test: **2472 verdi su 165 file** (attesi unendo b.411 e b.412; qui ne ho viste 2460 su 164, senza le prove di b.411 che stanno sul Mac) · 0 errori di lint (avvisi tollerati)
+- Test: **2485 verdi su 166 file** · 0 errori di lint (avvisi tollerati)
   ATTENZIONE, lezione del 21/08: per mezza giornata sono rimaste 16 prove
   rosse senza che me ne accorgessi, perche controllavo solo le quattro
   guardie invece della suite intera. Prima di dichiarare finito un giro
