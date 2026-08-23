@@ -214,6 +214,40 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.428** (push #720) — «LA TRADUZIONE NON E' PARTITA CON IL
+  PRIMO MESSAGGIO». Collaudo di Luca, e il difetto non era il primo
+  messaggio: era che UNA frase andata storta restava bruciata per sempre.
+  LA FIRMA ANTI-DOPPIONE NON SI SLACCIAVA MAI DOPO UN GUASTO. La stessa
+  frase verso la stessa lingua si chiede una volta sola — regola giusta,
+  serve a non far partire due traduzioni quando il timer della scrittura e
+  la fine della dettatura scattano insieme (b.357). Ma la firma si
+  slacciava SOLO su risposta buona e su respinta del controllo qualita.
+  Non su un guasto di rete, non su un 429, non su una funzione fredda, non
+  quando la resa veniva scartata perche la frase stava ancora crescendo.
+  Bastava un singhiozzo sul PRIMO tentativo e da quel momento riprovare la
+  stessa frase non produceva NIENTE: ne una chiamata, ne un errore, ne un
+  segno. Chi ci riprovava pensava che l'app fosse morta, e aveva ragione.
+  Ora la firma vale solo finche la richiesta e in volo: si slaccia su ogni
+  uscita che non porta una traduzione. Un posto solo (`slaccia`), chiamato
+  da tutte e cinque le uscite, cosi la prossima non se ne dimentica.
+  E IL SECONDO TOCCO SUL MICROFONO E' UN ORDINE, NON UN SUGGERIMENTO
+  (ordine di Luca: «quando lo clicco di nuovo deve inviare il messaggio e
+  leggerlo»). Finora a mandare la frase era `onend`, cioe un avviso del
+  BROWSER: su alcuni telefoni arriva tardi, su altri non arriva, e il
+  secondo tocco non faceva niente. Adesso manda anche il tocco. Chiamarlo
+  da due posti non fa danni: chi arriva secondo trova la firma armata e si
+  ferma — e c'e una prova che conta le richieste e ne pretende UNA.
+  PROVA: `__tests__/primo-invio-b428.test.jsx` — il riconoscimento vocale
+  e finto ma i tempi sono veri (pezzi volatili, pezzo definitivo, pezzo in
+  ritardo dopo la chiusura). La prova del riprova-dopo-un-guasto era ROSSA
+  sul codice di prima: «expected 1 to be 2», cioe il secondo tentativo non
+  partiva proprio.
+  E UNA PROVA MIA RISCRITTA, la solita malattia: `prima-prova` cercava
+  ALLA LETTERA la riga che slacciava la firma, ed e diventata rossa quando
+  quella riga, ripetuta in quattro punti, e diventata una funzione sola
+  chiamata da tutte le uscite. Il comportamento non era peggiorato: era
+  migliorato.
+
 - Versione: **b.427** (push #719) — quattro correzioni di Luca sulla
   stessa schermata, tutte dal suo schermo:
   1. LA LISTA DELLE LINGUE E' QUELLA DELLA HOME, «esattamente identica»:

@@ -170,9 +170,20 @@ export default function PrimaProva({ onChiudi }) {
     // timer della scrittura era ancora armato e la faceva ripartire: due
     // traduzioni identiche, due righe nel registro e la voce che leggeva due
     // volte. La stessa frase, verso la stessa lingua, si chiede UNA volta.
+    // b.428 — E LA FIRMA SI SLACCIA SEMPRE, QUALUNQUE COSA SUCCEDA.
+    // Collaudo di Luca: «la traduzione non e partita con il primo
+    // messaggio». Il difetto non era il primo messaggio: era che bastava
+    // UN singhiozzo — rete lenta, funzione fredda, un 429 — e la firma
+    // restava armata su quella frase. Da quel momento riprovare la STESSA
+    // frase non produceva piu niente: ne una chiamata, ne un errore, ne un
+    // segno. Chi ci riprovava pensava che l'app fosse morta, e aveva
+    // ragione a pensarlo.
+    // Adesso la firma vale solo finche la richiesta e in volo: appena si
+    // esce senza una traduzione, si slaccia.
     const impronta = `${meta}|${t}`;
     if (giaChiestaRef.current === impronta) return;
     giaChiestaRef.current = impronta;
+    const slaccia = () => { if (giaChiestaRef.current === impronta) giaChiestaRef.current = ''; };
     const mio = ++numeroRef.current;
     setStato('traduco');
     try {
@@ -185,14 +196,14 @@ export default function PrimaProva({ onChiudi }) {
         }),
       });
       const d = await r.json().catch(() => null);
-      if (!d?.translated) { if (mio === numeroRef.current) setStato('errore'); return; }
+      if (!d?.translated) { slaccia(); if (mio === numeroRef.current) setStato('errore'); return; }
       // b.357 — QUANDO LA TRADUZIONE NON C'E, NON SI FINGE. Se il controllo
       // di qualita del server la respinge, la risposta torna col testo
       // ORIGINALE dentro: finiva nel registro come se fosse tradotto (nello
       // schermo di Luca comparivano frasi italiane sotto la bandiera tedesca)
       // e la voce le leggeva pure. Meglio dirlo e lasciar riprovare.
       if (d.validationFailed) {
-        giaChiestaRef.current = ''; // riprovare la stessa frase deve essere possibile
+        slaccia(); // riprovare la stessa frase deve essere possibile
         if (mio === numeroRef.current) setStato('errore');
         return;
       }
@@ -202,7 +213,10 @@ export default function PrimaProva({ onChiudi }) {
       // i messaggi si susseguono, non scompaiono (collaudo di Luca).
       const attuale = testoRef.current.trim();
       const staAllungando = attuale !== t && attuale.startsWith(t);
-      if (staAllungando) return;
+      // b.428 — anche qui si slaccia: questa resa si butta perche ne
+      // arrivera una piu completa, ma se quella non arrivasse mai la
+      // frase resterebbe impossibile da chiedere di nuovo.
+      if (staAllungando) { slaccia(); if (mio === numeroRef.current) setStato('quieto'); return; }
       // in ordine di partenza, anche se le risposte arrivano scomposte
       setStoria((prima) => [...prima, { n: mio, detto: t, resa: d.translated }].sort((a, b) => a.n - b.n));
       // b.363 — la firma anti-doppione si azzera a risposta ACQUISITA: senza
@@ -210,7 +224,7 @@ export default function PrimaProva({ onChiudi }) {
       // piu nulla — ne riga ne voce — e nessun segnale. Il doppione di b.357
       // resta comunque bloccato: timer e fine-dettatura scattano PRIMA che la
       // risposta arrivi, quindi trovano la firma ancora armata.
-      giaChiestaRef.current = '';
+      slaccia();
       if (attuale === t) setTesto('');
       if (mio === numeroRef.current) setStato('quieto');
       try { memSet(FATTA, '1'); } catch { /* niente memoria: pazienza */ }
@@ -222,6 +236,7 @@ export default function PrimaProva({ onChiudi }) {
       // registro non compariva nulla, e il motivo vero (rete caduta, attesa
       // scaduta, credito finito, server rotto) restava irrecuperabile.
       if (e?.name !== 'AbortError') console.warn('[b.363] /api/translate:', e?.message || e);
+      slaccia();   // b.428 — dopo un guasto si DEVE poter riprovare
       if (mio === numeroRef.current) setStato('errore'); }
   }, [miaLingua, meta, parla]);
 
@@ -246,6 +261,16 @@ export default function PrimaProva({ onChiudi }) {
     if (detto) {
       try { recRef.current?.stop(); } catch { /* il riconoscimento era gia fermo: fermarlo due volte non e un guasto */ }
       setDetto(false); dettoRef.current = false;
+      // b.428, ordine di Luca: «se clicco sul microfono registro, quando lo
+      // clicco di nuovo deve inviare il messaggio e leggerlo». Finora a
+      // mandarlo era `onend`, cioe un avviso del BROWSER — e su alcuni
+      // telefoni quell'avviso arriva tardi, o non arriva. Il secondo tocco
+      // non e un suggerimento: e un ordine, e deve valere subito.
+      // Chiamarlo da tutti e due i posti non fa danni: la stessa frase
+      // verso la stessa lingua si chiede una volta sola (la firma sopra),
+      // e chi arriva secondo trova la porta gia chiusa.
+      clearTimeout(timerRef.current);
+      setTesto((attuale) => { if (attuale.trim()) traduci(attuale); return attuale; });
       return;
     }
     const SR = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);

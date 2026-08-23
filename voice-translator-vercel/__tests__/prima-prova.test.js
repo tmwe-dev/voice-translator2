@@ -112,11 +112,21 @@ describe('il traduttore subito', () => {
     // bandiera sbagliata (frasi italiane date per tedesche) e la voce le
     // leggeva pure. Deve diventare un errore visibile, e la stessa frase si
     // deve poter richiedere di nuovo.
+    // b.428 — questa prova cercava la riga `giaChiestaRef.current = ''`
+    // alla lettera, ed e diventata rossa quando la stessa cosa ha smesso
+    // di essere scritta in quattro punti ed e diventata una funzione sola
+    // (`slaccia`) chiamata da tutte le uscite. Il comportamento non e
+    // cambiato: e migliorato, perche adesso vale anche per i guasti di
+    // rete, che prima bruciavano la frase per sempre.
+    // La PROVA VERA del comportamento sta in `primo-invio-b428`, dove la
+    // frase viene rimandata davvero. Qui resta il controllo che la
+    // respinta si riconosca e non passi per buona.
     const i = src.indexOf('d.validationFailed');
     expect(i, 'la respinta si riconosce').toBeGreaterThan(-1);
     const blocco = src.slice(i, i + 300);
     expect(blocco, 'diventa un errore visibile').toMatch(/setStato\('errore'\)/);
-    expect(blocco, 'e la stessa frase si puo riprovare').toMatch(/giaChiestaRef\.current = ''/);
+    expect(blocco, 'e la stessa frase si puo riprovare').toMatch(/slaccia\(\)/);
+    expect(blocco, 'e NON finisce nel registro').not.toMatch(/setStoria/);
   });
 
   it('i messaggi si susseguono, e restano in ordine', () => {
