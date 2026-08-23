@@ -53,6 +53,16 @@
     --accento:   #5b8cff;
     --accento-2: #38e1ff;
     --rosso:     #ff5470;
+    /* b.437, ordine di Luca: «come colore a contrasto per evidenziare usa
+       il giallo sul blu». La regola in una riga: IL BLU E' L'APPLICAZIONE,
+       IL GIALLO E' DOVE SEI ADESSO. Serviva un secondo colore da quando e
+       sparito il grassetto: se il rilievo non lo fa piu il peso, deve
+       farlo qualcosa, e su questo fondo blu scuro il giallo e l'unico
+       colore che stacca senza gridare. Il rosso e gia occupato dai guasti,
+       il verde da chi e vivo. */
+    --giallo:    #ffc93c;
+    --giallo-vel: rgba(255,201,60,0.13);
+    --giallo-bor: rgba(255,201,60,0.40);
     --verde:     #3ddc84;
     --oro:       #ffc44d;
     --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
@@ -67,7 +77,7 @@
      smorto — e con la misura. Il grassetto e uno strumento potente
      proprio perche raro: usato ovunque non distingue piu niente, e
      l'occhio smette di vederlo. */
-  .ril { color: var(--testo); font-weight: 500; }
+  .ril { color: var(--giallo); font-weight: 500; }
 
   .ic { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor;
         stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -133,7 +143,7 @@
     background: rgba(5,7,15,0.85);
   }
   .barra i { font-style: normal; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 500; color: var(--muto); }
-  .barra i.on { color: var(--accento); }
+  .barra i.on { color: var(--giallo); }
   .barra .piu { width: 40px; height: 40px; border-radius: 999px; background: rgba(238,242,255,0.14); display: flex; align-items: center; justify-content: center; }
 
   /* ══ IL KIT — i pezzi riusabili ══ */
@@ -144,7 +154,7 @@
     display: flex; align-items: center; justify-content: center; cursor: pointer;
     font-family: var(--font); font-size: 15px; font-weight: 600; padding: 0;
   }
-  .tondino.on { border: 1px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+  .tondino.on { border: 1px solid var(--giallo-bor); background: var(--giallo-vel); color: var(--giallo); }
   .tondino.nudo { border: none; }
   .titolo { flex: 1; font-size: 16px; font-weight: 600; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pillola {
@@ -153,7 +163,7 @@
     color: var(--testo); font-size: 14.5px; font-weight: 500; cursor: pointer; font-family: var(--font);
     white-space: nowrap;
   }
-  .pillola.on { border: 1px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+  .pillola.on { border: 1px solid var(--giallo-bor); background: var(--giallo-vel); color: var(--giallo); }
 
   .corpo { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
   .corpo::-webkit-scrollbar { display: none; }
@@ -192,7 +202,100 @@
   /* i comandi dentro la fascia sono piu piccoli, ma il bersaglio del dito
      resta quello di prima: lo da la fascia, che e alta cinquantaquattro. */
   .modulo .quadro { width: 38px; height: 38px; border-radius: 12px; }
+  /* b.437 — IL PIU' A SINISTRA DEL CAMPO. Ordine di Luca: da qui entrano
+     foto, file, la posizione, un contatto, un documento. Sta a sinistra
+     perche non e un comando della voce: quelli stanno tutti a destra,
+     insieme. E' neutro, non blu: aggiungere non e ne l'azione principale
+     ne una cosa accesa. */
+  .modulo .quadro.piu { border: 0.5px solid var(--bordo); background: transparent; color: var(--testo-3); }
+  .modulo { padding-left: 8px; }
+  /* quando c'e del testo il microfono diventa la freccia di invio, nello
+     stesso posto: e la stessa regola di sempre — cio che appare
+     SOSTITUISCE, non spinge. E si accende di giallo, perche e la cosa
+     che sta per succedere. */
+  .modulo .quadro.invio { border: 1px solid var(--giallo-bor); background: var(--giallo-vel); color: var(--giallo); }
   .quadro.spento { border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05); opacity: 0.4; }
+
+  /* ═══ LA SIDEBAR E LA SUA LINGUETTA ═══
+     b.437, ordine di Luca: «dove sono le sidebar che aiutano a svuotare le
+     pagine? il menu podcast amico etc con linguetta va nella sidebar, e
+     anche nelle altre pagine i filtri o gruppi possono andare la dentro».
+     Aveva ragione due volte. Il pannello ESISTE gia nel programma da b.363
+     — l'avevo semplicemente dimenticato nel template, e senza di lui ogni
+     pagina si teneva addosso tutti i suoi comandi.
+     Le misure NON sono inventate: vengono dal righello vero
+     (app/lib/righello.js), dove la linguetta e 46 x 58 col raggio solo a
+     destra, e il pannello e min(330px, 86vw). Se il template inventasse
+     misure sue, non sarebbe piu un template. */
+  /* b.437 — LA BANDIERA BASTA. Ordine di Luca: «diamo informazioni anche
+     limitate: Giappone in alto, basta la bandiera piu grande — e una
+     selezione dell'utente, che sa che e il Giappone. Cambia non serve, se
+     clicchi sulla bandiera cambi paese».
+     E' vero e vale in generale: dire a qualcuno una cosa che ha appena
+     scelto lui non e informarlo, e occupargli lo schermo. Sparivano
+     insieme la parola «Giappone», la parola «Cambia» e la freccetta: tre
+     pezzi per dire quello che dice una bandiera sola, se e grande
+     abbastanza da essere un bersaglio. */
+  .bandiera {
+    font-size: 30px; line-height: 1; height: var(--tasto); width: var(--tasto);
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+
+  /* b.437 — IL SELETTORE DI SEZIONE, RIMESSO. Collaudo di Luca: «stanze e
+     notizie avevano in mezzo un'immagine e due frecce che hai eliminato,
+     ripristinale». Vero: gliel'avevo tolto in b.367 per guadagnare
+     altezza, e poi in b.433 l'avevo sostituito con due linguette piatte.
+     Torna com'era — freccia, icona in acciaio col nome, freccia — perche
+     le frecce dicono che ci si scorre, cosa che due parole affiancate non
+     dicono. */
+  .selettore { display: flex; align-items: center; justify-content: center; gap: 6px; flex-shrink: 0; padding: 6px 0 2px; }
+  .selettore .sez { display: flex; align-items: center; gap: 9px; padding: 0 10px; font-size: 15.5px; color: var(--testo); }
+  .acciaio.s { width: 30px; height: 30px; }
+
+  .linguetta {
+    position: absolute; left: 0; top: 108px; width: 46px; height: 58px;
+    border-radius: 0 16px 16px 0; border: 0.5px solid var(--bordo); border-left: none;
+    background: rgba(10,15,31,0.94); color: var(--testo-3);
+    display: flex; align-items: center; justify-content: center; z-index: 5; cursor: pointer;
+  }
+  .velo-lato { position: absolute; inset: 0; background: rgba(0,0,0,0.55); z-index: 8; }
+  .pannello {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 86%; z-index: 9;
+    background: var(--bg); border-right: 0.5px solid var(--bordo);
+    box-shadow: 10px 0 40px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column;
+  }
+  .pannello .testa {
+    display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+    padding: 14px; border-bottom: 0.5px solid var(--bordo);
+  }
+  .pannello .testa .n { flex: 1; font-size: 15px; font-weight: 600; }
+  .pannello .dentro {
+    flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none;
+    padding: 12px; display: flex; flex-direction: column; gap: 15px;
+  }
+  .pannello .dentro::-webkit-scrollbar { display: none; }
+  .gruppo { display: flex; flex-direction: column; gap: 1px; }
+  .gruppo > .eti-lato {
+    font-size: 10.5px; letter-spacing: 1.1px; color: var(--muto);
+    padding: 0 10px 7px; text-transform: uppercase;
+  }
+  .voce-lato {
+    display: flex; align-items: center; gap: 11px; height: 44px; padding: 0 10px;
+    border-radius: 12px; font-size: 14.5px; color: var(--testo-2); cursor: pointer;
+  }
+  .voce-lato .co { margin-left: auto; font-size: 12px; color: var(--muto); }
+  .voce-lato.on { background: var(--giallo-vel); color: var(--giallo); }
+  .voce-lato.on .co { color: var(--giallo); }
+
+  /* la tendina dal basso: da qui esce quello che apre il piu */
+  .tendina {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 9;
+    background: var(--bg); border-top: 0.5px solid var(--bordo);
+    border-radius: 20px 20px 0 0; padding: 8px 12px 16px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.55);
+  }
+  .tendina .presa { width: 38px; height: 4px; border-radius: 999px; background: var(--bordo); margin: 4px auto 10px; }
 
   .scheda { border: 1px solid var(--bordo); border-radius: 18px; background: var(--carta); overflow: hidden; }
   .scheda .dentro { padding: 13px 14px; }
@@ -209,7 +312,7 @@
   .schede-fila { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; padding: 4px 0 8px; }
   .schede-fila::-webkit-scrollbar { display: none; }
   .scheda-voce { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px; font-size: 11px; font-weight: 500; color: var(--muto); cursor: pointer; }
-  .scheda-voce.on { color: var(--accento); border-bottom: 2px solid var(--accento); }
+  .scheda-voce.on { color: var(--giallo); border-bottom: 2px solid var(--giallo); }
 
   .globo { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 42%, rgba(56,225,255,0.13), transparent 55%), radial-gradient(circle at 50% 40%, rgba(91,140,255,0.16), transparent 45%); }
   .velo { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(5,7,15,0.42) 0%, rgba(5,7,15,0.70) 42%, rgba(5,7,15,0.92) 100%); }
@@ -283,6 +386,12 @@
   <symbol id="i-phoneOff" viewBox="0 0 24 24"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67M1 1l22 22M4.22 4.22A19.79 19.79 0 0 0 2.12 4.18 2 2 0 0 0 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91"/></symbol>
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M5 3l14 9-14 9V3z"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></symbol>
+  <symbol id="i-sx" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-dx" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></symbol>
   <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
@@ -314,20 +423,40 @@
     niente scatole vuote, una cosa che comanda, e cio che appare sostituisce invece di
     spingere giu.
   </p>
-  <p class="nota" style="border-left-color:var(--accento)">
-    <span class="ril">Due prove chieste da Luca, e vanno guardate insieme.</span>
-    <span class="ril">Niente grassetto:</span> cio che prima si distingueva col peso adesso
-    si distingue col colore — testo pieno contro testo smorto — e con la misura. Il
-    grassetto e uno strumento forte proprio perche raro: messo dappertutto non distingue
-    piu niente e l'occhio smette di vederlo.
-    <span class="ril">E le linee dei comandi a mezzo punto:</span> su uno schermo vero
-    diventano un capello, e un tondino torna a leggersi come un contorno invece che come un
-    riquadro. Anche il tratto delle icone e sceso, o le linee non sarebbero state della
-    stessa famiglia.
+  <p class="nota" style="border-left-color:var(--giallo)">
+    <span class="ril">Questo giro: nove correzioni tue, e cambiano la struttura di tutte le pagine.</span>
     <br><br>
-    ATTENZIONE, e la cosa da guardare: <span class="ril">cosi il template NON e piu uguale
-    all'applicazione</span>, che oggi usa pesi da ottocento e bordi da un punto. Se ti
-    convince, si porta anche la; se no, si torna indietro qui e non e successo niente.
+    <span class="ril">1 · Le sidebar, che mancavano.</span> Il pannello che entra da sinistra esiste
+    gia nel programma da b.363 e nel template non c'era: senza di lui ogni pagina si teneva addosso
+    tutti i suoi comandi. Adesso ci sono la linguetta su quattordici schermate e tre pannelli
+    disegnati. Dentro vanno le sezioni, i filtri, i gruppi, le impostazioni — e il cambio Paese.
+    <span class="ril">E si tiene premuta e si trascina su e giu</span>, restando dove la lasci.
+    <br><br>
+    <span class="ril">2 · Niente barra in basso nelle pagine interne.</span> Erano sedici pagine ad
+    averla, e in dodici non serviva a niente: da li non si sceglie, si torna. Resta solo sulle
+    quattro pagine principali. Al suo posto, la freccia in alto a sinistra su ogni pagina.
+    <br><br>
+    <span class="ril">3 · In alto a destra, sempre le stesse cose:</span> l'ingrandimento del
+    carattere su tutte, e accanto il telefono o la videocamera dove c'e una chiamata.
+    <br><br>
+    <span class="ril">4 · Il modulo del testo:</span> il piu a sinistra — foto, file, posizione,
+    contatto, documento — e a destra la fotocamera accanto al microfono.
+    <br><br>
+    <span class="ril">5 · La bandiera basta.</span> Sparite la parola «Giappone» e la parola
+    «Cambia»: erano tre pezzi per dire una cosa che l'utente ha appena scelto lui. Si tocca la
+    bandiera e si cambia Paese.
+    <br><br>
+    <span class="ril">6 · Torna il selettore di sezione</span> con l'immagine in acciaio e le due
+    frecce, che avevo tolto due volte.
+    <br><br>
+    <span class="ril">7 · Il giallo sul blu.</span> Da quando non c'e piu il grassetto il rilievo
+    lo deve fare il colore. La regola e stretta: <span class="ril">il blu e l'applicazione, il
+    giallo e dove sei adesso</span> — se il giallo finisce anche altrove smette di dire dove sei.
+    <br><br>
+    <span class="ril">8 e 9 · Restano le due prove di ieri:</span> niente grassetto in nessun punto,
+    e le linee dei comandi a mezzo punto. Percio <span class="ril">il template NON e ancora uguale
+    all'applicazione</span>, che usa pesi da ottocento e bordi da un punto: se ti convince si porta
+    anche la, se no si torna indietro qui e non e successo niente.
   </p>
 
   <p class="nota">
@@ -414,17 +543,24 @@
     <!-- ── MONDO ── -->
     <div class="colonna">
       <div class="cartellino"><span class="lettera">02</span><span class="nome">Mondo</span><span class="stato fatto">FATTO · b.433</span></div>
-      <p class="didascalia">Il pianeta e la porta. Dice sempre dove sei, e come uscirne.</p>
+      <p class="didascalia">Il pianeta e la porta. La bandiera dice dove sei; tutto il resto e nel pannello.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="globo"></div><div class="velo"></div>
         <div class="schermo" style="position:relative;z-index:2">
           <div class="testata">
-            <span class="pillola on">🇯🇵 Giappone <span style="color:var(--muto);font-weight:600">Cambia</span> ›</span>
+            <span class="bandiera" title="Tocca per cambiare Paese">🇯🇵</span>
             <span style="flex:1"></span>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span>
             <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
           </div>
-          <div class="schede-fila" style="margin-top:8px">
-            <span class="scheda-voce on">Stanze</span><span class="scheda-voce">Notizie</span>
+          <div class="selettore">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-sx"/></svg></span>
+            <span class="sez">
+              <span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span>
+              <span>Stanze</span>
+            </span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-dx"/></svg></span>
           </div>
           <div class="corpo" style="padding-top:4px">
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">QUI SE NE PARLA</div>
@@ -451,8 +587,8 @@
       <div class="spiega">
         <span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Il selettore Stanze/Notizie era una tendina col triangolino: diventano <span class="ril">due linguette</span>, si vedono tutte e due senza aprire niente.</li>
-          <li>Il Paese e «Cambia» stanno nella stessa pillola: dove sei e come uscirne, in un pezzo solo.</li>
+          <li><span class="ril">Torna il selettore con l'immagine e le due frecce</span>, che avevo tolto due volte. Le frecce dicono che li ci si scorre; due parole affiancate non lo dicono.</li>
+          <li><span class="ril">Della testata resta la bandiera</span>, grande e sola. «Giappone» e «Cambia» erano tre pezzi per dire una cosa che l'utente ha appena scelto lui. Si tocca la bandiera e si cambia Paese, dal pannello.</li>
           <li>Il pianeta resta dietro e si vela scorrendo, come gia fa.</li>
         </ul>
       </div>
@@ -461,33 +597,20 @@
     <!-- ── VITA ── -->
     <div class="colonna">
       <div class="cartellino"><span class="lettera">03</span><span class="nome">Vita</span><span class="stato fatto">FATTO · b.432</span></div>
-      <p class="didascalia">Sette schede erano troppe da leggere in fila. Restano sette, ma con l'icona che parla.</p>
+      <p class="didascalia">Le sette sezioni se ne vanno nel pannello. Qui resta la conversazione.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Archimede</span>
-            <span class="tondino">A−</span><span class="tondino">A+</span><span class="tondino on"><svg class="ic"><use href="#i-phone"/></svg></span>
-          </div>
-          <div class="schede-fila" style="margin-top:8px">
-            <span class="scheda-voce"><svg class="ic"><use href="#i-mic"/></svg><span>Podcast</span></span>
-            <span class="scheda-voce on"><svg class="ic"><use href="#i-chat"/></svg><span>Amico</span></span>
-            <span class="scheda-voce"><svg class="ic"><use href="#i-users"/></svg><span>Tavolo</span></span>
-            <span class="scheda-voce"><svg class="ic"><use href="#i-graduation"/></svg><span>Impara</span></span>
-            <span class="scheda-voce"><svg class="ic"><use href="#i-target"/></svg><span>Obiettivi</span></span>
-            <span class="scheda-voce"><svg class="ic"><use href="#i-history"/></svg><span>Compiti</span></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Archimede</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
           </div>
           <div class="corpo">
             <div class="bolla sua">Buongiorno. Di cosa parliamo oggi?</div>
             <div class="bolla mia">Vorrei capire l'inflazione in Giappone.</div>
             <div class="bolla sua">Partiamo dai fatti: lo yen ha perso il 12% in un anno.</div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi un messaggio…</div>
-            <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div>
-            <div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi un messaggio…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
         <span class="ril">Cosa cambia.</span>
@@ -506,11 +629,10 @@
       <div class="cartellino"><span class="lettera">04</span><span class="nome">Stanza</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi c'e e in che lingua, prima di tutto. Il menu ••• smette di comprimersi.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Yen e inflazione</span>
-            <span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span><span class="tondino"><svg class="ic p"><use href="#i-settings"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
           </div>
           <div class="eti" style="padding:8px 2px 0">
             <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span>
@@ -521,12 +643,8 @@
             <div class="bolla mia">Piacere mio. Parliamo dello yen?<span class="orig">はじめまして。円について話しましょうか。</span></div>
             <div class="bolla sua">もちろんです。<span class="orig">Certamente.</span></div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi…</div>
-            <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div>
-            <div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
         <span class="ril">Cosa cambia.</span>
@@ -543,11 +661,10 @@
       <div class="cartellino"><span class="lettera">05</span><span class="nome">Business</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Strumenti, non riquadri. Ognuno dice cosa fa in una riga.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Business</span>
-            <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Business</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div class="scheda">
@@ -562,7 +679,6 @@
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Strumenti</div><div class="d">Firma, PDF, traduzione documenti</div></div><span class="frec">›</span></div>
           </div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
         <span class="ril">Cosa cambia.</span>
@@ -581,8 +697,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Profilo</span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Profilo</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div class="scheda">
@@ -628,10 +743,10 @@
       <div class="cartellino"><span class="lettera">07</span><span class="nome">Chat</span><span class="stato fatto">FATTO · b.433</span></div>
       <p class="didascalia">Le conversazioni avute. Ognuna dice con chi, in che lingue, e quando.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="titolo">Conversazioni</span>
-            <span class="tondino"><svg class="ic"><use href="#i-eye"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
           </div>
           <div class="corpo">
             <div class="riga-voce"><div><div class="t">Kenji</div><div class="d">🇮🇹 → 🇯🇵 · 24 messaggi · ieri</div></div><span class="frec">›</span></div>
@@ -652,11 +767,10 @@
       <div class="cartellino"><span class="lettera">08</span><span class="nome">Impara</span><span class="stato fatto">FATTO · b.435</span></div>
       <p class="didascalia">Una lezione per volta. Il Maestro legge, tu segui, e puoi alzare la mano.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">L'alfabeto</span>
-            <span class="tondino">A−</span><span class="tondino">A+</span><span class="tondino on"><svg class="ic"><use href="#i-play"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">L'alfabeto</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="eti" style="padding:8px 2px 0"><span class="chip">lezione 1 di 12</span><span class="chip">🇬🇧 inglese</span></div>
           <div style="height:5px;border-radius:3px;background:var(--spento);margin:10px 2px;overflow:hidden;flex-shrink:0">
@@ -668,11 +782,8 @@
             <div class="scheda"><div class="foto">A</div></div>
             <div style="font-size:14.5px;color:var(--testo-2);line-height:1.55">Five of them are vowels: A, E, I, O, U.</div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Alza la mano e chiedi…</div>
-            <div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Alza la mano e chiedi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li>A che punto sei sta <span class="ril">in cima, sempre</span>: una barra sottile e «1 di 12». Oggi bisogna indovinarlo.</li>
@@ -685,11 +796,10 @@
       <div class="cartellino"><span class="lettera">09</span><span class="nome">Podcast</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi parla adesso, e cosa sta dicendo. Il resto scorre sotto.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Il costo della vita</span>
-            <span class="tondino on"><svg class="ic"><use href="#i-pause"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-stop"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Il costo della vita</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:10px;padding:4px 2px">
@@ -705,13 +815,13 @@
             <div style="font-size:14px;color:var(--muto);line-height:1.5;margin-top:14px"><span class="ril">Aisha:</span> Ma gli stipendi solo del due e sei.</div>
             <div style="font-size:14px;color:var(--muto);line-height:1.5"><span class="ril">Marcus:</span> Allora la domanda vera e un'altra.</div>
           </div>
+          <div class="riga-campo" style="gap:8px"><div class="pillola" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-pause"/></svg>Pausa</div><div class="tondino" style="width:54px;height:54px"><svg class="ic"><use href="#i-stop"/></svg></div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li><span class="ril">Chi parla adesso</span> ha faccia, nome e ruolo in cima, con le barrette che si muovono. Oggi si capisce solo dal testo.</li>
         <li>La battuta in corso e grande, le precedenti si fanno da parte: stessa regola del traduttore.</li>
-        <li>Pausa e stop sono tondini in testata, non una barra a se.</li></ul></div>
+        <li>Pausa e stop stanno in <span class="ril">fondo</span>, dove arriva il pollice: si mette in pausa dieci volte durante un podcast, e dieci volte non si allunga la mano fino in cima.</li></ul></div>
     </div>
 
     <!-- ── OBIETTIVI E COMPITI ── -->
@@ -719,11 +829,10 @@
       <div class="cartellino"><span class="lettera">10</span><span class="nome">Obiettivi</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Poche cose, con quanto manca. Aggiungerne una e una riga sola.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Obiettivi</span>
-            <span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Obiettivi</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div class="scheda"><div class="dentro">
@@ -744,8 +853,8 @@
             <div class="riga-voce"><div><div class="t">Ripassa i verbi irregolari</div><div class="d">10 minuti · dal Maestro</div></div><span class="frec">›</span></div>
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Leggi: «Il costo della vita»</div><div class="d">4 minuti · da Mondo</div></div><span class="frec">›</span></div>
           </div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Nuovo obiettivo</div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li>Ogni obiettivo mostra <span class="ril">quanto manca</span>, non solo che esiste.</li>
@@ -757,12 +866,10 @@
       <div class="cartellino"><span class="lettera">11</span><span class="nome">TaxiTalk</span><span class="stato fatto">META · b.430</span></div>
       <p class="didascalia">Stessa forma del traduttore. Cambia solo che qui c'e anche dove vai.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="pillola">🇮🇹 → 🇪🇸</span>
-            <span style="flex:1"></span>
-            <span class="tondino on"><svg class="ic"><use href="#i-target"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo"></span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span>
           </div>
           <div class="corpo">
             <div style="display:flex;gap:8px">
@@ -780,10 +887,8 @@
               </div>
             </div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Parla o scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div>
-          </div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Parla o scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
-        <div class="barra"><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-home)"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li>E' <span class="ril">la stessa schermata del traduttore</span> con un tondino in piu: la destinazione. Due schermate che facevano lo stesso mestiere diventano una.</li>
@@ -797,8 +902,7 @@
       <div class="telefono">
         <div class="schermo">
           <div class="testata">
-            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-            <span class="titolo">Credito</span>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Credito</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo">
             <div style="text-align:center;padding:18px 0 10px">
@@ -815,7 +919,6 @@
             </div>
           </div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li>Il numero grande per primo: e la domanda con cui si apre questa pagina.</li>
@@ -828,12 +931,14 @@
       <p class="didascalia">Una domanda per schermata. Nessuno legge due domande insieme.</p>
       <div class="telefono">
         <div class="schermo" style="padding:10px 12px">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span style="flex:1"></span>
-            <div style="display:flex;gap:5px;align-items:center">
-              <span style="width:18px;height:4px;border-radius:2px;background:var(--accento)"></span>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
+            <div style="flex:1;display:flex;gap:5px;align-items:center;justify-content:center">
+              <span style="width:18px;height:4px;border-radius:2px;background:var(--giallo)"></span>
               <span style="width:18px;height:4px;border-radius:2px;background:var(--spento)"></span>
               <span style="width:18px;height:4px;border-radius:2px;background:var(--spento)"></span>
             </div>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span>
           </div>
           <div class="corpo" style="justify-content:center">
             <div style="font-size:26px;font-weight: 600;letter-spacing:-0.4px;line-height:1.2">Che lingua parli?</div>
@@ -868,7 +973,9 @@
       <p class="didascalia">Il codice grande, perche e la cosa che devi leggere a voce a qualcun altro.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">La tua stanza</span><span class="tondino"><svg class="ic p"><use href="#i-settings"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">La tua stanza</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo" style="align-items:center;justify-content:center">
             <div style="font-size:48px;font-weight: 600;letter-spacing:6px;font-variant-numeric:tabular-nums">K7M2</div>
             <div style="font-size:13px;color:var(--muto);margin-top:2px">Leggi questo codice a chi deve entrare</div>
@@ -893,7 +1000,9 @@
       <p class="didascalia">Quattro caselle, non un campo. Si sa quanto e lungo prima di cominciare.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Entra</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Entra</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo" style="align-items:center;justify-content:center">
             <div style="font-size:15px;color:var(--muto);margin-bottom:20px">Il codice che ti hanno dato</div>
             <div style="display:flex;gap:10px">
@@ -918,7 +1027,9 @@
       <p class="didascalia">Un link, e i modi per mandarlo. Niente altro su cui pensare.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Invita una persona</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Invita una persona</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="vuoto">Chi apre il link entra nella tua stanza. Sceglie la sua lingua da solo.</div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:10px">
@@ -945,7 +1056,9 @@
       <p class="didascalia">Chi c'e in cima, sempre. La videochiamata si accende da dentro, non e un'altra stanza.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">K7M2</span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span><span class="tondino"><svg class="ic p"><use href="#i-settings"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">K7M2</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
+          </div>
           <div class="eti" style="padding:8px 2px 0">
             <span class="chip">🇮🇹 tu</span><span class="chip">🇯🇵 Kenji</span><span class="chip">🇪🇸 Rosa</span>
             <span style="color:var(--verde)">● 3</span>
@@ -955,7 +1068,7 @@
             <div class="bolla sua" style="align-self:flex-start">Ya estamos todos.<span class="orig">Ci siamo tutti.</span></div>
             <div class="bolla mia">Perfetto, cominciamo.<span class="orig">完璧です、始めましょう。</span></div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
@@ -995,7 +1108,9 @@
       <p class="didascalia">Largo abbastanza da leggerlo. Ogni voce dice cosa fa, non solo come si chiama.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">K7M2</span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span><span class="tondino on"><svg class="ic p"><use href="#i-settings"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">K7M2</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
+          </div>
           <div class="corpo" style="padding-top:6px">
             <div class="scheda"><div class="dentro" style="padding:6px 0">
               <div class="riga-voce" style="padding:12px 14px"><div><div class="t">Numero di sicurezza</div><div class="d">Controlla che nessuno ascolti</div></div><span class="frec">›</span></div>
@@ -1017,7 +1132,9 @@
       <p class="didascalia">Due schermi, lo stesso numero. Se non combacia, qualcuno sta in mezzo.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Numero di sicurezza</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Numero di sicurezza</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo" style="align-items:center;justify-content:center">
             <div style="font-size:34px;font-weight: 600;letter-spacing:4px;font-variant-numeric:tabular-nums;line-height:1.5;text-align:center">48 21 07<br>93 55 16</div>
             <div style="font-size:14px;color:var(--muto);text-align:center;line-height:1.55;margin-top:20px;max-width:250px">
@@ -1048,8 +1165,11 @@
       <div class="cartellino"><span class="lettera">21</span><span class="nome">Discussione</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">La notizia in cima, i commenti sotto, e il campo che non finisce sotto la barra.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino"><svg class="ic"><use href="#i-globe"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span><span class="chip">economia</span></div>
             <div style="font-size:17px;font-weight: 600;line-height:1.35">Lo yen perde il dodici per cento in un anno</div>
@@ -1059,9 +1179,8 @@
             <div class="scheda"><div class="dentro"><div class="eti"><span class="chip">🇯🇵 Kenji</span><span>40m</span></div>
               <div style="font-size:14px;line-height:1.45;margin-top:6px">Qui invece sulla spesa si sente eccome.<span style="display:block;font-size:11.5px;color:var(--muto);margin-top:4px">ここでは買い物で強く感じます。</span></div></div></div>
           </div>
-          <div class="riga-campo"><div class="modulo"><div class="campo">Scrivi un commento…</div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div></div>
+          <div class="riga-campo"><div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi un commento…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
         <li>Il campo per commentare <span class="ril">non finisce piu sotto la barra</span>: era il difetto trovato da Luca a b.394.</li>
@@ -1074,7 +1193,9 @@
       <p class="didascalia">Chi e, che lingue parla, cosa ha detto. Nient'altro: qui non si guarda la vita di nessuno.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji</span><span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
+          </div>
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:12px;padding:6px 2px">
               <div class="faccia" style="width:60px;height:60px;background-image:var(--img-av3)"></div>
@@ -1092,8 +1213,8 @@
             <div class="riga-voce"><div><div class="t">Lo yen perde il dodici per cento</div><div class="d">economia · 3 commenti</div></div><span class="frec">›</span></div>
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Il treno per Osaka raddoppia</div><div class="d">trasporti · 1 commento</div></div><span class="frec">›</span></div>
           </div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Aggiungi ai contatti</div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
         <li>Le <span class="ril">lingue che parla</span> accanto al nome: e la cosa che ti dice se potete capirvi.</li>
@@ -1104,8 +1225,11 @@
       <div class="cartellino"><span class="lettera">23</span><span class="nome">Tavola rotonda</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi siede al tavolo, e su cosa. Poi parlano fra loro e tu entri quando vuoi.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Tavola rotonda</span><span class="tondino"><svg class="ic"><use href="#i-stop"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Tavola rotonda</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
+          </div>
           <div class="corpo">
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <span class="pillola on"><span class="faccia" style="width:24px;height:24px;background-image:var(--img-av3)"></span> Omar</span><span class="pillola on"><span class="faccia" style="width:24px;height:24px;background-image:var(--img-av4)"></span> Aisha</span><span class="pillola"><span class="faccia" style="width:24px;height:24px;background-image:var(--img-av5)"></span> Marcus</span>
@@ -1129,8 +1253,11 @@
       <div class="cartellino"><span class="lettera">24</span><span class="nome">Compagni</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">I tuoi, e cosa ricordano. Perche un Compagno che ricorda e una scelta, non un difetto.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">I tuoi Compagni</span><span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">I tuoi Compagni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <div class="faccia q" style="width:44px;height:44px;background-image:var(--img-av3)"></div>
@@ -1150,6 +1277,7 @@
               <span class="tondino" style="width:38px;height:38px;font-size:13px"><svg class="ic p"><use href="#i-settings"/></svg></span>
             </div></div>
           </div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Aggiungi un Compagno</div></div>
         </div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
@@ -1161,8 +1289,11 @@
       <div class="cartellino"><span class="lettera">25</span><span class="nome">Compiti</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Cosa devi studiare e per quando. I materiali si aggiungono con una foto.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Compiti</span><span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Compiti</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--oro)">ENTRO DOMANI</div>
             <div class="scheda"><div class="dentro">
@@ -1179,6 +1310,7 @@
               <span class="pillola" style="flex:1;justify-content:center"><svg class="ic p"><use href="#i-copy"/></svg> Incolla</span>
             </div>
           </div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Nuovo compito</div></div>
         </div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
@@ -1191,7 +1323,9 @@
       <p class="didascalia">Cosa vi siete detti, in dieci righe. E cosa avete deciso.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji · ieri</span><span class="tondino"><svg class="ic"><use href="#i-copy"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji · ieri</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="eti"><span class="chip">🇮🇹 → 🇯🇵</span><span>24 messaggi · 18 minuti</span></div>
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">IN DUE RIGHE</div>
@@ -1224,7 +1358,9 @@
       <p class="didascalia">Ogni riga dice il suo valore attuale a destra. Non si entra per scoprire com'e.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Impostazioni</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Impostazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">LINGUE</div>
             <div class="riga-voce"><div><div class="t">Lingua che parlo</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">🇮🇹 Italiano</span></div>
@@ -1238,7 +1374,6 @@
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Tema</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">Deep</span></div>
           </div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
         <li>Ogni riga mostra il <span class="ril">valore attuale a destra</span>: non si entra per scoprire com'e messo.</li>
@@ -1251,7 +1386,9 @@
       <p class="didascalia">Si ascoltano prima di sceglierle. Una voce non si giudica dal nome.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Come ti sentono</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Come ti sentono</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="vuoto">Tocca il triangolo per sentirle. Quella scelta ti legge le traduzioni.</div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
@@ -1280,7 +1417,9 @@
       <p class="didascalia">Roba tecnica. Dice cosa sblocca ognuna, e non mostra mai la chiave intera.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Le tue chiavi</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Le tue chiavi</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="vuoto">Con le tue chiavi non consumi credito: paghi direttamente il fornitore.</div>
             <div class="scheda"><div class="dentro">
@@ -1307,8 +1446,11 @@
       <div class="cartellino"><span class="lettera">30</span><span class="nome">Rubrica</span><span class="stato dafare">DA FARE</span></div>
       <p class="didascalia">Chi hai incontrato, in che lingua parlava, e se e online adesso.</p>
       <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Rubrica</span><span class="tondino"><svg class="ic"><use href="#i-eye"/></svg></span><span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Rubrica</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="riga-voce"><div style="display:flex;align-items:center;gap:11px">
               <div style="width:40px;height:40px;border-radius:999px;position:relative;background-image:var(--img-av3);background-size:cover;background-position:center"><span style="position:absolute;right:0;bottom:0;width:11px;height:11px;border-radius:999px;background:var(--verde);border:2px solid var(--bg)"></span></div>
@@ -1320,8 +1462,8 @@
               <div class="faccia" style="width:40px;height:40px;background-image:var(--img-av5)"></div>
               <div><div class="t">Marcus</div><div class="d">🇩🇪 Deutsch · vista lunedi</div></div></div><span class="frec">›</span></div>
           </div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px"><svg class="ic"><use href="#i-plus"/></svg>Aggiungi in rubrica</div></div>
         </div>
-        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
         <li>La <span class="ril">lingua accanto al nome</span>: e cio che ti dice se potete parlarvi adesso.</li>
@@ -1333,7 +1475,9 @@
       <p class="didascalia">La foto diventa un contatto. E si controlla prima di salvarlo.</p>
       <div class="telefono">
         <div class="schermo">
-          <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Biglietto letto</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Biglietto letto</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="scheda"><div class="foto"><svg class="ic gg"><use href="#i-credit"/></svg></div></div>
             <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">CONTROLLA PRIMA DI SALVARE</div>
@@ -1394,10 +1538,8 @@
       <div class="mis">altezza 44 · distanza 8 · freccia a sinistra</div>
       <div class="prova">
         <div class="testata">
-          <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span>
-          <span class="titolo">Titolo</span>
-          <span class="tondino">A−</span><span class="tondino on"><svg class="ic"><use href="#i-swap"/></svg></span>
-        </div>
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Titolo</span><span class="tondino" title="Ingrandisci il carattere">Aa</span><span class="tondino"><svg class="ic"><use href="#i-swap"/></svg></span>
+          </div>
       </div>
       <div class="perche">Sempre la stessa, in ogni pagina. La freccia a sinistra perche la cercano tutti li; i comandi a destra, tutti tondi e tutti della stessa misura. Resta dritta anche quando la pagina si ribalta.</div>
     </div>
@@ -1417,17 +1559,17 @@
       <div class="mis">altezza 44 · riempimento 0 15 · testo 14,5</div>
       <div class="prova" style="display:flex;gap:8px;flex-wrap:wrap">
         <span class="pillola">🇮🇹 → 🇺🇸</span>
-        <span class="pillola on">🇯🇵 Giappone Cambia ›</span>
+        <span class="pillola on"><svg class="ic"><use href="#i-users"/></svg>43 dentro</span>
       </div>
       <div class="perche">Per le cose che hanno uno stato e si cambiano: lingua, Paese, modo. Alta come un tondino, cosi sulla stessa riga niente balla.</div>
     </div>
 
     <div class="pezzo">
       <div class="nome">Il modulo del testo</div>
-      <div class="mis">fascia min 54 · comandi dentro, 38 × 38 · raggio 16 / 12</div>
+      <div class="mis">fascia min 54 · comandi dentro, 38 × 38 · raggio 16 / 12 · il piu a sinistra</div>
       <div class="prova">
         <div class="riga-campo" style="padding-bottom:0">
-          <div class="modulo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div>
+          <div class="modulo"><div class="quadro piu" title="Foto, file, posizione, contatto, documento"><svg class="ic"><use href="#i-plus"/></svg></div><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-camera"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div></div>
         </div>
       </div>
       <div class="perche">Dove si scrive sta sempre in basso, sempre a schermo, e non si ribalta mai. Una fascia sola a tutta larghezza, con i comandi DENTRO invece che di fianco: prima due tasti da cinquantaquattro portavano via piu di un terzo della riga proprio a quello che si deve leggere. Il bersaglio del dito non cala — lo da l'altezza della fascia, non la misura del tondino. A destra prima la voce, poi l'invio.</div>
@@ -1707,6 +1849,176 @@
       <div class="perche">Chi legge una traduzione ha il diritto di vedere da cosa viene, senza chiederlo. Piccola e smorta perche non e la cosa da leggere: e la cosa da poter controllare.</div>
     </div>
 
+    <div class="pezzo">
+      <div class="nome">La linguetta</div>
+      <div class="mis">46 × 58 · raggio 0 16 16 0 · a 108 dal bordo alto</div>
+      <div class="prova" style="position:relative;height:210px;background:var(--bg);border-radius:12px;overflow:hidden">
+        <div class="linguetta" style="top:10px;opacity:.22"><svg class="ic"><use href="#i-menu"/></svg></div>
+        <div class="linguetta" style="top:76px;border-color:var(--giallo-bor);color:var(--giallo);background:var(--giallo-vel)"><svg class="ic"><use href="#i-menu"/></svg></div>
+        <div class="linguetta" style="top:142px;opacity:.22"><svg class="ic"><use href="#i-menu"/></svg></div>
+        <span style="position:absolute;left:58px;top:88px;font-size:12px;color:var(--muto)">tieni premuto e trascina</span>
+      </div>
+      <div class="perche">La maniglia del pannello. Appoggiata al bordo sinistro, sporge appena, e non copre mai i contenuti — le liste sono strette apposta per lasciarle il posto. Tre righine: e il segno che tutti riconoscono per «qui ci sono i comandi». Le misure sono quelle del righello vero, non nuove.<br><br><span class="ril">Si tiene premuta e si sposta su e giu dove si vuole</span>, e il posto resta quello scelto anche dopo. Una maniglia fissa va bene per chi l'ha messa: chi tiene il telefono con l'altra mano, o ha il pollice corto, la trova sempre nel punto sbagliato. Muoverla e l'unico modo di darle ragione a tutti senza chiedere niente a nessuno.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La voce del pannello</div>
+      <div class="mis">alta 44 · icona 20 · raggio 12 · il conto a destra</div>
+      <div class="prova">
+        <span class="voce-lato on"><svg class="ic"><use href="#i-chat"/></svg><span>Amico</span></span>
+        <span class="voce-lato"><svg class="ic"><use href="#i-target"/></svg><span>Obiettivi</span><span class="co">2</span></span>
+      </div>
+      <div class="perche">Una riga per voce, in colonna: si vedono tutte insieme, anche la settima. La fila orizzontale che scorreva nascondeva le ultime, e nessuno trascina una fila per scoprire cosa c'e oltre il bordo. Accesa e gialla, come tutto cio che e acceso.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">La bandiera del Paese</div>
+      <div class="mis">30 di carattere · bersaglio 44 × 44</div>
+      <div class="prova" style="display:flex;gap:14px;align-items:center">
+        <span class="bandiera">🇯🇵</span><span class="bandiera">🇪🇸</span><span class="bandiera">🇩🇪</span>
+      </div>
+      <div class="perche">Da sola, grande, e si tocca per cambiare Paese. Nessuna parola accanto: il Paese l'ha scelto chi guarda, e ripeterglielo non lo informa. Il bersaglio resta quarantaquattro anche se il disegno e trenta.</div>
+    </div>
+
+    <div class="pezzo">
+      <div class="nome">Il selettore di sezione</div>
+      <div class="mis">frecce 44 · icona in acciaio 30 · centrato</div>
+      <div class="prova">
+        <div class="selettore">
+          <span class="tondino nudo"><svg class="ic"><use href="#i-sx"/></svg></span>
+          <span class="sez"><span class="acciaio s" style="background-image:var(--img-sez-mondo)"></span><span>Stanze</span></span>
+          <span class="tondino nudo"><svg class="ic"><use href="#i-dx"/></svg></span>
+        </div>
+      </div>
+      <div class="perche">Rimesso su richiesta di Luca dopo che l'avevo tolto due volte. Le due frecce fanno una cosa che due parole affiancate non fanno: dicono che li ci si scorre, e che le sezioni sono in fila. L'icona in acciaio da alla sezione una faccia, non solo un nome.</div>
+    </div>
+
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════
+       LE SIDEBAR — b.437
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="sezione">Le sidebar, che e dove va tutto il resto</h2>
+  <p class="sotto">
+    Una pagina si svuota solo se cio che le si toglie ha un altro posto dove stare. Quel posto
+    e il pannello che entra da sinistra: <span class="ril">dentro ci vanno le sezioni, i filtri,
+    i gruppi e le impostazioni</span> — tutto cio che si usa una volta ogni tanto e che il
+    resto del tempo copre i contenuti. La maniglia e la linguetta sul bordo: si vede sempre,
+    dice da che parte si apre, e non copre niente. Misure dal righello vero: 46 × 58 la
+    linguetta, 86% della larghezza il pannello.
+  </p>
+
+  <div class="pista">
+
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">E</span><span class="nome">Il pannello di Mondo</span><span class="stato dafare">DA FARE</span></div>
+      <p class="didascalia">Il Paese, le lingue e i filtri: qui dentro, non sopra il pianeta.</p>
+      <div class="telefono">
+        <div class="globo"></div><div class="velo"></div>
+        <div class="schermo" style="position:relative;z-index:2">
+          <div class="testata">
+            <span class="bandiera">🇯🇵</span><span style="flex:1"></span>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span>
+            <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
+          </div>
+          <div class="corpo"></div>
+        </div>
+        <div class="velo-lato"></div>
+        <div class="pannello">
+          <div class="testa"><span class="n">Mondo</span><span class="tondino"><svg class="ic"><use href="#i-x"/></svg></span></div>
+          <div class="dentro">
+            <div class="gruppo">
+              <span class="eti-lato">Il Paese</span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-globe"/></svg><span>Mondo intero</span></span><span class="voce-lato on"><span style="font-size:19px">🇯🇵</span><span>Giappone</span></span><span class="voce-lato"><span style="font-size:19px">🇪🇸</span><span>Spagna</span></span><span class="voce-lato"><span style="font-size:19px">🇩🇪</span><span>Germania</span></span><span class="voce-lato"><svg class="ic"><use href="#i-plus"/></svg><span>Cerca un Paese</span></span>
+            </div>
+            <div class="gruppo">
+              <span class="eti-lato">Sezione</span>
+              <span class="voce-lato on"><span class="acciaio b" style="background-image:var(--img-sez-mondo)"></span><span>Stanze</span><span class="co">12</span></span><span class="voce-lato"><span class="acciaio b" style="background-image:var(--img-sez-news)"></span><span>Notizie</span></span>
+            </div>
+            <div class="gruppo">
+              <span class="eti-lato">Mostra solo</span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-chat"/></svg><span>Dove si parla la mia lingua</span></span><span class="voce-lato"><svg class="ic"><use href="#i-users"/></svg><span>Con qualcuno dentro</span><span class="co">43</span></span><span class="voce-lato"><svg class="ic"><use href="#i-star"/></svg><span>I miei preferiti</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li><span class="ril">Il cambio Paese vive qui</span>, non in testata. In testata resta la bandiera: e una scelta di chi guarda, e lui sa gia qual e.</li>
+          <li>Ricerca, lingue e filtri stavano sopra il pianeta anche quando nessuno li usava. Coprivano meta mondo per niente.</li>
+          <li>«Mondo intero» e una voce come le altre, non un caso speciale: si esce da un Paese come si entra.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">F</span><span class="nome">Il pannello di Vita</span><span class="stato dafare">DA FARE</span></div>
+      <p class="didascalia">Le sette sezioni non stanno piu in fila sopra la conversazione.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Archimede</span>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span>
+            <span class="tondino"><svg class="ic"><use href="#i-phone"/></svg></span>
+          </div>
+          <div class="corpo"></div>
+        </div>
+        <div class="velo-lato"></div>
+        <div class="pannello">
+          <div class="testa"><span class="n">Archimede</span><span class="tondino"><svg class="ic"><use href="#i-x"/></svg></span></div>
+          <div class="dentro">
+            <div class="gruppo">
+              <span class="eti-lato">Cosa fate insieme</span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-mic"/></svg><span>Podcast</span></span><span class="voce-lato on"><svg class="ic"><use href="#i-chat"/></svg><span>Amico</span></span><span class="voce-lato"><svg class="ic"><use href="#i-users"/></svg><span>Tavolo</span></span><span class="voce-lato"><svg class="ic"><use href="#i-graduation"/></svg><span>Impara</span></span><span class="voce-lato"><svg class="ic"><use href="#i-target"/></svg><span>Obiettivi</span><span class="co">2</span></span><span class="voce-lato"><svg class="ic"><use href="#i-history"/></svg><span>Compiti</span><span class="co">3</span></span><span class="voce-lato"><svg class="ic"><use href="#i-doc"/></svg><span>Sommari</span></span>
+            </div>
+            <div class="gruppo">
+              <span class="eti-lato">Il Compagno</span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-user"/></svg><span>Chi e Archimede</span></span><span class="voce-lato"><svg class="ic"><use href="#i-speaker"/></svg><span>La sua voce</span></span><span class="voce-lato"><svg class="ic"><use href="#i-history"/></svg><span>14 ricordi</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li><span class="ril">Le sette schede erano una fila che scorreva</span>: per vedere l'ultima bisognava trascinare, e le ultime due non le trovava nessuno. In colonna si vedono tutte insieme.</li>
+          <li>Recuperi una riga intera sopra la conversazione, che e la cosa per cui si e li.</li>
+          <li>Il conto di fianco (14 ricordi, 3 compiti) sta nel pannello: e un numero da controllare ogni tanto, non da guardare sempre.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="colonna">
+      <div class="cartellino"><span class="lettera">G</span><span class="nome">Il piu, aperto</span><span class="stato dafare">DA FARE</span></div>
+      <p class="didascalia">Cosa si puo mandare oltre alle parole. Sale dal basso, dal tasto che l'ha aperto.</p>
+      <div class="telefono">
+        <div class="schermo">
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji</span>
+            <span class="tondino" title="Ingrandisci il carattere">Aa</span>
+            <span class="tondino"><svg class="ic"><use href="#i-video"/></svg></span>
+          </div>
+          <div class="corpo">
+            <div class="bolla sua">明日の九時でいいですか。<span class="orig">Va bene domani alle nove?</span></div>
+          </div>
+        </div>
+        <div class="velo-lato"></div>
+        <div class="tendina">
+          <div class="presa"></div>
+          <div class="gruppo">
+            <span class="voce-lato"><svg class="ic"><use href="#i-image"/></svg><span>Foto e video</span></span><span class="voce-lato"><svg class="ic"><use href="#i-camera"/></svg><span>Scatta adesso</span></span><span class="voce-lato"><svg class="ic"><use href="#i-doc"/></svg><span>Un documento</span></span><span class="voce-lato"><svg class="ic"><use href="#i-pin"/></svg><span>Condividi la posizione</span></span><span class="voce-lato"><svg class="ic"><use href="#i-user"/></svg><span>Condividi un contatto</span></span>
+          </div>
+        </div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li><span class="ril">Cinque cose, una lista, nomi che si leggono.</span> Non una griglia di quadrati colorati da decifrare.</li>
+          <li>Sale dal basso, attaccata al tasto che l'ha aperta: si vede da dove viene e dove tornera.</li>
+          <li>La posizione e il contatto sono cose che si <span class="ril">condividono</span>, non che si allegano: la parola lo dice.</li>
+        </ul>
+      </div>
+    </div>
+
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════
@@ -1725,7 +2037,9 @@
       <p class="didascalia" style="min-height:0">Una riga che dice cosa succedera. Mai un riquadro col bordo.</p>
       <div class="telefono" style="width:250px;height:340px">
         <div class="schermo">
-          <div class="testata"><span class="titolo" style="font-size:14px">Conversazioni</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo" style="font-size:14px">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo"><div class="vuoto">Ancora nessuna conversazione. Quando ne farai una, comparira qui.</div></div>
         </div>
       </div>
@@ -1735,7 +2049,9 @@
       <p class="didascalia" style="min-height:0">La forma di cio che arriva, nel posto dove arrivera.</p>
       <div class="telefono" style="width:250px;height:340px">
         <div class="schermo">
-          <div class="testata"><span class="titolo" style="font-size:14px">Conversazioni</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo" style="font-size:14px">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div style="height:15px;width:70%;border-radius:6px;background:var(--spento)"></div>
             <div style="height:11px;width:48%;border-radius:6px;background:var(--spento);opacity:.6"></div>
@@ -1750,7 +2066,9 @@
       <p class="didascalia" style="min-height:0">Cosa non ha funzionato, che non e colpa tua, e cosa fare adesso.</p>
       <div class="telefono" style="width:250px;height:340px">
         <div class="schermo">
-          <div class="testata"><span class="titolo" style="font-size:14px">Conversazioni</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo" style="font-size:14px">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:10px;border:1px solid rgba(255,84,112,0.28);background:rgba(255,84,112,0.10);border-radius:14px;padding:11px 12px">
               <div style="flex:1;font-size:12.5px;line-height:1.4"><span class="ril">Non riesco a leggere l'archivio</span><div style="color:var(--muto);font-size:11px">Non e colpa tua: la rete non risponde.</div></div>
@@ -1765,7 +2083,9 @@
       <p class="didascalia" style="min-height:0">L'unico che di solito si disegna. Gli altri tre no, ed e li che si perde la gente.</p>
       <div class="telefono" style="width:250px;height:340px">
         <div class="schermo">
-          <div class="testata"><span class="titolo" style="font-size:14px">Conversazioni</span></div>
+          <div class="testata">
+            <span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo" style="font-size:14px">Conversazioni</span><span class="tondino" title="Ingrandisci il carattere">Aa</span>
+          </div>
           <div class="corpo">
             <div class="riga-voce" style="padding:11px 2px"><div><div class="t" style="font-size:14px">Kenji</div><div class="d">🇮🇹 → 🇯🇵 · ieri</div></div><span class="frec">›</span></div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="t" style="font-size:14px">Yen e inflazione</div><div class="d">stanza · 2 giorni fa</div></div><span class="frec">›</span></div>
@@ -1791,6 +2111,10 @@
       </thead>
       <tbody style="font-variant-numeric:tabular-nums">
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto tondo</td><td style="padding:11px 14px;color:var(--accento)">44 × 44</td><td style="padding:11px 14px;color:var(--testo-3)">sotto, un dito sbaglia bersaglio</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Linguetta del pannello</td><td style="padding:11px 14px;color:var(--accento)">46 × 58 · raggio 0 16 16 0</td><td style="padding:11px 14px;color:var(--testo-3)">misura del righello vero</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Pannello laterale</td><td style="padding:11px 14px;color:var(--accento)">min(330, 86%) di larghezza</td><td style="padding:11px 14px;color:var(--testo-3)">coprente: dietro c'e il pianeta</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Voce del pannello</td><td style="padding:11px 14px;color:var(--accento)">alta 44 · raggio 12</td><td style="padding:11px 14px;color:var(--testo-3)">i quarantaquattro valgono anche qui</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Bandiera del Paese</td><td style="padding:11px 14px;color:var(--accento)">30 di carattere · bersaglio 44</td><td style="padding:11px 14px;color:var(--testo-3)">da sola, senza il nome accanto</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Comandi dentro il modulo (voce, invio)</td><td style="padding:11px 14px;color:var(--accento)">38 × 38 · raggio 12</td><td style="padding:11px 14px;color:var(--testo-3)">il bersaglio del dito lo da la fascia, alta 54</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo dove si scrive</td><td style="padding:11px 14px;color:var(--accento)">min 54 · max 110 · testo 16</td><td style="padding:11px 14px;color:var(--testo-3)">sotto 16 il telefono ingrandisce da solo</td></tr>
         <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo di ricerca</td><td style="padding:11px 14px;color:var(--accento)">48 · raggio 14</td><td style="padding:11px 14px;color:var(--testo-3)">piu basso: si interroga, non si compila</td></tr>
@@ -1821,6 +2145,13 @@
     <div class="regola"><div class="n">06</div><div class="t">I colori vengono dal tema</div><div class="d">Nessun colore scritto a mano: sei temi, e uno solo che sbaglia si vede subito. Stessa cosa per le parole, in trentotto lingue.</div></div>
     <div class="regola"><div class="n">07</div><div class="t">Quarantaquattro</div><div class="d">Nessun tasto sotto i 44 punti. In un telefono le dita fanno fatica, e sotto quella misura sbagliano bersaglio.<div class="m">imparata a b.424</div></div></div>
     <div class="regola"><div class="n">08</div><div class="t">Si gira solo cio che l'altro legge</div><div class="d">Quando una schermata si mostra a qualcun altro, ruota il testo — non il tuo modo di scrivere.<div class="m">imparata a b.424</div></div></div>
+    <div class="regola"><div class="n">09</div><div class="t">Si torna con la freccia, non col menu</div><div class="d">Ogni pagina interna ha la freccia in alto a sinistra e NON ha la barra in basso. La barra serve a scegliere fra i quattro posti principali: dentro una pagina non c'e niente da scegliere, c'e da tornare.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">10</div><div class="t">In alto a destra: carattere, e la chiamata</div><div class="d">L'ingrandimento del carattere c'e SEMPRE. Se la pagina e una conversazione, accanto c'e il telefono o la videocamera. Sempre li, su ogni pagina, senza doverlo cercare.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">11</div><div class="t">Il resto va nella sidebar</div><div class="d">Sezioni, filtri, gruppi, impostazioni: tutto cio che si usa ogni tanto sta nel pannello di sinistra, dietro la linguetta. Una pagina si svuota solo se cio che le togli ha un altro posto dove stare.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">12</div><div class="t">Non dire a qualcuno cio che ha scelto lui</div><div class="d">Se l'utente ha scelto il Giappone, basta la bandiera: sa che e il Giappone. Scrivere anche «Giappone» e anche «Cambia» e spendere tre pezzi per zero informazione.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">13</div><div class="t">Blu l'applicazione, giallo dove sei</div><div class="d">Il blu e il colore del sistema. Il giallo dice una cosa sola: cosa e acceso adesso. Da quando non c'e piu il grassetto, il rilievo lo fa il colore — e se il giallo lo si mette anche altrove smette di dire dove sei.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">15</div><div class="t">La maniglia la mette chi la usa</div><div class="d">La linguetta si tiene premuta e si trascina su e giu, e resta dove la si lascia. Un comando che sta sempre nello stesso punto e comodo per una mano sola: quella di chi l'ha disegnato.<div class="m">imparata a b.437</div></div></div>
+    <div class="regola"><div class="n">14</div><div class="t">A sinistra si aggiunge, a destra si parla</div><div class="d">Nel modulo del testo: il piu a sinistra (foto, file, posizione, contatto, documento), la fotocamera e il microfono a destra. Le cose della voce stanno insieme, e non si mescolano con le altre.<div class="m">imparata a b.437</div></div></div>
   </div>
 
   <div style="margin-top:34px;padding:20px;border-radius:18px;border:1px solid rgba(91,140,255,0.30);background:rgba(91,140,255,0.08);font-size:14px;line-height:1.62;color:var(--testo-2)">
