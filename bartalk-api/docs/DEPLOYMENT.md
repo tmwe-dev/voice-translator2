@@ -1,48 +1,71 @@
 # Deploy autonomo BarTalk API v1
 
-Ultimo allineamento Core verificato: **b.419 / push #711** (`d83df8455b08fbd7837c6a547f32b7d6ad9b9db9`).
+Ultimo allineamento Core: **b.420 / push #712** (`ee1a845845417ce43e0c4af8464531b53e8bbe8c`).
 
 ## Vercel
 
-- Progetto creato: `bartalk-api`
+- Progetto previsto: `bartalk-api`
 - Team: `tmweapps-projects`
-- Alias produzione assegnato al deploy iniziale: `bartalk-api-tmweapps-projects.vercel.app`
-- Deployment produzione iniziale creato: `dpl_H63Gedobxxar2jNeEiFhfFmP3qhy`
-- Inspector iniziale: `https://vercel.com/tmweapps-projects/bartalk-api/H63Gedobxxar2jNeEiFhfFmP3qhy`
+- Alias storico: `bartalk-api-tmweapps-projects.vercel.app`
+- Core: `https://voice-translator2.vercel.app`
 
-Il deploy e separato dal progetto BarTalk Core e contiene esclusivamente il runtime della API.
+Il deploy API e separato dal progetto Core e contiene soltanto `bartalk-api/`.
 
 ## Configurazione server-side
 
 Necessarie:
 
-- `BARTALK_API_SIGNING_SECRET` — segreto >= 32 caratteri per AES-256-GCM delle API key.
-- `BARTALK_CORE_URL` — URL del Core BarTalk (`https://voice-translator2.vercel.app`).
-- `BARTALK_API_KEY_TTL_DAYS` — default 6.
+- `BARTALK_API_SIGNING_SECRET` — >=32 caratteri;
+- `BARTALK_CORE_URL` — URL Core;
+- `BARTALK_API_KEY_TTL_DAYS` — intero 1-7, default 6.
 
-Opzionali ma consigliate per rate limit distribuito:
+Consigliate:
 
 - `API_REDIS_URL`
 - `API_REDIS_TOKEN`
 
-I valori segreti **non devono essere committati** in GitHub.
+Nessun valore segreto deve essere committato.
 
-### Stato di verifica delle env
+## Readiness autorevole
 
-Il connettore usato per creare il progetto/deploy non esponeva in modo coerente la lettura dei progetti/env dello stesso team. Questa documentazione quindi non afferma che il segreto di firma sia persistito nel progetto finche non viene verificato tramite un test reale di `/auth/exchange` o un canale Vercel di lettura coerente.
+Il vecchio problema era che il progetto poteva costruire e servire `/docs` anche senza il signing secret, mentre `/auth/exchange` sarebbe fallito. Ora:
 
-## Verifica minima di produzione dopo b.419
+`GET /api/v1/health`
 
-1. `GET /docs` deve caricare la documentazione.
-2. `GET /openapi` deve restituire OpenAPI 3.1 con `/live-sessions/{sessionId}/heartbeat`.
-3. `GET /api/v1/health` deve raggiungere il Core.
-4. `POST /api/v1/auth/exchange` con sessione BarTalk valida deve emettere una chiave `bt_live_...`.
-5. Una chiave alterata/scaduta deve essere rifiutata.
-6. Le route account devono sovrascrivere `token/userToken` col valore autenticato dal gateway.
-7. Apertura Live deve restituire `sessioneId` e `battitoSecondi`; l'heartbeat deve inoltrare `azione=rinnova` con il `sessionId` del path.
-8. `DELETE /api/v1/me/data` deve dichiarare `auditedCore=b.419`, non elencare piu follow/like/segnalazioni come residui, e mantenere esplicite le retention di policy.
-9. `GET /api/v1/realtime/ice` puo legittimamente restituire `iceServers: []` finche il Core non ha coturn + `TURN_SECRET/TURN_URLS`.
+ritorna **200 soltanto** se:
+
+1. il Core risponde;
+2. il signing secret e disponibile al runtime.
+
+Quindi la prova di deploy non dipende piu dalla possibilita del connettore di leggere le env: la verifica avviene dall'interno del runtime senza esporre il valore.
+
+## Gate production
+
+Prima del deploy:
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Dopo il deploy:
+
+1. `/api/v1/health` -> 200;
+2. `/openapi` -> OpenAPI 3.1 con snapshot b.420;
+3. `/auth/exchange` con sessione valida -> chiave `bt_live_*`;
+4. chiave scoped valida -> endpoint consentito;
+5. chiave con `scopes: []` -> endpoint scoped 403;
+6. sessione BarTalk revocata -> la chiave smette di funzionare anche sulle route con session probe;
+7. Live open/heartbeat/close;
+8. chiave alterata/scaduta -> 401;
+9. payload oversize -> 413.
 
 ## Regola di isolamento
 
-Il deploy/API non richiede modifiche a `voice-translator-vercel/`. Qualunque evoluzione della API resta in `bartalk-api/` e deve essere riallineata alle capability reali del Core prima di essere pubblicata.
+Qualunque evoluzione della Public API resta in:
+
+- `bartalk-api/**`
+- `.github/workflows/bartalk-api.yml`
+
+Nessuna modifica API deve apparire dentro `voice-translator-vercel/**`.
