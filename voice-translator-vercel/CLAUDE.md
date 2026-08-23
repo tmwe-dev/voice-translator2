@@ -214,6 +214,26 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.430** (push #722) — L'INDIRIZZO E LA MAPPA DENTRO «PARLA
+  ORA». Collaudo di Luca: «non vedo il tasto per mostrare la mappa o
+  inserire un indirizzo». Non era nascosto: non c'era. Stava solo in
+  TaxiTalk.
+  Sono gli STESSI pezzi, copiati riga per riga e non riscritti: la ricerca
+  su OpenStreetMap col riquadro attorno a dove sei (fa salire in cima i
+  posti vicini), la mappina di conferma, e il QR — che e la cosa piu utile
+  di tutte, perche chi hai davanti lo inquadra e gli si apre la SUA mappa,
+  nella sua lingua, senza installare niente. Piu «condividi link» per
+  mandarglielo a voce o su WhatsApp.
+  NON COSTA NIENTE E NON PASSA DAI NOSTRI SERVER: nessuna nostra rotta,
+  nessun credito scalato. Una prova lo controlla.
+  Prende il posto della lettura come le lingue: una cosa per volta, sempre
+  nello stesso posto, niente che spinge giu.
+  E porta con se la regola di b.248, copiata anche quella: cambiare il
+  testo dopo aver scelto INVALIDA la scelta — campo, mappa e QR non
+  possono dire due cose diverse.
+  PROVA: le quattro nuove in `lingua-e-pila-b429.test.jsx`, fra cui una
+  che confronta i pezzi con TaxiTalk per accertarsi che siano gli stessi.
+
 - Versione: **b.429** (push #721) — due difetti dal collaudo di Luca, e un
   terzo trovato cercandone uno dei due.
   1. «QUANDO CAMBIO LA LINGUA NON AGGIORNA IL TESTO DEI TASTI IN HOME».

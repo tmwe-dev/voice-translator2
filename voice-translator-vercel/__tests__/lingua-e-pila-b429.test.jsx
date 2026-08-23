@@ -72,3 +72,37 @@ describe('a pagina piena non galleggia niente sopra i comandi', () => {
     }
   });
 });
+
+describe('l\'indirizzo e la mappa, che in «Parla ora» non c\'erano', () => {
+  it('i pezzi sono COPIATI da TaxiTalk, non riscritti', () => {
+    // Regola di casa: cio che esiste si copia, non si reimplementa.
+    const p = senzaCommenti(leggi('app/components/PrimaProva.js'));
+    const tt = senzaCommenti(leggi('app/components/TaxiTalk.js'));
+    // la stessa ricerca, sullo stesso servizio, con lo stesso riquadro
+    for (const pezzo of ['nominatim.openstreetmap.org/search', 'format=json&limit=5&addressdetails=1',
+                         'api.qrserver.com/v1/create-qr-code', 'buildMapsUrl', '<TaxiMap']) {
+      expect(p, `manca in «Parla ora»: ${pezzo}`).toContain(pezzo);
+      expect(tt, `e doveva venire da TaxiTalk: ${pezzo}`).toContain(pezzo);
+    }
+  });
+
+  it('cambiare il testo dopo aver scelto invalida la scelta', () => {
+    // b.248 — campo, mappa e QR non possono dire due cose diverse.
+    const p = senzaCommenti(leggi('app/components/PrimaProva.js'));
+    expect(p).toMatch(/setDove\(v\); setMeta2\(null\)/);
+  });
+
+  it('la destinazione prende il posto della lettura, non la spinge giu', () => {
+    const p = senzaCommenti(leggi('app/components/PrimaProva.js'));
+    expect(p, 'una cosa per volta, stesso posto')
+      .toMatch(/scegliLingua \? bloccoLingue : scegliDove \? bloccoDove : bloccoLettura/);
+  });
+
+  it('non costa niente e non passa dai nostri server', () => {
+    // la ricerca va su OpenStreetMap e il QR su un servizio pubblico:
+    // nessuna nostra rotta, nessun credito scalato.
+    const p = senzaCommenti(leggi('app/components/PrimaProva.js'));
+    const dentroDove = p.slice(p.indexOf('const cercaIndirizzo'), p.indexOf('const micDisponibile'));
+    expect(dentroDove, 'nessuna chiamata a casa nostra').not.toMatch(/fetch\('\/api\//);
+  });
+});

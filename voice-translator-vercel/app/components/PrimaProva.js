@@ -9,6 +9,13 @@ import Icon from './Icon.js';
 // una seconda: si usa quella. Era una fila di pillole fatta da me, ed era
 // un'altra cosa in un altro posto per fare lo stesso mestiere.
 import CarouselLingue from './CarouselLingue.js';
+// b.430 — L'INDIRIZZO E LA MAPPA (collaudo di Luca: «non vedo il tasto per
+// mostrare la mappa o inserire un indirizzo»). Non c'erano: stavano solo
+// in TaxiTalk. Qui sono gli STESSI pezzi, copiati da li e non riscritti —
+// la ricerca su OpenStreetMap, la mappina di conferma, il QR che apre la
+// mappa sul telefono di chi hai davanti.
+import TaxiMap from './TaxiMap.js';
+import { buildMapsUrl } from '../lib/mapsLink.js';
 import { parlaColSistema } from '../lib/voceSistema.js'; // b.417
 
 // ═══════════════════════════════════════════════════════════════
@@ -93,6 +100,15 @@ export default function PrimaProva({ onChiudi }) {
   // scrivere»). Un comando che apre una cosa che poteva star li da sola e
   // un tocco chiesto per niente.
   const [scegliLingua, setScegliLingua] = useState(false); // la fila delle lingue e a schermo
+  // b.430 — la destinazione: campo, mappa e QR. Prende il posto della
+  // lettura come le lingue, e come le lingue non spinge giu niente.
+  const [scegliDove, setScegliDove] = useState(false);
+  const [dove, setDove] = useState('');            // quello che si scrive
+  const [meta2, setMeta2] = useState(null);        // il posto scelto {lat, lon, displayName}
+  const [risultati, setRisultati] = useState([]);
+  const [cercando, setCercando] = useState(false);
+  const [erroreDove, setErroreDove] = useState('');
+  const [mioPunto, setMioPunto] = useState(null);
   const recRef = useRef(null);
   const dettoRef = useRef(false); // per decidere la voce senza rilegare gli effetti
   const timerRef = useRef(null);
@@ -349,6 +365,63 @@ export default function PrimaProva({ onChiudi }) {
     clearTimeout(timerRef.current);
   }, []);
 
+  // ═══ b.430 — LA DESTINAZIONE, copiata da TaxiTalk riga per riga ═══
+  // Dove sei: serve solo a far salire in cima i posti vicini. Se il
+  // telefono non la da, la ricerca funziona lo stesso.
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (p) => setMioPunto({ lat: p.coords.latitude, lon: p.coords.longitude }),
+      () => {}, { timeout: 10000, maximumAge: 60000 }
+    );
+  }, []);
+
+  const cercaIndirizzo = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) return;
+    setCercando(true); setErroreDove(''); setRisultati([]);
+    try {
+      const enc = encodeURIComponent(q.trim());
+      const vicino = mioPunto
+        ? `&viewbox=${mioPunto.lon - 0.5},${mioPunto.lat + 0.5},${mioPunto.lon + 0.5},${mioPunto.lat - 0.5}`
+        : '';
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${enc}${vicino}&format=json&limit=5&addressdetails=1`,
+        { signal: AbortSignal.timeout(10000), headers: { 'Accept-Language': meta || 'en' } }
+      );
+      if (!res.ok) throw new Error('geocoding');
+      const dati = await res.json().catch(() => null);
+      if (!dati) { setErroreDove(L('searchError')); setCercando(false); return; }
+      if (dati.length === 0) setErroreDove(L('placeNotFound'));
+      else if (dati.length === 1) {
+        setMeta2({ lat: parseFloat(dati[0].lat), lon: parseFloat(dati[0].lon), displayName: dati[0].display_name });
+      } else {
+        setRisultati(dati.map((p) => ({ lat: parseFloat(p.lat), lon: parseFloat(p.lon), displayName: p.display_name })));
+      }
+    } catch (e) {
+      if (e?.name !== 'AbortError') console.warn('[b.430] nominatim:', e?.message || e);
+      setErroreDove(L('searchError'));
+    }
+    setCercando(false);
+  }, [mioPunto, meta, L]);
+
+  // b.248 — cambiare il testo dopo aver scelto invalida la scelta: campo,
+  // mappa e QR non possono dire due cose diverse.
+  const cambiaDove = useCallback((v) => { setDove(v); setMeta2(null); }, []);
+  const scegliPosto = useCallback((r) => {
+    vibrate(12); setMeta2(r); setRisultati([]);
+    setDove(r.displayName.split(',').slice(0, 3).join(', '));
+  }, []);
+
+  const indirizzoMappa = meta2 ? buildMapsUrl({ lat: meta2.lat, lng: meta2.lon, normalizedAddress: meta2.displayName }, 'google') : '';
+  const qrSrc = indirizzoMappa
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=${encodeURIComponent(indirizzoMappa)}`
+    : '';
+  const condividiMappa = useCallback(async () => {
+    if (!indirizzoMappa) return; vibrate(12);
+    if (navigator.share) { try { await navigator.share({ text: meta2?.displayName || '', url: indirizzoMappa }); } catch { /* l'utente ha annullato la condivisione: nessuna azione necessaria */ } }
+    else { try { await navigator.clipboard.writeText(indirizzoMappa); } catch { /* il browser non concede gli appunti in questo contesto: l'indirizzo resta comunque a schermo */ } }
+  }, [indirizzoMappa, meta2]);
+
   const micDisponibile = typeof window !== 'undefined' && !!(window.SpeechRecognition || window.webkitSpeechRecognition);
   const bordo = `1px solid ${C.cardBorder || 'rgba(255,255,255,0.1)'}`;
   const ultimaResa = storia.length ? storia[storia.length - 1].resa : '';
@@ -449,6 +522,78 @@ export default function PrimaProva({ onChiudi }) {
         onScegli={(lingua) => { setMeta(lingua.code); setScegliLingua(false); }}
         onLinguaMenu={() => { vibrate(); setView?.('settings'); }}
         C={C} L={L} />
+    </div>
+  );
+
+  // ── DOVE VAI: campo, mappa, QR. Copiato da TaxiTalk, stessa resa. ──
+  // Prende il posto della lettura come le lingue: una cosa per volta,
+  // sempre nello stesso posto. Il QR e la cosa piu utile di tutte —
+  // chi hai davanti lo inquadra e gli si apre la SUA mappa, nella sua
+  // lingua, senza installare niente.
+  const bloccoDove = (
+    <div key="dove" style={{ flex: '1 1 auto', minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none',
+      display: 'flex', flexDirection: 'column', gap: 10, padding: '4px 0' }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input value={dove} onChange={(e) => cambiaDove(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && dove.trim()) cercaIndirizzo(dove); }}
+          placeholder={L('searchAddress')} aria-label={L('searchAddress')}
+          style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.05)', border: bordo,
+            borderRadius: 16, padding: '15px 14px', color: C.textPrimary, fontSize: 16,
+            fontFamily: FONT, outline: 'none' }} />
+        <button onClick={() => dove.trim() && cercaIndirizzo(dove)} disabled={!dove.trim() || cercando}
+          aria-label={L('search')}
+          style={{ height: 54, padding: '0 18px', borderRadius: 16, flexShrink: 0, cursor: dove.trim() ? 'pointer' : 'default',
+            border: dove.trim() ? `1px solid rgba(91,140,255,0.34)` : bordo,
+            background: dove.trim() ? 'rgba(91,140,255,0.13)' : 'rgba(255,255,255,0.05)',
+            color: dove.trim() ? (C.accent || '#5b8cff') : C.textMuted,
+            fontFamily: FONT, fontSize: 14, fontWeight: 800, opacity: dove.trim() ? 1 : 0.5 }}>
+          {cercando ? '…' : L('search')}
+        </button>
+      </div>
+
+      {risultati.length > 0 && (
+        <div style={{ border: bordo, borderRadius: 14, overflow: 'hidden' }}>
+          {risultati.map((r, i) => (
+            <button key={i} onClick={() => scegliPosto(r)}
+              style={{ width: '100%', textAlign: 'left', padding: '13px 14px', background: 'none',
+                border: 'none', borderBottom: i < risultati.length - 1 ? bordo : 'none',
+                color: C.textPrimary, fontSize: 13.5, fontFamily: FONT, cursor: 'pointer', lineHeight: 1.4 }}>
+              <b>{r.displayName.split(',').slice(0, 2).join(',')}</b>
+              <div style={{ fontSize: 11.5, color: C.textMuted }}>{r.displayName.split(',').slice(2, 5).join(',')}</div>
+            </button>
+          ))}
+        </div>
+      )}
+      {erroreDove && <div style={{ fontSize: 12.5, color: '#ff5470', fontFamily: FONT }}>{erroreDove}</div>}
+
+      {meta2 && (
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <TaxiMap lat={meta2.lat} lng={meta2.lon} altezza={160} raggio={16} comandi={false} />
+            <div style={{ fontSize: 12, color: C.textMuted, marginTop: 6, overflow: 'hidden',
+              textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
+              {meta2.displayName.split(',').slice(0, 3).join(',')}
+            </div>
+          </div>
+          <div style={{ width: 138, flexShrink: 0, display: 'flex', flexDirection: 'column',
+            alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.05)', border: bordo,
+            borderRadius: 16, padding: '12px 10px' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- immagine
+                generata da un servizio esterno: next/image vorrebbe il
+                dominio in elenco, e per un QR non serve */}
+            <img src={qrSrc} alt="" width={108} height={108}
+              style={{ borderRadius: 10, background: '#fff', padding: 6, display: 'block' }} />
+            <div style={{ fontSize: 11, color: C.textMuted, textAlign: 'center', lineHeight: 1.35, fontFamily: FONT }}>
+              {L('taxiScanOpensMap')}
+            </div>
+            <button onClick={condividiMappa}
+              style={{ fontSize: 12, fontWeight: 700, color: C.accent || '#5b8cff', background: 'none',
+                border: 'none', cursor: 'pointer', fontFamily: FONT, padding: 6 }}>
+              {L('taxiShareLink')}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -630,6 +775,12 @@ export default function PrimaProva({ onChiudi }) {
             style={{ ...tondino(false), opacity: passo >= PASSO_MAX ? 0.35 : 1,
               color: C.textSecondary, fontSize: 19, fontWeight: 800 }}>A+</button>
         </>)}
+        {/* b.430 — DOVE VAI: il tasto che mancava. Apre campo, mappa e QR. */}
+        <button onClick={() => { vibrate(6); setScegliDove((v) => !v); setScegliLingua(false); }}
+          aria-pressed={scegliDove} aria-label={L('taxiWhereTo')} title={L('taxiWhereTo')}
+          style={tondino(scegliDove)}>
+          <Icon name="target" size={19} color={scegliDove ? (C.accent || '#5b8cff') : C.textMuted} />
+        </button>
         <button onClick={() => { vibrate(6); setCapovolto((v) => !v); }}
           aria-pressed={capovolto} aria-label={L('faceToFaceWord')} title={L('faceToFaceWord')}
           style={tondino(capovolto)}>
@@ -639,12 +790,12 @@ export default function PrimaProva({ onChiudi }) {
 
       {/* IL CENTRO: le lingue quando le chiedi, altrimenti cio che si legge.
           Una cosa per volta, sempre nello stesso posto: niente si sposta. */}
-      {scegliLingua ? bloccoLingue : bloccoLettura}
+      {scegliLingua ? bloccoLingue : scegliDove ? bloccoDove : bloccoLettura}
 
       {/* Sotto, sempre e in quest'ordine: la voce, poi il testo. Nessuna
           delle due si ribalta — si parla e si scrive mentre l'altro legge. */}
-      {!scegliLingua && bloccoVoce}
-      {!scegliLingua && bloccoTesto}
+      {!scegliLingua && !scegliDove && bloccoVoce}
+      {!scegliLingua && !scegliDove && bloccoTesto}
     </div>
   );
 }
