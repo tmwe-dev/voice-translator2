@@ -61,11 +61,19 @@
   * { box-sizing: border-box; }
 
   /* ══ COME SI USA UN'ICONA VERA: <svg class="ic"><use href="#i-mic"/></svg> ══ */
+  /* ══ IL RILIEVO SENZA GRASSETTO ══
+     Prova chiesta da Luca: niente bold. Cio che prima si distingueva col
+     peso adesso si distingue col COLORE — testo pieno contro testo
+     smorto — e con la misura. Il grassetto e uno strumento potente
+     proprio perche raro: usato ovunque non distingue piu niente, e
+     l'occhio smette di vederlo. */
+  .ril { color: var(--testo); font-weight: 500; }
+
   .ic { width: 20px; height: 20px; flex-shrink: 0; fill: none; stroke: currentColor;
-        stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .ic.g { width: 24px; height: 24px; }
-  .ic.gg { width: 38px; height: 38px; stroke-width: 1.7; }
-  .ic.ggg { width: 46px; height: 46px; stroke-width: 1.6; }
+  .ic.gg { width: 38px; height: 38px; stroke-width: 1.3; }
+  .ic.ggg { width: 46px; height: 46px; stroke-width: 1.2; }
   .ic.p { width: 16px; height: 16px; }
   /* le icone in acciaio delle sezioni e della barra: immagini, non tratti */
   .acciaio { width: 54px; height: 54px; background-size: contain; background-repeat: no-repeat;
@@ -81,12 +89,12 @@
   }
   .foglio { max-width: 1240px; margin: 0 auto; padding: 28px 20px 70px; }
 
-  .occhiello { font-size: 11px; font-weight: 800; letter-spacing: 1.6px; color: var(--accento); margin: 0 0 10px; }
-  h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 40px); font-weight: 800; letter-spacing: -0.6px; line-height: 1.1; text-wrap: balance; }
+  .occhiello { font-size: 11px; font-weight: 600; letter-spacing: 1.6px; color: var(--accento); margin: 0 0 10px; }
+  h1 { margin: 0 0 10px; font-size: clamp(26px, 5vw, 40px); font-weight: 600; letter-spacing: -0.6px; line-height: 1.1; text-wrap: balance; }
   .sommario { margin: 0 0 6px; max-width: 64ch; font-size: 15px; line-height: 1.55; color: var(--testo-2); }
   .nota { max-width: 64ch; font-size: 13px; line-height: 1.6; color: var(--muto); border-left: 2px solid var(--bordo); padding-left: 12px; margin: 16px 0 0; }
 
-  h2.sezione { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; margin: 44px 0 4px; }
+  h2.sezione { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; margin: 44px 0 4px; }
   p.sotto { font-size: 13.5px; color: var(--muto); margin: 0 0 18px; max-width: 64ch; }
 
   .pista { display: flex; gap: 18px; overflow-x: auto; padding: 22px 0 12px; scroll-snap-type: x mandatory; scrollbar-width: none; }
@@ -94,14 +102,14 @@
   .colonna { flex: 0 0 auto; width: 340px; scroll-snap-align: center; }
 
   .cartellino { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
-  .cartellino .lettera { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; color: var(--accento); }
-  .cartellino .nome { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
+  .cartellino .lettera { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; color: var(--accento); }
+  .cartellino .nome { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; }
   .didascalia { font-size: 12.5px; line-height: 1.5; color: var(--testo-3); margin: 0 0 14px; min-height: 38px; }
 
   /* ══ IL BOLLINO DI STATO — cosa e gia nel programma e cosa no ══ */
   .stato {
     display: inline-flex; align-items: center; gap: 5px; margin-left: auto;
-    font-size: 10px; font-weight: 800; letter-spacing: 0.6px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.6px;
     padding: 3px 8px; border-radius: 999px; white-space: nowrap;
   }
   .stato.fatto   { color: var(--verde); background: rgba(61,220,132,0.12); border: 1px solid rgba(61,220,132,0.28); }
@@ -124,7 +132,7 @@
     display: flex; align-items: center; justify-content: space-around;
     background: rgba(5,7,15,0.85);
   }
-  .barra i { font-style: normal; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 700; color: var(--muto); }
+  .barra i { font-style: normal; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9.5px; font-weight: 500; color: var(--muto); }
   .barra i.on { color: var(--accento); }
   .barra .piu { width: 40px; height: 40px; border-radius: 999px; background: rgba(238,242,255,0.14); display: flex; align-items: center; justify-content: center; }
 
@@ -132,20 +140,20 @@
   .testata { display: flex; align-items: center; gap: 8px; flex-shrink: 0; height: var(--tasto); }
   .tondino {
     width: var(--tasto); height: var(--tasto); border-radius: 999px; flex-shrink: 0;
-    border: 1px solid var(--bordo); background: transparent; color: var(--testo-2);
+    border: 0.5px solid var(--bordo); background: transparent; color: var(--testo-2);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
-    font-family: var(--font); font-size: 15px; font-weight: 800; padding: 0;
+    font-family: var(--font); font-size: 15px; font-weight: 600; padding: 0;
   }
-  .tondino.on { border: 1.5px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+  .tondino.on { border: 1px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
   .tondino.nudo { border: none; }
-  .titolo { flex: 1; font-size: 16px; font-weight: 800; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .titolo { flex: 1; font-size: 16px; font-weight: 600; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pillola {
     display: inline-flex; align-items: center; gap: 7px; height: var(--tasto); padding: 0 15px;
-    border-radius: 999px; border: 1px solid var(--bordo); background: rgba(255,255,255,0.04);
-    color: var(--testo); font-size: 14.5px; font-weight: 700; cursor: pointer; font-family: var(--font);
+    border-radius: 999px; border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.04);
+    color: var(--testo); font-size: 14.5px; font-weight: 500; cursor: pointer; font-family: var(--font);
     white-space: nowrap;
   }
-  .pillola.on { border: 1.5px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
+  .pillola.on { border: 1px solid var(--accento); background: rgba(91,140,255,0.13); color: var(--accento); }
 
   .corpo { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 12px 0; display: flex; flex-direction: column; gap: 10px; }
   .corpo::-webkit-scrollbar { display: none; }
@@ -156,31 +164,31 @@
   .riga-campo { display: flex; align-items: flex-end; gap: 8px; flex-shrink: 0; padding-bottom: 10px; }
   .campo {
     flex: 1; min-height: 54px; padding: 15px 14px; border-radius: 16px;
-    border: 1px solid var(--bordo); background: rgba(255,255,255,0.05);
+    border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05);
     color: var(--muto); font-size: 16px; font-family: var(--font); line-height: 1.35;
   }
   .quadro {
     width: 54px; height: 54px; border-radius: 16px; flex-shrink: 0; padding: 0;
-    border: 1px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.13);
+    border: 0.5px solid rgba(91,140,255,0.34); background: rgba(91,140,255,0.13);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
   }
-  .quadro.spento { border: 1px solid var(--bordo); background: rgba(255,255,255,0.05); opacity: 0.4; }
+  .quadro.spento { border: 0.5px solid var(--bordo); background: rgba(255,255,255,0.05); opacity: 0.4; }
 
   .scheda { border: 1px solid var(--bordo); border-radius: 18px; background: var(--carta); overflow: hidden; }
   .scheda .dentro { padding: 13px 14px; }
-  .scheda h4 { margin: 0 0 4px; font-size: 15px; font-weight: 700; line-height: 1.32; }
-  .scheda .eti { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--muto); font-weight: 700; }
-  .chip { border: 1px solid var(--bordo); border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 700; color: var(--testo-3); }
-  .foto { height: 116px; background: linear-gradient(135deg, rgba(91,140,255,0.14), rgba(56,225,255,0.10)); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 800; color: rgba(91,140,255,0.45); }
+  .scheda h4 { margin: 0 0 4px; font-size: 15px; font-weight: 500; line-height: 1.32; }
+  .scheda .eti { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--muto); font-weight: 500; }
+  .chip { border: 1px solid var(--bordo); border-radius: 6px; padding: 3px 7px; font-size: 11px; font-weight: 500; color: var(--testo-3); }
+  .foto { height: 116px; background: linear-gradient(135deg, rgba(91,140,255,0.14), rgba(56,225,255,0.10)); display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 600; color: rgba(91,140,255,0.45); }
 
   .riga-voce { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 2px; border-bottom: 1px solid var(--bordo); }
-  .riga-voce .t { font-size: 15px; font-weight: 700; }
+  .riga-voce .t { font-size: 15px; font-weight: 500; }
   .riga-voce .d { font-size: 12px; color: var(--muto); margin-top: 2px; }
   .riga-voce .frec { color: var(--muto); font-size: 17px; }
 
   .schede-fila { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; padding: 4px 0 8px; }
   .schede-fila::-webkit-scrollbar { display: none; }
-  .scheda-voce { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px; font-size: 11px; font-weight: 700; color: var(--muto); cursor: pointer; }
+  .scheda-voce { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px; font-size: 11px; font-weight: 500; color: var(--muto); cursor: pointer; }
   .scheda-voce.on { color: var(--accento); border-bottom: 2px solid var(--accento); }
 
   .globo { position: absolute; inset: 0; z-index: 0; background: radial-gradient(circle at 50% 42%, rgba(56,225,255,0.13), transparent 55%), radial-gradient(circle at 50% 40%, rgba(91,140,255,0.16), transparent 45%); }
@@ -192,21 +200,21 @@
   .bolla .orig { display: block; font-size: 11.5px; color: var(--muto); margin-top: 4px; }
 
   .spiega { margin-top: 14px; font-size: 13px; line-height: 1.62; color: var(--testo-2); }
-  .spiega b { color: var(--testo); font-weight: 800; }
+  .spiega b { color: var(--testo); font-weight: 600; }
   .spiega ul { margin: 8px 0 0; padding-left: 18px; }
   .spiega li { margin-bottom: 5px; }
 
   .griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 14px; }
   .regola { border: 1px solid var(--bordo); border-radius: 16px; padding: 16px; background: var(--carta); }
-  .regola .n { font-size: 11px; font-weight: 800; color: var(--accento); letter-spacing: 1.2px; }
-  .regola .t { font-size: 14.5px; font-weight: 800; margin: 6px 0; }
+  .regola .n { font-size: 11px; font-weight: 600; color: var(--accento); letter-spacing: 1.2px; }
+  .regola .t { font-size: 14.5px; font-weight: 600; margin: 6px 0; }
   .regola .d { font-size: 12.5px; line-height: 1.6; color: var(--testo-3); }
   .regola .m { font-size: 11.5px; color: var(--muto); margin-top: 8px; font-variant-numeric: tabular-nums; }
 
   .kit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   .pezzo { border: 1px solid var(--bordo); border-radius: 18px; padding: 16px; background: var(--carta); }
-  .pezzo .nome { font-size: 13px; font-weight: 800; margin-bottom: 4px; }
-  .pezzo .mis { font-size: 11.5px; color: var(--accento); font-weight: 700; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
+  .pezzo .nome { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .pezzo .mis { font-size: 11.5px; color: var(--accento); font-weight: 500; margin-bottom: 12px; font-variant-numeric: tabular-nums; }
   .pezzo .prova { background: rgba(5,7,15,0.5); border-radius: 12px; padding: 12px; }
   .pezzo .perche { font-size: 12px; color: var(--testo-3); line-height: 1.55; margin-top: 10px; }
 
@@ -286,13 +294,29 @@
     niente scatole vuote, una cosa che comanda, e cio che appare sostituisce invece di
     spingere giu.
   </p>
+  <p class="nota" style="border-left-color:var(--accento)">
+    <span class="ril">Due prove chieste da Luca, e vanno guardate insieme.</span>
+    <span class="ril">Niente grassetto:</span> cio che prima si distingueva col peso adesso
+    si distingue col colore — testo pieno contro testo smorto — e con la misura. Il
+    grassetto e uno strumento forte proprio perche raro: messo dappertutto non distingue
+    piu niente e l'occhio smette di vederlo.
+    <span class="ril">E le linee dei comandi a mezzo punto:</span> su uno schermo vero
+    diventano un capello, e un tondino torna a leggersi come un contorno invece che come un
+    riquadro. Anche il tratto delle icone e sceso, o le linee non sarebbero state della
+    stessa famiglia.
+    <br><br>
+    ATTENZIONE, e la cosa da guardare: <span class="ril">cosi il template NON e piu uguale
+    all'applicazione</span>, che oggi usa pesi da ottocento e bordi da un punto. Se ti
+    convince, si porta anche la; se no, si torna indietro qui e non e successo niente.
+  </p>
+
   <p class="nota">
-    <b>Come si usa.</b> Tredici pagine, sedici pezzi riusabili, i quattro stati che ogni
+    <span class="ril">Come si usa.</span> Tredici pagine, sedici pezzi riusabili, i quattro stati che ogni
     schermata deve saper fare, e la tabella con tutte le misure.
     Quando si tocca una pagina si copia dal kit, non si reinventa: cosi due schermate
     diverse non finiscono per fare la stessa cosa in due modi — che e come siamo arrivati
     ad avere tre microfoni diversi e due liste di lingue diverse.
-    <b>Se un numero non e nella tabella in fondo, vuol dire che non e stato deciso</b>: si
+    <span class="ril">Se un numero non e nella tabella in fondo, vuol dire che non e stato deciso</span>: si
     decide una volta e si scrive li.
   </p>
 
@@ -317,7 +341,7 @@
     <span style="font-size:12.5px;color:var(--testo-3);align-self:center">disegnata qui, non ancora nel programma</span>
   </div>
   <p class="sotto" style="margin-top:14px">
-    <b style="color:var(--testo)">Cinque fatte, tre gia a posto, cinque da fare.</b>
+    <span class="ril">Cinque fatte, tre gia a posto, cinque da fare.</span>
     E una regola che vale per tutte: si applica dove RIPARA qualcosa, non si restaura cio che
     gia funziona. Ogni pagina segnata FATTO ha chiuso un difetto vero, non un difetto di
     gusto — il microfono che mancava, le lingue buttate un passo prima di servire, un tocco
@@ -338,16 +362,16 @@
             <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
           </div>
           <div class="corpo" style="align-items:center;justify-content:center;gap:0">
-            <div style="display:flex;align-items:center;gap:10px;color:var(--muto);font-size:12px;font-weight:700">
+            <div style="display:flex;align-items:center;gap:10px;color:var(--muto);font-size:12px;font-weight: 500">
               <span>‹</span><span style="opacity:.3">🇰🇷</span><span style="opacity:.55">🇹🇼</span>
               <span style="font-size:26px">🇺🇸</span><span style="opacity:.55">🇪🇸</span><span style="opacity:.3">🇫🇷</span><span>›</span>
             </div>
-            <div style="font-size:12.5px;font-weight:700;color:var(--accento);margin:8px 0 26px">English (US) ✓</div>
+            <div style="font-size:12.5px;font-weight: 500;color:var(--accento);margin:8px 0 26px">English (US) ✓</div>
             <div style="width:132px;height:132px;border-radius:999px;border:1px solid rgba(91,140,255,0.34);
               background:radial-gradient(circle at 50% 38%, rgba(91,140,255,0.30), rgba(91,140,255,0.08) 62%, transparent 74%);
               box-shadow:0 0 0 10px rgba(91,140,255,0.05), 0 20px 60px -18px rgba(91,140,255,0.55);
               display:flex;align-items:center;justify-content:center;font-size:44px"><svg class="ic"><use href="#i-mic"/></svg></div>
-            <div style="font-size:17px;font-weight:800;margin-top:14px">Parla ora</div>
+            <div style="font-size:17px;font-weight: 600;margin-top:14px">Parla ora</div>
             <div style="width:100%;margin-top:26px">
               <div class="riga-voce"><div style="display:flex;align-items:center;gap:12px"><span class="acciaio" style="background-image:var(--img-sez-mondo)"></span><div><div class="t">Il mondo ora</div><div class="d">Stanze aperte, discussioni senza barriere</div></div></div><span class="frec">›</span></div>
               <div class="riga-voce"><div style="display:flex;align-items:center;gap:12px"><span class="acciaio" style="background-image:var(--img-sez-life)"></span><div><div class="t">Vita</div><div class="d">Podcast, tutor e corsi coi tuoi Compagni</div></div></div><span class="frec">›</span></div>
@@ -358,9 +382,9 @@
         <div class="barra"><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-home)"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia rispetto a oggi.</b>
+        <span class="ril">Cosa cambia rispetto a oggi.</span>
         <ul>
-          <li>Le sezioni erano riquadri con bordo: adesso sono <b>righe</b>. Tre riquadri uguali non dicono da dove cominciare, tre righe si leggono in fila.</li>
+          <li>Le sezioni erano riquadri con bordo: adesso sono <span class="ril">righe</span>. Tre riquadri uguali non dicono da dove cominciare, tre righe si leggono in fila.</li>
           <li>La pila del credito diventa un tondino nella testata, allineato agli altri.</li>
           <li>Il carosello resta identico: si tocca la bandiera al centro per scegliere.</li>
         </ul>
@@ -383,10 +407,10 @@
             <span class="scheda-voce on">Stanze</span><span class="scheda-voce">Notizie</span>
           </div>
           <div class="corpo" style="padding-top:4px">
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">QUI SE NE PARLA</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">QUI SE NE PARLA</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <span class="chip" style="padding:7px 12px;border-radius:999px">yen <b style="color:var(--muto)">3</b></span>
-              <span class="chip" style="padding:7px 12px;border-radius:999px">tecnologia <b style="color:var(--muto)">2</b></span>
+              <span class="chip" style="padding:7px 12px;border-radius:999px">yen <span style="color:var(--muto)">3</span></span>
+              <span class="chip" style="padding:7px 12px;border-radius:999px">tecnologia <span style="color:var(--muto)">2</span></span>
             </div>
             <div class="scheda" style="margin-top:6px">
               <div class="dentro">
@@ -405,9 +429,9 @@
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia.</b>
+        <span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Il selettore Stanze/Notizie era una tendina col triangolino: diventano <b>due linguette</b>, si vedono tutte e due senza aprire niente.</li>
+          <li>Il selettore Stanze/Notizie era una tendina col triangolino: diventano <span class="ril">due linguette</span>, si vedono tutte e due senza aprire niente.</li>
           <li>Il Paese e «Cambia» stanno nella stessa pillola: dove sei e come uscirne, in un pezzo solo.</li>
           <li>Il pianeta resta dietro e si vela scorrendo, come gia fa.</li>
         </ul>
@@ -447,9 +471,9 @@
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia.</b>
+        <span class="ril">Cosa cambia.</span>
         <ul>
-          <li><b>Il microfono nel campo</b>, che oggi manca: l'unico era dentro «Dal vivo», e dettare non si poteva.</li>
+          <li><span class="ril">Il microfono nel campo</span>, che oggi manca: l'unico era dentro «Dal vivo», e dettare non si poteva.</li>
           <li>«Dal vivo» diventa un tondino acceso nella testata, allineato agli altri comandi.</li>
           <li>Le sette schede restano dove sono: cambia solo che l'icona sta sopra la parola, cosi si riconoscono senza leggerle.</li>
         </ul>
@@ -485,9 +509,9 @@
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia.</b>
+        <span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Chi c'e e in che lingua sta <b>sotto la testata</b>, sempre visibile: era dentro il menu •••, cioe nascosto.</li>
+          <li>Chi c'e e in che lingua sta <span class="ril">sotto la testata</span>, sempre visibile: era dentro il menu •••, cioe nascosto.</li>
           <li>Ogni messaggio porta l'originale sotto la traduzione, piccolo. Chi vuole controllare puo.</li>
           <li>Il menu ••• si apre a larghezza vera, non piu schiacciato a fisarmonica.</li>
         </ul>
@@ -521,9 +545,9 @@
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia.</b>
+        <span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Il biglietto e <b>una cosa sola grande</b> in cima: e il motivo per cui si apre questa pagina.</li>
+          <li>Il biglietto e <span class="ril">una cosa sola grande</span> in cima: e il motivo per cui si apre questa pagina.</li>
           <li>Il resto sono righe, come sulla Home. Stessa forma, stesso gesto.</li>
           <li>Le immagini dei biglietti non si toccano.</li>
         </ul>
@@ -553,7 +577,7 @@
             <div class="scheda">
               <div class="dentro">
                 <div style="display:flex;align-items:baseline;gap:8px">
-                  <div style="font-size:30px;font-weight:800;color:var(--verde)">162h</div>
+                  <div style="font-size:30px;font-weight: 600;color:var(--verde)">162h</div>
                   <div style="font-size:13px;color:var(--muto)">11m di credito</div>
                 </div>
                 <div style="height:6px;border-radius:3px;background:var(--spento);margin:10px 0 4px;overflow:hidden">
@@ -570,10 +594,10 @@
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
       <div class="spiega">
-        <b>Cosa cambia.</b>
+        <span class="ril">Cosa cambia.</span>
         <ul>
-          <li>Il credito e <b>un numero grande</b>, non una pila da interpretare: e la cosa che si viene a controllare.</li>
-          <li>Ogni riga dice cosa fa <b>sotto il titolo</b>: nessuno deve entrare per scoprirlo.</li>
+          <li>Il credito e <span class="ril">un numero grande</span>, non una pila da interpretare: e la cosa che si viene a controllare.</li>
+          <li>Ogni riga dice cosa fa <span class="ril">sotto il titolo</span>: nessuno deve entrare per scoprirlo.</li>
         </ul>
       </div>
     </div>
@@ -598,8 +622,8 @@
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li>Ogni riga dice <b>le due lingue</b>: e la cosa che distingue una conversazione dall'altra, e oggi non si vede.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li>Ogni riga dice <span class="ril">le due lingue</span>: e la cosa che distingue una conversazione dall'altra, e oggi non si vede.</li>
         <li>Stessa riga-voce della Home: stesso gesto, stessa forma.</li></ul></div>
     </div>
 
@@ -619,7 +643,7 @@
             <div style="width:28%;height:100%;background:var(--accento)"></div>
           </div>
           <div class="corpo">
-            <div style="font-size:20px;font-weight:800;line-height:1.35">The alphabet has 26 letters.</div>
+            <div style="font-size:20px;font-weight: 600;line-height:1.35">The alphabet has 26 letters.</div>
             <div style="font-size:14px;color:var(--muto);line-height:1.5">L'alfabeto ha ventisei lettere.</div>
             <div class="scheda"><div class="foto">A</div></div>
             <div style="font-size:14.5px;color:var(--testo-2);line-height:1.55">Five of them are vowels: A, E, I, O, U.</div>
@@ -631,8 +655,8 @@
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li>A che punto sei sta <b>in cima, sempre</b>: una barra sottile e «1 di 12». Oggi bisogna indovinarlo.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li>A che punto sei sta <span class="ril">in cima, sempre</span>: una barra sottile e «1 di 12». Oggi bisogna indovinarlo.</li>
         <li>Il paragrafo che il Maestro sta leggendo e grande; la traduzione sotto, piccola.</li>
         <li>Alzare la mano si fa dal campo in basso, come si scrive dappertutto.</li></ul></div>
     </div>
@@ -651,22 +675,22 @@
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:10px;padding:4px 2px">
               <div class="faccia" style="width:44px;height:44px;background-image:var(--img-av3)"></div>
-              <div style="flex:1"><div style="font-size:14px;font-weight:800">Omar</div><div style="font-size:11.5px;color:var(--muto)">ricercatore · parla ora</div></div>
+              <div style="flex:1"><div style="font-size:14px;font-weight: 600">Omar</div><div style="font-size:11.5px;color:var(--muto)">ricercatore · parla ora</div></div>
               <div style="display:flex;gap:3px;align-items:flex-end;height:20px">
                 <span style="width:3px;height:8px;background:var(--accento);border-radius:2px"></span>
                 <span style="width:3px;height:16px;background:var(--accento);border-radius:2px"></span>
                 <span style="width:3px;height:11px;background:var(--accento);border-radius:2px"></span>
               </div>
             </div>
-            <div style="font-size:19px;font-weight:800;line-height:1.35">I dati Istat dicono che gli alimentari sono saliti del dieci per cento.</div>
-            <div style="font-size:14px;color:var(--muto);line-height:1.5;margin-top:14px"><b style="color:var(--testo-3)">Aisha:</b> Ma gli stipendi solo del due e sei.</div>
-            <div style="font-size:14px;color:var(--muto);line-height:1.5"><b style="color:var(--testo-3)">Marcus:</b> Allora la domanda vera e un'altra.</div>
+            <div style="font-size:19px;font-weight: 600;line-height:1.35">I dati Istat dicono che gli alimentari sono saliti del dieci per cento.</div>
+            <div style="font-size:14px;color:var(--muto);line-height:1.5;margin-top:14px"><span class="ril">Aisha:</span> Ma gli stipendi solo del due e sei.</div>
+            <div style="font-size:14px;color:var(--muto);line-height:1.5"><span class="ril">Marcus:</span> Allora la domanda vera e un'altra.</div>
           </div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li><b>Chi parla adesso</b> ha faccia, nome e ruolo in cima, con le barrette che si muovono. Oggi si capisce solo dal testo.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li><span class="ril">Chi parla adesso</span> ha faccia, nome e ruolo in cima, con le barrette che si muovono. Oggi si capisce solo dal testo.</li>
         <li>La battuta in corso e grande, le precedenti si fanno da parte: stessa regola del traduttore.</li>
         <li>Pausa e stop sono tondini in testata, non una barra a se.</li></ul></div>
     </div>
@@ -697,15 +721,15 @@
               </div>
               <div class="eti"><span>22% · 5 giorni di fila</span></div>
             </div></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:8px">PER OGGI</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">PER OGGI</div>
             <div class="riga-voce"><div><div class="t">Ripassa i verbi irregolari</div><div class="d">10 minuti · dal Maestro</div></div><span class="frec">›</span></div>
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Leggi: «Il costo della vita»</div><div class="d">4 minuti · da Mondo</div></div><span class="frec">›</span></div>
           </div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-chat)"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li>Ogni obiettivo mostra <b>quanto manca</b>, non solo che esiste.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li>Ogni obiettivo mostra <span class="ril">quanto manca</span>, non solo che esiste.</li>
         <li>«Per oggi» sotto: i compiti sono righe, non un'altra sezione da aprire.</li></ul></div>
     </div>
 
@@ -724,14 +748,14 @@
           <div class="corpo">
             <div style="display:flex;gap:8px">
               <div class="campo" style="min-height:48px;padding:13px 14px;font-size:15px">Aeroporto di Barajas</div>
-              <div class="quadro" style="width:auto;padding:0 16px;font-size:14px;font-weight:800;color:var(--accento)">Cerca</div>
+              <div class="quadro" style="width:auto;padding:0 16px;font-size:14px;font-weight: 600;color:var(--accento)">Cerca</div>
             </div>
             <div style="display:flex;gap:10px;margin-top:4px">
               <div style="flex:1;min-width:0">
-                <div style="height:130px;border-radius:16px;background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));border:1px solid var(--bordo);display:flex;align-items:center;justify-content:center;font-size:24px"><svg class="ic g"><use href="#i-target"/></svg></div>
+                <div style="height:130px;border-radius:16px;background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));border:0.5px solid var(--bordo);display:flex;align-items:center;justify-content:center;font-size:24px"><svg class="ic g"><use href="#i-target"/></svg></div>
                 <div style="font-size:11.5px;color:var(--muto);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Aeropuerto Adolfo Suárez, Madrid</div>
               </div>
-              <div style="width:132px;flex-shrink:0;border:1px solid var(--bordo);border-radius:16px;background:var(--campo);padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px">
+              <div style="width:132px;flex-shrink:0;border:0.5px solid var(--bordo);border-radius:16px;background:var(--campo);padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:8px">
                 <div style="width:96px;height:96px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;color:#000">▦</div>
                 <div style="font-size:10.5px;color:var(--muto);text-align:center;line-height:1.35">Il tassista inquadra: si apre la sua mappa</div>
               </div>
@@ -743,8 +767,8 @@
         </div>
         <div class="barra"><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-home)"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li>E' <b>la stessa schermata del traduttore</b> con un tondino in piu: la destinazione. Due schermate che facevano lo stesso mestiere diventano una.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li>E' <span class="ril">la stessa schermata del traduttore</span> con un tondino in piu: la destinazione. Due schermate che facevano lo stesso mestiere diventano una.</li>
         <li>Il QR resta identico: e l'unica cosa che il tassista puo usare senza avere l'app.</li></ul></div>
     </div>
 
@@ -760,13 +784,13 @@
           </div>
           <div class="corpo">
             <div style="text-align:center;padding:18px 0 10px">
-              <div style="font-size:46px;font-weight:800;color:var(--verde);line-height:1">162h</div>
+              <div style="font-size:46px;font-weight: 600;color:var(--verde);line-height:1">162h</div>
               <div style="font-size:14px;color:var(--muto);margin-top:4px">11 minuti rimasti</div>
             </div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">DOVE VA</div>
-            <div class="riga-voce"><div><div class="t">Traduzione</div></div><span style="font-size:13px;font-weight:700;color:var(--testo-2)">62%</span></div>
-            <div class="riga-voce"><div><div class="t">Voci premium</div></div><span style="font-size:13px;font-weight:700;color:var(--testo-2)">31%</span></div>
-            <div class="riga-voce"><div><div class="t">Compagni dal vivo</div></div><span style="font-size:13px;font-weight:700;color:var(--testo-2)">7%</span></div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">DOVE VA</div>
+            <div class="riga-voce"><div><div class="t">Traduzione</div></div><span style="font-size:13px;font-weight: 500;color:var(--testo-2)">62%</span></div>
+            <div class="riga-voce"><div><div class="t">Voci premium</div></div><span style="font-size:13px;font-weight: 500;color:var(--testo-2)">31%</span></div>
+            <div class="riga-voce"><div><div class="t">Compagni dal vivo</div></div><span style="font-size:13px;font-weight: 500;color:var(--testo-2)">7%</span></div>
             <div style="display:flex;gap:8px;margin-top:14px">
               <div class="pillola on" style="flex:1;justify-content:center">3 ore · 4,99</div>
               <div class="pillola" style="flex:1;justify-content:center">10 ore · 14,99</div>
@@ -775,9 +799,9 @@
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
         <ul><li>Il numero grande per primo: e la domanda con cui si apre questa pagina.</li>
-        <li><b>Dove va</b> il credito, in percentuale. Nessuno lo sa, e chiedendolo si scopre che tutti se lo chiedono.</li></ul></div>
+        <li><span class="ril">Dove va</span> il credito, in percentuale. Nessuno lo sa, e chiedendolo si scopre che tutti se lo chiedono.</li></ul></div>
     </div>
 
     <!-- ── PRIMO AVVIO ── -->
@@ -794,7 +818,7 @@
             </div>
           </div>
           <div class="corpo" style="justify-content:center">
-            <div style="font-size:26px;font-weight:800;letter-spacing:-0.4px;line-height:1.2">Che lingua parli?</div>
+            <div style="font-size:26px;font-weight: 600;letter-spacing:-0.4px;line-height:1.2">Che lingua parli?</div>
             <div style="font-size:14.5px;color:var(--muto);line-height:1.5;margin-bottom:14px">Chi hai davanti ti sentira nella sua.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <span class="pillola on">🇮🇹 Italiano</span><span class="pillola">🇺🇸 English</span>
@@ -802,12 +826,12 @@
             </div>
           </div>
           <div class="riga-campo">
-            <div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight:800">Avanti</div>
+            <div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight: 600">Avanti</div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b>
-        <ul><li><b>Una domanda per schermata</b>, e tre trattini in alto che dicono quanto manca.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul><li><span class="ril">Una domanda per schermata</span>, e tre trattini in alto che dicono quanto manca.</li>
         <li>Niente barra in basso: qui non si va da nessuna parte, si risponde.</li></ul></div>
     </div>
 
@@ -828,7 +852,7 @@
         <div class="schermo">
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">La tua stanza</span><span class="tondino"><svg class="ic p"><use href="#i-settings"/></svg></span></div>
           <div class="corpo" style="align-items:center;justify-content:center">
-            <div style="font-size:48px;font-weight:800;letter-spacing:6px;font-variant-numeric:tabular-nums">K7M2</div>
+            <div style="font-size:48px;font-weight: 600;letter-spacing:6px;font-variant-numeric:tabular-nums">K7M2</div>
             <div style="font-size:13px;color:var(--muto);margin-top:2px">Leggi questo codice a chi deve entrare</div>
             <div style="width:150px;height:150px;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:56px;color:#000;margin:20px 0 10px">▦</div>
             <div style="display:flex;gap:8px;margin-top:8px">
@@ -838,11 +862,11 @@
               <span style="width:7px;height:7px;border-radius:999px;background:var(--verde)"></span> In attesa che entri qualcuno
             </div>
           </div>
-          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight:800">Entra tu per primo</div></div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight: 600">Entra tu per primo</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Il codice e <b>la cosa piu grande a schermo</b>: e quello che si detta al telefono o si urla in un bar.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Il codice e <span class="ril">la cosa piu grande a schermo</span>: e quello che si detta al telefono o si urla in un bar.</li>
         <li>«In attesa» e una riga con un pallino, non un riquadro: cambia da sola quando entra qualcuno.</li></ul></div>
     </div>
 
@@ -855,10 +879,10 @@
           <div class="corpo" style="align-items:center;justify-content:center">
             <div style="font-size:15px;color:var(--muto);margin-bottom:20px">Il codice che ti hanno dato</div>
             <div style="display:flex;gap:10px">
-              <span style="width:54px;height:64px;border-radius:14px;border:1.5px solid var(--accento);background:rgba(91,140,255,0.10);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800">K</span>
-              <span style="width:54px;height:64px;border-radius:14px;border:1px solid var(--bordo);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800">7</span>
-              <span style="width:54px;height:64px;border-radius:14px;border:1px solid var(--bordo)"></span>
-              <span style="width:54px;height:64px;border-radius:14px;border:1px solid var(--bordo)"></span>
+              <span style="width:54px;height:64px;border-radius:14px;border:1px solid var(--accento);background:rgba(91,140,255,0.10);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight: 600">K</span>
+              <span style="width:54px;height:64px;border-radius:14px;border:0.5px solid var(--bordo);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight: 600">7</span>
+              <span style="width:54px;height:64px;border-radius:14px;border:0.5px solid var(--bordo)"></span>
+              <span style="width:54px;height:64px;border-radius:14px;border:0.5px solid var(--bordo)"></span>
             </div>
             <div style="margin-top:22px;font-size:13px;color:var(--muto)">oppure</div>
             <div class="pillola" style="margin-top:12px">▦ Inquadra il QR</div>
@@ -866,8 +890,8 @@
           <div class="riga-campo"><div class="pillola" style="flex:1;justify-content:center;height:54px;opacity:.4">Entra</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li><b>Quattro caselle</b> invece di un campo: si vede quanto e lungo il codice prima di cominciare a scriverlo.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li><span class="ril">Quattro caselle</span> invece di un campo: si vede quanto e lungo il codice prima di cominciare a scriverlo.</li>
         <li>Il QR e li accanto, non dietro un altro tocco.</li></ul></div>
     </div>
 
@@ -886,15 +910,15 @@
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
               <span class="pillola">WhatsApp</span><span class="pillola">SMS</span><span class="pillola">Email</span>
             </div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:14px">IN CHE LINGUA LO LEGGERA</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:14px">IN CHE LINGUA LO LEGGERA</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <span class="pillola on">🇺🇸 English</span><span class="pillola">🇪🇸 Español</span>
             </div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Il link si vede <b>per intero</b> prima di mandarlo: nessuno manda una cosa che non ha letto.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Il link si vede <span class="ril">per intero</span> prima di mandarlo: nessuno manda una cosa che non ha letto.</li>
         <li>La lingua dell'invito e una scelta esplicita: era gia successo che partisse nella lingua sbagliata.</li></ul></div>
     </div>
 
@@ -916,8 +940,8 @@
           <div class="riga-campo"><div class="campo">Scrivi…</div><div class="quadro"><svg class="ic"><use href="#i-mic"/></svg></div><div class="quadro"><svg class="ic"><use href="#i-send"/></svg></div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Le bandiere di <b>chi c'e</b> stanno sotto la testata, non dentro il menu ⋯.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Le bandiere di <span class="ril">chi c'e</span> stanno sotto la testata, non dentro il menu ⋯.</li>
         <li>Ogni messaggio porta l'originale sotto, piccolo: chi vuole controllare puo.</li>
         <li>La telecamera e un tondino in testata: accendere il video non e cambiare stanza.</li></ul></div>
     </div>
@@ -929,10 +953,10 @@
         <div class="schermo" style="padding:0">
           <div style="flex:1;min-height:0;position:relative;background:linear-gradient(160deg,rgba(91,140,255,0.10),rgba(56,225,255,0.06))">
             <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:60px;opacity:.5"></div>
-            <div style="position:absolute;top:12px;right:12px;width:84px;height:112px;border-radius:14px;border:1px solid var(--bordo);background:rgba(5,7,15,0.6);display:flex;align-items:center;justify-content:center;font-size:26px"></div>
+            <div style="position:absolute;top:12px;right:12px;width:84px;height:112px;border-radius:14px;border:0.5px solid var(--bordo);background:rgba(5,7,15,0.6);display:flex;align-items:center;justify-content:center;font-size:26px"></div>
             <div style="position:absolute;top:12px;left:12px" class="chip">🇯🇵 Kenji</div>
             <div style="position:absolute;left:12px;right:12px;bottom:86px;text-align:center">
-              <div style="display:inline-block;max-width:100%;padding:10px 14px;border-radius:14px;background:rgba(5,7,15,0.72);font-size:16px;font-weight:700;line-height:1.35">Ci vediamo domani alle nove.</div>
+              <div style="display:inline-block;max-width:100%;padding:10px 14px;border-radius:14px;background:rgba(5,7,15,0.72);font-size:16px;font-weight: 500;line-height:1.35">Ci vediamo domani alle nove.</div>
             </div>
             <div style="position:absolute;left:0;right:0;bottom:14px;display:flex;align-items:center;justify-content:center;gap:12px">
               <span class="tondino" style="width:54px;height:54px;background:rgba(5,7,15,0.6)"><svg class="ic"><use href="#i-mic"/></svg></span>
@@ -942,8 +966,8 @@
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Quello che l'altro sta dicendo, <b>tradotto, sopra i comandi</b>: e il motivo per cui questa videochiamata esiste.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Quello che l'altro sta dicendo, <span class="ril">tradotto, sopra i comandi</span>: e il motivo per cui questa videochiamata esiste.</li>
         <li>Tre comandi soli, grandi, e il rosso e solo per chiudere.</li>
         <li>Chi parla ha la sua bandiera sull'immagine: con tre persone non si indovina.</li></ul></div>
     </div>
@@ -964,10 +988,10 @@
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Si apre <b>a larghezza vera</b>: prima si schiacciava e le parole andavano a capo in mezzo alla frase.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Si apre <span class="ril">a larghezza vera</span>: prima si schiacciava e le parole andavano a capo in mezzo alla frase.</li>
         <li>Ogni voce ha la sua riga di spiegazione: nessuno deve toccarla per scoprire cosa fa.</li>
-        <li>Chiudere la stanza e in fondo, in rosso, con scritto che vale <b>per tutti</b>.</li></ul></div>
+        <li>Chiudere la stanza e in fondo, in rosso, con scritto che vale <span class="ril">per tutti</span>.</li></ul></div>
     </div>
 
     <div class="colonna">
@@ -977,18 +1001,18 @@
         <div class="schermo">
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Numero di sicurezza</span></div>
           <div class="corpo" style="align-items:center;justify-content:center">
-            <div style="font-size:34px;font-weight:800;letter-spacing:4px;font-variant-numeric:tabular-nums;line-height:1.5;text-align:center">48 21 07<br>93 55 16</div>
+            <div style="font-size:34px;font-weight: 600;letter-spacing:4px;font-variant-numeric:tabular-nums;line-height:1.5;text-align:center">48 21 07<br>93 55 16</div>
             <div style="font-size:14px;color:var(--muto);text-align:center;line-height:1.55;margin-top:20px;max-width:250px">
               Confronta questo numero con quello sul telefono dell'altra persona. Se sono uguali, nessuno puo ascoltarvi.
             </div>
-            <div style="display:flex;align-items:center;gap:8px;margin-top:22px;color:var(--verde);font-size:14px;font-weight:700">
+            <div style="display:flex;align-items:center;gap:8px;margin-top:22px;color:var(--verde);font-size:14px;font-weight: 500">
               <span style="width:8px;height:8px;border-radius:999px;background:var(--verde)"></span> Combaciano
             </div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Il numero e <b>a gruppi di due</b>: si legge a voce senza perdere il segno.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Il numero e <span class="ril">a gruppi di due</span>: si legge a voce senza perdere il segno.</li>
         <li>La spiegazione sta sotto il numero, non in un aiuto a parte: e li che serve.</li></ul></div>
     </div>
 
@@ -1010,8 +1034,8 @@
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Yen e inflazione</span><span class="tondino"><svg class="ic"><use href="#i-globe"/></svg></span></div>
           <div class="corpo">
             <div class="eti"><span class="chip">🇯🇵</span><span>NHK · 2h</span><span class="chip">economia</span></div>
-            <div style="font-size:17px;font-weight:800;line-height:1.35">Lo yen perde il dodici per cento in un anno</div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:8px">3 COMMENTI</div>
+            <div style="font-size:17px;font-weight: 600;line-height:1.35">Lo yen perde il dodici per cento in un anno</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">3 COMMENTI</div>
             <div class="scheda"><div class="dentro"><div class="eti"><span class="chip">🇮🇹 Marco</span><span>1h</span></div>
               <div style="font-size:14px;line-height:1.45;margin-top:6px">Da noi si sente sui viaggi, non sulla spesa.</div></div></div>
             <div class="scheda"><div class="dentro"><div class="eti"><span class="chip">🇯🇵 Kenji</span><span>40m</span></div>
@@ -1021,8 +1045,8 @@
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Il campo per commentare <b>non finisce piu sotto la barra</b>: era il difetto trovato da Luca a b.394.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Il campo per commentare <span class="ril">non finisce piu sotto la barra</span>: era il difetto trovato da Luca a b.394.</li>
         <li>Ogni commento in un'altra lingua porta l'originale sotto, piccolo.</li>
         <li>Il mappamondo in testata apre «cosa ne pensa il mondo» su questo tema.</li></ul></div>
     </div>
@@ -1037,24 +1061,24 @@
             <div style="display:flex;align-items:center;gap:12px;padding:6px 2px">
               <div class="faccia" style="width:60px;height:60px;background-image:var(--img-av3)"></div>
               <div style="flex:1">
-                <div style="font-size:18px;font-weight:800">Kenji</div>
+                <div style="font-size:18px;font-weight: 600">Kenji</div>
                 <div class="eti"><span class="chip">🇯🇵 日本語</span><span class="chip">🇺🇸 English</span></div>
               </div>
             </div>
             <div style="display:flex;gap:16px;padding:8px 2px">
-              <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">12</div><div style="font-size:11px;color:var(--muto)">discussioni</div></div>
-              <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">48</div><div style="font-size:11px;color:var(--muto)">commenti</div></div>
-              <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">7</div><div style="font-size:11px;color:var(--muto)">seguito da</div></div>
+              <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">12</div><div style="font-size:11px;color:var(--muto)">discussioni</div></div>
+              <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">48</div><div style="font-size:11px;color:var(--muto)">commenti</div></div>
+              <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">7</div><div style="font-size:11px;color:var(--muto)">seguito da</div></div>
             </div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:6px">HA APERTO</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:6px">HA APERTO</div>
             <div class="riga-voce"><div><div class="t">Lo yen perde il dodici per cento</div><div class="d">economia · 3 commenti</div></div><span class="frec">›</span></div>
             <div class="riga-voce" style="border-bottom:none"><div><div class="t">Il treno per Osaka raddoppia</div><div class="d">trasporti · 1 commento</div></div><span class="frec">›</span></div>
           </div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Le <b>lingue che parla</b> accanto al nome: e la cosa che ti dice se potete capirvi.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Le <span class="ril">lingue che parla</span> accanto al nome: e la cosa che ti dice se potete capirvi.</li>
         <li>Tre numeri e basta. Niente foto della vita: qui si conosce il pensiero di qualcuno, non la sua giornata.</li></ul></div>
     </div>
 
@@ -1075,11 +1099,11 @@
               <div class="riga-voce" style="padding:12px 2px;border-bottom:none"><div><div class="t"><svg class="ic p"><use href="#i-doc"/></svg> Produci un documento</div><div class="d">Alla fine, qualcosa da conservare</div></div><span style="color:var(--muto);font-size:18px">○</span></div>
             </div>
           </div>
-          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight:800">Apri la Tavola</div></div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight: 600">Apri la Tavola</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Le due opzioni sono <b>righe con la spiegazione</b>, non caselle da spuntare al buio.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Le due opzioni sono <span class="ril">righe con la spiegazione</span>, non caselle da spuntare al buio.</li>
         <li>Chi siede al tavolo si sceglie toccando le facce: si vede subito chi c'e e chi no.</li></ul></div>
     </div>
 
@@ -1092,7 +1116,7 @@
           <div class="corpo">
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <div class="faccia q" style="width:44px;height:44px;background-image:var(--img-av3)"></div>
-              <div style="flex:1"><div style="font-size:15px;font-weight:800">Archimede</div><div style="font-size:11.5px;color:var(--muto)">Ricercatore · italiano</div></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight: 600">Archimede</div><div style="font-size:11.5px;color:var(--muto)">Ricercatore · italiano</div></div>
               <span class="tondino" style="width:38px;height:38px;font-size:13px"><svg class="ic p"><use href="#i-settings"/></svg></span>
             </div>
             <div style="border-top:1px solid var(--bordo);padding:10px 14px;display:flex;align-items:center;gap:10px">
@@ -1104,14 +1128,14 @@
             </div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <div class="faccia q" style="width:44px;height:44px;background-image:var(--img-av4)"></div>
-              <div style="flex:1"><div style="font-size:15px;font-weight:800">Aisha</div><div style="font-size:11.5px;color:var(--muto)">Coach · italiano</div></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight: 600">Aisha</div><div style="font-size:11.5px;color:var(--muto)">Coach · italiano</div></div>
               <span class="tondino" style="width:38px;height:38px;font-size:13px"><svg class="ic p"><use href="#i-settings"/></svg></span>
             </div></div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>La memoria e <b>un interruttore visibile</b> su ogni Compagno, con quanti ricordi ha e come cancellarli. Oggi e spenta e non lo sa nessuno.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>La memoria e <span class="ril">un interruttore visibile</span> su ogni Compagno, con quanti ricordi ha e come cancellarli. Oggi e spenta e non lo sa nessuno.</li>
         <li>«Dimentica tutto» esiste ed e raggiungibile: era scritto nel codice e nessuno poteva chiederlo.</li></ul></div>
     </div>
 
@@ -1122,12 +1146,12 @@
         <div class="schermo">
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Compiti</span><span class="tondino"><svg class="ic"><use href="#i-plus"/></svg></span></div>
           <div class="corpo">
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--oro)">ENTRO DOMANI</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--oro)">ENTRO DOMANI</div>
             <div class="scheda"><div class="dentro">
               <h4>Verbi irregolari, seconda parte</h4>
               <div class="eti"><span class="chip">inglese</span><span>3 materiali</span></div>
             </div></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:8px">QUESTA SETTIMANA</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">QUESTA SETTIMANA</div>
             <div class="scheda"><div class="dentro">
               <h4>Capitolo 4 · il passato prossimo</h4>
               <div class="eti"><span class="chip">inglese</span><span>1 materiale</span></div>
@@ -1139,8 +1163,8 @@
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Raggruppati per <b>quando scadono</b>, non per quando li hai scritti: e la domanda che ci si fa aprendo.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Raggruppati per <span class="ril">quando scadono</span>, non per quando li hai scritti: e la domanda che ci si fa aprendo.</li>
         <li>Fotografa e incolla sono due tasti pari: incollare e gratis, fotografare costa — e si dice dove costa.</li></ul></div>
     </div>
 
@@ -1152,9 +1176,9 @@
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Kenji · ieri</span><span class="tondino"><svg class="ic"><use href="#i-copy"/></svg></span></div>
           <div class="corpo">
             <div class="eti"><span class="chip">🇮🇹 → 🇯🇵</span><span>24 messaggi · 18 minuti</span></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:8px">IN DUE RIGHE</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:8px">IN DUE RIGHE</div>
             <div style="font-size:15px;line-height:1.5">Avete concordato la consegna per il quindici e il pagamento a trenta giorni.</div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:12px">COSA AVETE DECISO</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:12px">COSA AVETE DECISO</div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="t" style="font-size:14px">Consegna il 15</div></div></div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="t" style="font-size:14px">Pagamento a 30 giorni</div></div></div>
             <div class="riga-voce" style="padding:11px 2px;border-bottom:none"><div><div class="t" style="font-size:14px">Kenji manda il campione lunedi</div></div></div>
@@ -1162,8 +1186,8 @@
           <div class="riga-campo"><div class="pillola" style="flex:1;justify-content:center;height:54px">Leggi tutta la conversazione</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li><b>Cosa avete deciso</b> in cima, come righe: e la ragione per cui si riapre una conversazione vecchia.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li><span class="ril">Cosa avete deciso</span> in cima, come righe: e la ragione per cui si riapre una conversazione vecchia.</li>
         <li>Le due lingue nella prima riga, come nell'archivio.</li></ul></div>
     </div>
 
@@ -1184,22 +1208,22 @@
         <div class="schermo">
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Impostazioni</span></div>
           <div class="corpo">
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">LINGUE</div>
-            <div class="riga-voce"><div><div class="t">Lingua che parlo</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">🇮🇹 Italiano</span></div>
-            <div class="riga-voce"><div><div class="t">Lingua dei menu</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">Segue quella parlata</span></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:10px">VOCE</div>
-            <div class="riga-voce"><div><div class="t">Come ti sentono</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">Nova</span></div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">LINGUE</div>
+            <div class="riga-voce"><div><div class="t">Lingua che parlo</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">🇮🇹 Italiano</span></div>
+            <div class="riga-voce"><div><div class="t">Lingua dei menu</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">Segue quella parlata</span></div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:10px">VOCE</div>
+            <div class="riga-voce"><div><div class="t">Come ti sentono</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">Nova</span></div>
             <div class="riga-voce"><div><div class="t">Leggi da sola le traduzioni</div></div>
               <span style="width:42px;height:24px;border-radius:999px;background:rgba(91,140,255,0.30);position:relative;flex-shrink:0">
                 <span style="position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:999px;background:var(--accento)"></span></span></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:10px">ASPETTO</div>
-            <div class="riga-voce" style="border-bottom:none"><div><div class="t">Tema</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">Deep</span></div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:10px">ASPETTO</div>
+            <div class="riga-voce" style="border-bottom:none"><div><div class="t">Tema</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">Deep</span></div>
           </div>
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Ogni riga mostra il <b>valore attuale a destra</b>: non si entra per scoprire com'e messo.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Ogni riga mostra il <span class="ril">valore attuale a destra</span>: non si entra per scoprire com'e messo.</li>
         <li>Gli interruttori si vedono senza aprire niente.</li>
         <li>Tre gruppi con l'etichetta: lingue, voce, aspetto. Non una lista lunga uguale.</li></ul></div>
     </div>
@@ -1214,23 +1238,23 @@
             <div class="vuoto">Tocca il triangolo per sentirle. Quella scelta ti legge le traduzioni.</div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <span class="tondino on" style="width:40px;height:40px"><svg class="ic"><use href="#i-play"/></svg></span>
-              <div style="flex:1"><div style="font-size:15px;font-weight:800">Nova</div><div style="font-size:11.5px;color:var(--muto)">Calda, media · 🇮🇹 🇺🇸 🇪🇸 +9</div></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight: 600">Nova</div><div style="font-size:11.5px;color:var(--muto)">Calda, media · 🇮🇹 🇺🇸 🇪🇸 +9</div></div>
               <span style="color:var(--accento);font-size:16px">✓</span>
             </div></div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <span class="tondino" style="width:40px;height:40px"><svg class="ic"><use href="#i-play"/></svg></span>
-              <div style="flex:1"><div style="font-size:15px;font-weight:800">Onyx</div><div style="font-size:11.5px;color:var(--muto)">Profonda, lenta · 🇮🇹 🇺🇸 +6</div></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight: 600">Onyx</div><div style="font-size:11.5px;color:var(--muto)">Profonda, lenta · 🇮🇹 🇺🇸 +6</div></div>
             </div></div>
             <div class="scheda"><div class="dentro" style="display:flex;align-items:center;gap:11px">
               <span class="tondino" style="width:40px;height:40px"><svg class="ic"><use href="#i-play"/></svg></span>
-              <div style="flex:1"><div style="font-size:15px;font-weight:800">Shimmer</div><div style="font-size:11.5px;color:var(--muto)">Chiara, veloce · 🇮🇹 🇺🇸 🇫🇷 +4</div></div>
+              <div style="flex:1"><div style="font-size:15px;font-weight: 600">Shimmer</div><div style="font-size:11.5px;color:var(--muto)">Chiara, veloce · 🇮🇹 🇺🇸 🇫🇷 +4</div></div>
             </div></div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Il triangolo per sentirla e <b>a sinistra, grande</b>: e il gesto principale di questa schermata.</li>
-        <li>Sotto ogni voce, le <b>lingue in cui e madrelingua</b>: e cio che decide se ti serve.</li></ul></div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Il triangolo per sentirla e <span class="ril">a sinistra, grande</span>: e il gesto principale di questa schermata.</li>
+        <li>Sotto ogni voce, le <span class="ril">lingue in cui e madrelingua</span>: e cio che decide se ti serve.</li></ul></div>
     </div>
 
     <div class="colonna">
@@ -1242,22 +1266,22 @@
           <div class="corpo">
             <div class="vuoto">Con le tue chiavi non consumi credito: paghi direttamente il fornitore.</div>
             <div class="scheda"><div class="dentro">
-              <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:800">OpenAI</div>
-                <span style="color:var(--verde);font-size:12px;font-weight:700">● attiva</span></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight: 600">OpenAI</div>
+                <span style="color:var(--verde);font-size:12px;font-weight: 500">● attiva</span></div>
               <div style="font-size:12px;color:var(--muto);margin-top:4px;font-family:monospace">sk-••••••••••••4f2a</div>
               <div style="font-size:11.5px;color:var(--testo-3);margin-top:6px">Traduzione e voce</div>
             </div></div>
             <div class="scheda"><div class="dentro">
-              <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight:800">ElevenLabs</div>
-                <span style="color:var(--muto);font-size:12px;font-weight:700">non impostata</span></div>
+              <div style="display:flex;align-items:center;gap:8px"><div style="flex:1;font-size:15px;font-weight: 600">ElevenLabs</div>
+                <span style="color:var(--muto);font-size:12px;font-weight: 500">non impostata</span></div>
               <div style="font-size:11.5px;color:var(--testo-3);margin-top:6px">Voci premium e Compagni dal vivo</div>
             </div></div>
           </div>
           <div class="riga-campo"><div class="pillola" style="flex:1;justify-content:center;height:54px">Aggiungi una chiave</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Sotto ogni chiave, <b>cosa sblocca</b>: senza, sono nomi di aziende senza significato.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Sotto ogni chiave, <span class="ril">cosa sblocca</span>: senza, sono nomi di aziende senza significato.</li>
         <li>La chiave si vede solo per le ultime quattro cifre, mai intera.</li></ul></div>
     </div>
 
@@ -1281,8 +1305,8 @@
         </div>
         <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i><span class="acciaio b" style="background-image:var(--img-menu-cuore);opacity:.55"></span><span>Community</span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-profilo)"></span><span>Profilo</span></i></div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>La <b>lingua accanto al nome</b>: e cio che ti dice se potete parlarvi adesso.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>La <span class="ril">lingua accanto al nome</span>: e cio che ti dice se potete parlarvi adesso.</li>
         <li>Il pallino verde sull'avatar, non una parola in piu.</li></ul></div>
     </div>
 
@@ -1294,17 +1318,17 @@
           <div class="testata"><span class="tondino nudo"><svg class="ic"><use href="#i-back"/></svg></span><span class="titolo">Biglietto letto</span></div>
           <div class="corpo">
             <div class="scheda"><div class="foto"><svg class="ic gg"><use href="#i-credit"/></svg></div></div>
-            <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">CONTROLLA PRIMA DI SALVARE</div>
+            <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">CONTROLLA PRIMA DI SALVARE</div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="d">Nome</div><div class="t" style="font-size:15px">Kenji Tanaka</div></div><span class="frec">✎</span></div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="d">Azienda</div><div class="t" style="font-size:15px">Marubeni Corp.</div></div><span class="frec">✎</span></div>
             <div class="riga-voce" style="padding:11px 2px"><div><div class="d">Email</div><div class="t" style="font-size:15px">k.tanaka@marubeni.jp</div></div><span class="frec">✎</span></div>
             <div class="riga-voce" style="padding:11px 2px;border-bottom:none"><div><div class="d">Telefono</div><div class="t" style="font-size:15px;color:var(--oro)">+81 3 —— controlla</div></div><span class="frec">✎</span></div>
           </div>
-          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-weight:800">Salva in rubrica</div></div>
+          <div class="riga-campo"><div class="pillola on" style="flex:1;justify-content:center;height:54px;font-weight: 600">Salva in rubrica</div></div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>Ogni campo si puo correggere <b>prima</b> di salvare: una lettura automatica sbaglia, e va detto.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>Ogni campo si puo correggere <span class="ril">prima</span> di salvare: una lettura automatica sbaglia, e va detto.</li>
         <li>I campi su cui la lettura e incerta sono in oro, non uguali agli altri.</li></ul></div>
     </div>
 
@@ -1317,18 +1341,18 @@
             <span class="pillola on">🇪🇸 Español</span><span class="pillola">🇬🇧 English</span><span class="pillola">🇸🇦 العربية</span>
           </div>
           <div class="corpo" style="justify-content:center">
-            <div style="font-size:12px;font-weight:800;letter-spacing:1px;color:var(--muto)">EL PASAJERO VA A</div>
-            <div style="font-size:28px;font-weight:800;line-height:1.28">Aeropuerto Adolfo Suárez, Terminal 4</div>
+            <div style="font-size:12px;font-weight: 600;letter-spacing:1px;color:var(--muto)">EL PASAJERO VA A</div>
+            <div style="font-size:28px;font-weight: 600;line-height:1.28">Aeropuerto Adolfo Suárez, Terminal 4</div>
             <div class="eti" style="margin-top:8px"><span class="chip">23 km</span><span class="chip">31 min</span></div>
-            <div style="height:150px;border-radius:16px;border:1px solid var(--bordo);background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));display:flex;align-items:center;justify-content:center;font-size:26px;margin-top:12px"><svg class="ic g"><use href="#i-target"/></svg></div>
+            <div style="height:150px;border-radius:16px;border:0.5px solid var(--bordo);background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));display:flex;align-items:center;justify-content:center;font-size:26px;margin-top:12px"><svg class="ic g"><use href="#i-target"/></svg></div>
           </div>
           <div class="riga-campo">
-            <div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight:800">Abrir en mi mapa</div>
+            <div class="pillola on" style="flex:1;justify-content:center;height:54px;font-size:15px;font-weight: 600">Abrir en mi mapa</div>
           </div>
         </div>
       </div>
-      <div class="spiega"><b>Cosa cambia.</b><ul>
-        <li>La lingua si sceglie <b>in cima e subito</b>: chi apre questa pagina non e dei nostri e non ha impostazioni.</li>
+      <div class="spiega"><span class="ril">Cosa cambia.</span><ul>
+        <li>La lingua si sceglie <span class="ril">in cima e subito</span>: chi apre questa pagina non e dei nostri e non ha impostazioni.</li>
         <li>La destinazione e enorme: si legge con lo sguardo, non si studia.</li>
         <li>Un tasto solo, e apre la mappa che lui usa gia tutti i giorni.</li></ul></div>
     </div>
@@ -1434,9 +1458,9 @@
       <div class="nome">Il ribaltamento</div>
       <div class="mis">mezzo giro · 520 millesimi · stessa altezza</div>
       <div class="prova" style="display:flex;align-items:center;justify-content:center;gap:14px;padding:22px 12px">
-        <div style="width:70px;height:92px;border-radius:10px;border:1px solid var(--bordo);background:var(--carta)"></div>
+        <div style="width:70px;height:92px;border-radius:10px;border:0.5px solid var(--bordo);background:var(--carta)"></div>
         <div style="color:var(--accento);font-size:20px"><svg class="ic g"><use href="#i-refresh"/></svg></div>
-        <div style="width:70px;height:92px;border-radius:10px;border:1.5px solid var(--accento);background:rgba(91,140,255,0.13)"></div>
+        <div style="width:70px;height:92px;border-radius:10px;border:1px solid var(--accento);background:rgba(91,140,255,0.13)"></div>
       </div>
       <div class="perche">Per entrare in una cosa senza andarsene: il foglio gira e dietro c'e l'altra faccia. Le due facce hanno la STESSA altezza, quindi girare non sposta niente. E chi ha chiesto meno movimento al telefono non lo subisce: le facce si scambiano e basta.</div>
     </div>
@@ -1460,7 +1484,7 @@
       <div class="mis">altezza fissa 62 · non spinge · ha sempre un'uscita</div>
       <div class="prova">
         <div style="display:flex;align-items:center;gap:10px;border:1px solid rgba(255,84,112,0.28);background:rgba(255,84,112,0.10);border-radius:14px;padding:11px 12px">
-          <div style="flex:1;font-size:13px;line-height:1.4"><b>Guasto della linea vocale</b><div style="color:var(--muto);font-size:11.5px">Non e colpa tua. La chat scritta funziona.</div></div>
+          <div style="flex:1;font-size:13px;line-height:1.4"><span class="ril">Guasto della linea vocale</span><div style="color:var(--muto);font-size:11.5px">Non e colpa tua. La chat scritta funziona.</div></div>
           <span class="pillola on" style="height:34px;padding:0 12px;font-size:12.5px">Riprova</span>
           <span class="tondino nudo" style="width:30px;height:30px;font-size:14px"><svg class="ic"><use href="#i-x"/></svg></span>
         </div>
@@ -1485,7 +1509,7 @@
       <div class="nome">Il testo per chi hai davanti</div>
       <div class="mis">30–52 · meno 12% per alfabeti densi · A− A+</div>
       <div class="prova" style="text-align:center;padding:18px 10px">
-        <div style="font-size:26px;font-weight:800;line-height:1.22;transform:rotate(180deg)">Good evening, do you have a table for two?</div>
+        <div style="font-size:26px;font-weight: 600;line-height:1.22;transform:rotate(180deg)">Good evening, do you have a table for two?</div>
       </div>
       <div class="perche">Gira SOLO questo, mai la riga dove scrivi. La misura si sposta di un passo per volta e si ricorda nelle preferenze. Cinese, giapponese, coreano, thai, hindi, bengali, tamil, arabo ed ebraico scendono dell'12%: un ideogramma porta quanto una sillaba intera.</div>
     </div>
@@ -1494,8 +1518,8 @@
       <div class="nome">La mappa e il QR</div>
       <div class="mis">mappa alta 130–160 · QR 96–108 · raggio 16</div>
       <div class="prova" style="display:flex;gap:10px">
-        <div style="flex:1;height:104px;border-radius:14px;border:1px solid var(--bordo);background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));display:flex;align-items:center;justify-content:center;font-size:20px"><svg class="ic g"><use href="#i-target"/></svg></div>
-        <div style="width:104px;flex-shrink:0;border:1px solid var(--bordo);border-radius:14px;background:var(--campo);display:flex;align-items:center;justify-content:center">
+        <div style="flex:1;height:104px;border-radius:14px;border:0.5px solid var(--bordo);background:linear-gradient(150deg,rgba(61,220,132,0.12),rgba(91,140,255,0.10));display:flex;align-items:center;justify-content:center;font-size:20px"><svg class="ic g"><use href="#i-target"/></svg></div>
+        <div style="width:104px;flex-shrink:0;border:0.5px solid var(--bordo);border-radius:14px;background:var(--campo);display:flex;align-items:center;justify-content:center">
           <div style="width:74px;height:74px;border-radius:8px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:26px;color:#000">▦</div>
         </div>
       </div>
@@ -1506,7 +1530,7 @@
       <div class="nome">Il campo di ricerca</div>
       <div class="mis">altezza 48 · raggio 14 · lente a sinistra</div>
       <div class="prova">
-        <div style="display:flex;align-items:center;gap:9px;height:48px;padding:0 14px;border-radius:14px;border:1px solid var(--bordo);background:rgba(255,255,255,0.05)">
+        <div style="display:flex;align-items:center;gap:9px;height:48px;padding:0 14px;border-radius:14px;border:0.5px solid var(--bordo);background:rgba(255,255,255,0.05)">
           <span style="color:var(--muto);font-size:15px"><svg class="ic"><use href="#i-eye"/></svg></span>
           <span style="color:var(--muto);font-size:15px">Cerca…</span>
         </div>
@@ -1518,7 +1542,7 @@
       <div class="nome">Il numero grande</div>
       <div class="mis">30–46 · cifre allineate · unita piccola accanto</div>
       <div class="prova" style="text-align:center;padding:10px">
-        <div style="font-size:40px;font-weight:800;color:var(--verde);line-height:1;font-variant-numeric:tabular-nums">162h</div>
+        <div style="font-size:40px;font-weight: 600;color:var(--verde);line-height:1;font-variant-numeric:tabular-nums">162h</div>
         <div style="font-size:13px;color:var(--muto);margin-top:4px">11 minuti rimasti</div>
       </div>
       <div class="perche">Quando una schermata esiste per rispondere a UNA domanda — quanto credito ho, quanti sono dentro — la risposta si scrive grande e per prima. Cifre a larghezza fissa, o cambiando numero balla la riga.</div>
@@ -1528,8 +1552,8 @@
       <div class="nome">La linguetta laterale</div>
       <div class="mis">sul bordo · alta 58 · una sotto l'altra, mai sovrapposte</div>
       <div class="prova" style="position:relative;height:150px;overflow:hidden">
-        <div style="position:absolute;left:0;top:14px;width:52px;height:58px;border-radius:0 14px 14px 0;border:1px solid var(--bordo);border-left:none;background:var(--carta);display:flex;align-items:center;justify-content:center;font-size:22px">🇮🇹</div>
-        <div style="position:absolute;left:0;top:82px;width:52px;height:58px;border-radius:0 14px 14px 0;border:1px solid var(--bordo);border-left:none;background:var(--carta);display:flex;align-items:center;justify-content:center;color:var(--muto)"><svg class="ic"><use href="#i-settings"/></svg></div>
+        <div style="position:absolute;left:0;top:14px;width:52px;height:58px;border-radius:0 14px 14px 0;border:0.5px solid var(--bordo);border-left:none;background:var(--carta);display:flex;align-items:center;justify-content:center;font-size:22px">🇮🇹</div>
+        <div style="position:absolute;left:0;top:82px;width:52px;height:58px;border-radius:0 14px 14px 0;border:0.5px solid var(--bordo);border-left:none;background:var(--carta);display:flex;align-items:center;justify-content:center;color:var(--muto)"><svg class="ic"><use href="#i-settings"/></svg></div>
       </div>
       <div class="perche">Le linguette vivono sul bordo sinistro e si tirano fuori col dito: tengono a portata cose che servono spesso senza occupare la pagina. Vanno impilate con lo stesso righello — una sopra l'altra, mai sovrapposte, che e il difetto gia corretto a b.400.</div>
     </div>
@@ -1540,7 +1564,7 @@
       <div class="prova" style="position:relative;height:110px">
         <div style="position:absolute;right:8px;top:8px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--verde)">
           <svg class="ic g"><use href="#i-battery"/></svg>
-          <span style="font-size:10px;font-weight:800;font-variant-numeric:tabular-nums">162h 11m</span>
+          <span style="font-size:10px;font-weight: 600;font-variant-numeric:tabular-nums">162h 11m</span>
         </div>
       </div>
       <div class="perche">Sta in alto a destra e ci resta — Luca l'ha chiesto tre volte. Ma sulle PAGINE PIENE si toglie: stanza, diretta, taxi e il traduttore la nascondono, o finirebbe sopra i loro comandi. Il numero e a larghezza fissa: scala di continuo e la riga non deve ballare.</div>
@@ -1567,7 +1591,7 @@
           <span>‹</span><span style="opacity:.3;font-size:17px">🇰🇷</span><span style="opacity:.55;font-size:20px">🇹🇼</span>
           <span style="font-size:28px">🇺🇸</span><span style="opacity:.55;font-size:20px">🇪🇸</span><span style="opacity:.3;font-size:17px">🇫🇷</span><span>›</span>
         </div>
-        <div style="height:30px;display:flex;align-items:center;justify-content:center;margin-top:6px;font-size:13px;font-weight:700;color:var(--accento)">English (US) ✓</div>
+        <div style="height:30px;display:flex;align-items:center;justify-content:center;margin-top:6px;font-size:13px;font-weight: 500;color:var(--accento)">English (US) ✓</div>
       </div>
       <div class="perche">Le vicine sfumano, la centrale e piena: si capisce dove si e senza contare. La riga sotto ha ALTEZZA FISSA — che ci sia il nome o il tasto «usa questa», il posto occupato e lo stesso, o tutto quello che sta sotto scende di trenta pixel a ogni bandiera che passa.</div>
     </div>
@@ -1589,8 +1613,8 @@
       <div class="nome">La riga col valore</div>
       <div class="mis">titolo 15 · valore a destra 13 · niente freccia</div>
       <div class="prova">
-        <div class="riga-voce"><div><div class="t">Lingua che parlo</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">🇮🇹 Italiano</span></div>
-        <div class="riga-voce" style="border-bottom:none"><div><div class="t">Come ti sentono</div></div><span style="font-size:13px;color:var(--testo-2);font-weight:700">Nova</span></div>
+        <div class="riga-voce"><div><div class="t">Lingua che parlo</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">🇮🇹 Italiano</span></div>
+        <div class="riga-voce" style="border-bottom:none"><div><div class="t">Come ti sentono</div></div><span style="font-size:13px;color:var(--testo-2);font-weight: 500">Nova</span></div>
       </div>
       <div class="perche">Nelle impostazioni ogni riga dice il suo valore ATTUALE a destra. Senza, si entra in una schermata solo per scoprire com'e messa e si esce senza toccare niente: due tocchi per un'informazione.</div>
     </div>
@@ -1600,7 +1624,7 @@
       <div class="mis">alta 5 · raggio 3 · numeri sotto, a larghezza fissa</div>
       <div class="prova">
         <div style="height:5px;border-radius:3px;background:var(--spento);overflow:hidden"><div style="width:64%;height:100%;background:var(--verde)"></div></div>
-        <div style="margin-top:6px;font-size:11.5px;font-weight:700;color:var(--muto);font-variant-numeric:tabular-nums">8 / 12</div>
+        <div style="margin-top:6px;font-size:11.5px;font-weight: 500;color:var(--muto);font-variant-numeric:tabular-nums">8 / 12</div>
       </div>
       <div class="perche">Sottile, mai grassa: e un'informazione di contorno, non il contenuto. I numeri sotto e a larghezza fissa, o la riga balla a ogni passo. E niente parola in mezzo: due numeri e una barra si capiscono in ogni lingua.</div>
     </div>
@@ -1618,9 +1642,9 @@
       <div class="nome">Il gruppo con etichetta</div>
       <div class="mis">11 · grassetto 800 · lettere larghe 1</div>
       <div class="prova">
-        <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto)">LINGUE</div>
+        <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto)">LINGUE</div>
         <div class="riga-voce" style="padding:11px 2px"><div><div class="t">Lingua che parlo</div></div><span class="frec">›</span></div>
-        <div style="font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muto);margin-top:10px">VOCE</div>
+        <div style="font-size:11px;font-weight: 600;letter-spacing:1px;color:var(--muto);margin-top:10px">VOCE</div>
         <div class="riga-voce" style="padding:11px 2px;border-bottom:none"><div><div class="t">Come ti sentono</div></div><span class="frec">›</span></div>
       </div>
       <div class="perche">Un elenco lungo tutto uguale non si legge: si scorre e si perde. Tre o quattro gruppi con un'etichetta piccola trasformano lo scorrere in un cercare.</div>
@@ -1630,7 +1654,7 @@
       <div class="nome">Il campo sbagliato</div>
       <div class="mis">bordo rosso · il perche SOTTO, non un avviso in cima</div>
       <div class="prova">
-        <div class="campo" style="min-height:48px;padding:13px 14px;font-size:15px;border:1.5px solid var(--rosso);color:var(--testo)">k.tanaka@marubeni</div>
+        <div class="campo" style="min-height:48px;padding:13px 14px;font-size:15px;border:1px solid var(--rosso);color:var(--testo)">k.tanaka@marubeni</div>
         <div style="margin-top:6px;font-size:12px;color:var(--rosso)">Manca la parte dopo il punto</div>
       </div>
       <div class="perche">L'errore sta ATTACCATO al campo che lo riguarda e dice cosa manca, non «campo non valido». Un avviso in cima che elenca gli errori costringe ad andare avanti e indietro per capire quale riga toccare.</div>
@@ -1640,7 +1664,7 @@
       <div class="nome">Il codice da leggere a voce</div>
       <div class="mis">40–48 · lettere larghe 6 · a larghezza fissa</div>
       <div class="prova" style="text-align:center;padding:14px">
-        <div style="font-size:42px;font-weight:800;letter-spacing:6px;font-variant-numeric:tabular-nums">K7M2</div>
+        <div style="font-size:42px;font-weight: 600;letter-spacing:6px;font-variant-numeric:tabular-nums">K7M2</div>
       </div>
       <div class="perche">Quando un codice va DETTO a qualcuno — al telefono o a voce in un bar — si scrive largo e spaziato: le lettere attaccate si sbagliano a dettare. Vale anche per il numero di sicurezza, a gruppi di due.</div>
     </div>
@@ -1649,9 +1673,9 @@
       <div class="nome">I conteggi in fila</div>
       <div class="mis">numero 20 · parola 11 sotto · distanza 18 · massimo tre</div>
       <div class="prova" style="display:flex;gap:18px">
-        <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">12</div><div style="font-size:11px;color:var(--muto)">discussioni</div></div>
-        <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">48</div><div style="font-size:11px;color:var(--muto)">commenti</div></div>
-        <div><div style="font-size:20px;font-weight:800;font-variant-numeric:tabular-nums">7</div><div style="font-size:11px;color:var(--muto)">seguito da</div></div>
+        <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">12</div><div style="font-size:11px;color:var(--muto)">discussioni</div></div>
+        <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">48</div><div style="font-size:11px;color:var(--muto)">commenti</div></div>
+        <div><div style="font-size:20px;font-weight: 600;font-variant-numeric:tabular-nums">7</div><div style="font-size:11px;color:var(--muto)">seguito da</div></div>
       </div>
       <div class="perche">Il numero sopra e la parola sotto, mai al contrario: si legge prima quanto e poi di cosa. Tre al massimo — al quarto diventa una tabella e non la guarda piu nessuno.</div>
     </div>
@@ -1711,7 +1735,7 @@
           <div class="testata"><span class="titolo" style="font-size:14px">Conversazioni</span></div>
           <div class="corpo">
             <div style="display:flex;align-items:center;gap:10px;border:1px solid rgba(255,84,112,0.28);background:rgba(255,84,112,0.10);border-radius:14px;padding:11px 12px">
-              <div style="flex:1;font-size:12.5px;line-height:1.4"><b>Non riesco a leggere l'archivio</b><div style="color:var(--muto);font-size:11px">Non e colpa tua: la rete non risponde.</div></div>
+              <div style="flex:1;font-size:12.5px;line-height:1.4"><span class="ril">Non riesco a leggere l'archivio</span><div style="color:var(--muto);font-size:11px">Non e colpa tua: la rete non risponde.</div></div>
               <span class="pillola on" style="height:32px;padding:0 11px;font-size:12px">Riprova</span>
             </div>
           </div>
@@ -1740,26 +1764,26 @@
   <h2 class="sezione">Le misure, tutte insieme</h2>
   <p class="sotto">Per non doverle ricavare ogni volta dal disegno. Se un numero non e qui, non e stato deciso.</p>
 
-  <div style="overflow-x:auto;border:1px solid var(--bordo);border-radius:16px;background:var(--carta)">
+  <div style="overflow-x:auto;border:0.5px solid var(--bordo);border-radius:16px;background:var(--carta)">
     <table style="width:100%;border-collapse:collapse;font-size:13px;min-width:520px">
       <thead>
-        <tr style="text-align:left;color:var(--muto);font-size:11px;letter-spacing:0.8px;font-weight:800">
+        <tr style="text-align:left;color:var(--muto);font-size:11px;letter-spacing:0.8px;font-weight: 600">
           <th style="padding:12px 14px">PEZZO</th><th style="padding:12px 14px">MISURA</th><th style="padding:12px 14px">PERCHE</th>
         </tr>
       </thead>
       <tbody style="font-variant-numeric:tabular-nums">
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Tasto tondo</td><td style="padding:11px 14px;color:var(--accento)">44 × 44</td><td style="padding:11px 14px;color:var(--testo-3)">sotto, un dito sbaglia bersaglio</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Tasto quadro (voce, invio)</td><td style="padding:11px 14px;color:var(--accento)">54 × 54 · raggio 16</td><td style="padding:11px 14px;color:var(--testo-3)">alto come il campo accanto</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Campo dove si scrive</td><td style="padding:11px 14px;color:var(--accento)">min 54 · max 110 · testo 16</td><td style="padding:11px 14px;color:var(--testo-3)">sotto 16 il telefono ingrandisce da solo</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Campo di ricerca</td><td style="padding:11px 14px;color:var(--accento)">48 · raggio 14</td><td style="padding:11px 14px;color:var(--testo-3)">piu basso: si interroga, non si compila</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Testata</td><td style="padding:11px 14px;color:var(--accento)">44 · distanza 8</td><td style="padding:11px 14px;color:var(--testo-3)">una riga, sempre la stessa</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Barra in basso</td><td style="padding:11px 14px;color:var(--accento)">94 + area sicura</td><td style="padding:11px 14px;color:var(--testo-3)">chi scorre riserva 106 in fondo</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Scheda</td><td style="padding:11px 14px;color:var(--accento)">raggio 18 · dentro 13/14</td><td style="padding:11px 14px;color:var(--testo-3)">foto 16:9, col fondale sotto</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Riga-voce</td><td style="padding:11px 14px;color:var(--accento)">titolo 15 · sotto 12</td><td style="padding:11px 14px;color:var(--testo-3)">ognuna si spiega da se</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Testo per chi hai davanti</td><td style="padding:11px 14px;color:var(--accento)">30 → 52 · −12% se denso</td><td style="padding:11px 14px;color:var(--testo-3)">e si ricorda nelle preferenze</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Ribaltamento</td><td style="padding:11px 14px;color:var(--accento)">520 ms · mezzo giro</td><td style="padding:11px 14px;color:var(--testo-3)">spento se il telefono chiede meno moto</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Colonna del testo</td><td style="padding:11px 14px;color:var(--accento)">max 680</td><td style="padding:11px 14px;color:var(--testo-3)">su schermo largo non diventa un lenzuolo</td></tr>
-        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight:700">Distanza fra le cose</td><td style="padding:11px 14px;color:var(--accento)">8 · 10 · 14</td><td style="padding:11px 14px;color:var(--testo-3)">tre sole, non una a caso ogni volta</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto tondo</td><td style="padding:11px 14px;color:var(--accento)">44 × 44</td><td style="padding:11px 14px;color:var(--testo-3)">sotto, un dito sbaglia bersaglio</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Tasto quadro (voce, invio)</td><td style="padding:11px 14px;color:var(--accento)">54 × 54 · raggio 16</td><td style="padding:11px 14px;color:var(--testo-3)">alto come il campo accanto</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo dove si scrive</td><td style="padding:11px 14px;color:var(--accento)">min 54 · max 110 · testo 16</td><td style="padding:11px 14px;color:var(--testo-3)">sotto 16 il telefono ingrandisce da solo</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Campo di ricerca</td><td style="padding:11px 14px;color:var(--accento)">48 · raggio 14</td><td style="padding:11px 14px;color:var(--testo-3)">piu basso: si interroga, non si compila</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Testata</td><td style="padding:11px 14px;color:var(--accento)">44 · distanza 8</td><td style="padding:11px 14px;color:var(--testo-3)">una riga, sempre la stessa</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Barra in basso</td><td style="padding:11px 14px;color:var(--accento)">94 + area sicura</td><td style="padding:11px 14px;color:var(--testo-3)">chi scorre riserva 106 in fondo</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Scheda</td><td style="padding:11px 14px;color:var(--accento)">raggio 18 · dentro 13/14</td><td style="padding:11px 14px;color:var(--testo-3)">foto 16:9, col fondale sotto</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Riga-voce</td><td style="padding:11px 14px;color:var(--accento)">titolo 15 · sotto 12</td><td style="padding:11px 14px;color:var(--testo-3)">ognuna si spiega da se</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Testo per chi hai davanti</td><td style="padding:11px 14px;color:var(--accento)">30 → 52 · −12% se denso</td><td style="padding:11px 14px;color:var(--testo-3)">e si ricorda nelle preferenze</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Ribaltamento</td><td style="padding:11px 14px;color:var(--accento)">520 ms · mezzo giro</td><td style="padding:11px 14px;color:var(--testo-3)">spento se il telefono chiede meno moto</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Colonna del testo</td><td style="padding:11px 14px;color:var(--accento)">max 680</td><td style="padding:11px 14px;color:var(--testo-3)">su schermo largo non diventa un lenzuolo</td></tr>
+        <tr style="border-top:1px solid var(--bordo)"><td style="padding:11px 14px;font-weight: 500">Distanza fra le cose</td><td style="padding:11px 14px;color:var(--accento)">8 · 10 · 14</td><td style="padding:11px 14px;color:var(--testo-3)">tre sole, non una a caso ogni volta</td></tr>
       </tbody>
     </table>
   </div>
@@ -1782,11 +1806,11 @@
   </div>
 
   <div style="margin-top:34px;padding:20px;border-radius:18px;border:1px solid rgba(91,140,255,0.30);background:rgba(91,140,255,0.08);font-size:14px;line-height:1.62;color:var(--testo-2)">
-    <b style="color:var(--testo)">Cosa NON cambia, ed e la maggior parte.</b><br>
+    <span class="ril">Cosa NON cambia, ed e la maggior parte.</span><br>
     Le immagini, le icone, gli avatar, il pianeta, il carosello delle bandiere, la barra in
     basso e la sua posizione, i nomi delle sezioni, e ogni funzione che oggi c'e. Il sistema
     va bene com'e: qui si mette in ordine come si presenta, non cosa fa.<br><br>
-    <b style="color:var(--testo)">E cosa manca ancora, detto invece che sottinteso.</b><br>
+    <span class="ril">E cosa manca ancora, detto invece che sottinteso.</span><br>
     Qui non ci sono la videochiamata a due (si tocca solo con due telefoni veri in mano) e
     la stanza in video: sono le uniche due schermate che non si possono disegnare a
     tavolino, perche il loro problema e dove finiscono le facce quando entra il terzo, e
