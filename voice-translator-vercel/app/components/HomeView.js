@@ -17,7 +17,6 @@ import CarouselLingue from './CarouselLingue.js';
 import Ribalta from './ui/Ribalta.js';
 import PrimaProva, { riapriPrimaProva } from './PrimaProva.js'; // b.96 → b.356 "Parla ora"
 import { memGet, memSet } from '../lib/memoria.js';
-import { COLONNA } from '../lib/righello.js';
 
 // ═══════════════════════════════════════
 // Theme palette (multi-theme support)
@@ -215,9 +214,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         // sicurezza dello schermo.
         paddingTop: 'max(8px, env(safe-area-inset-top))',
         paddingBottom: 100,
-        paddingLeft: 20, paddingRight: 20,
-        /* Colonna unica allineata: su desktop niente card che dilagano */
-        ...COLONNA,
+        // b.437 — LA HOME A TUTTA LARGHEZZA (collaudo di Luca: «non hai
+        // rispettato la larghezza dei contenitori del template, deve
+        // sfruttare la larghezza dello schermo; via i margini laterali»).
+        // La Home NON ha linguetta, quindi non deve tenere i 66px liberi
+        // da ogni lato che il righello lascia per la linguetta: stringevano
+        // il contenuto a meta schermo per niente. Ora va da bordo a bordo,
+        // col solo respiro minimo; un tetto largo evita che su desktop
+        // dilaghi.
+        paddingLeft: 12, paddingRight: 12,
+        width: '100%', maxWidth: 900, marginLeft: 'auto', marginRight: 'auto',
       }}>
 
         {/* ═══ Header ═══

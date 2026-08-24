@@ -214,6 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.437** (push #729) — HOME A TUTTA LARGHEZZA: i contenitori
+  usavano la colonna centrata che lascia 66px liberi per la linguetta —
+  ma la Home non ha linguetta, e stringeva tutto a meta schermo. Ora va da
+  bordo a bordo come nel template, coi margini laterali eliminati.
 - Versione: **b.436** (push #728) — HOME MONTATA DAL TEMPLATE: il microfono
   diventa il protagonista grande al centro, in cima compare la scritta
   BarTalk. Il tasto immagine faccia-a-faccia esce dalla Home; il barcode e
