@@ -2472,6 +2472,154 @@
 
 
   <!-- ═══════════════════════════════════════════════════════════
+       MONDO RIDISEGNATO — b.479
+       ═══════════════════════════════════════════════════════════ -->
+  <h2 class="sezione">Mondo: la pagina, e cosa resta nel pannello</h2>
+  <p class="sotto">
+    Dieci correzioni di Luca in una volta. La piu grossa e una decisione:
+    <span class="ril">la lingua non e piu un filtro</span>. Tutto e tradotto, quindi filtrare per
+    lingua non serve a nessuno — quello che interessa e <span class="ril">la ZONA</span>: dove sta
+    la gente con cui si parla. E la ricerca esce dal pannello e torna nella pagina, dove si cerca.
+  </p>
+
+  <div class="mappa">
+    <table>
+      <tr class="capo"><td>prima</td><td>adesso</td><td>perche</td></tr>
+      <tr><td>Cerca nel pannello</td><td>Cerca NELLA PAGINA</td><td>si cerca dove si guarda, non dietro una porta</td></tr>
+      <tr><td>Filtro lingua</td><td>tolto</td><td>e tutto tradotto: filtrare per lingua non toglie barriere, le rimette</td></tr>
+      <tr><td>&laquo;Da dove parto&raquo;</td><td>Paese, modulo standard</td><td>stessa bandiera e stesso elenco delle altre pagine</td></tr>
+      <tr><td>Titoli tradotti/originali</td><td>un'icona che si accende</td><td>due tasti larghi per un si/no</td></tr>
+      <tr><td>Veloce / Approfondita</td><td>un'icona che si accende</td><td>idem</td></tr>
+      <tr><td>All'apertura / A richiesta</td><td>un'icona IN ALTO</td><td>si tocca mentre si guarda l'elenco, non dentro un pannello</td></tr>
+      <tr><td>Tutto in grassetto</td><td>niente grassetto</td><td>se tutto pesa, niente pesa</td></tr>
+    </table>
+  </div>
+
+  <div class="fila" style="margin-top:18px">
+
+    <div>
+      <div class="cartellino"><span class="lettera">M1</span><span class="nome">Stanze</span><span class="stato dafare">DA FARE</span></div>
+      <div class="destinazione">&rarr; app/components/MondoView.js</div>
+      <p class="didascalia">La ricerca sta nella pagina. Il Paese e una pillola, non una freccia. Le tre preferenze sono tre icone.</p>
+      <div class="telefono">
+        <div class="linguetta" title="Apri il pannello"><svg class="ic"><use href="#i-menu"/></svg></div>
+        <div class="schermo">
+          <div class="testata">
+            <span class="pillola on">🇦🇺 Australia</span>
+            <span style="flex:1"></span>
+            <span class="tondino" title="Aggiorna ogni volta che apro"><svg class="ic"><use href="#i-refresh"/></svg></span>
+            <span class="tondino"><svg class="ic"><use href="#i-battery"/></svg></span>
+          </div>
+          <div class="tabs">
+            <span class="tab on">Stanze</span><span class="tab">Notizie</span><span class="tab">Mondo</span>
+          </div>
+          <div class="riga-campo" style="padding:10px 0 6px">
+            <div class="modulo" style="min-height:44px">
+              <svg class="ic" style="opacity:.55"><use href="#i-globe"/></svg>
+              <div class="campo" style="padding:5px 0">Cerca una stanza o un argomento…</div>
+            </div>
+          </div>
+          <div class="corpo" style="padding-top:2px">
+            <div style="font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muto)">Aperte adesso</div>
+            <div class="scheda">
+              <div class="dentro" style="display:flex;gap:11px;align-items:flex-start">
+                <div class="mini" style="width:44px;height:44px"><svg class="ic"><use href="#i-users"/></svg></div>
+                <div style="flex:1;min-width:0">
+                  <h4>Sydney &middot; il costo delle case</h4>
+                  <div class="eti"><span class="chip">🇦🇺</span><span class="quanti"><svg class="ic"><use href="#i-users"/></svg>12</span></div>
+                </div>
+              </div>
+            </div>
+            <div style="font-size:10.5px;letter-spacing:1.1px;text-transform:uppercase;color:var(--muto);margin-top:6px">Se ne parla</div>
+            <div class="scheda">
+              <div class="dentro" style="display:flex;gap:11px;align-items:flex-start">
+                <div class="mini" style="width:44px;height:44px"><svg class="ic"><use href="#i-chat"/></svg></div>
+                <div style="flex:1;min-width:0">
+                  <h4>Chi sale sul palco stasera</h4>
+                  <div class="eti"><span class="chip">🇦🇺 chiusa</span><span>18 commenti</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="scheda">
+              <div class="dentro" style="display:flex;gap:11px;align-items:flex-start">
+                <div class="mini" style="width:44px;height:44px"><svg class="ic"><use href="#i-zap"/></svg></div>
+                <div style="flex:1;min-width:0">
+                  <h4>Il traghetto che nessuno prende piu</h4>
+                  <div class="eti"><span class="chip">🌍 virale</span><span>41 commenti</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="barra"><i><span class="acciaio b" style="background-image:var(--img-menu-home);opacity:.55"></span><span>Home</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-chat);opacity:.55"></span><span>Chat</span></i><i><span class="piu"><svg class="ic p"><use href="#i-plus"/></svg></span></i><i class="on"><span class="acciaio b" style="background-image:var(--img-menu-cuore)"></span><span>Community</span></i><i><span class="acciaio b" style="background-image:var(--img-menu-profilo);opacity:.55"></span><span>Profilo</span></i></div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li><span class="ril">La ricerca e nella pagina</span>, sotto le linguette: si cerca dove si guarda. Prima stava dentro il pannello, cioe dietro una porta che nessuno apre per cercare.</li>
+          <li><span class="ril">Due elenchi, non uno.</span> «Aperte adesso» sono le stanze vive; «Se ne parla» sono quelle chiuse ma commentate, e il virale. Una pagina che mostra solo le stanze aperte, quando non ce ne sono, e una pagina vuota — ed e proprio il momento in cui bisogna dare a qualcuno un motivo per restare.</li>
+          <li><span class="ril">Il Paese e una pillola</span>, come nel resto dell'applicazione. Niente piu «Cambia &rsaquo;» con la freccia: si tocca la pillola.</li>
+          <li>L'aggiornamento e <span class="ril">un'icona in alto</span>: si tocca mentre si guarda l'elenco, che e quando viene voglia di aggiornarlo.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div>
+      <div class="cartellino"><span class="lettera">M2</span><span class="nome">Il pannello, ripulito</span><span class="stato dafare">DA FARE</span></div>
+      <div class="destinazione">&rarr; app/components/ui/PreferenzeMondo.js</div>
+      <p class="didascalia">Solo preferenze. Niente ricerca, niente lingua, niente grassetto.</p>
+      <div class="telefono">
+        <div class="schermo"><div class="corpo"></div></div>
+        <div class="velo-lato"></div>
+        <div class="pannello">
+          <div class="testa"><span class="n">Stanze</span><span class="tondino"><svg class="ic"><use href="#i-x"/></svg></span></div>
+          <div class="dentro">
+            <div class="gruppo">
+              <span class="eti-lato">Da dove guardo</span>
+              <span class="voce-lato on"><span style="font-size:19px">🇦🇺</span><span>Australia</span></span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-globe"/></svg><span>Mondo intero</span></span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-plus"/></svg><span>Cerca un Paese</span></span>
+            </div>
+            <div class="gruppo">
+              <span class="eti-lato">Come me le mostri</span>
+              <span class="voce-lato on"><svg class="ic"><use href="#i-swap"/></svg><span>Titoli tradotti</span><span class="co">&#10003;</span></span>
+              <span class="voce-lato"><svg class="ic"><use href="#i-zap"/></svg><span>Cerca a fondo</span></span>
+              <span class="voce-lato on"><svg class="ic"><use href="#i-refresh"/></svg><span>Aggiorna all'apertura</span><span class="co">&#10003;</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spiega"><span class="ril">Cosa cambia.</span>
+        <ul>
+          <li><span class="ril">Via la lingua.</span> Filtrare per lingua in un'applicazione che traduce tutto rimette la barriera che l'applicazione toglie. Quello che serve e la ZONA: da dove guardo il mondo.</li>
+          <li><span class="ril">Via la ricerca</span>: e nella pagina.</li>
+          <li><span class="ril">Tre interruttori, non sei tasti larghi.</span> «Tradotti / Originali», «Veloce / Approfondita» e «All'apertura / A richiesta» erano tre coppie di tasti grandi per tre si-o-no. Adesso sono tre voci che si accendono, con la spunta a destra: si legge in un colpo cosa e acceso.</li>
+          <li><span class="ril">Niente grassetto</span>, tutte le voci alte quarantaquattro, allineate a sinistra. Se tutto pesa, niente pesa.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="width:360px">
+      <div class="cartellino"><span class="lettera">M3</span><span class="nome">Come funziona il Paese</span><span class="stato gia">SPIEGAZIONE</span></div>
+      <p class="didascalia">La domanda di Luca: «spiegami l'impostazione mondo intero, non capisco come funziona».</p>
+      <div class="mappa" style="margin-top:0">
+        <table>
+          <tr class="capo"><td>stato</td><td>cosa vedi</td></tr>
+          <tr><td>Mondo intero</td><td>tutte le stanze del mondo, senza filtro</td></tr>
+          <tr><td>Un Paese</td><td>le stanze di quel Paese, PIU quello che e virale altrove</td></tr>
+          <tr><td>All'avvio</td><td>il Paese si indovina da dove sei, e si puo cambiare</td></tr>
+        </table>
+      </div>
+      <div class="spiega" style="margin-top:10px"><span class="ril">Le due cose da sapere.</span>
+        <ul>
+          <li>Oggi «Australia» compariva perche il Paese si <span class="ril">indovina dalla posizione</span> — e se indovina male, si vede solo l'Australia senza capire perche. Adesso la pillola in alto lo dice sempre, e si tocca per cambiarlo.</li>
+          <li><span class="ril">Un Paese non e una gabbia</span> (ordine di Luca): scelto un Paese, quello ha la PRIORITA, ma sotto compare anche cio che e virale fuori. Se no chi sceglie il suo Paese si chiude in una stanza vuota e non sa che il mondo sta parlando d'altro.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
        LE SIDEBAR — b.437
        ═══════════════════════════════════════════════════════════ -->
   <h2 class="sezione">Le sidebar, che e dove va tutto il resto</h2>
