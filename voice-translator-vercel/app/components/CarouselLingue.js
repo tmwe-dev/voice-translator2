@@ -100,13 +100,13 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
       {/* il bottone a righine che apre l'elenco completo (dal Wueform) */}
       <button onClick={() => { vibrate(6); setAperto((v) => !v); setCerca(''); }}
         aria-label={L('yourLang')} aria-expanded={aperto}
-        style={{ width: 44, height: 44, borderRadius: 22, border: 'none', cursor: 'pointer',
+        style={{ width: 34, height: 34, borderRadius: 17, border: 'none', cursor: 'pointer',
           background: 'rgba(255,255,255,0.05)', color: C.textMuted, marginBottom: 6,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           backdropFilter: 'blur(12px)', transition: 'transform .3s, background .3s' }}
         onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.10)'; }}
         onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}>
-        <svg viewBox="0 0 24 24" width={24} height={24} fill="none" stroke="currentColor" strokeWidth={1.2}>
+        <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={1.2}>
           <line x1="4" y1="8" x2="20" y2="8" style={{ animation: 'vtRiga 3s ease-in-out infinite' }} />
           <line x1="6" y1="12" x2="18" y2="12" style={{ animation: 'vtRiga 3s .4s ease-in-out infinite' }} />
           <line x1="8" y1="16" x2="16" y2="16" style={{ animation: 'vtRiga 3s .8s ease-in-out infinite' }} />
@@ -183,7 +183,7 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
         }}>
         {freccia(-1, '‹')}
         <div key={salto} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
-          minWidth: 270, height: 64, animation: `vtScivola${verso >= 0 ? 'D' : 'S'} .4s cubic-bezier(0.25,0.1,0.25,1)` }}>
+          minWidth: 230, height: 46, animation: `vtScivola${verso >= 0 ? 'D' : 'S'} .4s cubic-bezier(0.25,0.1,0.25,1)` }}>
           {visibili.map((l) => {
             const cent = l.sp === 0;
             const vicina = Math.abs(l.sp) === 1;
@@ -191,20 +191,20 @@ function CarouselLingue({ selezionata, onScegli, onLinguaMenu, C, L }) {
               <button key={`${l.code}-${l.sp}`}
                 onClick={() => { if (cent) { scegli(l); } else { setVerso(l.sp > 0 ? 1 : -1); setSalto((s) => s + 1); setCentro((c) => (c + l.sp + totale) % totale); } }}
                 title={l.name}
-                style={{ width: 52, border: 'none', background: 'transparent', cursor: 'pointer',
+                style={{ width: 40, border: 'none', background: 'transparent', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px',
                   fontFamily: FONT }}>
                 {/* b.438 — le bandiere come nel template: piene, non
                     oscurate. Via il brightness<1 che le spegneva e il
                     grayscale sul centro; i vicini si smorzano con la sola
                     opacita, come nel template. E piu grandi. */}
-                <span style={{ fontSize: cent ? 40 : 30, lineHeight: 1, transition: 'all .3s',
+                <span style={{ fontSize: cent ? 26 : 16, lineHeight: 1, transition: 'all .3s',
                   filter: cent ? 'none' : vicina ? 'grayscale(30%)' : 'grayscale(55%)',
                   opacity: cent ? 1 : vicina ? 0.6 : 0.35,
                   transform: cent ? 'scale(1.06)' : 'scale(1)' }}>
                   {l.flag}
                 </span>
-                <span style={{ fontSize: 9, letterSpacing: 1, fontWeight: 600, textTransform: 'uppercase',
+                <span style={{ fontSize: 8.5, letterSpacing: 1, fontWeight: 500, textTransform: 'uppercase',
                   color: cent ? C.textPrimary : C.textMuted, opacity: cent ? 1 : 0.5 }}>
                   {l.code.split('-')[0]}
                 </span>

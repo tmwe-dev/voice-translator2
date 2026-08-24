@@ -17,6 +17,14 @@ import { useApp } from '../contexts/AppContext.js';
 // avevano prese le altre: 48.
 const MISURA_MENU = 48;
 
+// b.443 — le immagini in acciaio del menu, quelle del template.
+const IMG_MENU = {
+  home: '/sezioni/menu-home.webp',
+  conversations: '/sezioni/menu-chat.webp',
+  community: '/sezioni/menu-cuore.webp',
+  profile: '/sezioni/menu-profilo.webp',
+};
+
 const NavIcon = ({ id, color, size = MISURA_MENU }) => {
   // b.363 — ICONE SOTTILI E MODERNE (ordine di Luca: «mettine di belle e
   // moderne con linee sottili, NO BOLD»). Quelle di prima erano disegni
@@ -97,7 +105,9 @@ const BottomNav = ({ currentView, onNewConversation }) => {
   const handleTabClick = (viewId) => { vibrate(15); setView(viewId); };
   const handleFabClick = () => { vibrate(20); onNewConversation ? onNewConversation() : setView('home'); };
 
-  const accentColor = C.accent1 || PALETTE.purple;
+  // b.443 — l'accesa e gialla (goldAccent), come nel template: il blu e
+  // l'applicazione, il giallo dice dove sei adesso.
+  const accentColor = C.goldAccent || '#ffc44d';
 
   const renderTab = (item) => {
     const isActive = item.views.includes(currentView);
@@ -112,7 +122,7 @@ const BottomNav = ({ currentView, onNewConversation }) => {
         onClick={() => handleTabClick(item.views[0])}
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
-          justifyContent: 'center', gap: '2px', padding: '4px 10px',
+          justifyContent: 'center', gap: '3px', padding: '2px 10px',
           // b.361 — VIA la sfumatura azzurra dietro la voce attiva (collaudo
           // di Luca: «sembra rimasta appesa la sfumatura e basta»): niente
           // sfondo, l'attiva si distingue solo dal colore del testo.
@@ -123,15 +133,27 @@ const BottomNav = ({ currentView, onNewConversation }) => {
         aria-label={item.label}
         aria-current={isActive ? 'page' : undefined}
       >
-        <NavIcon id={item.id} color={coloreIcona} size={MISURA_MENU} />
-        <span style={{ fontSize: '10px', fontWeight: '600', color, letterSpacing: '0.2px' }}>{item.label}</span>
+        {/* b.443 — TORNA L'ACCIAIO NEL MENU, come nel template (ordine di
+            Luca: «non stai usando il menu pie di pagina del template»).
+            A b.363 le avevo tolte perche a 48 si leggevano come macchie:
+            il template le usa a 26, ed e questa la misura che le fa
+            funzionare — piccole e nitide, non grandi e impastate. */}
+        {IMG_MENU[item.id]
+          // eslint-disable-next-line @next/next/no-img-element -- immagine locale
+          ? <img src={IMG_MENU[item.id]} alt="" aria-hidden width={52} height={52}
+              style={{ width: 26, height: 26, objectFit: 'contain', display: 'block',
+                opacity: isActive ? 1 : 0.55 }} />
+          : <NavIcon id={item.id} color={coloreIcona} size={26} />}
+        <span style={{ fontSize: '9.5px', fontWeight: '500', color, letterSpacing: '0.2px' }}>{item.label}</span>
       </button>
     );
   };
 
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, height: '94px',
+      // b.443 — altezza 62 come nel template (era 94 per reggere l'acciaio
+      // a 48; ora l'acciaio e 26 e quell'altezza non serve piu).
+      position: 'fixed', bottom: 0, left: 0, right: 0, height: '62px',
       // b.363 — la barra segue la misura dell'acciaio: con l'icona a 48
       // (raddoppiata e poi ridotta del 20%) l'altezza sta a 94. Con i 76
       // di prima l'icona usciva dalla barra e si mangiava l'etichetta.
@@ -150,27 +172,23 @@ const BottomNav = ({ currentView, onNewConversation }) => {
       {navItems.slice(0, 2).map(renderTab)}
 
       {/* ── Central FAB ── */}
-      <div style={{ position: 'relative', width: '56px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ width: '56px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <button
           onClick={handleFabClick}
           style={{
-            position: 'absolute', top: '-28px', width: '52px', height: '52px',
-            borderRadius: '50%',
-            // b.361 — GLASS semitrasparente, zero sfumature, segno nero
-            // (collaudo di Luca: «il tasto grigio sfumato fa cagare, voglio
-            // zero sfumature e sfondo glass semitrasparente, carattere nero»).
-            background: 'rgba(255,255,255,0.55)',
-            backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)',
+            // b.443 — il piu sta DENTRO la barra, tondo da 40, come nel
+            // template: non piu appeso sopra il bordo.
+            width: '40px', height: '40px', borderRadius: '50%',
+            background: 'rgba(238,242,255,0.14)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#000', border: `1px solid rgba(255,255,255,0.5)`,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            color: C.textPrimary || '#fff', border: 'none', padding: 0,
             cursor: 'pointer', transition: 'transform 0.15s', zIndex: 51,
           }}
           onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
           aria-label={L('newConversation')}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19"/>
             <line x1="5" y1="12" x2="19" y2="12"/>
           </svg>

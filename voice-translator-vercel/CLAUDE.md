@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.443** (push #735) — LE MISURE CHE LUCA HA CHIESTO: BarTalk a
+  30, la pillola delle bandiere con la freccia grandi, il carosello piu
+  piccolo, il tastone del microfono a 168, le righe della lista piu grandi
+  (icona 72, titolo 18, descrizione 14). E IL MENU IN BASSO E' QUELLO DEL
+  TEMPLATE: icone in acciaio a 26, barra alta 62, il «+» tondo dentro la
+  barra, la voce accesa gialla.
 - Versione: **b.442** (push #734) — LA HOME FEDELE AL TEMPLATE: marchio
   BarTalk centrato in testata; microfono grande col cerchio e l'icona BIANCA
   da 20; «Parla ora» a 17 sotto; via l'immagine QR (le porte per connettersi

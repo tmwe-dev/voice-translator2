@@ -213,7 +213,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
         // il margine morto in cima, il contenuto parte subito sotto la
         // sicurezza dello schermo.
         paddingTop: 'max(8px, env(safe-area-inset-top))',
-        paddingBottom: 100,
+        paddingBottom: 76,
         // b.442 — A TUTTA LARGHEZZA come nel template. La Home non ha la
         // linguetta laterale, quindi non deve tenere i 66px liberi per lato
         // che il righello riserva a quella: stringevano tutto per niente.
@@ -247,18 +247,18 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
           <span style={{
             position: 'absolute', top: 30, left: 0, zIndex: 3,
             display: 'inline-flex', alignItems: 'center', gap: 7,
-            height: 34, padding: '0 12px', borderRadius: 999,
+            height: 44, padding: '0 14px', borderRadius: 999,
             border: `1px solid ${C.cardBorder}`, background: 'rgba(255,255,255,0.04)',
-            fontFamily: FONT, fontSize: 14.5, color: C.textPrimary, whiteSpace: 'nowrap',
+            fontFamily: FONT, fontSize: 24, color: C.textPrimary, whiteSpace: 'nowrap',
           }}>
             {getLang(myLang).flag}
-            <span style={{ color: C.textMuted, fontSize: 12 }}>&rarr;</span>
+            <span style={{ color: C.textMuted, fontSize: 18 }}>&rarr;</span>
             {getLang(prefs.lang).flag}
           </span>
           {/* b.442 — IL MARCHIO, centrato in testata come nel template.
               «Talk» in accent1: il blu e l'applicazione. Niente grassetto. */}
           <div style={{
-            textAlign: 'center', fontFamily: FONT, fontSize: 22, lineHeight: 1,
+            textAlign: 'center', fontFamily: FONT, fontSize: 30, lineHeight: 1,
             letterSpacing: 0.2, color: C.textPrimary, padding: '3px 0',
           }}>
             Bar<span style={{ color: C.accent }}>Talk</span>
@@ -304,13 +304,13 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 template). Non azzurra e non da 44: quelle erano mie
                 deviazioni. L'alone prende l'accent1 del tema. */}
             <span style={{
-              width: 132, height: 132, borderRadius: 66,
+              width: 168, height: 168, borderRadius: 84,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               border: `1px solid ${C.accent}57`,
               background: `radial-gradient(circle at 50% 38%, ${C.accent}4d, ${C.accent}14 62%, transparent 74%)`,
               boxShadow: `0 0 0 10px ${C.accent}0d, 0 20px 60px -18px ${C.accent}8c`,
             }}>
-              <Icon name="mic" size={20} color={C.textPrimary} />
+              <Icon name="mic" size={30} color={C.textPrimary} />
             </span>
             <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: C.textPrimary }}>
               {L('speakNowTitle')}
@@ -344,7 +344,7 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               onClick={() => apriSezione(voce.id)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 14, width: '100%',
-                minHeight: 74, opacity: 1,
+                minHeight: 88, opacity: 1,
                 padding: '14px 2px', background: 'none', textAlign: 'left',
                 border: 'none', cursor: 'pointer', WebkitTapHighlightColor: 'transparent',
                 borderBottom: idx < SEZIONI.length - 1 ? `1px solid ${C.cardBorder}` : 'none',
@@ -356,20 +356,20 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
                 // b.363 — nella home le icone in acciaio crescono del 50%
                 // (ordine di Luca): il riquadro da 40 passa a 60, l'acciaio
                 // dentro da 36 a 54.
-                width: 60, height: 60, flexShrink: 0,
+                width: 72, height: 72, flexShrink: 0,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 0,
               }}>
                 {voce.img
                   ? <img src={voce.img} alt="" aria-hidden width={108} height={108}
-                      style={{ width: 54, height: 54, objectFit: 'contain', display: 'block',
+                      style={{ width: 66, height: 66, objectFit: 'contain', display: 'block',
                         filter: ombraAcciaio(1.2) }} />
                   : <Icon name={voce.icon} size={25} color={C.accent} />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 15, fontWeight: 500, color: C.textPrimary, fontFamily: FONT }}>
+                <span style={{ display: 'block', fontSize: 18, fontWeight: 500, color: C.textPrimary, fontFamily: FONT }}>
                   {L(voce.titleKey)}
                 </span>
-                <span style={{ display: 'block', fontSize: 12, color: C.textMuted, fontFamily: FONT, marginTop: 2 }}>
+                <span style={{ display: 'block', fontSize: 14, color: C.textMuted, fontFamily: FONT, marginTop: 3 }}>
                   {L(voce.descKey)}
                 </span>
               </span>
