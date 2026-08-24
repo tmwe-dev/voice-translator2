@@ -1,6 +1,5 @@
 'use client';
 import { memo, useState, useMemo, useEffect } from 'react';
-import { ombraAcciaio } from '../lib/acciaio.js';
 import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
 // b.363 — `t` serviva solo all'avviso del cambio lingua, che e stato tolto:
@@ -360,8 +359,13 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
               }}>
                 {voce.img
                   ? <img src={voce.img} alt="" aria-hidden width={108} height={108}
-                      style={{ width: 66, height: 66, objectFit: 'contain', display: 'block',
-                        filter: ombraAcciaio(1.2) }} />
+                      // b.455, ordine di Luca: «dietro tutte le immagini c'e
+                      // un'ombra scura, eliminala». Era uno stacco nero
+                      // PIENO, messo per staccare il metallo dal fondo
+                      // scuro. Sul tema chiaro non stacca niente: e una
+                      // macchia dietro l'oggetto. Queste immagini hanno gia
+                      // il loro rilievo dipinto dentro.
+                      style={{ width: 66, height: 66, objectFit: 'contain', display: 'block' }} />
                   : <Icon name={voce.icon} size={25} color={C.accent} />}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
