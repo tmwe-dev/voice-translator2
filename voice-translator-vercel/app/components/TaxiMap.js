@@ -62,6 +62,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
   const { L, S } = useApp();
   const boxRef = useRef(null);
   const mapRef = useRef(null);
+  const stileAttivoRef = useRef(null);   // quale stile e in uso adesso
   const [pronta, setPronta] = useState(false);
   const acc = S.colors?.accent1 || '#5b8cff';
   const acc2 = S.colors?.accent2 || '#38e1ff';
@@ -110,7 +111,7 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
 
       mappa = new maplibregl.Map({
         container: boxRef.current,
-        style: mappaOra(),
+        style: (stileAttivoRef.current = mappaOra()),
         center: [lng, lat],
         zoom: 14.5,
         attributionControl: { compact: true },
@@ -201,6 +202,32 @@ export default function TaxiMap({ lat, lng, altezza = 340, comandi = true, inter
     apriPannelloPieno();
     return () => chiudiPannelloPieno();
   }, [pieno]);
+
+  // b.454 — LA MAPPA NON CAMBIAVA COLORE. Collaudo di Luca: «la mappa non
+  // cambia colore ma e perfetta». Vero: lo stile veniva scelto UNA VOLTA
+  // SOLA, quando la mappa nasce, e da li restava quello per sempre —
+  // scavallate le sette o le diciannove non succedeva niente, e chi teneva
+  // l'app aperta si portava dietro la mappa sbagliata fino al riavvio.
+  //
+  // Adesso l'ora si ricontrolla, e quando cambia si usa setStyle: la mappa
+  // NON viene ricreata, quindi non riparte il velo «carico la mappa» e il
+  // punto di vista resta dov'e. I marcatori sono elementi appoggiati sopra,
+  // non livelli dello stile: setStyle non li tocca.
+  useEffect(() => {
+    const controlla = () => {
+      const voluto = mappaOra();
+      if (!mapRef.current || stileAttivoRef.current === voluto) return;
+      stileAttivoRef.current = voluto;
+      try { mapRef.current.setStyle(voluto); }
+      catch { /* la mappa sta ancora nascendo: si riprova al prossimo giro */ }
+    };
+    const id = setInterval(controlla, 60000);
+    // e si ricontrolla anche tornando all'app, che e quando ci si accorge
+    // che fuori nel frattempo e sceso il buio
+    const suRitorno = () => { if (!document.hidden) controlla(); };
+    document.addEventListener('visibilitychange', suRitorno);
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', suRitorno); };
+  }, []);
 
   const zoom = (delta) => mapRef.current?.zoomTo(mapRef.current.getZoom() + delta, { duration: 250 });
   const centra = () => mapRef.current?.flyTo({ center: [lng, lat], zoom: 15, duration: 600 });

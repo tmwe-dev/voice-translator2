@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.454** (push #745) — LA MAPPA CAMBIA COLORE DAVVERO: lo stile
+  veniva scelto una volta sola alla nascita, quindi scavallate le 7 o le 19
+  non succedeva niente. Ora l'ora si ricontrolla ogni minuto e tornando
+  all'app, e il cambio usa setStyle: la mappa non si ricrea, niente velo
+  «carico la mappa», il punto di vista resta dov'e.
 - Versione: **b.453** (push #744) — LA MAPPA E' NOSTRA: due stili disegnati
   da noi (giorno e notte), generati da scripts/mappa-bartalk.mjs a partire da
   Liberty — stessi dati OpenStreetMap, cambiano solo le tinte. Contrasto
