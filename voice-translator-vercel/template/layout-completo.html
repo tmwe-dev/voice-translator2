@@ -319,6 +319,30 @@
     background: radial-gradient(circle at 50% 38%, rgba(61,220,132,0.30), rgba(61,220,132,0.08) 62%, transparent 74%);
     box-shadow: 0 0 0 10px rgba(61,220,132,0.05), 0 20px 60px -18px rgba(61,220,132,0.55); }
 
+  /* ══ L'INDICE — b.480 ══
+     Luca: «nell'artefatto faccio fatica a trovare la pagina che modifichi,
+     come la trovo?». Colpa mia: quarantaquattro schermate e nessun modo di
+     arrivare a una in particolare. La barra resta appiccicata in cima
+     mentre si scorre, e il pezzo appena rifatto porta il segno «nuovo» —
+     cosi si sa dove guardare senza doverlo chiedere. */
+  .indice {
+    position: sticky; top: 0; z-index: 50; margin: 0 -20px 20px; padding: 12px 20px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+    background: rgba(5,7,15,0.94);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--bordo);
+  }
+  .indice .eti { font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--muto); margin-right: 4px; }
+  .indice a {
+    font-size: 12.5px; color: var(--testo-2); text-decoration: none;
+    padding: 6px 11px; border-radius: 999px; border: 0.5px solid var(--bordo);
+    background: var(--carta); white-space: nowrap;
+  }
+  .indice a:hover { border-color: var(--accento-2); color: var(--testo); }
+  .indice a.nuovo { border-color: var(--giallo); color: var(--giallo); }
+  .indice a.nuovo b { font-weight: 500; font-size: 10px; letter-spacing: 0.6px; text-transform: uppercase; opacity: 0.85; }
+  h2.sezione { scroll-margin-top: 78px; }
+
   .bandiera {
     font-size: 30px; line-height: 1; height: var(--tasto); width: var(--tasto);
     display: flex; align-items: center; justify-content: center; cursor: pointer;
@@ -641,6 +665,21 @@
 
 <div class="foglio">
 
+  <nav class="indice">
+    <span class="eti">Vai a</span>
+    <a href="#travaso">Come si travasa</a>
+    <a href="#pagine">Le pagine</a>
+    <a href="#stanze">Le stanze</a>
+    <a href="#dentro">Mondo e Vita</a>
+    <a href="#impostazioni">Impostazioni</a>
+    <a href="#kit">Il kit</a>
+    <a href="#mondo" class="nuovo">Mondo ridisegnato <b>nuovo</b></a>
+    <a href="#sidebar">Le sidebar</a>
+    <a href="#stati">I quattro stati</a>
+    <a href="#misure">Le misure</a>
+    <a href="#regole">Le regole</a>
+  </nav>
+
   <p class="occhiello">TEMPLATE · 32 SCHERMATE · 29 PEZZI · icone e immagini vere</p>
   <h1>BarTalk, layout completo</h1>
   <p class="sommario">
@@ -721,7 +760,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        LE PAGINE
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Come il template diventa codice</h2>
+  <h2 class="sezione" id="travaso">Come il template diventa codice</h2>
   <p class="sotto">
     Questo non e un disegno a parte: e uno specchio dell'infrastruttura. Ogni cosa qui dentro
     punta a qualcosa che nel programma esiste gia, col suo nome vero — cosi una modifica decisa
@@ -780,7 +819,7 @@
     vanno solo aggiunti alla lista visibile.
   </p>
 
-  <h2 class="sezione">Le pagine</h2>
+  <h2 class="sezione" id="pagine">Le pagine</h2>
   <p class="sotto">
     Scorri di lato. Ogni telefono e a misura vera, coi colori veri, e porta il suo BOLLINO:
     cosi il file non e piu un disegno fermo, ma dice a che punto siamo.
@@ -1454,7 +1493,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        LE STANZE
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Le stanze — dal codice alla videochiamata</h2>
+  <h2 class="sezione" id="stanze">Le stanze — dal codice alla videochiamata</h2>
   <p class="sotto">Sette schermate che si passano il testimone. Il filo che le tiene: chi c'e e in che lingua, sempre a schermo, mai dentro un menu.</p>
 
   <div class="pista">
@@ -1654,7 +1693,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        MONDO E VITA, IN PROFONDITA
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Dentro Mondo e dentro Vita</h2>
+  <h2 class="sezione" id="dentro">Dentro Mondo e dentro Vita</h2>
   <p class="sotto">Le schermate che si aprono da una riga di elenco. Tutte col ribaltamento: si gira il foglio, non si va via.</p>
 
   <div class="pista">
@@ -1857,7 +1896,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        IMPOSTAZIONI, BUSINESS E IL TASSISTA
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Impostazioni, Business e la pagina del tassista</h2>
+  <h2 class="sezione" id="impostazioni">Impostazioni, Business e la pagina del tassista</h2>
   <p class="sotto">Le schermate in cui si entra di rado: proprio per questo ognuna deve spiegarsi da sola.</p>
 
   <div class="pista">
@@ -2039,7 +2078,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        IL KIT
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Il kit — i pezzi che si copiano</h2>
+  <h2 class="sezione" id="kit">Il kit — i pezzi che si copiano</h2>
   <p class="sotto">
     Questa e la parte che serve davvero per applicare. Ogni pezzo ha la sua misura esatta:
     si copia di qui e non si reinventa, cosi due schermate non finiscono per fare la stessa
@@ -2474,7 +2513,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        MONDO RIDISEGNATO — b.479
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Mondo: la pagina, e cosa resta nel pannello</h2>
+  <h2 class="sezione" id="mondo">Mondo: la pagina, e cosa resta nel pannello</h2>
   <p class="sotto">
     Dieci correzioni di Luca in una volta. La piu grossa e una decisione:
     <span class="ril">la lingua non e piu un filtro</span>. Tutto e tradotto, quindi filtrare per
@@ -2622,7 +2661,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        LE SIDEBAR — b.437
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Le sidebar, che e dove va tutto il resto</h2>
+  <h2 class="sezione" id="sidebar">Le sidebar, che e dove va tutto il resto</h2>
   <p class="sotto">
     Una pagina si svuota solo se cio che le si toglie ha un altro posto dove stare. Quel posto
     e il pannello che entra da sinistra: <span class="ril">dentro ci vanno le sezioni, i filtri,
@@ -2750,7 +2789,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        GLI STATI
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">I quattro stati, che valgono per ogni schermata</h2>
+  <h2 class="sezione" id="stati">I quattro stati, che valgono per ogni schermata</h2>
   <p class="sotto">
     Una pagina non e finita quando e disegnata piena: e finita quando sa stare vuota, mentre
     aspetta, e quando qualcosa si rompe. Sono i tre momenti in cui la gente scrive che l'app
@@ -2825,7 +2864,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        LE MISURE
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Le misure, tutte insieme</h2>
+  <h2 class="sezione" id="misure">Le misure, tutte insieme</h2>
   <p class="sotto">Per non doverle ricavare ogni volta dal disegno. Se un numero non e qui, non e stato deciso.</p>
 
   <div style="overflow-x:auto;border:0.5px solid var(--bordo);border-radius:16px;background:var(--carta)">
@@ -2861,7 +2900,7 @@
   <!-- ═══════════════════════════════════════════════════════════
        LE REGOLE
        ═══════════════════════════════════════════════════════════ -->
-  <h2 class="sezione">Le regole, uguali per tutte le pagine</h2>
+  <h2 class="sezione" id="regole">Le regole, uguali per tutte le pagine</h2>
   <p class="sotto">Le sei della prima volta, piu due imparate applicandole.</p>
 
   <div class="griglia">
