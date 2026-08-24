@@ -1,0 +1,564 @@
+<title>Mappa a schermo intero</title>
+
+<style>
+  :root {
+    /* I TOKEN DEL TEMA — copiati da app/lib/styles.js (tema «dark»).
+       Stessi nomi delle chiavi di S.colors: un colore deciso qui si
+       trasferisce cambiando il tema, non cercando un hex nel codice. */
+    --bg:            #05070f;
+    --textPrimary:   #eef2ff;
+    --textSecondary: rgba(238,242,255,0.82);
+    --textMuted:     rgba(238,242,255,0.52);
+    --cardBg:        rgba(140,170,255,0.06);
+    --cardBorder:    rgba(160,190,255,0.14);
+    --inputBg:       rgba(140,170,255,0.05);
+    --accent1:       #5b8cff;
+    --accent2:       #38e1ff;
+    --accent3:       #ff5470;
+    --accent4:       #3ddc84;
+    --goldAccent:    #ffc44d;
+    --tasto: 44px;
+    --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--textPrimary); font-family: var(--font);
+    line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .foglio { max-width: 1180px; margin: 0 auto; padding: 34px 20px 80px; }
+
+  h1 { font-size: 30px; font-weight: 600; letter-spacing: -0.4px; margin: 0 0 6px; }
+  .occhiello { font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--accent2); margin-bottom: 10px; }
+  .sotto { color: var(--textSecondary); font-size: 15px; max-width: 74ch; margin: 0 0 8px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 44px 0 6px; }
+  .ril { color: var(--goldAccent); font-weight: 500; }
+  code { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px;
+    background: var(--inputBg); border: 1px solid var(--cardBorder); border-radius: 6px; padding: 1px 5px; }
+
+  .nota { border-left: 2px solid var(--accent2); background: var(--cardBg); border-radius: 0 14px 14px 0;
+    padding: 15px 18px; font-size: 14px; color: var(--textSecondary); margin: 16px 0; }
+
+  /* ══ LA GRIGLIA DEGLI STILI ══ */
+  .griglia { display: grid; grid-template-columns: repeat(auto-fill, minmax(174px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stile { padding: 0; border-radius: 14px; overflow: hidden; cursor: pointer; text-align: left;
+    border: 1px solid var(--cardBorder); background: var(--cardBg); font-family: var(--font);
+    display: flex; flex-direction: column; transition: border-color .15s, transform .1s; }
+  .stile:hover { border-color: var(--accent2); }
+  .stile:active { transform: scale(0.985); }
+  .stile.acceso { border: 1px solid var(--goldAccent); box-shadow: 0 0 0 3px rgba(255,196,77,0.12); }
+  .stile.fuori { opacity: 0.72; }
+  .mini-mappa { width: 100%; height: 104px; display: block; }
+  .etichetta { padding: 9px 11px 11px; display: flex; flex-direction: column; gap: 2px; }
+  .nome-stile { font-size: 14px; color: var(--textPrimary); }
+  .meta-stile { font-size: 11px; color: var(--textMuted); }
+
+  /* ══ IL TELEFONO ══ */
+  .fila { display: flex; gap: 22px; flex-wrap: wrap; align-items: flex-start; margin-top: 16px; }
+  .telefono { width: 300px; height: 610px; border-radius: 30px; border: 1px solid var(--cardBorder);
+    background: var(--bg); overflow: hidden; position: relative; flex-shrink: 0;
+    box-shadow: 0 24px 60px -22px rgba(0,0,0,0.75); }
+  .cartellino { display: flex; align-items: baseline; gap: 9px; margin-bottom: 5px; }
+  .cartellino .lettera { font-size: 12px; color: var(--accent2); font-family: ui-monospace, Menlo, monospace; }
+  .cartellino .nome { font-size: 15px; }
+  .didascalia { font-size: 12.5px; color: var(--textMuted); margin: 0 0 10px; max-width: 300px; min-height: 34px; }
+
+  .tondino { width: var(--tasto); height: var(--tasto); border-radius: 999px; flex-shrink: 0;
+    border: 0.5px solid var(--cardBorder); background: rgba(10,15,31,0.78);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: center; color: var(--textSecondary); }
+  .tondino.acceso { border: 1px solid var(--goldAccent); color: var(--goldAccent); background: rgba(255,196,77,0.14); }
+  .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5;
+    stroke-linecap: round; stroke-linejoin: round; }
+
+  .colonna-comandi { position: absolute; top: 14px; right: 12px; z-index: 4;
+    display: flex; flex-direction: column; gap: 8px; }
+  .tendina-stili { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 5;
+    background: rgba(8,12,24,0.92); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border: 0.5px solid var(--cardBorder); border-radius: 18px; padding: 10px; }
+  .tendina-stili .presa { width: 38px; height: 4px; border-radius: 999px; background: var(--cardBorder); margin: 2px auto 9px; }
+  .strisciata { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+  .strisciata::-webkit-scrollbar { display: none; }
+  .fiche { width: 84px; flex-shrink: 0; border-radius: 11px; overflow: hidden;
+    border: 1px solid var(--cardBorder); background: var(--cardBg); }
+  .fiche.acceso { border: 1px solid var(--goldAccent); }
+  .fiche svg { width: 100%; height: 52px; display: block; }
+  .fiche span { display: block; font-size: 10px; color: var(--textMuted); padding: 5px 6px 6px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 10px; }
+  td, th { padding: 9px 12px; border-top: 1px solid var(--cardBorder); text-align: left; vertical-align: top; }
+  th { color: var(--accent2); font-size: 10.5px; letter-spacing: 1.1px; text-transform: uppercase; font-weight: 500; border-top: none; }
+  td:first-child { font-family: ui-monospace, Menlo, monospace; font-size: 12px; white-space: nowrap; }
+  td:last-child { color: var(--textMuted); }
+  ul { margin: 8px 0; padding-left: 20px; color: var(--textSecondary); font-size: 14px; }
+  li { margin-bottom: 5px; }
+</style>
+
+<div class="foglio">
+
+<div class="occhiello">BarTalk &middot; template</div>
+<h1>La mappa a schermo intero, e i dodici stili</h1>
+<p class="sotto">
+  Dodici stili, <span class="ril">tutti provati davvero con una chiamata vera</span>: rispondono 200,
+  sono style JSON validi per MapLibre, hanno CORS aperto e non chiedono nessuna chiave. Le anteprime
+  qui sotto non sono disegni inventati: i colori — sfondo, acqua, strade, edifici, verde — sono
+  <span class="ril">estratti dal file di stile vero</span> di ognuno.
+</p>
+
+<div class="nota">
+  <span class="ril">Come si legge questo file.</span> Va in <code>app/components/TaxiMap.js</code>, che
+  oggi conosce due soli stili (<code>dark</code> e <code>positron</code>) e li sceglie dal tema.
+  Le misure vengono dal righello: nessun tasto sotto i <code>44</code>. I colori hanno i nomi veri
+  dei token del tema (<code>accent1</code>, <code>goldAccent</code>, <code>cardBorder</code>&hellip;).
+</div>
+
+<h2>I dodici stili, coi loro colori veri</h2>
+<p class="sotto">
+  I primi dieci sono di progetti aperti (OpenFreeMap e VersaTiles): nessuna chiave, nessuna
+  registrazione, uso libero dichiarato. Gli ultimi tre, piu smorti, sono di CARTO: funzionano senza
+  chiave ma sono di un'azienda, e i loro termini vanno letti prima di appoggiarcisi.
+  <span class="ril">Il satellite non c'e</span>, e non lo invento: nessun fornitore senza chiave ne
+  offre uno pronto.
+</p>
+
+<div class="griglia">
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="rgb(242,243,240)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="rgb(194, 200, 202)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(230, 233, 229)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(234, 234, 229)"/>
+  <g stroke="rgb(213, 213, 213)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Chiaro minimale</span>
+    <span class="meta-stile">OpenFreeMap &middot; chiaro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#f8f4f0"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="#AECFE2"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#fff"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="#f2eae2"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="#f2eae2"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="#f2eae2"/>
+  <g stroke="#cfcdca" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Chiaro vivo</span>
+    <span class="meta-stile">OpenFreeMap &middot; chiaro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#f8f4f0"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="rgb(158,189,255)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#d8e8c8"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsl(35,8%,85%)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsl(35,8%,85%)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsl(35,8%,85%)"/>
+  <g stroke="#e9ac77" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Stradale</span>
+    <span class="meta-stile">OpenFreeMap &middot; colorato</span></span>
+  </button>
+  <button class="stile acceso">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="rgb(12,12,12)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="rgb(27 ,27 ,29)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(12,12,12)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(10,10,10)"/>
+  <g stroke="rgb(12,12,12)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Notte</span>
+    <span class="meta-stile">OpenFreeMap &middot; scuro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#45516E"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="#38435C"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(232,33%,34%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <g stroke="#3C4357" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Notte ardesia</span>
+    <span class="meta-stile">OpenFreeMap &middot; scuro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="rgb(249,244,238)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="rgb(190,221,243)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(217,217,165)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(223,219,215)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(223,219,215)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(223,219,215)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Colorato</span>
+    <span class="meta-stile">VersaTiles &middot; colorato</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="hsl(33,0%,95%)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="hsl(205,0%,85%)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(60,0%,75%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsl(30,0%,86%)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsl(30,0%,86%)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsl(30,0%,86%)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Grigio</span>
+    <span class="meta-stile">VersaTiles &middot; chiaro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="rgb(246,240,246)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="rgb(203,210,223)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(90,6%,86%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(224,209,217)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(224,209,217)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(224,209,217)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Essenziale</span>
+    <span class="meta-stile">VersaTiles &middot; chiaro</span></span>
+  </button>
+  <button class="stile">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="hsl(33,48%,5%)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="hsl(205,69%,15%)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(60,41%,25%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsl(30,11%,14%)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsl(30,11%,14%)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsl(30,11%,14%)"/>
+  <g stroke="rgb(33,33,33)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Eclissi</span>
+    <span class="meta-stile">VersaTiles &middot; scuro</span></span>
+  </button>
+  <button class="stile fuori">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#fafaf8"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="#d4dadc"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#d4e8c8"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="#ededed"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="#ededed"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="#ededed"/>
+  <g stroke="#ddd" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Cenere</span>
+    <span class="meta-stile">CARTO &middot; chiaro</span></span>
+  </button>
+  <button class="stile fuori">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#0e0e0e"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="#2C353C"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#12281a"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgba(57, 57, 57, 1)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgba(57, 57, 57, 1)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgba(57, 57, 57, 1)"/>
+  <g stroke="#1a1a1a" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Materia oscura</span>
+    <span class="meta-stile">CARTO &middot; scuro</span></span>
+  </button>
+  <button class="stile fuori">
+    <svg class="mini-mappa" viewBox="0 0 150 104" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="150" height="104" fill="#fbf8f3"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 150 66 L 150 104 L 0 104 Z" fill="#b0d0d6"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#d4e8c8"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="#f3eadc"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="#f3eadc"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="#f3eadc"/>
+  <g stroke="#e6dfcb" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 150" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 150" stroke-width="2.4"/>
+  </g></svg>
+    <span class="etichetta"><span class="nome-stile">Viaggio</span>
+    <span class="meta-stile">CARTO &middot; colorato</span></span>
+  </button>
+</div>
+
+<h2>Come si va a schermo intero, e come si cambia stile</h2>
+<p class="sotto">
+  Due tasti soli, in colonna a destra, sopra la mappa. Gli stili stanno <span class="ril">nascosti
+  dietro il secondo</span>: non una fila di dodici bottoni sempre a schermo — la mappa e la cosa da
+  guardare, non i comandi.
+</p>
+
+<div class="fila">
+
+  <div>
+    <div class="cartellino"><span class="lettera">A</span><span class="nome">Dentro la pagina</span></div>
+    <p class="didascalia">La mappa sta nel suo riquadro. Il tasto espandi in alto a destra.</p>
+    <div class="telefono" style="height:300px">
+      <div style="position:absolute;inset:0;border-radius:30px;overflow:hidden"><svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 300 610" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="300" height="610" fill="rgb(12,12,12)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 300 66 L 300 610 L 0 610 Z" fill="rgb(27 ,27 ,29)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(12,12,12)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(10,10,10)"/>
+  <g stroke="rgb(12,12,12)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 300" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 300" stroke-width="2.4"/>
+  </g></svg></div>
+      <div class="colonna-comandi">
+        <span class="tondino"><svg class="ic"><use href="#i-expand"/></svg></span>
+        <span class="tondino"><svg class="ic"><use href="#i-layers"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cartellino"><span class="lettera">B</span><span class="nome">Schermo intero</span></div>
+    <p class="didascalia">Stesso nodo, non ricostruito: la mappa non si ricarica mai. Il tasto diventa una &times; nello stesso posto.</p>
+    <div class="telefono">
+      <div style="position:absolute;inset:0;border-radius:30px;overflow:hidden"><svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 300 610" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="300" height="610" fill="rgb(12,12,12)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 300 66 L 300 610 L 0 610 Z" fill="rgb(27 ,27 ,29)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(12,12,12)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(10,10,10)"/>
+  <g stroke="rgb(12,12,12)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 300" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 300" stroke-width="2.4"/>
+  </g></svg></div>
+      <div class="colonna-comandi">
+        <span class="tondino acceso"><svg class="ic"><use href="#i-x"/></svg></span>
+        <span class="tondino"><svg class="ic"><use href="#i-layers"/></svg></span>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cartellino"><span class="lettera">C</span><span class="nome">La scelta dello stile</span></div>
+    <p class="didascalia">Sale dal basso, si scorre col dito. Prende il posto di niente: galleggia sopra la mappa.</p>
+    <div class="telefono">
+      <div style="position:absolute;inset:0;border-radius:30px;overflow:hidden"><svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 300 610" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="300" height="610" fill="rgb(12,12,12)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 300 66 L 300 610 L 0 610 Z" fill="rgb(27 ,27 ,29)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(12,12,12)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(10,10,10)"/>
+  <g stroke="rgb(12,12,12)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 300" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 300" stroke-width="2.4"/>
+  </g></svg></div>
+      <div class="colonna-comandi">
+        <span class="tondino acceso"><svg class="ic"><use href="#i-x"/></svg></span>
+        <span class="tondino acceso"><svg class="ic"><use href="#i-layers"/></svg></span>
+      </div>
+      <div class="tendina-stili">
+        <div class="presa"></div>
+        <div class="strisciata"><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="rgb(242,243,240)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="rgb(194, 200, 202)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(230, 233, 229)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(234, 234, 229)"/>
+  <g stroke="rgb(213, 213, 213)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Chiaro minimale</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="#f8f4f0"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="#AECFE2"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#fff"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="#f2eae2"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="#f2eae2"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="#f2eae2"/>
+  <g stroke="#cfcdca" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Chiaro vivo</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="#f8f4f0"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="rgb(158,189,255)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="#d8e8c8"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsl(35,8%,85%)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsl(35,8%,85%)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsl(35,8%,85%)"/>
+  <g stroke="#e9ac77" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Stradale</span></div><div class="fiche acceso"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="rgb(12,12,12)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="rgb(27 ,27 ,29)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(12,12,12)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(10,10,10)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(10,10,10)"/>
+  <g stroke="rgb(12,12,12)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Notte</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="#45516E"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="#38435C"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(232,33%,34%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsla(232,47%,18%,0.65)"/>
+  <g stroke="#3C4357" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Notte ardesia</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="rgb(249,244,238)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="rgb(190,221,243)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(217,217,165)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(223,219,215)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(223,219,215)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(223,219,215)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Colorato</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="hsl(33,0%,95%)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="hsl(205,0%,85%)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(60,0%,75%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="hsl(30,0%,86%)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="hsl(30,0%,86%)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="hsl(30,0%,86%)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Grigio</span></div><div class="fiche"><svg class="" viewBox="0 0 84 52" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="84" height="52" fill="rgb(246,240,246)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 84 66 L 84 52 L 0 52 Z" fill="rgb(203,210,223)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="hsl(90,6%,86%)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(224,209,217)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(224,209,217)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(224,209,217)"/>
+  <g stroke="rgb(222,222,222)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 84" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 84" stroke-width="2.4"/>
+  </g></svg><span>Essenziale</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="cartellino"><span class="lettera">D</span><span class="nome">Di giorno</span></div>
+    <p class="didascalia">Lo stesso posto, alle tre del pomeriggio: la mappa e chiara da sola.</p>
+    <div class="telefono" style="height:300px">
+      <div style="position:absolute;inset:0;border-radius:30px;overflow:hidden"><svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 300 610" preserveAspectRatio="none" aria-hidden="true">
+  <rect width="300" height="610" fill="rgb(242,243,240)"/>
+  <path d="M0 74 C 34 66, 52 88, 86 78 S 130 58, 300 66 L 300 610 L 0 610 Z" fill="rgb(194, 200, 202)"/>
+  <rect x="12" y="12" width="40" height="26" rx="3" fill="rgb(230, 233, 229)"/>
+  <rect x="74" y="16" width="26" height="20" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="108" y="24" width="30" height="16" rx="2" fill="rgb(234, 234, 229)"/>
+  <rect x="18" y="46" width="34" height="14" rx="2" fill="rgb(234, 234, 229)"/>
+  <g stroke="rgb(213, 213, 213)" fill="none" stroke-linecap="round">
+    <path d="M0 44 H 300" stroke-width="4"/><path d="M62 0 V 74" stroke-width="3.4"/>
+    <path d="M0 22 H 62" stroke-width="2"/><path d="M104 8 V 44" stroke-width="2"/>
+    <path d="M62 60 H 300" stroke-width="2.4"/>
+  </g></svg></div>
+      <div class="colonna-comandi">
+        <span class="tondino"><svg class="ic"><use href="#i-expand"/></svg></span>
+        <span class="tondino"><svg class="ic"><use href="#i-layers"/></svg></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h2>Chiara di giorno, scura di notte — da sola</h2>
+<p class="sotto">
+  E' l'unica regola che decide da se. La mappa guarda l'ora del telefono e sceglie: dalle
+  <span class="ril">7 alle 19</span> lo stile chiaro, fuori da li quello scuro. Chi tocca un
+  qualunque stile <span class="ril">spegne l'automatismo</span> — se uno sceglie a mano, non gli si
+  ribalta la mappa sotto gli occhi al tramonto — e la sua scelta resta nelle preferenze.
+</p>
+
+<table>
+  <tr><th>quando</th><th>cosa fa</th><th>perche</th></tr>
+  <tr><td>7:00 &ndash; 19:00</td><td>Chiaro minimale</td><td>di giorno lo schermo compete col sole: serve contrasto, non atmosfera</td></tr>
+  <tr><td>19:00 &ndash; 7:00</td><td>Notte</td><td>al buio una mappa chiara acceca, e in taxi la si guarda in faccia</td></tr>
+  <tr><td>l'utente sceglie</td><td>resta quello</td><td>una scelta a mano vale piu di un orologio: l'automatismo si spegne</td></tr>
+</table>
+
+<h2>Le sette corrispondenze: come questo va nel programma</h2>
+<table>
+  <tr><th>nel template</th><th>nel programma</th></tr>
+  <tr><td>la mappa</td><td>app/components/TaxiMap.js &mdash; oggi conosce due stili, ne conoscera dodici</td></tr>
+  <tr><td>gli stili</td><td>la mappa STILI in cima al file: da 2 voci a 12, stessi indirizzi verificati</td></tr>
+  <tr><td>tasto espandi / chiudi</td><td>una proprieta nuova <code>pieno</code>, e lo stesso nodo che passa da relative a fixed</td></tr>
+  <tr><td>il tondino</td><td>44 dal righello (app/lib/righello.js), mai meno</td></tr>
+  <tr><td>colori</td><td>token del tema: accent1, goldAccent, cardBorder, cardBg</td></tr>
+  <tr><td>icone</td><td>Icon.js &mdash; servono due nomi nuovi: <code>expand</code> e <code>layers</code></td></tr>
+  <tr><td>parole</td><td>chiavi nuove nei 38 pacchetti: nome dei dodici stili, «schermo intero», «stile della mappa»</td></tr>
+</table>
+
+<div class="nota">
+  <span class="ril">Tre cose che devo dirti prima di scriverlo nel programma, non dopo.</span>
+  <ul>
+    <li><span class="ril">Lo schermo intero non usa l'API del browser.</span> Su iPhone quella non
+      esiste per un elemento: sarebbe una funzione che sul tuo telefono va a meta. Si fa con un
+      pannello dell'applicazione, come gia fa la pagina del tassista.</li>
+    <li><span class="ril">Entrando NON si deve ricostruire la mappa.</span> Se il nodo si sposta
+      nell'albero si perde il contesto WebGL e ricompare il velo «carico la mappa». Lo stesso
+      elemento passa da <code>relative</code> a <code>fixed</code>, e si chiama <code>resize()</code>.</li>
+    <li><span class="ril">Il tasto indietro di Android</span> deve chiudere lo schermo intero, non
+      uscire dalla schermata: se no il gesto piu naturale butta fuori dall'app in mezzo a una corsa.</li>
+  </ul>
+</div>
+
+<div class="nota" style="border-left-color:var(--goldAccent)">
+  <span class="ril">E una cosa che manca davvero: il satellite.</span> Nessun fornitore senza chiave
+  ne offre uno pronto. Le immagini dal cielo di Esri si scaricano anche senza chiave — l'ho
+  verificato — ma non hanno un file di stile gia fatto: andrebbe scritto a mano. Se il satellite ti
+  serve, dimmelo e lo preparo; non l'ho messo in elenco perche non l'ho provato.
+</div>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+</svg>
+
+</div>
