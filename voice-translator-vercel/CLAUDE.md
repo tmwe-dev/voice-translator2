@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.469** (push #759) — IL CLONE DELLA VOCE non partiva: il
+  tetto del corpo della richiesta era 256KB, quello di una richiesta di
+  testo, e mezzo mega di voce veniva respinto prima di partire — per questo
+  «non salvava i dati». Alzato a 4MB su quella rotta, e l'attesa da 30
+  secondi a 3 minuti. E la chat ha la linguetta col pannello, con dentro le
+  voci (ElevenLabs e le altre) che prima stavano sempre a schermo.
 - Versione: **b.467** (push #758) — UN MICROFONO SOLO per tutta
   l'applicazione (ui/Microfono.js): erano tre disegni diversi per lo stesso
   gesto — Home, «Parla ora» e chat. Cambia la misura, non la forma; il

@@ -267,7 +267,23 @@ async function handleGet(req) {
   }
 }
 
-export const POST = withApiGuard(handlePost, { maxRequests: 10, prefix: 'voice-clone' });
+// b.469 — IL TETTO DEL CORPO, che qui era quello di tutti gli altri.
+// Collaudo di Luca: «la creazione del clone della voce non funziona e non
+// salva i dati», con a schermo «Request body too large. Maximum size is
+// 256KB.» Quel messaggio e NOSTRO, non di Vercel: e il tetto predefinito
+// del guardiano delle API, giusto per una richiesta di testo e assurdo per
+// questa, che porta la VOCE di una persona.
+//
+// Il conto: centotre secondi di webm/opus stanno intorno al mezzo mega,
+// il doppio del tetto. La registrazione era buona, i segmenti c'erano
+// tutti, e la richiesta veniva respinta prima ancora di partire — per
+// questo «non salvava i dati»: non arrivavano mai.
+//
+// Quattro mega e il tetto vero della piattaforma (4,5) meno un margine:
+// bastano diversi minuti di parlato, e oltre non passerebbe comunque.
+export const POST = withApiGuard(handlePost, {
+  maxRequests: 10, prefix: 'voice-clone', maxBodySize: 4 * 1024 * 1024,
+});
 export const GET = withApiGuard(handleGet, { maxRequests: 10, prefix: 'voice-clone', skipBodyCheck: true });
 
 // ═══════════════════════════════════════

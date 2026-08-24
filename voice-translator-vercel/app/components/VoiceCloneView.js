@@ -79,7 +79,7 @@ export default function VoiceCloneView({ userToken, userTokenRef, onVoiceCloned,
       formData.append('voiceName', prefs.name || 'My Voice');
       formData.append('audio', blob, 'voice-sample.webm');
 
-      const res = await fetch('/api/voice-clone', { signal: AbortSignal.timeout(30000) /* b.363 — prima non c'era tetto di attesa: se la rete restava muta la chiamata pendeva per sempre e l'utente non vedeva mai un esito */, method: 'POST', body: formData });
+      const res = await fetch('/api/voice-clone', { signal: AbortSignal.timeout(180000) /* b.469 — tre minuti, non trenta secondi: qui non si manda una frase, si manda mezzo mega di voce. Su una rete lenta trenta secondi scadono a meta caricamento, e l'utente vede un guasto dove c'era solo una connessione normale. Il tetto resta, perche una chiamata senza tetto pende per sempre (b.363) */, method: 'POST', body: formData });
       // b.363 — prima la lettura non era protetta: con una risposta rotta si
       // mostrava un errore tecnico invece del motivo per cui la voce non e'
       // stata clonata.

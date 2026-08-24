@@ -12,6 +12,7 @@ import MessageList from './MessageList.js';
 import { daBarTalk } from './Carosello3D.js';
 const Carosello3D = lazy(() => import('./Carosello3D.js'));
 import ComandoZoom from './ui/ComandoZoom.js';
+import PannelloLaterale, { LinguettaPannello } from './ui/PannelloLaterale.js';
 import { IconCamera } from './Icons.js';
 import InterpreterView from './InterpreterView.js';
 import ChatActionsPanel from './ChatActionsPanel.js';
@@ -51,6 +52,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   showChatActions, setShowChatActions, localChat, ProviderBadge,
   roomSessionToken, userToken }) {
   const { L, S, prefs, myLang, setView, setMyLang, savePrefs, status, theme, setTheme } = useApp();
+  // b.468 — il pannello laterale della chat: dentro ci sono le voci.
+  const [pannelloVoci, setPannelloVoci] = useState(false);
 
   // b.379 — CHI SONO IO, DICHIARATO SUBITO. Stava piu di cento righe piu
   // in basso, e da b.372 due punti sopra lo leggevano gia: l'elenco di
@@ -516,7 +519,22 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </div>
       )}
 
-      {/* ═══ Voice Engine + Mode Bar ═══ */}
+      {/* ══ b.468 — LA LINGUETTA E IL PANNELLO, come nel template ══
+          Ordine di Luca: «inserire la linguetta, la side bar, mettere
+          all'interno il setting delle voci (ElevenLabs e le altre che ora
+          vedi fuori)».
+          La barra delle voci stava SEMPRE a schermo, in fondo alla chat:
+          motore vocale, modo della stanza, costo, badge del traduttore.
+          Sono cose che si guardano una volta e poi restano li a occupare
+          una riga sopra i messaggi — cioe sopra l'unica cosa per cui si e
+          nella pagina. Adesso vivono dietro la linguetta, dove il pannello
+          tiene gia i comandi di sezione nel resto dell'applicazione. */}
+      {!pannelloVoci && !showChatActions && (
+        <LinguettaPannello onApri={() => setPannelloVoci(true)} C={S.colors}
+          etichetta={L('voiceEngine') || L('settings')} />
+      )}
+      <PannelloLaterale aperto={pannelloVoci} onChiudi={() => setPannelloVoci(false)}
+        titolo={L('voiceEngine') || L('settings')} C={S.colors}>
       <VoiceEngineBar
         L={L} S={S} prefs={prefs} savePrefs={savePrefs}
         isTrial={isTrial} isTopPro={isTopPro} canUseElevenLabs={canUseElevenLabs}
@@ -533,6 +551,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           ? <ProviderBadge sourceLang={myLang} targetLang={partner.lang} theme={theme} compact />
           : null}
       />
+
+      </PannelloLaterale>
 
       {/* Animations */}
       <style>{`
