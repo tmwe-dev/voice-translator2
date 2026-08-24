@@ -216,7 +216,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   const [plancia, setPlancia] = useState('libera');
   const campoTestoRef = useRef(null);
   useEffect(() => {
-    if (plancia === 'scrivi') { try { campoTestoRef.current?.focus(); } catch { /* il campo non e ancora montato: il fuoco arriva al giro dopo */ } }
+    // b.471 — il campo e sempre a schermo: non c'e piu un momento in cui
+    // «si apre» e vuole il fuoco. Lo prende chi lo tocca.
   }, [plancia]);
   const isHost = isHostVerified !== undefined ? isHostVerified : roomInfo?.host === myName;
   const modeInfo = MODES.find(m => m.id === roomMode) || MODES[0];
@@ -873,33 +874,95 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           messi in modo funzionale" + template C ("il microfono e l'eroe"). */}
       {/* ═══ INIZIO b.294 — la plancia e LIBERA: niente barra fissa ═══ */}
       <style>{`@keyframes vtSaleDalBasso { from { transform: translateY(100%); opacity: 0.4; } to { transform: translateY(0); opacity: 1; } }`}</style>
-      {plancia === 'libera' && (
-        <div style={{ position: 'absolute', left: 0, right: 0,
-          bottom: 'max(18px, env(safe-area-inset-bottom))', zIndex: 40,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18,
-          pointerEvents: 'none' }}>
-          <button onClick={() => { vibrate(); setPlancia('scrivi'); }}
-            aria-label={L('typePlaceholder')}
-            style={{ pointerEvents: 'auto', width: 56, height: 56, borderRadius: 28,
-              border: '1px solid rgba(160,190,255,0.25)', cursor: 'pointer',
-              background: 'rgba(10,14,26,0.55)', backdropFilter: 'blur(10px)',
-              color: S.colors.textPrimary, fontSize: 24, display: 'flex',
-              alignItems: 'center', justifyContent: 'center',
-              WebkitTapHighlightColor: 'transparent' }}>
-            {'\u2328\uFE0E'}
-          </button>
-          <button onClick={() => { vibrate(); setPlancia('parla'); }}
-            aria-label={L('speakNow')}
-            style={{ pointerEvents: 'auto', width: 72, height: 72, borderRadius: 36,
-              border: 'none', cursor: 'pointer',
-              background: S.colors.btnGradient, color: '#000', fontSize: 30,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 8px 28px rgba(91,140,255,0.45)',
-              WebkitTapHighlightColor: 'transparent' }}>
-            {'\u{1F3A4}'}
-          </button>
+      {/* ══ b.471 — IL MODULO DEL TESTO STA SEMPRE IN BASSO ══
+          Collaudo di Luca: «perche non vedo testo microfono la in basso
+          come il template?».
+          Perche non c'era. Qui stavano DUE TONDI FLOTTANTI — una tastiera e
+          un microfono, per giunta disegnati con delle EMOJI, che in questa
+          interfaccia sono vietate — e il campo di scrittura compariva solo
+          dopo averne toccato uno. Tre stati (libera, scrivi, parla) per
+          fare quello che il template fa con una riga sola.
+          La regola del template e scritta nel kit: «dove si scrive sta
+          sempre in basso, sempre a schermo». Adesso e cosi: una fascia
+          sola, il piu a sinistra, il campo, la fotocamera e il microfono.
+          Il microfono apre i comandi della voce che c'erano gia. */}
+      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
+        padding: '8px 10px calc(10px + env(safe-area-inset-bottom))',
+        background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%)',
+        pointerEvents: 'none' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, pointerEvents: 'auto' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 6,
+            minHeight: 54, padding: '8px 8px 8px 8px', borderRadius: 16,
+            border: `1px solid ${S.colors.cardBorder}`, background: S.colors.inputBg }}>
+            {/* il piu: da qui entrano foto, file, posizione, contatto */}
+            <button onClick={() => { vibrate(); setShowChatActions(true); }}
+              aria-label={L('addShort')}
+              style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+                border: `1px solid ${S.colors.cardBorder}`, background: 'transparent',
+                color: S.colors.textSecondary, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent' }}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.6} strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            </button>
+            <input
+              ref={campoTestoRef}
+              aria-label={L('typePlaceholder')}
+              placeholder={L('typePlaceholder')}
+              value={textInput}
+              onChange={e => setTextInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); inviaConCitazione(); } }}
+              style={{ flex: 1, minWidth: 0, background: 'transparent', border: 'none',
+                color: S.colors.textPrimary, fontSize: 16, outline: 'none', fontFamily: FONT,
+                padding: '8px 0' }}
+            />
+            {/* la fotocamera, come nel template */}
+            <button onClick={() => { vibrate(); setShowChatActions(true); }}
+              aria-label={L('photoWord') || L('addShort')}
+              style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+                border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
+                color: S.colors.textPrimary, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                WebkitTapHighlightColor: 'transparent' }}>
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+            </button>
+            {/* a destra: la freccia se c'e del testo, se no il microfono —
+                cio che appare SOSTITUISCE nello stesso posto (regola 05) */}
+            {textInput.trim() ? (
+              <button onClick={() => { vibrate(); inviaConCitazione(); }}
+                aria-label={L('send')}
+                style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+                  border: `1px solid ${S.colors.goldAccent || '#ffc44d'}66`,
+                  background: `${S.colors.goldAccent || '#ffc44d'}22`,
+                  color: S.colors.goldAccent || '#ffc44d', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent' }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+              </button>
+            ) : (
+              <button onClick={() => { vibrate(); setPlancia('parla'); }}
+                aria-label={L('speakNow')}
+                style={{ width: 38, height: 38, borderRadius: 12, flexShrink: 0, padding: 0,
+                  border: `1px solid ${S.colors.accent1}57`, background: `${S.colors.accent1}14`,
+                  color: S.colors.textPrimary, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  WebkitTapHighlightColor: 'transparent' }}>
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-      )}
+      </div>
 
       {plancia === 'parla' && (
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
@@ -928,70 +991,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
       </div>
       )}
 
-      {plancia === 'scrivi' && (
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
-        animation: 'vtSaleDalBasso 0.22s ease-out',
-        display:'flex', flexDirection:'column',
-        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%)',
-        padding:'8px 10px calc(10px + env(safe-area-inset-bottom))'}}>
-        <button onClick={() => setPlancia('libera')} aria-label={L('close')}
-          style={{ alignSelf: 'center', background: 'rgba(10,14,26,0.6)', border: '1px solid rgba(160,190,255,0.2)',
-            color: S.colors.textMuted, width: 34, height: 34, borderRadius: 17, cursor: 'pointer',
-            fontSize: 15, marginBottom: 6 }}>{'\u2715'}</button>
-        {/* Risposta citata — subito sopra la riga di testo, legata all'input */}
-        {rispostaA && (
-          <div style={{ marginTop: 8, padding: '8px 12px', borderRadius: 12,
-            background: S.colors.overlayBg, borderLeft: `3px solid ${S.colors.accent1}`,
-            display: 'flex', alignItems: 'center', gap: 10, fontFamily: FONT }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 800, color: S.colors.accent1, marginBottom: 1 }}>
-                {/* b.363 — italiano fisso in una stanza per il resto tradotta */}
-                {L('replyToWord')} {rispostaA.nome}
-              </div>
-              <div style={{ fontSize: 12, color: S.colors.textMuted,
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {rispostaA.testo}
-              </div>
-            </div>
-            <button onClick={() => setRispostaA(null)} aria-label={L('cancelReply')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer',
-                color: S.colors.textMuted, fontSize: 16, padding: '0 4px' }}>×</button>
-          </div>
-        )}
-        <div style={{display:'flex', alignItems:'center', gap:8, marginTop:10,
-          background:S.colors.inputBg, border:`1px solid ${S.colors.inputBorder}`,
-          borderRadius:22, padding:'5px 6px 5px 14px'}}>
-        <input
-          ref={campoTestoRef}
-          aria-label={L('typePlaceholder')}
-          style={{flex:1, background:'transparent', border:'none', color:S.colors.textPrimary,
-            fontSize:14, outline:'none', fontFamily:FONT, minWidth:0}}
-          placeholder={L('typePlaceholder')}
-          value={textInput}
-          onChange={e => {
-            setTextInput(e.target.value);
-            if (e.target.value.trim()) {
-              if (!typingDebounceRef.current) {
-                sendTypingState(true);
-                typingDebounceRef.current = setTimeout(() => { typingDebounceRef.current = null; }, 2000);
-              }
-            }
-          }}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTypingState(false); inviaConCitazione(); }}}
-          onBlur={() => sendTypingState(false)}
-        />
-        <button onClick={() => { vibrate(); sendTypingState(false); inviaConCitazione(); }}
-          aria-label={L('send')}
-          style={{width:38, height:38, borderRadius:'50%', border:'none', flexShrink:0,
-            background: textInput.trim() ? S.colors.btnGradient : S.colors.overlayBg,
-            color: textInput.trim() ? S.colors.textPrimary : S.colors.textMuted,
-            fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
-            WebkitTapHighlightColor:'transparent', transition:'all 0.2s'}}>
-          {sendingText ? '...' : '\u2192'}
-        </button>
-        </div>
-      </div>
-      )}
+      {/* b.471 — qui c'era il SECONDO campo di scrittura, quello che si
+          apriva col tondo a tastiera. Non serve piu: il campo sta sempre in
+          basso, sopra. Tenerlo sarebbe stato un doppione capace di
+          comparire sopra l'altro. */}
       {/* ═══ FINE b.294 (gia b.173) ═══ */}
 
       {/* ═══ INIZIO v.154 — Contenuti chat (link condivisi) ═══

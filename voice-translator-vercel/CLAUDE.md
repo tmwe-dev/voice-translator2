@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.471** (push #761) — IL MODULO DEL TESTO STA SEMPRE IN BASSO
+  nella chat, come dice il template. Prima c'erano due tondi flottanti — una
+  tastiera e un microfono disegnati con EMOJI, vietate qui — e il campo
+  compariva solo dopo averne toccato uno: tre stati per fare quello che il
+  template fa con una riga. Ora: piu, campo, fotocamera, e microfono che
+  diventa freccia quando c'e del testo.
 - Versione: **b.470** (push #760) — LA CHAT SEGUE IL TEMPLATE: la riga di
   CHI C'E' (nomi, lingue e quanti sono) che mancava del tutto, il tasto Aa
   in testata collegato davvero alla misura delle bolle, e la testata scesa da
