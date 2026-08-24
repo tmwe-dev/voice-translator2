@@ -554,7 +554,13 @@ export default function getStyles(theme = 'deep') {
     // fondo della lista tiene 96px di aria: l'ultimo messaggio resta
     // SEMPRE visibile sopra la barra di scrittura, e lo scorrimento
     // automatico lo porta li, mai sotto.
-    chatArea: { flex:1, overflowY:'auto', padding:'14px 12px 96px', minHeight:0, WebkitOverflowScrolling:'touch', scrollPaddingBottom:'96px' },
+    // b.472 — VENTI di margine laterale, come il resto dell'applicazione.
+    // Erano dodici, e le bolle finivano piu larghe della riga di chi c'e e
+    // del campo di scrittura: tre elementi incolonnati con tre rientri
+    // diversi si vedono, anche se nessuno sa dire cosa non torna.
+    // Il fondo resta 96: sotto c'e il modulo del testo, che non deve mai
+    // coprire l'ultimo messaggio.
+    chatArea: { flex:1, overflowY:'auto', padding:'14px 20px 96px', minHeight:0, WebkitOverflowScrolling:'touch', scrollPaddingBottom:'96px' },
     // ── Nuvolette di VETRO (spec sciame) ──
     // La MIA: grigio-nero fumé, neutra su ogni tema.
     // La SUA: vetro tinto col colore del tema (violetto/lilla, orange/terra…).

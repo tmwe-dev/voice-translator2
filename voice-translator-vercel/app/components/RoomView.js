@@ -511,7 +511,10 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           stanza tradotta, e la risposta deve stare a schermo. */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-        padding: '8px 14px 2px', flexShrink: 0,
+        // b.472 — VENTI di margine laterale, come tutta l'applicazione
+        // (template). Avevo messo quattordici qui e dieci sotto: due valori
+        // diversi nella stessa pagina, e nessuno dei due era quello giusto.
+        padding: '8px 20px 2px', flexShrink: 0,
       }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -767,7 +770,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           aggiunge sotto l'elenco: lo SOSTITUISCE nello stesso posto,
           stessa altezza. E il tasto per scambiarli sta sopra, su una riga
           che c'era gia. */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 12px', flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 20px', flexShrink: 0 }}>
         <button onClick={() => { vibrate(6); setModoCarosello(v => !v); }}
           aria-pressed={modoCarosello}
           style={{
@@ -887,7 +890,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           sola, il piu a sinistra, il campo, la fotocamera e il microfono.
           Il microfono apre i comandi della voce che c'erano gia. */}
       <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
-        padding: '8px 10px calc(10px + env(safe-area-inset-bottom))',
+        padding: '8px 20px calc(10px + env(safe-area-inset-bottom))',
         background: 'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 45%)',
         pointerEvents: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, pointerEvents: 'auto' }}>

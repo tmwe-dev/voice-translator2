@@ -96,7 +96,7 @@ const RoomHeader = memo(function RoomHeader({
           intrappolato SOTTO lo sfondo trasparente e i click sulle voci
           finivano sullo sfondo (che chiude il menu) invece che sui
           comandi — il menu si apriva ma i comandi non partivano. */}
-      <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:6, padding:'8px 10px',
+      <div style={{...S.roomHeader, position:'relative', flexWrap:'nowrap', gap:6, padding:'8px 20px',
         display:'flex', alignItems:'center', zIndex: showMoreMenu ? 200 : undefined}} role="banner">
 
         {/* ── Sinistra: indietro ── */}

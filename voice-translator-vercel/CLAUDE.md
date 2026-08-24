@@ -214,6 +214,10 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.472** (push #762) — UN MARGINE SOLO IN TUTTA LA CHAT: erano
+  QUATTRO rientri diversi incolonnati (10, 12, 14, 20). Ora venti ovunque,
+  come la Home e come dice il template. E c'e una prova di guardia che lo
+  controlla, cosi la verifica non dipende piu dal fatto che me ne ricordi.
 - Versione: **b.471** (push #761) — IL MODULO DEL TESTO STA SEMPRE IN BASSO
   nella chat, come dice il template. Prima c'erano due tondi flottanti — una
   tastiera e un microfono disegnati con EMOJI, vietate qui — e il campo
