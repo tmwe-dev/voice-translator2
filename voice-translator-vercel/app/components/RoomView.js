@@ -215,9 +215,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
   // 'parla': il microfono-eroe coi suoi strumenti, anche lui libero.
   // La X (o l'invio) riporta alla pagina libera.
   const [plancia, setPlancia] = useState('libera');
-  // b.474 — il modulo del testo deve sapere se si sta parlando: e lui a
-  // diventare rosso, non solo il microfono.
-  const staRegistrando = plancia === 'parla';
+  // b.475 — il rosso segue la REGISTRAZIONE VERA, non l'apertura di un
+  // pannello che non c'e piu.
   const campoTestoRef = useRef(null);
   useEffect(() => {
     // b.471 — il campo e sempre a schermo: non c'e piu un momento in cui
@@ -675,6 +674,24 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
 
         <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
           color: S.colors.textMuted, padding: '4px 10px 7px', fontFamily: FONT }}>
+          {L('micWord') || L('voiceEngine')}
+        </div>
+        <TalkControls
+          L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
+          canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
+          recording={recording} isListening={isListening}
+          toggleRecording={toggleRecording} cancelRecording={cancelRecording}
+          startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
+          vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
+          vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
+          liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
+          status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
+          endChatAndSave={endChatAndSave} setView={setView}
+          roomSessionToken={roomSessionToken}
+        />
+
+        <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
+          color: S.colors.textMuted, padding: '4px 10px 7px', fontFamily: FONT }}>
           {L('voiceEngine')}
         </div>
       <VoiceEngineBar
@@ -919,8 +936,8 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'flex-end', gap: 6,
             minHeight: 54, padding: '8px', borderRadius: 16,
             transition: 'border-color .2s, background .2s',
-            border: `1px solid ${staRegistrando ? `${S.colors.accent3 || '#ff5470'}88` : S.colors.cardBorder}`,
-            background: staRegistrando ? `${S.colors.accent3 || '#ff5470'}14` : S.colors.inputBg }}>
+            border: `1px solid ${recording ? `${S.colors.accent3 || '#ff5470'}88` : S.colors.cardBorder}`,
+            background: recording ? `${S.colors.accent3 || '#ff5470'}14` : S.colors.inputBg }}>
             {/* il piu: da qui entrano foto, file, posizione, contatto */}
             <button onClick={() => { vibrate(); setShowChatActions(true); }}
               aria-label={L('addShort')}
@@ -957,6 +974,18 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 <circle cx="12" cy="13" r="4" />
               </svg>
             </button>
+            {/* b.475, collaudo di Luca: «perche dici di tener premuto? Tutti
+                  devono funzionare come nella home».
+                  Aveva ragione due volte. Primo: questo tasto apriva un
+                  PANNELLO che saliva e copriva il campo di scrittura, con
+                  dentro un secondo microfono e due impostazioni. Due tocchi
+                  e mezzo schermo coperto per fare quello che nella Home si
+                  fa con un tocco. Adesso registra direttamente.
+                  Secondo: la scritta diceva «tieni premuto», ma il comando
+                  sotto era gia un TOCCO che accende e un tocco che spegne —
+                  la stessa cosa della Home. Diceva il falso, e a un anziano
+                  o a un bambino che tiene premuto e aspetta non succede
+                  niente. */}
             {/* a destra: la freccia se c'e del testo, se no il microfono —
                 cio che appare SOSTITUISCE nello stesso posto (regola 05) */}
             {textInput.trim() ? (
@@ -974,13 +1003,13 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
                 </svg>
               </button>
             ) : (
-              <button onClick={() => { vibrate(); setPlancia(staRegistrando ? 'libera' : 'parla'); }}
-                aria-label={L('speakNow')} aria-pressed={staRegistrando}
-                style={{ ...vesteMicrofono({ misura: 38, acceso: staRegistrando, C: S.colors }).cerchio,
+              <button onClick={() => { vibrate(); toggleRecording?.(); }}
+                aria-label={L('conversationDesc')} aria-pressed={recording}
+                style={{ ...vesteMicrofono({ misura: 38, acceso: recording, C: S.colors }).cerchio,
                   borderRadius: 12, flexShrink: 0 }}>
                 <svg width={vesteMicrofono({ misura: 38, C: S.colors }).icona} height={vesteMicrofono({ misura: 38, C: S.colors }).icona}
                   viewBox="0 0 24 24" fill="none"
-                  stroke={vesteMicrofono({ misura: 38, acceso: staRegistrando, C: S.colors }).coloreIcona}
+                  stroke={vesteMicrofono({ misura: 38, acceso: recording, C: S.colors }).coloreIcona}
                   strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3zM19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" />
                 </svg>
@@ -990,33 +1019,14 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </div>
       </div>
 
-      {plancia === 'parla' && (
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 40,
-        animation: 'vtSaleDalBasso 0.22s ease-out',
-        display:'flex', flexDirection:'column', flexShrink:0,
-        background:'linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.55) 55%)',
-        padding:'8px 10px calc(10px + env(safe-area-inset-bottom))'}}>
-        <button onClick={() => setPlancia('libera')} aria-label={L('close')}
-          style={{ alignSelf: 'center', background: 'rgba(10,14,26,0.6)', border: '1px solid rgba(160,190,255,0.2)',
-            color: S.colors.textMuted, width: 34, height: 34, borderRadius: 17, cursor: 'pointer',
-            fontSize: 15, marginBottom: 6 }}>{'\u2715'}</button>
-        <TalkControls
-          L={L} S={S} roomMode={roomMode} roomId={roomId} isHost={isHost}
-          canTalk={canTalk} modeInfo={modeInfo} isTrial={isTrial}
-          recording={recording} isListening={isListening}
-          toggleRecording={toggleRecording} cancelRecording={cancelRecording}
-          startFreeTalk={startFreeTalk} stopFreeTalk={stopFreeTalk}
-          vadLivelloRef={vadLivelloRef} vadSilenceCountdown={vadSilenceCountdown}
-          vadSensitivity={vadSensitivity} setVadSensitivity={setVadSensitivity}
-          liveMode={liveMode} setLiveModeState={setLiveModeState} setLiveMode={setLiveMode}
-          status={status} webrtc={webrtc} myName={myName} roomInfo={roomInfo}
-          endChatAndSave={endChatAndSave} setView={setView}
-          roomSessionToken={roomSessionToken}
-        />
-
-      </div>
-      )}
-
+      {/* b.475 — IL PANNELLO CHE SALIVA NON C'E' PIU. Copriva il campo di
+          scrittura con un secondo microfono e due impostazioni, e per
+          parlare chiedeva due tocchi invece di uno. Il microfono e nel
+          modulo, come nella Home e come nel template.
+          I comandi che stavano qui dentro — riduzione del rumore, modo
+          della conversazione, sensibilita — sono impostazioni: sono nel
+          pannello laterale, dove Luca ha chiesto che stiano filtri e
+          preferenze. */}
       {/* b.471 — qui c'era il SECONDO campo di scrittura, quello che si
           apriva col tondo a tastiera. Non serve piu: il campo sta sempre in
           basso, sopra. Tenerlo sarebbe stato un doppione capace di

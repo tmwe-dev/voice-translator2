@@ -214,6 +214,12 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.475** (push #765) — IL MICROFONO DELLA CHAT FUNZIONA COME
+  QUELLO DELLA HOME: si tocca e registra, si tocca e finisce. Prima apriva
+  un pannello che copriva il campo di scrittura — due tocchi e mezzo schermo
+  — e la scritta diceva «tieni premuto», che era falso: chi teneva premuto
+  non otteneva niente. Le impostazioni che stavano in quel pannello
+  (riduzione rumore, modo, sensibilita) sono nella sidebar.
 - Versione: **b.474** (push #764) — TUTTI I MICROFONI ALLO STESSO STANDARD
   (quello della Home e del taxi), anche quello dentro il modulo della chat.
   E mentre si registra diventa rossa TUTTA la fascia del testo, non solo il

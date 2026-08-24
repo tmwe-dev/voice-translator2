@@ -94,7 +94,7 @@ const TalkControls = memo(function TalkControls({
               caldo (requestMicEarly all'unlock), quindi cattura subito.
               onPointerDown e comunque un gesto valido per il browser. */}
           <button onPointerDown={(e) => { e.preventDefault(); vibrate(25); toggleRecording(); }}
-            aria-label={recording ? L('sendVoiceMessage') : L('holdToSpeak')}
+            aria-label={recording ? L('sendVoiceMessage') : L('conversationDesc')}
             // b.467 — LO STESSO MICROFONO DELLA HOME, in piccolo. Qui era un
             // tondo pieno con una sfumatura e un impulso: un terzo disegno
             // per lo stesso gesto. Adesso e quello comune, misura 64.
@@ -107,9 +107,15 @@ const TalkControls = memo(function TalkControls({
           </button>
         </div>
         {/* Suggerimento "tieni premuto per parlare", come nel template C */}
+        {/* b.475, collaudo di Luca: «perche dici di tener premuto?». Perche
+              lo diceva e basta: il comando sotto e sempre stato un TOCCO che
+              accende e un tocco che spegne, come nella Home. Chi tiene
+              premuto e aspetta — un anziano, un bambino — non ottiene
+              niente e pensa che sia rotto. Ora c'e scritto quello che
+              succede davvero. */}
         {!recording && (
           <div style={{fontSize:11, color:S.colors.textMuted, fontWeight:600, marginTop:7, textAlign:'center'}}>
-            {L('holdToSpeak')}
+            {L('conversationDesc')}
           </div>
         )}
 
