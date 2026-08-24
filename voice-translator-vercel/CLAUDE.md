@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.439** (push #731) — IL SELETTORE PAESE SCENDE SOTTO IL
+  MICROFONO, in alternanza con «Parla ora» (ordine di Luca): lo stesso posto
+  mostra a turno la scritta e il carosello animato delle bandiere, e si ferma
+  mentre lo tocchi per scegliere con calma. Il microfono sopra resta il tasto
+  per parlare.
 - Versione: **b.438** (push #730) — FEDELTA AL TEMPLATE SULLA HOME: il
   microfono torna BIANCO e da 20 (era azzurro e da 44, una mia deriva);
   via il grassetto anche nell'app (come nel template, max 600, titoli di

@@ -1,5 +1,5 @@
 'use client';
-import { memo, useState, useMemo, useEffect } from 'react';
+import { memo, useState, useMemo, useEffect, useRef } from 'react';
 import { ombraAcciaio } from '../lib/acciaio.js';
 import { FONT, getLang, vibrate, PUSH } from '../lib/constants.js';
 import { useApp } from '../contexts/AppContext.js';
@@ -68,6 +68,11 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // b.356 — il traduttore "Parla ora" sta CHIUSO dietro la sua icona
   // (collaudo di Luca): niente piu apertura automatica al primo avvio.
   const [mostraPrimaProva, setMostraPrimaProva] = useState(false);
+  // b.438 — il selettore paese sotto il microfono si alterna con la
+  // scritta «Parla ora» (ordine di Luca). Un interruttore su un timer,
+  // che si mette in pausa mentre il dito e sul selettore.
+  const [mostraSel, setMostraSel] = useState(false);
+  const pausaSelRef = useRef(false);
   // b.358 — la tendina con TUTTE le scelte di comunicazione, dietro il barcode
 
   // I colori vengono dal tema attivo: un'unica verità, sei temi coerenti
@@ -185,6 +190,16 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
   // b.356 — la "luce che segue il mouse" di b.354 e stata tolta insieme
   // alle card: le voci sono icone nude, non hanno piu una superficie.
 
+  // b.438 — l'alternanza: ogni 3,6s scambia scritta e selettore, ma solo
+  // se la Home e a schermo e nessuno sta toccando il selettore.
+  useEffect(() => {
+    if (mostraPrimaProva) return undefined;
+    const id = setInterval(() => {
+      if (!pausaSelRef.current) setMostraSel((v) => !v);
+    }, 3600);
+    return () => clearInterval(id);
+  }, [mostraPrimaProva]);
+
   return (
     <main style={{ ...S.page, display: 'flex', flexDirection: 'column' }} aria-label={L('homeAria')}>
       {/* b.424 — LA HOME GIRA SU SE STESSA. Prima «Parla ora» prendeva il
@@ -263,15 +278,8 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             permettere la traduzione e la visualizzazione ampia»). La ✕
             riporta alla home normale. */}
 
-        {/* b.354 — IL CAROSELLO DELLE BANDIERE (Wueform) al posto della
-            dropdown: la lingua si sceglie qui, sotto il titolo. */}
-        <div style={{ margin: '18px 0 6px' }}>
-          <CarouselLingue
-            selezionata={prefs.lang}
-            onScegli={scegliLingua}
-            onLinguaMenu={() => { vibrate(); setView('settings'); }}
-            C={C} L={L} />
-        </div>
+        {/* b.438 — il carosello NON sta piu sopra il microfono: e sceso
+            sotto, in alternanza con «Parla ora» (vedi piu giu). */}
 
         {/* b.356 — l'icona "Parla ora": il traduttore sta chiuso qui
             dietro e quando si apre prende la pagina intera. */}
@@ -300,12 +308,42 @@ const HomeView = memo(function HomeView({ selectedMode, setSelectedMode,
             }}>
               <Icon name="mic" size={20} color={C.textPrimary} />
             </span>
-            <span style={{ fontFamily: FONT, fontSize: 17, fontWeight: 600, color: C.textPrimary }}>
-              {L('speakNowTitle')}
-            </span>
           </button>
         )}
         {/* ── FINE b.96 ── */}
+
+        {/* b.438 — SOTTO IL MICROFONO, IN ALTERNANZA (ordine di Luca): lo
+            stesso posto mostra a turno la scritta «Parla ora» e il carosello
+            animato delle bandiere. Toccandolo si ferma, per scegliere con
+            calma; il microfono sopra resta sempre il tasto per parlare. */}
+        <div
+          onPointerDown={() => { pausaSelRef.current = true; }}
+          onPointerUp={() => { pausaSelRef.current = false; }}
+          onPointerLeave={() => { pausaSelRef.current = false; }}
+          style={{
+            position: 'relative', width: '100%', minHeight: 74, marginBottom: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}
+        >
+          <span style={{
+            position: 'absolute', fontFamily: FONT, fontSize: 17, fontWeight: 600,
+            color: C.textPrimary, transition: 'opacity .5s ease',
+            opacity: mostraSel ? 0 : 1, pointerEvents: 'none',
+          }}>
+            {L('speakNowTitle')}
+          </span>
+          <div style={{
+            position: 'absolute', width: '100%', transition: 'opacity .5s ease',
+            opacity: mostraSel ? 1 : 0, pointerEvents: mostraSel ? 'auto' : 'none',
+          }}>
+            <CarouselLingue
+              selezionata={prefs.lang}
+              onScegli={scegliLingua}
+              onLinguaMenu={() => { vibrate(); setView('settings'); }}
+              C={C} L={L} />
+          </div>
+        </div>
+
 
         {/* b.436 — il barcode faccia-a-faccia NON e piu qui: e passato nel
             tasto «+» della barra (NewConversationSheet), che ora apre una
