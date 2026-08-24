@@ -1,6 +1,9 @@
 'use client';
 import { memo, useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from 'react';
 import { MODES, CONTEXTS, FONT, getLang, vibrate } from '../lib/constants.js';
+import { ultimoRapportoTesto } from '../lib/diagnosticaChiamata.js';
+import { rapportoMonitorTesto } from '../lib/monitorSviluppo.js';
+import { toast } from '../lib/avvisi.js';
 import { vaInVetrina } from '../lib/decisioni.js';
 import AvatarImg from './AvatarImg.js';
 import VideoCallOverlay from './VideoCallOverlay.js';
@@ -32,6 +35,18 @@ import { eDiretta } from '../lib/decisioni.js';
 // la lettura pubblica di una stanza non li manda apposta, e due punti
 // del client davano per scontato un array e morivano.
 import { membriDi } from '../lib/membri.js';
+
+// b.470 — la veste di una voce del pannello: alta 44 come ogni altro
+// tasto (regola dei quarantaquattro), a tutta larghezza, senza riquadro.
+function vocePannello(S) {
+  return {
+    display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+    minHeight: 44, padding: '0 10px', borderRadius: 12,
+    background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+    color: S.colors.textSecondary, fontSize: 14.5, fontFamily: FONT,
+    WebkitTapHighlightColor: 'transparent',
+  };
+}
 
 const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingMsg,
   recording, isListening, partnerConnected, partnerSpeaking, partnerLiveText, partnerTyping,
@@ -477,7 +492,63 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         endChatAndSave={endChatAndSave} leaveRoomTemporary={leaveRoomTemporary}
         taxiVisible={taxiVisible} setTaxiVisible={setTaxiVisible} setTaxiData={setTaxiData}
         myName={myName} roomId={roomId}
+        setZoomTesto={(f) => {
+          // b.470 — il carattere si salva nelle PREFERENZE, non in questa
+          // schermata: e la stessa misura di «Parla ora», e chi la sceglie
+          // una volta se la ritrova ovunque.
+          const ora = Number(prefs?.testoGrande) || 0;
+          savePrefs?.({ ...prefs, testoGrande: typeof f === 'function' ? f(ora) : f });
+        }}
       />
+
+      {/* ══ b.470 — CHI C'E' E IN CHE LINGUA, come nel template ══
+          E' la riga che il template mette per prima, subito sotto la
+          testata, e che qui mancava del tutto: i nomi e le lingue stavano
+          dentro il menu ••• — cioe nascosti — e in una stanza a tre non si
+          sapeva chi ci fosse senza aprirlo.
+          Non e decorazione: e la prima domanda che uno si fa entrando in una
+          stanza tradotta, e la risposta deve stare a schermo. */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+        padding: '8px 14px 2px', flexShrink: 0,
+      }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 5,
+          padding: '4px 9px', borderRadius: 999, fontSize: 12, fontFamily: FONT,
+          border: `1px solid ${S.colors.cardBorder}`, background: S.colors.cardBg,
+          color: S.colors.textSecondary,
+        }}>
+          <span>{myL.flag}</span><span>{L('youWord')}</span>
+        </span>
+        {otherMembers.map((m, i) => (
+          <span key={m.id || m.name || i} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '4px 9px', borderRadius: 999, fontSize: 12, fontFamily: FONT,
+            border: `1px solid ${S.colors.cardBorder}`, background: S.colors.cardBg,
+            color: S.colors.textSecondary,
+            // b.470 — chi non e connesso si smorza, come gia fa la bandiera
+            // in testata: presente nell'elenco ma spento, non sparito.
+            opacity: partnerConnected || otherMembers.length > 1 ? 1 : 0.45,
+          }}>
+            <span>{getLang(m.lang).flag}</span>
+            <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.name}
+            </span>
+          </span>
+        ))}
+        {/* quanti sono dentro: icona e numero, verdi e piccoli — mai il
+            pallino che gridava piu del nome della stanza (b.438) */}
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 4,
+          fontSize: 12.5, color: S.colors.accent4 || '#3ddc84', fontFamily: FONT,
+        }}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8z" />
+          </svg>
+          {otherMembers.length + 1}
+        </span>
+      </div>
 
       {/* ═══ Audio unlock — compact banner (does NOT block video call) ═══ */}
       {!audioReady && (
@@ -534,7 +605,51 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
           etichetta={L('voiceEngine') || L('settings')} />
       )}
       <PannelloLaterale aperto={pannelloVoci} onChiudi={() => setPannelloVoci(false)}
-        titolo={L('voiceEngine') || L('settings')} C={S.colors}>
+        titolo={L('settings')} C={S.colors}>
+
+        {/* ══ b.470 — NEL PANNELLO CI VANNO ANCHE LE PREFERENZE ══
+            Ordine di Luca: «sidebar deve contenere filtri e setting di
+            preferenze». Non solo il motore vocale: le cose che si decidono
+            una volta e poi restano decise. Sono le stesse che stavano
+            sparse fra la testata e il menu ••• — di la si arrivava solo
+            sapendo che c'erano. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
+            color: S.colors.textMuted, padding: '0 10px 7px', fontFamily: FONT }}>
+            {L('preferences') || L('settings')}
+          </div>
+
+          {/* la voce tradotta si sente, oppure no */}
+          <button onClick={() => { if (!audioEnabled) unlockAudio?.(); setAudioEnabled(!audioEnabled); }}
+            style={vocePannello(S)}>
+            <span>{audioEnabled ? L('muteTranslations') : L('unmuteTranslations')}</span>
+            <span style={{ marginLeft: 'auto', color: audioEnabled ? S.colors.accent4 : S.colors.textMuted }}>
+              {audioEnabled ? L('onWord') || 'on' : L('offWord') || 'off'}
+            </span>
+          </button>
+
+          {/* il rapporto tecnico: scende qui dalla testata, dove occupava un
+              posto fisso per uno strumento che si usa una volta ogni mille */}
+          <button onClick={async () => {
+              const testo = ultimoRapportoTesto() + '\n\n— CATENA VOCE / TESTO —\n' + rapportoMonitorTesto();
+              try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
+              catch { toast.info(testo.slice(0, 300)); }
+            }}
+            style={vocePannello(S)}>
+            <span>{L('techReport')}</span>
+          </button>
+
+          {/* le impostazioni vere e proprie, quelle di tutta l'applicazione */}
+          <button onClick={() => setView('settings')} style={vocePannello(S)}>
+            <span>{L('settings')}</span>
+            <span style={{ marginLeft: 'auto', color: S.colors.textMuted }}>&rsaquo;</span>
+          </button>
+        </div>
+
+        <div style={{ fontSize: 10.5, letterSpacing: 1.1, textTransform: 'uppercase',
+          color: S.colors.textMuted, padding: '4px 10px 7px', fontFamily: FONT }}>
+          {L('voiceEngine')}
+        </div>
       <VoiceEngineBar
         L={L} S={S} prefs={prefs} savePrefs={savePrefs}
         isTrial={isTrial} isTopPro={isTopPro} canUseElevenLabs={canUseElevenLabs}
@@ -681,6 +796,7 @@ const RoomView = memo(function RoomView({ roomId, roomInfo, messages, streamingM
         </Suspense>
       ) : (
       <MessageList
+        passoTesto={Number(prefs?.testoGrande) || 0}
         messages={messages} streamingMsg={streamingMsg}
         myName={myName} myLang={myLang} prefs={prefs}
         partner={partner} roomInfo={roomInfo} roomMode={roomMode} isHost={isHost}

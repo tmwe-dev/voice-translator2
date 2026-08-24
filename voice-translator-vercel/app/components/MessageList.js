@@ -89,7 +89,15 @@ const MessageList = memo(function MessageList({
   onMessageDoubleClick, // callback(msg) for Taxi Mode activation on double-tap
   // ── b.99 · reazioni durevoli (pollice su/giu, cuore) e risposte ──
   conteReazioni, mieReazioni, onReagisci, onRispondi,
+  passoTesto = 0,
 }) {
+  // b.470 — LA MISURA DEL TESTO ARRIVA DA FUORI. Il tasto «Aa» in testata
+  // (template) non cambiava niente qui dentro: le bolle erano a misura
+  // fissa. Un tasto che c'e ma non fa niente e peggio di un tasto che manca.
+  // Stessa scala di «Parla ora»: un passo vale il quattordici per cento.
+  const fattoreTesto = 1 + Math.max(-2, Math.min(3, Number(passoTesto) || 0)) * 0.14;
+  const mis = (n) => Math.round(n * fattoreTesto * 10) / 10;
+
   // b.326 — audit Mondo D2: la traduzione del mittente puo non arrivare mai
   // (stanza vuota alla scrittura: nessuna lingua di destinazione). Il lettore
   // non resta appeso a "Traduzione…": puo TRADURRE QUI, a richiesta, nella
@@ -228,7 +236,7 @@ const MessageList = memo(function MessageList({
                       pallino verde quando e stata consegnata»). In grande
                       la TRADUZIONE; sotto, piccolo, quello che ho scritto
                       io — cosi ognuno controlla la propria frase. */}
-                  <div style={{fontSize:14, fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary, display:'flex', alignItems:'baseline', gap:6}}>
+                  <div style={{fontSize:mis(14), fontWeight:500, lineHeight:1.5, color:S.colors.textPrimary, display:'flex', alignItems:'baseline', gap:6}}>
                     <span style={{flex:1, minWidth:0}}>
                       {/* b.363 — la regola b.353 non era mai stata realizzata:
                           i due rami erano IDENTICI, e per i propri messaggi
@@ -248,7 +256,7 @@ const MessageList = memo(function MessageList({
                   {/* Secondary line: original for sender (small), original for receiver */}
                   {pendingTranslation ? (
                     isMine ? (
-                      <div style={{fontSize:11, color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
+                      <div style={{fontSize:mis(11), color:S.colors.textMuted, marginTop:4, fontStyle:'italic'}}>
                         {m._translationError ? L('translationFailedShort') : L('translating')}
                       </div>
                     ) : (() => {

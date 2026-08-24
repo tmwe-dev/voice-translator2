@@ -214,6 +214,11 @@ qualunque refactoring. Non si propone di rimandarlo.
 
 ## Stato corrente (aggiornare a ogni versione)
 
+- Versione: **b.470** (push #760) — LA CHAT SEGUE IL TEMPLATE: la riga di
+  CHI C'E' (nomi, lingue e quanti sono) che mancava del tutto, il tasto Aa
+  in testata collegato davvero alla misura delle bolle, e la testata scesa da
+  sette comandi a quattro — chiamata vocale e rapporto tecnico sono nel
+  pannello, che ora tiene anche le preferenze.
 - Versione: **b.469** (push #759) — IL CLONE DELLA VOCE non partiva: il
   tetto del corpo della richiesta era 256KB, quello di una richiesta di
   testo, e mezzo mega di voce veniva respinto prima di partire — per questo

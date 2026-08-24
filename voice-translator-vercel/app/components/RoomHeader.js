@@ -68,7 +68,7 @@ const RoomHeader = memo(function RoomHeader({
   isTrial, freeCharsUsed, freeLimitExceeded, freeResetTime,
   endChatAndSave, leaveRoomTemporary,
   taxiVisible, setTaxiVisible, setTaxiData, myName, roomId,
-  setView,
+  setView, setZoomTesto,
 }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
 
@@ -159,19 +159,13 @@ const RoomHeader = memo(function RoomHeader({
         {/* ── b.193 · Consumo sempre a vista (cresce dal vivo) ── */}
         <ConsumoChip roomId={roomId} />
 
-        {/* ── b.353 — CHIAMATE A PORTATA DI DITO (Luca: «dietro icona
-            dedicata in alto», non sepolte nel menu). Stessi handler di
-            prima, spostati; nelle stanze solo-testo restano nascoste. */}
-        {webrtc && !stanzaSoloTesto && (
-          <button onClick={() => {
-              if (webrtc.webrtcConnected && webrtc.callType === 'voice') setShowVoiceCall(true);
-              else webrtc.initiateConnection(false);
-            }}
-            title={L('voiceCall')} aria-label={L('startVoiceCall')}
-            style={{...veste(S, webrtc.webrtcConnected && webrtc.callType === 'voice'), width:38, height:38, borderRadius:12, flexShrink:0}}>
-            <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          </button>
-        )}
+        {/* b.470 — LA CHIAMATA VOCALE SCENDE NEL MENU. Il template tiene
+            in testata quattro comandi, non sette: indietro, carattere, voce,
+            video. Sette tondini da trentotto in una riga da trecentonovanta
+            punti non sono comandi, sono una fila — e in una fila non si
+            distingue piu quello che serve adesso.
+            La chiamata vocale c'e ancora, nel menu ••• insieme al resto.
+            Il video resta in testata: e la porta al gruppo. */}
         {/* b.461, ordine di Luca: «le stanze partono normali come testo e si
             seleziona la camera all'interno della pagina chat». La telecamera
             era gia qui, e faceva una cosa sola: il video a due. Adesso fa la
@@ -203,18 +197,22 @@ const RoomHeader = memo(function RoomHeader({
           {audioEnabled ? <IconVolume size={18}/> : <IconVolumeOff size={18}/>}
         </button>
 
-        {/* b.353 — RAPPORTO TECNICO dietro la sua icona in barra (Luca):
-            un tocco copia la scatola nera della chiamata + catena voce. */}
-        <button onClick={async () => {
-            const testo = ultimoRapportoTesto() + '\n\n— CATENA VOCE / TESTO —\n' + rapportoMonitorTesto();
-            try { await navigator.clipboard.writeText(testo); toast.success(L('techReportCopied')); }
-            catch { toast.info(testo.slice(0, 300)); }
-          }}
-          title={L('techReport')} aria-label={L('techReport')}
-          style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0}}>
-          <IconClipboard size={16}/>
-        </button>
+        {/* b.470 — IL TASTO DEL CARATTERE, come nel template: c'e su ogni
+            pagina, sempre nello stesso posto. Qui mancava, e la misura del
+            testo si poteva cambiare solo dalla vista a carte — cioe non
+            dalla chat, che e dove si legge davvero. */}
+        {setZoomTesto && (
+          <button onClick={() => setZoomTesto((v) => (v >= 3 ? -2 : v + 1))}
+            title={L('textBigger')} aria-label={L('textBigger')}
+            style={{...veste(S, false), width:38, height:38, borderRadius:12, flexShrink:0,
+              fontFamily:FONT, fontSize:15, fontWeight:600, color:S.colors.textSecondary}}>
+            Aa
+          </button>
+        )}
 
+        {/* b.470 — il RAPPORTO TECNICO non sta piu in testata: e uno
+            strumento da guasto, si usa una volta ogni mille e occupava un
+            posto fisso accanto a cose che si usano parlando. E' nel menu. */}
         {/* ── Destra: un solo menu ••• ── */}
         <div style={{position:'relative', flexShrink:0}}>
           <button onClick={() => setShowMoreMenu(!showMoreMenu)}
